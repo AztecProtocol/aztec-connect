@@ -29,16 +29,6 @@ data "terraform_remote_state" "aztec2_iac" {
   }
 }
 
-# TODO: Remove once we've hardcoded in the real contract addresses.
-data "terraform_remote_state" "blockchain" {
-  backend = "s3"
-  config = {
-    bucket = "aztec-terraform"
-    key    = "${var.DEPLOY_TAG}/blockchain"
-    region = "eu-west-2"
-  }
-}
-
 provider "aws" {
   profile = "default"
   region  = "eu-west-2"
@@ -222,6 +212,10 @@ resource "aws_ecs_task_definition" "falafel" {
       {
         "name": "PROOF_GENERATOR_MODE",
         "value": "split"
+      },
+      {
+        "name": "PUBLISH_INTERVAL",
+        "value": "14400"
       }
     ],
     "mountPoints": [

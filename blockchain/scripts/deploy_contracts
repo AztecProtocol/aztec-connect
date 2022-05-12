@@ -19,15 +19,6 @@ case $VERSION_TAG in
     export TF_VAR_PUBLIC_ETHEREUM_HOST=https://mainnet-fork.aztec.network:8545
     export TF_VAR_PRIVATE_ETHEREUM_HOST=https://mainnet-fork.aztec.network:8545
     ;;
-  prod)
-    # Initial prod deployment can use our mainnet fork. We can remove this later, or leave it in.
-    # Falafel prod config will change to use real mainnet nodes and contracts addresses directly,
-    # rather than from terraform state.
-    NETWORK=mainnet-fork
-    VERIFICATION_KEY=VerificationKey28x32
-    export TF_VAR_PUBLIC_ETHEREUM_HOST=https://mainnet-fork.aztec.network:8545
-    export TF_VAR_PRIVATE_ETHEREUM_HOST=https://mainnet-fork.aztec.network:8545
-    ;;
   *)
     echo "No configuration for VERSION_TAG=$VERSION_TAG, skipping contract deployment."
     exit 0
