@@ -7,7 +7,7 @@ import { Poller } from 'app/util/poller';
 import { LazyInitCacheMap } from 'app/util/lazy_init_cache_map';
 import { toAdaptorArgs } from '../bridge_adaptor_util';
 
-const debug = createDebug('aux_data_options_poller_cache');
+const debug = createDebug('zm:aux_data_options_poller_cache');
 
 const POLL_INTERVAL = 5 * 60 * 1000;
 

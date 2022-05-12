@@ -1,0 +1,11 @@
+.root {
+  display: flex;
+  font-size: 12px;
+  align-items: center;
+}
+
+.price {
+  opacity: 0.8;
+  font-size: 10px;
+  margin-left: 5px;
+}

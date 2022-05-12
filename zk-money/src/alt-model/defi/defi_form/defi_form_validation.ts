@@ -89,5 +89,6 @@ export function validateDefiForm(input: DefiFormValidationInput): DefiFormValida
     input,
     feeAmounts,
     requiredInputInTargetAssetCoveringCosts,
+    targetDepositAmount,
   };
 }

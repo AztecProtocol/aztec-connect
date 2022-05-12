@@ -49,6 +49,7 @@ export interface DefiRecipe {
   logo: string;
   miniLogo: string;
   shortDesc: string;
+  exitDesc?: string;
   bannerImg: string;
   roiType: string;
   longDescription: string;

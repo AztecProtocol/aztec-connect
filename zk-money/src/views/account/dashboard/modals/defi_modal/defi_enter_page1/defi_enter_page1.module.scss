@@ -1,3 +1,14 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  grid-gap: 30px;
+  gap: 30px;
+  grid-template-columns: 1fr 1fr;
+  max-height: calc(100vh - 100px);
+  padding: 30px 30px;
+  overflow: auto;
+}
+
 .faqHint {
   align-self: end;
 }
@@ -19,15 +30,4 @@
   display: flex;
   flex-direction: row;
   gap: 160px;
-}
-
-.links {
-  display: flex;
-  flex-direction: row;
-  align-items: flex-end;
-  gap: 40px;
-}
-
-.link {
-  white-space: nowrap;
 }

@@ -1,0 +1,29 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  grid-gap: 30px;
+  gap: 30px;
+  grid-template-columns: 1fr 1fr;
+  max-height: calc(100vh - 100px);
+  padding: 30px 30px;
+  overflow: auto;
+}
+
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-direction: row;
+  gap: 30px;
+  font-size: 14px;
+}
+
+.faqHint {
+  align-self: end;
+}
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+}

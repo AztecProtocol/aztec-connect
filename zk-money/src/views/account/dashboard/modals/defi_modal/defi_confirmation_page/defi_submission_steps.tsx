@@ -1,10 +1,10 @@
 import { StepStatus, SubmissionFlow, ActiveSubmissionFlowItem } from 'ui-components';
 import { DefiComposerPhase, DefiComposerState } from 'alt-model/defi/defi_form';
-import { SubmissionItemPrompt } from '../modal_molecules/submission_item_prompt';
+import { SubmissionItemPrompt } from '../../modal_molecules/submission_item_prompt';
 import {
   SpendKeyGenerationStep,
   useSpendingKeyGenerationStep,
-} from '../modal_molecules/spending_key_generation_step_hooks/spending_key_generation_step_hooks';
+} from '../../modal_molecules/spending_key_generation_step_hooks/spending_key_generation_step_hooks';
 
 interface DefiSubmissionStepsProps {
   composerState: DefiComposerState;

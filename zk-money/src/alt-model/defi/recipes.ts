@@ -95,6 +95,7 @@ const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
     name: 'Lido Staking',
     investmentType: DefiInvestmentType.STAKING,
     shortDesc: 'Stake zkETH with Lido to earn daily rewards.',
+    exitDesc: 'Unstake zkwstETH and get back zkETH',
     longDescription:
       'This bridge, lets you invest DAI into AAVE and receive interest bearing aDAI in return. Also receive AAVE liquidity mining rewards. Gas savings are 30x and privacy is the default.',
     bannerImg: ethToDaiBanner,

@@ -1,4 +1,5 @@
-import { Page1 } from './page1';
+import { DefiEnterPage1 } from './defi_enter_page1';
+import { DefiExitPage1 } from './defi_exit_page1';
 import { useDefiForm, DefiComposerPhase, DefiFormMode } from 'alt-model/defi/defi_form';
 import { DefiRecipe } from 'alt-model/defi/types';
 import { Overlay } from 'components/overlay';
@@ -22,6 +23,8 @@ export function DefiModal({ recipe, mode, onClose }: DefiModalProps) {
   const canClose = phase === undefined || isIdle || phase === DefiComposerPhase.DONE;
   const canGoBack = locked && isIdle;
   const handleBack = canGoBack ? unlock : undefined;
+
+  const Page1 = mode === 'enter' ? DefiEnterPage1 : DefiExitPage1;
 
   const page =
     locked && composerState ? (

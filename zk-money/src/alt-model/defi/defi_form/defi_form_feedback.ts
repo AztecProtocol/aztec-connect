@@ -16,7 +16,9 @@ function getAmountInputFeedback(result: DefiFormValidationResult, touched: boole
     const asset = result.input.depositAsset;
     const requiredAmount = asset && required !== undefined ? new Amount(required, asset) : undefined;
     const balanceAmount = asset && balance !== undefined ? new Amount(balance, asset) : undefined;
-    console.error("Couldn't correctly form feedback string for defi form issue named insufficientTargetAssetBalance");
+    if (!requiredAmount || !balanceAmount) {
+      console.error("Couldn't correctly form feedback string for defi form issue named insufficientTargetAssetBalance");
+    }
     const requiredStr = `Transaction requires ${requiredAmount?.format()}. You have ${balanceAmount?.format()} available.`;
     if (assetIsSupportedForShielding(asset?.address)) {
       return requiredStr + ` Please first shield more ${asset?.symbol}.`;

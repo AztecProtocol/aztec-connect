@@ -5,7 +5,7 @@ import { Obs } from 'app/util';
 import { Poller } from 'app/util/poller';
 import { LazyInitDeepCacheMap } from 'app/util/lazy_init_cache_map';
 
-const debug = createDebug('interaction_present_value_poller_cache');
+const debug = createDebug('zm:interaction_present_value_poller_cache');
 
 const POLL_INTERVAL = 5 * 60 * 1000;
 

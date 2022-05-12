@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { BorderBox, Button } from 'components';
-import { Disclaimer } from '../modal_molecules/disclaimer';
-import { TransactionComplete } from '../modal_molecules/transaction_complete';
-import { CostBreakdown } from '../modal_molecules/cost_breakdown';
-import { VerticalSplitSection } from '../sections/vertical_split_section';
+import { Disclaimer } from '../../modal_molecules/disclaimer';
+import { TransactionComplete } from '../../modal_molecules/transaction_complete';
+import { CostBreakdown } from '../../modal_molecules/cost_breakdown';
+import { VerticalSplitSection } from '../../sections/vertical_split_section';
 import { DefiComposerPhase, DefiComposerState, DefiFormValidationResult } from 'alt-model/defi/defi_form';
 import { DefiRecipe } from 'alt-model/defi/types';
 import { BridgeKeyStats } from 'features/defi/bridge_key_stats';
