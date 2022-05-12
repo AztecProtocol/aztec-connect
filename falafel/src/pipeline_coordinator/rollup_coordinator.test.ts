@@ -1,10 +1,11 @@
 import { toBigIntBE, toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { TxType } from '@aztec/barretenberg/blockchain';
-import { BridgeConfig, BridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
 import { HashPath } from '@aztec/barretenberg/merkle_tree';
 import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
+import { BridgeConfig } from '@aztec/barretenberg/rollup_provider';
 import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { randomBytes } from 'crypto';
 import { BridgeResolver } from '../bridge';
@@ -26,37 +27,37 @@ const bridgeConfigs: BridgeConfig[] = [
   {
     bridgeId: 1n,
     numTxs: 5,
-    fee: 1000000n,
+    gas: 1000000,
     rollupFrequency: 2,
   },
   {
     bridgeId: 2n,
     numTxs: 10,
-    fee: 5000000n,
+    gas: 5000000,
     rollupFrequency: 3,
   },
   {
     bridgeId: 3n,
     numTxs: 3,
-    fee: 90000n,
+    gas: 90000,
     rollupFrequency: 4,
   },
   {
     bridgeId: 4n,
     numTxs: 6,
-    fee: 3000000n,
+    gas: 3000000,
     rollupFrequency: 1,
   },
   {
     bridgeId: 5n,
     numTxs: 2,
-    fee: 8000000n,
+    gas: 8000000,
     rollupFrequency: 7,
   },
   {
     bridgeId: 6n,
     numTxs: 20,
-    fee: 3000000n,
+    gas: 3000000,
     rollupFrequency: 8,
   },
 ];
@@ -71,18 +72,18 @@ const padBridgeConfigs = () => {
     bridgeConfigs.push({
       bridgeId: BigInt(i + 6),
       numTxs: 1, // arbitrary
-      fee: 90000n, // arbitrary
+      gas: 90000, // arbitrary
       rollupFrequency: 4, // arbitrary
     });
   }
 };
 padBridgeConfigs();
 
-const BASE_GAS = 20000n;
-const NON_DEFI_TX_GAS = 100000n;
-const DEFI_TX_GAS = 50000n;
+const BASE_GAS = 20000;
+const NON_DEFI_TX_GAS = 100000;
+const DEFI_TX_GAS = 50000;
 const DEFI_TX_PLUS_BASE_GAS = BASE_GAS + DEFI_TX_GAS;
-const HUGE_FEE = 10000000n;
+const HUGE_GAS = 10000000;
 
 const NON_FEE_PAYING_ASSET = 999;
 
@@ -91,7 +92,7 @@ const getBridgeCost = (bridgeId: bigint) => {
   if (!bridgeConfig) {
     throw new Error(`Requested cost for invalid bridge ID: ${bridgeId.toString()}`);
   }
-  return bridgeConfig.fee!;
+  return bridgeConfig.gas;
 };
 
 const getSingleBridgeCost = (bridgeId: bigint) => {
@@ -99,10 +100,9 @@ const getSingleBridgeCost = (bridgeId: bigint) => {
   if (!bridgeConfig) {
     throw new Error(`Requested cost for invalid bridge ID: ${bridgeId.toString()}`);
   }
-  const fee = bridgeConfig.fee!;
-  const numTxs = BigInt(bridgeConfig.numTxs);
-  const single = fee / numTxs;
-  return fee % numTxs > 0n ? single + 1n : single;
+  const { gas, numTxs } = bridgeConfig;
+  const single = gas / numTxs;
+  return gas % numTxs ? single + 1 : single;
 };
 
 const randomInt = (to = 2 ** 32 - 1) => Math.floor(Math.random() * (to + 1));
@@ -142,7 +142,7 @@ describe('rollup_coordinator', () => {
     {
       txType = TxType.TRANSFER,
       txFeeAssetId = 0,
-      excessGas = 0n,
+      excessGas = 0,
       creationTime = new Date(new Date('2021-06-20T11:43:00+01:00').getTime() + id), // ensures txs are ordered by id
       bridgeId = new BridgeId(randomInt(), 1, 0).toBigInt(),
       noteCommitment1 = randomBytes(32),
@@ -155,7 +155,7 @@ describe('rollup_coordinator', () => {
       id: Buffer.from([id]),
       txType,
       created: creationTime,
-      excessGas: excessGas,
+      excessGas,
       proofData: Buffer.concat([
         numToUInt32BE(txTypeToProofId(txType), 32),
         noteCommitment1,
@@ -170,10 +170,10 @@ describe('rollup_coordinator', () => {
       ]),
     } as any as TxDao);
 
-  const mockDefiBridgeTx = (id: number, fee: bigint, bridgeId: bigint, assetId = 0) =>
+  const mockDefiBridgeTx = (id: number, gas: number, bridgeId: bigint, assetId = 0) =>
     mockTx(id, {
       txType: TxType.DEFI_DEPOSIT,
-      excessGas: fee - (DEFI_TX_PLUS_BASE_GAS + feeResolver.getSingleBridgeTxGas(bridgeId)),
+      excessGas: gas - (DEFI_TX_PLUS_BASE_GAS + feeResolver.getSingleBridgeTxGas(bridgeId)),
       txFeeAssetId: assetId,
       bridgeId,
     });
@@ -342,7 +342,7 @@ describe('rollup_coordinator', () => {
         // We'll allow the number of bridgeIds to exceed the max number of bridge calls per block by 2.
         // So 2 of our txs _should_ be rejected from the first (and only) rollup of this test.
         const bridgeId = BigInt(((j - 1) % (numberOfBridgeCalls + 2)) + 1); // 1, 2, ..., 31, 32, 33, 34.
-        pendingTxs.push(mockDefiBridgeTx(i, HUGE_FEE, bridgeId));
+        pendingTxs.push(mockDefiBridgeTx(i, HUGE_GAS, bridgeId));
         j++;
       }
 
@@ -393,7 +393,7 @@ describe('rollup_coordinator', () => {
         // So _one_ of our txs _should_ be rejected from the first (and only) rollup of this test.
         const index = (j - 1) % (numberOfBridgeCalls + 1); // 0, 1, 2, ..., 31, 32.
         allTxs.push(
-          mockDefiBridgeTx(i, DEFI_TX_PLUS_BASE_GAS + bridgeConfigs[index].fee!, bridgeConfigs[index].bridgeId),
+          mockDefiBridgeTx(i, DEFI_TX_PLUS_BASE_GAS + bridgeConfigs[index].gas, bridgeConfigs[index].bridgeId),
         );
         j++;
       }
@@ -450,7 +450,7 @@ describe('rollup_coordinator', () => {
         // We'll allow the number of bridgeIds to exceed the max number of bridge calls per block by 2.
         // So 2 of our txs _should_ be rejected from the first (and only) rollup of this test.
         const bridgeId = BigInt(((j - 1) % (numberOfBridgeCalls + 2)) + 1); // 1, 2, ..., 31, 32, 33, 34.
-        pendingTxs.push(mockDefiBridgeTx(i, HUGE_FEE, bridgeId));
+        pendingTxs.push(mockDefiBridgeTx(i, HUGE_GAS, bridgeId));
         j++;
       }
 
@@ -485,14 +485,14 @@ describe('rollup_coordinator', () => {
       const pendingTxs = [
         mockTx(0, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
         mockTx(1, { txType: TxType.ACCOUNT, txFeeAssetId: 0 }),
-        mockDefiBridgeTx(2, HUGE_FEE, bridgeConfigs[0].bridgeId, 0),
+        mockDefiBridgeTx(2, HUGE_GAS, bridgeConfigs[0].bridgeId, 0),
         mockTx(3, { txType: TxType.DEFI_CLAIM, txFeeAssetId: 0 }),
         mockTx(4, { txType: TxType.WITHDRAW_TO_CONTRACT, txFeeAssetId: 0 }),
         mockTx(5, { txType: TxType.DEFI_CLAIM, txFeeAssetId: 0 }),
         mockTx(6, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
         mockTx(7, { txType: TxType.WITHDRAW_TO_WALLET, txFeeAssetId: 0 }),
         mockTx(8, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
-        mockDefiBridgeTx(9, HUGE_FEE, bridgeConfigs[0].bridgeId, 0),
+        mockDefiBridgeTx(9, HUGE_GAS, bridgeConfigs[0].bridgeId, 0),
         mockTx(10, { txType: TxType.DEFI_CLAIM, txFeeAssetId: 0 }),
       ];
       const rp = await coordinator.processPendingTxs(pendingTxs);
@@ -519,7 +519,7 @@ describe('rollup_coordinator', () => {
 
     it("will not rollup defi deposit proofs if the bridge isn't profitable", async () => {
       const bridgeId = bridgeConfigs[0].bridgeId;
-      const mockDefiBridgeTxLocal = (id: number, fee: bigint) => mockDefiBridgeTx(id, fee, bridgeId);
+      const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeId);
 
       const pendingTxs = [
         mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
@@ -539,7 +539,7 @@ describe('rollup_coordinator', () => {
 
     it('will rollup defi txs once the bridge is profitable', async () => {
       const bridgeId = bridgeConfigs[2].bridgeId;
-      const mockDefiBridgeTxLocal = (id: number, fee: bigint) => mockDefiBridgeTx(id, fee, bridgeId);
+      const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeId);
 
       let pendingTxs = [
         mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
@@ -585,9 +585,9 @@ describe('rollup_coordinator', () => {
 
     it('will add defi txs to a bridge queue if the bridge is not in the config', async () => {
       const bridgeId = 12345678n;
-      const mockBridgeGas = 10000000n;
-      const defaultDeFiBatchSize = 8n;
-      const mockDefiBridgeTxLocal = (id: number, fee: bigint) => mockDefiBridgeTx(id, fee, bridgeId);
+      const mockBridgeGas = 10000000;
+      const defaultDeFiBatchSize = 8;
+      const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeId);
       feeResolver.getSingleBridgeTxGas.mockReturnValue(mockBridgeGas / defaultDeFiBatchSize);
       feeResolver.getFullBridgeGas.mockReturnValue(mockBridgeGas);
       const pendingTxs = [
@@ -616,7 +616,7 @@ describe('rollup_coordinator', () => {
 
     it('will continue to add defi txs to profitable bridge', async () => {
       const bridgeId = bridgeConfigs[2].bridgeId;
-      const mockDefiBridgeTxLocal = (id: number, fee: bigint) => mockDefiBridgeTx(id, fee, bridgeId);
+      const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeId);
 
       const pendingTxs = [
         mockDefiBridgeTxLocal(0, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)),
@@ -643,7 +643,7 @@ describe('rollup_coordinator', () => {
 
     it('will fill bridge batch even after batch is profitable', async () => {
       const bridgeId = bridgeConfigs[2].bridgeId;
-      const mockDefiBridgeTxLocal = (id: number, fee: bigint) => mockDefiBridgeTx(id, fee, bridgeId);
+      const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeId);
 
       const pendingTxs = [
         mockDefiBridgeTxLocal(0, DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeId)),
@@ -671,7 +671,7 @@ describe('rollup_coordinator', () => {
 
     it('will only keep filling profitable bridge batch', async () => {
       const bridgeId = bridgeConfigs[2].bridgeId;
-      const mockDefiBridgeTxLocal = (id: number, fee: bigint) => mockDefiBridgeTx(id, fee, bridgeId);
+      const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeId);
 
       const pendingTxs = [
         mockDefiBridgeTxLocal(0, DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeId)),
@@ -714,7 +714,7 @@ describe('rollup_coordinator', () => {
 
     it('will only keep filling profitable bridge batch across invocations', async () => {
       const bridgeId = bridgeConfigs[2].bridgeId;
-      const mockDefiBridgeTxLocal = (id: number, fee: bigint) => mockDefiBridgeTx(id, fee, bridgeId);
+      const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeId);
 
       let pendingTxs = [
         mockDefiBridgeTxLocal(0, DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeId)),
@@ -778,7 +778,7 @@ describe('rollup_coordinator', () => {
 
     it('will only fill bridge batch up to rollup size', async () => {
       const bridgeId = bridgeConfigs[2].bridgeId;
-      const mockDefiBridgeTxLocal = (id: number, fee: bigint) => mockDefiBridgeTx(id, fee, bridgeId);
+      const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeId);
 
       const pendingTxs = [
         mockDefiBridgeTxLocal(0, DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeId)),
@@ -823,7 +823,7 @@ describe('rollup_coordinator', () => {
 
     it('will not split bridge batch over rollups', async () => {
       const bridgeId = bridgeConfigs[2].bridgeId;
-      const mockDefiBridgeTxLocal = (id: number, fee: bigint) => mockDefiBridgeTx(id, fee, bridgeId);
+      const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeId);
 
       const pendingTxs = [
         mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
@@ -1051,8 +1051,8 @@ describe('rollup_coordinator', () => {
     });
 
     it('single defi tx can publish if it covers rollup + bridge costs', async () => {
-      let fullCost = BigInt(numInnerRollupTxs * numOuterRollupProofs - 1) * BASE_GAS; // all other slots
-      fullCost += DEFI_TX_PLUS_BASE_GAS + bridgeConfigs[1].fee!; // our slot
+      let fullCost = (numInnerRollupTxs * numOuterRollupProofs - 1) * BASE_GAS; // all other slots
+      fullCost += DEFI_TX_PLUS_BASE_GAS + bridgeConfigs[1].gas; // our slot
       const pendingTxs = [mockDefiBridgeTx(0, fullCost, bridgeConfigs[1].bridgeId)];
       const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
@@ -1069,8 +1069,8 @@ describe('rollup_coordinator', () => {
     });
 
     it('single defi tx can publish if it covers rollup + bridge costs 2', async () => {
-      let almostFullCost = BigInt(numInnerRollupTxs * numOuterRollupProofs - 3) * BASE_GAS; // pays for all but 3 slots
-      almostFullCost += DEFI_TX_PLUS_BASE_GAS + bridgeConfigs[1].fee!; // pays for defi deposit slot + whole bridge
+      let almostFullCost = (numInnerRollupTxs * numOuterRollupProofs - 3) * BASE_GAS; // pays for all but 3 slots
+      almostFullCost += DEFI_TX_PLUS_BASE_GAS + bridgeConfigs[1].gas; // pays for defi deposit slot + whole bridge
       const pendingTxs = [
         mockDefiBridgeTx(0, almostFullCost, bridgeConfigs[1].bridgeId),
         mockTx(1, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
@@ -1103,8 +1103,8 @@ describe('rollup_coordinator', () => {
     });
 
     it('single defi tx can publish if it covers rollup + bridge costs 3', async () => {
-      let almostFullCost = BigInt(numInnerRollupTxs * numOuterRollupProofs - 2) * BASE_GAS; // pays for all but 2 slots
-      almostFullCost += DEFI_TX_PLUS_BASE_GAS + bridgeConfigs[1].fee!; // pays for defi deposit slot + whole bridge
+      let almostFullCost = (numInnerRollupTxs * numOuterRollupProofs - 2) * BASE_GAS; // pays for all but 2 slots
+      almostFullCost += DEFI_TX_PLUS_BASE_GAS + bridgeConfigs[1].gas; // pays for defi deposit slot + whole bridge
 
       // we have removed the base cost of 2 txs above from the excess which we have compensated for
       // as per the calculation that happens inside mockDefiBridgeTx() but then we add the defi tx
@@ -1124,8 +1124,8 @@ describe('rollup_coordinator', () => {
     });
 
     it('single defi tx can publish if it covers rollup + bridge costs 3', async () => {
-      let almostFullCost = BigInt(numInnerRollupTxs * numOuterRollupProofs - 1) * BASE_GAS; // needs 1 more tx to make profitable
-      almostFullCost += DEFI_TX_PLUS_BASE_GAS + bridgeConfigs[1].fee!; // bridge cost
+      let almostFullCost = (numInnerRollupTxs * numOuterRollupProofs - 1) * BASE_GAS; // needs 1 more tx to make profitable
+      almostFullCost += DEFI_TX_PLUS_BASE_GAS + bridgeConfigs[1].gas; // bridge cost
 
       // in the mockDefiBridgeTx helper here we will calculate excessGas as:
       // excessGas: fee - (DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)),
@@ -1151,7 +1151,7 @@ describe('rollup_coordinator', () => {
       // since we expect above that we have exactly covered the bridge cost, lets verify by
       // subtracting a single gas from the tx and check that it fails
       {
-        almostFullCost -= 1n;
+        almostFullCost -= 1;
         const pendingTxs = [mockDefiBridgeTx(0, almostFullCost, bridgeConfigs[1].bridgeId)];
 
         const rp = await coordinator.processPendingTxs(pendingTxs);
@@ -1160,7 +1160,7 @@ describe('rollup_coordinator', () => {
     });
 
     it('single payment tx can publish if it covers complete cost', async () => {
-      const fullCost = BigInt(numInnerRollupTxs * numOuterRollupProofs - 1) * BASE_GAS; // excess gas is all other slots
+      const fullCost = (numInnerRollupTxs * numOuterRollupProofs - 1) * BASE_GAS; // excess gas is all other slots
       const pendingTxs = [mockTx(0, { txType: TxType.TRANSFER, excessGas: fullCost, txFeeAssetId: 0 })];
       const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
@@ -1178,7 +1178,7 @@ describe('rollup_coordinator', () => {
       // minus 1.  but when we add the transaction, its fee is the fee for the tx itself (+1) and the excess
       // so we should have enough to cover the entire transaction.
 
-      const fullCost = BigInt(numInnerRollupTxs * numOuterRollupProofs - 1) * BASE_GAS; // excess gas is all other slots
+      const fullCost = (numInnerRollupTxs * numOuterRollupProofs - 1) * BASE_GAS; // excess gas is all other slots
       const pendingTxs = [mockTx(0, { txType: TxType.TRANSFER, excessGas: fullCost, txFeeAssetId: 0 })];
 
       // we used to add this extra tx here, but actually its not required as the first tx itself plus its
@@ -1204,7 +1204,7 @@ describe('rollup_coordinator', () => {
       // costs = share of the verifieer + cost associated with what its trying to do (i.e. payment vs
       // account vs deposit vs defi) + (for defi transactions only, an additional bridge cost)
 
-      let fullCost = BigInt(numInnerRollupTxs * numOuterRollupProofs - 3) * BASE_GAS; // full base cost of rollup
+      let fullCost = (numInnerRollupTxs * numOuterRollupProofs - 3) * BASE_GAS; // full base cost of rollup
 
       // we are only adding 2 txs but we have subtracted the cost of 3 txs from the full cost we are going
       // to supply as eccess.  we can either add another 3rd transaction to cover this, or restore the
@@ -1226,7 +1226,7 @@ describe('rollup_coordinator', () => {
     });
 
     it('defi txs are not published if bridge is not profitable, even if rollup is', async () => {
-      const fullCost = BigInt(numInnerRollupTxs * numOuterRollupProofs - 1) * BASE_GAS; // excess gas is all other slots
+      const fullCost = (numInnerRollupTxs * numOuterRollupProofs - 1) * BASE_GAS; // excess gas is all other slots
       const pendingTxs = [
         mockTx(0, { txType: TxType.TRANSFER, excessGas: fullCost, txFeeAssetId: 0 }),
         mockDefiBridgeTx(
@@ -1758,9 +1758,8 @@ describe('rollup_coordinator', () => {
           // We'll allow the number of bridgeIds to exceed the max number of bridge calls per block by 2.
           // So 2 of our txs _should_ be rejected from the first (and only) rollup of this test.
           const index = (j - 1) % (numberOfBridgeCalls + 2); // 0, 1, 2, ..., 31, 32, 33.
-          allTxs.push(
-            mockDefiBridgeTx(i, DEFI_TX_PLUS_BASE_GAS + bridgeConfigs[index].fee!, bridgeConfigs[index].bridgeId),
-          );
+          const { bridgeId, gas } = bridgeConfigs[index];
+          allTxs.push(mockDefiBridgeTx(i, DEFI_TX_PLUS_BASE_GAS + gas, bridgeId));
           j++;
         }
 
@@ -1836,7 +1835,7 @@ describe('rollup_coordinator', () => {
       // Create 4 defi deposit txs with different bridge ids.
       const defiTxs = bridgeConfigs
         .slice(0, 4)
-        .map((bc, i) => mockDefiBridgeTx(i, bc.fee! + DEFI_TX_PLUS_BASE_GAS, bc.bridgeId));
+        .map((bc, i) => mockDefiBridgeTx(i, bc.gas + DEFI_TX_PLUS_BASE_GAS, bc.bridgeId));
 
       // Create a chain of 4 txs. The 3rd one is a defi deposit tx.
       const commitments = [...Array(4)].map(() => randomBytes(32));

@@ -84,8 +84,8 @@ describe('tx fee resolver', () => {
     } as any;
 
     bridgeCostResolver = {
-      getMinBridgeTxGas: jest.fn().mockReturnValue(100000n),
-      getFullBridgeGas: jest.fn().mockReturnValue(100000000n),
+      getMinBridgeTxGas: jest.fn().mockReturnValue(100000),
+      getFullBridgeGas: jest.fn().mockReturnValue(100000000),
     } as any;
 
     txFeeResolver = new TxFeeResolver(

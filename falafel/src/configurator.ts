@@ -63,6 +63,7 @@ const defaultRuntimeConfig: RuntimeConfig = {
   maxProviderGasPrice: 250000000000n,
   maxUnsettledTxs: 0,
   defaultDeFiBatchSize: 5,
+  bridgeConfigs: [],
 };
 
 function getStartupConfigEnvVars(): Partial<StartupConfig> {
@@ -195,10 +196,14 @@ export class Configurator {
     return this.rollupContractChanged;
   }
 
-  public async saveRuntimeConfig(runtimeConfig: Partial<RuntimeConfig>) {
-    this.confVars.runtimeConfig = {
-      ...this.confVars.runtimeConfig,
-      ...runtimeConfig,
+  public saveRuntimeConfig(runtimeConfig: Partial<RuntimeConfig>) {
+    const prevRuntimeConfig = this.confVars.runtimeConfig;
+    this.confVars = {
+      ...this.confVars,
+      runtimeConfig: {
+        ...prevRuntimeConfig,
+        ...runtimeConfig,
+      },
     };
     this.writeConfigFile(this.confPath, this.confVars);
   }

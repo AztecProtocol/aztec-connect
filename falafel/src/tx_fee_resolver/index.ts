@@ -92,17 +92,17 @@ export class TxFeeResolver {
 
   getGasPaidForByFee(assetId: number, fee: bigint) {
     if (!this.feeCalculator) {
-      return 0n;
+      return 0;
     }
     return this.feeCalculator.getGasPaidForByFee(assetId, fee);
   }
 
   getBaseTxGas() {
-    return BigInt(this.baseTxGas);
+    return this.baseTxGas;
   }
 
   getTxGas(feeAssetId: number, txType: TxType) {
-    return this.getBaseTxGas() + BigInt(this.allAssets[feeAssetId].gasConstants[txType]);
+    return this.getBaseTxGas() + this.allAssets[feeAssetId].gasConstants[txType];
   }
 
   getBridgeTxGas(feeAssetId: number, bridgeId: bigint) {
@@ -130,14 +130,14 @@ export class TxFeeResolver {
     const assetId = this.isFeePayingAsset(inputAssetId) ? inputAssetId : this.defaultFeePayingAsset;
     const singleBridgeTxGas = this.getSingleBridgeTxGas(bridgeId);
     const fullBridgeTxGas = this.getFullBridgeGas(bridgeId);
-    const baseTxGas = BigInt(this.feeCalculator.getBaseTxGas());
+    const baseTxGas = this.feeCalculator.getBaseTxGas();
 
     // both of these include the base tx gas
-    const defiDepositGas = BigInt(this.feeCalculator.getTxGas(assetId, TxType.DEFI_DEPOSIT));
-    const defiClaimGas = BigInt(this.feeCalculator.getTxGas(assetId, TxType.DEFI_CLAIM));
+    const defiDepositGas = this.feeCalculator.getTxGas(assetId, TxType.DEFI_DEPOSIT);
+    const defiClaimGas = this.feeCalculator.getTxGas(assetId, TxType.DEFI_CLAIM);
     const slowTxGas = defiDepositGas + defiClaimGas + singleBridgeTxGas;
     const fastTxGas = defiDepositGas + defiClaimGas + fullBridgeTxGas;
-    const immediateTxGas = defiDepositGas + defiClaimGas + fullBridgeTxGas + baseTxGas * BigInt(this.txsPerRollup - 1);
+    const immediateTxGas = defiDepositGas + defiClaimGas + fullBridgeTxGas + baseTxGas * (this.txsPerRollup - 1);
 
     const values = [
       { assetId, value: this.feeCalculator.getTxFeeFromGas(slowTxGas, assetId) },

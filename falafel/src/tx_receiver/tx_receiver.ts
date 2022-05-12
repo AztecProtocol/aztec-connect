@@ -168,7 +168,7 @@ export class TxReceiver {
       dataRootsIndex,
       created: new Date(),
       txType,
-      excessGas: 0n, // provided later
+      excessGas: 0, // provided later
     });
   }
 

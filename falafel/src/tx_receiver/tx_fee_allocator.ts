@@ -1,9 +1,16 @@
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { TxType } from '@aztec/barretenberg/blockchain';
 import { DefiDepositProofData } from '@aztec/barretenberg/client_proofs';
-import { TxDao } from '../entity/tx';
+import { TxDao } from '../entity';
 import { TxFeeResolver } from '../tx_fee_resolver';
-import { Tx, TxGroupValidation } from './interfaces';
+import { Tx } from './interfaces';
+
+interface TxGroupValidation {
+  hasFeelessTxs: boolean;
+  feePayingAsset: number;
+  gasRequired: number;
+  gasProvided: number;
+}
 
 export class TxFeeAllocator {
   constructor(private txFeeResolver: TxFeeResolver) {}
@@ -15,8 +22,8 @@ export class TxFeeAllocator {
   public validateReceivedTxs(txs: Tx[], txTypes: TxType[]) {
     const result = {
       hasFeelessTxs: false,
-      gasProvided: 0n,
-      gasRequired: 0n,
+      gasProvided: 0,
+      gasRequired: 0,
     } as TxGroupValidation;
 
     const feePayingAssets = new Set<number>();
@@ -107,7 +114,7 @@ export class TxFeeAllocator {
         providedGas -= this.txFeeResolver.getTxGas(validation.feePayingAsset, txType);
       }
     }
-    if (providedGas === 0n) {
+    if (!providedGas) {
       // no excess, we can return
       return;
     }

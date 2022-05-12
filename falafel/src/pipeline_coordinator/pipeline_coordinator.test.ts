@@ -53,7 +53,7 @@ describe('pipeline_coordinator', () => {
       ]),
       created: created.toDate(),
       txType: TxType.TRANSFER,
-      excessGas: 100000n,
+      excessGas: 100000,
     } as TxDao);
 
   beforeEach(() => {

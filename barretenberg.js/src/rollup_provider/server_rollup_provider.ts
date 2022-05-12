@@ -6,14 +6,8 @@ import { BridgeId } from '../bridge_id';
 import { fetch } from '../iso_fetch';
 import { Tx } from '../rollup_provider';
 import { TxId } from '../tx_id';
-import {
-  accountTxFromJson,
-  joinSplitTxFromJson,
-  pendingTxFromJson,
-  RollupProvider,
-  rollupProviderStatusFromJson,
-  txToJson,
-} from './rollup_provider';
+import { accountTxFromJson, joinSplitTxFromJson, pendingTxFromJson, RollupProvider, txToJson } from './rollup_provider';
+import { rollupProviderStatusFromJson } from './rollup_provider_status';
 
 export class ServerRollupProvider extends ServerBlockSource implements RollupProvider {
   constructor(baseUrl: URL, pollInterval = 10000) {

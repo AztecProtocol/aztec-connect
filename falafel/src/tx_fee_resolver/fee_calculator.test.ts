@@ -376,7 +376,7 @@ describe('fee calculator', () => {
         const assetId = 1;
         const gas = feeCalculator.getGasPaidForByFee(assetId, 500n);
         // 1000 / 50
-        expect(gas).toEqual(20n);
+        expect(gas).toEqual(20);
       }
     });
 

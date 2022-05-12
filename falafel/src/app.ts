@@ -4,11 +4,10 @@ import { ProofData } from '@aztec/barretenberg/client_proofs';
 import {
   AccountTxJson,
   JoinSplitTxJson,
+  partialRuntimeConfigFromJson,
   PendingTxJson,
   rollupProviderStatusToJson,
-  RuntimeConfig,
   TxJson,
-  runtimeConfigFromJson,
 } from '@aztec/barretenberg/rollup_provider';
 import { numToInt32BE, serializeBufferArrayToVector } from '@aztec/barretenberg/serialize';
 import cors from '@koa/cors';
@@ -141,7 +140,7 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
 
   router.patch('/runtime-config', recordMetric, validateAuth, async (ctx: Koa.Context) => {
     const stream = new PromiseReadable(ctx.req);
-    const runtimeConfig: Partial<RuntimeConfig> = runtimeConfigFromJson(JSON.parse((await stream.readAll()) as string));
+    const runtimeConfig = partialRuntimeConfigFromJson(JSON.parse((await stream.readAll()) as string));
     server.setRuntimeConfig(runtimeConfig);
     ctx.status = 200;
   });

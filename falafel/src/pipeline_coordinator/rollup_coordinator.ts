@@ -39,9 +39,9 @@ export class RollupCoordinator {
 
   private initialiseBridgeQueues(rollupTimeouts: RollupTimeouts) {
     this.bridgeQueues = new Map<bigint, BridgeTxQueue>();
-    for (const bc of this.bridgeResolver.getBridgeConfigs()) {
-      const bt = rollupTimeouts.bridgeTimeouts.get(bc.bridgeId);
-      this.bridgeQueues.set(bc.bridgeId, new BridgeTxQueue(bc, bt));
+    for (const { bridgeId } of this.bridgeResolver.getBridgeConfigs()) {
+      const bt = rollupTimeouts.bridgeTimeouts.get(bridgeId);
+      this.bridgeQueues.set(bridgeId, new BridgeTxQueue(bridgeId, this.feeResolver, bt));
     }
   }
 
@@ -126,17 +126,7 @@ export class RollupCoordinator {
 
     if (!bridgeQueue) {
       // We don't have a bridge config for this!!
-      this.bridgeQueues.set(
-        bridgeId,
-        new BridgeTxQueue(
-          {
-            bridgeId,
-            numTxs: this.bridgeResolver.defaultDeFiBatchSize,
-            rollupFrequency: 0,
-          },
-          undefined,
-        ),
-      );
+      this.bridgeQueues.set(bridgeId, new BridgeTxQueue(bridgeId, this.feeResolver));
       bridgeQueue = this.bridgeQueues.get(bridgeId)!;
     }
 
@@ -148,12 +138,7 @@ export class RollupCoordinator {
 
     // Add this tx to the queue for this bridge and work out if we can put any more txs into the current batch or create a new one
     bridgeQueue.addDefiTx(rollupTx);
-    const newTxs = bridgeQueue.getTxsToRollup(
-      this.feeResolver,
-      remainingTxSlots,
-      assetIds,
-      RollupProofData.NUMBER_OF_ASSETS,
-    );
+    const newTxs = bridgeQueue.getTxsToRollup(remainingTxSlots, assetIds, RollupProofData.NUMBER_OF_ASSETS);
     addTxs(newTxs);
     return txsForRollup;
   }

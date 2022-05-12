@@ -1,5 +1,6 @@
 import { EthereumRpc } from '@aztec/barretenberg/blockchain';
-import { BridgeConfig, BridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeConfig } from '@aztec/barretenberg/rollup_provider';
 import { EthereumBlockchainConfig, JsonRpcProvider, WalletProvider } from '@aztec/blockchain';
 import { ConnectionOptions } from 'typeorm';
 import { Configurator, ConfVars } from './configurator';
@@ -67,19 +68,19 @@ function getPerChainBridgeConfig(chainId: number): BridgeConfig[] {
         {
           bridgeId: new BridgeId(1, 1, 1, undefined, undefined, 1663361092).toBigInt(),
           numTxs: 25,
-          fee: 500000n,
+          gas: 500000,
           rollupFrequency: 3,
         },
         {
           bridgeId: new BridgeId(2, 0, 2).toBigInt(),
           numTxs: 50,
-          fee: 200000n,
+          gas: 200000,
           rollupFrequency: 3,
         },
         {
           bridgeId: new BridgeId(2, 2, 0).toBigInt(),
           numTxs: 50,
-          fee: 200000n,
+          gas: 200000,
           rollupFrequency: 3,
         },
       ];
@@ -107,6 +108,7 @@ export async function getComponents(configurator: Configurator) {
   const { provider, signingAddress, chainId } = await getProvider(ethereumHost, privateKey);
   const ethConfig = getEthereumBlockchainConfig(confVars);
   const bridgeConfigs = getPerChainBridgeConfig(chainId);
+  configurator.saveRuntimeConfig({ bridgeConfigs });
 
   console.log(`Database Url: ${dbUrl || 'none (local sqlite)'}`);
   console.log(`Ethereum host: ${ethereumHost}`);
@@ -122,5 +124,5 @@ export async function getComponents(configurator: Configurator) {
     throw new Error('There should be one price feed contract address per fee paying asset.');
   }
 
-  return { ormConfig, provider, signingAddress, ethConfig, bridgeConfigs };
+  return { ormConfig, provider, signingAddress, ethConfig };
 }

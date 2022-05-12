@@ -1,12 +1,12 @@
 import { AccountId } from '../account_id';
 import { GrumpkinAddress } from '../address';
 import { AssetValue } from '../asset';
-import { BlockchainStatus, blockchainStatusFromJson, blockchainStatusToJson } from '../blockchain';
 import { BlockSource } from '../block_source';
-import { BridgeId, BridgeStatus, bridgeStatusFromJson, bridgeStatusToJson } from '../bridge_id';
+import { BridgeId } from '../bridge_id';
 import { AccountProofData, JoinSplitProofData } from '../client_proofs';
 import { OffchainAccountData, OffchainJoinSplitData } from '../offchain_tx_data';
 import { TxId } from '../tx_id';
+import { RollupProviderStatus } from './rollup_provider_status';
 
 export enum TxSettlementTime {
   NEXT_ROLLUP,
@@ -42,73 +42,6 @@ export const txFromJson = ({ proofData, offchainTxData, depositSignature }: TxJs
   offchainTxData: Buffer.from(offchainTxData, 'hex'),
   depositSignature: depositSignature ? Buffer.from(depositSignature, 'hex') : undefined,
 });
-
-export interface RuntimeConfig {
-  acceptingTxs: boolean;
-  useKeyCache: boolean;
-  publishInterval: number;
-  flushAfterIdle: number;
-  gasLimit: number;
-  baseTxGas: number;
-  verificationGas: number;
-  maxFeeGasPrice: bigint;
-  feeGasPriceMultiplier: number;
-  feeRoundUpSignificantFigures: number;
-  maxProviderGasPrice: bigint;
-  maxUnsettledTxs: number;
-  defaultDeFiBatchSize: number;
-}
-
-export function runtimeConfigToJson(runtimeConfig: RuntimeConfig) {
-  return {
-    ...runtimeConfig,
-    maxFeeGasPrice: runtimeConfig.maxFeeGasPrice.toString(),
-    maxProviderGasPrice: runtimeConfig.maxProviderGasPrice.toString(),
-  };
-}
-
-export function runtimeConfigFromJson(runtimeConfig: any) {
-  const { maxFeeGasPrice, maxProviderGasPrice } = runtimeConfig;
-  return {
-    ...runtimeConfig,
-    ...(maxFeeGasPrice !== undefined ? { maxFeeGasPrice: BigInt(maxFeeGasPrice) } : {}),
-    ...(maxProviderGasPrice !== undefined ? { maxProviderGasPrice: BigInt(maxProviderGasPrice) } : {}),
-  };
-}
-
-export interface RollupProviderStatus {
-  blockchainStatus: BlockchainStatus;
-  nextPublishTime: Date;
-  nextPublishNumber: number;
-  numTxsPerRollup: number;
-  numTxsInNextRollup: number;
-  numUnsettledTxs: number;
-  pendingTxCount: number;
-  runtimeConfig: RuntimeConfig;
-  bridgeStatus: BridgeStatus[];
-  proverless: boolean;
-  rollupSize: number;
-}
-
-export function rollupProviderStatusToJson(status: RollupProviderStatus) {
-  return {
-    ...status,
-    blockchainStatus: blockchainStatusToJson(status.blockchainStatus),
-    bridgeStatus: status.bridgeStatus.map(bridgeStatusToJson),
-    runtimeConfig: runtimeConfigToJson(status.runtimeConfig),
-  };
-}
-
-export function rollupProviderStatusFromJson(status: any): RollupProviderStatus {
-  const { blockchainStatus, nextPublishTime, runtimeConfig, bridgeStatus, ...rest } = status;
-  return {
-    ...rest,
-    blockchainStatus: blockchainStatusFromJson(blockchainStatus),
-    nextPublishTime: new Date(nextPublishTime),
-    runtimeConfig: runtimeConfigFromJson(runtimeConfig),
-    bridgeStatus: bridgeStatus.map(bridgeStatusFromJson),
-  };
-}
 
 export interface PendingTx {
   txId: TxId;

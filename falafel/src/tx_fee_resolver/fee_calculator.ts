@@ -67,7 +67,7 @@ export class FeeCalculator {
     };
   }
 
-  getTxFeeFromGas(gas: bigint, assetId: number) {
+  getTxFeeFromGas(gas: number, assetId: number) {
     return this.toAssetPrice(assetId, gas, false);
   }
 
@@ -90,14 +90,14 @@ export class FeeCalculator {
     if (this.freeAssets.includes(assetId)) {
       return 0n;
     }
-    return this.toAssetPrice(assetId, BigInt(this.baseTxGas), minPrice);
+    return this.toAssetPrice(assetId, this.baseTxGas, minPrice);
   }
 
   public getFeeConstant(assetId: number, txType: TxType, minPrice = false) {
     if (this.freeAssets.includes(assetId)) {
       return 0n;
     }
-    return this.toAssetPrice(assetId, BigInt(this.assets[assetId].gasConstants[txType]), minPrice);
+    return this.toAssetPrice(assetId, this.assets[assetId].gasConstants[txType], minPrice);
   }
 
   public getGasPaidForByFee(assetId: number, fee: bigint) {
@@ -114,7 +114,7 @@ export class FeeCalculator {
     const amountOfWeiProvided = assetCostInWei * fee;
     const gasPaidForUnscaled = amountOfWeiProvided / gasPriceInWei;
     const gasPaidforScaled = gasPaidForUnscaled / scaleFactor;
-    return gasPaidforScaled;
+    return Number(gasPaidforScaled);
   }
 
   public getBaseTxGas() {
@@ -125,12 +125,15 @@ export class FeeCalculator {
     return this.baseTxGas + this.assets[assetId].gasConstants[txType];
   }
 
-  private toAssetPrice(assetId: number, gas: bigint, minPrice: boolean) {
+  private toAssetPrice(assetId: number, gas: number, minPrice: boolean) {
     const price = minPrice ? this.priceTracker.getMinAssetPrice(assetId) : this.priceTracker.getAssetPrice(assetId);
     const { decimals } = this.assets[assetId];
     return !price
       ? 0n
-      : roundUp(this.applyGasPrice(gas * 10n ** BigInt(decimals), minPrice) / price, this.numSignificantFigures);
+      : roundUp(
+          this.applyGasPrice(BigInt(gas) * 10n ** BigInt(decimals), minPrice) / price,
+          this.numSignificantFigures,
+        );
   }
 
   private applyGasPrice(value: bigint, minPrice: boolean) {

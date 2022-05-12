@@ -6,8 +6,8 @@ import { ProofData } from '@aztec/barretenberg/client_proofs';
 export interface BridgeProfile {
   bridgeId: bigint;
   numTxs: number;
-  gasThreshold: bigint;
-  gasAccrued: bigint;
+  gasThreshold: number;
+  gasAccrued: number;
   earliestTx: Date;
   latestTx: Date;
 }
@@ -16,7 +16,7 @@ export interface RollupProfile {
   published: boolean;
   rollupSize: number;
   totalTxs: number;
-  gasBalance: bigint;
+  gasBalance: number;
   earliestTx: Date;
   latestTx: Date;
   innerChains: number;
@@ -29,7 +29,7 @@ export function emptyProfile(rollupSize: number) {
     published: false,
     rollupSize,
     totalTxs: 0,
-    gasBalance: 0n,
+    gasBalance: 0,
     earliestTx: new Date(0),
     latestTx: new Date(0),
     innerChains: 0,
@@ -95,7 +95,7 @@ export function profileRollup(
           bridgeId,
           numTxs: 0,
           gasThreshold: bridgeGasCost,
-          gasAccrued: 0n,
+          gasAccrued: 0,
           earliestTx: tx.tx.created,
           latestTx: tx.tx.created,
         };
@@ -120,7 +120,7 @@ export function profileRollup(
   rollupProfile.bridgeProfiles = bridgeProfiles;
   const numEmptySlots = rollupSize - allTxs.length;
   // now we have accounted for all transactions in this rollup, it's just the empty slots
-  rollupProfile.gasBalance -= BigInt(numEmptySlots) * BigInt(feeResolver.getBaseTxGas());
+  rollupProfile.gasBalance -= numEmptySlots * feeResolver.getBaseTxGas();
   // if we define the following values:
   // B = bridge cost
   // V = verification cost

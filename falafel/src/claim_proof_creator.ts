@@ -82,7 +82,7 @@ export class ClaimProofCreator {
         nullifier2: proof.nullifier2,
         dataRootsIndex,
         created: new Date(),
-        excessGas: 0n,
+        excessGas: 0,
       });
       await this.rollupDb.addTx(claimTx);
     }

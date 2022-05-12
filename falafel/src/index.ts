@@ -11,6 +11,7 @@ initEntities(configurator.getConfVars().dbUrl);
 import http from 'http';
 import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { EthereumBlockchain } from '@aztec/blockchain';
+import { emptyDir } from 'fs-extra';
 import { createConnection } from 'typeorm';
 import { appFactory } from './app';
 import { Server } from './server';
@@ -22,7 +23,7 @@ import { CachedRollupDb, TypeOrmRollupDb } from './rollup_db';
 import { InitHelpers } from '@aztec/barretenberg/environment';
 
 async function main() {
-  const { ormConfig, provider, signingAddress, ethConfig, bridgeConfigs } = await getComponents(configurator);
+  const { ormConfig, provider, signingAddress, ethConfig } = await getComponents(configurator);
   const {
     rollupContractAddress,
     feeDistributorAddress,
@@ -54,24 +55,22 @@ async function main() {
   await rollupDb.init();
   const worldStateDb = new WorldStateDb();
   const metrics = new Metrics(worldStateDb, rollupDb, blockchain);
-  const server = new Server(
-    configurator,
-    signingAddress,
-    bridgeConfigs,
-    blockchain,
-    rollupDb,
-    worldStateDb,
-    metrics,
-    barretenberg,
-  );
+  const server = new Server(configurator, signingAddress, blockchain, rollupDb, worldStateDb, metrics, barretenberg);
 
   const shutdown = async () => {
     await server.stop();
     await connection.close();
     process.exit(0);
   };
+  const shutdownAndClearDb = async () => {
+    await server.stop();
+    await connection.close();
+    await emptyDir('./data');
+    process.exit(0);
+  };
   process.once('SIGINT', shutdown);
   process.once('SIGTERM', shutdown);
+  process.once('SIGUSR1', shutdownAndClearDb);
 
   Container.set({ id: 'connection', factory: () => connection });
   Container.set({ id: 'rollupDb', factory: () => rollupDb });

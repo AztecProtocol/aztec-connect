@@ -1,22 +1,22 @@
-import { Blockchain, TxHash, TxType } from '@aztec/barretenberg/blockchain';
-import { BridgeConfig, BridgeId } from '@aztec/barretenberg/bridge_id';
-import { numToUInt32BE } from '@aztec/barretenberg/serialize';
-import { toBigIntBE, toBufferBE } from '@aztec/barretenberg/bigint_buffer';
-import { randomBytes } from 'crypto';
-import { TxDao } from './entity/tx';
-import { RollupDb } from './rollup_db';
-import { RollupTreeId, WorldStateDb } from '@aztec/barretenberg/world_state_db';
-import { DefiInteractionNote, NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
-import { Metrics } from './metrics';
-import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
-import { WorldState } from './world_state';
-import { RollupPipeline, RollupPipelineFactory } from './rollup_pipeline';
-import { Block } from '@aztec/barretenberg/block_source';
-import { ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
-import { RollupDao } from './entity';
 import { EthAddress } from '@aztec/barretenberg/address';
+import { toBigIntBE, toBufferBE } from '@aztec/barretenberg/bigint_buffer';
+import { Blockchain, TxHash, TxType } from '@aztec/barretenberg/blockchain';
+import { Block } from '@aztec/barretenberg/block_source';
+import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
+import { DefiInteractionNote, NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
+import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
+import { BridgeConfig } from '@aztec/barretenberg/rollup_provider';
+import { numToUInt32BE } from '@aztec/barretenberg/serialize';
+import { RollupTreeId, WorldStateDb } from '@aztec/barretenberg/world_state_db';
+import { randomBytes } from 'crypto';
+import { RollupDao } from './entity';
+import { TxDao } from './entity/tx';
+import { Metrics } from './metrics';
+import { RollupDb } from './rollup_db';
+import { RollupPipeline, RollupPipelineFactory } from './rollup_pipeline';
 import { TxFeeResolver } from './tx_fee_resolver';
-import { BridgeResolver } from './bridge';
+import { WorldState } from './world_state';
 
 type Mockify<T> = {
   [P in keyof T]: jest.Mock;
@@ -156,45 +156,47 @@ const getDummyRollupDao = async (id: number) => {
   return dao;
 };
 
-const BASE_GAS = 20000n;
-const DEFI_TX_GAS = 50000n;
+const BASE_GAS = 20000;
+const DEFI_TX_GAS = 50000;
 const DEFI_TX_PLUS_BASE_GAS = BASE_GAS + DEFI_TX_GAS;
+const DEFAULT_BRIDGE_GAS_LIMIT = 1000000;
+const DEFAULT_DEFI_BATCH_SIZE = 10;
 
 const bridgeConfigs: BridgeConfig[] = [
   {
     bridgeId: 1n,
     numTxs: 5,
-    fee: 1000000n,
+    gas: 1000000,
     rollupFrequency: 2,
   },
   {
     bridgeId: 2n,
     numTxs: 10,
-    fee: 5000000n,
+    gas: 5000000,
     rollupFrequency: 3,
   },
   {
     bridgeId: 3n,
     numTxs: 3,
-    fee: 90000n,
+    gas: 90000,
     rollupFrequency: 4,
   },
   {
     bridgeId: 4n,
     numTxs: 6,
-    fee: 3000000n,
+    gas: 3000000,
     rollupFrequency: 1,
   },
   {
     bridgeId: 5n,
     numTxs: 2,
-    fee: 8000000n,
+    gas: 8000000,
     rollupFrequency: 7,
   },
   {
     bridgeId: 6n,
     numTxs: 20,
-    fee: 3000000n,
+    gas: 3000000,
     rollupFrequency: 8,
   },
 ];
@@ -207,7 +209,7 @@ const mockTx = (
   {
     txType = TxType.TRANSFER,
     txFeeAssetId = 0,
-    excessGas = 0n,
+    excessGas = 0,
     creationTime = new Date(new Date('2021-06-20T11:43:00+01:00').getTime() + id), // ensures txs are ordered by id
     bridgeId = new BridgeId(randomInt(), 1, 0).toBigInt(),
     noteCommitment1 = randomBytes(32),
@@ -220,7 +222,7 @@ const mockTx = (
     id: Buffer.from([id]),
     txType,
     created: creationTime,
-    excessGas: excessGas,
+    excessGas,
     proofData: Buffer.concat([
       numToUInt32BE(txTypeToProofId(txType), 32),
       noteCommitment1,
@@ -240,10 +242,9 @@ const getSingleBridgeCost = (bridgeId: bigint) => {
   if (!bridgeConfig) {
     throw new Error(`Requested cost for invalid bridge ID: ${bridgeId.toString()}`);
   }
-  const fee = bridgeConfig.fee!;
-  const numTxs = BigInt(bridgeConfig.numTxs);
-  const single = fee / numTxs;
-  return fee % numTxs > 0n ? single + 1n : single;
+  const { gas, numTxs } = bridgeConfig;
+  const single = gas / numTxs;
+  return gas % numTxs ? single + 1 : single;
 };
 
 describe('world_state', () => {
@@ -255,13 +256,12 @@ describe('world_state', () => {
   let pipelineFactory: Mockify<RollupPipelineFactory>;
   let blockchain: Mockify<Blockchain>;
   let txFeeResolver: Mockify<TxFeeResolver>;
-  let bridgeResolver: Mockify<BridgeResolver>;
   let pipeline: Mockify<RollupPipeline>;
 
-  const mockDefiBridgeTx = (id: number, fee: bigint, bridgeId: bigint, assetId = 0) =>
+  const mockDefiBridgeTx = (id: number, gas: number, bridgeId: bigint, assetId = 0) =>
     mockTx(id, {
       txType: TxType.DEFI_DEPOSIT,
-      excessGas: fee - (DEFI_TX_PLUS_BASE_GAS + txFeeResolver.getSingleBridgeTxGas(bridgeId)),
+      excessGas: gas - (DEFI_TX_PLUS_BASE_GAS + txFeeResolver.getSingleBridgeTxGas(bridgeId)),
       txFeeAssetId: assetId,
       bridgeId,
     });
@@ -340,25 +340,14 @@ describe('world_state', () => {
 
     txFeeResolver = {
       getSingleBridgeTxGas: jest.fn().mockImplementation((bridgeId: bigint) => {
-        const b = bridgeConfigs.find(b => {
-          return b.bridgeId === bridgeId;
-        });
-        return b ? b.fee : 10000n;
+        const bridgeConfig = bridgeConfigs.find(b => b.bridgeId === bridgeId);
+        const gas = bridgeConfig?.gas ?? DEFAULT_BRIDGE_GAS_LIMIT;
+        const numTxs = bridgeConfig?.numTxs ?? DEFAULT_DEFI_BATCH_SIZE;
+        return gas / numTxs;
       }),
       getFullBridgeGas: jest.fn().mockImplementation((bridgeId: bigint) => {
-        const b = bridgeConfigs.find(b => {
-          return b.bridgeId === bridgeId;
-        });
-        return b ? b.fee : 1000000n;
-      }),
-    } as any;
-
-    bridgeResolver = {
-      getBridgeBatchSize: jest.fn().mockImplementation((bridgeId: bigint) => {
-        const b = bridgeConfigs.find(b => {
-          return b.bridgeId === bridgeId;
-        });
-        return b ? b.numTxs : 5;
+        const bridgeConfig = bridgeConfigs.find(b => b.bridgeId === bridgeId);
+        return bridgeConfig?.gas ?? DEFAULT_BRIDGE_GAS_LIMIT;
       }),
     } as any;
 
@@ -370,7 +359,6 @@ describe('world_state', () => {
       noteAlgorithms as any,
       metrics as any,
       txFeeResolver as any,
-      bridgeResolver as any,
       1,
     );
     (worldState as any).blockQueue = new SyncMemoryFifo();
@@ -744,13 +732,9 @@ describe('world_state', () => {
     txPoolProfile = await worldState.getTxPoolProfile();
 
     expect(txPoolProfile.pendingTxCount).toBe(2);
-    expect(txPoolProfile.pendingBridgeStats).toBeDefined();
-    expect(txPoolProfile.pendingBridgeStats.get(bridgeId1)).toBeDefined();
-
-    let bridge1BridgeProfile = txPoolProfile.pendingBridgeStats.get(bridgeId1);
-    expect(bridge1BridgeProfile?.gasAccrued).toBe(bridgeConfigs[0].fee! / BigInt(bridgeConfigs[0].numTxs));
-    expect(bridge1BridgeProfile?.gasThreshold).toBe(bridgeConfigs[0].fee!);
-    expect(bridge1BridgeProfile?.numTxs).toBe(bridgeConfigs[0].numTxs!);
+    expect(txPoolProfile.pendingBridgeStats).toEqual([
+      { bridgeId: bridgeId1, gasAccrued: bridgeConfigs[0].gas / bridgeConfigs[0].numTxs },
+    ]);
 
     // check all txs are accrued while the bridge is pending
     pendingTxs = [
@@ -772,9 +756,10 @@ describe('world_state', () => {
     ];
     await new Promise(r => setTimeout(r, 1001));
     txPoolProfile = await worldState.getTxPoolProfile();
-    bridge1BridgeProfile = txPoolProfile.pendingBridgeStats.get(bridgeId1);
     expect(txPoolProfile.pendingTxCount).toBe(2);
-    expect(bridge1BridgeProfile?.gasAccrued).toBe((bridgeConfigs[0].fee! / BigInt(bridgeConfigs[0].numTxs)) * 2n);
+    expect(txPoolProfile.pendingBridgeStats).toEqual([
+      { bridgeId: bridgeId1, gasAccrued: (bridgeConfigs[0].gas / bridgeConfigs[0].numTxs) * 2 },
+    ]);
     done();
   });
 });

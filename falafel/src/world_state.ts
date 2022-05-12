@@ -1,29 +1,24 @@
-import { toBigIntBE, toBufferBE } from '@aztec/barretenberg/bigint_buffer';
-import { Timer } from '@aztec/barretenberg/timer';
 import { EthAddress } from '@aztec/barretenberg/address';
+import { toBigIntBE, toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { Blockchain, TxType } from '@aztec/barretenberg/blockchain';
 import { Block } from '@aztec/barretenberg/block_source';
-import { ProofId, ProofData, JoinSplitProofData, DefiDepositProofData } from '@aztec/barretenberg/client_proofs';
+import { DefiDepositProofData, JoinSplitProofData, ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
+import { InitHelpers } from '@aztec/barretenberg/environment';
 import { MemoryFifo } from '@aztec/barretenberg/fifo';
 import { DefiInteractionNote, NoteAlgorithms, TreeClaimNote } from '@aztec/barretenberg/note_algorithms';
 import { OffchainDefiDepositData } from '@aztec/barretenberg/offchain_tx_data';
 import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
-import { RollupTreeId, WorldStateDb } from '@aztec/barretenberg/world_state_db';
-import { InitHelpers } from '@aztec/barretenberg/environment';
-import { AssetMetricsDao } from './entity/asset_metrics';
-import { RollupDao, RollupProofDao, TxDao } from './entity';
-import { Metrics } from './metrics';
-import { RollupDb } from './rollup_db';
-import { RollupPipeline, RollupPipelineFactory } from './rollup_pipeline';
-import { AccountDao, ClaimDao } from './entity';
-import { parseInteractionResult } from './rollup_db/parse_interaction_result';
-import { getTxTypeFromInnerProofData } from './get_tx_type';
-import { RollupTimeout, RollupTimeouts } from './pipeline_coordinator/publish_time_manager';
+import { Timer } from '@aztec/barretenberg/timer';
 import { WorldStateConstants } from '@aztec/barretenberg/world_state';
-import { BridgeProfile } from './pipeline_coordinator/rollup_profiler';
-import { createDefiRollupTx, RollupTx } from './pipeline_coordinator/bridge_tx_queue';
+import { RollupTreeId, WorldStateDb } from '@aztec/barretenberg/world_state_db';
+import { AccountDao, AssetMetricsDao, ClaimDao, RollupDao, RollupProofDao, TxDao } from './entity';
+import { getTxTypeFromInnerProofData } from './get_tx_type';
+import { Metrics } from './metrics';
+import { createDefiRollupTx } from './pipeline_coordinator/bridge_tx_queue';
+import { RollupTimeout, RollupTimeouts } from './pipeline_coordinator/publish_time_manager';
+import { parseInteractionResult, RollupDb } from './rollup_db';
+import { RollupPipeline, RollupPipelineFactory } from './rollup_pipeline';
 import { TxFeeResolver } from './tx_fee_resolver';
-import { BridgeResolver } from './bridge';
 
 const innerProofDataToTxDao = (tx: InnerProofData, offchainTxData: Buffer, created: Date, txType: TxType) => {
   const txDao = new TxDao();
@@ -35,7 +30,7 @@ const innerProofDataToTxDao = (tx: InnerProofData, offchainTxData: Buffer, creat
   txDao.created = created;
   txDao.mined = created;
   txDao.txType = txType;
-  txDao.excessGas = 0n;
+  txDao.excessGas = 0;
   return txDao;
 };
 
@@ -54,10 +49,15 @@ const rollupDaoToBlockBuffer = (dao: RollupDao) => {
   ).toBuffer();
 };
 
+interface BridgeStat {
+  bridgeId: bigint;
+  gasAccrued: number;
+}
+
 type TxPoolProfile = {
   numTxsInNextRollup: number;
   numTxs: number;
-  pendingBridgeStats: Map<bigint, BridgeProfile>;
+  pendingBridgeStats: BridgeStat[];
   pendingTxCount: number;
 };
 
@@ -67,7 +67,6 @@ export class WorldState {
   private blockBufferCache: Buffer[] = [];
   private txPoolProfile!: TxPoolProfile;
   private txPoolProfileValidUntil!: Date;
-  private expireTxPoolAfter = 60; // 60 seconds
 
   constructor(
     public rollupDb: RollupDb,
@@ -77,18 +76,14 @@ export class WorldState {
     private noteAlgo: NoteAlgorithms,
     private metrics: Metrics,
     private feeResolver: TxFeeResolver,
-    private bridgeResolver: BridgeResolver,
-    expireTxPoolAfter?: number,
+    private expireTxPoolAfter = 60,
   ) {
     this.txPoolProfile = {
       numTxs: 0,
       numTxsInNextRollup: 0,
       pendingTxCount: 0,
-      pendingBridgeStats: new Map(),
+      pendingBridgeStats: [],
     };
-    if (expireTxPoolAfter) {
-      this.expireTxPoolAfter = expireTxPoolAfter;
-    }
   }
 
   public async start() {
@@ -132,50 +127,39 @@ export class WorldState {
     if (!this.txPoolProfileValidUntil || new Date().getTime() > this.txPoolProfileValidUntil.getTime()) {
       const pendingTxs = await this.rollupDb.getPendingTxs();
       const processedTransactions = this.pipeline?.getProcessedTxs() || [];
-
       const pendingTransactionsNotInRollup = pendingTxs.filter(elem =>
-        processedTransactions.find(tx => tx.id.toString('hex') == elem.id.toString('hex')) ? false : true,
+        processedTransactions.every(tx => !tx.id.equals(elem.id)),
       );
 
-      const txPoolProfile: Map<bigint, BridgeProfile> = new Map();
-
-      for (let i = 0; i < pendingTransactionsNotInRollup.length; i++) {
-        const tx = pendingTransactionsNotInRollup[i];
+      const pendingBridgeStats: Map<bigint, BridgeStat> = new Map();
+      for (const tx of pendingTransactionsNotInRollup) {
         const proof = new ProofData(tx.proofData);
-        if (proof.proofId !== ProofId.DEFI_DEPOSIT) continue;
-        const defiProof = new DefiDepositProofData(proof);
-        const rollupTx: RollupTx = createDefiRollupTx(tx, defiProof);
-        const bridgeId = rollupTx.bridgeId!;
-        let bridgeProfile = txPoolProfile.get(rollupTx.bridgeId!);
-
-        if (!bridgeProfile) {
-          bridgeProfile = {
-            gasAccrued: this.feeResolver.getSingleBridgeTxGas(bridgeId!) + rollupTx.excessGas,
-            gasThreshold: this.feeResolver.getFullBridgeGas(bridgeId!),
-            bridgeId,
-            numTxs: this.bridgeResolver.getBridgeBatchSize(bridgeId!),
-            earliestTx: rollupTx.tx.created,
-            latestTx: rollupTx.tx.created,
-          };
-        } else {
-          bridgeProfile.gasAccrued! += this.feeResolver.getSingleBridgeTxGas(bridgeId) + rollupTx.excessGas;
-          if (bridgeProfile.earliestTx! > rollupTx.tx.created) {
-            bridgeProfile.earliestTx = rollupTx.tx.created;
-          }
-          if (bridgeProfile.latestTx! < rollupTx.tx.created) {
-            bridgeProfile.latestTx = rollupTx.tx.created;
-          }
+        if (proof.proofId !== ProofId.DEFI_DEPOSIT) {
+          continue;
         }
-        txPoolProfile.set(bridgeId, bridgeProfile);
+
+        const defiProof = new DefiDepositProofData(proof);
+        const rollupTx = createDefiRollupTx(tx, defiProof);
+        const bridgeId = rollupTx.bridgeId!;
+        const bridgeProfile = pendingBridgeStats.get(bridgeId) || {
+          bridgeId,
+          gasAccrued: 0,
+        };
+        bridgeProfile.gasAccrued += this.feeResolver.getSingleBridgeTxGas(bridgeId) + rollupTx.excessGas;
+
+        pendingBridgeStats.set(bridgeId, bridgeProfile);
       }
+
       this.txPoolProfile = {
         numTxs: await this.rollupDb.getUnsettledTxCount(),
         numTxsInNextRollup: processedTransactions.length,
-        pendingBridgeStats: txPoolProfile,
+        pendingBridgeStats: [...pendingBridgeStats.values()],
         pendingTxCount: pendingTransactionsNotInRollup.length,
       };
+
       this.txPoolProfileValidUntil = new Date(Date.now() + this.expireTxPoolAfter);
     }
+
     return this.txPoolProfile;
   }
 
