@@ -1,6 +1,6 @@
 import { emptyDirSync, mkdirpSync, pathExistsSync, readJsonSync, writeJsonSync } from 'fs-extra';
 import { dirname } from 'path';
-import { RuntimeConfig } from '@aztec/barretenberg/rollup_provider';
+import { RuntimeConfig, bridgeConfigFromJson, bridgeConfigToJson } from '@aztec/barretenberg/rollup_provider';
 import { EthAddress } from '@aztec/barretenberg/address';
 
 interface StartupConfig {
@@ -224,6 +224,7 @@ export class Configurator {
         ...conf.runtimeConfig,
         maxFeeGasPrice: BigInt(conf.runtimeConfig.maxFeeGasPrice),
         maxProviderGasPrice: BigInt(conf.runtimeConfig.maxProviderGasPrice),
+        bridgeConfigs: conf.runtimeConfig.bridgeConfigs.map(bridgeConfigFromJson),
       },
     };
   }
@@ -245,6 +246,7 @@ export class Configurator {
         acceptingTxs: true,
         maxFeeGasPrice: conf.runtimeConfig.maxFeeGasPrice.toString(),
         maxProviderGasPrice: conf.runtimeConfig.maxProviderGasPrice.toString(),
+        bridgeConfigs: conf.runtimeConfig.bridgeConfigs.map(bridgeConfigToJson),
       },
     });
   }
