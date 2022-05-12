@@ -6,7 +6,7 @@ import type {
   DefiPosition_Pending,
   DefiPosition_PendingExit,
 } from 'alt-model/defi/open_position_hooks';
-import { useDefaultExpectedOutput, useInteractionPresentValue } from 'alt-model/defi/defi_info_hooks';
+import { useInteractionPresentValue } from 'alt-model/defi/defi_info_hooks';
 import { useAmount } from 'alt-model/top_level_context';
 import { ShieldedAssetIcon } from 'components/shielded_asset_icon';
 
@@ -26,8 +26,7 @@ function PendingValueField({ position }: { position: DefiPosition_Pending | Defi
 }
 
 function ClosableValueField({ position }: { position: DefiPosition_Closable }) {
-  const output = useDefaultExpectedOutput(position.recipe, position.handleValue.value);
-  const amount = useAmount(output);
+  const amount = useAmount(position.handleValue);
   return <ValueField amount={amount} />;
 }
 
