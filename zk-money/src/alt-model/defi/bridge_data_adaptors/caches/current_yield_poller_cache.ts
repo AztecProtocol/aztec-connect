@@ -20,13 +20,12 @@ export function createCurrentAssetYieldPollerCache(
       ([recipes, adaptor, assets]) => {
         const recipe = recipes?.find(x => x.id === recipeId)!;
         if (!adaptor || !assets || !recipe) return undefined;
-        const { getCurrentYield } = adaptor;
-        if (!getCurrentYield)
+        if (!adaptor.getCurrentYield)
           throw new Error('Attempted to call unsupported method "getCurrentYield" on bridge adaptor');
         const { valueEstimationInteractionAssets } = recipe;
         return async () => {
           try {
-            const values = await getCurrentYield(BigInt(interactionNonce));
+            const values = await adaptor.getCurrentYield!(BigInt(interactionNonce));
             return { assetId: valueEstimationInteractionAssets.outA.id, value: values[0] };
           } catch (err) {
             debug({ recipeId, interactionNonce }, err);
