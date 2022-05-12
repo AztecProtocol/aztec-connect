@@ -1,13 +1,14 @@
+import { BlockchainAsset } from '@aztec/sdk';
 import daiIcon from '../images/dai_white.svg';
 import ethIcon from '../images/ethereum_white.svg';
 import renBTCIcon from '../images/renBTC_white.svg';
-import { TransactionType } from '../proof_type';
+import wstEthIcon from '../images/wsteth_white.svg';
 
 export interface ProofData {
   proofId: number;
   publicInput: bigint;
   publicOutput: bigint;
-  asset: Asset;
+  assetId: number;
   newNote1: Buffer;
   newNote2: Buffer;
   nullifier1: Buffer;
@@ -22,13 +23,10 @@ export interface Asset {
   decimals: number;
 }
 
-const assets: Asset[] = [
-  { name: 'ETH', decimals: 18, icon: ethIcon },
-  { name: 'DAI', decimals: 18, icon: daiIcon },
-  { name: 'renBTC', decimals: 8, icon: renBTCIcon },
-];
+const scientificFormatter = new Intl.NumberFormat('en-GB', { notation: 'scientific' });
 
-export function formatAsset(asset: Asset, amount: bigint): string {
+export function formatAsset(asset: BlockchainAsset | undefined, amount: bigint): string {
+  if (!asset) return `${scientificFormatter.format(amount)} (units unknown)`;
   return `${fromBaseUnits(amount, asset.decimals)} ${asset.name}`;
 }
 
@@ -46,39 +44,29 @@ function fromBaseUnits(value: bigint, decimals: number, precision: number = deci
   return (neg ? '-' : '') + (fractional ? `${integer}.${fractional.slice(0, precision)}` : integer);
 }
 
-export function parseRawProofData(rawProofData: Buffer): ProofData {
-  return {
-    proofId: rawProofData.readUInt32BE(28),
-    publicInput: toBigIntBE(rawProofData.slice(1 * 32, 1 * 32 + 32)),
-    publicOutput: toBigIntBE(rawProofData.slice(2 * 32, 2 * 32 + 32)),
-    asset: assets[Number(rawProofData.slice(3 * 32, 3 * 32 + 32).toString('hex'))],
-    newNote1: rawProofData.slice(4 * 32, 4 * 32 + 64),
-    newNote2: rawProofData.slice(6 * 32, 6 * 32 + 64),
-    nullifier1: rawProofData.slice(8 * 32, 8 * 32 + 32),
-    nullifier2: rawProofData.slice(9 * 32, 9 * 32 + 32),
-    inputOwner: rawProofData.slice(10 * 32 + 12, 10 * 32 + 32).toString('hex'),
-    outputOwner: rawProofData.slice(11 * 32 + 12, 11 * 32 + 32).toString('hex'),
-  };
+export function assetIdFromBuffer(buffer: Buffer) {
+  return buffer.readUInt32BE(28);
 }
 
-export const getTransactionType = (publicInput: bigint, publicOutput: bigint): TransactionType => {
-  // this is only true for join splits,
-  // as account txs repurpose publicInput and publicOutput values
-  const isShield = publicInput > 0;
-  const isWithdraw = publicOutput > 0;
-
-  if (isShield) {
-    return TransactionType.SHIELD;
-  } else if (isWithdraw) {
-    return TransactionType.WITHDRAW;
+export function getAssetIcon(asset?: BlockchainAsset): string | undefined {
+  if (!asset) return;
+  switch (asset.address.toString()) {
+    case '0x0000000000000000000000000000000000000000': // ETH
+      return ethIcon;
+    case '0x6B175474E89094C44Da98b954EedeAC495271d0F': // DAI
+      return daiIcon;
+    case '0xEB4C2781e4ebA804CE9a9803C67d0893436bB27D': // renBTC
+      return renBTCIcon;
+    case '0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0': // wstETH
+      return wstEthIcon;
   }
-  return TransactionType.PRIVATE_SEND;
-};
+}
 
-export function toBigIntBE(buf: Buffer): bigint {
-  const hex = buf.toString('hex');
-  if (hex.length === 0) {
-    return BigInt(0);
+export function getBridgeProtocolName(addressId: number) {
+  switch (addressId) {
+    case 1:
+      return 'Element Fixed Yield';
+    case 2:
+      return 'Lido Staking';
   }
-  return BigInt(`0x${hex}`);
 }

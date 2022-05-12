@@ -1,15 +1,13 @@
 import React from 'react';
+import { OffchainAccountData } from '@aztec/barretenberg/offchain_tx_data';
 import { HashValue, InfoRow } from '../block_summary';
+import { Tx } from './query';
 
-interface AccountDetailsProps {
-  publicInput: bigint;
-  publicOutput: bigint;
-}
-
-export const AccountDetails = ({ publicInput, publicOutput }: AccountDetailsProps) => {
+export function AccountDetails({ tx }: { tx: Tx }) {
+  const offchainAccountData = OffchainAccountData.fromBuffer(Buffer.from(tx.offchainTxData, 'hex'));
   return (
-    <InfoRow key="account_id" title="ACCOUNT ID">
-      <HashValue value={`0x${publicInput}${publicOutput}`} />
+    <InfoRow title="ACCOUNT ID">
+      <HashValue value={offchainAccountData.accountPublicKey.toString()} />
     </InfoRow>
   );
-};
+}

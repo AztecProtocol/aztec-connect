@@ -1,3 +1,4 @@
+import { ProofId } from '@aztec/sdk';
 import { gql } from 'apollo-boost';
 import { POLL_INTERVAL } from '../config';
 
@@ -9,8 +10,9 @@ export interface Block {
 
 export interface Tx {
   id: string;
-  proofId: number;
+  proofId: ProofId;
   proofData: string;
+  offchainTxData: string;
   newNote1: string;
   newNote2: string;
   nullifier1: string;
@@ -38,6 +40,7 @@ export const GET_TX = gql`
       id
       proofId
       proofData
+      offchainTxData
       newNote1
       newNote2
       nullifier1

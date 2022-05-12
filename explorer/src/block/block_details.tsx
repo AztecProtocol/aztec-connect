@@ -94,7 +94,7 @@ export const BlockDetails: React.FunctionComponent<BlockDetailsProps> = ({ block
   return (
     <DetailsSection
       lhsContent={summaryNode}
-      rhsContent={proofData ? <ProofData proofData={`0x${proofData}`} height={312} /> : <ProofDataPlaceholder />}
+      rhsContent={proofData ? <ProofData proofData={`0x${proofData}`} /> : <ProofDataPlaceholder />}
     />
   );
 };

@@ -5,20 +5,26 @@ import { CopyButton, Text } from '../components';
 import { breakpoints, spacings } from '../styles';
 import { InfoContent } from '../template';
 
+const ProofInfoContent = styled(InfoContent)`
+  display: grid;
+  grid-template-rows: auto minmax(300px, 1fr);
+`;
+
 const ContentRoot = styled.div`
   position: relative;
   margin: 0 -${spacings.s};
+  height: 100%;
 `;
 
-interface ProofContentProps {
-  height?: number;
-}
-
 const ProofContent = styled.div`
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 24px;
   padding: 0 ${spacings.s};
-  ${({ height }: ProofContentProps) => !!height && `height: ${height}px;`}
   word-break: break-all;
-  overflow: scroll;
+  overflow: auto;
 
   @media (max-width: ${breakpoints.s}) {
     overflow: hidden;
@@ -47,43 +53,36 @@ const CopyButtonRoot = styled(InlineCopyButtonRoot)`
   }
 `;
 
-interface ProofDataPlaceholderProps {
-  height?: number;
-}
-
-export const ProofDataPlaceholder: React.FunctionComponent<ProofDataPlaceholderProps> = ({ height }) => (
+export const ProofDataPlaceholder: React.FunctionComponent = () => (
   <InfoContent theme="secondary" titleIcon={proofDataIcon} caption="DETAIL" title="Proof Data">
-    <ProofContent height={height} />
+    <ProofContent />
   </InfoContent>
 );
 
 interface ProofDataProps {
   className?: string;
   proofData: string;
-  height?: number;
 }
 
-export const ProofData: React.FunctionComponent<ProofDataProps> = ({ className, proofData, height }) => {
+export const ProofData: React.FunctionComponent<ProofDataProps> = ({ className, proofData }) => {
   return (
-    <InfoContent className={className} theme="secondary" titleIcon={proofDataIcon} caption="DETAIL" title="Proof Data">
+    <ProofInfoContent
+      className={className}
+      theme="secondary"
+      titleIcon={proofDataIcon}
+      caption="DETAIL"
+      title="Proof Data"
+    >
       <ContentRoot>
-        <ProofContent height={height}>
+        <ProofContent>
           <Text size="s" weight="light" monospace>
-            {!height ? `${proofData} ` : proofData}
-            {!height && <TextSpacing text=".." size="s" weight="light" monospace />}
+            {proofData}
           </Text>
         </ProofContent>
-        {!height && (
-          <InlineCopyButtonRoot>
-            <CopyButton value={proofData} />
-          </InlineCopyButtonRoot>
-        )}
-        {!!height && (
-          <CopyButtonRoot>
-            <CopyButton value={proofData} />
-          </CopyButtonRoot>
-        )}
+        <CopyButtonRoot>
+          <CopyButton value={proofData} />
+        </CopyButtonRoot>
       </ContentRoot>
-    </InfoContent>
+    </ProofInfoContent>
   );
 };

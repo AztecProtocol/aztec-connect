@@ -1,9 +1,10 @@
+import { ProofId } from '@aztec/sdk';
 import React from 'react';
 import { Link } from 'react-router-dom';
 import styled, { css } from 'styled-components';
 import { Text, contentStyle, contentHighlightStyle, DeviceWidth } from '../components';
 import chevronRightIcon from '../images/chevron_right.svg';
-import { ProofId, proofIdToType, ProofTypeTag } from '../proof_type';
+import { ProofTypeTag } from '../proof_type';
 import { spacings, fontSizes, lineHeights, breakpoints } from '../styles';
 
 export interface Tx {
@@ -70,11 +71,10 @@ interface TxItemProps {
 }
 
 export const TxItem: React.FunctionComponent<TxItemProps> = ({ tx: { id, proofId } }) => {
-  const proofType = proofIdToType(proofId);
   return (
     <Root to={`/tx/${id}`}>
       <Info>
-        <StyledProofTypeTag proofType={proofType} />
+        <StyledProofTypeTag proofId={proofId} />
         <DeviceWidth>
           {({ breakpoint }) => {
             let hash = id;

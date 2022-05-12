@@ -1,29 +1,39 @@
+import { ProofId } from '@aztec/sdk';
 import { rgba } from 'polished';
 import React from 'react';
 import styled from 'styled-components';
 import { Text } from '../components';
 import { colours, spacings, borderRadius } from '../styles';
-import { ProofType } from './';
 
 const proofTypeColours = {
-  JOIN_SPLIT: colours.blue,
-  ACCOUNT: colours.orange,
+  [ProofId.PADDING]: colours.greyDark,
+  [ProofId.DEPOSIT]: colours.blue,
+  [ProofId.WITHDRAW]: colours.blue,
+  [ProofId.SEND]: colours.blue,
+  [ProofId.ACCOUNT]: colours.orange,
+  [ProofId.DEFI_DEPOSIT]: colours.green,
+  [ProofId.DEFI_CLAIM]: colours.green,
 };
 
-const proofTypeNames = {
-  JOIN_SPLIT: 'JOIN SPLIT',
-  ACCOUNT: 'ACCOUNT',
+export const proofTypeNames = {
+  [ProofId.PADDING]: 'PADDING',
+  [ProofId.DEPOSIT]: 'DEPOSIT',
+  [ProofId.WITHDRAW]: 'WITHDRAW',
+  [ProofId.SEND]: 'SEND',
+  [ProofId.ACCOUNT]: 'ACCOUNT',
+  [ProofId.DEFI_DEPOSIT]: 'DEFI DEPOSIT',
+  [ProofId.DEFI_CLAIM]: 'DEFI CLAIM',
 };
 
 interface ProofTypeTagProps {
-  proofType: ProofType;
+  proofId: ProofId;
 }
 
 const ProofTypeTagRoot = styled(Text)`
   display: inline-block;
   padding: 0 ${spacings.xs};
-  color: ${({ proofType }: ProofTypeTagProps) => proofTypeColours[proofType]};
-  background: ${({ proofType }: ProofTypeTagProps) => rgba(proofTypeColours[proofType], 0.2)};
+  color: ${({ proofId }: ProofTypeTagProps) => proofTypeColours[proofId]};
+  background: ${({ proofId }: ProofTypeTagProps) => rgba(proofTypeColours[proofId], 0.2)};
   border-radius: ${borderRadius};
   text-align: center;
   letter-spacing: 1px;
@@ -32,15 +42,9 @@ const ProofTypeTagRoot = styled(Text)`
 
 interface ProofTypeTagProps {
   className?: string;
-  proofType: ProofType;
+  proofId: ProofId;
 }
 
-export const ProofTypeTag: React.FunctionComponent<ProofTypeTagProps> = ({ className, proofType }) => (
-  <ProofTypeTagRoot
-    className={className}
-    proofType={proofType}
-    text={proofTypeNames[proofType]}
-    size="s"
-    weight="semibold"
-  />
+export const ProofTypeTag: React.FunctionComponent<ProofTypeTagProps> = ({ className, proofId }) => (
+  <ProofTypeTagRoot className={className} proofId={proofId} text={proofTypeNames[proofId]} size="s" weight="semibold" />
 );

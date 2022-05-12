@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@aztec/barretenberg": "../barretenberg.js/dest",
     "@aztec/sdk": "file:../sdk/dest",
     "@types/bn.js": "^4.11.6",
     "@types/classnames": "^2.2.10",
@@ -35,7 +36,7 @@
     "typescript": "^4.4.4"
   },
   "scripts": {
-    "start:dev": "parcel --port 8080 ./src/index.html --no-source-maps",
+    "start:dev": "parcel --port 3000 ./src/index.html --no-source-maps",
     "build": "yarn clean && yarn tsc && parcel build ./src/index.html --no-source-maps",
     "clean": "rm -rf ./cache ./dist"
   },

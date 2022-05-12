@@ -1,58 +1,50 @@
+import { ProofId } from '@aztec/sdk';
 import React from 'react';
 import styled from 'styled-components';
 import { BlockSummary, InfoRow, HashValue, Timestamp } from '../block_summary';
 import { ProofData } from '../proof_data';
-import { proofIdToType, ProofType, ProofTypeTag } from '../proof_type';
+import { ProofTypeTag } from '../proof_type';
 import { DetailsSection } from '../template';
 import { AccountDetails } from './account_details';
-import { getTransactionType, parseRawProofData } from './helpers';
-import { JoinSplitDetails } from './join_split_details';
+import { DepositDetails } from './deposit_details';
 import { Tx } from './query';
+import { WithdrawDetails } from './withdraw_detail';
+import { DefiDepositDetails } from './defi_deposit_details';
 
 const StyledProofTypeTag = styled(ProofTypeTag)`
   position: absolute;
   right: 0;
 `;
+
+function renderTypedTxDetails(tx: Tx) {
+  switch (tx.proofId) {
+    case ProofId.ACCOUNT:
+      return <AccountDetails tx={tx} />;
+    case ProofId.DEPOSIT:
+      return <DepositDetails tx={tx} />;
+    case ProofId.WITHDRAW:
+      return <WithdrawDetails tx={tx} />;
+    case ProofId.DEFI_DEPOSIT:
+      return <DefiDepositDetails tx={tx} />;
+    default:
+      return <></>;
+  }
+}
+
 interface TxDetailsProps {
   tx: Tx;
 }
 
 export const TxDetails: React.FunctionComponent<TxDetailsProps> = ({ tx }) => {
   const { id, proofId, newNote1, newNote2, nullifier1, nullifier2, block } = tx;
-  const { asset, inputOwner, outputOwner, publicOutput, publicInput } = parseRawProofData(
-    Buffer.from(tx.proofData, 'hex'),
-  );
 
   const created = block?.created;
-  const proofType = proofIdToType(proofId);
-  const statusTag = <StyledProofTypeTag proofType={proofType} />;
-
-  let proofDataHeight = 384;
-  let transactionType;
-  let transactionDetails;
-
-  if (proofType === ProofType.JOIN_SPLIT) {
-    proofDataHeight += 192;
-    transactionType = getTransactionType(publicInput, publicOutput);
-    transactionDetails = (
-      <JoinSplitDetails
-        transactionType={transactionType}
-        asset={asset}
-        inputOwner={inputOwner}
-        outputOwner={outputOwner}
-        publicOutput={publicOutput}
-        publicInput={publicInput}
-      />
-    );
-  } else if (proofType === ProofType.ACCOUNT) {
-    proofDataHeight += 72;
-    transactionDetails = <AccountDetails publicOutput={publicOutput} publicInput={publicInput} />;
-  }
+  const statusTag = <StyledProofTypeTag proofId={proofId} />;
 
   const summaryNode = (
-    <BlockSummary title="Transaction" subtitle={transactionType} titleContent={statusTag}>
+    <BlockSummary title="Transaction" titleContent={statusTag}>
       <InfoRow title="TIMESTAMP">{created ? <Timestamp time={created} /> : 'Pending...'}</InfoRow>
-      {transactionDetails}
+      {renderTypedTxDetails(tx)}
       <InfoRow title="NULLIFIERS">
         <HashValue value={`0x${nullifier1}`} />
         <HashValue value={`0x${nullifier2}`} />
@@ -67,7 +59,7 @@ export const TxDetails: React.FunctionComponent<TxDetailsProps> = ({ tx }) => {
     </BlockSummary>
   );
 
-  const proofNode = <ProofData proofData={`0x${tx.proofData}`} height={proofDataHeight} />;
+  const proofNode = <ProofData proofData={`0x${tx.proofData}`} />;
 
   return <DetailsSection lhsContent={summaryNode} rhsContent={proofNode} />;
 };
