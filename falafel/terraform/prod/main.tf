@@ -29,6 +29,16 @@ data "terraform_remote_state" "aztec2_iac" {
   }
 }
 
+# TODO: Remove once we've hardcoded in the real contract addresses.
+data "terraform_remote_state" "blockchain" {
+  backend = "s3"
+  config = {
+    bucket = "aztec-terraform"
+    key    = "${var.DEPLOY_TAG}/blockchain"
+    region = "eu-west-2"
+  }
+}
+
 provider "aws" {
   profile = "default"
   region  = "eu-west-2"
@@ -170,28 +180,24 @@ resource "aws_ecs_task_definition" "falafel" {
         "value": "http://ethereum.aztec.network:8545"
       },
       {
-        "name": "ETHEREUM_POLL_INTERVAL",
-        "value": "10000"
-      },
-      {
         "name": "ROLLUP_CONTRACT_ADDRESS",
-        "value": ""
+        "value": "0xFf6bEd1E4D28491B89a02Dc56b34a4b273eb9e0D"
       },
       {
         "name": "FEE_DISTRIBUTOR_ADDRESS",
-        "value": ""
+        "value": "0x6F643D77793b08A0425da0D74F7f52b0c2991045"
       },
       {
         "name": "PRICE_FEED_CONTRACT_ADDRESSES",
-        "value": ""
+        "value": "0x169e633a2d1e6c10dd91238ba11c4a708dfef37c,0x773616E4d11A78F511299002da57A0a94577F1f4"
       },
       {
         "name": "FEE_PAYING_ASSET_ADDRESSES",
-        "value": ""
+        "value": "0x0000000000000000000000000000000000000000,0x6b175474e89094c44da98b954eedeac495271d0f"
       },
       {
         "name": "PRIVATE_KEY",
-        "value": "${var.PRIVATE_KEY_MAINNET}"
+        "value": "${var.PRIVATE_KEY_MAINNET_AC}"
       },
       {
         "name": "SERVER_AUTH_TOKEN",
@@ -329,7 +335,6 @@ resource "aws_alb_target_group" "falafel" {
 
 resource "aws_lb_listener_rule" "api" {
   listener_arn = data.terraform_remote_state.aztec2_iac.outputs.alb_listener_arn
-  priority     = 50
 
   action {
     type             = "forward"

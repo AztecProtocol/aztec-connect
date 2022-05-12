@@ -99,7 +99,7 @@ export class TokenAsset implements Asset {
     return TxHash.fromString(receipt.transactionHash);
   }
 
-  public fromBaseUnits(value: bigint, precision = this.precision) {
+  public fromBaseUnits(value: bigint, precision?: number) {
     return fromBaseUnits(value, this.info.decimals, precision);
   }
 

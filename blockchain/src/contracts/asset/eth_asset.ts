@@ -10,7 +10,6 @@ const fixEthersStackTrace = (err: Error) => {
 };
 
 export class EthAsset implements Asset {
-  private precision = 6;
   private provider: Web3Provider;
 
   constructor(provider: EthereumProvider, private minConfirmations = 1) {
@@ -65,7 +64,7 @@ export class EthAsset implements Asset {
     return TxHash.fromString(receipt.transactionHash);
   }
 
-  public fromBaseUnits(value: bigint, precision = this.precision) {
+  public fromBaseUnits(value: bigint, precision?: number) {
     return fromBaseUnits(value, 18, precision);
   }
 

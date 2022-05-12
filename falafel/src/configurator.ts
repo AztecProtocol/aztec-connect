@@ -101,7 +101,7 @@ function getStartupConfigEnvVars(): Partial<StartupConfig> {
     ethereumHost: ETHEREUM_HOST,
     ethereumPollInterval: ETHEREUM_POLL_INTERVAL ? +ETHEREUM_POLL_INTERVAL : undefined,
     proofGeneratorMode: PROOF_GENERATOR_MODE,
-    privateKey: PRIVATE_KEY ? Buffer.from(PRIVATE_KEY.slice(2), 'hex') : undefined,
+    privateKey: PRIVATE_KEY ? Buffer.from(PRIVATE_KEY.replace('0x', ''), 'hex') : undefined,
     numInnerRollupTxs: NUM_INNER_ROLLUP_TXS ? +NUM_INNER_ROLLUP_TXS : undefined,
     numOuterRollupProofs: NUM_OUTER_ROLLUP_PROOFS ? +NUM_OUTER_ROLLUP_PROOFS : undefined,
     minConfirmation: MIN_CONFIRMATION ? +MIN_CONFIRMATION : undefined,
@@ -151,9 +151,8 @@ export class Configurator {
       const { rollupContractAddress } = startupConfigEnvVars;
       if (rollupContractAddress && !rollupContractAddress.equals(saved.rollupContractAddress)) {
         console.log(
-          `Rollup contract changed, erasing data: ${saved.rollupContractAddress.toString()} -> ${rollupContractAddress.toString()}`,
+          `Rollup contract changed: ${saved.rollupContractAddress.toString()} -> ${rollupContractAddress.toString()}`,
         );
-        emptyDirSync(dir);
         this.rollupContractChanged = true;
       }
 

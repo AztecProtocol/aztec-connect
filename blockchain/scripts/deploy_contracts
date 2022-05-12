@@ -8,12 +8,23 @@ set -e
 case $VERSION_TAG in
   testnet)
     NETWORK=goerli
+    VERIFICATION_KEY=MockVerificationKey
     export TF_VAR_PUBLIC_ETHEREUM_HOST=https://goerli.infura.io/v3/$TF_VAR_INFURA_API_KEY
     # export TF_VAR_PRIVATE_ETHEREUM_HOST=https://goerli.infura.io/v3/$TF_VAR_INFURA_API_KEY
     export TF_VAR_PRIVATE_ETHEREUM_HOST=http://ethereum.aztec.network:10545
     ;;
   dev)
     NETWORK=mainnet-fork
+    VERIFICATION_KEY=MockVerificationKey
+    export TF_VAR_PUBLIC_ETHEREUM_HOST=https://mainnet-fork.aztec.network:8545
+    export TF_VAR_PRIVATE_ETHEREUM_HOST=https://mainnet-fork.aztec.network:8545
+    ;;
+  prod)
+    # Initial prod deployment can use our mainnet fork. We can remove this later, or leave it in.
+    # Falafel prod config will change to use real mainnet nodes and contracts addresses directly,
+    # rather than from terraform state.
+    NETWORK=mainnet-fork
+    VERIFICATION_KEY=VerificationKey28x32
     export TF_VAR_PUBLIC_ETHEREUM_HOST=https://mainnet-fork.aztec.network:8545
     export TF_VAR_PRIVATE_ETHEREUM_HOST=https://mainnet-fork.aztec.network:8545
     ;;
@@ -65,7 +76,7 @@ fi
 
 if [ -n "$REDEPLOY" ]; then
   echo "Redeploying contracts..."
-  `docker run -e ETHEREUM_HOST=$TF_VAR_PUBLIC_ETHEREUM_HOST -e PRIVATE_KEY=$TF_VAR_PRIVATE_KEY -e VK=MockVerificationKey 278380418400.dkr.ecr.eu-west-2.amazonaws.com/blockchain:$COMMIT_HASH`
+  `docker run -e ETHEREUM_HOST=$TF_VAR_PUBLIC_ETHEREUM_HOST -e PRIVATE_KEY=$TF_VAR_PRIVATE_KEY -e VK=$VERIFICATION_KEY 278380418400.dkr.ecr.eu-west-2.amazonaws.com/blockchain:$COMMIT_HASH`
   if [ "$NETWORK" = "goerli" ]; then
     docker run -e ETHERSCAN_API_KEY=$ETHERSCAN_API_KEY 278380418400.dkr.ecr.eu-west-2.amazonaws.com/blockchain:$COMMIT_HASH yarn verify:goerli $ROLLUP_CONTRACT_ADDRESS || true
   fi

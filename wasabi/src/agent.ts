@@ -47,7 +47,7 @@ export class Agent {
     console.log(
       `agent ${this.id} funding ${userData.address} with ${deposit} wei from address ${this.fundingAccount.address}...`,
     );
-    const asset: EthAsset = new EthAsset(this.provider);
+    const asset = new EthAsset(this.provider);
     // We increment the funding account nonce. This is shared amongst all agents, and ensures we correctly execute
     // L1 txs with sequential nonces, thus we can improve performance by calling this method concurrently.
     const txHash = await asset.transfer(deposit, this.fundingAccount.address, userData.address, {
@@ -121,12 +121,6 @@ export class Agent {
     if (assetId == fee.assetId) {
       // asset is fee paying
       if (fee.value > assetBalance) {
-        // not enough asset to pay the fee
-        console.log(
-          `agent ${this.id} not withdrawing ${
-            assetInfo.name
-          } to address ${userData.address.toString()} as we have insufficient asset balance to pay the fee!`,
-        );
         return;
       }
       // minus the fee from the withdrawal amount
@@ -134,12 +128,6 @@ export class Agent {
     } else {
       // asset is not fee paying
       if (fee.value > ethBalance) {
-        // not enough ETH to pay the fee
-        console.log(
-          `agent ${this.id} not withdrawing ${
-            assetInfo.name
-          } to address ${userData.address.toString()} as we have insufficient ETH balance to pay the fee!`,
-        );
         return;
       }
     }

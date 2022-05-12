@@ -1,4 +1,4 @@
-import { AztecSdk, TxSettlementTime, WalletProvider } from '@aztec/sdk';
+import { AssetValue, AztecSdk, TxSettlementTime, WalletProvider } from '@aztec/sdk';
 import { Agent, EthAddressAndNonce, UserData } from './agent';
 
 /**
@@ -50,7 +50,7 @@ export class PaymentAgent {
         const transferPromises: Promise<void>[] = [];
         while (transferPromises.length < Math.min(this.numTransfers, this.numConcurrentTransfers)) {
           try {
-            const txId = await this.transfer(this.userA, this.userB, this.assetId, 1n);
+            const txId = await this.transfer(this.userA, this.userB, { assetId: this.assetId, value: 1n });
             const j = i;
             const p = this.sdk.awaitSettlement(txId).then(() => console.log(`agent ${this.id} transfer ${j} settled.`));
             transferPromises.push(p);
@@ -91,14 +91,13 @@ export class PaymentAgent {
     return assetId == 0 ? ethFees : ethFees + assetDepositFee.value + assetWithdrawFee.value;
   }
 
-  private async transfer(sender: UserData, recipient: UserData, assetId = 0, value = 1n) {
-    const assetInfo = this.sdk.getAssetInfo(assetId);
-    console.log(`agent ${this.id} transferring ${value} ${assetInfo.name} from userA to userB...`);
-    const [fee] = await this.sdk.getTransferFees(assetId);
+  private async transfer(sender: UserData, recipient: UserData, assetValue: AssetValue) {
+    console.log(`agent ${this.id} transferring ${this.sdk.fromBaseUnits(assetValue, true)} from userA to userB...`);
+    const [fee] = await this.sdk.getTransferFees(assetValue.assetId);
     const controller = this.sdk.createTransferController(
       sender.user.id,
       sender.signer,
-      { assetId: assetId, value },
+      assetValue,
       fee,
       recipient.user.id,
     );

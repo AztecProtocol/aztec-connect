@@ -1,4 +1,4 @@
-variable "PRIVATE_KEY_MAINNET" {
+variable "PRIVATE_KEY_MAINNET_AC" {
   type = string
 }
 
