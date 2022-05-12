@@ -5,6 +5,7 @@ import type { Config } from 'config';
 import createDebug from 'debug';
 import { LazyInitCacheMap } from 'app/util/lazy_init_cache_map';
 import { Obs } from 'app/util';
+import { EthersAdapter } from '@aztec/sdk';
 
 const debug = createDebug('zm:bridge_data_adaptor_cache');
 
@@ -14,9 +15,9 @@ export function createBridgeDataAdaptorObsCache(
   provider: Provider,
   config: Config,
 ) {
-  const isGanache = config.chainId === 0xa57ec;
   return new LazyInitCacheMap((recipeId: string) =>
     Obs.combine([defiRecipesObs, remoteStatusObs]).map(([recipes, status]) => {
+      const isMainnet = config.chainId === 1;
       if (!status || !recipes) return undefined;
       const recipe = recipes.find(x => x.id === recipeId)!;
       const { rollupContractAddress } = status.blockchainStatus;
@@ -26,10 +27,10 @@ export function createBridgeDataAdaptorObsCache(
         return undefined;
       }
       return recipe.createAdaptor(
-        provider,
+        new EthersAdapter(provider),
         rollupContractAddress.toString(),
         blockchainBridge.address.toString(),
-        isGanache,
+        isMainnet,
       );
     }),
   );

@@ -9,8 +9,6 @@ import { decodeErrorFromContractByTxHash, decodeSelector, retrieveContractSelect
 import { EthereumProvider } from '@aztec/barretenberg/blockchain';
 import * as RollupAbi from '../artifacts/contracts/RollupProcessor.sol/RollupProcessor.json';
 import * as Element from '@aztec/bridge-clients/client-dest/typechain-types/factories/ElementBridge__factory';
-import * as Rollup from '@aztec/bridge-clients/client-dest/typechain-types/factories/RollupProcessor__factory';
-import * as IVault from '@aztec/bridge-clients/client-dest/typechain-types/factories/IVault__factory';
 import { ElementBridgeData } from '@aztec/bridge-clients/client-dest/src/client/element/element-bridge-data';
 import { WalletProvider } from '../provider';
 import { getTokenBalance, getWethBalance } from '../tokens';
@@ -85,11 +83,13 @@ export const createElementBridgeData = async (
   elementBridgeAddress: EthAddress,
   provider: EthereumProvider,
 ) => {
-  const ethersProvider = new Web3Provider(provider);
-  const elementBridgeContract = Element.ElementBridge__factory.connect(elementBridgeAddress.toString(), ethersProvider);
-  const rollupContract = Rollup.RollupProcessor__factory.connect(rollupAddress.toString(), ethersProvider);
-  const vaultContract = IVault.IVault__factory.connect(MainnetAddresses.Contracts['BALANCER'], ethersProvider);
-  return new ElementBridgeData(elementBridgeContract, vaultContract, rollupContract, { chunkSize: 10 });
+  return ElementBridgeData.create(
+    provider,
+    elementBridgeAddress as any,
+    EthAddress.fromString(MainnetAddresses.Contracts['BALANCER']) as any,
+    rollupAddress as any,
+    { eventBatchSize: 10 },
+  );
 };
 
 const formatTime = (unixTimeInSeconds: number) => {

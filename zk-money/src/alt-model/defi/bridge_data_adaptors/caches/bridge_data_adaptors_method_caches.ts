@@ -6,7 +6,9 @@ import type { Config } from 'config';
 import { createAuxDataOptionsPollerCache } from './aux_data_options_poller_cache';
 import { createBridgeDataAdaptorObsCache } from './bridge_data_adaptor_cache';
 import { createExpectedOutputPollerCache } from './expected_output_poller_cache';
-import { createExpectedYearlyOutputPollerCache } from './expected_yearly_output_poller_cache';
+import { createExpectedAssetYieldPollerCache } from './expected_yield_poller_cache';
+import { createCurrentAssetYieldPollerCache } from './current_yield_poller_cache';
+
 import { createInteractionPresentValuePollerCache } from './interaction_present_value_poller_cache';
 import { createMarketSizePollerCache } from './market_size_poller_cache';
 
@@ -19,7 +21,12 @@ export function createBridgeDataAdaptorsMethodCaches(
 ) {
   const adaptorsObsCache = createBridgeDataAdaptorObsCache(defiRecipesObs, remoteStatusObs, provider, config);
   const auxDataPollerCache = createAuxDataOptionsPollerCache(defiRecipesObs, adaptorsObsCache, remoteAssetsObs);
-  const expectedYearlyOutputPollerCache = createExpectedYearlyOutputPollerCache(
+  const expectedAssetYieldPollerCache = createExpectedAssetYieldPollerCache(
+    defiRecipesObs,
+    adaptorsObsCache,
+    remoteAssetsObs,
+  );
+  const currentAssetYieldPollerCache = createCurrentAssetYieldPollerCache(
     defiRecipesObs,
     adaptorsObsCache,
     remoteAssetsObs,
@@ -33,9 +40,10 @@ export function createBridgeDataAdaptorsMethodCaches(
   return {
     adaptorsObsCache,
     auxDataPollerCache,
-    expectedYearlyOutputPollerCache,
+    expectedAssetYieldPollerCache,
     expectedOutputPollerCache,
     marketSizePollerCache,
+    currentAssetYieldPollerCache,
     interactionPresentValuePollerCache,
   };
 }

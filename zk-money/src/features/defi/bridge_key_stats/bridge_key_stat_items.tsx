@@ -2,7 +2,7 @@ import { useRollupProviderStatus } from 'alt-model';
 import {
   useDefaultAuxDataOption,
   useDefaultBridgeId,
-  useDefaultExpectedYield,
+  useDefaultExpectedAssetYield,
   useDefaultLiquidity,
 } from 'alt-model/defi/defi_info_hooks';
 import { DefiRecipe, KeyBridgeStat } from 'alt-model/defi/types';
@@ -27,10 +27,10 @@ function BatchSizeValue(props: { recipe: DefiRecipe }) {
   return <>{bridgeStatus?.numTxs ?? rpStatus?.runtimeConfig.defaultDeFiBatchSize}</>;
 }
 
-const percentageFormatter = new Intl.NumberFormat('en-GB', { style: 'percent', maximumFractionDigits: 1 });
+const percentageFormatter = new Intl.NumberFormat('en-GB', { style: 'percent', maximumFractionDigits: 2 });
 
 function YieldValue(props: { recipe: DefiRecipe }) {
-  const expectedYield = useDefaultExpectedYield(props.recipe);
+  const expectedYield = (useDefaultExpectedAssetYield(props.recipe)?.value || 0) / 100;
   const yieldStr = expectedYield !== undefined ? percentageFormatter.format(expectedYield) : '';
   return <>{yieldStr}</>;
 }

@@ -50,32 +50,26 @@ export function useDefaultLiquidity(recipeId: string) {
   return useLiquidity(recipeId, auxData);
 }
 
-function useExpectedYearlyOuput(recipeId: string, auxData?: bigint, inputValue?: bigint) {
-  const { expectedYearlyOutputPollerCache } = useBridgeDataAdaptorsMethodCaches();
+export function useExpectedAssetYield(recipe: DefiRecipe, auxData?: bigint) {
+  const inputValue = Amount.from('1', recipe.valueEstimationInteractionAssets.inA);
+  const { expectedAssetYieldPollerCache } = useBridgeDataAdaptorsMethodCaches();
   const poller =
     auxData === undefined || inputValue === undefined
       ? undefined
-      : expectedYearlyOutputPollerCache.get([recipeId, auxData, inputValue]);
+      : expectedAssetYieldPollerCache.get([recipe.id, auxData, inputValue.baseUnits]);
   return useMaybeObs(poller?.obs);
 }
 
-export function useExpectedYield(recipe: DefiRecipe, auxData?: bigint) {
-  const inputAmount = Amount.from('1', recipe.valueEstimationInteractionAssets.inA);
-  const output = useExpectedYearlyOuput(recipe.id, auxData, inputAmount.baseUnits);
-  const outputAmount = useAmount(output);
-
-  const inputBulkPrice = useAmountBulkPrice(inputAmount);
-  const outputBulkPrice = useAmountBulkPrice(outputAmount);
-
-  if (outputBulkPrice === undefined || inputBulkPrice === undefined) return undefined;
-  const diff = baseUnitsToFloat(outputBulkPrice - inputBulkPrice, PRICE_DECIMALS);
-  const divisor = baseUnitsToFloat(inputBulkPrice, PRICE_DECIMALS);
-  return diff / divisor;
+export function useCurrentAssetYield(recipe: DefiRecipe, interactionNonce: number) {
+  const { currentAssetYieldPollerCache } = useBridgeDataAdaptorsMethodCaches();
+  const poller =
+    interactionNonce === undefined ? undefined : currentAssetYieldPollerCache.get([recipe.id, interactionNonce]);
+  return useMaybeObs(poller?.obs);
 }
 
-export function useDefaultExpectedYield(recipe: DefiRecipe) {
+export function useDefaultExpectedAssetYield(recipe: DefiRecipe) {
   const auxData = useDefaultAuxDataOption(recipe.id);
-  return useExpectedYield(recipe, auxData);
+  return useExpectedAssetYield(recipe, auxData);
 }
 
 export function useExpectedOutput(recipeId: string, auxData?: bigint, inputValue?: bigint) {

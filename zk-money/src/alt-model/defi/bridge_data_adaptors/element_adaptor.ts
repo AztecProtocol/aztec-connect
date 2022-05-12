@@ -1,31 +1,24 @@
 import {
-  ElementBridge,
-  ElementBridge__factory,
-  IVault__factory,
-  RollupProcessor__factory,
-} from '@aztec/bridge-clients/client-dest/typechain-types';
-import { ElementBridgeData } from '@aztec/bridge-clients/client-dest/src/client/element/element-bridge-data';
+  ElementBridgeData,
+  ChainProperties,
+} from '@aztec/bridge-clients/client-dest/src/client/element/element-bridge-data';
 import { BridgeDataAdaptorCreator } from './types';
+import { EthAddress } from '@aztec/sdk';
 
 export const createElementAdaptor: BridgeDataAdaptorCreator = (
   provider,
   rollupContractAddress,
   bridgeContractAddress,
-  isGanache,
+  isMainnet,
 ) => {
   const balancerAddress = '0xBA12222222228d8Ba445958a75a0704d566BF2C8';
-
-  const balancerContract = IVault__factory.connect(balancerAddress, provider);
-  const elementBridgeContract = ElementBridge__factory.connect(
-    bridgeContractAddress.toString(),
+  const batchSize = isMainnet ? 10000 : 10;
+  const chainProperties: ChainProperties = { eventBatchSize: batchSize };
+  return ElementBridgeData.create(
     provider,
-  ) as ElementBridge;
-  const rollupContract = RollupProcessor__factory.connect(rollupContractAddress.toString(), provider);
-  const chainProperties = isGanache ? { chunkSize: 10 } : undefined;
-  const adaptor = new ElementBridgeData(elementBridgeContract, balancerContract, rollupContract, chainProperties);
-  return {
-    isAsync: true,
-    isYield: true,
-    adaptor,
-  };
+    EthAddress.fromString(bridgeContractAddress) as any,
+    EthAddress.fromString(balancerAddress) as any,
+    EthAddress.fromString(rollupContractAddress) as any,
+    chainProperties,
+  );
 };

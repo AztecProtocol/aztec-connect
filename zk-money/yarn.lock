@@ -9,6 +9,25 @@
   dependencies:
     "@jridgewell/trace-mapping" "^0.3.0"
 
+"@aztec/barretenberg@2.1.0-testnet.29":
+  version "2.1.0-testnet.29"
+  resolved "https://registry.yarnpkg.com/@aztec/barretenberg/-/barretenberg-2.1.0-testnet.29.tgz#015d79fe0a1d59e20ccf30795fe0c2fdb0544774"
+  integrity sha512-RDfuKSwR03VHFoRuTyWr4DfrRFf5hDlINp2Nc/WeT86yXuAd9+cOTtQxnPTQu6Hr/Z5tL5C7yMz5pzyUBlntBQ==
+  dependencies:
+    "@types/detect-node" "^2.0.0"
+    "@types/levelup" "^4.3.0"
+    debug "^4.1.1"
+    detect-node "^2.0.4"
+    fs-extra "10.0.0"
+    is-node "^1.0.2"
+    levelup "^5.0.0"
+    memdown "^6.0.0"
+    node-fetch "2.6.1"
+    promise-readable "^5.0.4"
+    sha3 "^2.1.3"
+    threads "1.7.0"
+    tslib "^2.0.0"
+
 "@aztec/barretenberg@file:../barretenberg.js/dest":
   version "2.0.0"
   dependencies:
@@ -29,8 +48,8 @@
 "@aztec/blockchain@file:../blockchain/dest":
   version "2.0.0"
   dependencies:
-    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-@aztec-blockchain-2.0.0-74e47f7a-ab64-480f-88ec-62546957bca9-1651247021231/node_modules/barretenberg.js/dest"
-    "@aztec/bridge-clients" "0.1.32"
+    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-@aztec-blockchain-2.0.0-834826eb-c612-45c7-9812-95b472232893-1652291565703/node_modules/barretenberg.js/dest"
+    "@aztec/bridge-clients" "0.1.38"
     "@ethersproject/experimental" "5.5.0"
     "@nomiclabs/hardhat-ethers" "^2.0.2"
     "@nomiclabs/hardhat-etherscan" "^2.1.8"
@@ -47,18 +66,31 @@
     hardhat-upgrades "^0.0.0"
     typescript "^4.4.4"
 
-"@aztec/bridge-clients@0.1.32", "@aztec/bridge-clients@^0.1.32":
-  version "0.1.32"
-  resolved "https://registry.yarnpkg.com/@aztec/bridge-clients/-/bridge-clients-0.1.32.tgz#4dc9dadc0a4085f9afd13eea184b0db7f1b68550"
-  integrity sha512-BFi3WREEOhaaRx0tv3/sfNtwTBTbrkG1cj9WU3nHLXyDmXII3+AfoP+N6H8VYo8U1Oo6TDL571Uhh4pxYWRQQQ==
+"@aztec/bridge-clients@0.1.38":
+  version "0.1.38"
+  resolved "https://registry.yarnpkg.com/@aztec/bridge-clients/-/bridge-clients-0.1.38.tgz#358abff8ccf77700399b92ebd96c12c840be57cb"
+  integrity sha512-Tf1kVntwezY+8pNR53yqWQGqouuAHswxJjM9v3pdq/C2ZCLbhX0dwRICXpV599vZevDKA4D8aqDA+keeAg/lhw==
   dependencies:
-    axios "^0.26.1"
+    "@aztec/barretenberg" "2.1.0-testnet.29"
+    "@ethersproject/providers" "^5.6.5"
+    detect-node "^2.1.0"
+    sha3 "^2.1.4"
+
+"@aztec/bridge-clients@0.1.39":
+  version "0.1.39"
+  resolved "https://registry.yarnpkg.com/@aztec/bridge-clients/-/bridge-clients-0.1.39.tgz#aa73bbfa8ba3c3694fd2b4cf3a6af11eb3486580"
+  integrity sha512-vrsEg4XEbeeucRWP2IGiPoXRsxz44fRsILwxR6erx7oWEE71GzC7lOkUs1kpXeOSa4/muKUaWy4xFqUFvP/gww==
+  dependencies:
+    "@aztec/barretenberg" "2.1.0-testnet.29"
+    "@ethersproject/providers" "^5.6.5"
+    detect-node "^2.1.0"
+    sha3 "^2.1.4"
 
 "@aztec/sdk@file:../sdk/dest":
   version "2.0.16"
   dependencies:
-    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-@aztec-sdk-2.0.16-db3766d4-4773-497d-9027-f8d68772a464-1651247021130/node_modules/barretenberg.js/dest"
-    "@aztec/blockchain" "file:../../.cache/yarn/v6/npm-@aztec-sdk-2.0.16-db3766d4-4773-497d-9027-f8d68772a464-1651247021130/node_modules/blockchain/dest"
+    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-@aztec-sdk-2.0.16-54649a47-0ffa-4041-9704-1aa533254770-1652291565630/node_modules/barretenberg.js/dest"
+    "@aztec/blockchain" "file:../../.cache/yarn/v6/npm-@aztec-sdk-2.0.16-54649a47-0ffa-4041-9704-1aa533254770-1652291565630/node_modules/blockchain/dest"
     "@types/levelup" "^4.3.0"
     async-mutex "^0.3.2"
     broadcast-channel "^3.1.0"
@@ -1887,6 +1919,31 @@
   version "5.6.2"
   resolved "https://registry.yarnpkg.com/@ethersproject/providers/-/providers-5.6.2.tgz#b9807b1c8c6f59fa2ee4b3cf6519724d07a9f422"
   integrity sha512-6/EaFW/hNWz+224FXwl8+HdMRzVHt8DpPmu5MZaIQqx/K/ELnC9eY236SMV7mleCM3NnEArFwcAAxH5kUUgaRg==
+  dependencies:
+    "@ethersproject/abstract-provider" "^5.6.0"
+    "@ethersproject/abstract-signer" "^5.6.0"
+    "@ethersproject/address" "^5.6.0"
+    "@ethersproject/basex" "^5.6.0"
+    "@ethersproject/bignumber" "^5.6.0"
+    "@ethersproject/bytes" "^5.6.0"
+    "@ethersproject/constants" "^5.6.0"
+    "@ethersproject/hash" "^5.6.0"
+    "@ethersproject/logger" "^5.6.0"
+    "@ethersproject/networks" "^5.6.0"
+    "@ethersproject/properties" "^5.6.0"
+    "@ethersproject/random" "^5.6.0"
+    "@ethersproject/rlp" "^5.6.0"
+    "@ethersproject/sha2" "^5.6.0"
+    "@ethersproject/strings" "^5.6.0"
+    "@ethersproject/transactions" "^5.6.0"
+    "@ethersproject/web" "^5.6.0"
+    bech32 "1.1.4"
+    ws "7.4.6"
+
+"@ethersproject/providers@^5.6.5":
+  version "5.6.5"
+  resolved "https://registry.yarnpkg.com/@ethersproject/providers/-/providers-5.6.5.tgz#aefecf78459817a323452e05a16d56afcf807e27"
+  integrity sha512-TRS+c2Ud+cMpWodmGAc9xbnYRPWzRNYt2zkCSnj58nJoamBQ6x4cUbBeo0lTC3y+6RDVIBeJv18OqsDbSktLVg==
   dependencies:
     "@ethersproject/abstract-provider" "^5.6.0"
     "@ethersproject/abstract-signer" "^5.6.0"
@@ -5247,13 +5304,6 @@ axe-core@^4.3.5:
   version "4.4.1"
   resolved "https://registry.yarnpkg.com/axe-core/-/axe-core-4.4.1.tgz#7dbdc25989298f9ad006645cd396782443757413"
   integrity sha512-gd1kmb21kwNuWr6BQz8fv6GNECPBnUasepcoLbekws23NVBLODdsClRZ+bQ8+9Uomf3Sm3+Vwn0oYG9NvwnJCw==
-
-axios@^0.26.1:
-  version "0.26.1"
-  resolved "https://registry.yarnpkg.com/axios/-/axios-0.26.1.tgz#1ede41c51fcf51bbbd6fd43669caaa4f0495aaa9"
-  integrity sha512-fPwcX4EvnSHuInCMItEhAGnaSEXRBjtzh9fOtsE6E1G6p7vl7edEeZe11QHf18+6+9gR5PbKV/sGKNaD8YaMeA==
-  dependencies:
-    follow-redirects "^1.14.8"
 
 axobject-query@^2.2.0:
   version "2.2.0"
@@ -8988,7 +9038,7 @@ flush-write-stream@^1.0.0:
     inherits "^2.0.3"
     readable-stream "^2.3.6"
 
-follow-redirects@^1.0.0, follow-redirects@^1.12.1, follow-redirects@^1.14.8:
+follow-redirects@^1.0.0, follow-redirects@^1.12.1:
   version "1.14.9"
   resolved "https://registry.yarnpkg.com/follow-redirects/-/follow-redirects-1.14.9.tgz#dd4ea157de7bfaf9ea9b3fbd85aa16951f78d8d7"
   integrity sha512-MQDfihBQYMcyy5dhRDJUHcw7lb2Pv/TuE6xP1vyraLukNDHKbDxDNaOE3NbCAdKQApno+GPRyo1YAp89yCjK4w==
@@ -15816,7 +15866,7 @@ sha.js@^2.4.0, sha.js@^2.4.11, sha.js@^2.4.8:
     inherits "^2.0.1"
     safe-buffer "^5.0.1"
 
-sha3@^2.1.3:
+sha3@^2.1.3, sha3@^2.1.4:
   version "2.1.4"
   resolved "https://registry.yarnpkg.com/sha3/-/sha3-2.1.4.tgz#000fac0fe7c2feac1f48a25e7a31b52a6492cc8f"
   integrity sha512-S8cNxbyb0UGUM2VhRD4Poe5N58gJnJsLJ5vC7FYWGUmGhcsj4++WaIOBFVDxlG0W3To6xBuiRh+i0Qp2oNCOtg==
