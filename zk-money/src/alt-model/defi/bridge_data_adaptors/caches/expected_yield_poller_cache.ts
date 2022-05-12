@@ -21,15 +21,14 @@ export function createExpectedAssetYieldPollerCache(
       ([recipes, adaptor, assets]) => {
         const recipe = recipes?.find(x => x.id === recipeId)!;
         if (!adaptor || !assets || !recipe) return undefined;
-        const { getExpectedYield } = adaptor;
-        if (!getExpectedYield)
+        if (!adaptor.getExpectedYield)
           throw new Error('Attempted to call unsupported method "getExpectedYield" on bridge adaptor');
 
         const { valueEstimationInteractionAssets } = recipe;
         const { inA, inB, outA, outB } = toAdaptorArgs(valueEstimationInteractionAssets);
         return async () => {
           try {
-            const values = await getExpectedYield(inA, inB, outA, outB, auxData, inputAmount);
+            const values = await adaptor.getExpectedYield!(inA, inB, outA, outB, auxData, inputAmount);
             return { assetId: valueEstimationInteractionAssets.outA.id, value: values[0] };
           } catch (err) {
             debug({ recipeId, inA, inB, outA, outB, auxData, inputAmount }, err);

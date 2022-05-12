@@ -21,12 +21,13 @@ export function createAuxDataOptionsPollerCache(
       ([recipes, adaptor, assets]) => {
         const recipe = recipes?.find(x => x.id === recipeId);
         if (!adaptor || !assets || !recipe) return undefined;
-        const { getAuxData } = adaptor;
-        if (!getAuxData) throw new Error('Attempted to call unsupported method "getAuxData" on bridge adaptor');
+        if (!adaptor.getAuxData) {
+          throw new Error('Attempted to call unsupported method "getAuxData" on bridge adaptor');
+        }
         const { inA, inB, outA, outB } = toAdaptorArgs(recipe.flow.enter);
         return async () => {
           try {
-            const data = await getAuxData!(inA, inB, outA, outB);
+            const data = await adaptor.getAuxData!(inA, inB, outA, outB);
             return data;
           } catch (err) {
             debug({ recipeId, inA, inB, outA, outB }, err);
