@@ -21,11 +21,13 @@ export function createMarketSizePollerCache(
       ([recipes, adaptor, assets]) => {
         const recipe = recipes?.find(x => x.id === recipeId);
         if (!adaptor || !assets || !recipe) return undefined;
-        if (!adaptor.isYield) throw new Error('Can only call getMarketObs for yield bridges.');
+        const { getMarketSize } = adaptor;
+        if (!getMarketSize) throw new Error('Attempted to call unsupported method "getMarketSize" on bridge adaptor');
+
         const { inA, inB, outA, outB } = toAdaptorArgs(recipe.flow.enter);
         return async () => {
           try {
-            const values = await adaptor.adaptor.getMarketSize(inA, inB, outA, outB, auxData);
+            const values = await getMarketSize(inA, inB, outA, outB, auxData);
             return values.map(x => ({ assetId: Number(x.assetId), value: x.amount }));
           } catch (err) {
             debug({ recipeId, inA, inB, outA, outB, auxData }, err);

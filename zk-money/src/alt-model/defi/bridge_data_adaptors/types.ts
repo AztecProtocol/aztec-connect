@@ -1,30 +1,9 @@
-import type { Provider } from '@ethersproject/providers';
-import {
-  AsyncBridgeData,
-  YieldBridgeData,
-  AsyncYieldBridgeData,
-} from '@aztec/bridge-clients/client-dest/src/client/bridge-data';
-
-export type BridgeDataAdaptor =
-  | {
-      isAsync: true;
-      isYield: false;
-      adaptor: AsyncBridgeData;
-    }
-  | {
-      isAsync: true;
-      isYield: true;
-      adaptor: AsyncYieldBridgeData;
-    }
-  | {
-      isAsync: false;
-      isYield: true;
-      adaptor: YieldBridgeData;
-    };
+import { EthereumProvider } from '@aztec/sdk';
+import { BridgeDataFieldGetters } from '@aztec/bridge-clients/client-dest/src/client/bridge-data';
 
 export type BridgeDataAdaptorCreator = (
-  provider: Provider,
+  provider: EthereumProvider,
   rollupContractAddress: string,
   bridgeContractAddress: string,
-  isGanache: boolean,
-) => BridgeDataAdaptor;
+  isMainnet: boolean,
+) => BridgeDataFieldGetters;

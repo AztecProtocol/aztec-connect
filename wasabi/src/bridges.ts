@@ -1,10 +1,7 @@
 import { BridgeId, AztecSdk, EthereumProvider, EthAddress, AssetValue } from '@aztec/sdk';
-import * as ElementContractFactory from '@aztec/bridge-clients/client-dest/typechain-types/factories/ElementBridge__factory';
-import * as RollupContractFactory from '@aztec/bridge-clients/client-dest/typechain-types/factories/RollupProcessor__factory';
-import * as IVault from '@aztec/bridge-clients/client-dest/typechain-types/factories/IVault__factory';
 import { ElementBridgeData } from '@aztec/bridge-clients/client-dest/src/client/element/element-bridge-data';
 import { AztecAsset, AztecAssetType } from '@aztec/bridge-clients/client-dest/src/client/bridge-data';
-import { Web3Provider } from '@ethersproject/providers';
+import { ChainProperties } from '@aztec/bridge-clients/client-dest/src/client/element/element-bridge-data';
 
 export const BALANCER_ADDRESS = '0xBA12222222228d8Ba445958a75a0704d566BF2C8';
 export const UNISWAP_BRIDGE_ADDRESS_ID = 1;
@@ -63,29 +60,27 @@ export interface AgentElementConfig {
 
 export const createElementBridgeData = async (sdk: AztecSdk, provider: EthereumProvider) => {
   const status = await sdk.getRemoteStatus();
-  const rollupAddress = status.blockchainStatus.rollupContractAddress;
+  const rollupContractAddress = status.blockchainStatus.rollupContractAddress;
   const elementBridge = status.blockchainStatus.bridges.find(a => a.id == ELEMENT_BRIDGE_ADDRESS_ID);
   if (!elementBridge) {
     console.log('failed to find element bridge address!!');
     return;
   }
 
-  const ethersProvider = new Web3Provider(provider);
-  const elementBridgeContract = ElementContractFactory.ElementBridge__factory.connect(
-    elementBridge.address.toString(),
-    ethersProvider,
-  );
-  const rollupContract = RollupContractFactory.RollupProcessor__factory.connect(
-    rollupAddress.toString(),
-    ethersProvider,
-  );
-  const vaultContract = IVault.IVault__factory.connect(BALANCER_ADDRESS, ethersProvider);
+  const chainProperties: ChainProperties = { eventBatchSize: 10 };
+  const balancerAddress = EthAddress.fromString(BALANCER_ADDRESS);
 
   console.log('creating element bridge data class');
   console.log('element bridge address', elementBridge.address.toString());
-  console.log('rollup contract address', rollupAddress.toString());
-  console.log('vault address', vaultContract.address.toString());
-  return new ElementBridgeData(elementBridgeContract, vaultContract, rollupContract);
+  console.log('rollup contract address', rollupContractAddress.toString());
+  console.log('vault address', balancerAddress.toString());
+  return ElementBridgeData.create(
+    provider,
+    elementBridge.address as any,
+    balancerAddress as any,
+    rollupContractAddress as any,
+    chainProperties,
+  );
 };
 
 export const retrieveElementConfig = async (sdk: AztecSdk, provider: EthereumProvider, assetIds: number[]) => {

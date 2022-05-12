@@ -7,11 +7,11 @@ import { Poller } from 'app/util/poller';
 import { LazyInitDeepCacheMap } from 'app/util/lazy_init_cache_map';
 import { toAdaptorArgs } from '../bridge_adaptor_util';
 
-const debug = createDebug('zm:expected_yearly_output_poller_cache');
+const debug = createDebug('zm:expected_yield_poller_cache');
 
 const POLL_INTERVAL = 5 * 60 * 1000;
 
-export function createExpectedYearlyOutputPollerCache(
+export function createExpectedAssetYieldPollerCache(
   defiRecipesObs: DefiRecipesObs,
   adaptorObsCache: BridgeDataAdaptorObsCache,
   remoteAssetsObs: RemoteAssetsObs,
@@ -21,16 +21,19 @@ export function createExpectedYearlyOutputPollerCache(
       ([recipes, adaptor, assets]) => {
         const recipe = recipes?.find(x => x.id === recipeId)!;
         if (!adaptor || !assets || !recipe) return undefined;
-        if (!adaptor.isYield) throw new Error('Can only call getExpectedYearlyOuput for yield bridges.');
+        const { getExpectedYield } = adaptor;
+        if (!getExpectedYield)
+          throw new Error('Attempted to call unsupported method "getExpectedYield" on bridge adaptor');
+
         const { valueEstimationInteractionAssets } = recipe;
         const { inA, inB, outA, outB } = toAdaptorArgs(valueEstimationInteractionAssets);
         return async () => {
           try {
-            const values = await adaptor.adaptor.getExpectedYearlyOuput(inA, inB, outA, outB, auxData, inputAmount);
+            const values = await getExpectedYield(inA, inB, outA, outB, auxData, inputAmount);
             return { assetId: valueEstimationInteractionAssets.outA.id, value: values[0] };
           } catch (err) {
             debug({ recipeId, inA, inB, outA, outB, auxData, inputAmount }, err);
-            throw new Error(`Failed to fetch bridge expected yearly output for "${recipe.name}".`);
+            throw new Error(`Failed to fetch bridge expected yield for "${recipe.name}".`);
           }
         };
       },

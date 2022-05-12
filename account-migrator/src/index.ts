@@ -23,17 +23,28 @@ program
   .requiredOption('-d, --directory <dir>', 'Directory to output files')
   .requiredOption('-a, --address <address>', 'Address of rollup processor contract')
   .requiredOption('-u, --url <url>', 'Infura URL')
-  .option('-r, --rollupId <rollupId>', 'Id of first required rollup', parseAndCheckNumber, 0)
-  .option('-c, --confirmations <confirmations>', 'Num confirmations required on rollups', parseAndCheckNumber, 0)
+  .requiredOption('-f, --from <rollupIdFrom>', 'Id of first required rollup', parseAndCheckNumber, 0)
+  .requiredOption(
+    '-c, --confirmations <confirmations>',
+    'Num confirmations required on rollups',
+    parseAndCheckNumber,
+    3,
+  )
+  .option('-t, --to <rollupIdTo>', 'Id of last required rollup', parseAndCheckNumber)
   .option('-l, --logDuplicates', 'Log duplicate Public Key/Nonce/Signing Key combinations', false)
-  .option('-z, --aztecConnect', 'Connects to an aztec connect version of the rollup contract', false);
+  .option('-z, --aztecConnect', 'Connects to an aztec connect version of the rollup contract', false)
+  .option(
+    '-v, --verify <chainId>',
+    "Don't generate output files, just calculate the roots and verify against those stored for the given chain id",
+    parseAndCheckNumber,
+  );
 program.parse(process.argv);
 const options = program.opts();
 
 async function writeAndVerifyAccounts(accountsFile: string, accounts: AccountData[]): Promise<AccountData[]> {
   console.log(`Writing ${accounts.length} accounts to file: ${accountsFile}`);
   const bytesWritten = await InitHelpers.writeAccountTreeData(accounts, accountsFile);
-  console.log(`Successfully written ${bytesWritten} bytes to accounts file`);
+  console.log(`Successfully wrote ${bytesWritten} bytes to accounts file`);
 
   const readAccounts = await InitHelpers.readAccountTreeData(accountsFile);
 
@@ -96,17 +107,15 @@ async function main() {
   console.log('Args: ', options);
   const path = filePath.resolve(__dirname, options.directory);
   const accountsFile = path + '/accounts';
-  const rootsFile = path + '/roots';
   const merkleDbPath = path + '/world_state.db';
-  console.log(`Accounts will be written to ${accountsFile}`);
-  console.log(`Roots will be written to ${rootsFile}`);
 
+  const toValue = options.to === undefined ? '' : `to ${options.to}`;
   console.log(
-    `Requesting blocks from rollupID ${options.rollupId} with at least ${options.confirmations} confirmations...`,
+    `Requesting blocks from rollupID ${options.from} ${toValue} with at least ${options.confirmations} confirmations...`,
   );
   const accountProofs = options.aztecConnect ? await getAccountsConnect(options) : await getAccountsLegacy(options);
 
-  const accounts = new Array<AccountData>(accountProofs.length);
+  const accounts = new Array<AccountData>(accountProofs.accounts.length);
 
   const barretenberg = await BarretenbergWasm.new();
   const noteAlgos = new NoteAlgorithms(barretenberg);
@@ -116,12 +125,12 @@ async function main() {
 
   console.log('Generating nullifiers, notes and account aliases etc...');
   const parseTimer = new Timer();
-  for (let i = 0; i < accountProofs.length; i++) {
+  for (let i = 0; i < accountProofs.accounts.length; i++) {
     const {
       aliasId: accountAliasId,
       accountKey,
       spendingKeys: [signingKey1, signingKey2],
-    } = accountProofs[i];
+    } = accountProofs.accounts[i];
 
     const aliasString = accountAliasId.aliasHash.toString();
     const oldNonce = migrations.get(aliasString) ?? 0; // if we haven't seen this account before, it's initial nonce is 0
@@ -160,9 +169,13 @@ async function main() {
       });
     }
   }
-  console.log(`Completed generation after ${parseTimer.s()}s, writing files...`);
-  await writeAndVerifyAccounts(accountsFile, accounts);
-  console.log('Completed writing files, now building new data and nullifier trees...');
+  console.log(`Completed in ${parseTimer.s()}s`);
+  // if chain id is specified then we are just verifying the roots against those stored for this chain id
+  if (options.verify === undefined) {
+    console.log(`Writing accounts data to file ${accountsFile}`);
+    await writeAndVerifyAccounts(accountsFile, accounts);
+  }
+  console.log('Building new data and nullifier trees...');
 
   const merkleTree = new WorldStateDb(merkleDbPath);
   await merkleTree.start();
@@ -189,33 +202,54 @@ async function main() {
     rootsRoot: roots.rootsRoot.toString('hex'),
   });
   console.log(`Initial data size: ${dataAndRootsRoots.dataSize}`);
-  await InitHelpers.writeRoots(roots, rootsFile);
-  const newRoots = await InitHelpers.readRoots(rootsFile);
-  if (!newRoots) {
-    throw new Error('Failed to write roots to file!!');
+  console.log(`First rollup Id: ${accountProofs.earliestRollupId}`);
+  console.log(`Last rollup Id: ${accountProofs.lastestRollupId}`);
+
+  // if chain id is specified then we are just verifying the roots against those stored for this chain id
+  if (options.verify) {
+    const initRootsFromEnvironment = InitHelpers.getInitRoots(options.verify);
+    if (roots.dataRoot.equals(initRootsFromEnvironment.dataRoot)) {
+      console.log(
+        `Data root comparison SUCCEEDED ${roots.dataRoot.toString(
+          'hex',
+        )} == ${initRootsFromEnvironment.dataRoot.toString('hex')}`,
+      );
+    } else {
+      console.log(
+        `Data root comparison FAILED ${roots.dataRoot.toString('hex')} != ${initRootsFromEnvironment.dataRoot.toString(
+          'hex',
+        )}`,
+      );
+    }
+
+    if (roots.rootsRoot.equals(initRootsFromEnvironment.rootsRoot)) {
+      console.log(
+        `Roots root comparison SUCCEEDED ${roots.rootsRoot.toString(
+          'hex',
+        )} == ${initRootsFromEnvironment.rootsRoot.toString('hex')}`,
+      );
+    } else {
+      console.log(
+        `Roots root comparison FAILED ${roots.rootsRoot.toString(
+          'hex',
+        )} != ${initRootsFromEnvironment.rootsRoot.toString('hex')}`,
+      );
+    }
+
+    if (roots.nullRoot.equals(initRootsFromEnvironment.nullRoot)) {
+      console.log(
+        `Null root comparison SUCCEEDED ${roots.nullRoot.toString(
+          'hex',
+        )} == ${initRootsFromEnvironment.nullRoot.toString('hex')}`,
+      );
+    } else {
+      console.log(
+        `Null root comparison FAILED ${roots.nullRoot.toString('hex')} != ${initRootsFromEnvironment.nullRoot.toString(
+          'hex',
+        )}`,
+      );
+    }
   }
-  if (!roots.dataRoot.equals(newRoots.dataRoot)) {
-    throw new Error(
-      `Data root read back from file did not match the generated value. Generated: ${roots.dataRoot.toString(
-        'hex',
-      )}, file: ${newRoots.dataRoot.toString('hex')}`,
-    );
-  }
-  if (!roots.nullRoot.equals(newRoots.nullRoot)) {
-    throw new Error(
-      `Null root read back from file did not match the generated value. Generated: ${roots.nullRoot.toString(
-        'hex',
-      )}, file: ${newRoots.nullRoot.toString('hex')}`,
-    );
-  }
-  if (!roots.rootsRoot.equals(newRoots.rootsRoot)) {
-    throw new Error(
-      `Roots root read back from file did not match the generated value. Generated: ${roots.rootsRoot.toString(
-        'hex',
-      )}, file: ${newRoots.rootsRoot.toString('hex')}`,
-    );
-  }
-  console.log('Successfully verified roots written to file');
 }
 
 main().catch(err => {

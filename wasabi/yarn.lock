@@ -2,13 +2,34 @@
 # yarn lockfile v1
 
 
-"@aztec/barretenberg@file:../barretenberg.js/dest":
-  version "2.0.0"
+"@aztec/barretenberg@2.1.0-testnet.29":
+  version "2.1.0-testnet.29"
+  resolved "https://registry.yarnpkg.com/@aztec/barretenberg/-/barretenberg-2.1.0-testnet.29.tgz#015d79fe0a1d59e20ccf30795fe0c2fdb0544774"
+  integrity sha512-RDfuKSwR03VHFoRuTyWr4DfrRFf5hDlINp2Nc/WeT86yXuAd9+cOTtQxnPTQu6Hr/Z5tL5C7yMz5pzyUBlntBQ==
   dependencies:
+    "@types/detect-node" "^2.0.0"
     "@types/levelup" "^4.3.0"
     debug "^4.1.1"
     detect-node "^2.0.4"
     fs-extra "10.0.0"
+    is-node "^1.0.2"
+    levelup "^5.0.0"
+    memdown "^6.0.0"
+    node-fetch "2.6.1"
+    promise-readable "^5.0.4"
+    sha3 "^2.1.3"
+    threads "1.7.0"
+    tslib "^2.0.0"
+
+"@aztec/barretenberg@file:../barretenberg.js/dest":
+  version "2.0.0"
+  dependencies:
+    "@types/detect-node" "^2.0.0"
+    "@types/levelup" "^4.3.0"
+    debug "^4.1.1"
+    detect-node "^2.0.4"
+    fs-extra "10.0.0"
+    is-node "^1.0.2"
     levelup "^5.0.0"
     memdown "^6.0.0"
     node-fetch "2.6.1"
@@ -20,13 +41,14 @@
 "@aztec/blockchain@file:../blockchain/dest":
   version "2.0.0"
   dependencies:
-    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-@aztec-blockchain-2.0.0-2d52fcab-fb9a-4b3d-8e0c-248d3fe51ec1-1649615322076/node_modules/barretenberg.js/dest"
-    "@aztec/bridge-clients" "0.1.32"
+    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-@aztec-blockchain-2.0.0-e85ca586-92a5-4cb5-a114-b5e4dfd96050-1652272787604/node_modules/barretenberg.js/dest"
+    "@aztec/bridge-clients" "0.1.38"
     "@ethersproject/experimental" "5.5.0"
     "@nomiclabs/hardhat-ethers" "^2.0.2"
     "@nomiclabs/hardhat-etherscan" "^2.1.8"
     "@nomiclabs/hardhat-waffle" "^2.0.1"
     "@openzeppelin/contracts-upgradeable" "^4.4.2"
+    "@types/detect-node" "^2.0.0"
     "@uniswap/v2-core" "^1.0.1"
     "@uniswap/v2-periphery" "^1.1.0-beta.0"
     commander "^9.0.0"
@@ -37,24 +59,23 @@
     hardhat-upgrades "^0.0.0"
     typescript "^4.4.4"
 
-"@aztec/bridge-clients@0.1.32":
-  version "0.1.32"
-  resolved "https://registry.yarnpkg.com/@aztec/bridge-clients/-/bridge-clients-0.1.32.tgz#4dc9dadc0a4085f9afd13eea184b0db7f1b68550"
-  integrity sha512-BFi3WREEOhaaRx0tv3/sfNtwTBTbrkG1cj9WU3nHLXyDmXII3+AfoP+N6H8VYo8U1Oo6TDL571Uhh4pxYWRQQQ==
+"@aztec/bridge-clients@0.1.38":
+  version "0.1.38"
+  resolved "https://registry.yarnpkg.com/@aztec/bridge-clients/-/bridge-clients-0.1.38.tgz#358abff8ccf77700399b92ebd96c12c840be57cb"
+  integrity sha512-Tf1kVntwezY+8pNR53yqWQGqouuAHswxJjM9v3pdq/C2ZCLbhX0dwRICXpV599vZevDKA4D8aqDA+keeAg/lhw==
   dependencies:
-    axios "^0.26.1"
-
-"@aztec/bridge-clients@^0.1.23":
-  version "0.1.23"
-  resolved "https://registry.yarnpkg.com/@aztec/bridge-clients/-/bridge-clients-0.1.23.tgz#d1f118e2a2dca2c527c22cf1ba8f1a45f29c5ab7"
-  integrity sha512-rP3H4t2flmVCNrSkITYd6HcBspVhumMr1Y0Np044XkHfsqQPdhAYs6RnI0ENc/rWbp9wCOWRuRR/fa86wPsnZQ==
+    "@aztec/barretenberg" "2.1.0-testnet.29"
+    "@ethersproject/providers" "^5.6.5"
+    detect-node "^2.1.0"
+    sha3 "^2.1.4"
 
 "@aztec/sdk@file:../sdk/dest":
   version "2.0.16"
   dependencies:
-    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-@aztec-sdk-2.0.16-63b7eb1b-1abd-4a99-af06-44ec730cb4f0-1649615323789/node_modules/barretenberg.js/dest"
-    "@aztec/blockchain" "file:../../.cache/yarn/v6/npm-@aztec-sdk-2.0.16-63b7eb1b-1abd-4a99-af06-44ec730cb4f0-1649615323789/node_modules/blockchain/dest"
+    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-@aztec-sdk-2.0.16-e27f15a6-5e87-407a-ba60-457471514545-1652272789903/node_modules/barretenberg.js/dest"
+    "@aztec/blockchain" "file:../../.cache/yarn/v6/npm-@aztec-sdk-2.0.16-e27f15a6-5e87-407a-ba60-457471514545-1652272789903/node_modules/blockchain/dest"
     "@types/levelup" "^4.3.0"
+    async-mutex "^0.3.2"
     broadcast-channel "^3.1.0"
     detect-node "^2.0.4"
     dexie "^3.0.1"
@@ -723,6 +744,31 @@
     bech32 "1.1.4"
     ws "7.4.6"
 
+"@ethersproject/providers@^5.6.5":
+  version "5.6.5"
+  resolved "https://registry.yarnpkg.com/@ethersproject/providers/-/providers-5.6.5.tgz#aefecf78459817a323452e05a16d56afcf807e27"
+  integrity sha512-TRS+c2Ud+cMpWodmGAc9xbnYRPWzRNYt2zkCSnj58nJoamBQ6x4cUbBeo0lTC3y+6RDVIBeJv18OqsDbSktLVg==
+  dependencies:
+    "@ethersproject/abstract-provider" "^5.6.0"
+    "@ethersproject/abstract-signer" "^5.6.0"
+    "@ethersproject/address" "^5.6.0"
+    "@ethersproject/basex" "^5.6.0"
+    "@ethersproject/bignumber" "^5.6.0"
+    "@ethersproject/bytes" "^5.6.0"
+    "@ethersproject/constants" "^5.6.0"
+    "@ethersproject/hash" "^5.6.0"
+    "@ethersproject/logger" "^5.6.0"
+    "@ethersproject/networks" "^5.6.0"
+    "@ethersproject/properties" "^5.6.0"
+    "@ethersproject/random" "^5.6.0"
+    "@ethersproject/rlp" "^5.6.0"
+    "@ethersproject/sha2" "^5.6.0"
+    "@ethersproject/strings" "^5.6.0"
+    "@ethersproject/transactions" "^5.6.0"
+    "@ethersproject/web" "^5.6.0"
+    bech32 "1.1.4"
+    ws "7.4.6"
+
 "@ethersproject/random@5.5.0", "@ethersproject/random@^5.5.0":
   version "5.5.0"
   resolved "https://registry.yarnpkg.com/@ethersproject/random/-/random-5.5.0.tgz#305ed9e033ca537735365ac12eed88580b0f81f9"
@@ -1291,6 +1337,11 @@
   resolved "https://registry.yarnpkg.com/@types/chai/-/chai-4.3.0.tgz#23509ebc1fa32f1b4d50d6a66c4032d5b8eaabdc"
   integrity sha512-/ceqdqeRraGolFTcfoXNiqjyQhZzbINDngeoAq9GoHa8PPK1yNzTaxWjA6BFWp5Ua9JpXEMSS4s5i9tS0hOJtw==
 
+"@types/detect-node@^2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@types/detect-node/-/detect-node-2.0.0.tgz#696e024ddd105c72bbc6a2e3f97902a2886f2c3f"
+  integrity sha512-+BozjlbPTACYITf1PWf62HLtDV79HbmZosUN1mv1gGrnjDCRwBXkDKka1sf6YQJvspmfPXVcy+X6tFW62KteeQ==
+
 "@types/istanbul-lib-coverage@*", "@types/istanbul-lib-coverage@^2.0.0":
   version "2.0.3"
   resolved "https://registry.yarnpkg.com/@types/istanbul-lib-coverage/-/istanbul-lib-coverage-2.0.3.tgz#4ba8ddb720221f432e443bd5f9117fd22cfd4762"
@@ -1820,6 +1871,13 @@ async-limiter@~1.0.0:
   resolved "https://registry.yarnpkg.com/async-limiter/-/async-limiter-1.0.1.tgz#dd379e94f0db8310b08291f9d64c3209766617fd"
   integrity sha512-csOlWGAcRFJaI6m+F2WKdnMKr4HhdhFVBk0H/QbJFMCr+uO2kwohwXQPxw/9OCxp05r5ghVBFSyioixx3gfkNQ==
 
+async-mutex@^0.3.2:
+  version "0.3.2"
+  resolved "https://registry.yarnpkg.com/async-mutex/-/async-mutex-0.3.2.tgz#1485eda5bda1b0ec7c8df1ac2e815757ad1831df"
+  integrity sha512-HuTK7E7MT7jZEh1P9GtRW9+aTWiDWWi9InbZ5hjxrnRa39KS4BW04+xLBhYNS2aXhHUIKZSw3gj4Pn1pj+qGAA==
+  dependencies:
+    tslib "^2.3.1"
+
 async@^2.4.0:
   version "2.6.3"
   resolved "https://registry.yarnpkg.com/async/-/async-2.6.3.tgz#d72625e2344a3656e3a3ad4fa749fa83299d82ff"
@@ -1846,13 +1904,6 @@ aws4@^1.8.0:
   version "1.11.0"
   resolved "https://registry.yarnpkg.com/aws4/-/aws4-1.11.0.tgz#d61f46d83b2519250e2784daf5b09479a8b41c59"
   integrity sha512-xh1Rl34h6Fi1DC2WWKfxUTVqRsNnr6LsKz2+hfwDxQJWmrx8+c7ylaqBMcHfl1U1r2dsifOvKX3LQuLNZ+XSvA==
-
-axios@^0.26.1:
-  version "0.26.1"
-  resolved "https://registry.yarnpkg.com/axios/-/axios-0.26.1.tgz#1ede41c51fcf51bbbd6fd43669caaa4f0495aaa9"
-  integrity sha512-fPwcX4EvnSHuInCMItEhAGnaSEXRBjtzh9fOtsE6E1G6p7vl7edEeZe11QHf18+6+9gR5PbKV/sGKNaD8YaMeA==
-  dependencies:
-    follow-redirects "^1.14.8"
 
 babel-jest@^24.9.0:
   version "24.9.0"
@@ -2651,6 +2702,11 @@ detect-node@^2.0.4:
   resolved "https://registry.yarnpkg.com/detect-node/-/detect-node-2.0.4.tgz#014ee8f8f669c5c58023da64b8179c083a28c46c"
   integrity sha512-ZIzRpLJrOj7jjP2miAtgqIfmzbxa4ZOr5jJc601zklsfEx9oTzmmj2nVpIPRpNlRTIh8lc1kyViIY7BWSGNmKw==
 
+detect-node@^2.1.0:
+  version "2.1.0"
+  resolved "https://registry.yarnpkg.com/detect-node/-/detect-node-2.1.0.tgz#c9c70775a49c3d03bc2c06d9a73be550f978f8b1"
+  integrity sha512-T0NIuQpnTvFDATNuHN5roPwSBG83rFsuO+MXXH9/3N1eFbn4wcPjttvjMLEPWJ0RGUYgQE7cGgS3tNxbqCGM7g==
+
 dexie@^3.0.1:
   version "3.0.3"
   resolved "https://registry.yarnpkg.com/dexie/-/dexie-3.0.3.tgz#ede63849dfe5f07e13e99bb72a040e8ac1d29dab"
@@ -3307,7 +3363,7 @@ flatted@^3.1.0:
   resolved "https://registry.yarnpkg.com/flatted/-/flatted-3.1.1.tgz#c4b489e80096d9df1dfc97c79871aea7c617c469"
   integrity sha512-zAoAQiudy+r5SvnSw3KJy5os/oRJYHzrzja/tBDqrZtNhUw8bt6y8OBzMWcjWr+8liV8Eb6yOhw8WZ7VFZ5ZzA==
 
-follow-redirects@^1.12.1, follow-redirects@^1.14.8:
+follow-redirects@^1.12.1:
   version "1.14.9"
   resolved "https://registry.yarnpkg.com/follow-redirects/-/follow-redirects-1.14.9.tgz#dd4ea157de7bfaf9ea9b3fbd85aa16951f78d8d7"
   integrity sha512-MQDfihBQYMcyy5dhRDJUHcw7lb2Pv/TuE6xP1vyraLukNDHKbDxDNaOE3NbCAdKQApno+GPRyo1YAp89yCjK4w==
@@ -4049,6 +4105,11 @@ is-negative-zero@^2.0.1:
   version "2.0.1"
   resolved "https://registry.yarnpkg.com/is-negative-zero/-/is-negative-zero-2.0.1.tgz#3de746c18dda2319241a53675908d8f766f11c24"
   integrity sha512-2z6JzQvZRa9A2Y7xC6dQQm4FSTSTNWjKIYYTt4246eMTJmIo0Q+ZyOsU66X8lxK1AbB92dFeglPLrhwpeRKO6w==
+
+is-node@^1.0.2:
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/is-node/-/is-node-1.0.2.tgz#d7d002745ef7debbb7477e988956ab0a4fccb653"
+  integrity sha1-19ACdF733ru3R36YiVarCk/MtlM=
 
 is-number@^3.0.0:
   version "3.0.0"
@@ -6395,7 +6456,7 @@ sha.js@^2.4.0, sha.js@^2.4.11, sha.js@^2.4.8:
     inherits "^2.0.1"
     safe-buffer "^5.0.1"
 
-sha3@^2.1.3:
+sha3@^2.1.3, sha3@^2.1.4:
   version "2.1.4"
   resolved "https://registry.yarnpkg.com/sha3/-/sha3-2.1.4.tgz#000fac0fe7c2feac1f48a25e7a31b52a6492cc8f"
   integrity sha512-S8cNxbyb0UGUM2VhRD4Poe5N58gJnJsLJ5vC7FYWGUmGhcsj4++WaIOBFVDxlG0W3To6xBuiRh+i0Qp2oNCOtg==
@@ -7078,6 +7139,11 @@ tslib@^2.1.0:
   version "2.3.1"
   resolved "https://registry.yarnpkg.com/tslib/-/tslib-2.3.1.tgz#e8a335add5ceae51aa261d32a490158ef042ef01"
   integrity sha512-77EbyPPpMz+FRFRuAFlWMtmgUWGe9UOG2Z25NqCwiIjRhOf5iKGuzSe5P2w1laq+FkRy4p+PCuVkJSGkzTEKVw==
+
+tslib@^2.3.1:
+  version "2.4.0"
+  resolved "https://registry.yarnpkg.com/tslib/-/tslib-2.4.0.tgz#7cecaa7f073ce680a05847aa77be941098f36dc3"
+  integrity sha512-d6xOpEDfsi2CZVlPQzGeux8XMwLT9hssAsaPYExaQMuYskwb+x1x7J371tWlbBdWHroy99KnVB6qIkUbs5X3UQ==
 
 tsort@0.0.1:
   version "0.0.1"

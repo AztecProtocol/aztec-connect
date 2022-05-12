@@ -29,7 +29,7 @@
   },
   "dependencies": {
     "@aztec/blockchain": "file:../blockchain/dest",
-    "@aztec/bridge-clients": "^0.1.23",
+    "@aztec/bridge-clients": "0.1.38",
     "@aztec/sdk": "file:../sdk/dest",
     "@ethersproject/providers": "^5.6.1",
     "log-timestamp": "^0.3.0",

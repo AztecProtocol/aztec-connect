@@ -16,9 +16,13 @@ export function createInteractionPresentValuePollerCache(
   return new LazyInitDeepCacheMap(([recipeId, interactionNonce]: [string, bigint]) => {
     const pollObs = Obs.combine([adaptorObsCache.get(recipeId), remoteAssetsObs]).map(([adaptor, assets]) => {
       if (!adaptor || !assets) return undefined;
+      const { getInteractionPresentValue } = adaptor;
+
+      if (!getInteractionPresentValue)
+        throw new Error('Attempted to call unsupported method "getInteractionPresentValue" on bridge adaptor');
       return async () => {
         try {
-          const values = await adaptor.adaptor.getInteractionPresentValue(interactionNonce);
+          const values = await getInteractionPresentValue!(interactionNonce);
           return { assetId: Number(values[0].assetId), value: values[0].amount };
         } catch (err) {
           debug({ recipeId, interactionNonce }, err);

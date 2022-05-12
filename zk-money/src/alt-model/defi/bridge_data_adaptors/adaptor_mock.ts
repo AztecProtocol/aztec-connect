@@ -1,13 +1,11 @@
 import {
   AztecAsset,
-  YieldBridgeData,
+  BridgeDataFieldGetters,
   AssetValue,
   AuxDataConfig,
-  AsyncYieldBridgeData,
 } from '@aztec/bridge-clients/client-dest/src/client/bridge-data';
-import { BridgeDataAdaptorCreator } from './types';
 
-export class YieldBridgeDataMock implements YieldBridgeData {
+export class BridgeDataFieldGettersMock implements BridgeDataFieldGetters {
   async getInteractionPresentValue(interactionNonce: bigint): Promise<AssetValue[]> {
     return [];
   }
@@ -33,15 +31,15 @@ export class YieldBridgeDataMock implements YieldBridgeData {
     return [];
   }
 
-  async getExpectedYearlyOuput(
+  async getExpectedYeild(
     inputAssetA: AztecAsset,
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
     auxData: bigint,
     inputValue: bigint,
-  ): Promise<bigint[]> {
-    return [inputValue + (inputValue * 5n) / 100n];
+  ): Promise<number[]> {
+    return [5.45];
   }
 
   async getMarketSize(
@@ -53,9 +51,6 @@ export class YieldBridgeDataMock implements YieldBridgeData {
   ): Promise<AssetValue[]> {
     return [{ assetId: 0n, amount: 12379654321234567898765n }];
   }
-}
-
-export class AsyncYieldBridgeDataMock extends YieldBridgeDataMock implements AsyncYieldBridgeData {
   async getExpiration(interactionNonce: bigint): Promise<bigint> {
     return BigInt(Date.now() / 1000 + 60 * 20 * 24 * 100);
   }
@@ -63,15 +58,3 @@ export class AsyncYieldBridgeDataMock extends YieldBridgeDataMock implements Asy
     return false;
   }
 }
-
-export const createMockYieldAdaptor: BridgeDataAdaptorCreator = () => ({
-  isAsync: false,
-  isYield: true,
-  adaptor: new YieldBridgeDataMock(),
-});
-
-export const createMockAsyncYieldAdaptor: BridgeDataAdaptorCreator = () => ({
-  isAsync: true,
-  isYield: true,
-  adaptor: new AsyncYieldBridgeDataMock(),
-});
