@@ -6,3 +6,9 @@ export interface Account {
   accountKey: GrumpkinAddress;
   spendingKeys: Buffer[];
 }
+
+export interface Accounts {
+  earliestRollupId: number;
+  lastestRollupId: number;
+  accounts: Account[];
+}

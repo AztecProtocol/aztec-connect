@@ -1,12 +1,14 @@
 const initConfig = {
   '1': {
     initRoots: {
-      initDataRoot: '08c5976319928065d5686996484f28347f14ae2030afe1fd4a6c617cd3e13622',
-      initNullRoot: '11f101925e2161c75269195174fdd5f4aba7b460d0dd927b3726472a25d3221c',
-      initRootsRoot: '217683028fc9cb7c910195ff8103d9208ca63b0b43b4da06ed9ee1a9c0156e9c',
+      initDataRoot: '08b8089346ce9612be7cf12fcacf49f4bfba619958245ad25cad60507505b654',
+      initNullRoot: '0e1168117178772a4063fb7b00645b050ac7d06e683a255d7af95894632a1010',
+      initRootsRoot: '27eea2d2b8b24fa2e18fb276396ebdbcd2f18e57caf610fe079589c182b53ad2',
     },
-    initDataSize: 123544,
+    initDataSize: 128078,
     accountsData: './data/mainnet/accounts',
+    firstRollup: 0,
+    lastRollup: 2735,
   },
   default: {
     initRoots: {

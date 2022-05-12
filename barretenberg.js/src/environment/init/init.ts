@@ -256,30 +256,4 @@ export class InitHelpers {
     const root = merkleTree.getRoot(nullTreeIndex);
     return root;
   }
-
-  public static async writeRoots(roots: Roots, filePath: string) {
-    return await this.writeData(
-      filePath,
-      Buffer.from(
-        JSON.stringify({
-          dataRoot: roots.dataRoot.toString('hex'),
-          nullRoot: roots.nullRoot.toString('hex'),
-          rootsRoot: roots.rootsRoot.toString('hex'),
-        }),
-      ),
-    );
-  }
-
-  public static async readRoots(filePath: string) {
-    const data = await this.readData(filePath);
-    if (!data.length) {
-      return;
-    }
-    const roots = JSON.parse(data.toString());
-    return {
-      dataRoot: Buffer.from(roots.dataRoot, 'hex'),
-      nullRoot: Buffer.from(roots.nullRoot, 'hex'),
-      rootsRoot: Buffer.from(roots.rootsRoot, 'hex'),
-    };
-  }
 }
