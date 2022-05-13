@@ -10,6 +10,7 @@ import {
   toBaseUnits,
   TxSettlementTime,
   virtualAssetIdFlag,
+  virtualAssetIdPlaceholder,
   WalletProvider,
 } from '@aztec/sdk';
 import createDebug from 'debug';
@@ -60,6 +61,8 @@ describe('end-to-end virtual assets tests', () => {
     await sdk.flushRollup(userIds[2], signers[2]);
   };
 
+  const min = (v0: bigint, v1: bigint) => (v0 <= v1 ? v0 : v1);
+
   beforeAll(async () => {
     debug(`funding initial ETH accounts...`);
     const privateKey = Buffer.from(PRIVATE_KEY, 'hex');
@@ -91,7 +94,7 @@ describe('end-to-end virtual assets tests', () => {
     const shieldValue = sdk.toBaseUnits(0, '0.08');
     const ethAssetId = 0;
     const daiAssetId = 1;
-    const virtualAssetIds = new Array(4).fill(2 ** 29).map((id, i) => id + i);
+    const virtualAssetIds: number[] = [];
 
     // Rollup 0.
     // Shield eth to all users' accounts.
@@ -113,7 +116,7 @@ describe('end-to-end virtual assets tests', () => {
       const fee = fees[DefiSettlementTime.INSTANT];
 
       // ETH to V0.
-      const bridgeIdEthToV0 = new BridgeId(bridgeAddressId, ethAssetId, virtualAssetIds[0]);
+      const bridgeIdEthToV0 = new BridgeId(bridgeAddressId, ethAssetId, virtualAssetIdPlaceholder);
       {
         const account = 0;
 
@@ -142,7 +145,7 @@ describe('end-to-end virtual assets tests', () => {
         ethAssetId,
         daiAssetId,
         undefined,
-        virtualAssetIds[1],
+        virtualAssetIdPlaceholder,
       );
       {
         const account = 0;
@@ -237,7 +240,7 @@ describe('end-to-end virtual assets tests', () => {
         ethAssetId,
         daiAssetId,
         undefined,
-        virtualAssetIds[2],
+        virtualAssetIdPlaceholder,
       );
       {
         const account = 1;
@@ -389,7 +392,12 @@ describe('end-to-end virtual assets tests', () => {
 
       // Dai and v1 to v3
       let defiController: DefiController;
-      const bridgeIdDaiAndV1ToV3 = new BridgeId(bridgeAddressId, daiAssetId, virtualAssetIds[3], virtualAssetIds[1]);
+      const bridgeIdDaiAndV1ToV3 = new BridgeId(
+        bridgeAddressId,
+        daiAssetId,
+        virtualAssetIdPlaceholder,
+        virtualAssetIds[1],
+      );
       const depositV1Value = await sdk.getBalanceAv(virtualAssetIds[1], userIds[0]);
       const depositDaiValue = { assetId: daiAssetId, value: depositV1Value.value };
       const fee2 = (await sdk.getDefiFees(bridgeIdDaiAndV1ToV3))[DefiSettlementTime.INSTANT];
@@ -487,7 +495,13 @@ describe('end-to-end virtual assets tests', () => {
 
       // V2 and V3 to ETH.
       const bridgeIdV2V3ToEth = new BridgeId(bridgeAddressId, virtualAssetIds[2], ethAssetId, virtualAssetIds[3]);
-      const depositV2V3Value = await sdk.getMaxDefiDepositValue(bridgeIdV2V3ToEth, userIds[0]);
+      const depositV2V3Value = {
+        assetId: virtualAssetIds[2],
+        value: min(
+          await sdk.getMaxSpendableValue(virtualAssetIds[2], userIds[0], 1),
+          await sdk.getMaxSpendableValue(virtualAssetIds[3], userIds[0], 1),
+        ),
+      };
       const fee0 = (await sdk.getDefiFees(bridgeIdV2V3ToEth))[DefiSettlementTime.INSTANT];
       {
         const account = 0;

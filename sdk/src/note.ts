@@ -21,7 +21,7 @@ export class Note {
   }
 
   get owner() {
-    return new AccountId(this.treeNote.ownerPubKey, this.treeNote.nonce);
+    return new AccountId(this.treeNote.ownerPubKey, this.treeNote.accountNonce);
   }
 
   get pending() {

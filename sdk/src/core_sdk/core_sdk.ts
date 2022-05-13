@@ -225,13 +225,13 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     return this.rollupProvider.getLatestAliasNonce(alias);
   }
 
-  public async getAccountId(alias: string, nonce?: number) {
+  public async getAccountId(alias: string, accountNonce?: number) {
     const aliasHash = await this.computeAliasHash(alias);
-    return this.db.getAccountId(aliasHash, nonce);
+    return this.db.getAccountId(aliasHash, accountNonce);
   }
 
-  public async getRemoteAccountId(alias: string, nonce?: number) {
-    return this.rollupProvider.getAccountId(alias, nonce);
+  public async getRemoteAccountId(alias: string, accountNonce?: number) {
+    return this.rollupProvider.getAccountId(alias, accountNonce);
   }
 
   public async isAliasAvailable(alias: string) {
@@ -274,13 +274,13 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     return this.schnorr.constructSignature(message, privateKey);
   }
 
-  public async addUser(privateKey: Buffer, nonce?: number, noSync = false) {
+  public async addUser(privateKey: Buffer, accountNonce?: number, noSync = false) {
     return this.serialQueue.push(async () => {
       const publicKey = await this.derivePublicKey(privateKey);
-      if (nonce === undefined) {
-        nonce = await this.getLatestAccountNonce(publicKey);
+      if (accountNonce === undefined) {
+        accountNonce = await this.getLatestAccountNonce(publicKey);
       }
-      const id = new AccountId(publicKey, nonce);
+      const id = new AccountId(publicKey, accountNonce);
       if (await this.db.getUser(id)) {
         throw new Error(`User already exists: ${id}`);
       }
@@ -293,8 +293,8 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
         syncedToRollup = nextRollupId - 1;
       }
 
-      const aliasHash = nonce > 0 ? await this.db.getAliasHashByAddress(publicKey) : undefined;
-      const user = { id, privateKey, publicKey, nonce, aliasHash, syncedToRollup };
+      const aliasHash = accountNonce > 0 ? await this.db.getAliasHashByAddress(publicKey) : undefined;
+      const user = { id, privateKey, publicKey, accountNonce, aliasHash, syncedToRollup };
       await this.db.addUser(user);
 
       const userState = this.userStateFactory.createUserState(user);
@@ -332,36 +332,32 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     return userState.getBalance(assetId);
   }
 
-  public async getMaxSpendableValue(assetId: number, userId: AccountId, numNotes?: number) {
+  public async getSpendableSum(assetId: number, userId: AccountId, excludePendingNotes?: boolean) {
     const userState = this.getUserState(userId);
-    return userState.getMaxSpendableValue(assetId, numNotes);
+    return userState.getSpendableSum(assetId, excludePendingNotes);
   }
 
-  public async getSpendableNotes(assetId: number, userId: AccountId) {
+  public async getSpendableSums(userId: AccountId, excludePendingNotes?: boolean) {
     const userState = this.getUserState(userId);
-    return userState.getSpendableNotes(assetId);
+    return userState.getSpendableSums(excludePendingNotes);
   }
 
-  public async getSpendableSum(assetId: number, userId: AccountId) {
+  public async getMaxSpendableValue(
+    assetId: number,
+    userId: AccountId,
+    numNotes?: number,
+    excludePendingNotes?: boolean,
+  ) {
     const userState = this.getUserState(userId);
-    return userState.getSpendableSum(assetId);
+    return userState.getMaxSpendableValue(assetId, numNotes, excludePendingNotes);
   }
 
-  public async getSpendableSums(userId: AccountId) {
-    const userState = this.getUserState(userId);
-    return userState.getSpendableSums();
+  public async pickNotes(userId: AccountId, assetId: number, value: bigint, excludePendingNotes?: boolean) {
+    return this.getUserState(userId).pickNotes(assetId, value, excludePendingNotes);
   }
 
-  public async getNotes(userId: AccountId) {
-    return this.db.getUserNotes(userId);
-  }
-
-  public async pickNotes(userId: AccountId, assetId: number, value: bigint) {
-    return this.getUserState(userId).pickNotes(assetId, value);
-  }
-
-  public async pickNote(userId: AccountId, assetId: number, value: bigint) {
-    return this.getUserState(userId).pickNote(assetId, value);
+  public async pickNote(userId: AccountId, assetId: number, value: bigint, excludePendingNotes?: boolean) {
+    return this.getUserState(userId).pickNote(assetId, value, excludePendingNotes);
   }
 
   public async getUserTxs(userId: AccountId) {
@@ -467,7 +463,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       this.assertInitState(SdkInitState.RUNNING);
 
       const { outputNotes } = input.tx;
-      const userId = new AccountId(outputNotes[1].ownerPubKey, outputNotes[1].nonce);
+      const userId = new AccountId(outputNotes[1].ownerPubKey, outputNotes[1].accountNonce);
       const userState = this.getUserState(userId);
       const user = userState.getUser();
       return this.paymentProofCreator.createProof(user, input, txRefNo);
@@ -477,7 +473,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   public async createAccountProofSigningData(
     signingPubKey: GrumpkinAddress,
     alias: string,
-    nonce: number,
+    accountNonce: number,
     migrate: boolean,
     accountPublicKey: GrumpkinAddress,
     newAccountPublicKey?: GrumpkinAddress,
@@ -490,7 +486,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       const tx = await this.accountProofCreator.createAccountTx(
         signingPubKey,
         aliasHash,
-        nonce,
+        accountNonce,
         migrate,
         accountPublicKey,
         newAccountPublicKey,
@@ -553,7 +549,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       this.assertInitState(SdkInitState.RUNNING);
 
       const { outputNotes } = input.tx;
-      const userId = new AccountId(outputNotes[1].ownerPubKey, outputNotes[1].nonce);
+      const userId = new AccountId(outputNotes[1].ownerPubKey, outputNotes[1].accountNonce);
       const userState = this.getUserState(userId);
       const user = userState.getUser();
       return this.defiDepositProofCreator.createProof(user, input, txRefNo);
@@ -851,10 +847,10 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     let noteIndex = 0;
     for (let i = 0; i < accounts.length; i++) {
       const {
-        alias: { address, nonce },
+        alias: { address, accountNonce },
         signingKeys: { signingKey1, signingKey2 },
       } = accounts[i];
-      const accountId = new AccountId(new GrumpkinAddress(address), nonce);
+      const accountId = new AccountId(new GrumpkinAddress(address), accountNonce);
 
       const signingKeys = [signingKey1, signingKey2];
       for (let j = 0; j < signingKeys.length; j++) {
@@ -868,7 +864,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       aliases.push({
         aliasHash: new AliasHash(accounts[i].alias.aliasHash),
         address: new GrumpkinAddress(accounts[i].alias.address),
-        latestNonce: accounts[i].alias.nonce,
+        latestNonce: accounts[i].alias.accountNonce,
       });
     }
     const keys = [...uniqueSigningKeys.values()];

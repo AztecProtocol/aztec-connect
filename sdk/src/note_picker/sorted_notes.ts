@@ -18,7 +18,10 @@ export class SortedNotes {
   add(note: Note) {
     let i = this.sortedNotes.length;
     for (; i > 0; i--) {
-      if (this.nth(i - 1).value <= note.value) {
+      if (
+        this.sortedNotes[i - 1].value < note.value ||
+        (this.sortedNotes[i - 1].value === note.value && !note.pending)
+      ) {
         break;
       }
     }
@@ -28,7 +31,9 @@ export class SortedNotes {
 
   bulkAdd(notes: Note[]) {
     if (!this.sortedNotes.length) {
-      this.sortedNotes = [...notes].sort((a, b) => (a.value < b.value ? -1 : a.value > b.value ? 1 : 0));
+      this.sortedNotes = [...notes].sort((a, b) =>
+        a.value < b.value ? -1 : a.value > b.value ? 1 : b.pending ? 1 : -1,
+      );
     } else {
       notes.forEach(n => this.add(n));
     }
@@ -41,6 +46,14 @@ export class SortedNotes {
 
   find(callback: (note: Note) => boolean) {
     return this.sortedNotes.find(note => callback(note));
+  }
+
+  findLast(callback: (note: Note) => boolean) {
+    for (let i = this.sortedNotes.length - 1; i >= 0; --i) {
+      if (callback(this.sortedNotes[i])) {
+        return this.sortedNotes[i];
+      }
+    }
   }
 
   nth(idx: number) {

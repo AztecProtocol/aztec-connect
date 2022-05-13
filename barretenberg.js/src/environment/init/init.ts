@@ -16,7 +16,7 @@ export interface AccountNotePair {
 }
 
 export interface AccountAlias {
-  nonce: number;
+  accountNonce: number;
   aliasHash: Buffer;
   address: Buffer;
 }
@@ -140,7 +140,7 @@ export class InitHelpers {
     });
     const dataToWrite = accountData.flatMap(account => {
       const nonBuf = Buffer.alloc(4);
-      nonBuf.writeUInt32BE(account.alias.nonce);
+      nonBuf.writeUInt32BE(account.alias.accountNonce);
       return [
         nonBuf,
         account.alias.aliasHash,
@@ -166,7 +166,7 @@ export class InitHelpers {
     for (let i = 0; i < numAccounts; i++) {
       let start = i * lengthOfAccountData;
       const alias: AccountAlias = {
-        nonce: data.readUInt32BE(start),
+        accountNonce: data.readUInt32BE(start),
         aliasHash: data.slice(start + 4, start + (4 + ALIAS_HASH_LENGTH)),
         address: data.slice(start + (4 + ALIAS_HASH_LENGTH), start + (4 + ALIAS_HASH_LENGTH + ADDRESS_LENGTH)),
       };

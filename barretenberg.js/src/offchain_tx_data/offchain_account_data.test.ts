@@ -56,4 +56,9 @@ describe('OffchainAccountData', () => {
         ),
     ).toThrow();
   });
+
+  it('throw if buffer size is wrong', () => {
+    expect(() => OffchainAccountData.fromBuffer(randomBytes(OffchainAccountData.SIZE - 1))).toThrow();
+    expect(() => OffchainAccountData.fromBuffer(randomBytes(OffchainAccountData.SIZE + 1))).toThrow();
+  });
 });

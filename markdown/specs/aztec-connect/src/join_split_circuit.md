@@ -10,11 +10,7 @@ The circuit takes in two input notes, and two new output notes, and updates the 
 
 ### Circuit Inputs: Summary
 
-The inputs for the join-split circuit are:
-
-$$ \text{JoinSplit Inputs} = (\text{Public Inputs}, \text{Private Inputs}) \in \mathbb{F}\_p^{13} \times \mathbb{F}\_p^{28}$$
-
-Where the field $\mathbb{F}_p$ is from the BN254 specification.
+The inputs for the join-split circuit are all elements of the field $\mathbb{F}_p$ from the BN254 specification.
 
 ### Public Inputs: Detail
 
@@ -24,250 +20,315 @@ Where the field $\mathbb{F}_p$ is from the BN254 specification.
 1. `nullifier_1`
 1. `nullifier_2`
 1. `public_value`
-1. `public_owner` // WARNING: public_owner doesn't seem to be constrained to anything, except a nonzero check.
-1. `public_asset_id`
+2. `public_owner`
+3. `public_asset_id`
 
-1. `old_data_tree_root`
+4. `old_data_tree_root`
 1. `tx_fee`
-1. `tx_fee_asset_id`
-1. `bridge_id`
-1. `defi_deposit_value`
-1. `propagated_input_index`
-1. `backward_link`
-1. `allow_chain`
-
-1. `defi_root` // note: this will not be used by the circuit, but is included so that the number of public inputs is uniform across base-level circuits.
+2. `tx_fee_asset_id`
+3. `bridge_id`
+4. `defi_deposit_value`
+5. `defi_root` // Note: this will not be used by the circuit, but is included so that the number of public inputs is uniform across base-level circuits.
+6. `backward_link`
+7. `allow_chain`
 
 ### Private Inputs: Detail
 
-1. `asset_id` // TODO: possibly redundant field, given this info is already contained within input_note_i
-1. `nonce` // TODO: possibly redundant field, given this info is already contained within input_note_i
-1. `num_input_notes`
+```js
+{
+  asset_id,
+  num_input_notes,
 
-1. `input_note_1_index`
-1. `input_note_2_index`
-1. `input_note_1_path`
-1. `input_note_2_path`
+  input_note_1_index,
+  input_note_2_index,
 
-1. `input_note_1.value`
-1. `input_note_1.secret`
-1. `input_note_1.owner`
-1. `input_note_1.asset_id`
-1. `input_note_1.nonce`
-1. `input_note_1.creator_pk` (creator_pk = optional public key of note creator)
-1. `input_note_1.input_nullifier`
+  input_note_1_path,
+  input_note_2_path,
 
-1. `input_note_2.value`
-1. `input_note_2.secret`
-1. `input_note_2.owner`
-1. `input_note_2.asset_id`
-1. `input_note_1.nonce`
-1. `input_note_2.creator_pk`
-1. `input_note_2.input_nullifier`
+  input_note_1: {
+    value,
+    secret,
+    owner,
+    asset_id,
+    account_nonce,
+    creator_pk,
+    input_nullifier,
+  },
 
-1. `output_note_1.value`
-1. `output_note_1.secret`
-1. `output_note_1.owner`
-1. `output_note_1.asset_id`
-1. `output_note_1.nonce`
-1. `output_note_1.creator_pk`
-1. `output_note_1.input_nullifier`
+  input_note_2: {
+    value,
+    secret,
+    owner,
+    asset_id,
+    account_nonce,
+    creator_pk,
+    input_nullifier,
+  },
 
-1. `output_note_2.value`
-1. `output_note_2.secret`
-1. `output_note_2.owner`
-1. `output_note_2.asset_id`
-1. `output_note_2.nonce`
-1. `output_note_2.creator_pk`
-1. `output_note_2.input_nullifier`
+  output_note_1: {
+    value,
+    secret,
+    owner,
+    asset_id,
+    account_nonce,
+    creator_pk, // (creator_pk = optional public key of note creator)
+    input_nullifier,
+  },
 
-1. `claim_note.deposit_value`
-1. `claim_note.bridge_id_data.bridge_contract_address`
-1. `claim_note.bridge_id_data.num_output_notes`
-1. `claim_note.bridge_id_data.input_asset_id`
-1. `claim_note.bridge_id_data.output_asset_id_a`
-1. `claim_note.bridge_id_data.output_asset_id_b`
-1. `claim_note.note_secret`
-1. `claim_note.input_nullifier`
+  output_note_2: {
+    value,
+    secret,
+    owner,
+    asset_id,
+    account_nonce,
+    creator_pk, // (creator_pk = optional public key of note creator)
+    input_nullifier,
+  },
 
-1. `account_private_key` (a.k.a. nullifier private key)
-1. `alias_hash`
-1. `account_note_index`
-1. `account_note_path`
+  partial_claim_note_data: {
+    deposit_value,
+    bridge_id_data: {
+      bridge_address_id,
+      input_asset_id_a,
+      input_asset_id_b,
+      output_asset_id_a,
+      output_asset_id_b,
+      config: {
+        second_input_in_use,
+        second_output_in_use,
+      },
+      aux_data,
+    },
+    note_secret,
+    input_nullifier,
+  },
 
-1. `signing_pk` (a.k.a. spending public key)
-1. `signature`
+  account_private_key,
+  alias_hash,
+  account_nonce,
+  account_note_index,
+  account_note_path,
+
+  signing_pk, // (a.k.a. spending public key)
+  signature,
+}
+```
 
 ### Index of Functions
 
-In the Pseudocode to follow, we use the following function names:
+In the Pseudocode to follow, we use the following function names. See [notes & nullifiers](./notes_and_nullifiers.md) for more details.
 
-- `value_note_commit()` **Value note commitment function**, which is assumed to be
+- `public_key()` derives a public key from a given secret key.
+- `value_note_commit()` - **Value note commitment function**, which is assumed to be
   - Collision-resistant
   - Field-friendly, which means the output value only depends on the inputs as field elements, and doesn’t change e.g. when input changes from a to a+r as bit string.
-- `partial_value_note_commit()` **Partial value note commitment function**. Has the same assumptions as `value_note_commit`. Uses a different generator. Stresses that the data being committed to is _partial_ - a subset of the data committed to by `value_note_commit`.
-- `claim_note_commit()` **Claim note commitment function**. Has the same assumptions as the `value_note_commit`. Uses a different generator.
-- `partial_claim_note_commit()` **Partial claim note commitment function**. Has the same assumptions as `claim_note_commit`. Uses a different generator. Stresses that the data being committed to is _partial_ - a subset of the data committed to by `claim_note_commit`.
-- `compute_nullifier()` **Nullifier Function**, which we assume can be modeled as a random oracle, and only depends on `account_private_key` $mod r$.
-- `account_note_commit()` **Account Note Commitment**, which is assumed to be collision resistant.
-- `public_key()` derives a public key from a given secret key.
-- `update()` **Merkle Update Function** inserts a set of compressed note commitments into the note tree and validates the correctness of the associated merkle root update.
+- `partial_value_note_commit()` - **Partial value note commitment function**. Has the same assumptions as `value_note_commit`. Uses a different generator. Stresses that the data being committed to is _partial_ - a subset of the data committed to by `value_note_commit`.
+- `partial_claim_note_commit()` - **Partial claim note commitment function**. Has the same assumptions as `value_note_commit`. Uses a different generator. Stresses that the data being committed to is _partial_ - a subset of the data committed to by `claim_note_commit` (in the claim circuit).
+- `account_note_commit()` - **Account note ommitment function**, which is assumed to be collision resistant.
+- `compute_nullifier()` - **Nullifier Function**, which we assume can be modeled as a random oracle, and only depends on `account_private_key` $mod r$.
+
 
 ### Circuit Logic (Pseudocode)
 
-#### Establish booleans
+```js
 
-```
-let:
-  is_deposit = proof_id == DEPOSIT
-  is_withdraw = proof_id == WITHDRAW
-  is_public_tx = is_deposit || is_withdraw
-  is_defi_deposit = proof_id == DEFI_DEPOSIT
-```
+// range checks:
+  for i = 1,2:
+  {
+    check:
+      input_note_i_index < 2 ** DATA_TREE_DEPTH
+      input_note_i.value < 2 ** NOTE_VALUE_BIT_LENGTH
+      output_note_i.value < 2 ** NOTE_VALUE_BIT_LENGTH
+  }
 
-#### Calculations
+  partial_claim_note.deposit_value < 2 ** DEFI_DEPOSIT_VALUE_BIT_LENGTH
 
-```
-let:
+  asset_id < 2 ** MAX_NUM_ASSETS_BIT_LENGTH
+  public_value < 2 ** NOTE_VALUE_BIT_LENGTH
+  tx_fee < 2 ** TX_FEE_BIT_LENGTH
 
-// public info
-  public_input = is_deposit ? public_value : 0
-  public_output = is_withdraw ? public_value : 0
+  account_note_index < 2 ** DATA_TREE_DEPTH
+  alias_hash < 2 ** ALIAS_HASH_BIT_LENGTH
+  account_nonce < 2 ** ACCOUNT_NONCE_BIT_LENGTH
 
-  public_asset_id = is_public_tx ? asset_id : 0
+  num_input_notes in {0, 1, 2}
+  allow_chain in {0, 1, 2, 3}
 
-// account
-  account_pk = public_key(account_private_key)
-  signer_pk = nonce ? signing_pk.x : account_pk.x
+// tx type initialisations:
+  const is_deposit = proof_id == DEPOSIT
+  const is_withdraw = proof_id == WITHDRAW
+  const is_send = proof_id == SEND
+  const is_defi_deposit = proof_id == DEFI_DEPOSIT
+  const is_public_tx = is_deposit || is_withdraw
 
-  account_alias_id = concat( nonce, alias_hash )
+// public value initialisations
+  const public_asset_id = is_public_tx ? asset_id : 0;
+  const public_input = is_deposit ? public_value : 0;
+  const public_output = is_withdraw ? public_value : 0;
 
-  account_note = {
+// account initialisations
+  const account_pk = public_key(account_private_key);
+  const signer_pk = account_nonce ? signing_pk.x : account_pk.x;
+
+  const account_alias_id = concat( account_nonce, alias_hash );
+  const account_note = {
     account_alias_id,
     account_pk,
     signer_pk,
-  }
-  account_note_commitment = account_note_commit(account_note)
+  };
+  const account_note_commitment = account_note_commit(account_note);
 
 // commitments
   for i in 1,2
   {
-    input_note_i.commitment = value_note_commit(input_note_i)
-    output_note_i.commitment = value_note_commit(output_note_i)
+    input_note_i.commitment = value_note_commit(input_note_i);
+    output_note_i.commitment = value_note_commit(output_note_i);
   }
 
-// adjustment to the output_note_1 commitment in the case of a defi deposit
-  bridge_id = is_defi_deposit ? claim_note.bridge_id_data.to_field() : 0
+// Data validity checks:
+  require(num_input_notes = 0 || 1 || 2); // it's pseudocode!
+  require(is_deposit || is_send || is_withdraw || is_defi_deposit);
 
-  partial_value_note = {
-    claim_note.note_secret,
-    input_note_1.owner,
-    input_note_1.nonce
+  if(num_input_notes == 0) require(is_deposit);
+
+  if (is_public_tx) {
+    require(public_value > 0);
+    require(public_owner > 0);
+  } else {
+    require(public_value == 0);
+    require(public_owner == 0);
   }
-  partial_value_note_commitment = partial_value_note_commit(partial_value_note)
 
-  partial_claim_note = {
-    deposit_value: claim_note.deposit_value,
-    bridge_id: claim_note.bridge_id_data.to_field(),
-    partial_value_note_commitment,
-    input_nullifier: claim_note.input_nullifier,
+  require(input_note_1.commitment != input_note_2.commitment);
+
+  require(
+    (asset_id == input_note_1.asset_id) &&
+    (asset_id == output_note_1.asset_id) &&
+    (asset_id == output_note_2.asset_id) &&
+  );
+
+  if (
+    (num_input_notes == 2) && 
+    !is_defi_deposit
+  ) {
+    require(input_note_1.asset_id == input_note_2.asset_id);
   }
-  partial_claim_note_commitment = partial_claim_note_commit(partial_claim_note)
 
-  output_note_1_commitment = is_defi_deposit ? partial_claim_note_commitment : output_note_1.commitment // supersedes output_note_1.commitment hereonin
+  require(account_private_key != 0);
 
-// note values
-  defi_deposit_value = is_defi_deposit ? claim_note.deposit_value : 0
+  const account_public_key = public_key(account_private_key);
+  require(
+    account_public_key == input_note_1.owner &&
+    account_public_key == input_note_2.owner
+  );
 
-  total_in_value = public_input + input_note_1.value + input_note_2.value
-  total_out_value = public_output + (is_defi_deposit ? defi_deposit_value : output_note_1.value) + output_note_2.valuue
+  require(
+    account_nonce == input_note_1.account_nonce &&
+    account_nonce == input_note_2.account_nonce
+  );
+
+  if (output_note_1.creator_pubkey) {
+    require(account_public_key == output_note_1.creator_pubkey);
+  }
+
+  if (output_note_2.creator_pubkey) {
+    require(account_public_key == output_note_2.creator_pubkey);
+  }
+
+// Defi deposit
+
+  let output_note_1_commitment = output_note_1.commitment; // supersedes output_note_1.commitment frin here on in.
+  let input_note_2_value = input_note_2.value; // supersedes input_note_2.value from here on in.
+  let output_note_1_value = output_note_1.value;
+  let defi_deposit_value = 0;
+
+  if (is_defi_deposit) {
+    const partial_value_note = {
+      secret: partial_claim_note_data.note_secret,
+      owner: input_note_1.owner,
+      account_nonce: input_note_1.account_nonce,
+      creator_pubkey = 0,
+    };
+    const partial_value_note_commitment = partial_value_note_commit(partial_value_note);
+
+    const partial_claim_note = {
+      deposit_value: partial_claim_note_data.deposit_value,
+      bridge_id: partial_claim_note_data.bridge_id_data.to_field(),
+      partial_value_note_commitment,
+      input_nullifier: partial_claim_note_data.input_nullifier,
+    }
+    const partial_claim_note_commitment = partial_claim_note_commit(partial_claim_note)
+
+    output_note_1_commitment = partial_claim_note_commitment;
+
+    defi_deposit_value = partial_claim_note.deposit_value;
+
+    require(defi_deposit_value > 0);
+
+    const { bridge_id_data } = partial_claim_note_data;
+    const bridge_id = bridge_id_data.to_field();
+
+    require(bridge_id_data.input_asset_id_a == input_note_1.asset_id);
+
+    if (input_note_2_in_use && (input_note_1.asset_id != input_note_2.asset_id)) {
+      require(defi_deposit_value == input_note_2.value);
+      require(bridge_id_data.config.second_input_in_use);
+      input_note_2_value = 0; // set to 0 for the 'conservation of value' equations below.
+    }
+
+    if (bridge_id_data.config.second_input_in_use) {
+      require(input_note_2_in_use);
+      require(input_note_2.asset_id == bridge_id_data.input_asset_id_b);
+    }
+
+    output_note_1_value = 0; // set to 0, since the partial claim note replaces it.
+  }
+
+// Conservation of value: no value created or destroyed:
+  const total_in_value = public_input + input_note_1.value + input_note_2_value
+  const total_out_value = public_output + (is_defi_deposit ? defi_deposit_value : output_note_1_value) + output_note_2.valuue
 
 // fee
-  tx_fee = total_in_value - total_out_value
+  const tx_fee = total_in_value - total_out_value // (no underflow allowed)
 
-// nullifier
-  for i = 1,2
+
+// Check input notes are valid:
+  let input_note_1_in_use = num_input_notes >= 1;
+  let input_note_2_in_use = num_input_notes == 2;
+
+  for i = 1,2:
   {
-    is_real_i = num_input_notes >= i
+    if (input_note_i_in_use) {
+      const input_note_commitment_i = value_note_commit(input_note_i);
+      const exists = check_membership(
+        input_note_commitment_i, input_note_i_index, input_note_i_path, old_data_tree_root
+      );
+      require(exists);
+    } else {
+      require(input_note_i.value == 0);
+    }
+  }
 
+// Compute nullifiers
+  for i = 1,2:
+  {
     nullifier_i = compute_nullifier(
       input_note_i.commitment,
       account_private_key,
-      is_real_i,
-    )
+      input_note_i_in_use,
+    );
   }
-```
 
-#### Range Checks
+  require(
+    output_note_1.input_nullifier == nullifier_1 &&
+    output_note_2.input_nullifier == nullifier_2 &&
+    partial_claim_note.input_nullifier == is_defi_deposit ? nullifier_1 : 0;
+  )
 
-```
+// Verify account ownership
+  check_membership(account_note_commitment, account_note_index, account_note_path, old_data_tree_root);
 
-for i = 1,2
-{
-  check:
-    input_note_i.value <= 2 ** NOTE_VALUE_BIT_LENGTH // WARNING: these don't look to be checked in the join_split circuit?
-    output_note_i.value <= 2 ** NOTE_VALUE_BIT_LENGTH // WARNING: these don't look to be checked in the join_split circuit?
-}
-
-claim_note.deposit_value <= 2 ** DEFI_DEPOSIT_VALUE_BIT_LENGTH
-
-asset_id <= 2 ** MAX_NUM_ASSETS_BIT_LENGTH
-public_value <= 2 ** NOTE_VALUE_BIT_LENGTH
-tx_fee <= 2 ** TX_FEE_BIT_LENGTH
-alias_hash <= 2 ** 224 // TODO: create config variable for this 224 value?
-
-num_input_notes in {0, 1, 2}
-propagated_input_index in {0, 1, 2}
-allow_chain in {0, 1, 2}
-```
-
-#### Consistency checks
-
-```
-check:
-  asset_id == input_note_1.asset_id == input_note_2.asset_id == output_note_1.asset_id == output_note_2.asset_id
-
-  nonce == input_note_1.nonce == input_note_2.nonce
-  // QUESTION: should output_note_i.nonce == nonce for output notes belonging to the sender?
-
-  account_pk == input_note_1.owner == input_note_2.owner
-
-  output_note_1.creator_pk == account_pk.x or 0
-  output_note_2.creator_pk == account_pk.x or 0
-
-  !is_public_tx <=> public_value == 0 && public_owner == 0
-
-  output_note_1.input_nullifier == nullifier_1
-  output_note_2.input_nullifier == nullifier_2
-  claim_note.input_nullifier == is_defi_deposit ? nullifier_1 : 0
-
-  total_in_value == total_out_value
-```
-
-#### Check inputs notes are valid
-
-```
-for i = 1,2
-{
-  compute input_note_commitment_i = value_note_commit(input_note_i)
-
-  check membership
-    (input_note_commitment_i, input_note_i_index, input_note_i_path, data_tree_root)
-    == is_real_i
-
-  if (!is_real_i) {
-    ensure input_note_i.value == 0
-  }
-}
-```
-
-#### Verify Account Ownership
-
-```
-check membership(account_note_commitment, account_note_index, account_note_path, data_tree_root)
-
-let message =
-  (
+  message = (
     public_value,
     public_owner,
     public_asset_id,
@@ -275,33 +336,47 @@ let message =
     output_note_2.commitment,
     nullifier_1,
     nullifier_2,
-    propagated_input_index,
     backward_link,
     allow_chain,
-  )
+  );
 
-check CHECKSIG
-  (
+  verify_signature(
     message,
     signature,
-    signer_pk
-  )
-```
+    signer_public_key
+  );
 
-#### Check chained tx inputs are valid
+// Check chained transaction inputs are valid:
+  const backward_link_in_use = inputs.backward_link != 0;
+  const note1_propagated = inputs.backward_link == input_note_1.commitment;
+  const note2_propagated = inputs.backward_link == input_note_2.commitment;
 
-```
-  is_defi_deposit => allow_chain != 1
+  if (backward_link_in_use) require(note1_propagated || note2_propagated);
 
-  (propagated_input_index == 1) => (backward_link == input_note_1.commitment)
-  (propagated_input_index == 2) => (backward_link == input_note_2.commitment)
+  if (is_defi_deposit) require(allow_chain != 1);
 
-  (allow_chain == 1) => (output_note_1.owner == input_note_1.owner)
-  (allow_chain == 2) => (output_note_2.owner == input_note_1.owner)
-```
+  if (inputs.allow_chain == 1) require(output_note_1.owner == input_note_1.owner);
+  if (inputs.allow_chain == 2) require(output_note_2.owner == input_note_1.owner);
 
-#### Constrain unused public inputs to zero
+// Constrain unused public inputs to zero:
+  require(defi_root == 0);
 
-```
-defi_root == 0
+// Set public inputs (simply listed here without syntax):
+  proof_id,
+  output_note_1_commitment,
+  output_note_2.commitment,
+  nullifier_1,
+  nullifier_2,
+  public_value,
+  public_owner,
+  public_asset_id,
+
+  old_data_tree_root,
+  tx_fee,
+  asset_id,
+  bridge_id,
+  defi_deposit_value,
+  defi_root,
+  backward_link,
+  allow_chain
 ```

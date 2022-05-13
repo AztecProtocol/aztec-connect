@@ -110,7 +110,7 @@ const dexieUserToUser = (user: DexieUser): UserData => {
   return {
     id,
     publicKey: id.publicKey,
-    nonce: id.accountNonce,
+    accountNonce: id.accountNonce,
     privateKey: Buffer.from(user.privateKey),
     syncedToRollup: user.syncedToRollup,
     aliasHash: user.aliasHash ? new AliasHash(Buffer.from(user.aliasHash)) : undefined,
@@ -820,31 +820,31 @@ export class DexieDatabase implements Database {
     return aliases[0]?.latestNonce;
   }
 
-  async getAliasHashByAddress(address: GrumpkinAddress, nonce?: number) {
+  async getAliasHashByAddress(address: GrumpkinAddress, accountNonce?: number) {
     const collection = this.alias
       .where({
         address: new Uint8Array(address.toBuffer()),
       })
-      .filter(a => nonce === undefined || a.latestNonce >= nonce);
-    if (nonce === undefined) {
+      .filter(a => accountNonce === undefined || a.latestNonce >= accountNonce);
+    if (accountNonce === undefined) {
       collection.reverse();
     }
     const aliases = await collection.sortBy('latestNonce');
     return aliases.length ? new AliasHash(Buffer.from(aliases[0].aliasHash)) : undefined;
   }
 
-  async getAccountId(aliasHash: AliasHash, nonce?: number) {
+  async getAccountId(aliasHash: AliasHash, accountNonce?: number) {
     const collection = this.alias
       .where({
         aliasHash: new Uint8Array(aliasHash.toBuffer()),
       })
-      .filter(a => nonce === undefined || a.latestNonce >= nonce);
-    if (nonce === undefined) {
+      .filter(a => accountNonce === undefined || a.latestNonce >= accountNonce);
+    if (accountNonce === undefined) {
       collection.reverse();
     }
     const [alias] = await collection.sortBy('latestNonce');
     return alias
-      ? new AccountId(new GrumpkinAddress(Buffer.from(alias.address)), nonce ?? alias.latestNonce)
+      ? new AccountId(new GrumpkinAddress(Buffer.from(alias.address)), accountNonce ?? alias.latestNonce)
       : undefined;
   }
 

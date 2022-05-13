@@ -16,7 +16,6 @@ import {
   OUTPUT_ASSET_ID_A_OFFSET,
   OUTPUT_ASSET_ID_B_LEN,
   OUTPUT_ASSET_ID_B_OFFSET,
-  virtualAssetIdFlag,
 } from './bridge_id_config';
 
 const randomInt = (to = 2 ** 30 - 1) => Math.floor(Math.random() * (to + 1));
@@ -38,16 +37,7 @@ export class BridgeId {
     public readonly outputAssetIdB?: number,
     public readonly auxData = 0,
   ) {
-    const secondInputVirtual = inputAssetIdB !== undefined && isVirtualAsset(inputAssetIdB);
-    const secondOutputVirtual = outputAssetIdB !== undefined && isVirtualAsset(outputAssetIdB);
-    this.bitConfig = new BitConfig(
-      isVirtualAsset(inputAssetIdA),
-      secondInputVirtual,
-      isVirtualAsset(outputAssetIdA),
-      secondOutputVirtual,
-      inputAssetIdB !== undefined && !secondInputVirtual,
-      outputAssetIdB !== undefined && !secondOutputVirtual,
-    );
+    this.bitConfig = new BitConfig(inputAssetIdB !== undefined, outputAssetIdB !== undefined);
   }
 
   static random() {
@@ -55,31 +45,28 @@ export class BridgeId {
   }
 
   static fromBigInt(val: bigint) {
+    const addressId = getNumber(val, ADDRESS_OFFSET, ADDRESS_BIT_LEN);
+    const inputAssetIdA = getNumber(val, INPUT_ASSET_ID_A_OFFSET, INPUT_ASSET_ID_A_LEN);
+    const outputAssetIdA = getNumber(val, OUTPUT_ASSET_ID_A_OFFSET, OUTPUT_ASSET_ID_A_LEN);
+    const inputAssetIdB = getNumber(val, INPUT_ASSET_ID_B_OFFSET, INPUT_ASSET_ID_B_LEN);
+    const outputAssetIdB = getNumber(val, OUTPUT_ASSET_ID_B_OFFSET, OUTPUT_ASSET_ID_B_LEN);
+    const auxData = getNumber(val, AUX_DATA_OFFSET, AUX_DATA_LEN);
+
     const bitConfig = BitConfig.fromBigInt(BigInt(getNumber(val, BITCONFIG_OFFSET, BITCONFIG_LEN)));
-    if (bitConfig.secondInputReal && bitConfig.secondInputVirtual) {
-      throw new Error('Invalid second input config.');
+    if (!bitConfig.secondInputInUse && inputAssetIdB) {
+      throw new Error('Inconsistent second input.');
     }
-    if (bitConfig.secondOutputReal && bitConfig.secondOutputVirtual) {
-      throw new Error('Invalid second output config.');
+    if (!bitConfig.secondOutputInUse && outputAssetIdB) {
+      throw new Error('Inconsistent second output.');
     }
 
-    const hasSecondInput = bitConfig.secondInputReal || bitConfig.secondInputVirtual;
-    const hasSecondOutput = bitConfig.secondOutputReal || bitConfig.secondOutputVirtual;
     return new BridgeId(
-      getNumber(val, ADDRESS_OFFSET, ADDRESS_BIT_LEN),
-      getNumber(val, INPUT_ASSET_ID_A_OFFSET, INPUT_ASSET_ID_A_LEN) +
-        (bitConfig.firstInputVirtual ? virtualAssetIdFlag : 0),
-      getNumber(val, OUTPUT_ASSET_ID_A_OFFSET, OUTPUT_ASSET_ID_A_LEN) +
-        (bitConfig.firstOutputVirtual ? virtualAssetIdFlag : 0),
-      hasSecondInput
-        ? getNumber(val, INPUT_ASSET_ID_B_OFFSET, INPUT_ASSET_ID_B_LEN) +
-          (bitConfig.secondInputVirtual ? virtualAssetIdFlag : 0)
-        : undefined,
-      hasSecondOutput
-        ? getNumber(val, OUTPUT_ASSET_ID_B_OFFSET, OUTPUT_ASSET_ID_B_LEN) +
-          (bitConfig.secondOutputVirtual ? virtualAssetIdFlag : 0)
-        : undefined,
-      getNumber(val, AUX_DATA_OFFSET, AUX_DATA_LEN),
+      addressId,
+      inputAssetIdA,
+      outputAssetIdA,
+      bitConfig.secondInputInUse ? inputAssetIdB : undefined,
+      bitConfig.secondOutputInUse ? outputAssetIdB : undefined,
+      auxData,
     );
   }
 
@@ -96,48 +83,44 @@ export class BridgeId {
   }
 
   get firstInputVirtual() {
-    return this.bitConfig.firstInputVirtual;
+    return isVirtualAsset(this.inputAssetIdA);
   }
 
   get secondInputVirtual() {
-    return this.bitConfig.secondInputVirtual;
+    return !!this.inputAssetIdB && isVirtualAsset(this.inputAssetIdB);
   }
 
   get firstOutputVirtual() {
-    return this.bitConfig.firstOutputVirtual;
+    return isVirtualAsset(this.outputAssetIdA);
   }
 
   get secondOutputVirtual() {
-    return this.bitConfig.secondOutputVirtual;
+    return !!this.outputAssetIdB && isVirtualAsset(this.outputAssetIdB);
   }
 
-  get secondInputReal() {
-    return this.bitConfig.secondInputReal;
+  get secondInputInUse() {
+    return this.bitConfig.secondInputInUse;
   }
 
-  get secondOutputReal() {
-    return this.bitConfig.secondOutputReal;
+  get secondOutputInUse() {
+    return this.bitConfig.secondOutputInUse;
   }
 
   get numInputAssets() {
-    return this.secondInputReal || this.secondInputVirtual ? 2 : 1;
+    return this.bitConfig.secondInputInUse ? 2 : 1;
   }
 
   get numOutputAssets() {
-    return this.secondOutputReal || this.secondOutputVirtual ? 2 : 1;
+    return this.bitConfig.secondOutputInUse ? 2 : 1;
   }
 
   toBigInt() {
     return (
       BigInt(this.addressId) +
-      (BigInt(this.inputAssetIdA - (this.bitConfig.firstInputVirtual ? virtualAssetIdFlag : 0)) <<
-        BigInt(INPUT_ASSET_ID_A_OFFSET)) +
-      (BigInt((this.inputAssetIdB || 0) - (this.bitConfig.secondInputVirtual ? virtualAssetIdFlag : 0)) <<
-        BigInt(INPUT_ASSET_ID_B_OFFSET)) +
-      (BigInt(this.outputAssetIdA - (this.bitConfig.firstOutputVirtual ? virtualAssetIdFlag : 0)) <<
-        BigInt(OUTPUT_ASSET_ID_A_OFFSET)) +
-      (BigInt((this.outputAssetIdB || 0) - (this.bitConfig.secondOutputVirtual ? virtualAssetIdFlag : 0)) <<
-        BigInt(OUTPUT_ASSET_ID_B_OFFSET)) +
+      (BigInt(this.inputAssetIdA) << BigInt(INPUT_ASSET_ID_A_OFFSET)) +
+      (BigInt(this.inputAssetIdB || 0) << BigInt(INPUT_ASSET_ID_B_OFFSET)) +
+      (BigInt(this.outputAssetIdA) << BigInt(OUTPUT_ASSET_ID_A_OFFSET)) +
+      (BigInt(this.outputAssetIdB || 0) << BigInt(OUTPUT_ASSET_ID_B_OFFSET)) +
       (this.bitConfig.toBigInt() << BigInt(BITCONFIG_OFFSET)) +
       (BigInt(this.auxData) << BigInt(AUX_DATA_OFFSET))
     );

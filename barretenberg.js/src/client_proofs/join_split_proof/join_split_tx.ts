@@ -92,9 +92,9 @@ export class JoinSplitTx {
     dataStart += 32;
     const aliasHash = new AliasHash(buf.slice(dataStart + 4, dataStart + 32));
     dataStart += 32;
-    const nonce = buf.readUInt32BE(dataStart);
+    const accountNonce = buf.readUInt32BE(dataStart);
     dataStart += 4;
-    const accountAliasId = new AccountAliasId(aliasHash, nonce);
+    const accountAliasId = new AccountAliasId(aliasHash, accountNonce);
     const accountIndex = buf.readUInt32BE(dataStart);
     dataStart += 4;
     const accountPath = HashPath.deserialize(buf, dataStart);

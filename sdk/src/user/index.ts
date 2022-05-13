@@ -7,7 +7,7 @@ export interface UserData {
   id: AccountId;
   privateKey: Buffer;
   publicKey: GrumpkinAddress;
-  nonce: number;
+  accountNonce: number;
   aliasHash?: AliasHash;
   syncedToRollup: number;
 }
@@ -16,7 +16,7 @@ export interface UserDataJson {
   id: string;
   privateKey: string;
   publicKey: string;
-  nonce: number;
+  accountNonce: number;
   aliasHash?: string;
   syncedToRollup: number;
 }

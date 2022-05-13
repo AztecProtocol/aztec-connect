@@ -104,13 +104,13 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
     return this.backend.getRemoteLatestAliasNonce(alias);
   }
 
-  public async getAccountId(alias: string, nonce?: number) {
-    const accountId = await this.backend.getAccountId(alias, nonce);
+  public async getAccountId(alias: string, accountNonce?: number) {
+    const accountId = await this.backend.getAccountId(alias, accountNonce);
     return accountId ? AccountId.fromString(accountId) : undefined;
   }
 
-  public async getRemoteAccountId(alias: string, nonce?: number) {
-    const accountId = await this.backend.getRemoteAccountId(alias, nonce);
+  public async getRemoteAccountId(alias: string, accountNonce?: number) {
+    const accountId = await this.backend.getRemoteAccountId(alias, accountNonce);
     return accountId ? AccountId.fromString(accountId) : undefined;
   }
 
@@ -164,7 +164,7 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
   public async createAccountProofSigningData(
     signingPubKey: GrumpkinAddress,
     alias: string,
-    nonce: number,
+    accountNonce: number,
     migrate: boolean,
     accountPublicKey: GrumpkinAddress,
     newAccountPublicKey?: GrumpkinAddress,
@@ -174,7 +174,7 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
     const signingData = await this.backend.createAccountProofSigningData(
       signingPubKey.toString(),
       alias,
-      nonce,
+      accountNonce,
       migrate,
       accountPublicKey.toString(),
       newAccountPublicKey ? newAccountPublicKey.toString() : undefined,
@@ -293,8 +293,8 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
     return SchnorrSignature.fromString(signature);
   }
 
-  public async addUser(privateKey: Buffer, nonce?: number, noSync?: boolean) {
-    const json = await this.backend.addUser(new Uint8Array(privateKey), nonce, noSync);
+  public async addUser(privateKey: Buffer, accountNonce?: number, noSync?: boolean) {
+    const json = await this.backend.addUser(new Uint8Array(privateKey), accountNonce, noSync);
     return userDataFromJson(json);
   }
 
@@ -317,37 +317,34 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
     return BigInt(balanceStr);
   }
 
-  public async getMaxSpendableValue(assetId: number, userId: AccountId, numNotes?: number) {
-    const valueStr = await this.backend.getMaxSpendableValue(assetId, userId.toString(), numNotes);
+  public async getSpendableSum(assetId: number, userId: AccountId, excludePendingNotes?: boolean) {
+    const valueStr = await this.backend.getSpendableSum(assetId, userId.toString(), excludePendingNotes);
     return BigInt(valueStr);
   }
 
-  public async getSpendableNotes(assetId: number, userId: AccountId) {
-    const notes = await this.backend.getSpendableNotes(assetId, userId.toString());
-    return notes.map(noteFromJson);
-  }
-
-  public async getSpendableSum(assetId: number, userId: AccountId) {
-    const valueStr = await this.backend.getSpendableSum(assetId, userId.toString());
-    return BigInt(valueStr);
-  }
-
-  public async getSpendableSums(userId: AccountId) {
-    const sums = await this.backend.getSpendableSums(userId.toString());
+  public async getSpendableSums(userId: AccountId, excludePendingNotes?: boolean) {
+    const sums = await this.backend.getSpendableSums(userId.toString(), excludePendingNotes);
     return sums.map(assetValueFromJson);
   }
 
-  public async getNotes(userId: AccountId) {
-    const notes = await this.backend.getNotes(userId.toString());
-    return notes.map(noteFromJson);
+  public async getMaxSpendableValue(
+    assetId: number,
+    userId: AccountId,
+    numNotes?: number,
+    excludePendingNotes?: boolean,
+  ) {
+    const valueStr = await this.backend.getMaxSpendableValue(assetId, userId.toString(), numNotes, excludePendingNotes);
+    return BigInt(valueStr);
   }
 
-  public async pickNotes(userId: AccountId, assetId: number, value: bigint) {
-    return (await this.backend.pickNotes(userId.toString(), assetId, value.toString())).map(noteFromJson);
+  public async pickNotes(userId: AccountId, assetId: number, value: bigint, excludePendingNotes?: boolean) {
+    return (await this.backend.pickNotes(userId.toString(), assetId, value.toString(), excludePendingNotes)).map(
+      noteFromJson,
+    );
   }
 
-  public async pickNote(userId: AccountId, assetId: number, value: bigint) {
-    const note = await this.backend.pickNote(userId.toString(), assetId, value.toString());
+  public async pickNote(userId: AccountId, assetId: number, value: bigint, excludePendingNotes?: boolean) {
+    const note = await this.backend.pickNote(userId.toString(), assetId, value.toString(), excludePendingNotes);
     return note ? noteFromJson(note) : undefined;
   }
 

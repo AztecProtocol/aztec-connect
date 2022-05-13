@@ -96,8 +96,8 @@ export interface Database extends MutexDatabase {
   getAliases(aliasHash: AliasHash): Promise<Alias[]>;
   getLatestNonceByAddress(address: GrumpkinAddress): Promise<number | undefined>;
   getLatestNonceByAliasHash(aliasHash: AliasHash): Promise<number | undefined>;
-  getAliasHashByAddress(address: GrumpkinAddress, nonce?: number): Promise<AliasHash | undefined>;
-  getAccountId(aliasHash: AliasHash, nonce?: number): Promise<AccountId | undefined>;
+  getAliasHashByAddress(address: GrumpkinAddress, accountNonce?: number): Promise<AliasHash | undefined>;
+  getAccountId(aliasHash: AliasHash, accountNonce?: number): Promise<AccountId | undefined>;
 
   deleteKey(name: string): Promise<void>;
   addKey(name: string, value: Buffer): Promise<void>;

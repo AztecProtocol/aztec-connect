@@ -39,6 +39,13 @@ export class DepositController {
     private readonly provider: EthereumProvider,
   ) {
     const { assetId, value } = assetValue;
+    if (!blockchain.getAsset(assetId)) {
+      throw new Error('Unsupported asset');
+    }
+    if (!value) {
+      throw new Error('Deposit value must be greater than 0.');
+    }
+
     this.publicInput = { assetId, value: value + (fee.assetId === assetId ? fee.value : BigInt(0)) };
     this.requireFeePayingTx = !!fee.value && fee.assetId !== assetId;
   }
@@ -92,6 +99,9 @@ export class DepositController {
 
   async depositFundsToContractWithPermit(deadline: bigint) {
     const { assetId } = this.publicInput;
+    if (assetId === 0) {
+      throw new Error('Permit flow unsupported for ETH.');
+    }
     const value = await this.getRequiredFunds();
     const { signature } = await this.createPermitArgs(value, deadline);
     this.txHash = await this.blockchain.depositPendingFundsPermit(assetId, value, deadline, signature, undefined, {
@@ -103,6 +113,9 @@ export class DepositController {
 
   async depositFundsToContractWithNonStandardPermit(deadline: bigint) {
     const { assetId } = this.publicInput;
+    if (assetId === 0) {
+      throw new Error('Permit flow unsupported for ETH.');
+    }
     const { signature, nonce } = await this.createPermitArgsNonStandard(deadline);
     const value = await this.getRequiredFunds();
     this.txHash = await this.blockchain.depositPendingFundsPermitNonStandard(
@@ -133,6 +146,9 @@ export class DepositController {
 
   async depositFundsToContractWithPermitAndProofApproval(deadline: bigint) {
     const { assetId } = this.publicInput;
+    if (assetId === 0) {
+      throw new Error('Permit flow unsupported for ETH.');
+    }
     const value = await this.getRequiredFunds();
     const { signature } = await this.createPermitArgs(value, deadline);
     const proofHash = this.getTxId().toBuffer();
@@ -145,6 +161,9 @@ export class DepositController {
 
   async depositFundsToContractWithNonStandardPermitAndProofApproval(deadline: bigint) {
     const { assetId } = this.publicInput;
+    if (assetId === 0) {
+      throw new Error('Permit flow unsupported for ETH.');
+    }
     const value = await this.getRequiredFunds();
     const { signature, nonce } = await this.createPermitArgsNonStandard(deadline);
     const proofHash = this.getTxId().toBuffer();

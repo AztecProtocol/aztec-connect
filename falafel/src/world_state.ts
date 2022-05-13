@@ -225,7 +225,7 @@ export class WorldState {
         new AccountDao({
           aliasHash: a.alias.aliasHash,
           accountPubKey: a.alias.address,
-          nonce: a.alias.nonce,
+          accountNonce: a.alias.accountNonce,
         }),
     );
     await this.rollupDb.addAccounts(accountDaos);

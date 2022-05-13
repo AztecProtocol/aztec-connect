@@ -3,7 +3,7 @@ import { TxType } from '@aztec/barretenberg/blockchain';
 import { DefiDepositProofData } from '@aztec/barretenberg/client_proofs';
 import { TxDao } from '../entity';
 import { TxFeeResolver } from '../tx_fee_resolver';
-import { Tx } from './interfaces';
+import { Tx } from './tx';
 
 interface TxGroupValidation {
   hasFeelessTxs: boolean;
@@ -15,56 +15,55 @@ interface TxGroupValidation {
 export class TxFeeAllocator {
   constructor(private txFeeResolver: TxFeeResolver) {}
 
-  private assetIsFeePaying(asset: number) {
-    return this.txFeeResolver.isFeePayingAsset(asset);
-  }
-
-  public validateReceivedTxs(txs: Tx[], txTypes: TxType[]) {
-    const result = {
-      hasFeelessTxs: false,
-      gasProvided: 0,
-      gasRequired: 0,
-    } as TxGroupValidation;
-
+  public validateReceivedTxs(txs: Tx[], txTypes: TxType[]): TxGroupValidation {
     const feePayingAssets = new Set<number>();
-
+    let hasFeelessTxs = false;
     // determine the fee paying asset type for this block of txs
     for (let i = 0; i < txs.length; i++) {
       const tx = txs[i];
-      const feeAsset = tx.proof.txFeeAssetId.readUInt32BE(28);
-      const isFeePayingAsset = this.assetIsFeePaying(feeAsset);
+      const txFeeAssetId = tx.proof.txFeeAssetId.readUInt32BE(28);
+      const isFeePayingAsset = this.txFeeResolver.isFeePayingAsset(txFeeAssetId);
       const txFee = toBigIntBE(tx.proof.txFee);
       if (isFeePayingAsset && txFee) {
-        feePayingAssets.add(feeAsset);
+        feePayingAssets.add(txFeeAssetId);
       } else {
-        result.hasFeelessTxs = true;
+        hasFeelessTxs = true;
       }
     }
 
     // there must be only one!
     if (feePayingAssets.size !== 1) {
-      throw new Error('Transactions must have exactly 1 fee paying asset');
+      throw new Error('Transactions must have exactly 1 fee paying asset.');
     }
-    result.feePayingAsset = [...feePayingAssets][0];
 
+    const feePayingAsset = [...feePayingAssets][0];
+    let gasRequired = 0;
+    let gasProvided = 0;
     // calculate the gas required and that provided
     for (let i = 0; i < txs.length; i++) {
       const tx = txs[i];
       if (txTypes[i] === TxType.DEFI_DEPOSIT) {
         const { bridgeId } = new DefiDepositProofData(tx.proof);
         // this call return BASE_TX_GAS + constants[DEFI_DEPOSIT] + BRIDGE_TX_GAS
-        result.gasRequired += this.txFeeResolver.getBridgeTxGas(result.feePayingAsset, bridgeId.toBigInt());
+        gasRequired += this.txFeeResolver.getBridgeTxGas(feePayingAsset, bridgeId.toBigInt());
         // this call return BASE_TX_GAS + constants[DEFI_CLAIM]
-        result.gasRequired += this.txFeeResolver.getTxGas(result.feePayingAsset, TxType.DEFI_CLAIM);
+        gasRequired += this.txFeeResolver.getTxGas(feePayingAsset, TxType.DEFI_CLAIM);
       } else {
-        result.gasRequired += this.txFeeResolver.getTxGas(result.feePayingAsset, txTypes[i]);
+        gasRequired += this.txFeeResolver.getTxGas(feePayingAsset, txTypes[i]);
       }
-      const feeAsset = tx.proof.txFeeAssetId.readUInt32BE(28);
-      if (feeAsset === result.feePayingAsset) {
-        result.gasProvided += this.txFeeResolver.getGasPaidForByFee(feeAsset, toBigIntBE(tx.proof.txFee));
+
+      const txFeeAssetId = tx.proof.txFeeAssetId.readUInt32BE(28);
+      if (txFeeAssetId === feePayingAsset) {
+        gasProvided += this.txFeeResolver.getGasPaidForByFee(txFeeAssetId, toBigIntBE(tx.proof.txFee));
       }
     }
-    return result;
+
+    return {
+      hasFeelessTxs,
+      feePayingAsset,
+      gasProvided,
+      gasRequired,
+    };
   }
 
   public reallocateGas(txDaos: TxDao[], txs: Tx[], txTypes: TxType[], validation: TxGroupValidation) {
@@ -128,9 +127,9 @@ export class TxFeeAllocator {
 
     // We have excess gas and no defi, find the first feeless tx and allocate the excess to it.
     const nonFeeIndex = txs.findIndex(tx => {
-      const feeAsset = tx.proof.txFeeAssetId.readUInt32BE(28);
+      const txFeeAssetId = tx.proof.txFeeAssetId.readUInt32BE(28);
       const txFee = toBigIntBE(tx.proof.txFee);
-      return !this.assetIsFeePaying(feeAsset) || !txFee;
+      return !this.txFeeResolver.isFeePayingAsset(txFeeAssetId) || !txFee;
     });
     if (nonFeeIndex === -1) {
       throw new Error(`Failed to allocate fee to tx`);

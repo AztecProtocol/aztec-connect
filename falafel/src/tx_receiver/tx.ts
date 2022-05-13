@@ -5,10 +5,3 @@ export interface Tx {
   offchainTxData: Buffer;
   depositSignature?: Buffer;
 }
-
-export interface TxGroupValidation {
-  hasFeelessTxs: boolean;
-  feePayingAsset: number;
-  gasRequired: bigint;
-  gasProvided: bigint;
-}

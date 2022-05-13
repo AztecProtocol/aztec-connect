@@ -427,20 +427,20 @@ export class SQLDatabase implements Database {
     return alias?.latestNonce;
   }
 
-  async getAliasHashByAddress(address: GrumpkinAddress, nonce?: number) {
+  async getAliasHashByAddress(address: GrumpkinAddress, accountNonce?: number) {
     const alias = await this.aliasRep.findOne({
-      where: { address, latestNonce: MoreThanOrEqual(nonce || 0) },
-      order: { latestNonce: nonce !== undefined ? 'ASC' : 'DESC' },
+      where: { address, latestNonce: MoreThanOrEqual(accountNonce || 0) },
+      order: { latestNonce: accountNonce !== undefined ? 'ASC' : 'DESC' },
     });
     return alias?.aliasHash;
   }
 
-  async getAccountId(aliasHash: AliasHash, nonce?: number) {
+  async getAccountId(aliasHash: AliasHash, accountNonce?: number) {
     const alias = await this.aliasRep.findOne({
-      where: { aliasHash, latestNonce: MoreThanOrEqual(nonce || 0) },
-      order: { latestNonce: nonce !== undefined ? 'ASC' : 'DESC' },
+      where: { aliasHash, latestNonce: MoreThanOrEqual(accountNonce || 0) },
+      order: { latestNonce: accountNonce !== undefined ? 'ASC' : 'DESC' },
     });
-    return alias ? new AccountId(alias.address, nonce ?? alias.latestNonce) : undefined;
+    return alias ? new AccountId(alias.address, accountNonce ?? alias.latestNonce) : undefined;
   }
 
   async addKey(name: string, value: Buffer) {

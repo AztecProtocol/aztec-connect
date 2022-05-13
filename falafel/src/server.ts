@@ -1,6 +1,7 @@
 import { AliasHash } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { Blockchain } from '@aztec/barretenberg/blockchain';
+import { AccountVerifier, JoinSplitVerifier } from '@aztec/barretenberg/client_proofs';
 import { Blake2s } from '@aztec/barretenberg/crypto';
 import { InitHelpers } from '@aztec/barretenberg/environment';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
@@ -126,6 +127,8 @@ export class Server {
       rollupDb,
       blockchain,
       this.proofGenerator,
+      new JoinSplitVerifier(),
+      new AccountVerifier(),
       this.txFeeResolver,
       metrics,
       this.bridgeResolver,
@@ -279,9 +282,9 @@ export class Server {
     return this.rollupDb.getLatestAliasNonce(aliasHash);
   }
 
-  public async getAccountId(alias: string, nonce?: number) {
+  public async getAccountId(alias: string, accountNonce?: number) {
     const aliasHash = AliasHash.fromAlias(alias, this.blake);
-    return this.rollupDb.getAccountId(aliasHash, nonce);
+    return this.rollupDb.getAccountId(aliasHash, accountNonce);
   }
 
   public async getUnsettledAccountTxs() {

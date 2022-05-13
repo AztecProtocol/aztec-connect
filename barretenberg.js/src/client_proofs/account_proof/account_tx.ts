@@ -47,9 +47,9 @@ export class AccountTx {
     dataStart += 64;
     const aliasHash = new AliasHash(buf.slice(dataStart + 4, dataStart + 32));
     dataStart += 32;
-    const nonce = buf.readUInt32BE(dataStart);
+    const accountNonce = buf.readUInt32BE(dataStart);
     dataStart += 4;
-    const accountAliasId = new AccountAliasId(aliasHash, nonce);
+    const accountAliasId = new AccountAliasId(aliasHash, accountNonce);
     const migrate = !!buf[dataStart];
     dataStart += 1;
     const accountIndex = buf.readUInt32BE(dataStart);

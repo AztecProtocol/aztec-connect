@@ -78,10 +78,9 @@ describe('defi controller', () => {
 
   describe('deposit one asset', () => {
     const assetId = 0;
-    const outputAssetId = 1;
-    const bridgeId = new BridgeId(1, assetId, outputAssetId);
+    const bridgeId = new BridgeId(1, assetId, 3);
     const depositValue = { assetId, value: 100n };
-    const fee = { assetId, value: 2n };
+    const fee = { assetId, value: 1n };
     let controller: DefiController;
 
     beforeEach(() => {
@@ -93,7 +92,7 @@ describe('defi controller', () => {
       {
         coreSdk.pickNotes.mockImplementationOnce(() => [
           { assetId, value: 40n },
-          { assetId, value: 62n },
+          { assetId, value: 61n },
         ]);
 
         await controller.createProof();
@@ -101,70 +100,69 @@ describe('defi controller', () => {
 
         expectDefiInputNotes([
           { assetId, value: 40n },
-          { assetId, value: 62n },
+          { assetId, value: 61n },
         ]);
         expectSendProofs([{ txId: defiTxId, bridgeId, depositValue: 100n }]);
       }
 
       // Found one note that has the value of depositValue + fee.
       {
-        coreSdk.pickNotes.mockImplementationOnce(() => [{ assetId, value: 102n }]);
+        coreSdk.pickNotes.mockImplementationOnce(() => [{ assetId, value: 101n }]);
 
         await controller.createProof();
         await controller.send();
 
-        expectDefiInputNotes([{ assetId, value: 102n }]);
+        expectDefiInputNotes([{ assetId, value: 101n }]);
         expectSendProofs([{ txId: defiTxId, bridgeId, depositValue: 100n }]);
       }
     });
 
     it('create a join split proof and a defi deposit proof', async () => {
-      // Found two notes whose sum is more than depositValue + fee.
+      // Found two notes whose sum is larger than depositValue + fee.
       // Join the notes to create an exact value note.
       {
         coreSdk.pickNotes.mockImplementationOnce(() => [
           { assetId, value: 41n },
-          { assetId, value: 62n },
+          { assetId, value: 61n },
         ]);
 
         await controller.createProof();
         await controller.send();
 
-        expectDefiInputNotes([{ assetId, value: 102n }]);
+        expectDefiInputNotes([{ assetId, value: 101n }]);
         expectSendProofs([
-          { txId: paymentTxId, assetId, privateInput: 102n, outputNoteValue: 102n },
+          { txId: paymentTxId, assetId, privateInput: 101n, outputNoteValue: 101n },
           { txId: defiTxId, bridgeId, depositValue: 100n },
         ]);
       }
 
-      // Found a note whose value is more than depositValue + fee.
+      // Found a note whose value is larger than depositValue + fee.
       // Split the note to create an exact value note.
       {
-        coreSdk.pickNotes.mockImplementationOnce(() => [{ assetId, value: 103n }]);
+        coreSdk.pickNotes.mockImplementationOnce(() => [{ assetId, value: 102n }]);
 
         await controller.createProof();
         await controller.send();
 
-        expectDefiInputNotes([{ assetId, value: 102n }]);
+        expectDefiInputNotes([{ assetId, value: 101n }]);
         expectSendProofs([
-          { txId: paymentTxId, assetId, privateInput: 102n, outputNoteValue: 102n },
+          { txId: paymentTxId, assetId, privateInput: 101n, outputNoteValue: 101n },
           { txId: defiTxId, bridgeId, depositValue: 100n },
         ]);
       }
     });
 
-    it('throw if can not find any input notes', async () => {
+    it('throw if cannot find any input notes', async () => {
       await expect(controller.createProof()).rejects.toThrow();
     });
   });
 
   describe('deposit one non fee paying asset', () => {
     const assetId = 0;
-    const outputAssetId = 1;
     const feeAssetId = 2;
-    const bridgeId = new BridgeId(1, assetId, outputAssetId);
+    const bridgeId = new BridgeId(1, assetId, 3);
     const depositValue = { assetId, value: 100n };
-    const fee = { assetId: feeAssetId, value: 2n };
+    const fee = { assetId: feeAssetId, value: 1n };
     let controller: DefiController;
 
     beforeEach(() => {
@@ -188,7 +186,7 @@ describe('defi controller', () => {
         ]);
         expectSendProofs([
           { txId: defiTxId, bridgeId, depositValue: 100n },
-          { txId: paymentTxId, assetId: feeAssetId, privateInput: 2n, outputNoteValue: 0n },
+          { txId: paymentTxId, assetId: feeAssetId, privateInput: 1n, outputNoteValue: 0n },
         ]);
       }
 
@@ -202,13 +200,13 @@ describe('defi controller', () => {
         expectDefiInputNotes([{ assetId, value: 100n }]);
         expectSendProofs([
           { txId: defiTxId, bridgeId, depositValue: 100n },
-          { txId: paymentTxId, assetId: feeAssetId, privateInput: 2n, outputNoteValue: 0n },
+          { txId: paymentTxId, assetId: feeAssetId, privateInput: 1n, outputNoteValue: 0n },
         ]);
       }
     });
 
     it('create a join split proof, a defi deposit proof and a fee paying proof', async () => {
-      // Found two notes whose sum is more than depositValue.
+      // Found two notes whose sum is larger than depositValue.
       // Join the notes to create an exact value note.
       {
         coreSdk.pickNotes.mockImplementationOnce(() => [
@@ -223,11 +221,11 @@ describe('defi controller', () => {
         expectSendProofs([
           { txId: paymentTxId, assetId, privateInput: 100n, outputNoteValue: 100n },
           { txId: defiTxId, bridgeId, depositValue: 100n },
-          { txId: paymentTxId, assetId: feeAssetId, privateInput: 2n, outputNoteValue: 0n },
+          { txId: paymentTxId, assetId: feeAssetId, privateInput: 1n, outputNoteValue: 0n },
         ]);
       }
 
-      // Found a note whose value is more than depositValue.
+      // Found a note whose value is larger than depositValue.
       // Split the note to create an exact value note.
       {
         coreSdk.pickNotes.mockImplementationOnce(() => [{ assetId, value: 101n }]);
@@ -239,7 +237,7 @@ describe('defi controller', () => {
         expectSendProofs([
           { txId: paymentTxId, assetId, privateInput: 100n, outputNoteValue: 100n },
           { txId: defiTxId, bridgeId, depositValue: 100n },
-          { txId: paymentTxId, assetId: feeAssetId, privateInput: 2n, outputNoteValue: 0n },
+          { txId: paymentTxId, assetId: feeAssetId, privateInput: 1n, outputNoteValue: 0n },
         ]);
       }
     });
@@ -248,20 +246,41 @@ describe('defi controller', () => {
   describe('deposit two assets', () => {
     const assetId = 0;
     const secondAssetId = 2;
-    const outputAssetId = 1;
-    const bridgeId = new BridgeId(1, assetId, outputAssetId, secondAssetId);
+    const bridgeId = new BridgeId(1, assetId, 3, secondAssetId);
     const depositValue = { assetId, value: 100n };
-    const fee = { assetId, value: 2n };
+    const fee = { assetId, value: 1n };
     let controller: DefiController;
 
     beforeEach(() => {
       controller = new DefiController(userId, userSigner, bridgeId, depositValue, fee, coreSdk);
     });
 
-    it('create a join split proof and a defi deposit proof', async () => {
-      // Found two notes that sum to depositValue + fee.
+    it('create a defi deposit proof', async () => {
+      // Input asset A: Found one note that has the value of depositValue + fee.
+      // Input asset B: Found one note that has the value of depositValue.
       {
-        coreSdk.pickNotes.mockImplementationOnce(() => [{ value: 40n }, { value: 62n }]);
+        coreSdk.pickNote.mockImplementationOnce(() => ({ assetId, value: 101n }));
+        coreSdk.pickNote.mockImplementationOnce(() => ({ assetId: secondAssetId, value: 100n }));
+
+        await controller.createProof();
+        await controller.send();
+
+        expectDefiInputNotes([
+          { assetId, value: 101n },
+          { assetId: secondAssetId, value: 100n },
+        ]);
+        expectSendProofs([{ txId: defiTxId, bridgeId, depositValue: 100n }]);
+      }
+    });
+
+    it('create a join split proof and a defi deposit proof', async () => {
+      // Input asset A: Found two notes that sum to depositValue + fee.
+      // Input asset B: Found one note that has the value of depositValue.
+      {
+        coreSdk.pickNotes.mockImplementationOnce(() => [
+          { assetId, value: 40n },
+          { assetId, value: 61n },
+        ]);
         coreSdk.pickNote.mockImplementationOnce(() => undefined);
         coreSdk.pickNote.mockImplementationOnce(() => ({ assetId: secondAssetId, value: 100n }));
 
@@ -269,16 +288,40 @@ describe('defi controller', () => {
         await controller.send();
 
         expectDefiInputNotes([
-          { assetId, value: 100n },
+          { assetId, value: 101n },
           { assetId: secondAssetId, value: 100n },
         ]);
         expectSendProofs([
-          { txId: paymentTxId, assetId, privateInput: 102n, outputNoteValue: 100n },
+          { txId: paymentTxId, assetId, privateInput: 101n, outputNoteValue: 101n },
           { txId: defiTxId, bridgeId, depositValue: 100n },
         ]);
       }
 
-      // Found one note that has the value of depositValue + fee.
+      // Input asset A: Found two notes whose sum is larger than depositValue + fee.
+      // Input asset B: Found one note that has the value of depositValue.
+      {
+        coreSdk.pickNotes.mockImplementationOnce(() => [
+          { assetId, value: 40n },
+          { assetId, value: 62n },
+        ]);
+        coreSdk.pickNote.mockImplementationOnce(() => undefined);
+        coreSdk.pickNote.mockImplementationOnce(() => ({ assetId: secondAssetId, value: 100n }));
+
+        await controller.createProof();
+        await controller.send();
+
+        expectDefiInputNotes([
+          { assetId, value: 101n },
+          { assetId: secondAssetId, value: 100n },
+        ]);
+        expectSendProofs([
+          { txId: paymentTxId, assetId, privateInput: 101n, outputNoteValue: 101n },
+          { txId: defiTxId, bridgeId, depositValue: 100n },
+        ]);
+      }
+
+      // Input asset A: Found one note whose value is larger than depositValue + fee.
+      // Input asset B: Found one note that has the value of depositValue.
       {
         coreSdk.pickNote.mockImplementationOnce(() => ({ assetId, value: 102n }));
         coreSdk.pickNote.mockImplementationOnce(() => ({ assetId: secondAssetId, value: 100n }));
@@ -287,73 +330,113 @@ describe('defi controller', () => {
         await controller.send();
 
         expectDefiInputNotes([
-          { assetId, value: 100n },
+          { assetId, value: 101n },
           { assetId: secondAssetId, value: 100n },
         ]);
         expectSendProofs([
-          { txId: paymentTxId, assetId, privateInput: 102n, outputNoteValue: 100n },
+          { txId: paymentTxId, assetId, privateInput: 101n, outputNoteValue: 101n },
           { txId: defiTxId, bridgeId, depositValue: 100n },
         ]);
       }
     });
 
-    it('create a join split proof with change value and a defi deposit proof', async () => {
-      // Found two notes whose sum is more than the depositValue.
-      // Join the notes to create an exact value note and pay the fee.
+    it('create a join split proof for the second asset and a defi deposit proof', async () => {
+      // Input asset A: Found one note that has the value of depositValue + fee.
+      // Input asset B: Found one note whose value is larger than depositValue.
       {
-        coreSdk.pickNotes.mockImplementationOnce(() => [{ value: 41n }, { value: 62n }]);
+        coreSdk.pickNote.mockImplementationOnce(() => ({ assetId, value: 101n }));
+        coreSdk.pickNote.mockImplementationOnce(() => ({ assetId: secondAssetId, value: 101n }));
+
+        await controller.createProof();
+        await controller.send();
+
+        expectDefiInputNotes([
+          { assetId, value: 101n },
+          { assetId: secondAssetId, value: 100n },
+        ]);
+        expectSendProofs([
+          { txId: paymentTxId, assetId: secondAssetId, privateInput: 100n, outputNoteValue: 100n },
+          { txId: defiTxId, bridgeId, depositValue: 100n },
+        ]);
+      }
+
+      // Input asset A: Found one note that has the value of depositValue + fee.
+      // Input asset B: Found two notes whose sum is larger than depositValue.
+      {
+        coreSdk.pickNotes.mockImplementationOnce(() => [
+          { assetId: secondAssetId, value: 41n },
+          { assetId: secondAssetId, value: 60n },
+        ]);
+        coreSdk.pickNote.mockImplementationOnce(() => ({ assetId, value: 101n }));
         coreSdk.pickNote.mockImplementationOnce(() => undefined);
-        coreSdk.pickNote.mockImplementationOnce(() => ({ assetId: secondAssetId, value: 100n }));
 
         await controller.createProof();
         await controller.send();
 
         expectDefiInputNotes([
-          { assetId, value: 100n },
+          { assetId, value: 101n },
           { assetId: secondAssetId, value: 100n },
         ]);
         expectSendProofs([
-          { txId: paymentTxId, assetId, privateInput: 102n, outputNoteValue: 100n },
-          { txId: defiTxId, bridgeId, depositValue: 100n },
-        ]);
-      }
-
-      // Found a note whose value is more than the depositValue.
-      // Split the note to create an exact value note and pay the fee.
-      {
-        coreSdk.pickNote.mockImplementationOnce(() => ({ assetId, value: 112n }));
-        coreSdk.pickNote.mockImplementationOnce(() => ({ assetId: secondAssetId, value: 100n }));
-
-        await controller.createProof();
-        await controller.send();
-
-        expectDefiInputNotes([
-          { assetId, value: 100n },
-          { assetId: secondAssetId, value: 100n },
-        ]);
-        expectSendProofs([
-          { txId: paymentTxId, assetId, privateInput: 102n, outputNoteValue: 100n },
+          { txId: paymentTxId, assetId: secondAssetId, privateInput: 100n, outputNoteValue: 100n },
           { txId: defiTxId, bridgeId, depositValue: 100n },
         ]);
       }
     });
 
-    it('throw if can not find a second note with exact value', async () => {
-      coreSdk.pickNote.mockImplementationOnce(() => ({ assetId, value: 112n }));
-      coreSdk.pickNote.mockImplementationOnce(() => ({ assetId: secondAssetId, value: 101n }));
+    it('throw if cannot find a note for the first asset', async () => {
+      coreSdk.pickNotes.mockImplementationOnce(() => []);
+      coreSdk.pickNote.mockImplementationOnce(() => undefined);
 
       await expect(controller.createProof()).rejects.toThrow();
+    });
+
+    it('throw if cannot find a note for the second asset', async () => {
+      coreSdk.pickNote.mockImplementationOnce(() => ({ assetId, value: 101n }));
+      coreSdk.pickNote.mockImplementationOnce(() => undefined);
+
+      await expect(controller.createProof()).rejects.toThrow();
+    });
+
+    it('throw if cannot find the exact value note for both assets', async () => {
+      {
+        coreSdk.pickNote.mockImplementationOnce(() => ({ assetId, value: 102n }));
+        coreSdk.pickNote.mockImplementationOnce(() => ({ assetId: secondAssetId, value: 101n }));
+        await expect(controller.createProof()).rejects.toThrow();
+      }
+
+      {
+        coreSdk.pickNote.mockReset();
+        coreSdk.pickNote.mockImplementationOnce(() => ({ assetId, value: 102n }));
+        coreSdk.pickNotes.mockImplementationOnce(() => [
+          { assetId: secondAssetId, value: 40n },
+          { assetId: secondAssetId, value: 60n },
+        ]);
+        await expect(controller.createProof()).rejects.toThrow();
+      }
+
+      {
+        coreSdk.pickNotes.mockReset();
+        coreSdk.pickNotes.mockImplementationOnce(() => [
+          { assetId, value: 41n },
+          { assetId, value: 60n },
+        ]);
+        coreSdk.pickNotes.mockImplementationOnce(() => [
+          { assetId: secondAssetId, value: 40n },
+          { assetId: secondAssetId, value: 60n },
+        ]);
+        await expect(controller.createProof()).rejects.toThrow();
+      }
     });
   });
 
   describe('deposit two non fee paying assets', () => {
     const assetId = 0;
     const secondAssetId = 2;
-    const feeAssetId = 3;
-    const outputAssetId = 1;
-    const bridgeId = new BridgeId(1, assetId, outputAssetId, secondAssetId);
+    const feeAssetId = 4;
+    const bridgeId = new BridgeId(1, assetId, 3, secondAssetId);
     const depositValue = { assetId, value: 100n };
-    const fee = { assetId: feeAssetId, value: 2n };
+    const fee = { assetId: feeAssetId, value: 1n };
     let controller: DefiController;
 
     beforeEach(() => {
@@ -361,7 +444,8 @@ describe('defi controller', () => {
     });
 
     it('create a defi deposit proof and a fee paying proof', async () => {
-      // Found one note that has the value of depositValue.
+      // Input asset A: Found one note that has the value of depositValue.
+      // Input asset B: Found one note that has the value of depositValue.
       coreSdk.pickNote.mockImplementationOnce(() => ({ assetId, value: 100n }));
       coreSdk.pickNote.mockImplementationOnce(() => ({ assetId: secondAssetId, value: 100n }));
 
@@ -374,12 +458,13 @@ describe('defi controller', () => {
       ]);
       expectSendProofs([
         { txId: defiTxId, bridgeId, depositValue: 100n },
-        { txId: paymentTxId, assetId: feeAssetId, privateInput: 2n, outputNoteValue: 0n },
+        { txId: paymentTxId, assetId: feeAssetId, privateInput: 1n, outputNoteValue: 0n },
       ]);
     });
 
     it('create a join split proof, a defi deposit proof and a fee paying proof', async () => {
-      // Found two notes that sum to depositValue.
+      // Input asset A: Found two notes that sum to depositValue.
+      // Input asset B: Found one note that has the value of depositValue.
       {
         coreSdk.pickNotes.mockImplementationOnce(() => [
           { assetId, value: 40n },
@@ -398,11 +483,12 @@ describe('defi controller', () => {
         expectSendProofs([
           { txId: paymentTxId, assetId, privateInput: 100n, outputNoteValue: 100n },
           { txId: defiTxId, bridgeId, depositValue: 100n },
-          { txId: paymentTxId, assetId: feeAssetId, privateInput: 2n, outputNoteValue: 0n },
+          { txId: paymentTxId, assetId: feeAssetId, privateInput: 1n, outputNoteValue: 0n },
         ]);
       }
 
-      // Found two notes whose sum is more than the depositValue.
+      // Input asset A: Found two notes whose sum is larger than depositValue.
+      // Input asset B: Found one note that has the value of depositValue.
       {
         coreSdk.pickNotes.mockImplementationOnce(() => [
           { assetId, value: 41n },
@@ -421,11 +507,12 @@ describe('defi controller', () => {
         expectSendProofs([
           { txId: paymentTxId, assetId, privateInput: 100n, outputNoteValue: 100n },
           { txId: defiTxId, bridgeId, depositValue: 100n },
-          { txId: paymentTxId, assetId: feeAssetId, privateInput: 2n, outputNoteValue: 0n },
+          { txId: paymentTxId, assetId: feeAssetId, privateInput: 1n, outputNoteValue: 0n },
         ]);
       }
 
-      // Found one note whose value is more than the depositValue.
+      // Input asset A: Found one note whose value is larger than depositValue.
+      // Input asset B: Found one note that has the value of depositValue.
       {
         coreSdk.pickNote.mockImplementationOnce(() => ({ assetId, value: 101n }));
         coreSdk.pickNote.mockImplementationOnce(() => ({ assetId: secondAssetId, value: 100n }));
@@ -440,35 +527,86 @@ describe('defi controller', () => {
         expectSendProofs([
           { txId: paymentTxId, assetId, privateInput: 100n, outputNoteValue: 100n },
           { txId: defiTxId, bridgeId, depositValue: 100n },
-          { txId: paymentTxId, assetId: feeAssetId, privateInput: 2n, outputNoteValue: 0n },
+          { txId: paymentTxId, assetId: feeAssetId, privateInput: 1n, outputNoteValue: 0n },
         ]);
       }
     });
 
     it('create a join split proof for the second asset, a defi deposit proof and a fee paying proof', async () => {
-      coreSdk.pickNote.mockImplementationOnce(() => ({ assetId, value: 100n }));
-      // Found one note whose value is more than the depositValue.
-      coreSdk.pickNote.mockImplementationOnce(() => ({ assetId: secondAssetId, value: 101n }));
+      // Input asset A: Found one note that has the value of depositValue.
+      // Input asset B: Found one note whose value is larger than depositValue.
+      {
+        coreSdk.pickNote.mockImplementationOnce(() => ({ assetId, value: 100n }));
+        coreSdk.pickNote.mockImplementationOnce(() => ({ assetId: secondAssetId, value: 101n }));
 
-      await controller.createProof();
-      await controller.send();
+        await controller.createProof();
+        await controller.send();
 
-      expectDefiInputNotes([
-        { assetId, value: 100n },
-        { assetId: secondAssetId, value: 100n },
-      ]);
-      expectSendProofs([
-        { txId: paymentTxId, assetId: secondAssetId, privateInput: 100n, outputNoteValue: 100n },
-        { txId: defiTxId, bridgeId, depositValue: 100n },
-        { txId: paymentTxId, assetId: feeAssetId, privateInput: 2n, outputNoteValue: 0n },
-      ]);
+        expectDefiInputNotes([
+          { assetId, value: 100n },
+          { assetId: secondAssetId, value: 100n },
+        ]);
+        expectSendProofs([
+          { txId: paymentTxId, assetId: secondAssetId, privateInput: 100n, outputNoteValue: 100n },
+          { txId: defiTxId, bridgeId, depositValue: 100n },
+          { txId: paymentTxId, assetId: feeAssetId, privateInput: 1n, outputNoteValue: 0n },
+        ]);
+      }
+
+      // Input asset A: Found one note that has the value of depositValue.
+      // Input asset B: Found two notes whose sum is larger than depositValue.
+      {
+        coreSdk.pickNotes.mockImplementationOnce(() => [
+          { assetId: secondAssetId, value: 41n },
+          { assetId: secondAssetId, value: 60n },
+        ]);
+        coreSdk.pickNote.mockImplementationOnce(() => ({ assetId, value: 100n }));
+        coreSdk.pickNote.mockImplementationOnce(() => undefined);
+
+        await controller.createProof();
+        await controller.send();
+
+        expectDefiInputNotes([
+          { assetId, value: 100n },
+          { assetId: secondAssetId, value: 100n },
+        ]);
+        expectSendProofs([
+          { txId: paymentTxId, assetId: secondAssetId, privateInput: 100n, outputNoteValue: 100n },
+          { txId: defiTxId, bridgeId, depositValue: 100n },
+          { txId: paymentTxId, assetId: feeAssetId, privateInput: 1n, outputNoteValue: 0n },
+        ]);
+      }
     });
 
-    it('throw if can not find the exact value note for both assets', async () => {
-      coreSdk.pickNote.mockImplementationOnce(() => ({ assetId, value: 101n }));
-      coreSdk.pickNote.mockImplementationOnce(() => ({ assetId: secondAssetId, value: 101n }));
+    it('throw if cannot find the exact value note for both assets', async () => {
+      {
+        coreSdk.pickNote.mockImplementationOnce(() => ({ assetId, value: 101n }));
+        coreSdk.pickNote.mockImplementationOnce(() => ({ assetId: secondAssetId, value: 101n }));
+        await expect(controller.createProof()).rejects.toThrow();
+      }
 
-      await expect(controller.createProof()).rejects.toThrow();
+      {
+        coreSdk.pickNote.mockReset();
+        coreSdk.pickNote.mockImplementationOnce(() => ({ assetId, value: 101n }));
+        coreSdk.pickNotes.mockImplementationOnce(() => [
+          { assetId: secondAssetId, value: 40n },
+          { assetId: secondAssetId, value: 60n },
+        ]);
+        await expect(controller.createProof()).rejects.toThrow();
+      }
+
+      {
+        coreSdk.pickNotes.mockReset();
+        coreSdk.pickNotes.mockImplementationOnce(() => [
+          { assetId, value: 40n },
+          { assetId, value: 60n },
+        ]);
+        coreSdk.pickNotes.mockImplementationOnce(() => [
+          { assetId: secondAssetId, value: 40n },
+          { assetId: secondAssetId, value: 60n },
+        ]);
+        await expect(controller.createProof()).rejects.toThrow();
+      }
     });
   });
 });

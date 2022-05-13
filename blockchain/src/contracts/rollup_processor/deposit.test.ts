@@ -1,5 +1,6 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { Asset } from '@aztec/barretenberg/blockchain';
+import { virtualAssetIdFlag } from '@aztec/barretenberg/bridge_id';
 import { Signer } from 'ethers';
 import { ethers } from 'hardhat';
 import { createPermitData, createPermitDataNonStandard } from '../../create_permit_data';
@@ -299,6 +300,26 @@ describe('rollup_processor: deposit', () => {
         .connect(userSigners[0])
         .depositPendingFunds(unknownAssetId, 1, userAddresses[0].toString()),
     ).rejects.toThrow();
+  });
+
+  it('should revert for depositing virtual asset', async () => {
+    const tokenAssetId = 1;
+    await expect(rollupProcessor.contract.getSupportedAsset(tokenAssetId)).not.toBeFalsy();
+
+    const virtualAssetId = tokenAssetId + virtualAssetIdFlag;
+    await expect(rollupProcessor.contract.getSupportedAsset(virtualAssetId)).rejects.toThrow('INVALID_ASSET_ID');
+    await expect(
+      rollupProcessor.contract
+        .connect(userSigners[0])
+        .depositPendingFunds(virtualAssetId, 1, userAddresses[0].toString()),
+    ).rejects.toThrow();
+
+    const { proofData, signatures } = await createRollupProof(
+      rollupProvider,
+      await createDepositProof(depositAmount, userAddresses[0], userSigners[0], virtualAssetId),
+    );
+    const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
+    await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('INVALID_ASSET_ID()');
   });
 
   it('should allow depositing to a proof hash', async () => {

@@ -78,8 +78,8 @@ export class ServerRollupProvider extends ServerBlockSource implements RollupPro
     return +(await response.text());
   }
 
-  async getAccountId(alias: string, nonce?: number) {
-    const response = await this.fetch('/get-account-id', { alias, nonce });
+  async getAccountId(alias: string, accountNonce?: number) {
+    const response = await this.fetch('/get-account-id', { alias, accountNonce });
     const accountId = await response.text();
     return accountId ? AccountId.fromString(accountId) : undefined;
   }

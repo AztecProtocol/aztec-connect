@@ -92,7 +92,7 @@ export class DefiDepositProofCreator {
       partialStateSecretEphPubKey!,
       depositValue,
       txFee,
-      viewingKeys[0], // contains [value, asset_id, nonce, creatorPubKey] of the change note (returned to the sender)
+      viewingKeys[0], // contains [value, asset_id, accountNonce, creatorPubKey] of the change note (returned to the sender)
       txRefNo,
     );
 

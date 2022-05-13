@@ -1,3 +1,4 @@
+import { randomBytes } from '../crypto';
 import { ViewingKey } from '../viewing_key';
 import { OffchainJoinSplitData } from './offchain_join_split_data';
 
@@ -20,5 +21,10 @@ describe('OffchainJoinSplitData', () => {
     expect(() => new OffchainJoinSplitData([ViewingKey.EMPTY, ViewingKey.random()], 123)).toThrow();
     expect(() => new OffchainJoinSplitData([ViewingKey.random(), ViewingKey.EMPTY], 123)).toThrow();
     expect(() => new OffchainJoinSplitData([ViewingKey.EMPTY, ViewingKey.EMPTY], 123)).toThrow();
+  });
+
+  it('throw if buffer size is wrong', () => {
+    expect(() => OffchainJoinSplitData.fromBuffer(randomBytes(OffchainJoinSplitData.SIZE - 1))).toThrow();
+    expect(() => OffchainJoinSplitData.fromBuffer(randomBytes(OffchainJoinSplitData.SIZE + 1))).toThrow();
   });
 });

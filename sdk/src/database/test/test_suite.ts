@@ -85,7 +85,7 @@ export const databaseTestSuite = (
         const userId = AccountId.random();
         const userNotes: Note[] = [];
         for (let i = 0; i < 10; ++i) {
-          const note = randomNote(undefined, { ownerPubKey: userId.publicKey, nonce: userId.accountNonce });
+          const note = randomNote(undefined, { ownerPubKey: userId.publicKey, accountNonce: userId.accountNonce });
           await db.addNote(note);
           if (i % 3) {
             await db.nullifyNote(note.nullifier);
@@ -95,7 +95,7 @@ export const databaseTestSuite = (
         }
         for (let i = 0; i < 5; ++i) {
           const { publicKey, accountNonce } = AccountId.random();
-          const note = randomNote(undefined, { ownerPubKey: publicKey, nonce: accountNonce });
+          const note = randomNote(undefined, { ownerPubKey: publicKey, accountNonce });
           await db.addNote(note);
         }
 
@@ -109,7 +109,7 @@ export const databaseTestSuite = (
         const userPendingNotes: Note[] = [];
         for (let i = 0; i < 10; ++i) {
           const index = i % 2 ? i : undefined;
-          const note = randomNote({ index }, { ownerPubKey: userId.publicKey, nonce: userId.accountNonce });
+          const note = randomNote({ index }, { ownerPubKey: userId.publicKey, accountNonce: userId.accountNonce });
           if (index === undefined) {
             userPendingNotes.push(note);
           }
@@ -117,7 +117,7 @@ export const databaseTestSuite = (
         }
         for (let i = 0; i < 5; ++i) {
           const { publicKey, accountNonce } = AccountId.random();
-          const note = randomNote(undefined, { ownerPubKey: publicKey, nonce: accountNonce });
+          const note = randomNote(undefined, { ownerPubKey: publicKey, accountNonce });
           await db.addNote(note);
         }
 
@@ -130,7 +130,7 @@ export const databaseTestSuite = (
         const userId = AccountId.random();
         const notes: Note[] = [];
         for (let i = 0; i < 5; ++i) {
-          const note = randomNote(undefined, { ownerPubKey: userId.publicKey, nonce: userId.accountNonce });
+          const note = randomNote(undefined, { ownerPubKey: userId.publicKey, accountNonce: userId.accountNonce });
           await db.addNote(note);
           notes.push(note);
         }
@@ -1042,7 +1042,7 @@ export const databaseTestSuite = (
       const generateUserProfile = async (user: UserData) => {
         await db.addUser(user);
 
-        const note = randomNote(undefined, { ownerPubKey: user.publicKey, nonce: user.nonce });
+        const note = randomNote(undefined, { ownerPubKey: user.publicKey, accountNonce: user.accountNonce });
         await db.addNote(note);
 
         const signingKey = randomSigningKey();
@@ -1083,7 +1083,11 @@ export const databaseTestSuite = (
 
       it('keep data of other users with same alias and publicKey but different nonces', async () => {
         const user0 = randomUser();
-        const user1 = { ...user0, id: new AccountId(user0.publicKey, user0.nonce + 1), nonce: user0.nonce + 1 };
+        const user1 = {
+          ...user0,
+          id: new AccountId(user0.publicKey, user0.accountNonce + 1),
+          accountNonce: user0.accountNonce + 1,
+        };
         const profile0 = await generateUserProfile(user0);
         const profile1 = await generateUserProfile(user1);
 

@@ -11,7 +11,7 @@ import { filterUndefined } from './filter_undefined';
 export class MigrateAccountController {
   private proofOutput!: ProofOutput;
   private feeProofOutput?: ProofOutput;
-  private txIds!: TxId[];
+  private txId!: TxId;
 
   constructor(
     public readonly userId: AccountId,
@@ -66,11 +66,17 @@ export class MigrateAccountController {
   }
 
   async send() {
-    this.txIds = await this.core.sendProofs(filterUndefined([this.proofOutput, this.feeProofOutput]));
-    return this.txIds[0];
+    if (!this.proofOutput) {
+      throw new Error('Call createProof() first.');
+    }
+    [this.txId] = await this.core.sendProofs(filterUndefined([this.proofOutput, this.feeProofOutput]));
+    return this.txId;
   }
 
   async awaitSettlement(timeout?: number) {
-    await Promise.all(this.txIds.map(txId => this.core.awaitSettlement(txId, timeout)));
+    if (!this.txId) {
+      throw new Error(`Call ${!this.proofOutput ? 'createProof()' : 'send()'} first.`);
+    }
+    await this.core.awaitSettlement(this.txId, timeout);
   }
 }

@@ -7,7 +7,7 @@ export const txDaoToAccountDao = (txDao: TxDao) => {
   return new AccountDao({
     aliasHash: accountAliasId.aliasHash.toBuffer(),
     accountPubKey: accountPublicKey.toBuffer(),
-    nonce: accountAliasId.accountNonce,
+    accountNonce: accountAliasId.accountNonce,
     tx: txDao,
   });
 };

@@ -18,7 +18,7 @@ export class AccountProofCreator {
   public async createAccountTx(
     signingPubKey: GrumpkinAddress,
     aliasHash: AliasHash,
-    nonce: number,
+    accountNonce: number,
     migrate: boolean,
     accountPublicKey: GrumpkinAddress,
     newAccountPublicKey?: GrumpkinAddress,
@@ -28,7 +28,7 @@ export class AccountProofCreator {
   ) {
     const merkleRoot = this.worldState.getRoot();
     const accountPath = await this.worldState.getHashPath(accountIndex);
-    const accountAliasId = new AccountAliasId(aliasHash, nonce);
+    const accountAliasId = new AccountAliasId(aliasHash, accountNonce);
 
     return new AccountTx(
       merkleRoot,
@@ -50,7 +50,7 @@ export class AccountProofCreator {
 
   public async createProofInput(
     aliasHash: AliasHash,
-    nonce: number,
+    accountNonce: number,
     migrate: boolean,
     accountPublicKey: GrumpkinAddress,
     signingPubKey: GrumpkinAddress,
@@ -59,8 +59,8 @@ export class AccountProofCreator {
     newSigningPubKey2: GrumpkinAddress | undefined,
   ): Promise<AccountProofInput> {
     const accountIndex =
-      nonce !== 0
-        ? (await this.db.getUserSigningKey(new AccountId(accountPublicKey, nonce), signingPubKey))?.treeIndex
+      accountNonce !== 0
+        ? (await this.db.getUserSigningKey(new AccountId(accountPublicKey, accountNonce), signingPubKey))?.treeIndex
         : 0;
     if (accountIndex === undefined) {
       throw new Error('Unknown signing key.');
@@ -69,7 +69,7 @@ export class AccountProofCreator {
     const tx = await this.createAccountTx(
       signingPubKey,
       aliasHash,
-      nonce,
+      accountNonce,
       migrate,
       accountPublicKey,
       newAccountPublicKey,

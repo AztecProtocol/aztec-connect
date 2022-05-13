@@ -129,8 +129,8 @@ export async function defiDepositTokens(
 ) {
   const tokenAssetId = sdk.getAssetIdByAddress(token);
   const defiSigner = await sdk.createSchnorrSigner((await sdk.getUserData(user)).privateKey);
-  const tokenDepositFee = (await sdk.getDefiFees(bridgeId, user, tokenQuantity))[settlementTime];
   const tokenAssetValue = { assetId: tokenAssetId, value: tokenQuantity };
+  const tokenDepositFee = (await sdk.getDefiFees(bridgeId, user, tokenAssetValue))[settlementTime];
   const defiDepositController = sdk.createDefiController(user, defiSigner, bridgeId, tokenAssetValue, tokenDepositFee);
   await defiDepositController.createProof();
   await defiDepositController.send();

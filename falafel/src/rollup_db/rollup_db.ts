@@ -89,7 +89,7 @@ export class TypeOrmRollupDb implements RollupDb {
     return this.accountRep.findOne(
       { aliasHash },
       {
-        order: { nonce: 'DESC' },
+        order: { accountNonce: 'DESC' },
       },
     );
   }
@@ -98,7 +98,7 @@ export class TypeOrmRollupDb implements RollupDb {
     return this.accountRep.findOne(
       { accountPubKey },
       {
-        order: { nonce: 'DESC' },
+        order: { accountNonce: 'DESC' },
       },
     );
   }
@@ -108,31 +108,37 @@ export class TypeOrmRollupDb implements RollupDb {
   }
 
   public async getAccountCount() {
-    return this.accountRep.count({ where: { nonce: 1 } });
+    return this.accountRep.count({ where: { accountNonce: 1 } });
   }
 
   public async getLatestAccountNonce(accountPubKey: GrumpkinAddress) {
     const account = await this.accountRep.findOne(
       { accountPubKey: accountPubKey.toBuffer() },
-      { order: { nonce: 'DESC' } },
+      { order: { accountNonce: 'DESC' } },
     );
-    return account?.nonce || 0;
+    return account?.accountNonce || 0;
   }
 
   public async getLatestAliasNonce(aliasHash: AliasHash) {
-    const account = await this.accountRep.findOne({ aliasHash: aliasHash.toBuffer() }, { order: { nonce: 'DESC' } });
-    return account?.nonce || 0;
+    const account = await this.accountRep.findOne(
+      { aliasHash: aliasHash.toBuffer() },
+      { order: { accountNonce: 'DESC' } },
+    );
+    return account?.accountNonce || 0;
   }
 
-  public async getAccountId(aliasHash: AliasHash, nonce?: number) {
+  public async getAccountId(aliasHash: AliasHash, accountNonce?: number) {
     const account = await this.accountRep.findOne({
-      where: { aliasHash: aliasHash.toBuffer(), nonce: MoreThanOrEqual(nonce || 0) },
-      order: { nonce: nonce !== undefined ? 'ASC' : 'DESC' },
+      where: { aliasHash: aliasHash.toBuffer(), accountNonce: MoreThanOrEqual(accountNonce || 0) },
+      order: { accountNonce: accountNonce !== undefined ? 'ASC' : 'DESC' },
     });
     if (!account) {
       return;
     }
-    return new AccountId(new GrumpkinAddress(account.accountPubKey), nonce === undefined ? account.nonce : nonce);
+    return new AccountId(
+      new GrumpkinAddress(account.accountPubKey),
+      accountNonce === undefined ? account.accountNonce : accountNonce,
+    );
   }
 
   public async getTotalRollupsOfSize(rollupSize: number) {

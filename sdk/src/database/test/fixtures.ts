@@ -24,7 +24,7 @@ export const randomNote = (note: Partial<Note> = {}, treeNote: Partial<TreeNote>
         treeNote.ownerPubKey || GrumpkinAddress.randomAddress(),
         inputOrDefault(treeNote.value, BigInt(randomInt())),
         inputOrDefault(treeNote.assetId, randomInt()),
-        inputOrDefault(treeNote.nonce, randomInt()),
+        inputOrDefault(treeNote.accountNonce, randomInt()),
         treeNote.noteSecret || randomBytes(32),
         treeNote.creatorPubKey || randomBytes(32),
         treeNote.inputNullifier || randomBytes(32),
@@ -51,7 +51,7 @@ export const randomUser = (): UserData => {
     id,
     privateKey: randomBytes(32),
     publicKey: id.publicKey,
-    nonce: id.accountNonce,
+    accountNonce: id.accountNonce,
     aliasHash: AliasHash.random(),
     syncedToRollup: randomInt(),
   };

@@ -100,8 +100,8 @@ export class PaymentProofCreator {
     const privateInput = inputNotes.reduce((sum, n) => sum + n.value, BigInt(0));
     const { value: recipientPrivateOutput } = outputNotes[0];
     const { assetId, value: senderPrivateOutput } = outputNotes[1];
-    const newNoteOwner = new AccountId(outputNotes[0].ownerPubKey, outputNotes[0].nonce);
-    const userId = new AccountId(outputNotes[1].ownerPubKey, outputNotes[1].nonce);
+    const newNoteOwner = new AccountId(outputNotes[0].ownerPubKey, outputNotes[0].accountNonce);
+    const userId = new AccountId(outputNotes[1].ownerPubKey, outputNotes[1].accountNonce);
     const coreTx = new PaymentTx(
       txId,
       userId,

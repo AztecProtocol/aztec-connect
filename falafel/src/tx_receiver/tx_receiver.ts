@@ -1,7 +1,7 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { Blockchain, TxType } from '@aztec/barretenberg/blockchain';
-import { validateBridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeId, validateBridgeId } from '@aztec/barretenberg/bridge_id';
 import {
   AccountVerifier,
   DefiDepositProofData,
@@ -12,7 +12,11 @@ import {
 } from '@aztec/barretenberg/client_proofs';
 import { Crs } from '@aztec/barretenberg/crs';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
-import { OffchainAccountData, OffchainDefiDepositData } from '@aztec/barretenberg/offchain_tx_data';
+import {
+  OffchainAccountData,
+  OffchainDefiDepositData,
+  OffchainJoinSplitData,
+} from '@aztec/barretenberg/offchain_tx_data';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { BarretenbergWasm, BarretenbergWorker, createWorker, destroyWorker } from '@aztec/barretenberg/wasm';
 import { Mutex } from 'async-mutex';
@@ -23,13 +27,12 @@ import { getTxTypeFromProofData } from '../get_tx_type';
 import { Metrics } from '../metrics';
 import { RollupDb } from '../rollup_db';
 import { TxFeeResolver } from '../tx_fee_resolver';
-import { Tx } from './interfaces';
+import { Tx } from './tx';
 import { TxFeeAllocator } from './tx_fee_allocator';
 
 export class TxReceiver {
   private worker!: BarretenbergWorker;
-  private joinSplitVerifier!: JoinSplitVerifier;
-  private accountVerifier!: AccountVerifier;
+  private feeAllocator: TxFeeAllocator;
   private mutex = new Mutex();
 
   constructor(
@@ -38,10 +41,15 @@ export class TxReceiver {
     private rollupDb: RollupDb,
     private blockchain: Blockchain,
     private proofGenerator: ProofGenerator,
-    private txFeeResolver: TxFeeResolver,
+    private joinSplitVerifier: JoinSplitVerifier,
+    private accountVerifier: AccountVerifier,
+    txFeeResolver: TxFeeResolver,
     private metrics: Metrics,
     private bridgeResolver: BridgeResolver,
-  ) {}
+    private log = console.log,
+  ) {
+    this.feeAllocator = new TxFeeAllocator(txFeeResolver);
+  }
 
   public async init() {
     const crs = new Crs(0);
@@ -49,14 +57,12 @@ export class TxReceiver {
 
     this.worker = await createWorker('0', this.barretenberg.module);
 
-    console.log('TxReceiver requesting verification keys from ProofGenerator...');
+    this.log('TxReceiver requesting verification keys from ProofGenerator...');
 
     const jsKey = await this.proofGenerator.getJoinSplitVk();
-    this.joinSplitVerifier = new JoinSplitVerifier();
     await this.joinSplitVerifier.loadKey(this.worker, jsKey, crs.getG2Data());
 
     const accountKey = await this.proofGenerator.getAccountVk();
-    this.accountVerifier = new AccountVerifier();
     await this.accountVerifier.loadKey(this.worker, accountKey, crs.getG2Data());
   }
 
@@ -73,31 +79,32 @@ export class TxReceiver {
         const { proof } = txs[i];
         const txType = await getTxTypeFromProofData(proof, this.blockchain);
         this.metrics.txReceived(txType);
-        console.log(`Received tx (${i + 1}/${txs.length}): ${proof.txId.toString('hex')}, type: ${TxType[txType]}`);
+        this.log(`Received tx (${i + 1}/${txs.length}): ${proof.txId.toString('hex')}, type: ${TxType[txType]}`);
         txTypes.push(txType);
       }
 
-      const feeAllocator = new TxFeeAllocator(this.txFeeResolver);
-      const validation = feeAllocator.validateReceivedTxs(txs, txTypes);
-      console.log(
+      const validation = this.feeAllocator.validateReceivedTxs(txs, txTypes);
+      this.log(
         `Gas Required/Provided: ${validation.gasRequired}/${validation.gasProvided}. Fee asset index: ${validation.feePayingAsset}. Feeless txs: ${validation.hasFeelessTxs}.`,
       );
-
       if (validation.gasProvided < validation.gasRequired) {
-        console.log(
+        this.log(
           `Txs only contained enough fee to pay for ${validation.gasProvided} gas, but it needed ${validation.gasRequired}.`,
         );
         throw new Error('Insufficient fee.');
       }
 
+      await this.validateChain(txs);
+
       await this.validateRequiredDeposit(txs);
 
       const txDaos: TxDao[] = [];
       for (let i = 0; i < txs.length; ++i) {
-        const tx = txs[i];
-        txDaos.push(await this.validateTx(tx, txTypes[i], txs.slice(0, i)));
+        const txDao = await this.validateTx(txs[i], txTypes[i]);
+        txDaos.push(txDao);
       }
-      feeAllocator.reallocateGas(txDaos, txs, txTypes, validation);
+
+      this.feeAllocator.reallocateGas(txDaos, txs, txTypes, validation);
       await this.rollupDb.addTxs(txDaos);
 
       return txDaos.map(txDao => txDao.id);
@@ -106,36 +113,11 @@ export class TxReceiver {
     }
   }
 
-  private async validateTx({ proof, offchainTxData, depositSignature }: Tx, txType: TxType, precedingTxs: Tx[]) {
-    if (
-      (await this.rollupDb.nullifiersExist(proof.nullifier1, proof.nullifier2)) ||
-      precedingTxs.some(p =>
-        [p.proof.nullifier1, p.proof.nullifier2]
-          .filter(n => !!toBigIntBE(n))
-          .some(n => n.equals(proof.nullifier1) || n.equals(proof.nullifier2)),
-      )
-    ) {
-      throw new Error('Nullifier already exists.');
-    }
+  private async validateTx({ proof, offchainTxData, depositSignature }: Tx, txType: TxType) {
+    await this.validateAsset(proof);
 
-    const { backwardLink } = proof;
-    if (!backwardLink.equals(Buffer.alloc(32))) {
-      const unsettledTxs = [
-        ...(await this.rollupDb.getUnsettledTxs()).map(({ proofData }) => new ProofData(proofData)),
-        ...precedingTxs.map(p => p.proof),
-      ];
-      if (unsettledTxs.some(tx => tx.backwardLink.equals(backwardLink))) {
-        throw new Error('Duplicated backward link.');
-      }
-
-      const linkedTx = unsettledTxs.some(
-        tx =>
-          (tx.allowChainFromNote1 && tx.noteCommitment1.equals(backwardLink)) ||
-          (tx.allowChainFromNote2 && tx.noteCommitment2.equals(backwardLink)),
-      );
-      if (!linkedTx) {
-        throw new Error('Linked tx not found.');
-      }
+    if (proof.proofId === ProofId.DEPOSIT) {
+      await this.validateDepositProofApproval(proof, depositSignature);
     }
 
     // Check the proof is valid.
@@ -143,21 +125,21 @@ export class TxReceiver {
       case ProofId.DEPOSIT:
       case ProofId.WITHDRAW:
       case ProofId.SEND:
-        await this.validateJoinSplitTx(proof, depositSignature);
+        await this.validatePaymentProof(proof, offchainTxData);
         break;
       case ProofId.ACCOUNT: {
-        const offchainData = OffchainAccountData.fromBuffer(offchainTxData);
-        await this.validateAccountTx(proof, offchainData);
+        await this.validateAccountProof(proof, offchainTxData);
         break;
       }
       case ProofId.DEFI_DEPOSIT:
-        await this.validateDefiBridgeTx(proof, OffchainDefiDepositData.fromBuffer(offchainTxData));
+        await this.validateDefiDepositProof(proof, offchainTxData);
         break;
       default:
         throw new Error('Unknown proof id.');
     }
 
     const dataRootsIndex = await this.rollupDb.getDataRootsIndex(proof.noteTreeRoot);
+
     return new TxDao({
       id: proof.txId,
       proofData: proof.rawProofData,
@@ -172,28 +154,21 @@ export class TxReceiver {
     });
   }
 
-  private async validateJoinSplitTx(proof: ProofData, depositSignature?: Buffer) {
-    if (proof.proofId === ProofId.DEPOSIT) {
-      const { publicOwner } = new JoinSplitProofData(proof);
-      const txId = new TxId(proof.txId);
-      let proofApproval = await this.blockchain.getUserProofApprovalStatus(publicOwner, txId.toBuffer());
-      if (!proofApproval && depositSignature) {
-        const message = txId.toDepositSigningData();
-
-        proofApproval = this.blockchain.validateSignature(publicOwner, depositSignature, message);
-      }
-      if (!proofApproval) {
-        throw new Error(`Tx not approved or invalid signature: ${txId.toString()}`);
-      }
+  private async validatePaymentProof(proof: ProofData, offchainTxData: Buffer) {
+    try {
+      OffchainJoinSplitData.fromBuffer(offchainTxData);
+    } catch (e) {
+      throw new Error(`Invalid offchain data: ${e.message}`);
     }
 
     if (!(await this.joinSplitVerifier.verifyProof(proof.rawProofData))) {
-      throw new Error('Join-split proof verification failed.');
+      throw new Error('Payment proof verification failed.');
     }
   }
 
-  private async validateAccountTx(proof: ProofData, offchainData: OffchainAccountData) {
-    const { accountPublicKey, accountAliasId, spendingPublicKey1, spendingPublicKey2 } = offchainData;
+  private async validateAccountProof(proof: ProofData, offchainTxData: Buffer) {
+    const { accountPublicKey, accountAliasId, spendingPublicKey1, spendingPublicKey2 } =
+      OffchainAccountData.fromBuffer(offchainTxData);
     const expectedCommitments = [proof.noteCommitment1, proof.noteCommitment2];
     [spendingPublicKey1, spendingPublicKey2].forEach((spendingKey, i) => {
       const commitment = this.noteAlgo.accountNoteCommitment(accountAliasId, accountPublicKey, spendingKey);
@@ -207,7 +182,7 @@ export class TxReceiver {
     }
   }
 
-  private async validateDefiBridgeTx(proofData: ProofData, offchainData: OffchainDefiDepositData) {
+  private async validateDefiDepositProof(proofData: ProofData, offchainTxData: Buffer) {
     if (proofData.allowChainFromNote1 || proofData.allowChainFromNote2) {
       throw new Error('Cannot chain from a defi deposit tx.');
     }
@@ -222,10 +197,11 @@ export class TxReceiver {
     const bridgeConfig = this.bridgeResolver.getBridgeConfig(bridgeId.toBigInt());
     const blockchainStatus = this.blockchain.getBlockchainStatus();
     if (!blockchainStatus.allowThirdPartyContracts && !bridgeConfig) {
-      console.log(`Unrecognised Defi bridge: ${bridgeId.toString()}`);
-      throw new Error('Unrecognised Defi-bridge');
+      this.log(`Unrecognised Defi bridge: ${bridgeId.toString()}`);
+      throw new Error('Unrecognised Defi-bridge.');
     }
 
+    const offchainData = OffchainDefiDepositData.fromBuffer(offchainTxData);
     if (!bridgeId.equals(offchainData.bridgeId)) {
       throw new Error(`Wrong bridgeId in offchain data. Expect ${bridgeId}. Got ${offchainData.bridgeId}.`);
     }
@@ -240,7 +216,85 @@ export class TxReceiver {
     // TODO - check partialState
 
     if (!(await this.joinSplitVerifier.verifyProof(proofData.rawProofData))) {
-      throw new Error('Defi-bridge proof verification failed.');
+      throw new Error('Defi-deposit proof verification failed.');
+    }
+  }
+
+  private async validateChain(txs: Tx[]) {
+    const unsettledTxs = (await this.rollupDb.getUnsettledTxs()).map(({ proofData }) => new ProofData(proofData));
+    for (let i = 0; i < txs.length; ++i) {
+      const { backwardLink } = txs[i].proof;
+      if (!backwardLink.equals(Buffer.alloc(32))) {
+        const precedingTxs = [...unsettledTxs, ...txs.slice(0, i).map(p => p.proof)];
+        if (precedingTxs.some(tx => tx.backwardLink.equals(backwardLink))) {
+          throw new Error('Duplicated backward link.');
+        }
+
+        const linkedTx = precedingTxs.some(
+          tx =>
+            (tx.allowChainFromNote1 && tx.noteCommitment1.equals(backwardLink)) ||
+            (tx.allowChainFromNote2 && tx.noteCommitment2.equals(backwardLink)),
+        );
+        if (!linkedTx) {
+          throw new Error('Linked tx not found.');
+        }
+      }
+
+      const { nullifier1, nullifier2 } = txs[i].proof;
+      if (
+        (await this.rollupDb.nullifiersExist(nullifier1, nullifier2)) ||
+        txs
+          .slice(0, i)
+          .some(p =>
+            [p.proof.nullifier1, p.proof.nullifier2]
+              .filter(n => !!toBigIntBE(n))
+              .some(n => n.equals(nullifier1) || n.equals(nullifier2)),
+          )
+      ) {
+        throw new Error('Nullifier already exists.');
+      }
+    }
+  }
+
+  private async validateAsset(proof: ProofData) {
+    const validateNonVirtualAssetId = (assetId: number) => {
+      const { assets } = this.blockchain.getBlockchainStatus();
+      if (assetId >= assets.length) {
+        throw new Error(`Unsupported asset ${assetId}.`);
+      }
+    };
+
+    switch (proof.proofId) {
+      case ProofId.DEPOSIT:
+      case ProofId.WITHDRAW: {
+        const assetId = proof.publicAssetId.readUInt32BE(28);
+        validateNonVirtualAssetId(assetId);
+        break;
+      }
+      case ProofId.DEFI_DEPOSIT: {
+        const bridgeId = BridgeId.fromBuffer(proof.bridgeId);
+        if (!bridgeId.firstOutputVirtual) {
+          validateNonVirtualAssetId(bridgeId.outputAssetIdA);
+        }
+        if (bridgeId.secondOutputInUse && !bridgeId.secondOutputVirtual) {
+          validateNonVirtualAssetId(bridgeId.outputAssetIdB!);
+        }
+        break;
+      }
+      default:
+    }
+  }
+
+  private async validateDepositProofApproval(proof: ProofData, depositSignature?: Buffer) {
+    const { publicOwner } = new JoinSplitProofData(proof);
+    const txId = new TxId(proof.txId);
+    let proofApproval = await this.blockchain.getUserProofApprovalStatus(publicOwner, txId.toBuffer());
+    if (!proofApproval && depositSignature) {
+      const message = txId.toDepositSigningData();
+      proofApproval = this.blockchain.validateSignature(publicOwner, depositSignature, message);
+    }
+    if (!proofApproval) {
+      throw new Error(`Tx not approved or invalid signature: ${txId.toString()}`);
     }
   }
 

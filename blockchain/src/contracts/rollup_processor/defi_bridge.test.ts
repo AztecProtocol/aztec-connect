@@ -1,6 +1,6 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { Asset, TxHash } from '@aztec/barretenberg/blockchain';
-import { BridgeId, virtualAssetIdFlag } from '@aztec/barretenberg/bridge_id';
+import { BridgeId, virtualAssetIdFlag, virtualAssetIdPlaceholder } from '@aztec/barretenberg/bridge_id';
 import {
   computeInteractionHashes,
   DefiInteractionNote,
@@ -336,8 +336,8 @@ describe('rollup_processor: defi bridge', () => {
     const bridgeId = await mockBridge({
       inputAssetIdA: 1 + virtualAssetIdFlag,
       inputAssetIdB: 2 + virtualAssetIdFlag,
-      outputAssetIdA: 0 + virtualAssetIdFlag,
-      outputAssetIdB: 2 + virtualAssetIdFlag,
+      outputAssetIdA: virtualAssetIdPlaceholder,
+      outputAssetIdB: virtualAssetIdPlaceholder,
       outputValueA,
       outputValueB,
     });

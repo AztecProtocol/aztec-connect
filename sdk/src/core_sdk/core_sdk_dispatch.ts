@@ -62,12 +62,12 @@ export class CoreSdkDispatch extends EventEmitter implements CoreSdkSerializedIn
     return this.request('getRemoteLatestAliasNonce', [alias]);
   }
 
-  public async getAccountId(alias: string, nonce?: number) {
-    return await this.request('getAccountId', [alias, nonce]);
+  public async getAccountId(alias: string, accountNonce?: number) {
+    return await this.request('getAccountId', [alias, accountNonce]);
   }
 
-  public async getRemoteAccountId(alias: string, nonce?: number) {
-    return await this.request('getRemoteAccountId', [alias, nonce]);
+  public async getRemoteAccountId(alias: string, accountNonce?: number) {
+    return await this.request('getRemoteAccountId', [alias, accountNonce]);
   }
 
   public async isAliasAvailable(alias: string) {
@@ -117,7 +117,7 @@ export class CoreSdkDispatch extends EventEmitter implements CoreSdkSerializedIn
   public async createAccountProofSigningData(
     signingPubKey: string,
     alias: string,
-    nonce: number,
+    accountNonce: number,
     migrate: boolean,
     accountPublicKey: string,
     newAccountPublicKey?: string,
@@ -127,7 +127,7 @@ export class CoreSdkDispatch extends EventEmitter implements CoreSdkSerializedIn
     return this.request('createAccountProofSigningData', [
       signingPubKey,
       alias,
-      nonce,
+      accountNonce,
       migrate,
       accountPublicKey,
       newAccountPublicKey,
@@ -230,8 +230,8 @@ export class CoreSdkDispatch extends EventEmitter implements CoreSdkSerializedIn
     return this.request('constructSignature', [message, privateKey]);
   }
 
-  public async addUser(privateKey: Uint8Array, nonce?: number, noSync?: boolean) {
-    return this.request('addUser', [privateKey, nonce, noSync]);
+  public async addUser(privateKey: Uint8Array, accountNonce?: number, noSync?: boolean) {
+    return this.request('addUser', [privateKey, accountNonce, noSync]);
   }
 
   public async removeUser(userId: string) {
@@ -250,32 +250,24 @@ export class CoreSdkDispatch extends EventEmitter implements CoreSdkSerializedIn
     return this.request('getBalance', [assetId, userId]);
   }
 
-  public async getMaxSpendableValue(assetId: number, userId: string, numNotes?: number) {
-    return this.request('getMaxSpendableValue', [assetId, userId, numNotes]);
+  public async getSpendableSum(assetId: number, userId: string, excludePendingNotes?: boolean) {
+    return this.request('getSpendableSum', [assetId, userId, excludePendingNotes]);
   }
 
-  public async getSpendableNotes(assetId: number, userId: string) {
-    return this.request('getSpendableNotes', [assetId, userId]);
+  public async getSpendableSums(userId: string, excludePendingNotes?: boolean) {
+    return this.request('getSpendableSums', [userId, excludePendingNotes]);
   }
 
-  public async getSpendableSum(assetId: number, userId: string) {
-    return this.request('getSpendableSum', [assetId, userId]);
+  public async getMaxSpendableValue(assetId: number, userId: string, numNotes?: number, excludePendingNotes?: boolean) {
+    return this.request('getMaxSpendableValue', [assetId, userId, numNotes, excludePendingNotes]);
   }
 
-  public async getSpendableSums(userId: string) {
-    return this.request('getSpendableSums', [userId]);
+  public async pickNotes(userId: string, assetId: number, value: string, excludePendingNotes?: boolean) {
+    return this.request('pickNotes', [userId, assetId, value, excludePendingNotes]);
   }
 
-  public async getNotes(userId: string) {
-    return this.request('getNotes', [userId]);
-  }
-
-  public async pickNotes(userId: string, assetId: number, value: string) {
-    return this.request('pickNotes', [userId, assetId, value]);
-  }
-
-  public async pickNote(userId: string, assetId: number, value: string) {
-    return this.request('pickNote', [userId, assetId, value]);
+  public async pickNote(userId: string, assetId: number, value: string, excludePendingNotes?: boolean) {
+    return this.request('pickNote', [userId, assetId, value, excludePendingNotes]);
   }
 
   public async getUserTxs(userId: string) {

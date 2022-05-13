@@ -235,8 +235,4 @@ export class EthereumSdk extends EventEmitter {
   public async getDefiTxs(accountId: AccountId) {
     return this.aztecSdk.getDefiTxs(accountId);
   }
-
-  public async getNotes(accountId: AccountId) {
-    return this.aztecSdk.getNotes(accountId);
-  }
 }

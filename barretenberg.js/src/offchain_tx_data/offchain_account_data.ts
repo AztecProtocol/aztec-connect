@@ -22,6 +22,10 @@ export class OffchainAccountData {
   }
 
   static fromBuffer(buf: Buffer) {
+    if (buf.length !== OffchainAccountData.SIZE) {
+      throw new Error('Invalid buffer size.');
+    }
+
     let dataStart = 0;
     const accountPublicKey = new GrumpkinAddress(buf.slice(dataStart, dataStart + 64));
     dataStart += 64;

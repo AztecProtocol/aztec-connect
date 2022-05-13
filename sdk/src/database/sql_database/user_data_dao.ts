@@ -5,7 +5,7 @@ import { UserData } from '../../user';
 import { grumpkinAddressTransformer, accountIdTransformer, aliasHashTransformer } from './transformer';
 
 @Entity({ name: 'userData' })
-@Index(['publicKey', 'nonce'], { unique: true })
+@Index(['publicKey', 'accountNonce'], { unique: true })
 export class UserDataDao implements UserData {
   @PrimaryColumn('blob', { transformer: [accountIdTransformer] })
   public id!: AccountId;
@@ -17,7 +17,7 @@ export class UserDataDao implements UserData {
   public privateKey!: Buffer;
 
   @Column()
-  public nonce!: number;
+  public accountNonce!: number;
 
   @Column('blob', { nullable: true, transformer: [aliasHashTransformer] })
   public aliasHash?: AliasHash;

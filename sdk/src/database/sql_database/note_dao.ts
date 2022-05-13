@@ -59,7 +59,7 @@ export class NoteDao {
 }
 
 export const noteToNoteDao = ({
-  treeNote: { noteSecret, ownerPubKey, nonce, creatorPubKey, inputNullifier, assetId },
+  treeNote: { noteSecret, ownerPubKey, accountNonce, creatorPubKey, inputNullifier, assetId },
   commitment,
   nullifier,
   value,
@@ -71,7 +71,7 @@ export const noteToNoteDao = ({
   commitment,
   nullifier,
   noteSecret,
-  owner: new AccountId(ownerPubKey, nonce),
+  owner: new AccountId(ownerPubKey, accountNonce),
   creatorPubKey,
   inputNullifier,
   assetId,

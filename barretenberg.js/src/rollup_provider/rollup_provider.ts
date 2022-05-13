@@ -122,7 +122,7 @@ export interface RollupProvider extends BlockSource {
   getInitialWorldState(): Promise<InitialWorldState>;
   getLatestAccountNonce(accountPubKey: GrumpkinAddress): Promise<number>;
   getLatestAliasNonce(alias: string): Promise<number>;
-  getAccountId(alias: string, nonce?: number): Promise<AccountId | undefined>;
+  getAccountId(alias: string, accountNonce?: number): Promise<AccountId | undefined>;
   getUnsettledAccountTxs: () => Promise<AccountTx[]>;
   getUnsettledPaymentTxs: () => Promise<JoinSplitTx[]>;
 }

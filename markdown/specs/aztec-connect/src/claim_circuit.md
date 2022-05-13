@@ -155,10 +155,11 @@ Checks:
 
 - Many values are range-checked. See [constants.hpp](../../barretenberg/src/aztec/rollup/proofs/notes/constants.hpp) and [constants.hpp](../../barretenberg/src/aztec/rollup/constants.hpp) for the variables whose bit-lengths are constrained.
 - Check `bit_config` vars:
-  - `require(first_input_virtual == false)` (not supported)
-  - `require(first_output_virtual == false)` (not supported)
-  - `second_input_virtual NAND second_input_real`
-  - `second_output_virtual NAND second_output_real`
+  - Extract 'virtualness' from `input_asset_id_b` and `output_asset_id_b`
+  - `second_input_virtual must_imply second_input_in_use`
+  - `second_output_virtual must_imply second_output_in_use`
+  - `second_input_in_use must_imply input_asset_id_a != input_asset_id_b`
+  - `second_output_in_use must_imply output_asset_id_a != output_asset_id_b`
 - `require(claim_note.deposit_value != 0)`
 - `require(deposit_value <= total_input_value)`
 - `require(output_value_a <= total_output_value_a)`

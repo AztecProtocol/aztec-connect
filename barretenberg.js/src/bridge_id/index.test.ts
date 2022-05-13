@@ -1,17 +1,6 @@
+import { BitConfig } from './bit_config';
 import { BridgeId } from './bridge_id';
-import {
-  ADDRESS_BIT_LEN,
-  ADDRESS_OFFSET,
-  INPUT_ASSET_ID_A_LEN,
-  INPUT_ASSET_ID_A_OFFSET,
-  INPUT_ASSET_ID_B_LEN,
-  INPUT_ASSET_ID_B_OFFSET,
-  OUTPUT_ASSET_ID_A_LEN,
-  OUTPUT_ASSET_ID_A_OFFSET,
-  OUTPUT_ASSET_ID_B_LEN,
-  OUTPUT_ASSET_ID_B_OFFSET,
-  virtualAssetIdFlag,
-} from './bridge_id_config';
+import { BITCONFIG_OFFSET, virtualAssetIdFlag } from './bridge_id_config';
 
 describe('bridge id', () => {
   const virtualAssetId = virtualAssetIdFlag + 1;
@@ -58,41 +47,42 @@ describe('bridge id', () => {
 
   it('correctly create the bit config', () => {
     expect(new BridgeId(0, 1, 0).bitConfig).toEqual({
-      firstInputVirtual: false,
-      secondInputVirtual: false,
-      firstOutputVirtual: false,
-      secondOutputVirtual: false,
-      secondInputReal: false,
-      secondOutputReal: false,
+      secondInputInUse: false,
+      secondOutputInUse: false,
+    });
+
+    expect(new BridgeId(0, 1, 0, undefined, 2).bitConfig).toEqual({
+      secondInputInUse: false,
+      secondOutputInUse: true,
+    });
+
+    expect(new BridgeId(0, 1, 0, 2).bitConfig).toEqual({
+      secondInputInUse: true,
+      secondOutputInUse: false,
     });
 
     expect(new BridgeId(0, 1, 0, virtualAssetId, 2).bitConfig).toEqual({
-      firstInputVirtual: false,
-      secondInputVirtual: true,
-      firstOutputVirtual: false,
-      secondOutputVirtual: false,
-      secondInputReal: false,
-      secondOutputReal: true,
+      secondInputInUse: true,
+      secondOutputInUse: true,
     });
   });
 
-  it('remove the 30th bit of a virtual asset when serialized', () => {
-    const addressId = virtualAssetIdFlag + 1;
-    const val = new BridgeId(
-      addressId,
-      virtualAssetIdFlag + 2,
-      virtualAssetIdFlag + 3,
-      virtualAssetIdFlag + 4,
-      virtualAssetIdFlag + 5,
-    ).toBigInt();
+  it('does not allow asset id to have value and not in use', () => {
+    const replaceBitConfig = (bridgeId: BridgeId, bitConfig: BitConfig) => {
+      return (
+        bridgeId.toBigInt() -
+        (bridgeId.bitConfig.toBigInt() << BigInt(BITCONFIG_OFFSET)) +
+        (bitConfig.toBigInt() << BigInt(BITCONFIG_OFFSET))
+      );
+    };
 
-    const getNumber = (val: bigint, offset: number, size: number) =>
-      Number((val >> BigInt(offset)) & ((BigInt(1) << BigInt(size)) - BigInt(1)));
-
-    expect(getNumber(val, ADDRESS_OFFSET, ADDRESS_BIT_LEN)).toEqual(addressId);
-    expect(getNumber(val, INPUT_ASSET_ID_A_OFFSET, INPUT_ASSET_ID_A_LEN)).toEqual(2);
-    expect(getNumber(val, OUTPUT_ASSET_ID_A_OFFSET, OUTPUT_ASSET_ID_A_LEN)).toEqual(3);
-    expect(getNumber(val, INPUT_ASSET_ID_B_OFFSET, INPUT_ASSET_ID_B_LEN)).toEqual(4);
-    expect(getNumber(val, OUTPUT_ASSET_ID_B_OFFSET, OUTPUT_ASSET_ID_B_LEN)).toEqual(5);
+    {
+      const idVal = replaceBitConfig(new BridgeId(0, 1, 2, 3, 4), new BitConfig(false, true));
+      expect(() => BridgeId.fromBigInt(idVal)).toThrow('Inconsistent second input.');
+    }
+    {
+      const idVal = replaceBitConfig(new BridgeId(0, 1, 2, 0, 4), new BitConfig(false, false));
+      expect(() => BridgeId.fromBigInt(idVal)).toThrow('Inconsistent second output');
+    }
   });
 });

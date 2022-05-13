@@ -75,8 +75,8 @@ export class SyncRollupDb {
     return this.synchronise(() => this.rollupDb.getLatestAliasNonce(aliasHash));
   }
 
-  public async getAccountId(aliasHash: AliasHash, nonce?: number) {
-    return this.synchronise(() => this.rollupDb.getAccountId(aliasHash, nonce));
+  public async getAccountId(aliasHash: AliasHash, accountNonce?: number) {
+    return this.synchronise(() => this.rollupDb.getAccountId(aliasHash, accountNonce));
   }
 
   public async getTotalRollupsOfSize(rollupSize: number) {

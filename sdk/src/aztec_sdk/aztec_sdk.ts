@@ -119,12 +119,12 @@ export class AztecSdk extends EventEmitter {
     return this.core.getRemoteLatestAliasNonce(alias);
   }
 
-  public async getAccountId(alias: string, nonce?: number) {
-    return this.core.getAccountId(alias, nonce);
+  public async getAccountId(alias: string, accountNonce?: number) {
+    return this.core.getAccountId(alias, accountNonce);
   }
 
-  public async getRemoteAccountId(alias: string, nonce?: number) {
-    return this.core.getRemoteAccountId(alias, nonce);
+  public async getRemoteAccountId(alias: string, accountNonce?: number) {
+    return this.core.getRemoteAccountId(alias, accountNonce);
   }
 
   public async isAliasAvailable(alias: string) {
@@ -139,8 +139,8 @@ export class AztecSdk extends EventEmitter {
     return this.core.userExists(userId);
   }
 
-  public async addUser(privateKey: Buffer, nonce?: number, noSync = false) {
-    const userData = await this.core.addUser(privateKey, nonce, noSync);
+  public async addUser(privateKey: Buffer, accountNonce?: number, noSync = false) {
+    const userData = await this.core.addUser(privateKey, accountNonce, noSync);
     return new AztecSdkUser(userData.id, this);
   }
 
@@ -289,7 +289,11 @@ export class AztecSdk extends EventEmitter {
     return new TransferController(userId, userSigner, value, fee, to, this.core);
   }
 
-  public async getDefiFees(bridgeId: BridgeId, userId?: AccountId, depositValue?: bigint) {
+  public async getDefiFees(bridgeId: BridgeId, userId?: AccountId, depositValue?: AssetValue) {
+    if (depositValue && depositValue.assetId !== bridgeId.inputAssetIdA) {
+      throw new Error('Inconsistent asset ids.');
+    }
+
     const defiFees = await this.core.getDefiFees(bridgeId);
     const { assetId: feeAssetId, value: minDefiFee } = defiFees[0];
     const requireFeePayingTx = feeAssetId !== bridgeId.inputAssetIdA;
@@ -298,53 +302,32 @@ export class AztecSdk extends EventEmitter {
         return true;
       }
 
+      const { value } = depositValue;
+      const privateInput = value + (!requireFeePayingTx ? minDefiFee : BigInt(0));
+
       if (bridgeId.inputAssetIdB === undefined) {
-        const privateInput = depositValue + (!requireFeePayingTx ? minDefiFee : BigInt(0));
         const notes = await this.core.pickNotes(userId, bridgeId.inputAssetIdA, privateInput);
         return notes.reduce((sum, n) => sum + n.value, BigInt(0)) !== privateInput;
       }
 
-      if (!requireFeePayingTx) {
-        return true;
-      }
-
       return (
-        (await this.core.pickNote(userId, bridgeId.inputAssetIdA, depositValue))?.value !== depositValue ||
-        (await this.core.pickNote(userId, bridgeId.inputAssetIdB, depositValue))?.value !== depositValue
+        (await this.core.pickNote(userId, bridgeId.inputAssetIdA, privateInput))?.value !== privateInput ||
+        (await this.core.pickNote(userId, bridgeId.inputAssetIdB, value))?.value !== value
       );
     })();
 
-    let additionalFee = BigInt(0);
-    const additionalTxs = +requireFeePayingTx + +requireJoinSplitTx;
-    if (additionalTxs) {
-      const [minTransferFee] = (await this.core.getTxFees(feeAssetId))[TxType.TRANSFER];
-      additionalFee += minTransferFee.value * BigInt(additionalTxs);
-    }
+    const [minTransferFee] = (await this.core.getTxFees(feeAssetId))[TxType.TRANSFER];
+    // Always include the fee for an extra join split tx if the user is willing to pay higher fee.
+    const additionalFees = [
+      minTransferFee.value * BigInt(+requireFeePayingTx + +requireJoinSplitTx),
+      minTransferFee.value * BigInt(+requireFeePayingTx + 1),
+      minTransferFee.value * BigInt(+requireFeePayingTx + 1),
+    ];
 
-    return defiFees.map(defiFee => ({
+    return defiFees.map((defiFee, i) => ({
       ...defiFee,
-      value: defiFee.value + additionalFee,
+      value: defiFee.value + additionalFees[i],
     }));
-  }
-
-  public async getMaxDefiDepositValue(bridgeId: BridgeId, userId: AccountId) {
-    const { assetId: feeAssetId, value: defiFee } = (await this.core.getDefiFees(bridgeId))[0];
-    const assetId = bridgeId.inputAssetIdA;
-    const requireFeePayingTx = feeAssetId !== assetId;
-    const numNotes = bridgeId.inputAssetIdB === undefined ? 2 : 1;
-    const maxSpendableValueA = await this.core.getMaxSpendableValue(bridgeId.inputAssetIdA, userId, numNotes);
-    let fee = !requireFeePayingTx ? defiFee : BigInt(0);
-    if (bridgeId.inputAssetIdB === undefined) {
-      return { assetId, value: maxSpendableValueA > fee ? maxSpendableValueA - fee : BigInt(0) };
-    } else {
-      if (!requireFeePayingTx) {
-        const { value: transferFee } = (await this.core.getTxFees(feeAssetId))[TxType.TRANSFER][0];
-        fee += transferFee;
-      }
-      const maxDepositValueA = maxSpendableValueA > fee ? maxSpendableValueA - fee : BigInt(0);
-      const maxDepositValueB = await this.core.getMaxSpendableValue(bridgeId.inputAssetIdB, userId, numNotes);
-      return { assetId, value: maxDepositValueA <= maxDepositValueB ? maxDepositValueA : maxDepositValueB };
-    }
   }
 
   public createDefiController(
@@ -361,10 +344,10 @@ export class AztecSdk extends EventEmitter {
     alias: string,
     publicKey: GrumpkinAddress,
     trustedThirdPartyPublicKeys: GrumpkinAddress[],
-    nonce?: number,
+    accountNonce?: number,
   ) {
-    const accountNonce = nonce !== undefined ? nonce : (await this.core.getLatestAccountNonce(publicKey)) + 1;
-    const accountId = new AccountId(publicKey, accountNonce);
+    const nonce = accountNonce !== undefined ? accountNonce : (await this.core.getLatestAccountNonce(publicKey)) + 1;
+    const accountId = new AccountId(publicKey, nonce);
     const socialRecoverySigner = await this.createSchnorrSigner(randomBytes(32));
     const recoveryPublicKey = socialRecoverySigner.getPublicKey();
 
@@ -373,7 +356,7 @@ export class AztecSdk extends EventEmitter {
         const signingData = await this.core.createAccountProofSigningData(
           recoveryPublicKey,
           alias,
-          accountNonce,
+          nonce,
           false,
           publicKey,
           undefined,
@@ -505,16 +488,23 @@ export class AztecSdk extends EventEmitter {
 
   public async flushRollup(userId: AccountId, userSigner: Signer) {
     const fee = (await this.getTransferFees(0))[TxSettlementTime.INSTANT];
-    const controller = this.createTransferController(
+    const feeProofInput = await this.core.createPaymentProofInput(
       userId,
-      userSigner,
-      { assetId: fee.assetId, value: BigInt(0) },
-      fee,
-      userId,
+      fee.assetId,
+      BigInt(0),
+      BigInt(0),
+      fee.value,
+      BigInt(0),
+      BigInt(0),
+      undefined,
+      undefined,
+      userSigner.getPublicKey(),
+      2,
     );
-    await controller.createProof();
-    await controller.send();
-    await controller.awaitSettlement();
+    feeProofInput.signature = await userSigner.signMessage(feeProofInput.signingData);
+    const feeProofOutput = await this.core.createPaymentProof(feeProofInput, 0);
+    const [txId] = await this.core.sendProofs([feeProofOutput]);
+    await this.core.awaitSettlement(txId);
   }
 
   public async getSigningKeys(userId: AccountId) {
@@ -549,27 +539,24 @@ export class AztecSdk extends EventEmitter {
     return this.fromBaseUnits(await this.getBalanceAv(assetId, userId), symbol, precision);
   }
 
-  public async getMaxSpendableValue(assetId: number, userId: AccountId, numNotes?: number) {
+  public async getSpendableSum(assetId: number, userId: AccountId, excludePendingNotes?: boolean) {
+    return this.core.getSpendableSum(assetId, userId, excludePendingNotes);
+  }
+
+  public async getSpendableSums(userId: AccountId, excludePendingNotes?: boolean) {
+    return this.core.getSpendableSums(userId, excludePendingNotes);
+  }
+
+  public async getMaxSpendableValue(
+    assetId: number,
+    userId: AccountId,
+    numNotes?: number,
+    excludePendingNotes?: boolean,
+  ) {
     if (numNotes !== undefined && (numNotes > 2 || numNotes < 1)) {
       throw new Error(`numNotes can only be 1 or 2. Got ${numNotes}.`);
     }
-    return this.core.getMaxSpendableValue(assetId, userId, numNotes);
-  }
-
-  public async getSpendableNotes(assetId: number, userId: AccountId) {
-    return this.core.getSpendableNotes(assetId, userId);
-  }
-
-  public async getSpendableSum(assetId: number, userId: AccountId) {
-    return this.core.getSpendableSum(assetId, userId);
-  }
-
-  public async getSpendableSums(userId: AccountId) {
-    return this.core.getSpendableSums(userId);
-  }
-
-  public async getNotes(userId: AccountId) {
-    return this.core.getNotes(userId);
+    return this.core.getMaxSpendableValue(assetId, userId, numNotes, excludePendingNotes);
   }
 
   public async getUserTxs(userId: AccountId) {

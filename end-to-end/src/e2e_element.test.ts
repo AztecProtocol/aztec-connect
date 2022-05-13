@@ -181,7 +181,7 @@ describe('end-to-end async defi tests', () => {
     // If the fees are paid in the deposit asset, then we will need to subtract the fees to get the correct balance.
     for (let i = 0; i < assetSpecs.length; ++i) {
       const { assetId: feeAssetId, value: feeValue } = defiDepositControllers[i].fee;
-      const { assetId, value } = defiDepositControllers[i].assetValue;
+      const { assetId, value } = defiDepositControllers[i].depositValue;
       const totalQuantityDepositedToAztec = tokenDepositControllers[i].assetValue.value;
       await debugBalance(assetId);
       const balance = await sdk.getBalance(assetId, userId);
@@ -224,7 +224,7 @@ describe('end-to-end async defi tests', () => {
     // All assets should now have more than we initially received minus any fees paid.
     for (let i = 0; i < assetSpecs.length; ++i) {
       const { assetId: feeAssetId, value: feeValue } = defiDepositControllers[i].fee;
-      const { assetId } = defiDepositControllers[i].assetValue;
+      const { assetId } = defiDepositControllers[i].depositValue;
       const totalQuantityDepositedToAztec = tokenDepositControllers[i].assetValue.value;
       await debugBalance(assetId);
       const balance = await sdk.getBalance(assetId, userId);

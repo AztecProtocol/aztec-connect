@@ -15,7 +15,7 @@ export class RegisterController {
   private readonly newUserId: AccountId;
   private depositController?: DepositController;
   private proofOutput!: ProofOutput;
-  private txIds!: TxId[];
+  private txId!: TxId;
 
   constructor(
     public readonly userId: AccountId,
@@ -134,18 +134,24 @@ export class RegisterController {
   }
 
   async send() {
+    if (!this.proofOutput) {
+      throw new Error('Call createProof() first.');
+    }
     if (!this.depositController) {
-      this.txIds = await this.core.sendProofs([this.proofOutput]);
+      [this.txId] = await this.core.sendProofs([this.proofOutput]);
     } else {
       const [{ tx, ...proofOutputData }] = this.depositController.getProofs();
       const recipientTx = createCorePaymentTxForRecipient(tx as CorePaymentTx, this.newUserId);
       const feeProofOutput = { tx: recipientTx, ...proofOutputData };
-      this.txIds = await this.core.sendProofs([this.proofOutput, feeProofOutput]);
+      [this.txId] = await this.core.sendProofs([this.proofOutput, feeProofOutput]);
     }
-    return this.txIds[0];
+    return this.txId;
   }
 
   async awaitSettlement(timeout?: number) {
-    await Promise.all(this.txIds.map(txId => this.core.awaitSettlement(txId, timeout)));
+    if (!this.txId) {
+      throw new Error(`Call ${!this.proofOutput ? 'createProof()' : 'send()'} first.`);
+    }
+    await this.core.awaitSettlement(this.txId, timeout);
   }
 }

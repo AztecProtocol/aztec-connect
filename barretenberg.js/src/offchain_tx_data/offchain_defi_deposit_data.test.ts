@@ -50,4 +50,9 @@ describe('OffchainDefiDepositData', () => {
         ),
     ).toThrow();
   });
+
+  it('throw if buffer size is wrong', () => {
+    expect(() => OffchainDefiDepositData.fromBuffer(randomBytes(OffchainDefiDepositData.SIZE - 1))).toThrow();
+    expect(() => OffchainDefiDepositData.fromBuffer(randomBytes(OffchainDefiDepositData.SIZE + 1))).toThrow();
+  });
 });

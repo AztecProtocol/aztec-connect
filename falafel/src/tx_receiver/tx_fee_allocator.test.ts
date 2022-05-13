@@ -7,7 +7,7 @@ import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { randomBytes } from 'crypto';
 import { TxDao } from '../entity';
 import { TxFeeResolver } from '../tx_fee_resolver';
-import { Tx } from './interfaces';
+import { Tx } from './tx';
 import { TxFeeAllocator } from './tx_fee_allocator';
 
 const bridgeConfigs: BridgeConfig[] = [

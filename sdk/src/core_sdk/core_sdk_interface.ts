@@ -40,9 +40,9 @@ export interface CoreSdkInterface {
 
   getRemoteLatestAliasNonce(alias: string): Promise<number>;
 
-  getAccountId(alias: string, nonce?: number): Promise<AccountId | undefined>;
+  getAccountId(alias: string, accountNonce?: number): Promise<AccountId | undefined>;
 
-  getRemoteAccountId(alias: string, nonce?: number): Promise<AccountId | undefined>;
+  getRemoteAccountId(alias: string, accountNonce?: number): Promise<AccountId | undefined>;
 
   isAliasAvailable(alias: string): Promise<boolean>;
 
@@ -69,7 +69,7 @@ export interface CoreSdkInterface {
   createAccountProofSigningData(
     signingPubKey: GrumpkinAddress,
     alias: string,
-    nonce: number,
+    accountNonce: number,
     migrate: boolean,
     accountPublicKey: GrumpkinAddress,
     newAccountPublicKey?: GrumpkinAddress,
@@ -127,7 +127,7 @@ export interface CoreSdkInterface {
 
   constructSignature(message: Buffer, privateKey: Buffer): Promise<SchnorrSignature>;
 
-  addUser(privateKey: Buffer, nonce?: number, noSync?: boolean): Promise<UserData>;
+  addUser(privateKey: Buffer, accountNonce?: number, noSync?: boolean): Promise<UserData>;
 
   removeUser(userId: AccountId): Promise<void>;
 
@@ -137,19 +137,20 @@ export interface CoreSdkInterface {
 
   getBalance(assetId: number, userId: AccountId): Promise<bigint>;
 
-  getMaxSpendableValue(assetId: number, userId: AccountId, numNotes?: number): Promise<bigint>;
+  getSpendableSum(assetId: number, userId: AccountId, excludePendingNotes?: boolean): Promise<bigint>;
 
-  getSpendableNotes(assetId: number, userId: AccountId): Promise<Note[]>;
+  getSpendableSums(userId: AccountId, excludePendingNotes?: boolean): Promise<AssetValue[]>;
 
-  getSpendableSum(assetId: number, userId: AccountId): Promise<bigint>;
+  getMaxSpendableValue(
+    assetId: number,
+    userId: AccountId,
+    numNotes?: number,
+    excludePendingNotes?: boolean,
+  ): Promise<bigint>;
 
-  getSpendableSums(userId: AccountId): Promise<AssetValue[]>;
+  pickNotes(userId: AccountId, assetId: number, value: bigint, excludePendingNotes?: boolean): Promise<Note[]>;
 
-  getNotes(userId: AccountId): Promise<Note[]>;
-
-  pickNotes(userId: AccountId, assetId: number, value: bigint): Promise<Note[]>;
-
-  pickNote(userId: AccountId, assetId: number, value: bigint): Promise<Note | undefined>;
+  pickNote(userId: AccountId, assetId: number, value: bigint, excludePendingNotes?: boolean): Promise<Note | undefined>;
 
   getUserTxs(userId: AccountId): Promise<CoreUserTx[]>;
 

@@ -102,13 +102,13 @@ export class CoreSdkServerStub {
     return this.core.getRemoteLatestAliasNonce(alias);
   }
 
-  public async getAccountId(alias: string, nonce?: number) {
-    const accountId = await this.core.getAccountId(alias, nonce);
+  public async getAccountId(alias: string, accountNonce?: number) {
+    const accountId = await this.core.getAccountId(alias, accountNonce);
     return accountId ? accountId.toString() : undefined;
   }
 
-  public async getRemoteAccountId(alias: string, nonce?: number) {
-    const accountId = await this.core.getRemoteAccountId(alias, nonce);
+  public async getRemoteAccountId(alias: string, accountNonce?: number) {
+    const accountId = await this.core.getRemoteAccountId(alias, accountNonce);
     return accountId ? accountId.toString() : undefined;
   }
 
@@ -161,7 +161,7 @@ export class CoreSdkServerStub {
   public async createAccountProofSigningData(
     signingPubKey: string,
     alias: string,
-    nonce: number,
+    accountNonce: number,
     migrate: boolean,
     accountPublicKey: string,
     newAccountPublicKey?: string,
@@ -171,7 +171,7 @@ export class CoreSdkServerStub {
     const signingData = await this.core.createAccountProofSigningData(
       GrumpkinAddress.fromString(signingPubKey),
       alias,
-      nonce,
+      accountNonce,
       migrate,
       GrumpkinAddress.fromString(accountPublicKey),
       newAccountPublicKey ? GrumpkinAddress.fromString(newAccountPublicKey) : undefined,
@@ -290,8 +290,8 @@ export class CoreSdkServerStub {
     return signature.toString();
   }
 
-  public async addUser(privateKey: Uint8Array, nonce?: number, noSync?: boolean) {
-    const userData = await this.core.addUser(Buffer.from(privateKey), nonce, noSync);
+  public async addUser(privateKey: Uint8Array, accountNonce?: number, noSync?: boolean) {
+    const userData = await this.core.addUser(Buffer.from(privateKey), accountNonce, noSync);
     return userDataToJson(userData);
   }
 
@@ -314,37 +314,34 @@ export class CoreSdkServerStub {
     return balance.toString();
   }
 
-  public async getMaxSpendableValue(assetId: number, userId: string, numNotes?: number) {
-    const value = await this.core.getMaxSpendableValue(assetId, AccountId.fromString(userId), numNotes);
-    return value.toString();
-  }
-
-  public async getSpendableNotes(assetId: number, userId: string) {
-    const notes = await this.core.getSpendableNotes(assetId, AccountId.fromString(userId));
-    return notes.map(noteToJson);
-  }
-
-  public async getSpendableSum(assetId: number, userId: string) {
-    const sum = await this.core.getSpendableSum(assetId, AccountId.fromString(userId));
+  public async getSpendableSum(assetId: number, userId: string, excludePendingNotes?: boolean) {
+    const sum = await this.core.getSpendableSum(assetId, AccountId.fromString(userId), excludePendingNotes);
     return sum.toString();
   }
 
-  public async getSpendableSums(userId: string) {
-    const sums = await this.core.getSpendableSums(AccountId.fromString(userId));
+  public async getSpendableSums(userId: string, excludePendingNotes?: boolean) {
+    const sums = await this.core.getSpendableSums(AccountId.fromString(userId), excludePendingNotes);
     return sums.map(assetValueToJson);
   }
 
-  public async getNotes(userId: string) {
-    const notes = await this.core.getNotes(AccountId.fromString(userId));
-    return notes.map(noteToJson);
+  public async getMaxSpendableValue(assetId: number, userId: string, numNotes?: number, excludePendingNotes?: boolean) {
+    const value = await this.core.getMaxSpendableValue(
+      assetId,
+      AccountId.fromString(userId),
+      numNotes,
+      excludePendingNotes,
+    );
+    return value.toString();
   }
 
-  public async pickNotes(userId: string, assetId: number, value: string) {
-    return (await this.core.pickNotes(AccountId.fromString(userId), assetId, BigInt(value))).map(noteToJson);
+  public async pickNotes(userId: string, assetId: number, value: string, excludePendingNotes?: boolean) {
+    return (await this.core.pickNotes(AccountId.fromString(userId), assetId, BigInt(value), excludePendingNotes)).map(
+      noteToJson,
+    );
   }
 
-  public async pickNote(userId: string, assetId: number, value: string) {
-    const note = await this.core.pickNote(AccountId.fromString(userId), assetId, BigInt(value));
+  public async pickNote(userId: string, assetId: number, value: string, excludePendingNotes?: boolean) {
+    const note = await this.core.pickNote(AccountId.fromString(userId), assetId, BigInt(value), excludePendingNotes);
     return note ? noteToJson(note) : undefined;
   }
 

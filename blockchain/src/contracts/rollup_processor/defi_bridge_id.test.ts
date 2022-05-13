@@ -1,5 +1,5 @@
 import { EthAddress } from '@aztec/barretenberg/address';
-import { virtualAssetIdFlag } from '@aztec/barretenberg/bridge_id';
+import { virtualAssetIdFlag, virtualAssetIdPlaceholder } from '@aztec/barretenberg/bridge_id';
 import { Signer } from 'ethers';
 import { ethers } from 'hardhat';
 import { createRollupProof, createSendProof, DefiInteractionData } from './fixtures/create_mock_proof';
@@ -38,8 +38,8 @@ describe('rollup_processor: defi bridge', () => {
 
   it('will not revert if two virtual output assets are the same', async () => {
     const bridgeId = await mockBridge({
-      outputAssetIdA: 2 + virtualAssetIdFlag,
-      outputAssetIdB: 2 + virtualAssetIdFlag,
+      outputAssetIdA: virtualAssetIdPlaceholder,
+      outputAssetIdB: virtualAssetIdPlaceholder,
     });
     const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, 1n)],

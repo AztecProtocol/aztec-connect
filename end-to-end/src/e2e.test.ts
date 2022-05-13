@@ -27,9 +27,9 @@ describe('end-to-end tests', () => {
   const assetId = 0;
   const debug = createDebug('bb:e2e');
 
-  const createUser = async (accountPrivateKey = randomBytes(32), nonce = 0) => {
-    const userId = (await sdk.addUser(accountPrivateKey, nonce)).id;
-    const signingPrivateKey = !nonce ? accountPrivateKey : randomBytes(32);
+  const createUser = async (accountPrivateKey = randomBytes(32), accountNonce = 0) => {
+    const userId = (await sdk.addUser(accountPrivateKey, accountNonce)).id;
+    const signingPrivateKey = !accountNonce ? accountPrivateKey : randomBytes(32);
     const signer = await sdk.createSchnorrSigner(signingPrivateKey);
     return { userId, signer, accountPrivateKey };
   };

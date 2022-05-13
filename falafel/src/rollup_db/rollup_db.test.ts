@@ -45,10 +45,10 @@ describe('rollup_db', () => {
 
   it('should count accounts that have nonce 1', async () => {
     const txs = [
-      randomAccountTx({ nonce: 1 }),
-      randomAccountTx({ nonce: 2 }),
-      randomAccountTx({ nonce: 1 }),
-      randomAccountTx({ nonce: 3 }),
+      randomAccountTx({ accountNonce: 1 }),
+      randomAccountTx({ accountNonce: 2 }),
+      randomAccountTx({ accountNonce: 1 }),
+      randomAccountTx({ accountNonce: 3 }),
     ];
     for (const tx of txs) {
       await rollupDb.addTx(tx);
@@ -64,10 +64,10 @@ describe('rollup_db', () => {
     const aliasHash0 = AliasHash.random();
     const aliasHash1 = AliasHash.random();
     const txs = [
-      randomAccountTx({ accountPublicKey: accountPublicKey0, aliasHash: aliasHash0, nonce: 1 }),
-      randomAccountTx({ accountPublicKey: accountPublicKey0, aliasHash: aliasHash0, nonce: 2 }),
-      randomAccountTx({ accountPublicKey: accountPublicKey0, aliasHash: aliasHash1, nonce: 3 }),
-      randomAccountTx({ accountPublicKey: accountPublicKey1, aliasHash: aliasHash1, nonce: 4 }),
+      randomAccountTx({ accountPublicKey: accountPublicKey0, aliasHash: aliasHash0, accountNonce: 1 }),
+      randomAccountTx({ accountPublicKey: accountPublicKey0, aliasHash: aliasHash0, accountNonce: 2 }),
+      randomAccountTx({ accountPublicKey: accountPublicKey0, aliasHash: aliasHash1, accountNonce: 3 }),
+      randomAccountTx({ accountPublicKey: accountPublicKey1, aliasHash: aliasHash1, accountNonce: 4 }),
     ];
     for (const tx of txs) {
       await rollupDb.addTx(tx);
@@ -353,10 +353,10 @@ describe('rollup_db', () => {
     const aliasHash0 = AliasHash.random();
     const aliasHash1 = AliasHash.random();
     const txs = [
-      randomAccountTx({ accountPublicKey: accountPubKey0, aliasHash: aliasHash0, nonce: 3 }),
-      randomAccountTx({ accountPublicKey: accountPubKey0, aliasHash: aliasHash1, nonce: 5 }),
-      randomAccountTx({ accountPublicKey: accountPubKey1, aliasHash: aliasHash1, nonce: 6 }),
-      randomAccountTx({ accountPublicKey: accountPubKey1, aliasHash: aliasHash0, nonce: 9 }),
+      randomAccountTx({ accountPublicKey: accountPubKey0, aliasHash: aliasHash0, accountNonce: 3 }),
+      randomAccountTx({ accountPublicKey: accountPubKey0, aliasHash: aliasHash1, accountNonce: 5 }),
+      randomAccountTx({ accountPublicKey: accountPubKey1, aliasHash: aliasHash1, accountNonce: 6 }),
+      randomAccountTx({ accountPublicKey: accountPubKey1, aliasHash: aliasHash0, accountNonce: 9 }),
     ];
     for (const tx of txs) {
       await rollupDb.addTx(tx);
@@ -377,9 +377,9 @@ describe('rollup_db', () => {
     const aliasHash0 = AliasHash.random();
     const aliasHash1 = AliasHash.random();
     const txs = [
-      randomAccountTx({ accountPublicKey: accountPubKey0, aliasHash: aliasHash0, nonce: 1 }),
-      randomAccountTx({ accountPublicKey: accountPubKey1, aliasHash: aliasHash0, nonce: 3 }),
-      randomAccountTx({ accountPublicKey: accountPubKey1, aliasHash: aliasHash1, nonce: 2 }),
+      randomAccountTx({ accountPublicKey: accountPubKey0, aliasHash: aliasHash0, accountNonce: 1 }),
+      randomAccountTx({ accountPublicKey: accountPubKey1, aliasHash: aliasHash0, accountNonce: 3 }),
+      randomAccountTx({ accountPublicKey: accountPubKey1, aliasHash: aliasHash1, accountNonce: 2 }),
     ];
     for (const tx of txs) {
       await rollupDb.addTx(tx);

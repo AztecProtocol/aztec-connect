@@ -31,8 +31,4 @@ export class EthereumSdkUser {
   async getAccountTxs() {
     return this.sdk.getAccountTxs(this.accountId);
   }
-
-  async getNotes() {
-    return this.sdk.getNotes(this.accountId);
-  }
 }

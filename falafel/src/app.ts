@@ -215,8 +215,8 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
 
   router.post('/get-account-id', recordMetric, async (ctx: Koa.Context) => {
     const stream = new PromiseReadable(ctx.req);
-    const { alias, nonce } = JSON.parse((await stream.readAll()) as string);
-    const accountId = await server.getAccountId(alias, nonce ? +nonce : undefined);
+    const { alias, accountNonce } = JSON.parse((await stream.readAll()) as string);
+    const accountId = await server.getAccountId(alias, accountNonce ? +accountNonce : undefined);
     ctx.body = accountId?.toString() || '';
     ctx.status = 200;
   });

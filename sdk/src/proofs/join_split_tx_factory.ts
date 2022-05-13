@@ -36,14 +36,17 @@ export class JoinSplitTxFactory {
       allowChain = 0,
     } = {},
   ) {
-    const { id: accountId, aliasHash, privateKey, publicKey, nonce } = user;
-    const accountAliasId = aliasHash ? new AccountAliasId(aliasHash, nonce) : AccountAliasId.random();
+    if (inputNotes.reduce((count, n) => count + (n.allowChain ? 1 : 0), 0) > 1) {
+      throw new Error('Cannot chain from more than one pending note.');
+    }
 
-    const { path: accountPath, index: accountIndex } = await this.getAccountPathAndIndex(
-      nonce,
-      accountId,
-      signingPubKey,
-    );
+    const { id: accountId, aliasHash, privateKey, publicKey, accountNonce } = user;
+    if (accountNonce && !aliasHash) {
+      throw new Error('Alias hash not found.');
+    }
+
+    const accountAliasId = aliasHash ? new AccountAliasId(aliasHash, accountNonce) : AccountAliasId.random();
+    const { path: accountPath, index: accountIndex } = await this.getAccountPathAndIndex(accountId, signingPubKey);
 
     const numInputNotes = inputNotes.length;
     const notes = [...inputNotes];
@@ -55,13 +58,13 @@ export class JoinSplitTxFactory {
         publicKey, // owner
         BigInt(0), // value
         assetId,
-        nonce,
+        accountNonce,
         randomBytes(32), // inputNullifier - this is a dummy input nullifier for the dummy note.
         this.createEphemeralPrivKey(),
         this.grumpkin,
       );
       inputTreeNotes.push(treeNote);
-      notes.push(this.generateNewNote(treeNote, user.privateKey, { gibberish: true }));
+      notes.push(this.generateNewNote(treeNote, privateKey, { gibberish: true }));
     }
 
     const inputNoteIndices = notes.map(n => n.index || 0);
@@ -88,7 +91,7 @@ export class JoinSplitTxFactory {
 
     const claimNote =
       proofId === ProofId.DEFI_DEPOSIT
-        ? this.createClaimNote(bridgeId, defiDepositValue, user.id, inputNoteNullifiers[0])
+        ? this.createClaimNote(bridgeId, defiDepositValue, accountId, inputNoteNullifiers[0])
         : { note: ClaimNoteTxData.EMPTY, ephPubKey: undefined };
 
     const propagatedInputIndex = 1 + inputNotes.findIndex(n => n.allowChain);
@@ -124,8 +127,8 @@ export class JoinSplitTxFactory {
     return { tx, viewingKeys, partialStateSecretEphPubKey: claimNote.ephPubKey };
   }
 
-  private async getAccountPathAndIndex(nonce: number, accountId: AccountId, signingPubKey: GrumpkinAddress) {
-    if (nonce === 0) {
+  private async getAccountPathAndIndex(accountId: AccountId, signingPubKey: GrumpkinAddress) {
+    if (accountId.accountNonce === 0) {
       return {
         path: this.worldState.buildZeroHashPath(WorldStateConstants.DATA_TREE_DEPTH),
         index: 0,

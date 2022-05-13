@@ -20,6 +20,8 @@ import { mockAsyncBridge } from './fixtures/setup_defi_bridges';
 import { setupTestRollupProcessor } from './fixtures/setup_upgradeable_test_rollup_processor';
 import { TestRollupProcessor } from './fixtures/test_rollup_processor';
 
+jest.setTimeout(60000 * 2);
+
 describe('rollup_processor: extract defi notes', () => {
   let rollupProcessor: TestRollupProcessor;
   let signers: Signer[];

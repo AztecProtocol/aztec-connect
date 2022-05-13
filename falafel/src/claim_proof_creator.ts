@@ -1,17 +1,15 @@
 import { TxType } from '@aztec/barretenberg/blockchain';
+import { DefiInteractionEvent } from '@aztec/barretenberg/block_source/defi_interaction_event';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { ProofData } from '@aztec/barretenberg/client_proofs';
-import { DefiInteractionEvent } from '@aztec/barretenberg/block_source/defi_interaction_event';
-import { DefiInteractionNote, TreeClaimNote } from '@aztec/barretenberg/note_algorithms';
+import { TreeClaimNote } from '@aztec/barretenberg/note_algorithms';
 import { OffchainDefiClaimData } from '@aztec/barretenberg/offchain_tx_data';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
-import { RollupTreeId, WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { Timer } from '@aztec/barretenberg/timer';
+import { RollupTreeId, WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { ClaimProof, ClaimProofRequest, ProofGenerator } from 'halloumi/proof_generator';
-import { ClaimDao } from './entity/claim';
-import { TxDao } from './entity/tx';
-import { RollupDb } from './rollup_db';
-import { parseInteractionResult } from './rollup_db/parse_interaction_result';
+import { ClaimDao, TxDao } from './entity';
+import { parseInteractionResult, RollupDb } from './rollup_db';
 
 export class ClaimProofCreator {
   constructor(private rollupDb: RollupDb, private worldStateDb: WorldStateDb, private proofGenerator: ProofGenerator) {}

@@ -61,18 +61,20 @@ describe('end-to-end migrated tests', () => {
     return signedMessage.slice(0, 32);
   };
 
-  const addUser = async (ethAddress: EthAddress, nonce: number, noSync = !nonce) => {
+  const addUser = async (ethAddress: EthAddress, accountNonce: number, noSync = !accountNonce) => {
     const accountPrivateKey = await createSigningKey(ethAddress, privateKeyMessage);
     const publicKey = await sdk.derivePublicKey(accountPrivateKey);
-    const userId = new AccountId(publicKey, nonce);
+    const userId = new AccountId(publicKey, accountNonce);
     try {
-      await sdk.addUser(accountPrivateKey, nonce, noSync);
+      await sdk.addUser(accountPrivateKey, accountNonce, noSync);
       debug(`added user ${userId}.`);
     } catch (e) {
       // Do nothing if user is already added to the sdk.
       debug(`user already present ${userId}`);
     }
-    const signingPrivateKey = !nonce ? accountPrivateKey : await createSigningKey(ethAddress, spendingKeyMessage);
+    const signingPrivateKey = !accountNonce
+      ? accountPrivateKey
+      : await createSigningKey(ethAddress, spendingKeyMessage);
     const signer = await sdk.createSchnorrSigner(signingPrivateKey);
     return { userId, signer, accountPrivateKey };
   };

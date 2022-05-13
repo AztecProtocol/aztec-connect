@@ -879,9 +879,9 @@ export class UserSession extends EventEmitter {
 
   private async removeUnregisteredUsers() {
     const users = await this.sdk.getUsersData();
-    const userZeros = users.filter(u => !u.nonce);
+    const userZeros = users.filter(u => !u.accountNonce);
     for (const userZero of userZeros) {
-      if (!users.some(u => u.publicKey.equals(userZero.publicKey) && u.nonce > 0)) {
+      if (!users.some(u => u.publicKey.equals(userZero.publicKey) && u.accountNonce > 0)) {
         await this.accountUtils.removeUser(userZero.id);
       }
     }
