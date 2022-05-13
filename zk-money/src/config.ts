@@ -11,7 +11,7 @@ export interface Config {
   mainnetEthereumHost: string;
   txAmountLimits: PerKnownAddress<bigint>;
   sessionTimeout: number;
-  debug: boolean;
+  debugFilter: string;
   maxAvailableAssetId: number;
 }
 
@@ -20,7 +20,7 @@ interface ConfigVars {
   txAmountLimits: string;
   sessionTimeout: string;
   maxAvailableAssetId: string;
-  debug: boolean;
+  debugFilter: string;
 }
 
 const removeEmptyValues = (vars: ConfigVars): Partial<ConfigVars> => {
@@ -38,7 +38,7 @@ const fromLocalStorage = (): ConfigVars => ({
   txAmountLimits: localStorage.getItem('zm_txAmountLimit') || '',
   sessionTimeout: localStorage.getItem('zm_sessionTimeout') || '',
   maxAvailableAssetId: localStorage.getItem('zm_maxAvailableAssetId') || '',
-  debug: !!localStorage.getItem('zm_debug'),
+  debugFilter: localStorage.getItem('zm_debug') ?? '',
 });
 
 const fromEnvVars = (): ConfigVars => ({
@@ -46,7 +46,7 @@ const fromEnvVars = (): ConfigVars => ({
   txAmountLimits: process.env.REACT_APP_TX_AMOUNT_LIMIT || '',
   sessionTimeout: process.env.REACT_APP_SESSION_TIMEOUT || '',
   maxAvailableAssetId: process.env.REACT_APP_MAX_AVAILABLE_ASSET_ID || '',
-  debug: !!process.env.REACT_APP_DEBUG,
+  debugFilter: process.env.REACT_APP_DEBUG ?? '',
 });
 
 const productionConfig: ConfigVars = {
@@ -58,12 +58,12 @@ const productionConfig: ConfigVars = {
   ]),
   sessionTimeout: '30', // days
   maxAvailableAssetId: '2',
-  debug: true,
+  debugFilter: 'zm:*,bb:*',
 };
 
 const developmentConfig: ConfigVars = {
   ...productionConfig,
-  debug: true,
+  debugFilter: 'zm:*,bb:*',
 };
 
 function getEthereumHost(chainId: number) {
@@ -124,7 +124,7 @@ export async function getConfig(): Promise<Config> {
     txAmountLimits: txAmountLimitsStr,
     sessionTimeout,
     maxAvailableAssetId,
-    debug,
+    debugFilter,
   } = { ...defaultConfig, ...removeEmptyValues(fromEnvVars()), ...removeEmptyValues(fromLocalStorage()) };
 
   const txAmountLimits = JSON.parse(txAmountLimitsStr);
@@ -139,6 +139,6 @@ export async function getConfig(): Promise<Config> {
     },
     sessionTimeout: +(sessionTimeout || 1),
     maxAvailableAssetId: +maxAvailableAssetId,
-    debug,
+    debugFilter,
   };
 }

@@ -64,9 +64,7 @@ export class App extends EventEmitter {
     initialLoginMode: LoginMode,
   ) {
     super();
-    if (config.debug) {
-      createDebug.enable('zm:*');
-    }
+    createDebug.enable(config.debugFilter);
     this.requiredNetwork = chainIdToNetwork(config.chainId)!;
     if (!this.requiredNetwork) {
       throw new Error(`Unknown network for chainId ${config.chainId}.`);
