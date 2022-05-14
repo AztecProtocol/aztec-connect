@@ -1,9 +1,10 @@
 import { createLogger, enableLogs } from '@aztec/barretenberg/debug';
 import EventEmitter from 'events';
-import { CoreSdkServerStub, SdkEvent } from '../../core_sdk';
-import { BananaCoreSdkOptions, createBananaCoreSdk } from '../banana_core_sdk';
+import { SdkEvent } from '../../core_sdk';
+import { BananaCoreSdkOptions } from '../banana_core_sdk';
 import { createDispatchFn, DispatchMsg } from '../transport';
-import { createVanillaCoreSdk } from '../vanilla_core_sdk';
+import { createMangoCoreSdk } from './create_mango_core_sdk';
+import { MangoCoreSdk } from './mango_core_sdk';
 
 const debug = createLogger('aztec:sdk:iframe_backend');
 
@@ -34,8 +35,12 @@ export interface IframeBackend extends EventEmitter {
 }
 
 export class IframeBackend extends EventEmitter {
-  private coreSdk!: CoreSdkServerStub;
+  private coreSdk!: MangoCoreSdk;
   private initPromise!: Promise<void>;
+
+  constructor(private origin: string) {
+    super();
+  }
 
   public async initComponents(options: BananaCoreSdkOptions) {
     if (!this.initPromise) {
@@ -50,11 +55,7 @@ export class IframeBackend extends EventEmitter {
     }
 
     const serverUrl = await getServerUrl();
-    const coreSdk =
-      typeof window.SharedWorker !== 'undefined'
-        ? await createBananaCoreSdk({ ...options, serverUrl })
-        : await createVanillaCoreSdk({ ...options, serverUrl });
-    this.coreSdk = new CoreSdkServerStub(coreSdk);
+    this.coreSdk = await createMangoCoreSdk(this.origin, { ...options, serverUrl });
     for (const e in SdkEvent) {
       const event = (SdkEvent as any)[e];
       this.coreSdk.on(event, (...args: any[]) => {

@@ -1,3 +1,4 @@
+import { Crs } from '@aztec/barretenberg/crs';
 import { PooledPedersen } from '@aztec/barretenberg/crypto';
 import { createLogger } from '@aztec/barretenberg/debug';
 import { PooledFftFactory } from '@aztec/barretenberg/fft';
@@ -19,8 +20,11 @@ export class SharedWorkerFrontend {
   constructor(private transportClient: TransportClient) {}
 
   public async initComponents(options: BananaCoreSdkOptions) {
-    // Call `init` on the SharedWorkerBackend. Constructs and initializes the chocolate core sdk.
-    await this.transportClient.request({ fn: 'initComponents', args: [options] });
+    // All calls on JobQueueDispatch will be sent to jobQueueDispatch function on SharedWorkerBackend.
+    this.jobQueue = new JobQueueDispatch(msg => {
+      debug(`job queue dispatch request: ${msg.fn}(${msg.args})`);
+      return this.transportClient.request({ fn: 'jobQueueDispatch', args: [msg] });
+    });
 
     const { numWorkers = getNumWorkers() } = options;
     const barretenberg = await BarretenbergWasm.new();
@@ -29,13 +33,17 @@ export class SharedWorkerFrontend {
     const pippenger = new PooledPippenger(workerPool);
     const fftFactory = new PooledFftFactory(workerPool);
 
-    // All calls on JobQueueDispatch will be sent to jobQueueDispatch function on SharedWorkerBackend.
-    this.jobQueue = new JobQueueDispatch(msg => {
-      debug(`job queue dispatch request: ${msg.fn}(${msg.args})`);
-      return this.transportClient.request({ fn: 'jobQueueDispatch', args: [msg] });
-    });
-
     const jobQueueWorker = new JobQueueWorker(this.jobQueue, pedersen, pippenger, fftFactory);
+    const crsData = await this.getCrsData();
+    await jobQueueWorker.init(crsData);
+    debug('starting job queue worker...');
+    jobQueueWorker.start();
+
+    // Event messages from the SharedWorkerBackend are dispatch messages (that call emit on their targets).
+    this.transportClient.on('event_msg', ({ fn, args }) => this[fn](...args));
+
+    // Call `init` on the SharedWorkerBackend. Constructs and initializes the chocolate core sdk.
+    await this.transportClient.request({ fn: 'initComponents', args: [options] });
 
     // All calls on BananaCoreSdk will be sent to coreSdkDispatch function on SharedWorkerBackend.
     this.coreSdk = new BananaCoreSdk(
@@ -49,12 +57,18 @@ export class SharedWorkerFrontend {
 
     this.coreSdk.on(SdkEvent.DESTROYED, () => this.transportClient.close());
 
-    // Event messages from the SharedWorkerBackend are dispatch messages (that call emit on their targets).
-    this.transportClient.on('event_msg', ({ fn, args }) => this[fn](...args));
-
     return { coreSdk: new CoreSdkClientStub(this.coreSdk) };
   }
 
   public jobQueueDispatch = createDispatchFn(this, 'jobQueue', debug);
   public coreSdkDispatch = createDispatchFn(this, 'coreSdk', debug);
+
+  private async getCrsData() {
+    const circuitSize = 2 ** 16;
+    debug(`downloading crs data (circuit size: ${circuitSize})...`);
+    const crs = new Crs(circuitSize);
+    await crs.download();
+    debug('done.');
+    return Buffer.from(crs.getData());
+  }
 }

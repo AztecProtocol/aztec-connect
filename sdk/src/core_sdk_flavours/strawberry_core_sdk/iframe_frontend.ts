@@ -1,8 +1,7 @@
-import { CoreSdkClientStub, CoreSdkDispatch } from '../../core_sdk';
-import { CoreSdkSerializedInterface } from '../../core_sdk/core_sdk_serialized_interface';
+import { createLogger } from '@aztec/barretenberg/debug';
+import { CoreSdkClientStub, CoreSdkDispatch, CoreSdkSerializedInterface } from '../../core_sdk';
 import { createDispatchFn, TransportClient } from '../transport';
 import { StrawberryCoreSdkOptions } from './strawberry_core_sdk_options';
-import { createLogger } from '@aztec/barretenberg/debug';
 
 const debug = createLogger('aztec:sdk:iframe_frontend');
 

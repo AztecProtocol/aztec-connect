@@ -317,9 +317,8 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     this.emit(SdkEvent.UPDATED_USERS);
   }
 
-  public async getSigningKeys(accountId: AccountId) {
-    // TODO - fetch the keys from server so that the account doesn't have to be added locally.
-    const keys = await this.db.getUserSigningKeys(accountId);
+  public async getSigningKeys(userId: AccountId) {
+    const keys = await this.db.getUserSigningKeys(userId);
     return keys.map(k => k.key);
   }
 

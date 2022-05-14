@@ -182,7 +182,7 @@ export class CoreSdkDispatch extends EventEmitter implements CoreSdkSerializedIn
     return this.request('awaitSynchronised');
   }
 
-  public isUserSynching(userId: string) {
+  public async isUserSynching(userId: string) {
     return this.request('isUserSynching', [userId]);
   }
 
@@ -238,8 +238,8 @@ export class CoreSdkDispatch extends EventEmitter implements CoreSdkSerializedIn
     return this.request('removeUser', [userId]);
   }
 
-  public async getSigningKeys(accountId: string) {
-    return this.request('getSigningKeys', [accountId]);
+  public async getSigningKeys(userId: string) {
+    return this.request('getSigningKeys', [userId]);
   }
 
   public getBalances(userId: string) {

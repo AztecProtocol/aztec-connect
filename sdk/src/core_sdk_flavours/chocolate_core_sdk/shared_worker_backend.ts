@@ -1,9 +1,10 @@
+import { createLogger, enableLogs } from '@aztec/barretenberg/debug';
 import EventEmitter from 'events';
 import { CoreSdkSerializedInterface, SdkEvent } from '../../core_sdk';
 import { JobQueue } from '../job_queue';
 import { createDispatchFn, DispatchMsg } from '../transport';
-import { ChocolateCoreSdkOptions, createChocolateCoreSdk } from './create_chocolate_core_sdk';
-import { createLogger, enableLogs } from '@aztec/barretenberg/debug';
+import { ChocolateCoreSdkOptions } from './chocolate_core_sdk_options';
+import { createChocolateCoreSdk } from './create_chocolate_core_sdk';
 
 const debug = createLogger('aztec:sdk:shared_worker_backend');
 
@@ -33,8 +34,6 @@ export class SharedWorkerBackend extends EventEmitter {
       enableLogs(options.debug);
     }
 
-    this.coreSdk = await createChocolateCoreSdk(this.jobQueue, options);
-
     this.jobQueue.on('new_job', () => {
       // SharedWorkerFrontend has corresponding jobQueueDispatch method.
       this.emit('dispatch_msg', {
@@ -42,6 +41,8 @@ export class SharedWorkerBackend extends EventEmitter {
         args: [{ fn: 'emit', args: ['new_job'] }],
       });
     });
+
+    this.coreSdk = await createChocolateCoreSdk(this.jobQueue, options);
 
     for (const e in SdkEvent) {
       const event = (SdkEvent as any)[e];

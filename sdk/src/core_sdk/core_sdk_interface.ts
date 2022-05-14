@@ -131,7 +131,7 @@ export interface CoreSdkInterface {
 
   removeUser(userId: AccountId): Promise<void>;
 
-  getSigningKeys(accountId: AccountId): Promise<Buffer[]>;
+  getSigningKeys(userId: AccountId): Promise<Buffer[]>;
 
   getBalances(userId: AccountId): Promise<AssetValue[]>;
 

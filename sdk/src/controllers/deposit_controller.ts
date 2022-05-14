@@ -42,7 +42,7 @@ export class DepositController {
     if (!blockchain.getAsset(assetId)) {
       throw new Error('Unsupported asset');
     }
-    if (!value) {
+    if (!value && !fee.value) {
       throw new Error('Deposit value must be greater than 0.');
     }
 

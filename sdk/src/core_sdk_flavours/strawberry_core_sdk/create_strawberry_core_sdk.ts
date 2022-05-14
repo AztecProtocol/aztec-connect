@@ -1,7 +1,7 @@
+import { createIframe } from '../mango_core_sdk';
 import { TransportClient } from '../transport';
-import { createIframe } from './create_iframe';
 import { IframeFrontend } from './iframe_frontend';
-import { IframeTransportConnect } from './iframe_transport';
+import { IframeTransportConnect } from './iframe_transport_connect';
 import { StrawberryCoreSdkOptions } from './strawberry_core_sdk_options';
 
 export async function createStrawberryCoreSdk(options: StrawberryCoreSdkOptions) {

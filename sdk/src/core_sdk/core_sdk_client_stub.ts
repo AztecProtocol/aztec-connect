@@ -241,7 +241,7 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
     await this.backend.awaitSynchronised();
   }
 
-  public isUserSynching(userId: AccountId) {
+  public async isUserSynching(userId: AccountId) {
     return this.backend.isUserSynching(userId.toString());
   }
 
@@ -302,8 +302,8 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
     await this.backend.removeUser(userId.toString());
   }
 
-  public async getSigningKeys(accountId: AccountId) {
-    const keys = await this.backend.getSigningKeys(accountId.toString());
+  public async getSigningKeys(userId: AccountId) {
+    const keys = await this.backend.getSigningKeys(userId.toString());
     return keys.map(k => Buffer.from(k));
   }
 

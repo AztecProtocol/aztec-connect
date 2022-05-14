@@ -238,7 +238,7 @@ export class CoreSdkServerStub {
     await this.core.awaitSynchronised();
   }
 
-  public isUserSynching(userId: string) {
+  public async isUserSynching(userId: string) {
     return this.core.isUserSynching(AccountId.fromString(userId));
   }
 
@@ -299,8 +299,8 @@ export class CoreSdkServerStub {
     await this.core.removeUser(AccountId.fromString(userId));
   }
 
-  public async getSigningKeys(accountId: string) {
-    const keys = await this.core.getSigningKeys(AccountId.fromString(accountId));
+  public async getSigningKeys(userId: string) {
+    const keys = await this.core.getSigningKeys(AccountId.fromString(userId));
     return keys.map(k => new Uint8Array(k));
   }
 

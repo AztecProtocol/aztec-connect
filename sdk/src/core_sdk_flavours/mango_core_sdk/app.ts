@@ -1,9 +1,9 @@
 import { DispatchMsg, TransportServer } from '../transport';
 import { IframeBackend } from './iframe_backend';
-import { IframeTransportListener } from './iframe_transport';
+import { IframeTransportListener } from './iframe_transport_listener';
 
 function main() {
-  const iframeBackend = new IframeBackend();
+  const iframeBackend = new IframeBackend(document.referrer);
 
   /**
    * Messages from our transport layer, are function calls to be dispatched to sharedWorkerBackend.

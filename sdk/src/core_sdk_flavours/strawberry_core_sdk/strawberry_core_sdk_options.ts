@@ -1,3 +1,3 @@
-import { BananaCoreSdkOptions } from '../banana_core_sdk';
+import { MangoCoreSdkOptions } from '../mango_core_sdk';
 
-export type StrawberryCoreSdkOptions = BananaCoreSdkOptions;
+export type StrawberryCoreSdkOptions = MangoCoreSdkOptions;
