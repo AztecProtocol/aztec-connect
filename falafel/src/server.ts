@@ -131,13 +131,14 @@ export class Server {
 
   public async stop() {
     console.log('Server stop...');
+    this.ready = false;
 
     this.proofGenerator.stop();
-
-    this.ready = false;
     await this.txReceiver.destroy();
     await this.worldState.stop();
     await this.txFeeResolver.stop();
+
+    console.log('Server stopped.');
   }
 
   public isReady() {

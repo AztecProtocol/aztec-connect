@@ -63,6 +63,7 @@ async function main() {
     await rollupDb.eraseDb();
     await connection.close();
     worldStateDb.destroy();
+    console.log('Databases erased.');
     process.exit(0);
   };
   process.once('SIGINT', shutdown);

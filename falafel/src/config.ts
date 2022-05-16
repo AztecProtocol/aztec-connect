@@ -109,6 +109,7 @@ export async function getComponents(configurator: Configurator) {
   const bridgeConfigs = getPerChainBridgeConfig(chainId);
   configurator.saveRuntimeConfig({ bridgeConfigs });
 
+  console.log(`Process Id: ${process.pid}`);
   console.log(`Database Url: ${dbUrl || 'none (local sqlite)'}`);
   console.log(`Ethereum host: ${ethereumHost}`);
   console.log(`Gas limit: ${gasLimit || 'default'}`);
