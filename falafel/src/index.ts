@@ -11,7 +11,6 @@ initEntities(configurator.getConfVars().dbUrl);
 import http from 'http';
 import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { EthereumBlockchain } from '@aztec/blockchain';
-import { emptyDir } from 'fs-extra';
 import { createConnection } from 'typeorm';
 import { appFactory } from './app';
 import { Server } from './server';
@@ -24,15 +23,8 @@ import { InitHelpers } from '@aztec/barretenberg/environment';
 
 async function main() {
   const { ormConfig, provider, signingAddress, ethConfig } = await getComponents(configurator);
-  const {
-    rollupContractAddress,
-    feeDistributorAddress,
-    priceFeedContractAddresses,
-    apiPrefix,
-    serverAuthToken,
-    port,
-    feePayingAssetAddresses,
-  } = configurator.getConfVars();
+  const { rollupContractAddress, feeDistributorAddress, priceFeedContractAddresses, apiPrefix, serverAuthToken, port } =
+    configurator.getConfVars();
 
   const connection = await createConnection(ormConfig);
   const blockchain = await EthereumBlockchain.new(
@@ -40,7 +32,7 @@ async function main() {
     rollupContractAddress,
     feeDistributorAddress,
     priceFeedContractAddresses,
-    feePayingAssetAddresses,
+    // feePayingAssetAddresses,
     provider,
   );
 

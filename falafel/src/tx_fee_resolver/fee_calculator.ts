@@ -1,7 +1,18 @@
-import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { BlockchainAsset, TxType } from '@aztec/barretenberg/blockchain';
-import { ProofData } from '@aztec/barretenberg/client_proofs/proof_data';
-import { TxDao } from '../entity';
+import {
+  OffchainAccountData,
+  OffchainDefiClaimData,
+  OffchainDefiDepositData,
+  OffchainJoinSplitData,
+} from '@aztec/barretenberg/offchain_tx_data';
+import {
+  RollupAccountProofData,
+  RollupDefiClaimProofData,
+  RollupDefiDepositProofData,
+  RollupDepositProofData,
+  RollupSendProofData,
+  RollupWithdrawProofData,
+} from '@aztec/barretenberg/rollup_proof';
 import { PriceTracker } from './price_tracker';
 import { roundUp } from './round_up';
 
@@ -9,95 +20,35 @@ export class FeeCalculator {
   constructor(
     private readonly priceTracker: PriceTracker,
     private readonly assets: BlockchainAsset[],
-    private baseTxGas: number,
-    private maxFeeGasPrice: bigint,
-    private feeGasPriceMultiplier: number,
+    private readonly verificationGas: number,
+    private readonly maxFeeGasPrice: bigint,
+    private readonly feeGasPriceMultiplier: number,
     private readonly txsPerRollup: number,
-    private publishInterval: number,
-    private readonly surplusRatios = [1, 0],
-    private readonly freeAssets: number[] = [],
-    private readonly freeTxTypes: TxType[] = [],
-    private numSignificantFigures = 0,
+    private readonly numSignificantFigures = 0,
   ) {}
 
-  public setConf(
-    baseTxGas: number,
-    maxFeeGasPrice: bigint,
-    feeGasPriceMultiplier: number,
-    publishInterval: number,
-    numSignificantFigures: number,
-  ) {
-    this.baseTxGas = baseTxGas;
-    this.maxFeeGasPrice = maxFeeGasPrice;
-    this.feeGasPriceMultiplier = feeGasPriceMultiplier;
-    this.publishInterval = publishInterval;
-    this.numSignificantFigures = numSignificantFigures;
-  }
-
-  getMinTxFee(assetId: number, txType: TxType) {
-    if (this.freeTxTypes.includes(txType)) {
-      return 0n;
-    }
+  public getMinTxFee(assetId: number, txType: TxType) {
     return this.getFeeConstant(assetId, txType, true) + this.getBaseFee(assetId, true);
   }
 
-  getTxFee(assetId: number, txType: TxType) {
-    if (this.freeTxTypes.includes(txType)) {
-      return 0n;
-    }
-    return this.getFeeConstant(assetId, txType) + this.getBaseFee(assetId);
-  }
-
-  getFeeQuotes(assetId: number) {
+  public getTxFees(assetId: number) {
     const baseFee = this.getBaseFee(assetId);
-    return {
-      feeConstants: [
-        TxType.DEPOSIT,
-        TxType.TRANSFER,
-        TxType.WITHDRAW_TO_WALLET,
-        TxType.WITHDRAW_TO_CONTRACT,
-        TxType.ACCOUNT,
-        TxType.DEFI_DEPOSIT,
-        TxType.DEFI_CLAIM,
-      ].map(txType => (this.freeTxTypes.includes(txType) ? 0n : baseFee + this.getFeeConstant(assetId, txType))),
-      baseFeeQuotes: this.surplusRatios.map(ratio => ({
-        fee: baseFee * BigInt(Math.round(this.txsPerRollup * (1 - ratio))),
-        time: Math.max(5 * 60, this.publishInterval * ratio),
-      })),
-    };
+    return [
+      TxType.DEPOSIT,
+      TxType.TRANSFER,
+      TxType.WITHDRAW_TO_WALLET,
+      TxType.WITHDRAW_TO_CONTRACT,
+      TxType.ACCOUNT,
+      TxType.DEFI_DEPOSIT,
+      TxType.DEFI_CLAIM,
+    ].map(txType => [
+      { assetId, value: baseFee + this.getFeeConstant(assetId, txType) },
+      { assetId, value: baseFee * BigInt(this.txsPerRollup) + this.getFeeConstant(assetId, txType) },
+    ]);
   }
 
-  getTxFeeFromGas(gas: number, assetId: number) {
+  public getTxFeeFromGas(gas: number, assetId: number) {
     return this.toAssetPrice(assetId, gas, false);
-  }
-
-  computeSurplusRatio(txs: TxDao[]) {
-    const baseFees = this.assets.map((_, id) => this.getBaseFee(id));
-    const surplus = txs
-      .map(tx => {
-        const proofData = new ProofData(tx.proofData);
-        const txFeeAssetId = proofData.txFeeAssetId.readUInt32BE(28);
-        const txFee = toBigIntBE(proofData.txFee);
-        const currentFee = this.getTxFee(txFeeAssetId, tx.txType);
-        return baseFees[txFeeAssetId] ? Number((txFee - currentFee) / baseFees[txFeeAssetId]) : 0;
-      })
-      .reduce((acc, exc) => acc + exc, 0);
-    const ratio = +(1 - surplus / this.txsPerRollup).toFixed(2);
-    return Math.min(1, Math.max(0, ratio));
-  }
-
-  getBaseFee(assetId: number, minPrice = false) {
-    if (this.freeAssets.includes(assetId)) {
-      return 0n;
-    }
-    return this.toAssetPrice(assetId, this.baseTxGas, minPrice);
-  }
-
-  public getFeeConstant(assetId: number, txType: TxType, minPrice = false) {
-    if (this.freeAssets.includes(assetId)) {
-      return 0n;
-    }
-    return this.toAssetPrice(assetId, this.assets[assetId].gasConstants[txType], minPrice);
   }
 
   public getGasPaidForByFee(assetId: number, fee: bigint) {
@@ -118,11 +69,15 @@ export class FeeCalculator {
   }
 
   public getBaseTxGas() {
-    return this.baseTxGas;
+    return Math.ceil(this.verificationGas / this.txsPerRollup);
   }
 
   public getTxGas(assetId: number, txType: TxType) {
-    return this.baseTxGas + this.assets[assetId].gasConstants[txType];
+    return this.getBaseTxGas() + this.getGasOverheadForTxType(assetId, txType);
+  }
+
+  private getBaseFee(assetId: number, minPrice = false) {
+    return this.toAssetPrice(assetId, this.getBaseTxGas(), minPrice);
   }
 
   private toAssetPrice(assetId: number, gas: number, minPrice: boolean) {
@@ -136,6 +91,10 @@ export class FeeCalculator {
         );
   }
 
+  private getFeeConstant(assetId: number, txType: TxType, minPrice = false) {
+    return this.toAssetPrice(assetId, this.getGasOverheadForTxType(assetId, txType), minPrice);
+  }
+
   private applyGasPrice(value: bigint, minPrice: boolean) {
     const gasPrice = minPrice ? this.priceTracker.getMinGasPrice() : this.priceTracker.getGasPrice();
     const multiplierPrecision = 10 ** 8;
@@ -143,5 +102,29 @@ export class FeeCalculator {
     const expectedValue = (value * gasPrice * feeGasPriceMultiplier) / BigInt(multiplierPrecision);
     const maxValue = this.maxFeeGasPrice ? value * this.maxFeeGasPrice : expectedValue;
     return expectedValue > maxValue ? maxValue : expectedValue;
+  }
+
+  private getGasOverheadForTxType(assetId: number, txType: TxType) {
+    const gasPerByte = 4;
+    switch (txType) {
+      case TxType.ACCOUNT:
+        return (OffchainAccountData.SIZE + RollupAccountProofData.ENCODED_LENGTH) * gasPerByte;
+      case TxType.DEFI_CLAIM:
+        return (OffchainDefiClaimData.SIZE + RollupDefiClaimProofData.ENCODED_LENGTH) * gasPerByte;
+      case TxType.DEFI_DEPOSIT:
+        return (OffchainDefiDepositData.SIZE + RollupDefiDepositProofData.ENCODED_LENGTH) * gasPerByte;
+      case TxType.DEPOSIT:
+        // 64 bytes of signature data.
+        // 3500 gas for ecrecover.
+        return (64 + OffchainJoinSplitData.SIZE + RollupDepositProofData.ENCODED_LENGTH) * gasPerByte + 3500;
+      case TxType.TRANSFER:
+        return (OffchainJoinSplitData.SIZE + RollupSendProofData.ENCODED_LENGTH) * gasPerByte;
+      case TxType.WITHDRAW_TO_CONTRACT:
+      case TxType.WITHDRAW_TO_WALLET:
+        return (
+          this.assets[assetId].gasLimit +
+          (OffchainJoinSplitData.SIZE + RollupWithdrawProofData.ENCODED_LENGTH) * gasPerByte
+        );
+    }
   }
 }

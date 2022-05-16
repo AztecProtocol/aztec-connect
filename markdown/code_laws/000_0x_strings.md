@@ -1,15 +1,8 @@
 # 0x strings
 
-Never, ever, in any of the code base, should the letters `0x` appear inside quotes.
-The Ethereum development ecosystem has been damaged by the lazy approach of throwing binary data into strings.
-In the infancy of JavaScript, options were limited. That's no longer the case with `Buffer` types and TypeScript.
+Avoid `0x` prefixed hex strings to represent binary data.
 
-There is one exception to where quoted `0x` strings are permitted in our codebase, and that is at an interface to a third party library that uses such strings.
-Any such library must be encapsulated with extreme prejudice within a single manageable layer to prevent the interface permeating our codebase.
-
-The only time it's acceptable to write such code, is in the slicing off of the `0x` before converting it into a typed binary data structure.
-
-Note that the `0x` is sliced off **before** being sent to our `TxHash` class. Our code **never** deals with `0x` strings.
+Favour slicing off the `0x` as soon as the string is consumed and converting the hex to a `Buffer`. Only serialize a `Buffer` back to a string if it must be represented as a string (e.g. in JSON), and only prefix it with a `0x` if a wider standard expects it as such. Examples would Ethereum addresses and transaction hashes.
 
 ### Example
 
@@ -22,11 +15,11 @@ class TxHash {
     }
 
     static fromString(str: string) {
-      return new TxHash(Buffer.fromString(str, 'hex'));
+      return new TxHash(Buffer.fromString(str.replace('0x', ''), 'hex'));
     }
 
     toString() {
-      return this.data.toString('hex');
+      return '0x' + this.data.toString('hex');
     }
   }
 

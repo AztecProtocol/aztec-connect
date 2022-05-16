@@ -119,7 +119,14 @@ export class RollupPipelineFactory {
     private bridgeResolver: BridgeResolver,
   ) {}
 
-  public setConf(publishInterval: number, flushAfterIdle: number, maxProviderGasPrice: bigint, gasLimit: number) {
+  public setConf(
+    txFeeResolver: TxFeeResolver,
+    publishInterval: number,
+    flushAfterIdle: number,
+    maxProviderGasPrice: bigint,
+    gasLimit: number,
+  ) {
+    this.txFeeResolver = txFeeResolver;
     this.publishInterval = publishInterval;
     this.flushAfterIdle = flushAfterIdle;
     this.maxProviderGasPrice = maxProviderGasPrice;

@@ -29,7 +29,6 @@ export class Contracts {
     private readonly rollupProcessor: RollupProcessor,
     private readonly feeDistributor: FeeDistributor,
     private assets: Asset[],
-    private readonly feePayingAssetAddresses: EthAddress[],
     private readonly gasPriceFeed: GasPriceFeed,
     private readonly priceFeeds: PriceFeed[],
     private readonly ethereumProvider: EthereumProvider,
@@ -43,7 +42,6 @@ export class Contracts {
     rollupContractAddress: EthAddress,
     feeDistributorAddress: EthAddress,
     priceFeedContractAddresses: EthAddress[],
-    feePayingAssetAddresses: EthAddress[],
     ethereumProvider: EthereumProvider,
     confirmations: number,
   ) {
@@ -64,7 +62,6 @@ export class Contracts {
       rollupProcessor,
       feeDistributor,
       assets,
-      feePayingAssetAddresses,
       gasPriceFeed,
       priceFeeds,
       ethereumProvider,
@@ -83,15 +80,11 @@ export class Contracts {
   public async updateAssets() {
     const supportedAssets = await this.rollupProcessor.getSupportedAssets();
     const newAssets = await Promise.all(
-      supportedAssets.slice(this.assets.length - 1).map(async ({ address, gasLimit }) =>
-        TokenAsset.fromAddress(
-          address,
-          this.ethereumProvider,
-          gasLimit,
-          this.feePayingAssetAddresses.some(feePayingAsset => address.equals(feePayingAsset)),
-          this.confirmations,
+      supportedAssets
+        .slice(this.assets.length - 1)
+        .map(async ({ address, gasLimit }) =>
+          TokenAsset.fromAddress(address, this.ethereumProvider, gasLimit, this.confirmations),
         ),
-      ),
     );
     this.assets = [...this.assets, ...newAssets];
   }

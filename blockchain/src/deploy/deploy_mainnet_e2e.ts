@@ -1,4 +1,3 @@
-import { EthAddress } from '@aztec/barretenberg/address';
 import { TreeInitData } from '@aztec/barretenberg/environment';
 import { Signer } from 'ethers';
 import {
@@ -48,8 +47,7 @@ export async function deployMainnetE2e(signer: Signer, { dataTreeSize, roots }: 
   await deployElementBridge(signer, rollup, ['dai', 'lusd3crv-f'], expiryCutOff);
   await deployLidoBridge(signer, rollup);
 
-  const feePayingAssets = [EthAddress.ZERO.toString(), DAI_ADDRESS];
   const priceFeeds = [FAST_GAS_PRICE_FEED_ADDRESS, DAI_PRICE_FEED_ADDRESS];
 
-  return { rollup, priceFeeds, feeDistributor, feePayingAssets };
+  return { rollup, priceFeeds, feeDistributor };
 }

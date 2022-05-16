@@ -70,6 +70,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     serverUrl: '',
     chainId: -1,
     rollupContractAddress: EthAddress.ZERO,
+    feePayingAssetIds: [0],
     syncedToRollup: -1,
     latestRollupId: -1,
     dataRoot: Buffer.alloc(0),
@@ -129,6 +130,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
 
       const {
         blockchainStatus: { chainId, rollupContractAddress },
+        runtimeConfig: {feePayingAssetIds },
         rollupSize,
       } = await this.getRemoteStatus();
 
@@ -156,6 +158,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
         serverUrl: options.serverUrl,
         chainId,
         rollupContractAddress: rollupContractAddress,
+        feePayingAssetIds,
         dataSize: this.worldState.getSize(),
         dataRoot: this.worldState.getRoot(),
         syncedToRollup: await this.getSyncedToRollup(),

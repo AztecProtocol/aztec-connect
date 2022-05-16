@@ -21,7 +21,7 @@ export async function depositTokensToAztec(
   const tokenAssetId = sdk.getAssetIdByAddress(token);
   const signer = await sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(usersEthereumAddress)!);
   const tokenDepositFee = (await sdk.getDepositFees(tokenAssetId))[settlementTime];
-  const value = sdk.isFeePayingAsset(tokenAssetId) ? tokenQuantity - tokenDepositFee.value : tokenQuantity;
+  const value = await sdk.isFeePayingAsset(tokenAssetId) ? tokenQuantity - tokenDepositFee.value : tokenQuantity;
   const tokenAssetValue = { assetId: tokenAssetId, value };
   const tokenDepositController = sdk.createDepositController(
     user,

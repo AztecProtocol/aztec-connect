@@ -1,3 +1,5 @@
+import { toBigIntBE, toBufferBE } from '../bigint_buffer';
+
 export interface BridgeStatus {
   bridgeId: bigint;
   numTxs: number;
@@ -21,7 +23,7 @@ export interface BridgeStatusJson {
 export function bridgeStatusToJson({ bridgeId, nextPublishTime, ...rest }: BridgeStatus): BridgeStatusJson {
   return {
     ...rest,
-    bridgeId: bridgeId.toString(),
+    bridgeId: toBufferBE(bridgeId, 32).toString('hex'),
     nextPublishTime: nextPublishTime?.toISOString(),
   };
 }
@@ -29,7 +31,7 @@ export function bridgeStatusToJson({ bridgeId, nextPublishTime, ...rest }: Bridg
 export function bridgeStatusFromJson({ bridgeId, nextPublishTime, ...rest }: BridgeStatusJson): BridgeStatus {
   return {
     ...rest,
-    bridgeId: BigInt(bridgeId),
+    bridgeId: toBigIntBE(Buffer.from(bridgeId, 'hex')),
     nextPublishTime: nextPublishTime ? new Date(nextPublishTime) : undefined,
   };
 }

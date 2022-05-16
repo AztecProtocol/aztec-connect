@@ -97,7 +97,6 @@ describe('pipeline_coordinator', () => {
     } as any;
 
     feeResolver = {
-      setConf: jest.fn(),
       getBaseTxGas: jest.fn().mockReturnValue(1),
       getGasPaidForByFee: jest.fn().mockImplementation((assetId: number, fee: bigint) => fee),
       getMinTxFee: jest.fn().mockImplementation(() => {

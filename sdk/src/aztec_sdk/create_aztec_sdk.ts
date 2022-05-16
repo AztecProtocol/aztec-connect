@@ -11,7 +11,7 @@ import {
   StrawberryCoreSdkOptions,
   VanillaCoreSdkOptions,
 } from '../core_sdk_flavours';
-import { AztecSdk, AztecSdkOptions } from './aztec_sdk';
+import { AztecSdk } from './aztec_sdk';
 
 async function createBlockchain(ethereumProvider: EthereumProvider, coreSdk: CoreSdkInterface, confs = 1) {
   const { chainId, rollupContractAddress } = await coreSdk.getLocalStatus();
@@ -32,9 +32,10 @@ export enum SdkFlavour {
   HOSTED,
 }
 
-export type CreateSharedWorkerSdkOptions = AztecSdkOptions & BananaCoreSdkOptions;
-export type CreateHostedSdkOptions = AztecSdkOptions & StrawberryCoreSdkOptions;
-export type CreatePlainSdkOptions = AztecSdkOptions & VanillaCoreSdkOptions;
+type BlockchainOptions = { minConfirmation?: number };
+export type CreateSharedWorkerSdkOptions = BlockchainOptions & BananaCoreSdkOptions;
+export type CreateHostedSdkOptions = BlockchainOptions & StrawberryCoreSdkOptions;
+export type CreatePlainSdkOptions = BlockchainOptions & VanillaCoreSdkOptions;
 export type CreateSdkOptions = CreateSharedWorkerSdkOptions &
   CreateHostedSdkOptions &
   CreatePlainSdkOptions & { flavour?: SdkFlavour };
@@ -54,7 +55,7 @@ export async function createSharedWorkerSdk(ethereumProvider: EthereumProvider, 
   const coreSdk = await createBananaCoreSdk(options);
   try {
     const blockchain = await createBlockchain(ethereumProvider, coreSdk, options.minConfirmation);
-    return new AztecSdk(coreSdk, blockchain, ethereumProvider, options);
+    return new AztecSdk(coreSdk, blockchain, ethereumProvider);
   } catch (err) {
     await coreSdk.destroy();
     throw err;
@@ -76,7 +77,7 @@ export async function createHostedAztecSdk(ethereumProvider: EthereumProvider, o
   const coreSdk = await createStrawberryCoreSdk(options);
   try {
     const blockchain = await createBlockchain(ethereumProvider, coreSdk, options.minConfirmation);
-    return new AztecSdk(coreSdk, blockchain, ethereumProvider, options);
+    return new AztecSdk(coreSdk, blockchain, ethereumProvider);
   } catch (err) {
     await coreSdk.destroy();
     throw err;
@@ -94,7 +95,7 @@ export async function createPlainAztecSdk(ethereumProvider: EthereumProvider, op
   const coreSdk = await createVanillaCoreSdk(options);
   try {
     const blockchain = await createBlockchain(ethereumProvider, coreSdk, options.minConfirmation);
-    return new AztecSdk(coreSdk, blockchain, ethereumProvider, options);
+    return new AztecSdk(coreSdk, blockchain, ethereumProvider);
   } catch (err) {
     await coreSdk.destroy();
     throw err;

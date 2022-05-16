@@ -32,8 +32,6 @@ export TF_IN_AUTOMATION=1
 terraform init -input=false -backend-config="key=$DEPLOY_TAG/blockchain"
 export TF_VAR_ETHEREUM_NETWORK=$(terraform output ethereum_network || echo "")
 export TF_VAR_FEE_DISTRIBUTOR_ADDRESS=$(terraform output fee_distributor_address || echo "")
-export TF_VAR_FEE_PAYING_ASSET_ADDRESSES=$(terraform output fee_paying_asset_addresses || echo "")
-export TF_VAR_PRICE_FEED_CONTRACT_ADDRESSES=$(terraform output price_feed_contract_addresses || echo "")
 export TF_VAR_ROLLUP_CONTRACT_ADDRESS=$(terraform output rollup_contract_address || echo "")
 cd ../..
 

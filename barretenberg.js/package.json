@@ -17,7 +17,8 @@
     },
     "testRegex": ".*\\.test\\.ts$",
     "rootDir": "./src",
-    "testTimeout": 30000
+    "testTimeout": 30000,
+    "slowTestThreshold": 60
   },
   "browserslist": [
     "since 2017-06"

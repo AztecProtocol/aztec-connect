@@ -26,11 +26,6 @@ import { UserAccountTx, UserDefiTx, UserPaymentTx } from '../user_tx';
 import { AztecSdkUser } from './aztec_sdk_user';
 import { groupUserTxs } from './group_user_txs';
 
-export interface AztecSdkOptions {
-  debug?: string;
-  minConfirmation?: number;
-}
-
 export interface AztecSdk {
   on(event: SdkEvent.UPDATED_USERS, listener: () => void): this;
   on(event: SdkEvent.UPDATED_USER_STATE, listener: (userId: AccountId) => void): this;
@@ -43,7 +38,6 @@ export class AztecSdk extends EventEmitter {
     private core: CoreSdkInterface,
     private blockchain: ClientEthereumBlockchain,
     private provider: EthereumProvider,
-    private sdkOptions: AztecSdkOptions = {},
   ) {
     super();
 
@@ -202,11 +196,11 @@ export class AztecSdk extends EventEmitter {
     return this.blockchain.getAsset(assetId).getStaticInfo();
   }
 
-  public isFeePayingAsset(assetId: number) {
+  public async isFeePayingAsset(assetId: number) {
     if (isVirtualAsset(assetId)) {
       return false;
     }
-    return this.blockchain.getAsset(assetId)?.getStaticInfo().isFeePaying;
+    return (await this.core.getLocalStatus()).feePayingAssetIds.includes(assetId);
   }
 
   public isVirtualAsset(assetId: number) {
@@ -236,7 +230,7 @@ export class AztecSdk extends EventEmitter {
   private async getTransactionFees(assetId: number, txType: TxType) {
     const fees = await this.core.getTxFees(assetId);
     const txSettlementFees = fees[txType];
-    if (this.isFeePayingAsset(assetId)) {
+    if (await this.isFeePayingAsset(assetId)) {
       return txSettlementFees;
     }
     const [feeTxTransferFee] = fees[TxType.TRANSFER];

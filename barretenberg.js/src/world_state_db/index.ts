@@ -5,7 +5,6 @@ import { toBigIntBE, toBufferBE } from '../bigint_buffer';
 import { ChildProcess, execSync, spawn } from 'child_process';
 import { PromiseReadable } from 'promise-readable';
 import { serializeBufferArrayToVector } from '../serialize';
-import { WorldStateConstants } from '../world_state/world_state_constants';
 
 enum Command {
   GET,

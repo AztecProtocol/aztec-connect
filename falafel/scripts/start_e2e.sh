@@ -17,6 +17,7 @@ export NUM_INNER_ROLLUP_TXS=3
 export NUM_OUTER_ROLLUP_PROOFS=2
 export ETHEREUM_POLL_INTERVAL=1000
 export PROVERLESS=true
+export FEE_GAS_PRICE_MULTIPLIER=0.01
 
 yarn clean_db
 yarn build

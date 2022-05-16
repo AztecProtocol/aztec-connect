@@ -42,14 +42,9 @@ export class Server {
       numInnerRollupTxs,
       numOuterRollupProofs,
       proverless,
-      feePayingAssetAddresses,
       runtimeConfig: {
         publishInterval,
         flushAfterIdle,
-        baseTxGas,
-        maxFeeGasPrice,
-        feeGasPriceMultiplier,
-        feeRoundUpSignificantFigures,
         maxProviderGasPrice,
         gasLimit,
         defaultDeFiBatchSize,
@@ -61,20 +56,7 @@ export class Server {
     this.blake = new Blake2s(barretenberg);
     this.bridgeResolver = new BridgeResolver(bridgeConfigs, blockchain, defaultDeFiBatchSize);
 
-    this.txFeeResolver = new TxFeeResolver(
-      blockchain,
-      this.bridgeResolver,
-      baseTxGas,
-      maxFeeGasPrice,
-      feeGasPriceMultiplier,
-      numInnerRollupTxs * numOuterRollupProofs,
-      publishInterval,
-      feePayingAssetAddresses,
-      undefined,
-      undefined,
-      undefined,
-      feeRoundUpSignificantFigures,
-    );
+    this.txFeeResolver = this.createTxFeeResolver();
 
     switch (proofGeneratorMode) {
       case 'split':
@@ -170,10 +152,6 @@ export class Server {
     this.configurator.saveRuntimeConfig(config);
     const {
       runtimeConfig: {
-        baseTxGas,
-        maxFeeGasPrice,
-        feeGasPriceMultiplier,
-        feeRoundUpSignificantFigures,
         publishInterval,
         flushAfterIdle,
         maxProviderGasPrice,
@@ -182,16 +160,42 @@ export class Server {
         bridgeConfigs,
       },
     } = this.configurator.getConfVars();
+
+    await this.txFeeResolver.stop();
+    this.txFeeResolver = this.createTxFeeResolver();
+    await this.txFeeResolver.start();
+
+    this.worldState.setTxFeeResolver(this.txFeeResolver);
+    this.txReceiver.setTxFeeResolver(this.txFeeResolver);
     this.bridgeResolver.setConf(defaultDeFiBatchSize, bridgeConfigs);
-    this.pipelineFactory.setConf(publishInterval, flushAfterIdle, maxProviderGasPrice, gasLimit);
-    this.txFeeResolver.setConf(
-      baseTxGas,
+    this.pipelineFactory.setConf(this.txFeeResolver, publishInterval, flushAfterIdle, maxProviderGasPrice, gasLimit);
+
+    await this.worldState.resetPipeline();
+  }
+
+  private createTxFeeResolver() {
+    const {
+      numInnerRollupTxs,
+      numOuterRollupProofs,
+      runtimeConfig: {
+        verificationGas,
+        maxFeeGasPrice,
+        feeGasPriceMultiplier,
+        feeRoundUpSignificantFigures,
+        feePayingAssetIds,
+      },
+    } = this.configurator.getConfVars();
+
+    return new TxFeeResolver(
+      this.blockchain,
+      this.bridgeResolver,
+      verificationGas,
       maxFeeGasPrice,
       feeGasPriceMultiplier,
-      publishInterval,
+      numInnerRollupTxs * numOuterRollupProofs,
+      feePayingAssetIds,
       feeRoundUpSignificantFigures,
     );
-    await this.worldState.resetPipeline();
   }
 
   public async removeData() {

@@ -91,7 +91,7 @@ describe('rollup_processor: withdraw', () => {
     const faultyERC20 = await FaultyERC20.deploy();
     const assetAddr = EthAddress.fromString(faultyERC20.address);
     const gasLimit = 55000;
-    const asset = await TokenAsset.fromAddress(assetAddr, new EthersAdapter(ethers.provider), gasLimit, true);
+    const asset = await TokenAsset.fromAddress(assetAddr, new EthersAdapter(ethers.provider), gasLimit);
 
     await rollupProcessor.setSupportedAsset(asset.address, gasLimit);
     const assetId = (await rollupProcessor.getSupportedAssets()).length;

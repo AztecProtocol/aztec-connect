@@ -40,7 +40,6 @@ export class TokenAsset implements Asset {
     address: EthAddress,
     ethereumProvider: EthereumProvider,
     gasLimit: number,
-    isFeePaying: boolean,
     minConfirmations?: number,
   ) {
     const erc20 = new Contract(address.toString(), abi, new Web3Provider(ethereumProvider));
@@ -50,8 +49,6 @@ export class TokenAsset implements Asset {
       symbol: await erc20.symbol(),
       decimals: +(await erc20.decimals()),
       gasLimit,
-      isFeePaying,
-      gasConstants: isFeePaying ? [5000, 0, 36000, 36000, 0, 36000, 36000] : [],
     };
     return new TokenAsset(info, erc20, ethereumProvider, minConfirmations);
   }

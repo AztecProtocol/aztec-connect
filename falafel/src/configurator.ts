@@ -1,4 +1,4 @@
-import { emptyDirSync, mkdirpSync, pathExistsSync, readJsonSync, writeJsonSync } from 'fs-extra';
+import { mkdirpSync, pathExistsSync, readJsonSync, writeJsonSync } from 'fs-extra';
 import { dirname } from 'path';
 import { RuntimeConfig, bridgeConfigFromJson, bridgeConfigToJson } from '@aztec/barretenberg/rollup_provider';
 import { EthAddress } from '@aztec/barretenberg/address';
@@ -9,7 +9,6 @@ interface StartupConfig {
   rollupContractAddress: EthAddress;
   feeDistributorAddress: EthAddress;
   priceFeedContractAddresses: EthAddress[];
-  feePayingAssetAddresses: EthAddress[];
   ethereumHost: string;
   ethereumPollInterval?: number;
   proofGeneratorMode: string;
@@ -33,7 +32,6 @@ const defaultStartupConfig: StartupConfig = {
   rollupContractAddress: EthAddress.ZERO,
   feeDistributorAddress: EthAddress.ZERO,
   priceFeedContractAddresses: [],
-  feePayingAssetAddresses: [],
   ethereumHost: 'http://localhost:8545',
   ethereumPollInterval: 10000,
   proofGeneratorMode: 'normal',
@@ -55,7 +53,6 @@ const defaultRuntimeConfig: RuntimeConfig = {
   publishInterval: 0,
   flushAfterIdle: 0,
   gasLimit: 12000000,
-  baseTxGas: 16000,
   verificationGas: 500000,
   maxFeeGasPrice: 250000000000n,
   feeGasPriceMultiplier: 1,
@@ -64,6 +61,7 @@ const defaultRuntimeConfig: RuntimeConfig = {
   maxUnsettledTxs: 0,
   defaultDeFiBatchSize: 5,
   bridgeConfigs: [],
+  feePayingAssetIds: [0],
 };
 
 function getStartupConfigEnvVars(): Partial<StartupConfig> {
@@ -72,7 +70,6 @@ function getStartupConfigEnvVars(): Partial<StartupConfig> {
     ROLLUP_CONTRACT_ADDRESS,
     FEE_DISTRIBUTOR_ADDRESS,
     PRICE_FEED_CONTRACT_ADDRESSES,
-    FEE_PAYING_ASSET_ADDRESSES,
     ETHEREUM_HOST,
     ETHEREUM_POLL_INTERVAL,
     PROOF_GENERATOR_MODE,
@@ -85,6 +82,7 @@ function getStartupConfigEnvVars(): Partial<StartupConfig> {
     API_PREFIX,
     PROVERLESS,
     TYPEORM_LOGGING,
+    SERVER_AUTH_TOKEN,
   } = process.env;
 
   const envVars: Partial<StartupConfig> = {
@@ -94,9 +92,6 @@ function getStartupConfigEnvVars(): Partial<StartupConfig> {
     feeDistributorAddress: FEE_DISTRIBUTOR_ADDRESS ? EthAddress.fromString(FEE_DISTRIBUTOR_ADDRESS) : undefined,
     priceFeedContractAddresses: PRICE_FEED_CONTRACT_ADDRESSES
       ? PRICE_FEED_CONTRACT_ADDRESSES.split(',').map(EthAddress.fromString)
-      : undefined,
-    feePayingAssetAddresses: FEE_PAYING_ASSET_ADDRESSES
-      ? FEE_PAYING_ASSET_ADDRESSES.split(',').map(EthAddress.fromString)
       : undefined,
     ethereumHost: ETHEREUM_HOST,
     ethereumPollInterval: ETHEREUM_POLL_INTERVAL ? +ETHEREUM_POLL_INTERVAL : undefined,
@@ -109,13 +104,20 @@ function getStartupConfigEnvVars(): Partial<StartupConfig> {
     apiPrefix: API_PREFIX,
     typeOrmLogging: TYPEORM_LOGGING ? TYPEORM_LOGGING === 'true' : undefined,
     proverless: PROVERLESS ? PROVERLESS === 'true' : undefined,
+    serverAuthToken: SERVER_AUTH_TOKEN,
   };
   return Object.fromEntries(Object.entries(envVars).filter(e => e[1] !== undefined));
 }
 
 function getRuntimeConfigEnvVars(): Partial<RuntimeConfig> {
-  const { BASE_TX_GAS, FEE_GAS_PRICE_MULTIPLIER, PUBLISH_INTERVAL, FLUSH_AFTER_IDLE, DEFAULT_DEFI_BATCH_SIZE } =
-    process.env;
+  const {
+    BASE_TX_GAS,
+    FEE_GAS_PRICE_MULTIPLIER,
+    PUBLISH_INTERVAL,
+    FLUSH_AFTER_IDLE,
+    DEFAULT_DEFI_BATCH_SIZE,
+    FEE_PAYING_ASSET_IDS,
+  } = process.env;
 
   const envVars = {
     publishInterval: PUBLISH_INTERVAL ? +PUBLISH_INTERVAL : undefined,
@@ -123,6 +125,7 @@ function getRuntimeConfigEnvVars(): Partial<RuntimeConfig> {
     baseTxGas: BASE_TX_GAS ? +BASE_TX_GAS : undefined,
     feeGasPriceMultiplier: FEE_GAS_PRICE_MULTIPLIER ? +FEE_GAS_PRICE_MULTIPLIER : undefined,
     defaultDeFiBatchSize: DEFAULT_DEFI_BATCH_SIZE ? +DEFAULT_DEFI_BATCH_SIZE : undefined,
+    feePayingAssetIds: FEE_PAYING_ASSET_IDS ? FEE_PAYING_ASSET_IDS.split(',').map(id => +id) : undefined,
   };
   return Object.fromEntries(Object.entries(envVars).filter(e => e[1] !== undefined));
 }
@@ -217,7 +220,6 @@ export class Configurator {
       rollupContractAddress: EthAddress.fromString(conf.rollupContractAddress),
       feeDistributorAddress: EthAddress.fromString(conf.feeDistributorAddress),
       priceFeedContractAddresses: conf.priceFeedContractAddresses.map(EthAddress.fromString),
-      feePayingAssetAddresses: conf.feePayingAssetAddresses.map(EthAddress.fromString),
       privateKey: Buffer.from(conf.privateKey, 'hex'),
       runtimeConfig: {
         ...conf.runtimeConfig,
@@ -238,7 +240,6 @@ export class Configurator {
       rollupContractAddress: conf.rollupContractAddress.toString(),
       feeDistributorAddress: conf.feeDistributorAddress.toString(),
       priceFeedContractAddresses: conf.priceFeedContractAddresses.map(a => a.toString()),
-      feePayingAssetAddresses: conf.feePayingAssetAddresses.map(a => a.toString()),
       privateKey: conf.privateKey.toString('hex'),
       runtimeConfig: {
         ...conf.runtimeConfig,

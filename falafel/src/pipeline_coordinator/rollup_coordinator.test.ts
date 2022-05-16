@@ -233,7 +233,6 @@ describe('rollup_coordinator', () => {
       getMinTxFee: jest.fn().mockImplementation(() => {
         throw new Error('This should not be called');
       }),
-      setConf: jest.fn(),
       start: jest.fn(),
       stop: jest.fn(),
       getGasPaidForByFee: jest.fn().mockImplementation((assetId: number, fee: bigint) => fee),
@@ -1959,7 +1958,7 @@ describe('rollup_coordinator', () => {
       });
       const pendingTxs = [...Array(numInnerRollupTxs * numOuterRollupProofs)].map((_, i) => mockTx(i));
       try {
-        const rp = await coordinator.processPendingTxs(pendingTxs);
+        await coordinator.processPendingTxs(pendingTxs);
       } catch (err) {
         expect(err).toBeDefined();
         expect(err.message).toBe('Creator Error');
@@ -1986,69 +1985,11 @@ describe('rollup_coordinator', () => {
       });
       const pendingTxs = [...Array(numInnerRollupTxs * numOuterRollupProofs)].map((_, i) => mockTx(i));
       try {
-        const rp = await coordinator.processPendingTxs(pendingTxs);
+        await coordinator.processPendingTxs(pendingTxs);
       } catch (err) {
         expect(err).toBeDefined();
         expect(err.message).toBe('Publisher Error');
       }
     });
-  });
-
-  describe('maximum assets', () => {
-    const numInnerRollupTxs = 8;
-    const numOuterRollupProofs = 4;
-
-    beforeEach(() => {
-      coordinator = new RollupCoordinator(
-        publishTimeManager as any,
-        rollupCreator as any,
-        rollupAggregator as any,
-        rollupPublisher as any,
-        numInnerRollupTxs,
-        numOuterRollupProofs,
-        oldDefiRoot,
-        oldDefiPath,
-        bridgeResolver as any,
-        feeResolver as any,
-        defiInteractionNotes,
-      );
-      jest.resetModules();
-    });
-    /*     it('non-fee paying assets do not contribute to asset limit', async () => {
-      const pendingTxs = [...Array(numInnerRollupTxs * numOuterRollupProofs)].map((_, i) =>
-        mockTx(i, { txFeeAssetId: i + NON_FEE_PAYING_ASSET }),
-      );
-      pendingTxs[pendingTxs.length - 1] = mockTx(pendingTxs.length - 1, { txFeeAssetId: 0 });
-      pendingTxs[pendingTxs.length - 2] = mockTx(pendingTxs.length - 2, { txFeeAssetId: 1 });
-      const rp = (await coordinator.processPendingTxs(pendingTxs));
-      expect(rp.published).toBe(true);
-      expect(coordinator.getProccessedTxs()).toEqual(pendingTxs);
-      expect(rollupCreator.create).toHaveBeenCalledTimes(numOuterRollupProofs);
-      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
-      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
-      expect(rollupPublisher.getRollupBenificiary).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0, 1]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([...Array(4).fill(0n)]);
-    }); */
-
-    /*     it('non-fee paying assets do not contribute to asset limit 2', async () => {
-      const pendingTxs = [...Array(numInnerRollupTxs * numOuterRollupProofs)].map((_, i) => {
-        if (i % 2 === 0) {
-          return mockTx(i, { txFeeAssetId: i + NON_FEE_PAYING_ASSET });
-        }
-        return mockDefiBridgeTx(i, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[0].bridgeId), bridgeConfigs[0].bridgeId, i + NON_FEE_PAYING_ASSET);
-      });
-      pendingTxs[pendingTxs.length - 1] = mockTx(pendingTxs.length - 1, { txFeeAssetId: 0 });
-      pendingTxs[pendingTxs.length - 2] = mockTx(pendingTxs.length - 2, { txFeeAssetId: 1 });
-      const rp = (await coordinator.processPendingTxs(pendingTxs));
-      expect(rp.published).toBe(true);
-      expect(coordinator.getProccessedTxs()).toEqual(pendingTxs);
-      expect(rollupCreator.create).toHaveBeenCalledTimes(numOuterRollupProofs);
-      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
-      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
-      expect(rollupPublisher.getRollupBenificiary).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0, 1]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([bridgeConfigs[0].bridgeId, ...Array(3).fill(0n)]);
-    }); */
   });
 });

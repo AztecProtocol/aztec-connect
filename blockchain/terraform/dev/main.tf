@@ -35,14 +35,6 @@ output "price_feed_contract_addresses" {
   value = "${var.PRICE_FEED_CONTRACT_ADDRESSES}"
 }
 
-variable "FEE_PAYING_ASSET_ADDRESSES" {
-  type = string
-}
-
-output "fee_paying_asset_addresses" {
-  value = "${var.FEE_PAYING_ASSET_ADDRESSES}"
-}
-
 variable "PUBLIC_ETHEREUM_HOST" {
   type = string
 }

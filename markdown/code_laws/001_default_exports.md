@@ -1,7 +1,7 @@
 # Default Exports
 
-Don't ever use default exports, except when using a third party libraries that provides no alternative.
-It leads to naming confusions, and robs the compiler of various insights.
+Don't use default exports, except when using a third party libraries that provides no alternative.
+It leads to naming confusions, and robs the compiler of various insights, which hinder refactoring tools.
 
 ### Yes Example
 

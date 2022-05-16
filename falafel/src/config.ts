@@ -92,12 +92,11 @@ function getPerChainBridgeConfig(chainId: number): BridgeConfig[] {
 export async function getComponents(configurator: Configurator) {
   const confVars = configurator.getConfVars();
   const {
-    runtimeConfig: { gasLimit },
+    runtimeConfig: { gasLimit, feePayingAssetIds },
     ethereumHost,
     privateKey,
     rollupContractAddress,
     feeDistributorAddress,
-    feePayingAssetAddresses,
     priceFeedContractAddresses,
     typeOrmLogging,
     dbUrl,
@@ -115,12 +114,12 @@ export async function getComponents(configurator: Configurator) {
   console.log(`Gas limit: ${gasLimit || 'default'}`);
   console.log(`Rollup provider address: ${rollupContractAddress || 'none'}`);
   console.log(`Fee distributor address: ${feeDistributorAddress || 'none'}`);
-  console.log(`Fee paying asset addresses: ${feePayingAssetAddresses.map(a => a.toString()).join(',') || 'none'}`);
+  console.log(`Fee paying asset ids: ${feePayingAssetIds}`);
   console.log(`Price feed addresses: ${priceFeedContractAddresses.map(a => a.toString()).join(',') || 'none'}`);
   console.log(`Signing address: ${signingAddress}`);
   console.log(`Proverless: ${proverless}`);
 
-  if (feePayingAssetAddresses.length !== priceFeedContractAddresses.length) {
+  if (priceFeedContractAddresses.length < feePayingAssetIds.length) {
     throw new Error('There should be one price feed contract address per fee paying asset.');
   }
 

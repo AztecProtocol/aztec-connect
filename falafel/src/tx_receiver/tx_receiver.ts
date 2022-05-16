@@ -32,7 +32,6 @@ import { TxFeeAllocator } from './tx_fee_allocator';
 
 export class TxReceiver {
   private worker!: BarretenbergWorker;
-  private feeAllocator: TxFeeAllocator;
   private mutex = new Mutex();
 
   constructor(
@@ -43,13 +42,11 @@ export class TxReceiver {
     private proofGenerator: ProofGenerator,
     private joinSplitVerifier: JoinSplitVerifier,
     private accountVerifier: AccountVerifier,
-    txFeeResolver: TxFeeResolver,
+    private txFeeResolver: TxFeeResolver,
     private metrics: Metrics,
     private bridgeResolver: BridgeResolver,
     private log = console.log,
-  ) {
-    this.feeAllocator = new TxFeeAllocator(txFeeResolver);
-  }
+  ) {}
 
   public async init() {
     const crs = new Crs(0);
@@ -70,6 +67,10 @@ export class TxReceiver {
     await destroyWorker(this.worker);
   }
 
+  public setTxFeeResolver(txFeeResolver: TxFeeResolver) {
+    this.txFeeResolver = txFeeResolver;
+  }
+
   public async receiveTxs(txs: Tx[]) {
     // We mutex this entire receive call until we move to "deposit to proof hash". Read more below.
     await this.mutex.acquire();
@@ -83,7 +84,8 @@ export class TxReceiver {
         txTypes.push(txType);
       }
 
-      const validation = this.feeAllocator.validateReceivedTxs(txs, txTypes);
+      const txFeeAllocator = new TxFeeAllocator(this.txFeeResolver);
+      const validation = txFeeAllocator.validateReceivedTxs(txs, txTypes);
       this.log(
         `Gas Required/Provided: ${validation.gasRequired}/${validation.gasProvided}. Fee asset index: ${validation.feePayingAsset}. Feeless txs: ${validation.hasFeelessTxs}.`,
       );
@@ -104,7 +106,7 @@ export class TxReceiver {
         txDaos.push(txDao);
       }
 
-      this.feeAllocator.reallocateGas(txDaos, txs, txTypes, validation);
+      txFeeAllocator.reallocateGas(txDaos, txs, txTypes, validation);
       await this.rollupDb.addTxs(txDaos);
 
       return txDaos.map(txDao => txDao.id);

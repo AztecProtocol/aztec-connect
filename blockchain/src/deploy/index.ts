@@ -54,13 +54,12 @@ async function main() {
   console.error(`Initial null root: ${roots.nullRoot.toString('hex')}`);
   console.error(`Initial root root: ${roots.rootsRoot.toString('hex')}`);
 
-  const { rollup, priceFeeds, feeDistributor, feePayingAssets } = await deploy(chainId, signer, treeInitData, VK);
+  const { rollup, priceFeeds, feeDistributor } = await deploy(chainId, signer, treeInitData, VK);
 
   const envVars = {
     ROLLUP_CONTRACT_ADDRESS: rollup.address,
     FEE_DISTRIBUTOR_ADDRESS: feeDistributor.address,
     PRICE_FEED_CONTRACT_ADDRESSES: priceFeeds.map(p => p).join(','),
-    FEE_PAYING_ASSET_ADDRESSES: feePayingAssets.join(','),
   };
 
   for (const [k, v] of Object.entries(envVars)) {

@@ -39,6 +39,8 @@ services:
       NODE_ENV: production
       PROVERLESS: ${PROVERLESS}
       VK: ${VK}
+      FEE_PAYING_ASSET_IDS: 0,1
+      FEE_GAS_PRICE_MULTIPLIER: 0.01
     depends_on:
       - ganache
     command: >

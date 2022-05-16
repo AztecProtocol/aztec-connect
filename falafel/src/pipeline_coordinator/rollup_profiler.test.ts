@@ -109,7 +109,6 @@ describe('Profile Rollup', () => {
     jest.spyOn(Date, 'now').mockImplementation(() => getCurrentTime().getTime());
 
     feeResolver = {
-      setConf: jest.fn(),
       getMinTxFee: jest.fn().mockImplementation(() => {
         throw new Error('This should not be called');
       }),

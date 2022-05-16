@@ -75,7 +75,7 @@ export class WorldState {
     private pipelineFactory: RollupPipelineFactory,
     private noteAlgo: NoteAlgorithms,
     private metrics: Metrics,
-    private feeResolver: TxFeeResolver,
+    private txFeeResolver: TxFeeResolver,
     private expireTxPoolAfter = 60,
   ) {
     this.txPoolProfile = {
@@ -101,6 +101,10 @@ export class WorldState {
     this.blockQueue.process(block => this.handleBlock(block));
 
     await this.startNewPipeline();
+  }
+
+  public setTxFeeResolver(txFeeResolver: TxFeeResolver) {
+    this.txFeeResolver = txFeeResolver;
   }
 
   public getRollupSize() {
@@ -145,7 +149,7 @@ export class WorldState {
           bridgeId,
           gasAccrued: 0,
         };
-        bridgeProfile.gasAccrued += this.feeResolver.getSingleBridgeTxGas(bridgeId) + rollupTx.excessGas;
+        bridgeProfile.gasAccrued += this.txFeeResolver.getSingleBridgeTxGas(bridgeId) + rollupTx.excessGas;
 
         pendingBridgeStats.set(bridgeId, bridgeProfile);
       }

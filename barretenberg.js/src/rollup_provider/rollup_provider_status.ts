@@ -16,7 +16,6 @@ export interface RuntimeConfig {
   publishInterval: number;
   flushAfterIdle: number;
   gasLimit: number;
-  baseTxGas: number;
   verificationGas: number;
   maxFeeGasPrice: bigint;
   feeGasPriceMultiplier: number;
@@ -25,6 +24,7 @@ export interface RuntimeConfig {
   maxUnsettledTxs: number;
   defaultDeFiBatchSize: number;
   bridgeConfigs: BridgeConfig[];
+  feePayingAssetIds: number[];
 }
 
 export interface RuntimeConfigJson {
@@ -33,7 +33,6 @@ export interface RuntimeConfigJson {
   publishInterval: number;
   flushAfterIdle: number;
   gasLimit: number;
-  baseTxGas: number;
   verificationGas: number;
   maxFeeGasPrice: string;
   feeGasPriceMultiplier: number;
@@ -42,6 +41,7 @@ export interface RuntimeConfigJson {
   maxUnsettledTxs: number;
   defaultDeFiBatchSize: number;
   bridgeConfigs: BridgeConfigJson[];
+  feePayingAssetIds: number[];
 }
 
 export const runtimeConfigToJson = ({

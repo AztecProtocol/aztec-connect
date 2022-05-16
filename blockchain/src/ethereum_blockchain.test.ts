@@ -33,8 +33,6 @@ const blockchainAssets: BlockchainAsset[] = [
     decimals: 18,
     symbol: 'A',
     name: 'Asset A',
-    isFeePaying: true,
-    gasConstants: [],
     gasLimit: 123,
   },
   {
@@ -42,8 +40,6 @@ const blockchainAssets: BlockchainAsset[] = [
     decimals: 6,
     symbol: 'B',
     name: 'Asset B',
-    isFeePaying: false,
-    gasConstants: [],
     gasLimit: 456,
   },
 ];

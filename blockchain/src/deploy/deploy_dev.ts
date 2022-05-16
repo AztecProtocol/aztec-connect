@@ -1,4 +1,3 @@
-import { EthAddress } from '@aztec/barretenberg/address';
 import { TreeInitData } from '@aztec/barretenberg/environment';
 import { Signer } from 'ethers';
 import {
@@ -50,7 +49,6 @@ export async function deployDev(signer: Signer, { dataTreeSize, roots }: TreeIni
   const gasPriceFeedContact = await deployMockPriceFeed(signer, gasPrice);
   const daiPriceFeedContact = await deployMockPriceFeed(signer, daiPrice);
   const priceFeeds = [gasPriceFeedContact.address, daiPriceFeedContact.address];
-  const feePayingAssets = [EthAddress.ZERO.toString(), asset0.address];
 
-  return { rollup, priceFeeds, feeDistributor, feePayingAssets };
+  return { rollup, priceFeeds, feeDistributor };
 }
