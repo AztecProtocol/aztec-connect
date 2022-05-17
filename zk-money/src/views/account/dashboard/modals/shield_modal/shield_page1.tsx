@@ -12,6 +12,7 @@ import { useLegacyEthAccountState } from 'alt-model/assets/l1_balance_hooks';
 import { WalletDropdownSelect } from '../defi_modal/wallet_dropdown_select';
 import { WalletAccountIndicator } from 'ui-components';
 import style from './shield.module.scss';
+import { ShieldPrivacySection } from './shield_privacy_section';
 
 function toLegacyRecipientInput({ recipientAlias }: ShieldFormFields, { input }: ShieldFormValidationResult) {
   const { aliasIsValid } = input;
@@ -109,7 +110,7 @@ export function ShieldPage1({
             />
           </>
         }
-        rightPanel={<div />}
+        rightPanel={<ShieldPrivacySection />}
       />
       <SplitSection
         leftPanel={
