@@ -39,7 +39,7 @@ export function ShieldConfirmationPage({
         }
         bottomPanel={
           <CostBreakdown
-            recipient={validationResult.input.fields.recipientAlias}
+            recipient={`@${validationResult.input.fields.recipientAlias}`}
             amountLabel="Shield Amount"
             amount={validationResult.targetL2OutputAmount}
             fee={validationResult.input.feeAmount}
