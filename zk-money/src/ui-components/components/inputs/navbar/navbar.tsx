@@ -1,9 +1,10 @@
 import { Link, useLocation } from 'react-router-dom';
+import { isSafari } from 'device_support';
 import { bindStyle } from '../../../util/classnames';
 import { ReactComponent as Logo } from '../../../images/zk_money.svg';
+import zkMoneyLogoWhite from 'images/zk_money_white.svg';
+import zkMoneyLogo from 'images/zk_money.svg';
 import style from './navbar.module.scss';
-import { useTotalValuation } from 'alt-model/total_account_valuation_hooks';
-import { formatBulkPrice } from 'app';
 
 const cx = bindStyle(style);
 
@@ -36,17 +37,20 @@ const LINKS: LinkItem[] = [
   { url: '/trade', label: 'Trade' },
 ];
 
+function getLogo(theme: Theme | undefined) {
+  if (isSafari) {
+    return theme === Theme.GRADIENT ? <img src={zkMoneyLogoWhite} /> : <img src={zkMoneyLogo} />;
+  }
+  return <Logo className={cx(style.logo, theme === Theme.GRADIENT ? style.gradient : style.white)} />;
+}
+
 export function Navbar({ isLoggedIn, accountComponent, theme, onChange, onLogin }: NavbarProps): JSX.Element {
   const location = useLocation();
-  const totalValuation = useTotalValuation();
-  const totalValuationStr = totalValuation !== undefined ? formatBulkPrice(totalValuation) : 'Balance';
 
   return (
     <div className={style.headerRoot}>
       <div className={cx(style.logoRoot, { enabled: !!onChange })}>
-        <Link to="/">
-          <Logo className={cx(style.logo, theme === Theme.GRADIENT ? style.gradient : style.white)} />
-        </Link>
+        <Link to="/">{getLogo(theme)}</Link>
       </div>
 
       <div className={style.accountRoot}>
@@ -55,7 +59,7 @@ export function Navbar({ isLoggedIn, accountComponent, theme, onChange, onLogin 
           <Link
             key={link.url}
             to={link.url}
-            className={cx(style.link, style.navLink, {
+            className={cx(style.link, isSafari && style.noLetterSpacing, style.navLink, {
               active: link.url === location.pathname,
               white: theme === Theme.WHITE,
               gradient: theme === Theme.GRADIENT,
@@ -68,7 +72,7 @@ export function Navbar({ isLoggedIn, accountComponent, theme, onChange, onLogin 
           <div className={style.accountWrapper}>
             <Link
               to={'/balance'}
-              className={cx(style.link, style.navLink, {
+              className={cx(style.link, isSafari && style.noLetterSpacing, style.navLink, {
                 active: '/balance' === location.pathname,
                 white: theme === Theme.WHITE,
                 gradient: theme === Theme.GRADIENT,
@@ -81,7 +85,7 @@ export function Navbar({ isLoggedIn, accountComponent, theme, onChange, onLogin 
         ) : (
           <Link
             to="/signin"
-            className={cx(style.link, style.navLink, {
+            className={cx(style.link, isSafari && style.noLetterSpacing, style.navLink, {
               active: '/signin' === location.pathname || '/signup' === location.pathname,
               white: theme === Theme.WHITE,
               gradient: theme === Theme.GRADIENT,

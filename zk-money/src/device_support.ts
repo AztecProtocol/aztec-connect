@@ -4,6 +4,8 @@ export const isIOS = () =>
 
 const isFirefox = () => navigator.userAgent.includes('Firefox');
 
+export const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
 const hasIndexedDbSupport = () =>
   new Promise(resolve => {
     const db = indexedDB.open('test');

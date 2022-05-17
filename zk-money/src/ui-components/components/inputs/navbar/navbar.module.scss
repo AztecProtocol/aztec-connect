@@ -98,6 +98,10 @@
   padding-bottom: 5px;
 }
 
+.noLetterSpacing {
+  letter-spacing: initial;
+}
+
 .navLink:hover {
   opacity: 1;
 }
@@ -157,4 +161,9 @@
 .accountComponent {
   position: absolute;
   top: 60px;
+}
+
+.disableAnimation {
+  clip-path: initial;
+  transition: initial;
 }

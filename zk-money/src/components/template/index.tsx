@@ -7,6 +7,7 @@ import { SystemMessagePopup } from './system_message_popup';
 import { ContentWrapper } from './content_wrapper';
 import { Footer } from './footer';
 import { debounce } from 'lodash';
+import { isSafari } from 'device_support';
 
 export * from './content_wrapper';
 export * from './system_message_popup';
@@ -18,6 +19,7 @@ interface RootProps {
 interface BackgroundProps {
   theme: Theme;
   isResizing: boolean;
+  isSafari: boolean;
 }
 
 const Root = styled.div<RootProps>`
@@ -41,7 +43,7 @@ const Background = styled.div<BackgroundProps>`
   );
   transform: ${({ theme }) =>
     theme === Theme.GRADIENT ? `translate(calc(-100% + 100vw), calc(-100% + 100vh))` : `translate(0%, 0%)`};
-  transition: transform ${({ isResizing }) => (isResizing ? '0s' : '1.25s')} ease;
+  transition: transform ${({ isResizing, isSafari }) => (isResizing || isSafari ? '0s' : '1.25s')} ease;
   position: fixed;
   width: 300vw;
   height: 300vh;
@@ -49,7 +51,6 @@ const Background = styled.div<BackgroundProps>`
   left: 0;
   z-index: -999999;
 `;
-
 interface ContentRootProps {
   extraFooterSpace: boolean;
 }
@@ -129,7 +130,7 @@ export const Template: React.FunctionComponent<TemplateProps> = ({
           </>
         )}
       </Root>
-      <Background isResizing={isResizing} theme={theme} />
+      <Background isResizing={isResizing} theme={theme} isSafari={isSafari} />
     </>
   );
 };
