@@ -1,13 +1,14 @@
-import { useMemo, useState } from 'react';
 import { isKnownAssetAddressString } from 'alt-model/known_assets/known_asset_addresses';
 import type { RemoteAsset } from 'alt-model/types';
+import { useSendForm } from 'alt-model/send/send_form_hooks';
 import { Card, CardHeaderSize } from 'ui-components';
-import { debounce } from 'lodash';
-import { useApp, useSendForm } from 'alt-model';
-import { SendMode, SendStatus } from 'app';
+import { useApp } from 'alt-model';
+import { SendMode } from 'app';
 import { CloseButtonWhite, Modal } from 'components';
+import { SendFormFieldsPage } from './send_form_fields_page';
+import { SendComposerPhase } from 'alt-model/send/send_composer_state_obs';
+import { SendConfirmationPage } from './send_confirmation_page';
 import { Theme } from 'styles';
-import { Send } from './send';
 import style from './send_modal.module.scss';
 
 interface SendModalProps {
@@ -15,7 +16,7 @@ interface SendModalProps {
   asset: RemoteAsset;
 }
 
-function getTitle(sendMode: SendMode) {
+function getTitle(sendMode?: SendMode) {
   switch (sendMode) {
     case SendMode.SEND:
       return 'Send to L2';
@@ -27,16 +28,18 @@ function getTitle(sendMode: SendMode) {
 }
 
 export function SendModal({ asset, onClose }: SendModalProps) {
-  const [sendMode, setSendMode] = useState(SendMode.SEND);
   const { config } = useApp();
-  const { formValues, sendForm, processing, spendableBalance } = useSendForm(asset, sendMode);
-  const generatingKey = formValues?.status.value === SendStatus.GENERATE_KEY;
-  const theme = generatingKey ? Theme.GRADIENT : Theme.WHITE;
-  const canClose = !processing && !generatingKey;
-  const overrideModalLayout = !generatingKey;
-  const debouncedSoftValidation = useMemo(() => debounce(() => sendForm?.softValidation(), 300), [sendForm]);
+  const sendForm = useSendForm(asset.id);
+  const { state, setters, feedback, composerState, isValid, isLocked, unlock, submit, attemptLock } = sendForm;
 
-  if (!formValues || !asset) return <></>;
+  const phase = composerState?.phase;
+  const isIdle = phase === SendComposerPhase.IDLE;
+  const canClose = phase === undefined || isIdle || phase === SendComposerPhase.DONE;
+  const canGoBack = isLocked && isIdle;
+  const handleBack = canGoBack ? unlock : undefined;
+  const generatingKey = phase === SendComposerPhase.GENERATING_KEY;
+  const overrideModalLayout = !generatingKey;
+  const theme = generatingKey ? Theme.GRADIENT : Theme.WHITE;
 
   const assetAddressStr = asset.address.toString();
   if (!isKnownAssetAddressString(assetAddressStr)) {
@@ -44,12 +47,36 @@ export function SendModal({ asset, onClose }: SendModalProps) {
   }
   const txAmountLimit = config.txAmountLimits[assetAddressStr];
 
+  const cardContent =
+    isLocked && composerState ? (
+      <SendConfirmationPage
+        state={state}
+        composerState={composerState}
+        onSubmit={submit}
+        onClose={onClose}
+        asset={asset}
+        txAmountLimit={txAmountLimit}
+      />
+    ) : (
+      <SendFormFieldsPage
+        asset={asset}
+        state={state}
+        feedback={feedback}
+        isValid={!!isValid}
+        onChangeSendMode={setters.sendMode}
+        onChangeAmount={setters.amountStrOrMax}
+        onChangeRecipient={setters.recipientStr}
+        onChangeSpeed={setters.speed}
+        onNext={attemptLock}
+      />
+    );
+
   return (
     <Modal theme={theme} onClose={() => canClose && onClose()} noPadding={overrideModalLayout}>
       <Card
         cardHeader={
           <div className={style.sendHeader}>
-            <span className={style.headerLabel}>{getTitle(sendMode)}</span>
+            <span className={style.headerLabel}>{getTitle(state.fields.sendMode)}</span>
             <CloseButtonWhite
               onClick={() => {
                 if (canClose) onClose();
@@ -57,27 +84,7 @@ export function SendModal({ asset, onClose }: SendModalProps) {
             />
           </div>
         }
-        cardContent={
-          <Send
-            theme={theme}
-            asset={asset}
-            txAmountLimit={txAmountLimit}
-            spendableBalance={spendableBalance}
-            sendMode={sendMode}
-            form={formValues}
-            explorerUrl={config.explorerUrl}
-            onChangeSendMode={setSendMode}
-            onChangeInputs={async values => {
-              sendForm?.changeValues(values);
-              debouncedSoftValidation();
-            }}
-            onValidate={() => sendForm?.lock()}
-            onSubmit={() => sendForm?.submit()}
-            onClose={() => {
-              if (canClose) onClose();
-            }}
-          />
-        }
+        cardContent={cardContent}
         headerSize={CardHeaderSize.LARGE}
       />
     </Modal>

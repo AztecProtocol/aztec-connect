@@ -1,4 +1,4 @@
-import { MessageType, RecipientInput, SendMode, ValueAvailability } from 'app';
+import { SendMode } from 'app';
 import { InputTheme, InputWrapper, InputStatusIcon, MaskedInput, InputStatus } from 'components';
 import { InputSection } from '../input_section';
 
@@ -6,23 +6,17 @@ interface RecipientSectionProps {
   theme: InputTheme;
   sendMode: SendMode;
   message?: string;
-  recipient: RecipientInput;
+  recipientStr: string;
+  isLoading: boolean;
+  isValid: boolean;
   onChangeValue: (value: string) => void;
 }
 
-const getRecipientInputStatus = (recipient: RecipientInput) => {
-  if (recipient.messageType === MessageType.WARNING) {
-    return InputStatus.WARNING;
-  }
-  if (recipient.messageType === MessageType.ERROR) {
-    return InputStatus.ERROR;
-  }
-  if (recipient.value.valid === ValueAvailability.PENDING) {
-    return InputStatus.LOADING;
-  }
-  return (recipient.value.input || recipient.message) && recipient.value.valid === ValueAvailability.INVALID
-    ? InputStatus.ERROR
-    : InputStatus.SUCCESS;
+const getRecipientInputStatus = (isLoading: boolean, isValid: boolean) => {
+  if (isLoading) return InputStatus.LOADING;
+  if (isValid) return InputStatus.SUCCESS;
+  return InputStatus.ERROR;
+  // TODO: Support warning state - probably if reusing an eth address?
 };
 
 function getRecipientPlaceholder(sendMode: SendMode) {
@@ -37,7 +31,7 @@ function getRecipientPlaceholder(sendMode: SendMode) {
 }
 
 export function RecipientSection(props: RecipientSectionProps) {
-  const { theme, recipient, sendMode, onChangeValue } = props;
+  const { sendMode, onChangeValue, theme } = props;
 
   return (
     <InputSection
@@ -45,12 +39,13 @@ export function RecipientSection(props: RecipientSectionProps) {
       component={
         <InputWrapper theme={theme}>
           <InputStatusIcon
-            status={getRecipientInputStatus(recipient)}
-            inactive={!recipient.value.input && !recipient.message}
+            status={getRecipientInputStatus(props.isLoading, props.isValid)}
+            // TODO: why would we want an inactive state?
+            inactive={props.recipientStr.length === 0}
           />
           <MaskedInput
             theme={theme}
-            value={recipient.value.input}
+            value={props.recipientStr}
             prefix={sendMode === SendMode.WIDTHDRAW ? '' : '@'}
             onChangeValue={onChangeValue}
             placeholder={getRecipientPlaceholder(sendMode)}

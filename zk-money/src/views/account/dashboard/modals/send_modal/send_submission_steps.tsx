@@ -1,44 +1,40 @@
-import { StepStatus, SubmissionFlow } from 'ui-components';
-import { SendStatus } from 'app';
+import { ActiveSubmissionFlowItem, StepStatus, SubmissionFlow } from 'ui-components';
 import {
   SpendKeyGenerationStep,
   useSpendingKeyGenerationStep,
 } from '../modal_molecules/spending_key_generation_step_hooks';
+import { SendComposerPhase, SendComposerState } from 'alt-model/send/send_composer_state_obs';
+import { SubmissionItemPrompt } from '../modal_molecules/submission_item_prompt/submission_item_prompt';
 
 interface SendSubmissionStepsProps {
-  currentStatus: SendStatus;
-  failed: boolean;
+  composerState: SendComposerState;
 }
 
 const steps = [
-  {
-    status: SendStatus.GENERATE_KEY,
-    text: 'Generate Spending Key',
-  },
-  {
-    status: SendStatus.CREATE_PROOF,
-    text: 'Create Proof',
-  },
-  {
-    status: SendStatus.SEND_PROOF,
-    text: 'Send Private Transaction',
-  },
+  { phase: SendComposerPhase.GENERATING_KEY, label: 'Creating Spending Key' },
+  { phase: SendComposerPhase.CREATING_PROOF, label: 'Creating Proof' },
+  { phase: SendComposerPhase.SENDING_PROOF, label: 'Sending Proof' },
 ];
+const labels = steps.map(x => x.label);
 
-function getIndexOfStep(status: SendStatus) {
-  return steps.findIndex(step => step.status === status);
+function getActiveItem(
+  { phase, error }: SendComposerState,
+  spendKeyGenerationStep: SpendKeyGenerationStep,
+): ActiveSubmissionFlowItem {
+  if (error) {
+    const idx = steps.findIndex(x => x.phase === error.phase);
+    const expandedContent = <SubmissionItemPrompt errored>{error.message}</SubmissionItemPrompt>;
+    return { idx, status: StepStatus.ERROR, expandedContent };
+  }
+  const idx = steps.findIndex(x => x.phase === phase);
+  if (phase === SendComposerPhase.GENERATING_KEY) {
+    return { idx, ...spendKeyGenerationStep };
+  }
+  return { idx, status: StepStatus.RUNNING };
 }
 
-function getActiveItem(currentStatus: SendStatus, failed: boolean, spendingKeyGenerationStep: SpendKeyGenerationStep) {
-  const idx = getIndexOfStep(currentStatus);
-  if (currentStatus === SendStatus.GENERATE_KEY) return { idx, ...spendingKeyGenerationStep };
-  return { idx: getIndexOfStep(currentStatus), status: failed ? StepStatus.ERROR : StepStatus.RUNNING };
-}
-
-export function SendSubmissionSteps(props: SendSubmissionStepsProps) {
-  const stepsText = steps.map(step => step.text);
+export function SendSubmissionSteps({ composerState }: SendSubmissionStepsProps) {
   const spendingKeyGenerationStep = useSpendingKeyGenerationStep();
-  const activeItem = getActiveItem(props.currentStatus, props.failed, spendingKeyGenerationStep);
 
-  return <SubmissionFlow activeItem={activeItem} labels={stepsText} />;
+  return <SubmissionFlow activeItem={getActiveItem(composerState, spendingKeyGenerationStep)} labels={labels} />;
 }

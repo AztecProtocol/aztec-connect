@@ -13,6 +13,7 @@
   width: 100%;
   border-radius: 5px;
   padding: 0 20px;
+  align-items: center;
 }
 
 .row:nth-child(even) {
@@ -57,4 +58,10 @@
   background-size: contain;
   background-position: center;
   background-repeat: no-repeat;
+}
+
+.recipient {
+  font-size: 16px;
+  font-weight: 500;
+  text-align: right;
 }

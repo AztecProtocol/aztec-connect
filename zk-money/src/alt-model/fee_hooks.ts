@@ -1,6 +1,6 @@
 import createDebug from 'debug';
 import { useEffect, useMemo, useState } from 'react';
-import { AssetValue, EthAddress } from '@aztec/sdk';
+import { AssetValue, EthAddress, TxType } from '@aztec/sdk';
 import { Contract } from '@ethersproject/contracts';
 import { useSdk, useStableEthereumProvider, useGasUnitPrice } from 'alt-model/top_level_context';
 import { listenPoll } from 'app/util';
@@ -94,15 +94,27 @@ export function useEstimatedShieldingGasCosts(depositor?: EthAddress, assetId?: 
   };
 }
 
-const DEPOSIT_FEE_POLL_INTERVAL = 1000 * 60 * 5;
+const FEE_POLL_INTERVAL = 1000 * 60 * 5;
 
 export function useDepositFeeAmounts(assetId: number) {
   const sdk = useSdk();
   const [fees, setFees] = useState<AssetValue[]>();
   useEffect(() => {
     if (sdk) {
-      return listenPoll(() => sdk.getDepositFees(assetId).then(setFees), DEPOSIT_FEE_POLL_INTERVAL);
+      return listenPoll(() => sdk.getDepositFees(assetId).then(setFees), FEE_POLL_INTERVAL);
     }
   }, [sdk, assetId]);
+  return useAmounts(fees);
+}
+
+export function useTxFeeAmounts(assetId: number, txType: TxType | undefined) {
+  const sdk = useSdk();
+  const [feeGroups, setFeeGroups] = useState<AssetValue[][]>();
+  useEffect(() => {
+    if (sdk) {
+      return listenPoll(() => sdk.getTxFees(assetId).then(setFeeGroups), FEE_POLL_INTERVAL);
+    }
+  }, [sdk, assetId]);
+  const fees = txType !== undefined ? feeGroups?.[txType] : undefined;
   return useAmounts(fees);
 }

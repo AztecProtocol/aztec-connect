@@ -14,19 +14,6 @@ import { WalletAccountIndicator } from 'ui-components';
 import style from './shield.module.scss';
 import { ShieldPrivacySection } from './shield_privacy_section';
 
-function toLegacyRecipientInput({ recipientAlias }: ShieldFormFields, { input }: ShieldFormValidationResult) {
-  const { aliasIsValid } = input;
-  const valid =
-    aliasIsValid === undefined
-      ? ValueAvailability.PENDING
-      : aliasIsValid
-      ? ValueAvailability.VALID
-      : ValueAvailability.INVALID;
-  return {
-    value: { input: recipientAlias, txType: TxType.DEPOSIT, valid },
-  };
-}
-
 interface ShieldPage1Props {
   fields: ShieldFormFields;
   feedback: ShieldFormFeedback;
@@ -92,7 +79,9 @@ export function ShieldPage1({
           <>
             <RecipientSection
               theme={InputTheme.WHITE}
-              recipient={toLegacyRecipientInput(fields, validationResult)}
+              recipientStr={fields.recipientAlias}
+              isLoading={validationResult.input.aliasIsValid === undefined}
+              isValid={!!validationResult.input.aliasIsValid}
               sendMode={SendMode.SEND}
               onChangeValue={onChangeRecipientAlias}
             />

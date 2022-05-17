@@ -5,7 +5,7 @@ import { InputTheme } from './input_theme';
 const wrapperStyles: { [key in InputTheme]: any } = {
   [InputTheme.WHITE]: css`
     background: ${colours.white};
-    box-shadow: 0px 1px 6px rgba(0, 0, 0, 0.15);
+    box-shadow: 0px 4px 10px rgb(0 0 0 / 10%);
   `,
   [InputTheme.LIGHT]: css`
     background: rgba(255, 255, 255, 0.2);

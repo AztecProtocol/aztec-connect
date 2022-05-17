@@ -10,8 +10,13 @@ interface CostBreakdownProps {
   amountLabel: string;
   amount?: Amount;
   fee?: Amount;
-  recipient?: string;
+  recipient: string;
   deductionsAreFromL1?: boolean;
+}
+
+interface RecipientRowProps {
+  label: string;
+  value: string;
 }
 
 interface RowProps {
@@ -30,6 +35,15 @@ function renderIcon(assetIsZk?: boolean, address?: EthAddress) {
     const src = getAssetIcon(address);
     if (src) return <div className={style.l1AssetIcon} style={{ backgroundImage: `url(${src})` }} />;
   }
+}
+
+function RecipientRow({ label, value }: RecipientRowProps) {
+  return (
+    <div className={style.row}>
+      <div className={style.title}>{label}</div>
+      <div className={style.recipient}>{value}</div>
+    </div>
+  );
 }
 
 function Row({ label, cost, address, value, assetIsZk }: RowProps) {
@@ -63,7 +77,7 @@ export function CostBreakdown({ amountLabel, amount, fee, recipient, deductionsA
 
   return (
     <div className={style.root}>
-      <Row label="Recipient" value={recipient} />
+      <RecipientRow label="Recipient" value={recipient} />
       <Row
         label={amountLabel}
         cost={maybeBulkPriceStr(amountBulkPrice)}

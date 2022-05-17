@@ -35,7 +35,7 @@ const Root = styled.div<RootProps>`
   flex: 0 0 32px;
   height: 32px;
   border-radius: 100%;
-  opacity: ${({ inactive }) => (inactive ? 0.5 : 1)};
+  opacity: ${({ inactive }) => (inactive ? 0 : 1)};
   ${({ status }) => {
     switch (status) {
       case InputStatus.SUCCESS:

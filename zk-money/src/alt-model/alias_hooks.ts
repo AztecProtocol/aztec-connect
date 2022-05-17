@@ -1,5 +1,6 @@
-import type { AztecSdk } from '@aztec/sdk';
+import type { AccountId, AztecSdk } from '@aztec/sdk';
 import { formatAliasInput, isValidAliasInput } from 'app';
+import { gateSetter } from 'app/util';
 import { useEffect, useState } from 'react';
 import { useSdk } from './top_level_context';
 
@@ -10,6 +11,23 @@ async function checkAliasExists(sdk: AztecSdk, aliasInput: string) {
   if (!availableLocally) return true;
   const availableRemotely = await sdk.isRemoteAliasAvailable(alias);
   return !availableRemotely;
+}
+
+export function useAccountIdForAlias(alias: string) {
+  const sdk = useSdk();
+  const [accountIdFetchState, setAccountIdFetchState] = useState<{ accountId?: AccountId; isLoading: boolean }>({
+    isLoading: false,
+  });
+  useEffect(() => {
+    const gatedSetter = gateSetter(setAccountIdFetchState);
+    gatedSetter.set({ isLoading: false });
+    if (sdk) {
+      gatedSetter.set({ isLoading: true });
+      sdk.getRemoteAccountId(alias).then(accountId => gatedSetter.set({ isLoading: false, accountId }));
+    }
+    return gatedSetter.close;
+  }, [sdk, alias]);
+  return accountIdFetchState;
 }
 
 export function useAliasIsValidRecipient(aliasInput: string, debounceMs = 500) {
