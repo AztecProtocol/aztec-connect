@@ -596,8 +596,9 @@ export class ShieldForm extends EventEmitter implements AccountForm {
           return this.abort(e.message);
         }
 
-        const data = signingData.toString('hex');
-        this.prompt(`Please sign the following proof data in your wallet: 0x${data.slice(0, 8)}...${data.slice(-4)}`);
+        const digest = controller.getTxId()?.toString();
+        if (!digest) throw new Error('Proof digest unavailable');
+        this.prompt(`Please sign the message in your wallet containing the following transaction ID: ${digest}`);
         try {
           await controller.sign();
         } catch (e) {

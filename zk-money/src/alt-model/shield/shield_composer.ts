@@ -10,8 +10,6 @@ import { createSigningKeys, KeyVault } from '../../app/key_vault';
 
 const debug = createDebug('zm:shield_composer');
 
-const textDecoder = new TextDecoder();
-
 export interface ShieldComposerPayload {
   targetOutput: Amount;
   fee: Amount;
@@ -168,10 +166,12 @@ export class ShieldComposer {
     // Skip this step for contract wallets
     if (!(await sdk.isContract(depositor))) {
       this.stateObs.setPhase(ShieldComposerPhase.APPROVE_PROOF);
-      const signingData = await controller.getSigningData();
-      const signingMessage = textDecoder.decode(signingData);
+      const digest = controller.getTxId()?.toString();
+      if (!digest) throw new Error('Proof digest unavailable');
       await this.walletAccountEnforcer.ensure();
-      this.stateObs.setPrompt(`Please sign the following message in your wallet: "${signingMessage}"`);
+      this.stateObs.setPrompt(
+        `Please sign the message in your wallet containing the following transaction ID: ${digest}`,
+      );
       try {
         await controller.sign();
       } catch (e) {

@@ -113,6 +113,10 @@ export class RegisterController {
     }
   }
 
+  getTxId() {
+    return this.depositController?.getTxId();
+  }
+
   getSigningData() {
     return this.depositController?.getSigningData();
   }
