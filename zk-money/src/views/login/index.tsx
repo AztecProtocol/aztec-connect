@@ -180,8 +180,8 @@ const getStepInfo = ({ loginState: { step, mode, allowToProceed }, explorerUrl }
     case LoginStep.CLAIM_USERNAME:
       return {
         stepNo: 4,
-        title: 'Shield ETH', // TODO - Could be other assets.
-        description: `In order to prevent spam, you must shield at the same time as claiming an alias. Please shield at least 0.01 ETH.`,
+        title: 'Account Registration',
+        description: `To create a new Aztec account, shield at least 0.01 ETH.`,
       };
     default:
       return {
