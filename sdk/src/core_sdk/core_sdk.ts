@@ -10,17 +10,20 @@ import { Grumpkin } from '@aztec/barretenberg/ecc';
 import { AccountData, InitHelpers } from '@aztec/barretenberg/environment';
 import { FftFactory } from '@aztec/barretenberg/fft';
 import { MemoryFifo } from '@aztec/barretenberg/fifo';
+import { HashPath, MemoryMerkleTree } from '@aztec/barretenberg/merkle_tree';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { OffchainAccountData } from '@aztec/barretenberg/offchain_tx_data';
 import { Pippenger } from '@aztec/barretenberg/pippenger';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { RollupProvider } from '@aztec/barretenberg/rollup_provider';
+import { Timer } from '@aztec/barretenberg/timer';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { BarretenbergWasm, WorkerPool } from '@aztec/barretenberg/wasm';
 import { WorldState, WorldStateConstants } from '@aztec/barretenberg/world_state';
 import { EventEmitter } from 'events';
 import { LevelUp } from 'levelup';
 import { BlockContext } from '../block_context/block_context';
+import { CorePaymentTx, createCorePaymentTxForRecipient } from '../core_tx';
 import { Alias, Database, SigningKey } from '../database';
 import { Note } from '../note';
 import {
@@ -36,9 +39,6 @@ import { UserState, UserStateEvent, UserStateFactory } from '../user_state';
 import { CoreSdkInterface } from './core_sdk_interface';
 import { CoreSdkOptions } from './core_sdk_options';
 import { SdkEvent, SdkStatus } from './sdk_status';
-import { HashPath } from '@aztec/barretenberg/merkle_tree';
-import { MemoryMerkleTree } from '@aztec/barretenberg/merkle_tree';
-import { Timer } from '@aztec/barretenberg/timer';
 
 const debug = createLogger('bb:core_sdk');
 
@@ -130,7 +130,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
 
       const {
         blockchainStatus: { chainId, rollupContractAddress },
-        runtimeConfig: {feePayingAssetIds },
+        runtimeConfig: { feePayingAssetIds },
         rollupSize,
       } = await this.getRemoteStatus();
 
@@ -582,6 +582,19 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
 
       for (const proof of proofs) {
         await userState.addProof(proof);
+
+        // Add the payment proof to recipient's account if they are not the sender.
+        if ([ProofId.DEPOSIT, ProofId.SEND].includes(proof.tx.proofId)) {
+          const recipient = proof.outputNotes[0].owner;
+          if (!recipient.equals(userId)) {
+            const recipientTx = createCorePaymentTxForRecipient(proof.tx as CorePaymentTx, recipient);
+            try {
+              await this.getUserState(recipient).addProof({ ...proof, tx: recipientTx });
+            } catch (e) {
+              // Recipient's account is not added.
+            }
+          }
+        }
       }
 
       return txIds;
