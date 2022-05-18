@@ -1,0 +1,19 @@
+.root {
+  display: grid;
+  grid-template-columns: 0.7fr 0.7fr 1fr 0.5fr;
+  font-size: 14px;
+  align-items: end;
+}
+
+.time {
+  font-weight: 450;
+}
+
+.amount {
+  padding-right: 20px;
+}
+
+.price {
+  font-size: 11px;
+  opacity: 0.8;
+}

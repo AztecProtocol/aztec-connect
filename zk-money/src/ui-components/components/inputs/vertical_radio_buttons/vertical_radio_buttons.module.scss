@@ -1,0 +1,50 @@
+@use '../../../styles/mixins.scss';
+@use '../../../styles/gradients';
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.opt {
+  height: 20px;
+  display: flex;
+  gap: 24px;
+  cursor: pointer;
+  align-items: center;
+}
+
+.cell {
+  position: relative;
+  height: 20px;
+  width: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #f5f5f5;
+}
+
+.cell::before {
+  @include mixins.gradient_border(4px, 1px, #e9e6e6, #e9e6e6);
+}
+
+.cell.selected::before {
+  @include mixins.gradient_border(4px, 1px);
+}
+
+.cell.selected .circle {
+  width: 10px;
+  height: 10px;
+  border-radius: 5px;
+  background: linear-gradient(
+    101.14deg,
+    gradients.$primary_from 11.12%,
+    gradients.$primary_to 58.22%,
+    gradients.$primary_to 58.22%
+  );
+}
+
+.optContent {
+  flex-grow: 1;
+}

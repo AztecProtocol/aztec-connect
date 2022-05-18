@@ -7,3 +7,4 @@ export * from './hyperlink';
 export * from './icon_buttons';
 export * from './amount_input';
 export * from './amount_selection';
+export * from './vertical_radio_buttons';

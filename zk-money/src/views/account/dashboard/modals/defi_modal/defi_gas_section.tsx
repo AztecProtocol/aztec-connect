@@ -1,14 +1,14 @@
 import type { Amount } from 'alt-model/assets';
 import type { DefiRecipe } from 'alt-model/defi/types';
 import { BridgeId, DefiSettlementTime } from '@aztec/sdk';
-import { Toggle } from 'ui-components';
+import { VerticalRadioButtons } from 'ui-components';
 import { InputSection } from '../sections/input_section';
 import { MiniL2BalanceIndicator } from '../sections/amount_section/mini_balance_indicators';
-import { FeeBulkPriceSubLabel } from '../sections/gas_section/fee_bulk_price_sub_label';
 import { SectionInfo } from '../modal_molecules/section_info';
 import { DefiGasSaving } from './defi_gas_saving';
 import { useRollupProviderStatus } from 'alt-model';
 import { estimateDefiSettlementTimes } from 'alt-model/estimate_settlement_times';
+import { FeeOptionContent } from '../sections/gas_section/fee_option_content';
 
 function renderInfo(props: DefiGasSectionProps) {
   const selectedFeeAmount = props.feeAmounts?.[props.speed];
@@ -20,9 +20,9 @@ function renderInfo(props: DefiGasSectionProps) {
           <DefiGasSaving feeAmount={selectedFeeAmount} bridgeAddressId={props.recipe?.addressId} />
         </>
       );
-    case DefiSettlementTime.INSTANT:
-      return <p>Fast. Settle in the next Aztec rollup.</p>;
     case DefiSettlementTime.NEXT_ROLLUP:
+      return <p>Fast. Settle in the next Aztec rollup.</p>;
+    case DefiSettlementTime.INSTANT:
       return <p>Fastest. Settle immediately on Ethereum.</p>;
   }
 }
@@ -47,30 +47,30 @@ export function DefiGasSection(props: DefiGasSectionProps) {
 
   const options = [
     {
-      value: DefiSettlementTime.DEADLINE,
-      label: 'Batched',
-      sublabel: (
-        <FeeBulkPriceSubLabel
+      id: DefiSettlementTime.DEADLINE,
+      content: (
+        <FeeOptionContent
+          label="Batched"
           expectedTimeOfSettlement={batchSettlementTime}
           feeAmount={feeAmounts?.[DefiSettlementTime.DEADLINE]}
         />
       ),
     },
     {
-      value: DefiSettlementTime.NEXT_ROLLUP,
-      label: 'Fast Track',
-      sublabel: (
-        <FeeBulkPriceSubLabel
+      id: DefiSettlementTime.NEXT_ROLLUP,
+      content: (
+        <FeeOptionContent
+          label="Fast Track"
           expectedTimeOfSettlement={nextSettlementTime}
           feeAmount={feeAmounts?.[DefiSettlementTime.NEXT_ROLLUP]}
         />
       ),
     },
     {
-      value: DefiSettlementTime.INSTANT,
-      label: 'Instant',
-      sublabel: (
-        <FeeBulkPriceSubLabel
+      id: DefiSettlementTime.INSTANT,
+      content: (
+        <FeeOptionContent
+          label="Instant"
           expectedTimeOfSettlement={instantSettlementTime}
           feeAmount={feeAmounts?.[DefiSettlementTime.INSTANT]}
         />
@@ -80,11 +80,11 @@ export function DefiGasSection(props: DefiGasSectionProps) {
 
   return (
     <InputSection
-      title={'Gas Fee'}
+      title="Transaction Fee"
       titleComponent={<MiniL2BalanceIndicator asset={feeAmounts?.[0]?.info} />}
       component={
         <>
-          <Toggle value={speed} onChangeValue={onChangeSpeed} options={options} height={100} />
+          <VerticalRadioButtons value={speed} onChangeValue={onChangeSpeed} options={options} />
           <SectionInfo>{renderInfo(props)}</SectionInfo>
         </>
       }

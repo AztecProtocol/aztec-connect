@@ -1,14 +1,14 @@
 import { TxSettlementTime } from '@aztec/sdk';
-import { Toggle } from 'ui-components';
 import { Amount } from 'alt-model/assets';
 import { RemoteAsset } from 'alt-model/types';
 import { InputSection } from '../input_section';
 import { MiniL1BalanceIndicator, MiniL2BalanceIndicator } from '../amount_section/mini_balance_indicators';
-import { FeeBulkPriceSubLabel } from './fee_bulk_price_sub_label';
 import { TxGasSaving } from './tx_gas_saving';
 import { SectionInfo } from '../../modal_molecules/section_info';
 import { useRollupProviderStatus } from 'alt-model';
 import { estimateTxSettlementTimes } from 'alt-model/estimate_settlement_times';
+import { VerticalRadioButtons } from 'ui-components/components/inputs/vertical_radio_buttons';
+import { FeeOptionContent } from './fee_option_content';
 
 type BalanceType = 'L1' | 'L2';
 
@@ -53,10 +53,10 @@ export function TxGasSection(props: TxGasSectionProps) {
 
   const options = [
     {
-      value: TxSettlementTime.NEXT_ROLLUP,
-      label: 'Slow',
-      sublabel: (
-        <FeeBulkPriceSubLabel
+      id: TxSettlementTime.NEXT_ROLLUP,
+      content: (
+        <FeeOptionContent
+          label="Slow"
           expectedTimeOfSettlement={nextSettlementTime}
           feeAmount={feeAmounts?.[TxSettlementTime.NEXT_ROLLUP]}
           deductionIsFromL1={deductionIsFromL1}
@@ -64,10 +64,10 @@ export function TxGasSection(props: TxGasSectionProps) {
       ),
     },
     {
-      value: TxSettlementTime.INSTANT,
-      label: 'Instant',
-      sublabel: (
-        <FeeBulkPriceSubLabel
+      id: TxSettlementTime.INSTANT,
+      content: (
+        <FeeOptionContent
+          label="Instant"
           expectedTimeOfSettlement={instantSettlementTime}
           feeAmount={feeAmounts?.[TxSettlementTime.INSTANT]}
           deductionIsFromL1={deductionIsFromL1}
@@ -82,7 +82,7 @@ export function TxGasSection(props: TxGasSectionProps) {
       titleComponent={renderBalanceIndicator(balanceType, asset)}
       component={
         <>
-          <Toggle value={speed} onChangeValue={onChangeSpeed} options={options} height={100} />
+          <VerticalRadioButtons value={speed} onChangeValue={onChangeSpeed} options={options} />
           <SectionInfo>{renderInfo(props)}</SectionInfo>
         </>
       }
