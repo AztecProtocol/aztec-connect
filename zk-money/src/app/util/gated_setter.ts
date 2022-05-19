@@ -4,7 +4,7 @@ import type { Dispatch, SetStateAction } from 'react';
 // Often only the most current effect should be able to update state, so it is
 // convenient to first wrap the setter such that it can be invalidated during
 // effect cleanup.
-export function gateSetter<T>(setter: Dispatch<SetStateAction<T>>) {
+export function createGatedSetter<T>(setter: Dispatch<SetStateAction<T>>) {
   let open = true;
   return {
     set: (action: SetStateAction<T>) => {

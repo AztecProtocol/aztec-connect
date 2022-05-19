@@ -1,11 +1,10 @@
 import createDebug from 'debug';
 import { useEffect, useMemo, useState } from 'react';
-import { AssetValue, EthAddress, TxType } from '@aztec/sdk';
+import { EthAddress } from '@aztec/sdk';
 import { Contract } from '@ethersproject/contracts';
-import { useSdk, useStableEthereumProvider, useGasUnitPrice } from 'alt-model/top_level_context';
-import { listenPoll } from 'app/util';
-import { useRollupProviderStatus } from './rollup_provider_hooks';
-import { useAmounts } from './asset_hooks';
+import { useStableEthereumProvider, useGasUnitPrice } from 'alt-model/top_level_context';
+import { createGatedSetter, listenPoll } from 'app/util';
+import { useRollupProviderStatus } from '../rollup_provider_hooks';
 
 const debug = createDebug('zm:fee_hooks');
 
@@ -66,6 +65,8 @@ function costPlus10Percent(gas?: bigint, gasUnitPrice?: bigint) {
   return (gas * gasUnitPrice * 110n) / 100n;
 }
 
+const POLL_INTERVAL = 1000 * 60 * 10;
+
 export function useEstimatedShieldingGasCosts(depositor?: EthAddress, assetId?: number) {
   const stableEthereumProvider = useStableEthereumProvider();
   const gasUnitPrice = useGasUnitPrice();
@@ -79,12 +80,24 @@ export function useEstimatedShieldingGasCosts(depositor?: EthAddress, assetId?: 
     }
   }, [stableEthereumProvider, contractAddress]);
   useEffect(() => {
-    if (contract) getApproveProofGasEstimate(contract).then(setApproveProofGas);
+    setApproveProofGas(undefined);
+    if (contract) {
+      return listenPoll(() => getApproveProofGasEstimate(contract).then(setApproveProofGas), POLL_INTERVAL);
+    }
   }, [contract]);
   const fromAddressStr = depositor?.toString();
   useEffect(() => {
+    setDepositFundsGas(undefined);
     if (contract && fromAddressStr && assetId !== undefined) {
-      getDepositFundsGasEstimate(contract, fromAddressStr, assetId).then(setDepositFundsGas);
+      const gatedSetter = createGatedSetter(setDepositFundsGas);
+      const unlisten = listenPoll(
+        () => getDepositFundsGasEstimate(contract, fromAddressStr, assetId).then(gatedSetter.set),
+        POLL_INTERVAL,
+      );
+      return () => {
+        gatedSetter.close();
+        unlisten();
+      };
     }
   }, [contract, fromAddressStr, assetId]);
 
@@ -92,29 +105,4 @@ export function useEstimatedShieldingGasCosts(depositor?: EthAddress, assetId?: 
     depositFundsGasCost: costPlus10Percent(depositFundsGas, gasUnitPrice),
     approveProofGasCost: costPlus10Percent(approveProofGas, gasUnitPrice),
   };
-}
-
-const FEE_POLL_INTERVAL = 1000 * 60 * 5;
-
-export function useDepositFeeAmounts(assetId: number) {
-  const sdk = useSdk();
-  const [fees, setFees] = useState<AssetValue[]>();
-  useEffect(() => {
-    if (sdk) {
-      return listenPoll(() => sdk.getDepositFees(assetId).then(setFees), FEE_POLL_INTERVAL);
-    }
-  }, [sdk, assetId]);
-  return useAmounts(fees);
-}
-
-export function useTxFeeAmounts(assetId: number, txType: TxType | undefined) {
-  const sdk = useSdk();
-  const [feeGroups, setFeeGroups] = useState<AssetValue[][]>();
-  useEffect(() => {
-    if (sdk) {
-      return listenPoll(() => sdk.getTxFees(assetId).then(setFeeGroups), FEE_POLL_INTERVAL);
-    }
-  }, [sdk, assetId]);
-  const fees = txType !== undefined ? feeGroups?.[txType] : undefined;
-  return useAmounts(fees);
 }

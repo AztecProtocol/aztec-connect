@@ -4,7 +4,7 @@ import { useApp } from 'alt-model/app_context';
 import { useAsset } from 'alt-model/asset_hooks';
 import { useMaxSpendableValue } from 'alt-model/balance_hooks';
 import { useAwaitCorrectProvider } from 'alt-model/defi/defi_form/correct_provider_hooks';
-import { useTxFeeAmounts } from 'alt-model/fee_hooks';
+import { useTxFeeAmounts } from './tx_fee_hooks';
 import { useTrackedFieldChangeHandlers } from 'alt-model/form_fields_hooks';
 import { isKnownAssetAddressString } from 'alt-model/known_assets/known_asset_addresses';
 import { useRollupProviderStatusPoller } from 'alt-model/rollup_provider_hooks';
@@ -13,10 +13,10 @@ import { SendMode } from 'app';
 import { useEffect, useMemo, useState } from 'react';
 import { Recipient, SendComposer } from './send_form_composer';
 import { SendFormFields, validateSendForm } from './send_form_validation';
-import { useMaybeObs } from 'app/util';
+import { createGatedSetter, useMaybeObs } from 'app/util';
 import { SendComposerPhase } from './send_composer_state_obs';
 import { getSendFormFeedback } from './send_form_feedback';
-import { useAccountIdForAlias, useAliasIsValidRecipient } from 'alt-model/alias_hooks';
+import { useAccountIdForAlias } from 'alt-model/alias_hooks';
 
 const debug = createDebug('zm:send_form_hooks');
 
@@ -25,7 +25,9 @@ function useIsContractWallet(ethAddress?: EthAddress) {
   const sdk = useSdk();
   useEffect(() => {
     setIsContract(undefined);
-    ethAddress && sdk?.isContract(ethAddress).then(setIsContract);
+    const gatedSetter = createGatedSetter(setIsContract);
+    ethAddress && sdk?.isContract(ethAddress).then(gatedSetter.set);
+    return gatedSetter.close;
   }, [sdk, ethAddress]);
   return isContract;
 }
@@ -80,7 +82,6 @@ export function useSendForm(preselectedAssetId?: number) {
   const isContract = useIsContractWallet(ethAddress);
   const txType = getTxType(fields.sendMode, isContract);
   const { accountId: recipientAccountId, isLoading: isLoadingRecipient } = useAccountIdForAlias(fields.recipientStr);
-  console.log({ recipientAccountId, isLoadingRecipient });
   const recipient = getRecipient(fields.sendMode, ethAddress, recipientAccountId);
 
   const feeAmounts = useTxFeeAmounts(fields.assetId, txType);

@@ -1,6 +1,6 @@
 import type { AccountId, AztecSdk } from '@aztec/sdk';
 import { formatAliasInput, isValidAliasInput } from 'app';
-import { gateSetter } from 'app/util';
+import { createGatedSetter } from 'app/util';
 import { useEffect, useState } from 'react';
 import { useSdk } from './top_level_context';
 
@@ -19,7 +19,7 @@ export function useAccountIdForAlias(alias: string) {
     isLoading: false,
   });
   useEffect(() => {
-    const gatedSetter = gateSetter(setAccountIdFetchState);
+    const gatedSetter = createGatedSetter(setAccountIdFetchState);
     gatedSetter.set({ isLoading: false });
     if (sdk) {
       gatedSetter.set({ isLoading: true });
