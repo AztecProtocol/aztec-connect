@@ -1,10 +1,10 @@
 import { Card, CardHeaderSize } from 'ui-components';
 import { useShieldForm, ShieldComposerPhase } from 'alt-model/shield';
-import { CloseButtonWhite, Modal } from 'components';
+import { Modal } from 'components';
 import { ShieldConfirmationPage } from './shield_confirmation_page';
 import { ShieldPage1 } from './shield_page1';
 import { useRemoteAssets } from 'alt-model/top_level_context';
-import style from './shield_modal.module.scss';
+import { ShieldModalHeader } from './shield_modal_header';
 
 interface ShieldModalProps {
   onClose: () => void;
@@ -17,17 +17,11 @@ export function ShieldModal(props: ShieldModalProps) {
   const { fields, setters, validationResult, composerState, locked, attemptLock, feedback, submit, unlock } =
     useShieldForm(props.preselectedAssetId);
 
-  const handleClose = () => {
-    if (!locked) {
-      onClose();
-    } else {
-      if (composerState?.phase === ShieldComposerPhase.DONE) {
-        onClose();
-      } else {
-        unlock();
-      }
-    }
-  };
+  const phase = composerState?.phase;
+  const isIdle = phase === ShieldComposerPhase.IDLE;
+  const canClose = phase === undefined || isIdle || phase === ShieldComposerPhase.DONE;
+  const canGoBack = locked && isIdle;
+  const handleBack = canGoBack ? unlock : undefined;
 
   if (!assets) {
     return null;
@@ -56,14 +50,9 @@ export function ShieldModal(props: ShieldModalProps) {
     );
 
   return (
-    <Modal onClose={handleClose}>
+    <Modal onClose={onClose}>
       <Card
-        cardHeader={
-          <div className={style.sendHeader}>
-            <span className={style.headerLabel}>Shield Funds</span>
-            <CloseButtonWhite onClick={handleClose} />
-          </div>
-        }
+        cardHeader={<ShieldModalHeader closeDisabled={!canClose} onClose={onClose} onBack={handleBack} />}
         cardContent={cardContent}
         headerSize={CardHeaderSize.LARGE}
       />

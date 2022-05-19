@@ -1,0 +1,33 @@
+.root {
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+
+.leftSegment {
+  width: 50%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  font-size: 24px;
+}
+
+.logo {
+  height: 100%;
+}
+
+.rightSegment {
+  width: 50%;
+  display: flex;
+  justify-content: end;
+  gap: 18px;
+  align-items: center;
+}
+
+.navButtons {
+  align-items: center;
+  display: flex;
+  height: 100%;
+  align-items: center;
+}

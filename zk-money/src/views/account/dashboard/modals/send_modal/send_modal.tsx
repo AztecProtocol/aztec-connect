@@ -10,21 +10,11 @@ import { SendComposerPhase } from 'alt-model/send/send_composer_state_obs';
 import { SendConfirmationPage } from './send_confirmation_page';
 import { Theme } from 'styles';
 import style from './send_modal.module.scss';
+import { SendModalHeader } from './send_modal_header';
 
 interface SendModalProps {
   onClose: () => void;
   asset: RemoteAsset;
-}
-
-function getTitle(sendMode?: SendMode) {
-  switch (sendMode) {
-    case SendMode.SEND:
-      return 'Send to L2';
-    case SendMode.WIDTHDRAW:
-      return 'Withdraw to L1';
-    default:
-      return '';
-  }
 }
 
 export function SendModal({ asset, onClose }: SendModalProps) {
@@ -75,14 +65,12 @@ export function SendModal({ asset, onClose }: SendModalProps) {
     <Modal theme={theme} onClose={() => canClose && onClose()} noPadding={overrideModalLayout}>
       <Card
         cardHeader={
-          <div className={style.sendHeader}>
-            <span className={style.headerLabel}>{getTitle(state.fields.sendMode)}</span>
-            <CloseButtonWhite
-              onClick={() => {
-                if (canClose) onClose();
-              }}
-            />
-          </div>
+          <SendModalHeader
+            closeDisabled={!canClose}
+            onBack={handleBack}
+            onClose={onClose}
+            sendMode={state.fields.sendMode}
+          />
         }
         cardContent={cardContent}
         headerSize={CardHeaderSize.LARGE}
