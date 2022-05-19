@@ -1,6 +1,7 @@
+import { getAssetPreferredFractionalDigits } from 'alt-model/known_assets/known_asset_display_data';
 import type { RemoteAsset } from 'alt-model/types';
-import { fromBaseUnits } from 'app';
-import { Checkbox, Spacer, Text } from 'components';
+import { formatBaseUnits } from 'app';
+import { Checkbox } from 'components';
 import style from './disclaimer.module.scss';
 
 interface DisclaimerProps {
@@ -11,7 +12,12 @@ interface DisclaimerProps {
 }
 
 export function Disclaimer({ transactionLimit, asset, accepted, onChangeAccepted }: DisclaimerProps) {
-  const assetStr = asset ? `${fromBaseUnits(transactionLimit, asset.decimals)} ${asset.symbol}` : '';
+  const assetStr = asset
+    ? `${formatBaseUnits(transactionLimit, asset.decimals, {
+        precision: getAssetPreferredFractionalDigits(asset.address),
+        commaSeparated: true,
+      })} ${asset.symbol}`
+    : '';
   return (
     <div className={style.root}>
       <div className={style.header}>

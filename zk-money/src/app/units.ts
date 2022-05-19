@@ -12,7 +12,8 @@ export const fromBaseUnits = (value: bigint, decimals: number) => {
     .padStart(decimals + 1, '0');
   const integer = valStr.slice(0, valStr.length - decimals);
   const fractional = valStr.slice(-decimals).replace(/0{1,}$/, '');
-  return (neg ? '-' : '') + (fractional ? `${integer}.${fractional}` : integer);
+  const result = (neg ? '-' : '') + (fractional ? `${integer}.${fractional}` : integer);
+  return result;
 };
 
 export const toBaseUnits = (valueString: string, decimals: number) => {

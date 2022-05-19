@@ -33,7 +33,7 @@ import {
 import { createSigningKeys, KeyVault } from '../key_vault';
 import { Provider, ProviderEvent } from '../provider';
 import { RollupService, RollupServiceEvent, TxFee } from '../rollup_service';
-import { fromBaseUnits, max, min, toBaseUnits } from '../units';
+import { formatBaseUnits, fromBaseUnits, max, min, toBaseUnits } from '../units';
 import { AccountForm, AccountFormEvent } from './account_form';
 import { TransactionGraph } from './transaction_graph';
 import { getAssetPreferredFractionalDigits } from 'alt-model/known_assets/known_asset_display_data';
@@ -368,6 +368,13 @@ export class SendForm extends EventEmitter implements AccountForm {
     this.updateFormValues(toUpdate);
   }
 
+  private formatAmount(amount: bigint) {
+    return formatBaseUnits(amount, this.asset.decimals, {
+      precision: getAssetPreferredFractionalDigits(this.asset.address),
+      commaSeparated: true,
+    });
+  }
+
   private validateChanges(changes: Partial<SendFormValues>) {
     const toUpdate = clearMessages(changes);
 
@@ -386,9 +393,7 @@ export class SendForm extends EventEmitter implements AccountForm {
       if (amountValue > this.txAmountLimit) {
         toUpdate.amount = withError(
           amountInput,
-          `For security, amount is capped at ${fromBaseUnits(this.txAmountLimit, this.asset.decimals)} ${
-            this.asset.symbol
-          }.`,
+          `For security, amount is capped at ${this.formatAmount(this.txAmountLimit)} ${this.asset.symbol}.`,
         );
       }
     }
@@ -459,10 +464,7 @@ export class SendForm extends EventEmitter implements AccountForm {
       if (fee < currentFee) {
         form.fees = withError(
           form.fees,
-          `Fee has changed from ${fromBaseUnits(fee, this.asset.decimals)} to ${fromBaseUnits(
-            currentFee,
-            this.asset.decimals,
-          )}.`,
+          `Fee has changed from ${this.formatAmount(fee)} to ${this.formatAmount(currentFee)}.`,
         );
       }
     }

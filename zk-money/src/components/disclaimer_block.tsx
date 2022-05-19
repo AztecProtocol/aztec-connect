@@ -4,7 +4,8 @@ import styled from 'styled-components/macro';
 import warningIcon from '../images/warning.svg';
 import { Text } from './text';
 import { borderRadiuses, breakpoints, spacings, Theme, themeColours } from '../styles';
-import { fromBaseUnits } from '../app';
+import { formatBaseUnits } from 'app';
+import { getAssetPreferredFractionalDigits } from 'alt-model/known_assets/known_asset_display_data';
 
 const Root = styled.div`
   display: flex;
@@ -73,9 +74,13 @@ export const DisclaimerBlock: React.FunctionComponent<DisclaimerBlockProps> = ({
       </ColIcon>
       <ColContent>
         <Text size="s">
-          {`This is experimental software that hasn’t been externally audited yet. For security, amounts are capped at ${fromBaseUnits(
+          {`This is experimental software that hasn’t been externally audited yet. For security, amounts are capped at ${formatBaseUnits(
             txAmountLimit,
             asset.decimals,
+            {
+              precision: getAssetPreferredFractionalDigits(asset.address),
+              commaSeparated: true,
+            },
           )} ${asset.symbol}. `}
           <WarningFootnote text="Use at your own risk." weight="bold" inline />
         </Text>

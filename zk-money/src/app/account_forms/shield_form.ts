@@ -432,6 +432,13 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     this.updateFormValues(toUpdate);
   }
 
+  private formatAmount(amount: bigint) {
+    return formatBaseUnits(amount, this.asset.decimals, {
+      precision: getAssetPreferredFractionalDigits(this.asset.address),
+      commaSeparated: true,
+    });
+  }
+
   private validateChanges(changes: Partial<ShieldFormValues>) {
     const toUpdate = clearMessages(changes);
 
@@ -463,16 +470,14 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     if (amountValue > this.txAmountLimit && !toUpdate.amount?.message) {
       toUpdate.amount = withError(
         amountInput,
-        `For security, amount is capped at ${fromBaseUnits(this.txAmountLimit, this.asset.decimals)} ${
-          this.asset.symbol
-        }.`,
+        `For security, amount is capped at ${this.formatAmount(this.txAmountLimit)} ${this.asset.symbol}.`,
       );
     }
     if (this.minAmount !== undefined) {
       if (amountValue < this.minAmount && !toUpdate.amount?.message) {
         toUpdate.amount = withError(
           amountInput,
-          `Please shield at least ${fromBaseUnits(this.minAmount, this.asset.decimals)} ${this.asset.symbol}.`,
+          `Please shield at least ${this.formatAmount(this.minAmount)} ${this.asset.symbol}.`,
         );
       }
     }
@@ -510,10 +515,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
       if (fee < currentFee) {
         form.fees = withError(
           form.fees,
-          `Fee has changed from ${fromBaseUnits(fee, this.asset.decimals)} to ${fromBaseUnits(
-            currentFee,
-            this.asset.decimals,
-          )}.`,
+          `Fee has changed from ${this.formatAmount(fee)} to ${this.formatAmount(currentFee)}.`,
         );
       }
     }
@@ -711,7 +713,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
         } catch (e) {
           return this.abort(e.message);
         }
-        this.prompt(`Please approve a deposit of ${fromBaseUnits(requiredFunds, asset.decimals)} ${asset.symbol}.`);
+        this.prompt(`Please approve a deposit of ${this.formatAmount(requiredFunds)} ${asset.symbol}.`);
         try {
           await controller.approve();
           this.prompt('Awaiting transaction confirmation...');
@@ -729,9 +731,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
       return this.abort(e.message);
     }
     try {
-      this.prompt(
-        `Please make a deposit of ${fromBaseUnits(requiredFunds, asset.decimals)} ${asset.symbol} from your wallet.`,
-      );
+      this.prompt(`Please make a deposit of ${this.formatAmount(requiredFunds)} ${asset.symbol} from your wallet.`);
       if (!permitSupport) {
         await controller.depositFundsToContract();
       } else {
