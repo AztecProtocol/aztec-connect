@@ -16,6 +16,7 @@ export class UserDefiClaimTx {
     public readonly success: boolean,
     public readonly outputValueA: AssetValue,
     public readonly outputValueB: AssetValue | undefined,
+    public readonly created: Date,
     public readonly settled?: Date,
   ) {}
 }

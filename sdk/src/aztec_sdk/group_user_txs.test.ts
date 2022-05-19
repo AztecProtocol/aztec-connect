@@ -46,6 +46,7 @@ describe('groupUserTxs', () => {
         publicValue: 100n,
         senderPrivateOutput: 80n,
         txRefNo,
+        created: new Date(now),
       });
       expect(groupUserTxs([accountTx, depositAndFeeTx])).toEqual([
         new UserAccountTx(
@@ -520,6 +521,7 @@ describe('groupUserTxs', () => {
           true,
           { assetId: 1, value: 23n },
           { assetId: 3, value: 45n },
+          defiTx.finalised!,
           undefined,
         ),
         new UserDefiTx(
@@ -569,6 +571,7 @@ describe('groupUserTxs', () => {
           true,
           { assetId: bridgeId.outputAssetIdA, value: 23n },
           { assetId: virtualAssetIdFlag + 678, value: 45n },
+          defiTx.finalised!,
           defiTx.claimSettled!,
         ),
         new UserDefiTx(

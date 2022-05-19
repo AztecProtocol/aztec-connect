@@ -97,7 +97,7 @@ const toUserDefiClaimTx = (
     userId,
     bridgeId,
     depositValue,
-    interactionResult: { success, outputValueA, outputValueB, claimSettled },
+    interactionResult: { success, outputValueA, outputValueB, claimSettled, finalised },
   }: UserDefiTx,
 ) =>
   new UserDefiClaimTx(
@@ -109,6 +109,7 @@ const toUserDefiClaimTx = (
     success!,
     outputValueA!,
     outputValueB,
+    finalised!,
     claimSettled,
   );
 
@@ -247,12 +248,16 @@ const groupTxsByTxRefNo = (txs: CoreUserTx[]) => {
 
 const filterUndefined = <T>(ts: (T | undefined)[]): T[] => ts.filter((t: T | undefined): t is T => !!t);
 
-const bySettled = (tx1: UserTx, tx2: UserTx) => {
-  if (tx1.settled && tx2.settled) return tx2.settled.getTime() - tx1.settled.getTime();
-  if (!tx1.settled && !tx2.settled) return 0;
-  if (!tx1.settled) return -1;
-  if (!tx2.settled) return 1;
-
+const bySettledThenCreated = (tx1: UserTx, tx2: UserTx) => {
+  const createdSort = tx2.created.getTime() - tx1.created.getTime();
+  if (tx1.settled && tx2.settled) {
+    // sort based on settled time, if they are the same sort based on created
+    const sort = tx2.settled.getTime() - tx1.settled.getTime();
+    return sort === 0 ? createdSort : sort;
+  }
+  if (!tx1.settled && tx2.settled) return -1; // tx1 ahead of tx2 as it is not settled
+  if (!tx2.settled && tx1.settled) return 1; //  tx2 ahead of tx1 as it is not settled
+  if (!tx2.settled && !tx1.settled) return createdSort; // sort based on created time
   return 0;
 };
 
@@ -260,5 +265,5 @@ export const groupUserTxs = (txs: CoreUserTx[]) => {
   const txGroups = groupTxsByTxRefNo(txs);
   return filterUndefined(txGroups.map(txs => toUserTx(txs)))
     .flat()
-    .sort(bySettled);
+    .sort(bySettledThenCreated);
 };

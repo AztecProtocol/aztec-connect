@@ -241,7 +241,7 @@ describe('end-to-end defi tests', () => {
         await debugBalance(1, 0);
         await debugBalance(2, 0);
 
-        const [defiTx0, defiTx1] = await sdk.getDefiTxs(userIds[0]);
+        const [defiTx1, defiTx0] = await sdk.getDefiTxs(userIds[0]);
         expect(defiTx0).toMatchObject({
           bridgeId: daiAndEthToBtcBridge,
           depositValue: depositDaiEthValue,

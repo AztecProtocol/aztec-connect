@@ -297,7 +297,7 @@ describe('end-to-end virtual assets tests', () => {
 
       // Verify account 1 balances.
       {
-        const [defiTx1, defiTx0] = await sdk.getDefiTxs(userIds[1]);
+        const [defiTx0, defiTx1] = await sdk.getDefiTxs(userIds[1]);
         virtualAssetIds[2] = virtualAssetIdFlag + defiTx0.interactionResult.interactionNonce!;
 
         await debugBalance(ethAssetId, 1);

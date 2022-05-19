@@ -48,7 +48,7 @@
 "@aztec/blockchain@file:../blockchain/dest":
   version "2.0.0"
   dependencies:
-    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-@aztec-blockchain-2.0.0-834826eb-c612-45c7-9812-95b472232893-1652291565703/node_modules/barretenberg.js/dest"
+    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-@aztec-blockchain-2.0.0-fb04da46-e01e-4a78-bff6-b6780d6f7cd1-1652869020799/node_modules/barretenberg.js/dest"
     "@aztec/bridge-clients" "0.1.38"
     "@ethersproject/experimental" "5.5.0"
     "@nomiclabs/hardhat-ethers" "^2.0.2"
@@ -76,10 +76,10 @@
     detect-node "^2.1.0"
     sha3 "^2.1.4"
 
-"@aztec/bridge-clients@0.1.39":
-  version "0.1.39"
-  resolved "https://registry.yarnpkg.com/@aztec/bridge-clients/-/bridge-clients-0.1.39.tgz#aa73bbfa8ba3c3694fd2b4cf3a6af11eb3486580"
-  integrity sha512-vrsEg4XEbeeucRWP2IGiPoXRsxz44fRsILwxR6erx7oWEE71GzC7lOkUs1kpXeOSa4/muKUaWy4xFqUFvP/gww==
+"@aztec/bridge-clients@0.1.40":
+  version "0.1.40"
+  resolved "https://registry.yarnpkg.com/@aztec/bridge-clients/-/bridge-clients-0.1.40.tgz#826ece54ddd4d763c8d79a523e930beeb107dc2d"
+  integrity sha512-Qn1KJU41UfeHzPEbIZ/I4HT6rw0G46NQTkx+N2+diDJ2CJi6j7P4+yFRlPnwIqr3No2ogEDL/QiLdWqSSbd8uA==
   dependencies:
     "@aztec/barretenberg" "2.1.0-testnet.29"
     "@ethersproject/providers" "^5.6.5"
@@ -89,8 +89,8 @@
 "@aztec/sdk@file:../sdk/dest":
   version "2.0.16"
   dependencies:
-    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-@aztec-sdk-2.0.16-54649a47-0ffa-4041-9704-1aa533254770-1652291565630/node_modules/barretenberg.js/dest"
-    "@aztec/blockchain" "file:../../.cache/yarn/v6/npm-@aztec-sdk-2.0.16-54649a47-0ffa-4041-9704-1aa533254770-1652291565630/node_modules/blockchain/dest"
+    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-@aztec-sdk-2.0.16-816715ec-e48c-423a-a9a7-99ef21e7cb19-1652869020727/node_modules/barretenberg.js/dest"
+    "@aztec/blockchain" "file:../../.cache/yarn/v6/npm-@aztec-sdk-2.0.16-816715ec-e48c-423a-a9a7-99ef21e7cb19-1652869020727/node_modules/blockchain/dest"
     "@types/levelup" "^4.3.0"
     async-mutex "^0.3.2"
     broadcast-channel "^3.1.0"
