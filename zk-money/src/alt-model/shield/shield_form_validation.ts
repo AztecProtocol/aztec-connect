@@ -3,10 +3,11 @@ import type { Network } from 'app/networks';
 import type { ShieldComposerPayload } from './shield_composer';
 import type { EthAddress, TxSettlementTime } from '@aztec/sdk';
 import type { RemoteAsset } from 'alt-model/types';
+import type { StrOrMax } from 'alt-model/forms/constants';
+import type { KeyVault } from 'app/key_vault';
 import { Amount } from 'alt-model/assets/amount';
 import { max, min } from 'app';
-import { KeyVault } from 'app/key_vault';
-import { MAX_MODE, StrOrMax } from 'alt-model/forms/constants';
+import { amountFromStrOrMaxRoundedDown } from 'alt-model/forms/helpers';
 
 export interface ShieldFormFields {
   assetId: number;
@@ -116,10 +117,7 @@ export function validateShieldForm(input: ShieldFormValidationInputs): ShieldFor
   const totalCost = feeInTargetAsset + reservedForL1GasIfTargetAssetIsEth;
 
   const maxL2Output = max(min(totalL1Balance - totalCost, transactionLimit), 0n);
-  const targetL2OutputAmount =
-    fields.amountStrOrMax === MAX_MODE
-      ? new Amount(maxL2Output, targetAsset)
-      : Amount.from(fields.amountStrOrMax, targetAsset);
+  const targetL2OutputAmount = amountFromStrOrMaxRoundedDown(fields.amountStrOrMax, maxL2Output, targetAsset);
 
   const requiredL1InputIfThereWereNoCosts = targetL2OutputAmount.baseUnits - l1PendingBalance;
   const requiredL1InputCoveringCosts = requiredL1InputIfThereWereNoCosts + totalCost;

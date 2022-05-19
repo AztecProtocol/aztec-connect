@@ -4,7 +4,8 @@ import type { DefiComposerPayload } from './defi_composer';
 import type { RemoteAsset } from 'alt-model/types';
 import { Amount } from 'alt-model/assets';
 import { max, min } from 'app';
-import { MAX_MODE, StrOrMax } from 'alt-model/forms/constants';
+import { StrOrMax } from 'alt-model/forms/constants';
+import { amountFromStrOrMaxRoundedDown } from 'alt-model/forms/helpers';
 
 export interface DefiFormFields {
   amountStrOrMax: StrOrMax;
@@ -62,10 +63,7 @@ export function validateDefiForm(input: DefiFormValidationInput): DefiFormValida
   const feeInTargetAsset = targetAssetIsPayingFee ? feeAmount.baseUnits : 0n;
 
   const maxOutput = max(min(balanceInTargetAsset - feeInTargetAsset, transactionLimit), 0n);
-  const targetDepositAmount =
-    fields.amountStrOrMax === MAX_MODE
-      ? new Amount(maxOutput, depositAsset)
-      : Amount.from(fields.amountStrOrMax, depositAsset);
+  const targetDepositAmount = amountFromStrOrMaxRoundedDown(fields.amountStrOrMax, maxOutput, depositAsset);
 
   const requiredInputInTargetAssetCoveringCosts = targetDepositAmount.baseUnits + feeInTargetAsset;
 

@@ -1,7 +1,8 @@
-import { TxSettlementTime, TxType } from '@aztec/sdk';
+import { TxSettlementTime } from '@aztec/sdk';
 import { Amount } from 'alt-model/assets';
 import { AmountFactory } from 'alt-model/assets/amount_factory';
-import { MAX_MODE, StrOrMax } from 'alt-model/forms/constants';
+import { StrOrMax } from 'alt-model/forms/constants';
+import { amountFromStrOrMaxRoundedDown } from 'alt-model/forms/helpers';
 import { RemoteAsset } from 'alt-model/types';
 import { max, min, SendMode } from 'app';
 import { Recipient, SendComposerPayload } from './send_form_composer';
@@ -24,7 +25,6 @@ interface SendFormValidationInput {
   balanceInFeePayingAsset?: bigint;
   transactionLimit?: bigint;
   recipient?: Recipient;
-  // txType?: TxType;
   aliasIsValid?: boolean;
   isLoadingRecipient: boolean;
 }
@@ -82,8 +82,7 @@ export function validateSendForm(input: SendFormValidationInput): SendFormValida
   const feeInTargetAsset = targetAssetIsPayingFee ? feeAmount.baseUnits : 0n;
 
   const maxOutput = max(min(balanceInTargetAsset - feeInTargetAsset, transactionLimit), 0n);
-  const targetAmount =
-    fields.amountStrOrMax === MAX_MODE ? new Amount(maxOutput, asset) : Amount.from(fields.amountStrOrMax, asset);
+  const targetAmount = amountFromStrOrMaxRoundedDown(fields.amountStrOrMax, maxOutput, asset);
 
   const requiredInputInTargetAssetCoveringCosts = targetAmount.baseUnits + feeInTargetAsset;
 
