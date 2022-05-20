@@ -598,7 +598,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
           return this.abort(e.message);
         }
 
-        const digest = controller.getTxId()?.toString();
+        const digest = controller.getProofHash()?.toString();
         if (!digest) throw new Error('Proof digest unavailable');
         this.prompt(`Please sign the message in your wallet containing the following transaction ID: ${digest}`);
         try {
@@ -732,13 +732,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     }
     try {
       this.prompt(`Please make a deposit of ${this.formatAmount(requiredFunds)} ${asset.symbol} from your wallet.`);
-      if (!permitSupport) {
-        await controller.depositFundsToContract();
-      } else {
-        const expireIn = BigInt(300); // seconds
-        const deadline = BigInt(Math.floor(Date.now() / 1000)) + expireIn;
-        await controller.depositFundsToContractWithPermit(deadline);
-      }
+      await controller.depositFundsToContract();
     } catch (e) {
       debug(e);
       throw new Error('Failed to deposit from your wallet.');

@@ -21,7 +21,7 @@ export async function depositTokensToAztec(
   const tokenAssetId = sdk.getAssetIdByAddress(token);
   const signer = await sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(usersEthereumAddress)!);
   const tokenDepositFee = (await sdk.getDepositFees(tokenAssetId))[settlementTime];
-  const value = await sdk.isFeePayingAsset(tokenAssetId) ? tokenQuantity - tokenDepositFee.value : tokenQuantity;
+  const value = (await sdk.isFeePayingAsset(tokenAssetId)) ? tokenQuantity - tokenDepositFee.value : tokenQuantity;
   const tokenAssetValue = { assetId: tokenAssetId, value };
   const tokenDepositController = sdk.createDepositController(
     user,
@@ -33,8 +33,8 @@ export async function depositTokensToAztec(
   await tokenDepositController.createProof();
   await tokenDepositController.sign();
   await tokenDepositController.approve();
-  const txHash = await tokenDepositController.depositFundsToContract();
-  await sdk.getTransactionReceipt(txHash);
+  await tokenDepositController.depositFundsToContract();
+  await tokenDepositController.awaitDepositFundsToContract();
   await tokenDepositController.send();
   return tokenDepositController;
 }
@@ -57,8 +57,12 @@ export async function batchDeposit(
       const fee = depositFees[i == users.length - 1 ? TxSettlementTime.INSTANT : TxSettlementTime.NEXT_ROLLUP];
       const controller = sdk.createDepositController(user, signer, shieldValue, fee, depositor);
       await controller.createProof();
-      await controller.depositFundsToContractWithProofApproval();
+      if (shieldValue.assetId !== 0) {
+        await controller.approve();
+      }
+      await controller.depositFundsToContract();
       await controller.awaitDepositFundsToContract();
+      await controller.sign();
       return controller;
     }),
   );

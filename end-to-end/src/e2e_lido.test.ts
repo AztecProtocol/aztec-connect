@@ -92,8 +92,10 @@ describe('end-to-end defi tests', () => {
         const fee = depositFees[i == accounts.length - 1 ? TxSettlementTime.INSTANT : TxSettlementTime.NEXT_ROLLUP];
         const controller = sdk.createDepositController(userIds[i], signer, shieldValue, fee, depositor);
         await controller.createProof();
-        await controller.depositFundsToContractWithProofApproval();
+        await controller.depositFundsToContract();
         await controller.awaitDepositFundsToContract();
+        await controller.approveProof();
+        await controller.awaitApproveProof();
         await controller.send();
         return controller;
       });

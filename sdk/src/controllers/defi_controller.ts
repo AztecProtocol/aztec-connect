@@ -151,7 +151,7 @@ export class DefiController {
     }
   }
 
-  async send() {
+  public async send() {
     if (!this.proofOutput) {
       throw new Error('Call createProof() first.');
     }
@@ -162,28 +162,28 @@ export class DefiController {
     return this.txId;
   }
 
-  async awaitDefiDepositCompletion(timeout?: number) {
+  public async awaitDefiDepositCompletion(timeout?: number) {
     if (!this.txId) {
       throw new Error(`Call ${!this.proofOutput ? 'createProof()' : 'send()'} first.`);
     }
     await this.core.awaitDefiDepositCompletion(this.txId, timeout);
   }
 
-  async awaitDefiFinalisation(timeout?: number) {
+  public async awaitDefiFinalisation(timeout?: number) {
     if (!this.txId) {
       throw new Error(`Call ${!this.proofOutput ? 'createProof()' : 'send()'} first.`);
     }
     await this.core.awaitDefiFinalisation(this.txId, timeout);
   }
 
-  async awaitSettlement(timeout?: number) {
+  public async awaitSettlement(timeout?: number) {
     if (!this.txId) {
       throw new Error(`Call ${!this.proofOutput ? 'createProof()' : 'send()'} first.`);
     }
     await this.core.awaitDefiSettlement(this.txId, timeout);
   }
 
-  async getInteractionNonce() {
+  public async getInteractionNonce() {
     if (!this.txId) {
       throw new Error(`Call ${!this.proofOutput ? 'createProof()' : 'send()'} first.`);
     }

@@ -5,12 +5,14 @@ import {
   BlockchainBridge,
   EthereumProvider,
   EthereumSignature,
+  Receipt,
   SendTxOptions,
   TxHash,
 } from '@aztec/barretenberg/blockchain';
+import { sleep } from '@aztec/barretenberg/sleep';
+import { Timer } from '@aztec/barretenberg/timer';
 import { Web3Provider } from '@ethersproject/providers';
-import { EthAsset, TokenAsset } from './contracts';
-import { RollupProcessor } from './contracts/rollup_processor';
+import { EthAsset, RollupProcessor, TokenAsset } from './contracts';
 
 export class ClientEthereumBlockchain {
   private readonly rollupProcessor: RollupProcessor;
@@ -23,6 +25,7 @@ export class ClientEthereumBlockchain {
     private readonly bridges: BlockchainBridge[],
     private readonly ethereumProvider: EthereumProvider,
     private readonly minConfirmations: number,
+    private readonly permitSupportAssetIds: number[] = [],
   ) {
     this.rollupProcessor = new RollupProcessor(rollupContractAddress, ethereumProvider);
     this.provider = new Web3Provider(this.ethereumProvider);
@@ -75,6 +78,10 @@ export class ClientEthereumBlockchain {
       throw new Error(`Unknown bridge. Address: ${address}. Gas limit: ${gasLimit}.`);
     }
     return index + 1;
+  }
+
+  public async hasPermitSupport(assetId: number) {
+    return this.permitSupportAssetIds.includes(assetId);
   }
 
   public async getUserPendingDeposit(assetId: number, account: EthAddress) {
@@ -147,16 +154,12 @@ export class ClientEthereumBlockchain {
    */
   public async getTransactionReceipt(
     txHash: TxHash,
-    interval = 1,
     timeout = 300,
+    interval = 1,
     minConfirmations = this.minConfirmations,
-  ) {
-    const started = Date.now();
+  ): Promise<Receipt> {
+    const timer = new Timer();
     while (true) {
-      if (timeout && Date.now() - started > timeout * 1000) {
-        throw new Error(`Timeout awaiting tx confirmation: ${txHash}`);
-      }
-
       const txReceipt = await this.provider.getTransactionReceipt(txHash.toString());
       if (!minConfirmations || (txReceipt && txReceipt.confirmations >= minConfirmations)) {
         return txReceipt
@@ -164,7 +167,11 @@ export class ClientEthereumBlockchain {
           : { status: false, blockNum: 0 };
       }
 
-      await new Promise(resolve => setTimeout(resolve, interval * 1000));
+      await sleep(interval * 1000);
+
+      if (timeout && timer.s() > timeout) {
+        throw new Error(`Timeout awaiting tx confirmation: ${txHash}`);
+      }
     }
   }
 }

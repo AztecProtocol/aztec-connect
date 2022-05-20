@@ -65,7 +65,7 @@ export class MigrateAccountController {
     }
   }
 
-  async send() {
+  public async send() {
     if (!this.proofOutput) {
       throw new Error('Call createProof() first.');
     }
@@ -73,7 +73,7 @@ export class MigrateAccountController {
     return this.txId;
   }
 
-  async awaitSettlement(timeout?: number) {
+  public async awaitSettlement(timeout?: number) {
     if (!this.txId) {
       throw new Error(`Call ${!this.proofOutput ? 'createProof()' : 'send()'} first.`);
     }

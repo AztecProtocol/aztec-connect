@@ -79,8 +79,8 @@ describe('end-to-end account tests', () => {
         depositor,
       );
 
-      const depositHash = await controller.depositFundsToContract();
-      await sdk.getTransactionReceipt(depositHash);
+      await controller.depositFundsToContract();
+      await controller.awaitDepositFundsToContract();
 
       await controller.createProof();
       await controller.sign();

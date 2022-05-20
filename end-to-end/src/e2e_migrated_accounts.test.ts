@@ -188,8 +188,8 @@ describe('end-to-end migrated tests', () => {
         const controller = sdk.createDepositController(user, signer, depositValue, fee, depositor);
         await controller.createProof();
 
-        const txHash = await controller.depositFundsToContract();
-        await sdk.getTransactionReceipt(txHash);
+        await controller.depositFundsToContract();
+        await controller.awaitDepositFundsToContract();
 
         await controller.sign();
         depositTxIds.push(await controller.send());

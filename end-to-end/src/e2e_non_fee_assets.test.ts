@@ -98,8 +98,8 @@ describe('end-to-end async defi tests', () => {
       const controller = sdk.createDepositController(userIds[i], signer, shieldValue, fee, depositor);
       await controller.createProof();
       await controller.sign();
-      const txHash = await controller.depositFundsToContract();
-      await sdk.getTransactionReceipt(txHash);
+      await controller.depositFundsToContract();
+      await controller.awaitDepositFundsToContract();
       depositControllers.push(controller);
     }
 

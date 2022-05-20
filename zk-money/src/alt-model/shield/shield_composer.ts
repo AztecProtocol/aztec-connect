@@ -167,7 +167,7 @@ export class ShieldComposer {
     // Skip this step for contract wallets
     if (!(await sdk.isContract(depositor))) {
       this.stateObs.setPhase(ShieldComposerPhase.APPROVE_PROOF);
-      const digest = controller.getTxId()?.toString();
+      const digest = controller.getProofHash()?.toString();
       if (!digest) throw new Error('Proof digest unavailable');
       await this.walletAccountEnforcer.ensure();
       this.stateObs.setPrompt(

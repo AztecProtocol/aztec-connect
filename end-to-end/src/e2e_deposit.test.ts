@@ -66,8 +66,8 @@ describe('end-to-end tests', () => {
     const controller = sdk.createDepositController(userId, signer, depositValue, fee, depositor);
     await controller.createProof();
 
-    const depositTxHash = await controller.depositFundsToContract();
-    await sdk.getTransactionReceipt(depositTxHash);
+    await controller.depositFundsToContract();
+    await controller.awaitDepositFundsToContract();
 
     await controller.sign();
     await controller.send();

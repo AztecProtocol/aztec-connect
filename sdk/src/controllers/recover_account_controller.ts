@@ -7,7 +7,11 @@ import { AddSigningKeyController } from './add_signing_key_controller';
 export class RecoverAccountController {
   private addSigningKeyController: AddSigningKeyController;
 
-  constructor(public readonly recoveryPayload: RecoveryPayload, public readonly fee: AssetValue, core: CoreSdkInterface) {
+  constructor(
+    public readonly recoveryPayload: RecoveryPayload,
+    public readonly fee: AssetValue,
+    core: CoreSdkInterface,
+  ) {
     const {
       trustedThirdPartyPublicKey,
       recoveryPublicKey,
@@ -28,11 +32,11 @@ export class RecoverAccountController {
     await this.addSigningKeyController.createProof();
   }
 
-  async send() {
+  public async send() {
     return this.addSigningKeyController.send();
   }
 
-  async awaitSettlement(timeout?: number) {
+  public async awaitSettlement(timeout?: number) {
     await this.addSigningKeyController.awaitSettlement(timeout);
   }
 }

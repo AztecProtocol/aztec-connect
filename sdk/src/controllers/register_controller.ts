@@ -55,43 +55,39 @@ export class RegisterController {
     }
   }
 
-  async getPendingFunds() {
+  public async getPendingFunds() {
     return this.depositController!.getPendingFunds();
   }
 
-  async getRequiredFunds() {
+  public async getRequiredFunds() {
     return this.depositController!.getRequiredFunds();
   }
 
-  async getPublicAllowance() {
+  public async getPublicAllowance() {
     return this.depositController!.getPublicAllowance();
   }
 
-  async approve() {
+  public async approve() {
     return this.depositController!.approve();
   }
 
-  async depositFundsToContract() {
-    return this.depositController!.depositFundsToContract();
+  public async awaitApprove(timeout?: number, interval?: number) {
+    this.depositController!.awaitApprove(timeout, interval);
   }
 
-  async depositFundsToContractWithPermit(deadline: bigint) {
-    return this.depositController!.depositFundsToContractWithPermit(deadline);
+  public async depositFundsToContract(permitDeadline?: bigint) {
+    return this.depositController!.depositFundsToContract(permitDeadline);
   }
 
-  async depositFundsToContractWithProofApproval() {
-    return this.depositController!.depositFundsToContractWithProofApproval();
+  public async depositFundsToContractWithNonStandardPermit(permitDeadline: bigint) {
+    return this.depositController!.depositFundsToContractWithNonStandardPermit(permitDeadline);
   }
 
-  async depositFundsToContractWithPermitAndProofApproval(deadline: bigint) {
-    return this.depositController!.depositFundsToContractWithPermitAndProofApproval(deadline);
+  public async awaitDepositFundsToContract(timeout?: number, interval?: number) {
+    return this.depositController!.awaitDepositFundsToContract(timeout, interval);
   }
 
-  async awaitDepositFundsToContract() {
-    return this.depositController!.awaitDepositFundsToContract();
-  }
-
-  async createProof() {
+  public async createProof() {
     const aliasHash = await this.core.computeAliasHash(this.alias);
     const txRefNo = this.depositController ? createTxRefNo() : 0;
     const signingPublicKey = this.userSigner.getPublicKey();
@@ -113,34 +109,42 @@ export class RegisterController {
     }
   }
 
-  getTxId() {
-    return this.depositController?.getTxId();
+  public getProofHash() {
+    return this.depositController?.getProofHash();
   }
 
-  getSigningData() {
+  public getSigningData() {
     return this.depositController?.getSigningData();
   }
 
-  async isProofApproved() {
+  public async isProofApproved() {
     return this.depositController!.isProofApproved();
   }
 
-  async approveProof() {
+  public async approveProof() {
     return this.depositController!.approveProof();
   }
 
-  async sign() {
+  public async awaitApproveProof(timeout?: number, interval?: number) {
+    return this.depositController!.awaitApproveProof(timeout, interval);
+  }
+
+  public async sign() {
     return this.depositController!.sign();
   }
 
-  isSignatureValid() {
+  public isSignatureValid() {
     return this.depositController!.isSignatureValid();
   }
 
-  async send() {
+  public async send() {
     if (!this.proofOutput) {
       throw new Error('Call createProof() first.');
     }
+    if (!(await this.core.userExists(this.newUserId))) {
+      throw new Error('Add the new user to the sdk first.');
+    }
+
     if (!this.depositController) {
       [this.txId] = await this.core.sendProofs([this.proofOutput]);
     } else {
@@ -152,7 +156,7 @@ export class RegisterController {
     return this.txId;
   }
 
-  async awaitSettlement(timeout?: number) {
+  public async awaitSettlement(timeout?: number) {
     if (!this.txId) {
       throw new Error(`Call ${!this.proofOutput ? 'createProof()' : 'send()'} first.`);
     }

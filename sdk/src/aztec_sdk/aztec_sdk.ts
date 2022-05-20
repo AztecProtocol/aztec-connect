@@ -476,8 +476,8 @@ export class AztecSdk extends EventEmitter {
     return validateSignature(publicOwner, signature, signingData);
   }
 
-  public async getTransactionReceipt(txHash: TxHash, interval = 1, timeout?: number): Promise<Receipt> {
-    return this.blockchain.getTransactionReceipt(txHash, interval, timeout);
+  public async getTransactionReceipt(txHash: TxHash, timeout?: number, interval = 1): Promise<Receipt> {
+    return this.blockchain.getTransactionReceipt(txHash, timeout, interval);
   }
 
   public async flushRollup(userId: AccountId, userSigner: Signer) {
