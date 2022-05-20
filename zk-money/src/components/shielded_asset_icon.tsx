@@ -22,6 +22,7 @@ const Root = styled.div<{ size: Size | number }>`
     return `
     width: ${pxs};
     height: ${pxs};
+    min-width: ${pxs};
   `;
   }}
 `;

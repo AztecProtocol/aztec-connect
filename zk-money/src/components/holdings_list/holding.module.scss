@@ -12,12 +12,14 @@
 
 .assetWrapper {
   display: flex;
+  width: 230px;
   flex-direction: row;
   align-items: center;
 }
 
 .holdingUnits {
   font-size: 18px;
+  white-space: pre;
   margin-left: 20px;
 }
 
@@ -43,7 +45,9 @@
   display: flex;
   flex-direction: row;
   gap: 35px;
+  width: 235px;
   position: relative;
+  justify-content: flex-end;
 }
 
 .holdingAmount {

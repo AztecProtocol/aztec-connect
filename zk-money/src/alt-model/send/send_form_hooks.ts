@@ -7,7 +7,7 @@ import { useAwaitCorrectProvider } from 'alt-model/defi/defi_form/correct_provid
 import { useTxFeeAmounts } from './tx_fee_hooks';
 import { useTrackedFieldChangeHandlers } from 'alt-model/form_fields_hooks';
 import { isKnownAssetAddressString } from 'alt-model/known_assets/known_asset_addresses';
-import { useRollupProviderStatusPoller } from 'alt-model/rollup_provider_hooks';
+import { useRollupProviderStatus, useRollupProviderStatusPoller } from 'alt-model/rollup_provider_hooks';
 import { useSdk, useAmountFactory } from 'alt-model/top_level_context';
 import { SendMode } from 'app';
 import { useEffect, useMemo, useState } from 'react';
@@ -17,6 +17,7 @@ import { createGatedSetter, useMaybeObs } from 'app/util';
 import { SendComposerPhase } from './send_composer_state_obs';
 import { getSendFormFeedback } from './send_form_feedback';
 import { useAccountIdForAlias } from 'alt-model/alias_hooks';
+import { estimateTxSettlementTimes } from 'alt-model/estimate_settlement_times';
 
 const debug = createDebug('zm:send_form_hooks');
 
@@ -84,6 +85,8 @@ export function useSendForm(preselectedAssetId?: number) {
   const { accountId: recipientAccountId, isLoading: isLoadingRecipient } = useAccountIdForAlias(fields.recipientStr);
   const recipient = getRecipient(fields.sendMode, ethAddress, recipientAccountId);
 
+  const rpStatus = useRollupProviderStatus();
+  const { instantSettlementTime, nextSettlementTime } = estimateTxSettlementTimes(rpStatus);
   const feeAmounts = useTxFeeAmounts(fields.assetId, txType);
   const feeAmount = feeAmounts?.[fields.speed];
   const balanceInTargetAsset = useMaxSpendableValue(fields.assetId);
@@ -147,9 +150,12 @@ export function useSendForm(preselectedAssetId?: number) {
       debug('Tried to resubmit form while in progress');
       return;
     }
-    lockedComposer.compose().then(success => {
-      // Submitting a defi proof should affect `rpStatus.bridgeStatus`
-      if (success) rpStatusPoller.invalidate();
+    lockedComposer.compose().then(txId => {
+      if (txId) {
+        const timeToSettlement = [nextSettlementTime, instantSettlementTime][fields.speed]!;
+        localStorage.setItem(txId.toString(), timeToSettlement.toString());
+        rpStatusPoller.invalidate();
+      }
     });
   };
 

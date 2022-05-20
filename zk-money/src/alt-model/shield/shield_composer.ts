@@ -1,4 +1,4 @@
-import { AccountId, AztecSdk, EthAddress, DepositController } from '@aztec/sdk';
+import { AccountId, AztecSdk, EthAddress, DepositController, TxId } from '@aztec/sdk';
 import type { Provider } from '../../app';
 import createDebug from 'debug';
 import { Amount } from 'alt-model/assets';
@@ -42,7 +42,7 @@ export class ShieldComposer {
     deposit: new CachedStep<void>(),
     createProof: new CachedStep<void>(),
     approveProof: new CachedStep<void>(),
-    sendProof: new CachedStep<void>(),
+    sendProof: new CachedStep<TxId>(),
   };
 
   async compose() {
@@ -53,10 +53,11 @@ export class ShieldComposer {
       await this.cachedSteps.createProof.exec(() => this.createProof(controller));
       await this.cachedSteps.deposit.exec(() => this.deposit(controller));
       await this.cachedSteps.approveProof.exec(() => this.approveProof(controller));
-      await this.cachedSteps.sendProof.exec(() => this.sendProof(controller));
+      const txId = await this.cachedSteps.sendProof.exec(() => this.sendProof(controller));
       await this.cleanup(controller);
       this.stateObs.setPhase(ShieldComposerPhase.DONE);
-      return true;
+
+      return txId;
     } catch (error) {
       debug('Compose failed with error:', error);
       this.stateObs.error(error?.message?.toString());
@@ -202,7 +203,7 @@ export class ShieldComposer {
   private async sendProof(controller: DepositController) {
     this.stateObs.setPhase(ShieldComposerPhase.SEND_PROOF);
     await this.walletAccountEnforcer.ensure();
-    await controller.send();
+    return await controller.send();
   }
 
   private async cleanup(controller: DepositController) {

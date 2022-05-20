@@ -15,8 +15,9 @@ import { useAwaitCorrectProvider } from './correct_provider_hooks';
 import { BridgeInteractionAssets, DefiRecipe } from '../types';
 import { useDefaultAuxDataOption } from '../defi_info_hooks';
 import { MAX_MODE } from 'alt-model/forms/constants';
-import { useRollupProviderStatusPoller } from 'alt-model/rollup_provider_hooks';
+import { useRollupProviderStatus, useRollupProviderStatusPoller } from 'alt-model/rollup_provider_hooks';
 import { useMaxSpendableValue } from 'alt-model/balance_hooks';
+import { estimateDefiSettlementTimes } from 'alt-model/estimate_settlement_times';
 
 const debug = createDebug('zm:defi_form_hooks');
 
@@ -83,6 +84,14 @@ export function useDefiForm(recipe: DefiRecipe, mode: DefiFormMode) {
   const composerState = useMaybeObs(lockedComposer?.stateObs);
   const locked = !!lockedComposer;
 
+  const rpStatus = useRollupProviderStatus();
+  const bridgeIdNum = bridgeId?.toBigInt();
+  const bridgeStatus = rpStatus?.bridgeStatus.find(x => x.bridgeId === bridgeIdNum);
+  const { instantSettlementTime, nextSettlementTime, batchSettlementTime } = estimateDefiSettlementTimes(
+    rpStatus,
+    bridgeStatus,
+  );
+
   const attemptLock = () => {
     setAttemptedLock(true);
     if (!validationResult.isValid) {
@@ -121,9 +130,13 @@ export function useDefiForm(recipe: DefiRecipe, mode: DefiFormMode) {
       debug('Tried to resubmit form while in progress');
       return;
     }
-    lockedComposer.compose().then(success => {
-      // Submitting a defi proof should affect `rpStatus.bridgeStatus`
-      if (success) rpStatusPoller.invalidate();
+    lockedComposer.compose().then(txId => {
+      if (txId) {
+        const timeToSettlement = [batchSettlementTime, nextSettlementTime, instantSettlementTime][fields.speed]!;
+        localStorage.setItem(txId.toString(), timeToSettlement.toString());
+        // Submitting a defi proof should affect `rpStatus.bridgeStatus`
+        rpStatusPoller.invalidate();
+      }
     });
   };
 

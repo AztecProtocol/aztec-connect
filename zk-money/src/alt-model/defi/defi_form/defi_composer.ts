@@ -45,9 +45,10 @@ export class DefiComposer {
       await controller.createProof();
       this.stateObs.setPhase(DefiComposerPhase.SENDING_PROOF);
 
-      await controller.send();
+      const txId = await controller.send();
       this.stateObs.setPhase(DefiComposerPhase.DONE);
-      return true;
+
+      return txId;
     } catch (error) {
       debug('Compose failed with error:', error);
       this.stateObs.error(error?.message?.toString());

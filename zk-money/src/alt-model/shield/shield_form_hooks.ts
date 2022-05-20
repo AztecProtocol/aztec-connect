@@ -16,8 +16,9 @@ import { useProviderState } from 'alt-model/provider_hooks';
 import { useAliasIsValidRecipient } from 'alt-model/alias_hooks';
 import { isKnownAssetAddressString } from 'alt-model/known_assets/known_asset_addresses';
 import { useAsset } from 'alt-model/asset_hooks';
-import { useRollupProviderStatusPoller } from 'alt-model/rollup_provider_hooks';
+import { useRollupProviderStatus, useRollupProviderStatusPoller } from 'alt-model/rollup_provider_hooks';
 import { useMaxSpendableValue } from 'alt-model/balance_hooks';
+import { estimateTxSettlementTimes } from 'alt-model/estimate_settlement_times';
 
 const debug = createDebug('zm:shield_form_hooks');
 
@@ -70,6 +71,8 @@ export function useShieldForm(preselectedAssetId?: number) {
   });
   const feedback = getShieldFormFeedback(validationResult, touchedFields, attemptedLock);
   const composerState = useMaybeObs(lockedComposer?.stateObs);
+  const rpStatus = useRollupProviderStatus();
+  const { instantSettlementTime, nextSettlementTime } = estimateTxSettlementTimes(rpStatus);
   const locked = !!lockedComposer;
 
   const attemptLock = () => {
@@ -110,9 +113,12 @@ export function useShieldForm(preselectedAssetId?: number) {
       debug('Tried to resubmit form while in progress');
       return;
     }
-    lockedComposer.compose().then(success => {
-      // Submitting a shield proof should affect `rpStatus.pendingTxCount`
-      if (success) rpStatusPoller.invalidate();
+    lockedComposer.compose().then(txId => {
+      if (txId) {
+        const timeToSettlement = [nextSettlementTime, instantSettlementTime][fields.speed]!;
+        localStorage.setItem(txId.toString(), timeToSettlement.toString());
+        rpStatusPoller.invalidate();
+      }
     });
   };
 

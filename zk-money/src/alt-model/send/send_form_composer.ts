@@ -48,6 +48,7 @@ export class SendComposer {
 
       this.stateObs.setPhase(SendComposerPhase.CREATING_PROOF);
       let controller: TransferController | WithdrawController;
+
       if (recipient.sendMode === SendMode.SEND) {
         controller = sdk.createTransferController(
           accountId,
@@ -68,10 +69,11 @@ export class SendComposer {
       await controller.createProof();
 
       this.stateObs.setPhase(SendComposerPhase.SENDING_PROOF);
-      await controller.send();
+      const txId = await controller.send();
 
       this.stateObs.setPhase(SendComposerPhase.DONE);
-      return true;
+
+      return txId;
     } catch (error) {
       debug('Compose failed with error:', error);
       this.stateObs.error(error?.message?.toString());
