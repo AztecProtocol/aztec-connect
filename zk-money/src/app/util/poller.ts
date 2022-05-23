@@ -3,10 +3,10 @@ import { IObs } from './obs/types';
 
 export class Poller<T> {
   private readonly lastPolledObs = Obs.input<undefined | number>(undefined);
-  obs: Obs<T | undefined>;
+  obs: Obs<T>;
 
-  constructor(pollObs: IObs<undefined | (() => Promise<T>)>, interval: number) {
-    this.obs = Obs.combine([pollObs, this.lastPolledObs]).mapEmitter<T | undefined>(([poll, lastPolled], emit) => {
+  constructor(pollObs: IObs<undefined | (() => Promise<T>)>, interval: number, initialValue: T) {
+    this.obs = Obs.combine([pollObs, this.lastPolledObs]).mapEmitter<T>(([poll, lastPolled], emit) => {
       if (!poll) return;
       const refresh = async () => {
         const value = await poll();
@@ -22,7 +22,7 @@ export class Poller<T> {
         return () => clearTimeout(task);
       }
       return undefined;
-    }, undefined);
+    }, initialValue);
   }
 
   invalidate() {

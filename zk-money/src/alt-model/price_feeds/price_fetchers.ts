@@ -23,7 +23,7 @@ function createDefaultPriceFetcher(priceFeedContractAddressStr: string, provider
   return async () => {
     try {
       const bigNum = await contract.latestAnswer();
-      return bigNum.toBigInt();
+      return bigNum.toBigInt() as bigint;
     } catch (err) {
       debug(`Price fetch failed for address ${priceFeedContractAddressStr}`, err);
       throw err;

@@ -92,15 +92,18 @@ function useValidRecipesOnly(recipes?: DefiRecipe[]) {
     // Each recipe in this list will have it's corresponding aux data opts checked
     const recipesRequiringAuxDataOpts = recipes.filter(x => x.requiresAuxDataOpts);
     // Lazy fetch the aux data opts for recipe in the above list
-    const recipesAuxDataOptsObs = Obs.combine(recipesRequiringAuxDataOpts.map(x => auxDataPollerCache.get(x.id).obs));
+    const recipesAuxDataOptsObs = Obs.combine(
+      recipesRequiringAuxDataOpts.map(x => auxDataPollerCache.get(x.id)?.obs ?? Obs.constant(undefined)),
+    );
     return recipesAuxDataOptsObs.map(recipesAuxDataOpts => {
       let validRecipes = recipes;
       // Check each item in the aforementioned list, and remove it from
-      // the complete recipe list if it doesn't have any aux data opts
+      // the complete recipe list if it doesn't have any aux data opts.
+      // We generously assume success until the dat's loaded.
       for (let i = 0; i < recipesAuxDataOpts.length; i++) {
         const recipe = recipesRequiringAuxDataOpts[i];
         const auxDataOpts = recipesAuxDataOpts[i];
-        if (!auxDataOpts || auxDataOpts.length === 0) {
+        if (auxDataOpts && auxDataOpts.length === 0) {
           validRecipes = validRecipes.filter(x => x !== recipe);
         }
       }

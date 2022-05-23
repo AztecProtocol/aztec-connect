@@ -73,7 +73,7 @@ export function useOpenPositions() {
   const balances = useSpendableBalances();
   const defiTxs = useDefiTxs();
   return useMemo(
-    () => balances && defiTxs && recipes && aggregatePositions(balances, defiTxs, recipes),
+    () => balances && defiTxs && aggregatePositions(balances, defiTxs, recipes),
     [balances, recipes, defiTxs],
   );
 }

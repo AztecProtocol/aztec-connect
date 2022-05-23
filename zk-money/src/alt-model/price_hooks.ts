@@ -17,7 +17,7 @@ export function useAssetUnitPrices(assetIds?: number[]) {
   const priceFeedPollerCache = usePriceFeedPollerCache();
   const obs = useMemo(() => {
     if (assetIds) {
-      const deps = assetIds.map(assetId => priceFeedPollerCache.get(assetId).obs);
+      const deps = assetIds.map(assetId => priceFeedPollerCache.get(assetId)?.obs ?? Obs.constant(undefined));
       return Obs.combine(deps).map(prices => mapToObj(assetIds, (_, idx) => prices[idx]));
     }
   }, [priceFeedPollerCache, assetIds]);

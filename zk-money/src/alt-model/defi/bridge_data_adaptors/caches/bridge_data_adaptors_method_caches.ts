@@ -1,10 +1,9 @@
 import type { Provider } from '@ethersproject/providers';
-import type { DefiRecipesObs } from 'alt-model/defi/recipes';
-import type { RemoteAssetsObs } from 'alt-model/top_level_context/remote_assets_obs';
-import type { RemoteStatusObs } from 'alt-model/top_level_context/remote_status_poller';
 import type { Config } from 'config';
+import type { RollupProviderStatus } from '@aztec/sdk';
+import type { DefiRecipe } from 'alt-model/defi/types';
 import { createAuxDataOptionsPollerCache } from './aux_data_options_poller_cache';
-import { createBridgeDataAdaptorObsCache } from './bridge_data_adaptor_cache';
+import { createBridgeDataAdaptorCache } from './bridge_data_adaptor_cache';
 import { createExpectedOutputPollerCache } from './expected_output_poller_cache';
 import { createExpectedAssetYieldPollerCache } from './expected_yield_poller_cache';
 import { createCurrentAssetYieldPollerCache } from './current_yield_poller_cache';
@@ -13,32 +12,20 @@ import { createInteractionPresentValuePollerCache } from './interaction_present_
 import { createMarketSizePollerCache } from './market_size_poller_cache';
 
 export function createBridgeDataAdaptorsMethodCaches(
-  defiRecipesObs: DefiRecipesObs,
+  defiRecipes: DefiRecipe[],
   provider: Provider,
-  remoteStatusObs: RemoteStatusObs,
-  remoteAssetsObs: RemoteAssetsObs,
+  remoteStatus: RollupProviderStatus,
   config: Config,
 ) {
-  const adaptorsObsCache = createBridgeDataAdaptorObsCache(defiRecipesObs, remoteStatusObs, provider, config);
-  const auxDataPollerCache = createAuxDataOptionsPollerCache(defiRecipesObs, adaptorsObsCache, remoteAssetsObs);
-  const expectedAssetYieldPollerCache = createExpectedAssetYieldPollerCache(
-    defiRecipesObs,
-    adaptorsObsCache,
-    remoteAssetsObs,
-  );
-  const currentAssetYieldPollerCache = createCurrentAssetYieldPollerCache(
-    defiRecipesObs,
-    adaptorsObsCache,
-    remoteAssetsObs,
-  );
-  const expectedOutputPollerCache = createExpectedOutputPollerCache(defiRecipesObs, adaptorsObsCache, remoteAssetsObs);
-  const marketSizePollerCache = createMarketSizePollerCache(defiRecipesObs, adaptorsObsCache, remoteAssetsObs);
-  const interactionPresentValuePollerCache = createInteractionPresentValuePollerCache(
-    adaptorsObsCache,
-    remoteAssetsObs,
-  );
+  const adaptorsCache = createBridgeDataAdaptorCache(defiRecipes, remoteStatus, provider, config);
+  const auxDataPollerCache = createAuxDataOptionsPollerCache(defiRecipes, adaptorsCache);
+  const expectedAssetYieldPollerCache = createExpectedAssetYieldPollerCache(defiRecipes, adaptorsCache);
+  const currentAssetYieldPollerCache = createCurrentAssetYieldPollerCache(defiRecipes, adaptorsCache);
+  const expectedOutputPollerCache = createExpectedOutputPollerCache(defiRecipes, adaptorsCache);
+  const marketSizePollerCache = createMarketSizePollerCache(defiRecipes, adaptorsCache);
+  const interactionPresentValuePollerCache = createInteractionPresentValuePollerCache(adaptorsCache);
   return {
-    adaptorsObsCache,
+    adaptorsCache,
     auxDataPollerCache,
     expectedAssetYieldPollerCache,
     expectedOutputPollerCache,

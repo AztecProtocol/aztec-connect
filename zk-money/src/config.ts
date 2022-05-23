@@ -1,4 +1,4 @@
-import { getBlockchainStatus } from '@aztec/sdk';
+import { getRollupProviderStatus } from '@aztec/sdk';
 import { KNOWN_MAINNET_ASSET_ADDRESS_STRS as S, PerKnownAddress } from 'alt-model/known_assets/known_asset_addresses';
 import { toBaseUnits } from './app/units';
 
@@ -12,14 +12,12 @@ export interface Config {
   txAmountLimits: PerKnownAddress<bigint>;
   sessionTimeout: number;
   debugFilter: string;
-  maxAvailableAssetId: number;
 }
 
 interface ConfigVars {
   deployTag: string;
   txAmountLimits: string;
   sessionTimeout: string;
-  maxAvailableAssetId: string;
   debugFilter: string;
 }
 
@@ -37,7 +35,6 @@ const fromLocalStorage = (): ConfigVars => ({
   deployTag: localStorage.getItem('zm_deployTag') || '',
   txAmountLimits: localStorage.getItem('zm_txAmountLimit') || '',
   sessionTimeout: localStorage.getItem('zm_sessionTimeout') || '',
-  maxAvailableAssetId: localStorage.getItem('zm_maxAvailableAssetId') || '',
   debugFilter: localStorage.getItem('zm_debug') ?? '',
 });
 
@@ -45,19 +42,18 @@ const fromEnvVars = (): ConfigVars => ({
   deployTag: '',
   txAmountLimits: process.env.REACT_APP_TX_AMOUNT_LIMIT || '',
   sessionTimeout: process.env.REACT_APP_SESSION_TIMEOUT || '',
-  maxAvailableAssetId: process.env.REACT_APP_MAX_AVAILABLE_ASSET_ID || '',
   debugFilter: process.env.REACT_APP_DEBUG ?? '',
 });
 
 const productionConfig: ConfigVars = {
   deployTag: '',
   txAmountLimits: JSON.stringify([
-    `${toBaseUnits('30', 18)}`, // 30 ETH
-    `${toBaseUnits('100000', 18)}`, // 100000 DAI
-    `${toBaseUnits('2', 8)}`, // 2 renBTC
+    `${toBaseUnits('5', 18)}`, // 5 ETH
+    `${toBaseUnits('10000', 18)}`, // 10,000 DAI
+    `${toBaseUnits('1', 8)}`, // 1 renBTC
+    `${toBaseUnits('6', 18)}`, // 6 wstETH
   ]),
   sessionTimeout: '30', // days
-  maxAvailableAssetId: '2',
   debugFilter: 'zm:*,bb:*',
 };
 
@@ -79,66 +75,82 @@ function getEthereumHost(chainId: number) {
   }
 }
 
-async function getDeployConfig(deployTag: string) {
-  if (!deployTag) {
-    // If we haven't overridden our deploy tag, we discover it at runtime. All s3 deployments have a file
-    // called DEPLOY_TAG in their root containing the deploy tag.
-    if (process.env.NODE_ENV !== 'development') {
-      deployTag = await fetch('/DEPLOY_TAG')
-        .then(resp => resp.text())
-        .catch(() => '');
-    } else {
-      // Webpack's dev-server would serve up index.html instead of the DEPLOY_TAG.
-      deployTag = 'aztec-connect-dev';
-    }
+function getInferredDeployTag() {
+  // If we haven't overridden our deploy tag, we discover it at runtime. All s3 deployments have a file
+  // called DEPLOY_TAG in their root containing the deploy tag.
+  if (process.env.NODE_ENV !== 'development') {
+    return fetch('/DEPLOY_TAG')
+      .then(resp => resp.text())
+      .catch(() => '');
+  } else {
+    // Webpack's dev-server would serve up index.html instead of the DEPLOY_TAG.
+    return 'aztec-connect-dev';
   }
+}
 
+function getDeployConfig(deployTag: string, rollupProviderUrl: string, chainId: number) {
   if (deployTag) {
     const hostedSdkUrl = `https://${deployTag}-sdk.aztec.network`;
-    const rollupProviderUrl = `https://api.aztec.network/${deployTag}/falafel`;
     // If this is prod release, we will use the prod domain name.
     const explorerUrl = deployTag.match(/-prod$/)
       ? 'https://explorer.aztec.network'
       : `https://${deployTag}-explorer.aztec.network`;
 
-    const chainId = (await getBlockchainStatus(rollupProviderUrl)).chainId;
     const ethereumHost = getEthereumHost(chainId);
     const mainnetEthereumHost = getEthereumHost(1);
     return { hostedSdkUrl, rollupProviderUrl, explorerUrl, chainId, ethereumHost, mainnetEthereumHost };
   } else {
     const hostedSdkUrl = `${window.location.protocol}//${window.location.hostname}:1234`;
-    const rollupProviderUrl = `${window.location.protocol}//${window.location.hostname}:8081`;
     const explorerUrl = `${window.location.protocol}//${window.location.hostname}:3000`;
-    const chainId = 1337;
     const ethereumHost = `${window.location.protocol}//${window.location.hostname}:8545`;
     const mainnetEthereumHost = getEthereumHost(1);
     return { hostedSdkUrl, rollupProviderUrl, explorerUrl, chainId, ethereumHost, mainnetEthereumHost };
   }
 }
 
-export async function getConfig(): Promise<Config> {
+function getRawConfigWithOverrides() {
   const defaultConfig = process.env.NODE_ENV === 'development' ? developmentConfig : productionConfig;
+  return { ...defaultConfig, ...removeEmptyValues(fromEnvVars()), ...removeEmptyValues(fromLocalStorage()) };
+}
 
-  const {
-    deployTag,
-    txAmountLimits: txAmountLimitsStr,
-    sessionTimeout,
-    maxAvailableAssetId,
-    debugFilter,
-  } = { ...defaultConfig, ...removeEmptyValues(fromEnvVars()), ...removeEmptyValues(fromLocalStorage()) };
+function getRollupProviderUrl(deployTag: string) {
+  if (deployTag) return `https://api.aztec.network/${deployTag}/falafel`;
+  return `${window.location.protocol}//${window.location.hostname}:8081`;
+}
 
+function assembleConfig(
+  rawConfig: ReturnType<typeof getRawConfigWithOverrides>,
+  deployConfig: ReturnType<typeof getDeployConfig>,
+): Config {
+  const { txAmountLimits: txAmountLimitsStr, sessionTimeout, debugFilter } = rawConfig;
   const txAmountLimits = JSON.parse(txAmountLimitsStr);
 
   return {
-    ...(await getDeployConfig(deployTag)),
+    ...deployConfig,
     txAmountLimits: {
       [S.ETH]: BigInt(txAmountLimits[0]),
       [S.DAI]: BigInt(txAmountLimits[1]),
       [S.renBTC]: BigInt(txAmountLimits[2]),
-      [S.wstETH]: BigInt(txAmountLimits[0]),
+      [S.wstETH]: BigInt(txAmountLimits[3]),
     },
     sessionTimeout: +(sessionTimeout || 1),
-    maxAvailableAssetId: +maxAvailableAssetId,
     debugFilter,
+  };
+}
+
+export async function getEnvironment() {
+  const rawConfig = getRawConfigWithOverrides();
+  const deployTag = rawConfig.deployTag || (await getInferredDeployTag());
+  const rollupProviderUrl = getRollupProviderUrl(deployTag);
+  const initialRollupProviderStatus = await getRollupProviderStatus(rollupProviderUrl);
+  const deployConfig = getDeployConfig(
+    deployTag,
+    rollupProviderUrl,
+    initialRollupProviderStatus.blockchainStatus.chainId,
+  );
+  const config = assembleConfig(rawConfig, deployConfig);
+  return {
+    config,
+    initialRollupProviderStatus,
   };
 }

@@ -1,21 +1,19 @@
 import { useMemo } from 'react';
 import { BridgeId } from '@aztec/sdk';
-import { useAggregatedAssetsBulkPrice } from 'alt-model';
 import { DefiRecipe } from './types';
-import { baseUnitsToFloat, PRICE_DECIMALS } from 'app';
 import { useAmount, useBridgeDataAdaptorsMethodCaches } from 'alt-model/top_level_context';
-import { useMaybeObs, useObs } from 'app/util';
+import { useMaybeObs } from 'app/util';
 import { Amount } from 'alt-model/assets';
 import { useAmountBulkPrice } from 'alt-model/price_hooks';
 
 export function useBridgeDataAdaptor(recipeId: string) {
-  const { adaptorsObsCache } = useBridgeDataAdaptorsMethodCaches();
-  return useObs(adaptorsObsCache.get(recipeId));
+  const { adaptorsCache } = useBridgeDataAdaptorsMethodCaches();
+  return adaptorsCache.get(recipeId);
 }
 
 export function useDefaultAuxDataOption(recipeId: string) {
   const { auxDataPollerCache } = useBridgeDataAdaptorsMethodCaches();
-  const opts = useObs(auxDataPollerCache.get(recipeId).obs);
+  const opts = useMaybeObs(auxDataPollerCache.get(recipeId)?.obs);
   // TODO: don't assume last element is default choice
   return opts?.[opts?.length - 1];
 }
@@ -42,7 +40,8 @@ export function useDefaultBridgeMarket(recipeId: string) {
 
 function useLiquidity(recipeId: string, auxData?: bigint) {
   const market = useBridgeMarket(recipeId, auxData);
-  return useAggregatedAssetsBulkPrice(market);
+  const amount = useAmount(market?.[0]);
+  return useAmountBulkPrice(amount);
 }
 
 export function useDefaultLiquidity(recipeId: string) {

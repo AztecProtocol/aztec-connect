@@ -9,10 +9,7 @@ import ethToDaiBanner from '../../images/eth_to_dai_banner.svg';
 import { createElementAdaptor } from './bridge_data_adaptors/element_adaptor';
 import { KNOWN_MAINNET_ASSET_ADDRESSES as KMAA } from 'alt-model/known_assets/known_asset_addresses';
 import { RemoteAsset } from 'alt-model/types';
-import { RemoteAssetsObs } from 'alt-model/top_level_context/remote_assets_obs';
 import { createLidoAdaptor } from './bridge_data_adaptors/lido_adaptor';
-import { RemoteStatusObs } from 'alt-model/top_level_context/remote_status_poller';
-import { Obs } from 'app/util';
 
 const debug = createDebug('zm:recipes');
 
@@ -108,16 +105,11 @@ const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
   },
 ];
 
-export function createDefiRecipeObs(remoteStatusObs: RemoteStatusObs, remoteAssetsObs: RemoteAssetsObs) {
-  return Obs.combine([remoteStatusObs, remoteAssetsObs]).map(([status, assets]) => {
-    if (!status || !assets) return undefined;
-    const recipes: DefiRecipe[] = [];
-    for (const args of CREATE_RECIPES_ARGS) {
-      const recipe = createRecipe(args, status, assets);
-      if (recipe) recipes.push(recipe);
-    }
-    return recipes;
-  });
+export function createDefiRecipes(status: RollupProviderStatus, assets: RemoteAsset[]) {
+  const recipes: DefiRecipe[] = [];
+  for (const args of CREATE_RECIPES_ARGS) {
+    const recipe = createRecipe(args, status, assets);
+    if (recipe) recipes.push(recipe);
+  }
+  return recipes;
 }
-
-export type DefiRecipesObs = ReturnType<typeof createDefiRecipeObs>;

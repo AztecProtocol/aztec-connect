@@ -7,6 +7,7 @@ import {
 } from 'alt-model/defi/defi_info_hooks';
 import { DefiRecipe, KeyBridgeStat } from 'alt-model/defi/types';
 import { baseUnitsToFloat, PRICE_DECIMALS } from 'app';
+import { SkeletonRect } from './skeleton_rect';
 
 const formatter = new Intl.NumberFormat('en-GB', { notation: 'compact' });
 
@@ -16,23 +17,24 @@ function formatPriceShort(value: bigint) {
 
 function LiquidityValue(props: { recipe: DefiRecipe }) {
   const liquidity = useDefaultLiquidity(props.recipe.id);
-  const valueStr = liquidity !== undefined ? `$${formatPriceShort(liquidity)}` : '';
-  return <>{valueStr}</>;
+  if (liquidity === undefined) return <SkeletonRect sizingContent="$11B" />;
+  return <>${formatPriceShort(liquidity)}</>;
 }
 
 function BatchSizeValue(props: { recipe: DefiRecipe }) {
   const bridgeId = useDefaultBridgeId(props.recipe)?.toBigInt();
   const rpStatus = useRollupProviderStatus();
-  const bridgeStatus = rpStatus?.bridgeStatus.find(x => x.bridgeId === bridgeId);
-  return <>{bridgeStatus?.numTxs ?? rpStatus?.runtimeConfig.defaultDeFiBatchSize}</>;
+  if (!rpStatus?.bridgeStatus || !bridgeId) return <SkeletonRect sizingContent="25" />;
+  const bridgeStatus = rpStatus.bridgeStatus.find(x => x.bridgeId === bridgeId);
+  return <>{bridgeStatus?.numTxs ?? rpStatus.runtimeConfig.defaultDeFiBatchSize}</>;
 }
 
 const percentageFormatter = new Intl.NumberFormat('en-GB', { style: 'percent', maximumFractionDigits: 2 });
 
 function YieldValue(props: { recipe: DefiRecipe }) {
-  const expectedYield = (useDefaultExpectedAssetYield(props.recipe)?.value || 0) / 100;
-  const yieldStr = expectedYield !== undefined ? percentageFormatter.format(expectedYield) : '';
-  return <>{yieldStr}</>;
+  const expectedYield = useDefaultExpectedAssetYield(props.recipe)?.value;
+  if (expectedYield === undefined) return <SkeletonRect sizingContent="2.34%" />;
+  return <>{percentageFormatter.format(expectedYield / 100)}</>;
 }
 
 const dateFormatter = new Intl.DateTimeFormat('default', { day: 'numeric', month: 'short', year: '2-digit' });
@@ -40,10 +42,9 @@ const dateFormatter = new Intl.DateTimeFormat('default', { day: 'numeric', month
 function MaturityValue(props: { recipe: DefiRecipe }) {
   // Assume aux data is unix datetime for now
   const auxData = useDefaultAuxDataOption(props.recipe.id);
-  if (auxData === undefined) return <div />;
+  if (auxData === undefined) return <SkeletonRect sizingContent="16 Sept 2022" />;
   const ms = Number(auxData) * 1000;
-  const dateStr = dateFormatter.format(ms);
-  return <>{dateStr}</>;
+  return <>{dateFormatter.format(ms)}</>;
 }
 
 export function getKeyStatItemProps(stat: KeyBridgeStat, recipe: DefiRecipe) {

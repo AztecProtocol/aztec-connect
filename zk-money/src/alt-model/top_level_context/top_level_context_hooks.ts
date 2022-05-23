@@ -26,8 +26,7 @@ export function useRemoteAssetForId(assetId: number) {
 }
 
 export function useAmountFactory() {
-  const { amountFactoryObs } = useTopLevelContext();
-  return useObs(amountFactoryObs);
+  return useTopLevelContext().amountFactory;
 }
 
 export function useAmount(assetValue?: AssetValue) {
@@ -61,6 +60,5 @@ export function useBridgeDataAdaptorsMethodCaches() {
 }
 
 export function useDefiRecipes() {
-  const { defiRecipesObs } = useTopLevelContext();
-  return useObs(defiRecipesObs);
+  return useTopLevelContext().defiRecipes;
 }

@@ -9,7 +9,7 @@ export function useAsset(assetId: number) {
 
 export function useAmount(assetValue?: AssetValue) {
   const factory = useAmountFactory();
-  return useMemo(() => assetValue && factory?.fromAssetValue(assetValue), [factory, assetValue]);
+  return useMemo(() => assetValue && factory.fromAssetValue(assetValue), [factory, assetValue]);
 }
 
 export function useAmounts(assetValues?: AssetValue[]) {
@@ -17,7 +17,7 @@ export function useAmounts(assetValues?: AssetValue[]) {
   return useMemo(
     () =>
       assetValues?.map(assetValue => {
-        return factory?.fromAssetValue(assetValue);
+        return factory.fromAssetValue(assetValue);
       }),
     [factory, assetValues],
   );

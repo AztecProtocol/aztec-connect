@@ -1,6 +1,5 @@
-import type { RemoteAssetsObs } from 'alt-model/top_level_context/remote_assets_obs';
-import type { BridgeDataAdaptorObsCache } from './bridge_data_adaptor_cache';
-import type { DefiRecipesObs } from 'alt-model/defi/recipes';
+import type { BridgeDataAdaptorCache } from './bridge_data_adaptor_cache';
+import type { DefiRecipe } from 'alt-model/defi/types';
 import createDebug from 'debug';
 import { Obs } from 'app/util';
 import { Poller } from 'app/util/poller';
@@ -11,32 +10,26 @@ const debug = createDebug('zm:expected_yield_poller_cache');
 
 const POLL_INTERVAL = 5 * 60 * 1000;
 
-export function createExpectedAssetYieldPollerCache(
-  defiRecipesObs: DefiRecipesObs,
-  adaptorObsCache: BridgeDataAdaptorObsCache,
-  remoteAssetsObs: RemoteAssetsObs,
-) {
+export function createExpectedAssetYieldPollerCache(recipes: DefiRecipe[], adaptorCache: BridgeDataAdaptorCache) {
   return new LazyInitDeepCacheMap(([recipeId, auxData, inputAmount]: [string, bigint, bigint]) => {
-    const pollObs = Obs.combine([defiRecipesObs, adaptorObsCache.get(recipeId), remoteAssetsObs]).map(
-      ([recipes, adaptor, assets]) => {
-        const recipe = recipes?.find(x => x.id === recipeId)!;
-        if (!adaptor || !assets || !recipe) return undefined;
-        if (!adaptor.getExpectedYield)
-          throw new Error('Attempted to call unsupported method "getExpectedYield" on bridge adaptor');
+    const recipe = recipes.find(x => x.id === recipeId);
+    const adaptor = adaptorCache.get(recipeId);
+    if (!adaptor || !recipe) return undefined;
+    if (!adaptor.getExpectedYield) {
+      throw new Error('Attempted to call unsupported method "getExpectedYield" on bridge adaptor');
+    }
 
-        const { valueEstimationInteractionAssets } = recipe;
-        const { inA, inB, outA, outB } = toAdaptorArgs(valueEstimationInteractionAssets);
-        return async () => {
-          try {
-            const values = await adaptor.getExpectedYield!(inA, inB, outA, outB, auxData, inputAmount);
-            return { assetId: valueEstimationInteractionAssets.outA.id, value: values[0] };
-          } catch (err) {
-            debug({ recipeId, inA, inB, outA, outB, auxData, inputAmount }, err);
-            throw new Error(`Failed to fetch bridge expected yield for "${recipe.name}".`);
-          }
-        };
-      },
-    );
-    return new Poller(pollObs, POLL_INTERVAL);
+    const { valueEstimationInteractionAssets } = recipe;
+    const { inA, inB, outA, outB } = toAdaptorArgs(valueEstimationInteractionAssets);
+    const pollObs = Obs.constant(async () => {
+      try {
+        const values = await adaptor.getExpectedYield!(inA, inB, outA, outB, auxData, inputAmount);
+        return { assetId: valueEstimationInteractionAssets.outA.id, value: values[0] };
+      } catch (err) {
+        debug({ recipeId, inA, inB, outA, outB, auxData, inputAmount }, err);
+        throw new Error(`Failed to fetch bridge expected yield for "${recipe.name}".`);
+      }
+    });
+    return new Poller(pollObs, POLL_INTERVAL, undefined);
   });
 }

@@ -9,7 +9,7 @@ export function createGasPricePoller(provider: Provider) {
     const bigNumber = await provider.getGasPrice();
     return BigInt(bigNumber.toString());
   });
-  return new Poller(pollObs, GAS_PRICE_POLL_INTERVAL);
+  return new Poller(pollObs, GAS_PRICE_POLL_INTERVAL, undefined);
 }
 
 export type GasPricePoller = ReturnType<typeof createGasPricePoller>;

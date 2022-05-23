@@ -26,7 +26,7 @@ function useUnfinalisedAsyncDefiAsyncPresentValues() {
             recipe.id,
             BigInt(tx.interactionResult.interactionNonce),
           ]);
-          obsList.push(poller.obs);
+          obsList.push(poller?.obs ?? Obs.constant(undefined));
         }
       }
     }
