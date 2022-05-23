@@ -3,7 +3,7 @@ import style from './information_section.module.scss';
 
 interface InformationSectionProps {
   title: string;
-  subtitle: string;
+  subtitle?: string;
   content: React.ReactNode;
   buttonLabel: string;
   helpLink: string;

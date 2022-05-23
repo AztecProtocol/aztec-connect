@@ -60,7 +60,7 @@ export function DefiExitPage1({
             feeAmounts={validationResult?.feeAmounts}
           />
         }
-        rightPanel={<RecipeSettlementTimeInformationSection recipe={recipe} />}
+        rightPanel={<RecipeSettlementTimeInformationSection recipe={recipe} selectedSpeed={fields.speed} />}
       />
       <div className={style.footer}>
         <FaqHint className={style.faqHint} />

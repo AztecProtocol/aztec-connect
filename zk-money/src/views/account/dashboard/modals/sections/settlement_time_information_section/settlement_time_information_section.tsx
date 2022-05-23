@@ -1,6 +1,5 @@
-import moment from 'moment';
 import { ProgressBar } from 'ui-components';
-import { TxSettlementTime } from '@aztec/sdk';
+import { DefiSettlementTime, TxSettlementTime } from '@aztec/sdk';
 import { useRollupProviderStatus } from 'alt-model';
 import { DefiRecipe } from 'alt-model/defi/types';
 import { InformationSection } from '../information_section';
@@ -8,13 +7,13 @@ import { useDefaultCountDownData } from 'features/defi/bridge_count_down/bridge_
 import style from './settlement_time_information_section.module.scss';
 
 interface SettlementTimeInformationSectionProps {
-  timeStr: string;
   remainingSlots: number;
   progress: number;
 }
 
 interface RecipeSettlementTimeInformationSectionProps {
   recipe: DefiRecipe;
+  selectedSpeed: DefiSettlementTime;
 }
 
 interface TransactionSettlementTimeInformationSectionProps {
@@ -39,8 +38,7 @@ function SettlementProgressBar(props: SettlementProgressBarProps) {
 export function SettlementTimeInformationSection(props: SettlementTimeInformationSectionProps) {
   return (
     <InformationSection
-      title="Est Settlement"
-      subtitle={props.timeStr}
+      title="Batch"
       content={<SettlementProgressBar remainingSlots={props.remainingSlots} progress={props.progress} />}
       buttonLabel="Learn more"
       // TODO: Update FAQ with more useful info about settlement times
@@ -51,19 +49,20 @@ export function SettlementTimeInformationSection(props: SettlementTimeInformatio
 
 export function RecipeSettlementTimeInformationSection(props: RecipeSettlementTimeInformationSectionProps) {
   const data = useDefaultCountDownData(props.recipe);
-  const progress = (data?.takenSlots ?? 0) / (data?.totalSlots ?? 1);
-  const remainingSlots = (data?.totalSlots ?? 0) - (data?.takenSlots ?? 0);
-  const timeStr = data?.nextBatch ? moment(data.nextBatch).fromNow(false) : '';
-  return <SettlementTimeInformationSection remainingSlots={remainingSlots} progress={progress} timeStr={timeStr} />;
+  if (!data) return <></>;
+  const { totalSlots } = data;
+  const takenSlots = props.selectedSpeed === DefiSettlementTime.DEADLINE ? data.takenSlots : totalSlots;
+  const progress = takenSlots / totalSlots;
+  const remainingSlots = totalSlots - takenSlots;
+  return <SettlementTimeInformationSection remainingSlots={remainingSlots} progress={progress} />;
 }
 
 export function TransactionSettlementTimeInformationSection(props: TransactionSettlementTimeInformationSectionProps) {
   const rpStatus = useRollupProviderStatus();
-  const takenSlots = rpStatus?.pendingTxCount || 0;
-  // const totalSlots = 0; --> needs implementation
-  // const progress = takenSlots / totalSlots;
-  // const remainingSlots = totalSlots - takenSlots;
-  const timeStr =
-    props.selectedSpeed === TxSettlementTime.INSTANT ? 'Now' : moment(rpStatus?.nextPublishTime).fromNow(false);
-  return <SettlementTimeInformationSection remainingSlots={0} progress={0} timeStr={timeStr} />;
+  if (!rpStatus) return <></>;
+  const totalSlots = rpStatus.numTxsPerRollup;
+  const takenSlots = props.selectedSpeed === TxSettlementTime.INSTANT ? totalSlots : rpStatus.numTxsInNextRollup;
+  const progress = takenSlots / totalSlots;
+  const remainingSlots = totalSlots - takenSlots;
+  return <SettlementTimeInformationSection remainingSlots={remainingSlots} progress={progress} />;
 }

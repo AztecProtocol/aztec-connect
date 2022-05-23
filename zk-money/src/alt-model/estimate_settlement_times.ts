@@ -29,11 +29,11 @@ function estimateDefiBatchSettlementTime(
 ) {
   if (!rpStatus || !bridgeStatus) return;
   const { nextPublishTime, rollupFrequency } = bridgeStatus;
-  if (nextPublishTime) return nextPublishTime;
+  if (nextPublishTime) return new Date(nextPublishTime.getTime() + APPROX_ROLLUP_PROOF_DURATION_MS);
   const publishIntervalSeconds = rpStatus.runtimeConfig.publishInterval;
   if (rollupFrequency > 0 && publishIntervalSeconds > 0 && nextSettlementTime) {
     const defiBatchInterval = rollupFrequency * (publishIntervalSeconds * 1000);
-    return new Date(nextSettlementTime.getTime() + defiBatchInterval);
+    return new Date(nextSettlementTime.getTime() + defiBatchInterval + APPROX_ROLLUP_PROOF_DURATION_MS);
   }
 }
 
