@@ -12,8 +12,9 @@
   height: 40px;
   width: 100%;
   border-radius: 5px;
-  padding: 0 20px;
   align-items: center;
+  border: 1px solid transparent;
+  padding: 0 24px;
 }
 
 .row:nth-child(even) {
@@ -49,7 +50,7 @@
 }
 
 .amount {
-  width: 140px;
+  width: 180px;
 }
 
 .l1AssetIcon {
@@ -58,6 +59,20 @@
   background-size: contain;
   background-position: center;
   background-repeat: no-repeat;
+}
+
+.investmentRow {
+  font-size: 20px;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  height: 40px;
+  width: 100%;
+  border-radius: 10px;
+  margin-top: 10px;
+  border: 1px solid #e2e2e2;
+  padding: 0 24px;
+  box-shadow: 0px 4px 20px rgb(0 0 0 / 8%);
 }
 
 .recipient {

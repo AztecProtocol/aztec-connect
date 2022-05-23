@@ -12,7 +12,7 @@ import { useMaybeObs } from 'app/util';
 import { isKnownAssetAddressString } from 'alt-model/known_assets/known_asset_addresses';
 import { useDefiFeeAmounts } from './defi_fee_hooks';
 import { useAwaitCorrectProvider } from './correct_provider_hooks';
-import { BridgeInteractionAssets, DefiRecipe } from '../types';
+import { BridgeInteractionAssets, DefiRecipe, FlowDirection } from '../types';
 import { useDefaultAuxDataOption } from '../defi_info_hooks';
 import { MAX_MODE } from 'alt-model/forms/constants';
 import { useRollupProviderStatus, useRollupProviderStatusPoller } from 'alt-model/rollup_provider_hooks';
@@ -21,9 +21,7 @@ import { estimateDefiSettlementTimes } from 'alt-model/estimate_settlement_times
 
 const debug = createDebug('zm:defi_form_hooks');
 
-export type DefiFormMode = 'enter' | 'exit';
-
-function getInteractionAssets(recipe: DefiRecipe, mode: DefiFormMode) {
+function getInteractionAssets(recipe: DefiRecipe, mode: FlowDirection) {
   switch (mode) {
     case 'enter':
       return recipe.flow.enter;
@@ -43,7 +41,7 @@ function useDefiFormBridgeId(recipe: DefiRecipe, { inA, outA }: BridgeInteractio
   }, [auxData, recipe, inA, outA]);
 }
 
-export function useDefiForm(recipe: DefiRecipe, mode: DefiFormMode) {
+export function useDefiForm(recipe: DefiRecipe, mode: FlowDirection) {
   const { accountId, config } = useApp();
   const [fields, setFields] = useState<DefiFormFields>({
     amountStrOrMax: mode === 'exit' ? MAX_MODE : '',

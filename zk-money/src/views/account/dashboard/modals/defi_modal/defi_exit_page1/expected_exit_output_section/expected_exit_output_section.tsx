@@ -17,7 +17,7 @@ export function ExpectedExitOutputSection(props: ExpectedExitOutputSectionProps)
   const inputValue = props.validationResult.targetDepositAmount?.baseUnits;
   const maybeAuxData = auxData !== undefined ? BigInt(auxData) : undefined;
   const maybeInputValue = (inputValue ?? 0n) > 0n ? inputValue : undefined;
-  const expectedOutput = useExpectedOutput(props.recipe.id, maybeAuxData, maybeInputValue);
+  const expectedOutput = useExpectedOutput(props.recipe.id, 'exit', maybeAuxData, maybeInputValue);
   const amount = useAmount(expectedOutput);
   const amountStr = amount ? `~${amount?.format({ uniform: true })}` : undefined;
   const bulkPrice = useAmountBulkPrice(amount);

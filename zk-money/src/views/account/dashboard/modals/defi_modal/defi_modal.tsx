@@ -1,7 +1,7 @@
 import { DefiEnterPage1 } from './defi_enter_page1';
 import { DefiExitPage1 } from './defi_exit_page1';
-import { useDefiForm, DefiComposerPhase, DefiFormMode } from 'alt-model/defi/defi_form';
-import { DefiRecipe } from 'alt-model/defi/types';
+import { useDefiForm, DefiComposerPhase } from 'alt-model/defi/defi_form';
+import { DefiRecipe, FlowDirection } from 'alt-model/defi/types';
 import { Overlay } from 'components/overlay';
 import { DefiModalHeader } from './defi_modal_header';
 import { Card, CardHeaderSize } from 'ui-components';
@@ -10,12 +10,12 @@ import { DefiConfirmationPage } from './defi_confirmation_page';
 
 interface DefiModalProps {
   recipe: DefiRecipe;
-  mode: DefiFormMode;
+  flowDirection: FlowDirection;
   onClose: () => void;
 }
 
-export function DefiModal({ recipe, mode, onClose }: DefiModalProps) {
-  const defiForm = useDefiForm(recipe, mode);
+export function DefiModal({ recipe, flowDirection, onClose }: DefiModalProps) {
+  const defiForm = useDefiForm(recipe, flowDirection);
   const { fields, setters, validationResult, feedback, composerState, submit, attemptLock, locked, unlock } = defiForm;
 
   const phase = composerState?.phase;
@@ -24,11 +24,12 @@ export function DefiModal({ recipe, mode, onClose }: DefiModalProps) {
   const canGoBack = locked && isIdle;
   const handleBack = canGoBack ? unlock : undefined;
 
-  const Page1 = mode === 'enter' ? DefiEnterPage1 : DefiExitPage1;
+  const Page1 = flowDirection === 'enter' ? DefiEnterPage1 : DefiExitPage1;
 
   const page =
     locked && composerState ? (
       <DefiConfirmationPage
+        flowDirection={flowDirection}
         recipe={recipe}
         composerState={composerState}
         onSubmit={submit}

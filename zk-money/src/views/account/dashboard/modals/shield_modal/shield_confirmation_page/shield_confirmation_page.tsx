@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { BorderBox, Button } from 'components';
 import { ShieldComposerPhase, ShieldComposerState, ShieldFormValidationResult } from 'alt-model/shield';
-import { CostBreakdown } from '../../modal_molecules/cost_breakdown';
+import { CostBreakdown, Row } from '../../modal_molecules/cost_breakdown';
 import { Disclaimer } from '../../modal_molecules/disclaimer';
 import { TransactionComplete } from '../../modal_molecules/transaction_complete';
 import { VerticalSplitSection } from '../../sections/vertical_split_section';
@@ -31,21 +31,12 @@ export function ShieldConfirmationPage({
 
   return (
     <div className={style.page2Wrapper}>
-      <VerticalSplitSection
-        topPanel={
-          <div className={style.topStats}>
-            <div className={style.description}>{'Details about your shield transaction'}</div>
-          </div>
-        }
-        bottomPanel={
-          <CostBreakdown
-            recipient={`@${validationResult.input.fields.recipientAlias}`}
-            amountLabel="Shield Amount"
-            amount={validationResult.targetL2OutputAmount}
-            fee={validationResult.input.feeAmount}
-            deductionsAreFromL1
-          />
-        }
+      <CostBreakdown
+        recipient={`@${validationResult.input.fields.recipientAlias}`}
+        amountLabel="Shield Amount"
+        amount={validationResult.targetL2OutputAmount}
+        fee={validationResult.input.feeAmount}
+        deductionsAreFromL1
       />
       <BorderBox>
         {showingDeclaration ? (

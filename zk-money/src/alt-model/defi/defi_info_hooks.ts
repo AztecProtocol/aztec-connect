@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { BridgeId } from '@aztec/sdk';
-import { DefiRecipe } from './types';
+import { DefiRecipe, FlowDirection } from './types';
 import { useAmount, useBridgeDataAdaptorsMethodCaches } from 'alt-model/top_level_context';
 import { useMaybeObs } from 'app/util';
 import { Amount } from 'alt-model/assets';
@@ -71,11 +71,16 @@ export function useDefaultExpectedAssetYield(recipe: DefiRecipe) {
   return useExpectedAssetYield(recipe, auxData);
 }
 
-export function useExpectedOutput(recipeId: string, auxData?: bigint, inputValue?: bigint) {
+export function useExpectedOutput(
+  recipeId: string,
+  flowDirection: FlowDirection,
+  auxData?: bigint,
+  inputValue?: bigint,
+) {
   const { expectedOutputPollerCache } = useBridgeDataAdaptorsMethodCaches();
   const poller =
     auxData !== undefined && inputValue !== undefined
-      ? expectedOutputPollerCache.get([recipeId, auxData, inputValue])
+      ? expectedOutputPollerCache.get([recipeId, auxData, inputValue, flowDirection])
       : undefined;
   return useMaybeObs(poller?.obs);
 }
@@ -89,7 +94,7 @@ export function useInteractionPresentValue(recipe: DefiRecipe, interactionNonce?
   return useMaybeObs(poller?.obs);
 }
 
-export function useDefaultExpectedOutput(recipe: DefiRecipe, inputValue?: bigint) {
+export function useDefaultExpectedOutput(recipe: DefiRecipe, flowDirection: FlowDirection, inputValue?: bigint) {
   const auxData = useDefaultAuxDataOption(recipe.id);
-  return useExpectedOutput(recipe.id, auxData, inputValue);
+  return useExpectedOutput(recipe.id, flowDirection, auxData, inputValue);
 }

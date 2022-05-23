@@ -5,20 +5,16 @@
 }
 
 .topPanel {
-  flex: 0 0 60%;
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  background-color: #fafafa;
-  border-top-left-radius: 20px;
-  border-top-right-radius: 20px;
+  flex: 1 1 auto;
 }
 
 .bottomPanel {
-  flex: 1 1 auto;
-  padding: 24px;
+  flex: 0 0 60%;
+  display: flex;
   border-top: 1px solid #e2e2e2;
+  flex-direction: column;
+  justify-content: center;
+  background-color: #fafafa;
   border-bottom-left-radius: 20px;
   border-bottom-right-radius: 20px;
 }

@@ -23,13 +23,13 @@ function Apy({ expectedYield, investmentType }: { expectedYield?: number; invest
 function ApyFromTxAux({ position }: { position: DefiPosition_Pending | DefiPosition_Async }) {
   const { interactionNonce = 0 } = position.tx.interactionResult;
 
-  const expectedYield = useCurrentAssetYield(position.recipe, interactionNonce)?.value;
+  const expectedYield = useCurrentAssetYield(position.recipe, interactionNonce);
 
   return <Apy expectedYield={expectedYield} investmentType={position.recipe.investmentType} />;
 }
 
 function ApyFromDefaultAux({ position }: { position: DefiPosition_Closable | DefiPosition_Pending }) {
-  const expectedYield = useDefaultExpectedAssetYield(position.recipe)?.value;
+  const expectedYield = useDefaultExpectedAssetYield(position.recipe);
   return <Apy expectedYield={expectedYield} investmentType={position.recipe.investmentType} />;
 }
 

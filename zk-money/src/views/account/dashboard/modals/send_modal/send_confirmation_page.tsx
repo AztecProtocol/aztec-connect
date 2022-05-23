@@ -44,20 +44,11 @@ export function SendConfirmationPage({
 
   return (
     <div className={style.page2Wrapper}>
-      <VerticalSplitSection
-        topPanel={
-          <div className={style.topStats}>
-            <div className={style.description}>{'Details about your send transaction'}</div>
-          </div>
-        }
-        bottomPanel={
-          <CostBreakdown
-            amountLabel="Amount"
-            recipient={formatRecipient(state.fields.recipientStr, state.fields.sendMode)}
-            amount={state.targetAmount}
-            fee={state.feeAmount}
-          />
-        }
+      <CostBreakdown
+        recipient={formatRecipient(state.fields.recipientStr, state.fields.sendMode)}
+        amountLabel="Amount"
+        amount={state.targetAmount}
+        fee={state.feeAmount}
       />
       <BorderBox>
         {showingDeclaration ? (

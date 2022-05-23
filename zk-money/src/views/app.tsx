@@ -1,4 +1,3 @@
-import type { DefiFormMode } from 'alt-model/defi/defi_form';
 import { AztecSdk } from '@aztec/sdk';
 import { Navbar } from 'ui-components';
 import { BroadcastChannel } from 'broadcast-channel';
@@ -36,7 +35,7 @@ import { TransitionGroup, CSSTransition } from 'react-transition-group';
 import { Balance } from './account/dashboard/balance';
 import { Earn } from './account/dashboard/earn';
 import { Trade } from './account/dashboard/trade';
-import { DefiRecipe } from 'alt-model/defi/types';
+import { DefiRecipe, FlowDirection } from 'alt-model/defi/types';
 import { DefiModal } from 'views/account/dashboard/modals/defi_modal';
 import { KNOWN_MAINNET_ASSET_ADDRESSES } from 'alt-model/known_assets/known_asset_addresses';
 import './app.css';
@@ -50,7 +49,7 @@ interface AppProps {
 
 interface AppState {
   action: AppAction;
-  activeDefiModal?: { recipe: DefiRecipe; mode: DefiFormMode };
+  activeDefiModal?: { recipe: DefiRecipe; flowDirection: FlowDirection };
   loginState: LoginState;
   worldState: WorldState;
   providerState?: ProviderState;
@@ -282,11 +281,11 @@ export class AppView extends PureComponent<AppProps, AppState> {
   };
 
   private handleOpenDefiEnterModal = (recipe: DefiRecipe) => {
-    this.setState({ activeDefiModal: { recipe, mode: 'enter' } });
+    this.setState({ activeDefiModal: { recipe, flowDirection: 'enter' } });
   };
 
   private handleOpenDefiExitModal = (recipe: DefiRecipe) => {
-    this.setState({ activeDefiModal: { recipe, mode: 'exit' } });
+    this.setState({ activeDefiModal: { recipe, flowDirection: 'exit' } });
   };
 
   private handleLogout = () => {

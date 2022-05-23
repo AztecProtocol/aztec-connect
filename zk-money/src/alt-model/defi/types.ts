@@ -17,6 +17,8 @@ export enum KeyBridgeStat {
   LIQUIDITY,
 }
 
+export type FlowDirection = 'enter' | 'exit';
+
 export interface BridgeInteractionAssets {
   inA: RemoteAsset;
   outA: RemoteAsset;

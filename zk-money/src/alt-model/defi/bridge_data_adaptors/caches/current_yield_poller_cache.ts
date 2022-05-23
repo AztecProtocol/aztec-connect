@@ -17,11 +17,10 @@ export function createCurrentAssetYieldPollerCache(recipes: DefiRecipe[], adapto
     if (!adaptor.getCurrentYield) {
       throw new Error('Attempted to call unsupported method "getCurrentYield" on bridge adaptor');
     }
-    const { valueEstimationInteractionAssets } = recipe;
     const pollObs = Obs.constant(async () => {
       try {
         const values = await adaptor.getCurrentYield!(BigInt(interactionNonce));
-        return { assetId: valueEstimationInteractionAssets.outA.id, value: values[0] };
+        return values[0];
       } catch (err) {
         debug({ recipeId, interactionNonce }, err);
         throw new Error(`Failed to fetch bridge current yield for "${recipe.name}".`);

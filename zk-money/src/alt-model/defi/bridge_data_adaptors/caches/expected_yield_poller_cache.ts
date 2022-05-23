@@ -24,7 +24,7 @@ export function createExpectedAssetYieldPollerCache(recipes: DefiRecipe[], adapt
     const pollObs = Obs.constant(async () => {
       try {
         const values = await adaptor.getExpectedYield!(inA, inB, outA, outB, auxData, inputAmount);
-        return { assetId: valueEstimationInteractionAssets.outA.id, value: values[0] };
+        return values[0];
       } catch (err) {
         debug({ recipeId, inA, inB, outA, outB, auxData, inputAmount }, err);
         throw new Error(`Failed to fetch bridge expected yield for "${recipe.name}".`);

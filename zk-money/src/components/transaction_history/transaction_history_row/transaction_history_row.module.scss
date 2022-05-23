@@ -12,7 +12,7 @@
 }
 
 .segment {
-  padding: 0 40px;
+  padding: 0 30px;
 }
 
 .separator {
@@ -41,4 +41,12 @@
   justify-content: right;
   align-items: center;
   gap: 15px;
+}
+
+.firstSegment {
+  padding: 0 30px 0 40px;
+}
+
+.lastSegment {
+  padding: 0 40px 0 30px;
 }

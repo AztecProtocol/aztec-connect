@@ -32,7 +32,7 @@ function BatchSizeValue(props: { recipe: DefiRecipe }) {
 const percentageFormatter = new Intl.NumberFormat('en-GB', { style: 'percent', maximumFractionDigits: 2 });
 
 function YieldValue(props: { recipe: DefiRecipe }) {
-  const expectedYield = useDefaultExpectedAssetYield(props.recipe)?.value;
+  const expectedYield = useDefaultExpectedAssetYield(props.recipe);
   if (expectedYield === undefined) return <SkeletonRect sizingContent="2.34%" />;
   return <>{percentageFormatter.format(expectedYield / 100)}</>;
 }

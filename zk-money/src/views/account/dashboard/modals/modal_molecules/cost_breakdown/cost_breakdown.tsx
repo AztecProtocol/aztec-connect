@@ -1,6 +1,7 @@
 import { EthAddress } from '@aztec/sdk';
 import { useAmountBulkPrice } from 'alt-model';
 import { Amount } from 'alt-model/assets/amount';
+import { DefiInvestmentType } from 'alt-model/defi/types';
 import { getAssetIcon } from 'alt-model/known_assets/known_asset_display_data';
 import { formatBulkPrice } from 'app';
 import { ShieldedAssetIcon } from 'components';
@@ -12,6 +13,8 @@ interface CostBreakdownProps {
   fee?: Amount;
   recipient: string;
   deductionsAreFromL1?: boolean;
+  investmentLabel?: string;
+  investmentReturn?: Amount;
 }
 
 interface RecipientRowProps {
@@ -46,9 +49,22 @@ function RecipientRow({ label, value }: RecipientRowProps) {
   );
 }
 
-function Row({ label, cost, address, value, assetIsZk }: RowProps) {
+export function Row({ label, cost, address, value, assetIsZk }: RowProps) {
   return (
     <div className={style.row}>
+      <div className={style.title}>{label}</div>
+      <div className={style.values}>
+        <div className={style.cost}>{cost}</div>
+        <div className={style.assetIcon}>{renderIcon(assetIsZk, address)}</div>
+        <div className={style.amount}>{value}</div>
+      </div>
+    </div>
+  );
+}
+
+export function InvestmentRow({ label, cost, address, value, assetIsZk }: RowProps) {
+  return (
+    <div className={style.investmentRow}>
       <div className={style.title}>{label}</div>
       <div className={style.values}>
         <div className={style.cost}>{cost}</div>
@@ -64,7 +80,15 @@ function maybeBulkPriceStr(bulkPrice?: bigint) {
   return '$' + formatBulkPrice(bulkPrice);
 }
 
-export function CostBreakdown({ amountLabel, amount, fee, recipient, deductionsAreFromL1 }: CostBreakdownProps) {
+export function CostBreakdown({
+  amountLabel,
+  amount,
+  fee,
+  recipient,
+  deductionsAreFromL1,
+  investmentLabel,
+  investmentReturn,
+}: CostBreakdownProps) {
   const assetIsZk = !deductionsAreFromL1;
   const layer = assetIsZk ? 'L2' : 'L1';
   const amountBulkPrice = useAmountBulkPrice(amount);
@@ -99,6 +123,14 @@ export function CostBreakdown({ amountLabel, amount, fee, recipient, deductionsA
         value={totalAmount?.format({ layer })}
         assetIsZk={assetIsZk}
       />
+      {investmentLabel && investmentReturn && (
+        <InvestmentRow
+          address={investmentReturn?.address}
+          assetIsZk={true}
+          label={investmentLabel}
+          value={investmentReturn?.format({ layer, uniform: true })}
+        />
+      )}
     </div>
   );
 }

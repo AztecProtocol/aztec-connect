@@ -15,6 +15,7 @@
   width: 230px;
   flex-direction: row;
   align-items: center;
+  width: 33%;
 }
 
 .holdingUnits {
@@ -32,7 +33,6 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  width: 55px;
   cursor: pointer;
   transition: transform 0.2s ease-in-out;
 }
@@ -43,6 +43,7 @@
 
 .buttonsWrapper {
   display: flex;
+  width: 33%;
   flex-direction: row;
   gap: 35px;
   width: 235px;
