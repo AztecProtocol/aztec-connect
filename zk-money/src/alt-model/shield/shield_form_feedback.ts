@@ -1,3 +1,4 @@
+import { Amount } from 'alt-model/assets';
 import { TouchedFormFields } from 'alt-model/form_fields_hooks';
 import { ShieldFormValidationResult, ShieldFormFields } from './shield_form_validation';
 
@@ -56,6 +57,16 @@ function getFooterFeedback(result: ShieldFormValidationResult, attemptedLock: bo
     } to pay the fee for this transaction. Please first shield at least ${fee?.toFloat()} ${
       fee?.info.symbol
     } in a seperate transaction before attempting again to shield any ${output?.info.symbol}.`;
+  }
+  if (result.hasPendingBalance) {
+    const { targetAsset, l1PendingBalance } = result.input;
+    if (targetAsset && l1PendingBalance) {
+      const pendingAmount = new Amount(l1PendingBalance, targetAsset);
+      return `You have ${pendingAmount.format({
+        layer: 'L1',
+        uniform: true,
+      })} pending on the contract. This will be used first.`;
+    }
   }
 }
 

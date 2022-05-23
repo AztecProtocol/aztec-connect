@@ -54,6 +54,7 @@ export interface ShieldFormValidationResult {
   maxL2Output?: bigint;
   targetL2OutputAmount?: Amount;
   reservedForL1GasIfTargetAssetIsEth?: bigint;
+  hasPendingBalance?: boolean;
   input: ShieldFormValidationInputs;
 }
 
@@ -111,6 +112,7 @@ export function validateShieldForm(input: ShieldFormValidationInputs): ShieldFor
   const reservedForL1GasIfTargetAssetIsEth = isEth ? approveProofGasCost + depositFundsGasCost : 0n;
 
   // Some value may already be deposited, and will be used first
+  const hasPendingBalance = l1PendingBalance > 0n;
   const totalL1Balance = l1Balance + l1PendingBalance;
 
   // Accounting for both L1 gas and L2 fees
@@ -161,5 +163,6 @@ export function validateShieldForm(input: ShieldFormValidationInputs): ShieldFor
     maxL2Output,
     targetL2OutputAmount,
     reservedForL1GasIfTargetAssetIsEth,
+    hasPendingBalance,
   };
 }

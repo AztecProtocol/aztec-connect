@@ -25,11 +25,7 @@ export const toBaseUnits = (valueString: string, decimals: number) => {
 };
 
 export const baseUnitsToFloat = (value: bigint, divisorExponent: number) => {
-  const divisor = Math.pow(10, divisorExponent);
-  const bigIntDivsor = BigInt(divisor);
-  const whole = Number(value / bigIntDivsor);
-  const fractional = Number(value % bigIntDivsor) / divisor;
-  return whole + fractional;
+  return Number(`${value}E${-divisorExponent}`);
 };
 
 export const formatBaseUnits = (

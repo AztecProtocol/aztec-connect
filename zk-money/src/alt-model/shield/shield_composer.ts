@@ -7,6 +7,7 @@ import { WalletAccountEnforcer } from './ensured_provider';
 import { Network } from 'app/networks';
 import { ShieldComposerPhase, ShieldComposerStateObs } from './shield_composer_state_obs';
 import { createSigningKeys, KeyVault } from '../../app/key_vault';
+import { KNOWN_MAINNET_ASSET_ADDRESSES } from 'alt-model/known_assets/known_asset_addresses';
 
 const debug = createDebug('zm:shield_composer');
 
@@ -98,20 +99,22 @@ export class ShieldComposer {
   private async deposit(controller: DepositController) {
     this.stateObs.setPhase(ShieldComposerPhase.DEPOSIT);
 
-    const requiredAmount = await this.approveAndAwaitL1AllowanceIfNecessary(controller);
+    const requiredFunds = await controller.getRequiredFunds();
+    if (requiredFunds === 0n) {
+      // Already enough funds pending on contract
+      return;
+    }
+    const requiredAmount = this.payload.targetOutput.withBaseUnits(requiredFunds);
+    await this.approveAndAwaitL1AllowanceIfNecessary(controller, requiredAmount);
     await this.depositAndAwaitConfirmation(controller, requiredAmount);
   }
 
-  private async approveAndAwaitL1AllowanceIfNecessary(controller: DepositController) {
+  private async approveAndAwaitL1AllowanceIfNecessary(controller: DepositController, requiredAmount: Amount) {
     // If an ERC-20 doesn't support permits, an allowance must first be granted as a seperate transaction.
-    const { targetOutput } = this.payload;
-    const targetAssetIsEth = targetOutput.id === 0;
-    const permitSupport = targetOutput.permitSupport;
-    const requiredFunds = await controller.getRequiredFunds();
-    const requiredAmount = targetOutput.withBaseUnits(requiredFunds);
-    if (!targetAssetIsEth && !permitSupport) {
+    const targetAssetIsEth = controller.assetValue.assetId === 0;
+    if (!targetAssetIsEth && !controller.hasPermitSupport()) {
       const sufficientAllowanceHasBeenApproved = () =>
-        controller.getPublicAllowance().then(allowance => allowance >= requiredFunds);
+        controller.getPublicAllowance().then(allowance => allowance >= requiredAmount.baseUnits);
       if (!(await sufficientAllowanceHasBeenApproved())) {
         await this.walletAccountEnforcer.ensure();
         this.stateObs.setPrompt(`Please approve a deposit of ${requiredAmount.format({ layer: 'L1' })}.`);
@@ -130,12 +133,13 @@ export class ShieldComposer {
   private async depositAndAwaitConfirmation(controller: DepositController, requiredAmount: Amount) {
     await this.walletAccountEnforcer.ensure();
     this.stateObs.setPrompt(`Please make a deposit of ${requiredAmount.format({ layer: 'L1' })} from your wallet.`);
-    if (this.payload.targetOutput.permitSupport) {
-      const expireIn = 60n * 5n; // 5 minutes
-      const deadline = BigInt(Math.floor(Date.now() / 1000)) + expireIn;
-      await controller.depositFundsToContractWithPermit(deadline);
+    const expireIn = 60n * 5n; // 5 minutes
+    const deadline = BigInt(Math.floor(Date.now() / 1000)) + expireIn;
+    const isDai = this.payload.targetOutput.id === this.deps.sdk.getAssetIdByAddress(KNOWN_MAINNET_ASSET_ADDRESSES.DAI);
+    if (isDai) {
+      await controller.depositFundsToContractWithNonStandardPermit(deadline);
     } else {
-      await controller.depositFundsToContract();
+      await controller.depositFundsToContract(deadline);
     }
     this.stateObs.setPrompt('Awaiting transaction confirmation...');
     const timeout = 1000 * 60 * 30; // 30 mins
@@ -152,7 +156,7 @@ export class ShieldComposer {
     // Skip this step for contract wallets
     if (!(await sdk.isContract(depositor))) {
       this.stateObs.setPhase(ShieldComposerPhase.APPROVE_PROOF);
-      const digest = controller.getProofHash()?.toString();
+      const digest = controller.getProofHash()?.toString('hex');
       if (!digest) throw new Error('Proof digest unavailable');
       await this.walletAccountEnforcer.ensure();
       this.stateObs.setPrompt(
