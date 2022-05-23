@@ -4,16 +4,6 @@
   flex-direction: column;
 }
 
-.errorMessage {
-  font-size: 14px;
-  font-weight: 600;
-  height: 14px;
-  bottom: 10px;
-  line-height: 16px;
-  align-self: end;
-  margin-bottom: 16px;
-}
-
 .root {
   display: flex;
   flex-direction: column;
@@ -35,20 +25,4 @@
 
 .toggle {
   width: 40%;
-}
-
-.nextWrapper {
-  display: flex;
-  flex-direction: column;
-}
-
-.footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: end;
-}
-
-.nextButton {
-  justify-self: end;
-  align-self: end;
 }

@@ -1,0 +1,23 @@
+.root {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 20px;
+  align-items: center;
+}
+
+.feedback {
+  color: red;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 150%;
+}
+
+.nextWrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+.nextButton {
+  justify-self: end;
+  align-self: end;
+}

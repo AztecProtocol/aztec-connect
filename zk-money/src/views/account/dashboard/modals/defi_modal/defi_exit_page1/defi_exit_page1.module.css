@@ -17,13 +17,3 @@
   gap: 30px;
   font-size: 14px;
 }
-
-.faqHint {
-  align-self: end;
-}
-
-.footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: end;
-}

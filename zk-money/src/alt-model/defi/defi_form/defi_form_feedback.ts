@@ -5,6 +5,9 @@ import { DefiFormValidationResult, DefiFormFields } from './defi_form_validation
 
 function getAmountInputFeedback(result: DefiFormValidationResult, touched: boolean) {
   if (!touched) return;
+  if (result.noAmount) {
+    return `Amount must be non-zero`;
+  }
   if (result.beyondTransactionLimit) {
     const { transactionLimit } = result.input;
     const txLimitAmount = result.targetDepositAmount?.withBaseUnits(transactionLimit ?? 0n);
@@ -26,21 +29,16 @@ function getAmountInputFeedback(result: DefiFormValidationResult, touched: boole
       return requiredStr;
     }
   }
-  if (result.noAmount) {
-    return `Amount must be non-zero`;
-  }
 }
 
-function getFooterFeedback(result: DefiFormValidationResult, attemptedLock: boolean) {
-  if (!attemptedLock) return;
+function getFooterFeedback(result: DefiFormValidationResult) {
   if (result.insufficientFeePayingAssetBalance) {
     const fee = result.input.feeAmount;
-    const output = result.targetDepositAmount;
     return `You do not have enough zk${
       fee?.info.symbol
     } to pay the fee for this transaction. Please first shield at least ${fee?.format({
       layer: 'L1',
-    })} in a seperate transaction before attempting again to shield any ${output?.info.symbol}.`;
+    })}.`;
   }
 }
 
@@ -51,7 +49,7 @@ export function getDefiFormFeedback(
 ) {
   return {
     amount: getAmountInputFeedback(result, touchedFields.amountStrOrMax || attemptedLock),
-    footer: getFooterFeedback(result, attemptedLock),
+    footer: getFooterFeedback(result),
   };
 }
 

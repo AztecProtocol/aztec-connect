@@ -1,4 +1,4 @@
-import { SendMode } from 'app';
+import { SendMode } from 'alt-model/send';
 import { BackButton } from 'ui-components';
 import { CloseButtonWhite } from 'components';
 import style from './send_modal_header.module.scss';

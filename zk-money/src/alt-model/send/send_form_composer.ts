@@ -1,10 +1,10 @@
-import { AztecSdk, AccountId, BridgeId, EthAddress, TransferController, WithdrawController } from '@aztec/sdk';
+import { AztecSdk, AccountId, EthAddress, TransferController, WithdrawController } from '@aztec/sdk';
 import { Amount } from 'alt-model/assets';
-import { SendMode } from 'app';
 import { createSigningKeys } from 'app/key_vault';
 import createDebug from 'debug';
 import { Provider } from 'app/provider';
 import { SendComposerPhase, SendComposerStateObs } from './send_composer_state_obs';
+import { SendMode } from './send_mode';
 
 const debug = createDebug('zm:send_composer');
 
@@ -18,11 +18,11 @@ export type Recipient =
       address: EthAddress;
     };
 
-export interface SendComposerPayload {
+export type SendComposerPayload = Readonly<{
   recipient: Recipient;
   targetAmount: Amount;
   feeAmount: Amount;
-}
+}>;
 
 export interface SendComposerDeps {
   sdk: AztecSdk;
@@ -33,7 +33,7 @@ export interface SendComposerDeps {
 export class SendComposer {
   stateObs = new SendComposerStateObs();
 
-  constructor(private readonly payload: SendComposerPayload, private readonly deps: SendComposerDeps) {}
+  constructor(readonly payload: SendComposerPayload, private readonly deps: SendComposerDeps) {}
 
   async compose() {
     this.stateObs.clearError();

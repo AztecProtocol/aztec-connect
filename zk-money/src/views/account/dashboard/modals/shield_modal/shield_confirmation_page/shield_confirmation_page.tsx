@@ -1,6 +1,11 @@
 import { useState } from 'react';
 import { BorderBox, Button } from 'components';
-import { ShieldComposerPhase, ShieldComposerState, ShieldFormValidationResult } from 'alt-model/shield';
+import {
+  ShieldComposerPhase,
+  ShieldComposerState,
+  ShieldFormValidationResult,
+  ShieldComposerPayload,
+} from 'alt-model/shield';
 import { CostBreakdown, Row } from '../../modal_molecules/cost_breakdown';
 import { Disclaimer } from '../../modal_molecules/disclaimer';
 import { TransactionComplete } from '../../modal_molecules/transaction_complete';
@@ -11,12 +16,14 @@ import style from './shield_confirmation_page.module.scss';
 interface ShieldConfirmationPageProps {
   composerState: ShieldComposerState;
   validationResult: ShieldFormValidationResult;
+  lockedComposerPayload: ShieldComposerPayload;
   onSubmit: () => void;
   onClose: () => void;
 }
 
 export function ShieldConfirmationPage({
   composerState,
+  lockedComposerPayload,
   validationResult,
   onSubmit,
   onClose,
@@ -34,8 +41,8 @@ export function ShieldConfirmationPage({
       <CostBreakdown
         recipient={`@${validationResult.input.fields.recipientAlias}`}
         amountLabel="Shield Amount"
-        amount={validationResult.targetL2OutputAmount}
-        fee={validationResult.input.feeAmount}
+        amount={lockedComposerPayload.targetOutput}
+        fee={lockedComposerPayload.fee}
         deductionsAreFromL1
       />
       <BorderBox>

@@ -9,7 +9,7 @@ import { useTrackedFieldChangeHandlers } from 'alt-model/form_fields_hooks';
 import { isKnownAssetAddressString } from 'alt-model/known_assets/known_asset_addresses';
 import { useRollupProviderStatus, useRollupProviderStatusPoller } from 'alt-model/rollup_provider_hooks';
 import { useSdk, useAmountFactory } from 'alt-model/top_level_context';
-import { SendMode } from 'app';
+import { SendMode } from './send_mode';
 import { useEffect, useMemo, useState } from 'react';
 import { Recipient, SendComposer } from './send_form_composer';
 import { SendFormFields, validateSendForm } from './send_form_validation';
@@ -113,6 +113,7 @@ export function useSendForm(preselectedAssetId?: number) {
   const feedback = getSendFormFeedback(validationResult, touchedFields, attemptedLock);
   const composerState = useMaybeObs(lockedComposer?.stateObs);
   const isLocked = !!lockedComposer;
+  const lockedComposerPayload = lockedComposer?.payload;
 
   const attemptLock = () => {
     setAttemptedLock(true);
@@ -172,6 +173,7 @@ export function useSendForm(preselectedAssetId?: number) {
     ...validationResult,
     feedback,
     composerState,
+    lockedComposerPayload,
     submit,
     attemptLock,
     isLocked,

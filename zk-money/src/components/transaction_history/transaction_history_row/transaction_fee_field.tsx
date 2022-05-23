@@ -1,5 +1,4 @@
-import { AssetValue, ProofId, UserTx, UserPaymentTx } from '@aztec/sdk';
-import { useApp } from 'alt-model';
+import { AssetValue, ProofId, UserTx } from '@aztec/sdk';
 import { useAmount } from 'alt-model/asset_hooks';
 
 function FeeField({ fee }: { fee: AssetValue }) {
@@ -7,20 +6,12 @@ function FeeField({ fee }: { fee: AssetValue }) {
   return <>Fee: {amount?.format({ uniform: true })}</>;
 }
 
-function SendFeeField({ tx }: { tx: UserPaymentTx }) {
-  const { accountId } = useApp();
-  if (!accountId) return <></>;
-  const userIsOwner = tx.userId.equals(accountId);
-  if (!userIsOwner) return <></>;
-  return <FeeField fee={tx.fee} />;
-}
-
 export function renderTransactionFeeField(tx: UserTx) {
   switch (tx.proofId) {
     case ProofId.SEND:
-      return <SendFeeField tx={tx} />;
-    case ProofId.WITHDRAW:
+      if (!tx.isSender) return;
       return <FeeField fee={tx.fee} />;
+    case ProofId.WITHDRAW:
     case ProofId.DEFI_DEPOSIT: {
       return <FeeField fee={tx.fee} />;
     }

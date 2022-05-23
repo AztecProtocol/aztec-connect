@@ -54,6 +54,7 @@ export interface ShieldFormValidationResult {
   maxL2Output?: bigint;
   targetL2OutputAmount?: Amount;
   reservedForL1GasIfTargetAssetIsEth?: bigint;
+  requiredL1InputCoveringCosts?: bigint;
   hasPendingBalance?: boolean;
   input: ShieldFormValidationInputs;
 }
@@ -163,6 +164,7 @@ export function validateShieldForm(input: ShieldFormValidationInputs): ShieldFor
     maxL2Output,
     targetL2OutputAmount,
     reservedForL1GasIfTargetAssetIsEth,
+    requiredL1InputCoveringCosts,
     hasPendingBalance,
   };
 }

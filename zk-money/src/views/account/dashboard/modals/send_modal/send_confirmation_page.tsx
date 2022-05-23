@@ -5,14 +5,19 @@ import { Disclaimer } from '../modal_molecules/disclaimer';
 import { TransactionComplete } from '../modal_molecules/transaction_complete';
 import { VerticalSplitSection } from '../sections/vertical_split_section';
 import { SendSubmissionSteps } from './send_submission_steps';
-import { SendComposerPhase, SendComposerState } from 'alt-model/send/send_composer_state_obs';
-import { SendFormDerivedData, SendFormValidationResult } from 'alt-model/send/send_form_validation';
+import {
+  SendFormDerivedData,
+  SendMode,
+  SendComposerPhase,
+  SendComposerState,
+  SendComposerPayload,
+} from 'alt-model/send';
 import style from './send_confirmation_page.module.scss';
 import { RemoteAsset } from 'alt-model/types';
-import { SendMode } from 'app';
 
 interface SendConfirmationPageProps {
   composerState: SendComposerState;
+  lockedComposerPayload: SendComposerPayload;
   state: SendFormDerivedData;
   asset: RemoteAsset;
   txAmountLimit: bigint;
@@ -29,6 +34,7 @@ function formatRecipient(recipientStr: string, sendMode: SendMode) {
 
 export function SendConfirmationPage({
   composerState,
+  lockedComposerPayload,
   state,
   asset,
   txAmountLimit,
@@ -47,8 +53,8 @@ export function SendConfirmationPage({
       <CostBreakdown
         recipient={formatRecipient(state.fields.recipientStr, state.fields.sendMode)}
         amountLabel="Amount"
-        amount={state.targetAmount}
-        fee={state.feeAmount}
+        amount={lockedComposerPayload.targetAmount}
+        fee={lockedComposerPayload.feeAmount}
       />
       <BorderBox>
         {showingDeclaration ? (

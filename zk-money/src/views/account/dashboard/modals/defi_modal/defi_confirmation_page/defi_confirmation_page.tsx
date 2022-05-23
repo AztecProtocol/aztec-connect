@@ -4,8 +4,15 @@ import { BorderBox, Button } from 'components';
 import { Disclaimer } from '../../modal_molecules/disclaimer';
 import { TransactionComplete } from '../../modal_molecules/transaction_complete';
 import { CostBreakdown } from '../../modal_molecules/cost_breakdown';
-import { DefiComposerPhase, DefiComposerState, DefiFormValidationResult } from 'alt-model/defi/defi_form';
+import { VerticalSplitSection } from '../../sections/vertical_split_section';
+import {
+  DefiComposerPhase,
+  DefiComposerState,
+  DefiFormValidationResult,
+  DefiComposerPayload,
+} from 'alt-model/defi/defi_form';
 import { DefiInvestmentType, DefiRecipe, FlowDirection } from 'alt-model/defi/types';
+import { BridgeKeyStats } from 'features/defi/bridge_key_stats';
 import { DefiSubmissionSteps } from './defi_submission_steps';
 import {
   useDefaultAuxDataOption,
@@ -20,6 +27,7 @@ import { RemoteAsset } from 'alt-model/types';
 interface DefiConfirmationPageProps {
   recipe: DefiRecipe;
   composerState: DefiComposerState;
+  lockedComposerPayload: DefiComposerPayload;
   flowDirection: FlowDirection;
   validationResult: DefiFormValidationResult;
   onSubmit: () => void;
@@ -66,6 +74,7 @@ function getFixedYieldReturn(
 export function DefiConfirmationPage({
   recipe,
   composerState,
+  lockedComposerPayload,
   flowDirection,
   validationResult,
   onSubmit,
@@ -74,7 +83,7 @@ export function DefiConfirmationPage({
   const [riskChecked, setRiskChecked] = useState(false);
   const timeToMaturity = useDefaultAuxDataOption(recipe.id);
   const expectedYield = (useDefaultExpectedAssetYield(recipe) || 0) / 100;
-  const amount = validationResult.validPayload?.targetDepositAmount;
+  const amount = lockedComposerPayload.targetDepositAmount;
   const expectedOutput = useExpectedOutput(recipe.id, flowDirection, timeToMaturity, amount?.toAssetValue().value);
   const expectedStakingOutputAmount = useAmount(expectedOutput);
   const annualYieldValue = expectedYield || 0;
@@ -93,7 +102,7 @@ export function DefiConfirmationPage({
         amountLabel="Amount"
         recipient={recipe.name}
         amount={amount}
-        fee={validationResult.validPayload?.feeAmount}
+        fee={lockedComposerPayload.feeAmount}
         investmentLabel={getInvestmentReturnLabel(recipe)}
         investmentReturn={
           recipe.investmentType === DefiInvestmentType.STAKING

@@ -16,7 +16,18 @@ interface DefiModalProps {
 
 export function DefiModal({ recipe, flowDirection, onClose }: DefiModalProps) {
   const defiForm = useDefiForm(recipe, flowDirection);
-  const { fields, setters, validationResult, feedback, composerState, submit, attemptLock, locked, unlock } = defiForm;
+  const {
+    fields,
+    setters,
+    validationResult,
+    feedback,
+    composerState,
+    lockedComposerPayload,
+    submit,
+    attemptLock,
+    locked,
+    unlock,
+  } = defiForm;
 
   const phase = composerState?.phase;
   const isIdle = phase === DefiComposerPhase.IDLE;
@@ -27,11 +38,12 @@ export function DefiModal({ recipe, flowDirection, onClose }: DefiModalProps) {
   const Page1 = flowDirection === 'enter' ? DefiEnterPage1 : DefiExitPage1;
 
   const page =
-    locked && composerState ? (
+    locked && composerState && lockedComposerPayload ? (
       <DefiConfirmationPage
         flowDirection={flowDirection}
         recipe={recipe}
         composerState={composerState}
+        lockedComposerPayload={lockedComposerPayload}
         onSubmit={submit}
         onClose={onClose}
         validationResult={validationResult}

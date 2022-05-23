@@ -1,8 +1,8 @@
 import type { ShieldFormFeedback, ShieldFormFields, ShieldFormValidationResult } from 'alt-model/shield';
 import type { StrOrMax } from 'alt-model/forms/constants';
-import { TxSettlementTime, TxType } from '@aztec/sdk';
-import { ProviderStatus, SendMode, ValueAvailability, WalletId } from 'app';
-import { Button, InputTheme } from 'components';
+import { TxSettlementTime } from '@aztec/sdk';
+import { ProviderStatus, WalletId } from 'app';
+import { InputTheme } from 'components';
 import { AmountSection, TxGasSection, RecipientSection } from 'views/account/dashboard/modals/sections';
 import { RemoteAsset } from 'alt-model/types';
 import { TransactionSettlementTimeInformationSection } from '../sections/settlement_time_information_section';
@@ -13,6 +13,7 @@ import { WalletDropdownSelect } from '../defi_modal/wallet_dropdown_select';
 import { WalletAccountIndicator } from 'ui-components';
 import style from './shield.module.scss';
 import { ShieldPrivacySection } from './shield_privacy_section';
+import { FooterSection } from '../sections/footer_section';
 
 interface ShieldPage1Props {
   fields: ShieldFormFields;
@@ -79,10 +80,10 @@ export function ShieldPage1({
           <>
             <RecipientSection
               theme={InputTheme.WHITE}
+              recipientType="L2"
               recipientStr={fields.recipientAlias}
               isLoading={validationResult.input.aliasIsValid === undefined}
               isValid={!!validationResult.input.aliasIsValid}
-              sendMode={SendMode.SEND}
               onChangeValue={onChangeRecipientAlias}
             />
             <AmountSection
@@ -104,7 +105,6 @@ export function ShieldPage1({
       <SplitSection
         leftPanel={
           <TxGasSection
-            asset={validationResult.input.feeAmount?.info}
             balanceType={validationResult.targetAssetIsPayingFee ? 'L1' : 'L2'}
             speed={fields.speed}
             onChangeSpeed={onChangeSpeed}
@@ -115,11 +115,7 @@ export function ShieldPage1({
         }
         rightPanel={<TransactionSettlementTimeInformationSection selectedSpeed={fields.speed} />}
       />
-
-      {feedback.footer && <div className={style.errorMessage}>{feedback.footer}</div>}
-      <div className={style.nextWrapper}>
-        <Button theme="gradient" text="Next" onClick={onNext} disabled={!validationResult.isValid} />
-      </div>
+      <FooterSection onNext={onNext} nextDisabled={!validationResult.isValid} feedback={feedback.footer} />
     </div>
   );
 }

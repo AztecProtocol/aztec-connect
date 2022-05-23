@@ -1,10 +1,11 @@
-import { SendMode } from 'app';
 import { InputTheme, InputWrapper, InputStatusIcon, MaskedInput, InputStatus } from 'components';
 import { InputSection } from '../input_section';
 
+type RecipientType = 'L1' | 'L2';
+
 interface RecipientSectionProps {
   theme: InputTheme;
-  sendMode: SendMode;
+  recipientType: RecipientType;
   message?: string;
   recipientStr: string;
   isLoading: boolean;
@@ -19,11 +20,11 @@ const getRecipientInputStatus = (isLoading: boolean, isValid: boolean) => {
   // TODO: Support warning state - probably if reusing an eth address?
 };
 
-function getRecipientPlaceholder(sendMode: SendMode) {
-  switch (sendMode) {
-    case SendMode.SEND:
+function getRecipientPlaceholder(type: RecipientType) {
+  switch (type) {
+    case 'L2':
       return `Enter Alias`;
-    case SendMode.WIDTHDRAW:
+    case 'L1':
       return `Enter Ethereum Address`;
     default:
       return '';
@@ -31,7 +32,7 @@ function getRecipientPlaceholder(sendMode: SendMode) {
 }
 
 export function RecipientSection(props: RecipientSectionProps) {
-  const { sendMode, onChangeValue, theme } = props;
+  const { recipientType, onChangeValue, theme } = props;
 
   return (
     <InputSection
@@ -46,9 +47,9 @@ export function RecipientSection(props: RecipientSectionProps) {
           <MaskedInput
             theme={theme}
             value={props.recipientStr}
-            prefix={sendMode === SendMode.WIDTHDRAW ? '' : '@'}
+            prefix={recipientType === 'L1' ? '' : '@'}
             onChangeValue={onChangeValue}
-            placeholder={getRecipientPlaceholder(sendMode)}
+            placeholder={getRecipientPlaceholder(recipientType)}
           />
         </InputWrapper>
       }

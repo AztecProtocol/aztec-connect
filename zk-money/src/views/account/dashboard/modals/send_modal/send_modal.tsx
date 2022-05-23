@@ -1,15 +1,12 @@
 import { isKnownAssetAddressString } from 'alt-model/known_assets/known_asset_addresses';
 import type { RemoteAsset } from 'alt-model/types';
-import { useSendForm } from 'alt-model/send/send_form_hooks';
 import { Card, CardHeaderSize } from 'ui-components';
 import { useApp } from 'alt-model';
-import { SendMode } from 'app';
-import { CloseButtonWhite, Modal } from 'components';
+import { Modal } from 'components';
 import { SendFormFieldsPage } from './send_form_fields_page';
-import { SendComposerPhase } from 'alt-model/send/send_composer_state_obs';
+import { SendComposerPhase, useSendForm } from 'alt-model/send';
 import { SendConfirmationPage } from './send_confirmation_page';
 import { Theme } from 'styles';
-import style from './send_modal.module.scss';
 import { SendModalHeader } from './send_modal_header';
 
 interface SendModalProps {
@@ -20,7 +17,18 @@ interface SendModalProps {
 export function SendModal({ asset, onClose }: SendModalProps) {
   const { config } = useApp();
   const sendForm = useSendForm(asset.id);
-  const { state, setters, feedback, composerState, isValid, isLocked, unlock, submit, attemptLock } = sendForm;
+  const {
+    state,
+    setters,
+    feedback,
+    composerState,
+    lockedComposerPayload,
+    isValid,
+    isLocked,
+    unlock,
+    submit,
+    attemptLock,
+  } = sendForm;
 
   const phase = composerState?.phase;
   const isIdle = phase === SendComposerPhase.IDLE;
@@ -38,9 +46,10 @@ export function SendModal({ asset, onClose }: SendModalProps) {
   const txAmountLimit = config.txAmountLimits[assetAddressStr];
 
   const cardContent =
-    isLocked && composerState ? (
+    isLocked && composerState && lockedComposerPayload ? (
       <SendConfirmationPage
         state={state}
+        lockedComposerPayload={lockedComposerPayload}
         composerState={composerState}
         onSubmit={submit}
         onClose={onClose}

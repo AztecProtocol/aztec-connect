@@ -14,8 +14,18 @@ interface ShieldModalProps {
 export function ShieldModal(props: ShieldModalProps) {
   const assets = useRemoteAssets();
   const { onClose } = props;
-  const { fields, setters, validationResult, composerState, locked, attemptLock, feedback, submit, unlock } =
-    useShieldForm(props.preselectedAssetId);
+  const {
+    fields,
+    setters,
+    validationResult,
+    composerState,
+    lockedComposerPayload,
+    locked,
+    attemptLock,
+    feedback,
+    submit,
+    unlock,
+  } = useShieldForm(props.preselectedAssetId);
 
   const phase = composerState?.phase;
   const isIdle = phase === ShieldComposerPhase.IDLE;
@@ -28,10 +38,11 @@ export function ShieldModal(props: ShieldModalProps) {
   }
 
   const cardContent =
-    locked && composerState ? (
+    locked && composerState && lockedComposerPayload ? (
       <ShieldConfirmationPage
         composerState={composerState}
         validationResult={validationResult}
+        lockedComposerPayload={lockedComposerPayload}
         onSubmit={submit}
         onClose={onClose}
       />

@@ -4,8 +4,9 @@ import { AmountFactory } from 'alt-model/assets/amount_factory';
 import { StrOrMax } from 'alt-model/forms/constants';
 import { amountFromStrOrMaxRoundedDown } from 'alt-model/forms/helpers';
 import { RemoteAsset } from 'alt-model/types';
-import { max, min, SendMode } from 'app';
+import { max, min } from 'app';
 import { Recipient, SendComposerPayload } from './send_form_composer';
+import { SendMode } from './send_mode';
 
 export interface SendFormFields {
   amountStrOrMax: StrOrMax;

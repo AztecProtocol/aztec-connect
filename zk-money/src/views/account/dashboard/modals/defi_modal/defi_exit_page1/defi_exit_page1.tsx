@@ -1,16 +1,15 @@
 import type { StrOrMax } from 'alt-model/forms/constants';
-import { Button } from 'components';
 import { DefiFormFeedback, DefiFormFields, DefiFormValidationResult } from 'alt-model/defi/defi_form';
 import { AmountSection } from 'views/account/dashboard/modals/sections';
 import { DefiRecipe } from 'alt-model/defi/types';
 import { DefiSettlementTime } from '@aztec/sdk';
-import { FaqHint } from 'ui-components';
 import { SplitSection } from '../../sections/split_section';
 import { RecipeSettlementTimeInformationSection } from '../../sections/settlement_time_information_section';
 import style from './defi_exit_page1.module.css';
 import { DefiGasSection } from './../defi_gas_section';
 import { DefiWebLinks } from './../defi_web_links';
 import { ExpectedExitOutputSection } from './expected_exit_output_section';
+import { FooterSection } from '../../sections/footer_section';
 
 interface DefiExitPage1Props {
   recipe: DefiRecipe;
@@ -62,10 +61,7 @@ export function DefiExitPage1({
         }
         rightPanel={<RecipeSettlementTimeInformationSection recipe={recipe} selectedSpeed={fields.speed} />}
       />
-      <div className={style.footer}>
-        <FaqHint className={style.faqHint} />
-        <Button text="Next" onClick={onNext} disabled={!validationResult.isValid} />
-      </div>
+      <FooterSection onNext={onNext} nextDisabled={!validationResult.isValid} feedback={feedback.footer} />
     </div>
   );
 }

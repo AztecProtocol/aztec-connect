@@ -1,7 +1,6 @@
 import { useBalances } from 'alt-model';
 import { recipeFiltersToSearchStr } from 'alt-model/defi/recipe_filters';
 import { RemoteAsset } from 'alt-model/types';
-import { SendMode } from 'app';
 import { Pagination } from 'components/pagination';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';

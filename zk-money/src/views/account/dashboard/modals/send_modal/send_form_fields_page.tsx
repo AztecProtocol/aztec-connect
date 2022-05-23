@@ -1,19 +1,18 @@
 import React from 'react';
 import type { RemoteAsset } from 'alt-model/types';
-import { SendMode, ValueAvailability } from 'app';
-import { Button, InputTheme } from 'components';
+import { InputTheme } from 'components';
 import { SplitSection } from '../sections/split_section';
 import { AmountSection } from 'views/account/dashboard/modals/sections/amount_section';
 import { TxGasSection } from 'views/account/dashboard/modals/sections/gas_section';
-import { FaqHint, formatMaxAmount, Toggle } from 'ui-components';
+import { Toggle } from 'ui-components';
 import { DescriptionSection, RecipientSection } from '../sections';
 import { PrivacyInformationSection } from '../sections/privacy_information_section';
 import { TransactionSettlementTimeInformationSection } from '../sections/settlement_time_information_section';
-import { MAX_MODE, StrOrMax } from 'alt-model/forms/constants';
+import { StrOrMax } from 'alt-model/forms/constants';
 import { TxSettlementTime } from '@aztec/sdk';
-import { SendFormFeedback } from 'alt-model/send/send_form_feedback';
-import { SendFormDerivedData } from 'alt-model/send/send_form_validation';
-import style from './send.module.scss';
+import { SendFormDerivedData, SendMode, SendFormFeedback } from 'alt-model/send';
+import style from './send_form_fields_page.module.scss';
+import { FooterSection } from '../sections/footer_section';
 
 export interface SendProps {
   asset: RemoteAsset;
@@ -54,11 +53,6 @@ export const SendFormFieldsPage: React.FunctionComponent<SendProps> = ({
   onChangeSpeed,
   onNext,
 }) => {
-  const handleChangeAmountStrOrMax = (amountStrOrMax: StrOrMax) => {
-    const value =
-      amountStrOrMax === MAX_MODE && state.maxOutput ? formatMaxAmount(state.maxOutput, asset) : amountStrOrMax;
-    onChangeAmount(value);
-  };
   const { sendMode } = state.fields;
 
   return (
@@ -75,7 +69,7 @@ export const SendFormFieldsPage: React.FunctionComponent<SendProps> = ({
               recipientStr={state.fields.recipientStr}
               isLoading={state.isLoadingRecipient}
               isValid={!!state.recipient}
-              sendMode={sendMode}
+              recipientType={sendMode === SendMode.SEND ? 'L2' : 'L1'}
               message={feedback.recipient}
               onChangeValue={value => {
                 onChangeRecipient(value.replace(/^@+/, ''));
@@ -85,7 +79,7 @@ export const SendFormFieldsPage: React.FunctionComponent<SendProps> = ({
               maxAmount={state.maxOutput ?? 0n}
               asset={asset}
               amountStrOrMax={state.fields.amountStrOrMax}
-              onChangeAmountStrOrMax={handleChangeAmountStrOrMax}
+              onChangeAmountStrOrMax={onChangeAmount}
               amountStrAnnotation={undefined}
               message={feedback.amount}
               balanceType="L2"
@@ -103,7 +97,6 @@ export const SendFormFieldsPage: React.FunctionComponent<SendProps> = ({
       <SplitSection
         leftPanel={
           <TxGasSection
-            asset={asset}
             balanceType="L2"
             speed={state.fields.speed}
             onChangeSpeed={onChangeSpeed}
@@ -113,13 +106,7 @@ export const SendFormFieldsPage: React.FunctionComponent<SendProps> = ({
         }
         rightPanel={<TransactionSettlementTimeInformationSection selectedSpeed={state.fields.speed} />}
       />
-      <div className={style.footer}>
-        <FaqHint className={style.faqHint} />
-        <div className={style.nextWrapper}>
-          {feedback.footer && <div className={style.errorMessage}>{feedback.footer}</div>}
-          <Button className={style.nextButton} text="Next" theme="gradient" onClick={onNext} disabled={!isValid} />
-        </div>
-      </div>
+      <FooterSection onNext={onNext} nextDisabled={!isValid} feedback={feedback.footer} />
     </div>
   );
 };

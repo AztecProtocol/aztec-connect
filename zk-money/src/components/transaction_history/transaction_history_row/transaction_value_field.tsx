@@ -1,5 +1,4 @@
-import { AssetValue, ProofId, UserPaymentTx, UserTx } from '@aztec/sdk';
-import { useApp } from 'alt-model';
+import { AssetValue, ProofId, UserTx } from '@aztec/sdk';
 import { useAmount } from 'alt-model/asset_hooks';
 import { ShieldedAssetIcon } from 'components/shielded_asset_icon';
 
@@ -18,20 +17,12 @@ function ValueField(props: { assetValue?: AssetValue }) {
   );
 }
 
-function SendValueField({ tx }: { tx: UserPaymentTx }) {
-  const { accountId } = useApp();
-  if (!accountId) return <></>;
-  const userIsOwner = tx.userId.equals(accountId);
-  const value = userIsOwner ? invertAssetValue(tx.value) : tx.value;
-  return <ValueField assetValue={value} />;
-}
-
 export function renderTransactionValueField(tx: UserTx) {
   switch (tx.proofId) {
     case ProofId.DEPOSIT:
       return <ValueField assetValue={tx.value} />;
     case ProofId.SEND:
-      return <SendValueField tx={tx} />;
+      return <ValueField assetValue={tx.isSender ? invertAssetValue(tx.value) : tx.value} />;
     case ProofId.WITHDRAW:
       return <ValueField assetValue={invertAssetValue(tx.value)} />;
     case ProofId.DEFI_DEPOSIT: {

@@ -8,8 +8,7 @@ import style from './amount_input.module.scss';
 
 const cx = bindStyle(style);
 
-// TODO: This needn't be exported once `handleChangeAmountStrOrMax` is removed from send.tsx
-export function formatMaxAmount(maxAmount: bigint, asset: RemoteAsset) {
+function formatMaxAmount(maxAmount: bigint, asset: RemoteAsset) {
   if (maxAmount === 0n) {
     // Skip decimal places for 0
     return '0';

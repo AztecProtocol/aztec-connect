@@ -81,6 +81,7 @@ export function useDefiForm(recipe: DefiRecipe, mode: FlowDirection) {
   const feedback = getDefiFormFeedback(validationResult, touchedFields, attemptedLock);
   const composerState = useMaybeObs(lockedComposer?.stateObs);
   const locked = !!lockedComposer;
+  const lockedComposerPayload = lockedComposer?.payload;
 
   const rpStatus = useRollupProviderStatus();
   const bridgeIdNum = bridgeId?.toBigInt();
@@ -146,5 +147,16 @@ export function useDefiForm(recipe: DefiRecipe, mode: FlowDirection) {
     setLockedComposer(undefined);
   };
 
-  return { fields, setters, validationResult, feedback, composerState, submit, attemptLock, locked, unlock };
+  return {
+    fields,
+    setters,
+    validationResult,
+    feedback,
+    composerState,
+    lockedComposerPayload,
+    submit,
+    attemptLock,
+    locked,
+    unlock,
+  };
 }

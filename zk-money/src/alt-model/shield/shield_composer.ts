@@ -11,12 +11,12 @@ import { KNOWN_MAINNET_ASSET_ADDRESSES } from 'alt-model/known_assets/known_asse
 
 const debug = createDebug('zm:shield_composer');
 
-export interface ShieldComposerPayload {
+export type ShieldComposerPayload = Readonly<{
   targetOutput: Amount;
   fee: Amount;
   depositor: EthAddress;
   recipientAlias: string;
-}
+}>;
 
 export interface ShieldComposerDeps {
   sdk: AztecSdk;
@@ -29,7 +29,7 @@ export interface ShieldComposerDeps {
 export class ShieldComposer {
   stateObs = new ShieldComposerStateObs();
   private readonly walletAccountEnforcer: WalletAccountEnforcer;
-  constructor(private readonly payload: ShieldComposerPayload, private readonly deps: ShieldComposerDeps) {
+  constructor(readonly payload: ShieldComposerPayload, private readonly deps: ShieldComposerDeps) {
     this.walletAccountEnforcer = new WalletAccountEnforcer(
       deps.provider,
       payload.depositor,

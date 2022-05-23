@@ -7,10 +7,10 @@ import { DefiComposerPhase, DefiComposerStateObs } from './defi_composer_state_o
 
 const debug = createDebug('zm:defi_composer');
 
-export interface DefiComposerPayload {
+export type DefiComposerPayload = Readonly<{
   targetDepositAmount: Amount;
   feeAmount: Amount;
-}
+}>;
 
 export interface DefiComposerDeps {
   sdk: AztecSdk;
@@ -21,7 +21,7 @@ export interface DefiComposerDeps {
 
 export class DefiComposer {
   stateObs = new DefiComposerStateObs();
-  constructor(private readonly payload: DefiComposerPayload, private readonly deps: DefiComposerDeps) {}
+  constructor(readonly payload: DefiComposerPayload, private readonly deps: DefiComposerDeps) {}
 
   async compose() {
     this.stateObs.clearError();

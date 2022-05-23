@@ -1,10 +1,8 @@
 import type { StrOrMax } from 'alt-model/forms/constants';
-import { Button } from 'components';
 import { DefiFormFeedback, DefiFormFields, DefiFormValidationResult } from 'alt-model/defi/defi_form';
 import { AmountSection, DescriptionSection, StatsSection } from 'views/account/dashboard/modals/sections';
 import { DefiRecipe } from 'alt-model/defi/types';
 import { DefiSettlementTime } from '@aztec/sdk';
-import { FaqHint } from 'ui-components';
 import { SplitSection } from '../../sections/split_section';
 import { RecipeSettlementTimeInformationSection } from '../../sections/settlement_time_information_section';
 import { PrivacyInformationSection } from '../../sections/privacy_information_section';
@@ -12,6 +10,7 @@ import defiBridgeImage from 'images/defi_bridge.svg';
 import style from './defi_enter_page1.module.scss';
 import { DefiGasSection } from './../defi_gas_section';
 import { DefiWebLinks } from './../defi_web_links';
+import { FooterSection } from '../../sections/footer_section';
 
 interface DefiEnterPage1Props {
   recipe: DefiRecipe;
@@ -72,10 +71,7 @@ export function DefiEnterPage1({
         }
         rightPanel={<RecipeSettlementTimeInformationSection recipe={recipe} selectedSpeed={fields.speed} />}
       />
-      <div className={style.footer}>
-        <FaqHint className={style.faqHint} />
-        <Button text="Next" onClick={onNext} disabled={!validationResult.isValid} />
-      </div>
+      <FooterSection onNext={onNext} nextDisabled={!validationResult.isValid} feedback={feedback.footer} />
     </div>
   );
 }

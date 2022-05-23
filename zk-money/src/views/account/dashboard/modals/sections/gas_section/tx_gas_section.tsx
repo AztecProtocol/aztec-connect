@@ -40,14 +40,14 @@ interface TxGasSectionProps {
   speed: TxSettlementTime;
   onChangeSpeed: (speed: TxSettlementTime) => void;
   feeAmounts?: (Amount | undefined)[] | undefined[];
-  asset?: RemoteAsset;
   balanceType: BalanceType;
   targetAssetIsErc20?: boolean;
   deductionIsFromL1?: boolean;
 }
 
 export function TxGasSection(props: TxGasSectionProps) {
-  const { speed, onChangeSpeed, feeAmounts, asset, balanceType, deductionIsFromL1 } = props;
+  const { speed, onChangeSpeed, feeAmounts, balanceType, deductionIsFromL1 } = props;
+  const asset = feeAmounts?.[0]?.info;
   const rpStatus = useRollupProviderStatus();
   const { instantSettlementTime, nextSettlementTime } = estimateTxSettlementTimes(rpStatus);
 

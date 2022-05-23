@@ -1,4 +1,3 @@
-import { PrivacyIssue } from 'app';
 import { useState, useEffect } from 'react';
 import { ProgressBar } from 'ui-components';
 import { RemoteAsset } from 'alt-model/types';
@@ -12,7 +11,7 @@ interface PrivacyInformationSectionProps {
   asset: RemoteAsset;
   amount: bigint;
   txToAlias?: boolean;
-  privacyIssue?: PrivacyIssue;
+  hasMajorPrivacyIssue?: boolean;
 }
 
 interface PrivacyContentProps {
@@ -23,7 +22,7 @@ interface PrivacyContentProps {
 
 export function PrivacyInformationSection(props: PrivacyInformationSectionProps) {
   const [debouncedProps, setDebouncedProps] = useState(props);
-  const { amount, privacyIssue, txToAlias } = debouncedProps;
+  const { amount, txToAlias, hasMajorPrivacyIssue } = debouncedProps;
 
   useEffect(() => {
     const task = setTimeout(() => setDebouncedProps(props), 500);
@@ -34,7 +33,7 @@ export function PrivacyInformationSection(props: PrivacyInformationSectionProps)
   const buckets = useDepositorBuckets(asset.address);
 
   const countFromPrivacySet = buckets?.find(b => b.lowerBound >= amount)?.count ?? 1;
-  const crowd = !privacyIssue || privacyIssue === 'none' ? countFromPrivacySet : 1;
+  const crowd = hasMajorPrivacyIssue ? 1 : countFromPrivacySet;
   const approxCrowd = approxCrowdFormatter.format(crowd);
   const { text, progress, subtitle } = getPrivacyValues(crowd, approxCrowd, amount);
 

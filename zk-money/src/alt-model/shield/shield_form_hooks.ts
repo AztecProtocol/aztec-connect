@@ -74,6 +74,7 @@ export function useShieldForm(preselectedAssetId?: number) {
   const rpStatus = useRollupProviderStatus();
   const { instantSettlementTime, nextSettlementTime } = estimateTxSettlementTimes(rpStatus);
   const locked = !!lockedComposer;
+  const lockedComposerPayload = lockedComposer?.payload;
 
   const attemptLock = () => {
     setAttemptedLock(true);
@@ -130,5 +131,16 @@ export function useShieldForm(preselectedAssetId?: number) {
     setLockedComposer(undefined);
   };
 
-  return { fields, setters, validationResult, feedback, composerState, submit, attemptLock, locked, unlock };
+  return {
+    fields,
+    setters,
+    validationResult,
+    feedback,
+    composerState,
+    lockedComposerPayload,
+    submit,
+    attemptLock,
+    locked,
+    unlock,
+  };
 }
