@@ -64,8 +64,8 @@ export const SendFormFieldsPage: React.FunctionComponent<SendProps> = ({
   return (
     <div className={style.root}>
       <div className={style.header}>
-        <DescriptionSection className={style.description} text={getDescription(sendMode)} />
         <Toggle className={style.toggle} value={sendMode} options={MODES} onChangeValue={onChangeSendMode} />
+        <DescriptionSection className={style.description} text={getDescription(sendMode)} />
       </div>
       <SplitSection
         leftPanel={
