@@ -57,13 +57,11 @@ describe('end-to-end tests', () => {
   it('should deposit', async () => {
     const depositValue = sdk.toBaseUnits(assetId, '0.03');
 
-    const signer = await sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(accounts[0])!);
-
     expect(await sdk.getBalance(assetId, userId)).toBe(0n);
 
     const depositor = accounts[0];
     const [fee] = await sdk.getDepositFees(assetId);
-    const controller = sdk.createDepositController(userId, signer, depositValue, fee, depositor);
+    const controller = sdk.createDepositController(depositor, depositValue, fee, userId);
     await controller.createProof();
 
     await controller.depositFundsToContract();

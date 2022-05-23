@@ -127,6 +127,25 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
     return AliasHash.fromString(hash);
   }
 
+  public async createDepositProof(
+    assetId: number,
+    publicInput: bigint,
+    privateOutput: bigint,
+    noteRecipient: AccountId,
+    publicOwner: EthAddress,
+    txRefNo: number,
+  ) {
+    const json = await this.backend.createDepositProof(
+      assetId,
+      publicInput.toString(),
+      privateOutput.toString(),
+      noteRecipient.toString(),
+      publicOwner.toString(),
+      txRefNo,
+    );
+    return proofOutputFromJson(json);
+  }
+
   public async createPaymentProofInput(
     userId: AccountId,
     assetId: number,

@@ -75,7 +75,7 @@ export class Agent {
 
   public async sendDeposit(userData: UserData, deposit: bigint, assetId = 0, instant = false) {
     const assetInfo = this.sdk.getAssetInfo(assetId);
-    const { user, signer, address } = userData;
+    const { user, address } = userData;
     const fee = (await this.sdk.getDepositFees(assetId))[
       instant ? TxSettlementTime.INSTANT : TxSettlementTime.NEXT_ROLLUP
     ];
@@ -85,11 +85,10 @@ export class Agent {
     const actualDepositValue = assetId == 0 ? deposit - fee.value : deposit;
 
     const controller = this.sdk.createDepositController(
-      user.id,
-      signer,
+      address,
       { assetId, value: actualDepositValue },
       fee,
-      address,
+      user.id,
     );
     await controller.createProof();
     await controller.sign();

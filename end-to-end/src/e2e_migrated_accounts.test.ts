@@ -10,7 +10,6 @@ import {
   TxId,
   TxSettlementTime,
   WalletProvider,
-  Web3Signer,
   WithdrawController,
 } from '@aztec/sdk';
 import createDebug from 'debug';
@@ -26,14 +25,6 @@ const {
   ROLLUP_HOST = 'http://localhost:8081',
   PRIVATE_KEY = '',
 } = process.env;
-
-const privateKeyMessage = Buffer.from(
-  `Sign this message to generate your Aztec Privacy Key. This key lets the application decrypt your balance on Aztec.\n\nIMPORTANT: Only sign this message if you trust the application.`,
-);
-
-const spendingKeyMessage = Buffer.from(
-  `Sign this message to generate your Aztec Spending Key. This key lets the application spend your funds on Aztec.\n\nIMPORTANT: Only sign this message if you trust the application.`,
-);
 
 // taken from barretenberg environment module
 const initialAccounts = {
@@ -55,15 +46,8 @@ describe('end-to-end migrated tests', () => {
   let walletProvider: WalletProvider;
   const assetId = 0;
 
-  const createSigningKey = async (ethAddress: EthAddress, message: Buffer) => {
-    const signer = new Web3Signer(walletProvider);
-    const signedMessage = await signer.signMessage(message, ethAddress);
-    return signedMessage.slice(0, 32);
-  };
-
   const addUser = async (ethAddress: EthAddress, accountNonce: number, noSync = !accountNonce) => {
-    const accountPrivateKey = await createSigningKey(ethAddress, privateKeyMessage);
-    const publicKey = await sdk.derivePublicKey(accountPrivateKey);
+    const { privateKey: accountPrivateKey, publicKey } = await sdk.generateAccountKeyPair(ethAddress);
     const userId = new AccountId(publicKey, accountNonce);
     try {
       await sdk.addUser(accountPrivateKey, accountNonce, noSync);
@@ -74,7 +58,7 @@ describe('end-to-end migrated tests', () => {
     }
     const signingPrivateKey = !accountNonce
       ? accountPrivateKey
-      : await createSigningKey(ethAddress, spendingKeyMessage);
+      : (await sdk.generateSpendingKeyPair(ethAddress)).privateKey;
     const signer = await sdk.createSchnorrSigner(signingPrivateKey);
     return { userId, signer, accountPrivateKey };
   };
@@ -177,7 +161,6 @@ describe('end-to-end migrated tests', () => {
 
       for (let i = 0; i < 3; ++i) {
         const depositor = addresses[i];
-        const signer = signers[i];
         const user = accounts[i];
         const fee = depositFees[i == 2 ? TxSettlementTime.INSTANT : TxSettlementTime.NEXT_ROLLUP];
         debug(
@@ -185,7 +168,7 @@ describe('end-to-end migrated tests', () => {
             fee,
           )}) from ${depositor.toString()} to account ${i}...`,
         );
-        const controller = sdk.createDepositController(user, signer, depositValue, fee, depositor);
+        const controller = sdk.createDepositController(depositor, depositValue, fee, user);
         await controller.createProof();
 
         await controller.depositFundsToContract();

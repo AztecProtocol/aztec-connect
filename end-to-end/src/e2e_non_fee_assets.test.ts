@@ -90,12 +90,11 @@ describe('end-to-end async defi tests', () => {
     for (let i = 0; i < accounts.length; i++) {
       const depositor = accounts[i];
       debug(`shielding ${sdk.fromBaseUnits(shieldValue, true)} from ${depositor.toString()}...`);
-      const signer = await sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(depositor)!);
       // flush this transaction through by paying for all the slots in the rollup
       const fee = (await sdk.getDepositFees(ethAssetId))[
         i == accounts.length - 1 ? TxSettlementTime.INSTANT : TxSettlementTime.NEXT_ROLLUP
       ];
-      const controller = sdk.createDepositController(userIds[i], signer, shieldValue, fee, depositor);
+      const controller = sdk.createDepositController(depositor, shieldValue, fee, userIds[i]);
       await controller.createProof();
       await controller.sign();
       await controller.depositFundsToContract();

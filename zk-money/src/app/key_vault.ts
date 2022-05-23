@@ -1,23 +1,13 @@
-import type { Provider } from './provider';
-import { AztecSdk, EthAddress, GrumpkinAddress, Web3Signer } from '@aztec/sdk';
+import { AztecSdk, EthAddress, GrumpkinAddress } from '@aztec/sdk';
 import { AccountVersion } from './account_state';
+import type { Provider } from './provider';
 
 export const createSigningKeys = async (provider: Provider, sdk: AztecSdk) => {
-  const message = Buffer.from(
-    `Sign this message to generate your Aztec Spending Key. This key lets the application spend your funds on Aztec.\n\nIMPORTANT: Only sign this message if you trust the application.`,
-  );
   const ethAddress = provider.account!;
-  const signer = new Web3Signer(provider.ethereumProvider);
-  const privateKey = (await signer.signPersonalMessage(message, ethAddress)).slice(0, 32);
-  const publicKey = await sdk.derivePublicKey(privateKey);
-  return { privateKey, publicKey };
+  return await sdk.generateSpendingKeyPair(ethAddress, provider.ethereumProvider);
 };
 
 export class KeyVault {
-  static signingMessage = Buffer.from(
-    `Sign this message to generate your Aztec Privacy Key. This key lets the application decrypt your balance on Aztec.\n\nIMPORTANT: Only sign this message if you trust the application.`,
-  );
-
   private account: { privateKey: Buffer; publicKey: GrumpkinAddress; ethAddress: EthAddress; version: AccountVersion };
 
   constructor(privateKey: Buffer, publicKey: GrumpkinAddress, ethAddress: EthAddress, version: AccountVersion) {
@@ -42,9 +32,7 @@ export class KeyVault {
 
   static async create(provider: Provider, sdk: AztecSdk) {
     const ethAddress = provider.account!;
-    const signer = new Web3Signer(provider.ethereumProvider);
-    const privateKey = (await signer.signPersonalMessage(KeyVault.signingMessage, ethAddress)).slice(0, 32);
-    const publicKey = await sdk.derivePublicKey(privateKey);
+    const { privateKey, publicKey } = await sdk.generateAccountKeyPair(ethAddress, provider.ethereumProvider);
     return new KeyVault(privateKey, publicKey, ethAddress, AccountVersion.V1);
   }
 }

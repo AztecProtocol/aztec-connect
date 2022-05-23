@@ -7,47 +7,40 @@ import { ClientEthereumBlockchain } from '@aztec/blockchain';
 import { CoreSdkInterface } from '../core_sdk';
 import { CorePaymentTx, createCorePaymentTxForRecipient } from '../core_tx';
 import { ProofOutput } from '../proofs';
-import { Signer } from '../signer';
+import { SchnorrSigner } from '../signer';
 import { createTxRefNo } from './create_tx_ref_no';
-import { DepositController } from './deposit_controller';
+import { DepositController, FeePayer } from './deposit_controller';
 
 export class RegisterController {
-  private readonly newUserId: AccountId;
   private depositController?: DepositController;
-  private proofOutput!: ProofOutput;
-  private txId!: TxId;
+  private proofOutput?: ProofOutput;
+  private txId?: TxId;
 
   constructor(
     public readonly userId: AccountId,
-    private readonly userSigner: Signer,
     public readonly alias: string,
+    private readonly accountPrivateKey: Buffer,
     public readonly signingPublicKey: GrumpkinAddress,
     public readonly recoveryPublicKey: GrumpkinAddress | undefined,
     public readonly deposit: AssetValue,
     public readonly fee: AssetValue,
     public readonly depositor: EthAddress,
+    public readonly feePayer: FeePayer | undefined,
     private readonly core: CoreSdkInterface,
     blockchain: ClientEthereumBlockchain,
     provider: EthereumProvider,
   ) {
-    if (userId.accountNonce !== 0) {
-      throw new Error('Registration proof can only be created by account with nonce 0.');
+    if (userId.accountNonce !== 1) {
+      throw new Error(`Expect new user to have account nonce 1. Got ${userId.accountNonce}.`);
     }
-
-    if (deposit.value && fee.value && deposit.assetId !== fee.assetId) {
-      throw new Error('Inconsistent asset ids.');
-    }
-
-    this.newUserId = new AccountId(userId.publicKey, 1);
 
     if (deposit.value || fee.value) {
       this.depositController = new DepositController(
-        userId,
-        this.userSigner,
         deposit,
         fee,
         depositor,
-        this.newUserId,
+        this.userId,
+        feePayer,
         core,
         blockchain,
         provider,
@@ -88,20 +81,26 @@ export class RegisterController {
   }
 
   public async createProof() {
+    const accountPublicKey = await this.core.derivePublicKey(this.accountPrivateKey);
+    if (!accountPublicKey.equals(this.userId.publicKey)) {
+      throw new Error('`accountPrivateKey` does not belong to the new user.');
+    }
+
+    const signer = new SchnorrSigner(this.core, accountPublicKey, this.accountPrivateKey);
+    const spendingPublicKey = signer.getPublicKey();
     const aliasHash = await this.core.computeAliasHash(this.alias);
     const txRefNo = this.depositController ? createTxRefNo() : 0;
-    const signingPublicKey = this.userSigner.getPublicKey();
 
     const proofInput = await this.core.createAccountProofInput(
-      this.userId,
+      new AccountId(accountPublicKey, 0),
       aliasHash,
       true,
-      signingPublicKey,
+      spendingPublicKey,
       this.signingPublicKey,
       this.recoveryPublicKey,
       undefined,
     );
-    proofInput.signature = await this.userSigner.signMessage(proofInput.signingData);
+    proofInput.signature = await signer.signMessage(proofInput.signingData);
     this.proofOutput = await this.core.createAccountProof(proofInput, txRefNo);
 
     if (this.depositController) {
@@ -141,15 +140,12 @@ export class RegisterController {
     if (!this.proofOutput) {
       throw new Error('Call createProof() first.');
     }
-    if (!(await this.core.userExists(this.newUserId))) {
-      throw new Error('Add the new user to the sdk first.');
-    }
 
     if (!this.depositController) {
       [this.txId] = await this.core.sendProofs([this.proofOutput]);
     } else {
       const [{ tx, ...proofOutputData }] = this.depositController.getProofs();
-      const recipientTx = createCorePaymentTxForRecipient(tx as CorePaymentTx, this.newUserId);
+      const recipientTx = createCorePaymentTxForRecipient(tx as CorePaymentTx, this.userId);
       const feeProofOutput = { tx: recipientTx, ...proofOutputData };
       [this.txId] = await this.core.sendProofs([this.proofOutput, feeProofOutput]);
     }

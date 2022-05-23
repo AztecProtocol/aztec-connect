@@ -38,9 +38,9 @@ function MinForm({ grumpkinPrivKey }: MinFormProps) {
             });
             await sdk.run();
             const grumpkinPubKey = await sdk.derivePublicKey(grumpkinPrivKey);
-            const accountId = new AccountId(grumpkinPubKey, 0);
+            const accountId = new AccountId(grumpkinPubKey, 1);
             if (!(await sdk.userExists(accountId))) {
-              await sdk.addUser(grumpkinPrivKey);
+              await sdk.addUser(grumpkinPrivKey, accountId.accountNonce);
             }
             log('init complete');
             setSdk(sdk);
@@ -75,14 +75,14 @@ function MinForm({ grumpkinPrivKey }: MinFormProps) {
           disabled={!sdk || busy}
           onClick={async () => {
             setBusy(true);
-            const signer = await sdk!.createSchnorrSigner(grumpkinPrivKey);
-            const accountId = new AccountId(signer.getPublicKey(), 0);
+            const publicKey = await sdk!.derivePublicKey(grumpkinPrivKey);
+            const accountId = new AccountId(publicKey, 1);
             const start = new Date().getTime();
             log(`creating account proof...`);
             const controller = sdk!.createRegisterController(
               accountId,
-              signer,
               'blah',
+              grumpkinPrivKey,
               accountId.publicKey,
               undefined,
               {

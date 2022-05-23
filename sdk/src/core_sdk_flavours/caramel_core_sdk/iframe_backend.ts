@@ -3,8 +3,8 @@ import EventEmitter from 'events';
 import { SdkEvent } from '../../core_sdk';
 import { BananaCoreSdkOptions } from '../banana_core_sdk';
 import { createDispatchFn, DispatchMsg } from '../transport';
-import { createMangoCoreSdk } from './create_mango_core_sdk';
-import { MangoCoreSdk } from './mango_core_sdk';
+import { CaramelCoreSdk } from './caramel_core_sdk';
+import { createCaramelCoreSdk } from './create_caramel_core_sdk';
 
 const debug = createLogger('aztec:sdk:iframe_backend');
 
@@ -35,7 +35,7 @@ export interface IframeBackend extends EventEmitter {
 }
 
 export class IframeBackend extends EventEmitter {
-  private coreSdk!: MangoCoreSdk;
+  private coreSdk!: CaramelCoreSdk;
   private initPromise!: Promise<void>;
 
   constructor(private origin: string) {
@@ -55,7 +55,7 @@ export class IframeBackend extends EventEmitter {
     }
 
     const serverUrl = await getServerUrl();
-    this.coreSdk = await createMangoCoreSdk(this.origin, { ...options, serverUrl });
+    this.coreSdk = await createCaramelCoreSdk(this.origin, { ...options, serverUrl });
     for (const e in SdkEvent) {
       const event = (SdkEvent as any)[e];
       this.coreSdk.on(event, (...args: any[]) => {

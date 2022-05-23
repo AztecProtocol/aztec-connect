@@ -11,7 +11,7 @@ import {
 
 export async function depositTokensToAztec(
   usersEthereumAddress: EthAddress,
-  user: AccountId,
+  userId: AccountId,
   token: EthAddress,
   tokenQuantity: bigint,
   settlementTime: TxSettlementTime,
@@ -19,16 +19,18 @@ export async function depositTokensToAztec(
   provider: WalletProvider,
 ) {
   const tokenAssetId = sdk.getAssetIdByAddress(token);
-  const signer = await sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(usersEthereumAddress)!);
   const tokenDepositFee = (await sdk.getDepositFees(tokenAssetId))[settlementTime];
   const value = (await sdk.isFeePayingAsset(tokenAssetId)) ? tokenQuantity - tokenDepositFee.value : tokenQuantity;
   const tokenAssetValue = { assetId: tokenAssetId, value };
+  const signer = await sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(usersEthereumAddress)!);
+  const feePayer = tokenDepositFee.assetId !== tokenAssetId ? { userId, signer } : undefined;
   const tokenDepositController = sdk.createDepositController(
-    user,
-    signer,
+    usersEthereumAddress,
     tokenAssetValue,
     tokenDepositFee,
-    usersEthereumAddress,
+    userId,
+    feePayer,
+    provider,
   );
   await tokenDepositController.createProof();
   await tokenDepositController.sign();
@@ -44,7 +46,6 @@ export async function batchDeposit(
   users: AccountId[],
   shieldValue: AssetValue,
   sdk: AztecSdk,
-  provider: WalletProvider,
 ) {
   const depositFees = await sdk.getDepositFees(shieldValue.assetId);
 
@@ -52,10 +53,9 @@ export async function batchDeposit(
   const controllers = await Promise.all(
     users.map(async (user, i) => {
       const depositor = depositors[i];
-      const signer = await sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(depositor)!);
       // Last deposit pays for instant rollup to flush.
       const fee = depositFees[i == users.length - 1 ? TxSettlementTime.INSTANT : TxSettlementTime.NEXT_ROLLUP];
-      const controller = sdk.createDepositController(user, signer, shieldValue, fee, depositor);
+      const controller = sdk.createDepositController(depositor, shieldValue, fee, user);
       await controller.createProof();
       if (shieldValue.assetId !== 0) {
         await controller.approve();

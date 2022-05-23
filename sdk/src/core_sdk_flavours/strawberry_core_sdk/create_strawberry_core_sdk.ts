@@ -1,4 +1,4 @@
-import { createIframe } from '../mango_core_sdk';
+import { createIframe } from '../caramel_core_sdk';
 import { TransportClient } from '../transport';
 import { IframeFrontend } from './iframe_frontend';
 import { IframeTransportConnect } from './iframe_transport_connect';

@@ -47,9 +47,7 @@ describe('end-to-end account tests', () => {
 
   it('should create and recover account, add and remove signing keys.', async () => {
     const accountPrivateKey = provider.getPrivateKeyForAddress(depositor)!;
-    const user0 = await sdk.addUser(accountPrivateKey);
-    const signer0 = await sdk.createSchnorrSigner(accountPrivateKey);
-    const { publicKey: accountPubKey } = await user0.getUserData();
+    const accountPubKey = await sdk.derivePublicKey(accountPrivateKey);
 
     expect(await sdk.getLatestAccountNonce(accountPubKey)).toBe(0);
 
@@ -69,9 +67,9 @@ describe('end-to-end account tests', () => {
       const txFee = (await sdk.getRegisterFees(depositValue))[TxSettlementTime.INSTANT];
 
       const controller = sdk.createRegisterController(
-        user0.id,
-        signer0,
+        user1.id,
         alias,
+        accountPrivateKey,
         signer1.getPublicKey(),
         recoveryPublicKey,
         depositValue,
@@ -85,14 +83,12 @@ describe('end-to-end account tests', () => {
       await controller.createProof();
       await controller.sign();
 
-      expect(await user0.getBalance(assetId)).toBe(BigInt(0));
       expect(await user1.getBalance(assetId)).toBe(BigInt(0));
 
       await controller.send();
       debug(`waiting to settle...`);
       await controller.awaitSettlement(awaitSettlementTimeout);
 
-      expect(await user0.getBalance(assetId)).toBe(BigInt(0));
       expect(await user1.getBalance(assetId)).toBe(depositValue.value);
     }
 

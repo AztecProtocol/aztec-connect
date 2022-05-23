@@ -97,14 +97,14 @@ describe('end-to-end tests', () => {
 
     // Rollup 0: Deposits.
     {
-      const depositControllers = await asyncMap(depositUsers, async ({ address, signer, userId }, i) => {
+      const depositControllers = await asyncMap(depositUsers, async ({ address, userId }, i) => {
         const fee = depositFees[i == 0 ? TxSettlementTime.NEXT_ROLLUP : TxSettlementTime.INSTANT];
         debug(
           `shielding ${sdk.fromBaseUnits(depositValue, true)} (fee: ${sdk.fromBaseUnits(
             fee,
           )}) from ${address.toString()} to account ${i}...`,
         );
-        const controller = sdk.createDepositController(userId, signer, depositValue, fee, address);
+        const controller = sdk.createDepositController(address, depositValue, fee, userId);
         await controller.createProof();
 
         await controller.depositFundsToContract();

@@ -30,7 +30,7 @@
   "targets": {
     "if": {
       "context": "browser",
-      "source": "./src/core_sdk_flavours/mango_core_sdk/index.html",
+      "source": "./src/core_sdk_flavours/caramel_core_sdk/index.html",
       "distDir": "./dist"
     },
     "sw": {

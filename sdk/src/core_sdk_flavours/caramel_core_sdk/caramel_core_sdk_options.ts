@@ -1,5 +1,5 @@
 import { CoreSdkOptions } from '../../core_sdk';
 
-export interface MangoCoreSdkOptions extends CoreSdkOptions {
+export interface CaramelCoreSdkOptions extends CoreSdkOptions {
   pollInterval?: number;
 }

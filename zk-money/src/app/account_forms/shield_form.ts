@@ -651,47 +651,39 @@ export class ShieldForm extends EventEmitter implements AccountForm {
       await this.ethAccount.refreshPendingBalance(true);
     }
 
-    const senderId = controller.userId;
-    if (!senderId.equals(this.userId)) {
-      await this.accountUtils.removeUser(senderId);
-    }
-
     this.proceed(ShieldStatus.DONE);
   }
 
   private async createController(depositor: EthAddress) {
-    const { accountPublicKey, accountPrivateKey } = this.keyVault;
-    const senderId = new AccountId(accountPublicKey, 0);
+    const { accountPrivateKey } = this.keyVault;
     const form = this.values;
     const asset = this.asset;
     const depositValue = { assetId: asset.id, value: toBaseUnits(form.amount.value, asset.decimals) };
     const fee = { assetId: asset.id, value: form.fees.value[form.speed.value].fee };
     const recipient = form.recipient.value.input;
     const outputNoteOwner = recipient === this.alias ? this.userId : (await this.accountUtils.getAccountId(recipient))!;
-    const signer = await this.sdk.createSchnorrSigner(accountPrivateKey);
     if (this.isNewAccount) {
       await this.accountUtils.addUser(accountPrivateKey, this.userId.accountNonce);
     }
-    await this.accountUtils.addUser(accountPrivateKey, senderId.accountNonce);
     return this.isNewAccount
       ? this.sdk.createRegisterController(
-          senderId,
-          signer,
+          this.userId,
           this.alias,
+          accountPrivateKey,
           this.newSpendingPublicKey!,
           undefined,
           depositValue,
           fee,
           depositor,
+          undefined,
           this.provider?.ethereumProvider,
         )
       : this.sdk.createDepositController(
-          senderId,
-          signer,
+          depositor,
           depositValue,
           fee,
-          depositor,
           outputNoteOwner,
+          undefined,
           this.provider?.ethereumProvider,
         );
   }

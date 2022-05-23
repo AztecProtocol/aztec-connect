@@ -20,6 +20,7 @@ import { Timer } from '@aztec/barretenberg/timer';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { BarretenbergWasm, WorkerPool } from '@aztec/barretenberg/wasm';
 import { WorldState, WorldStateConstants } from '@aztec/barretenberg/world_state';
+import { randomBytes } from 'crypto';
 import { EventEmitter } from 'events';
 import { LevelUp } from 'levelup';
 import { BlockContext } from '../block_context/block_context';
@@ -35,6 +36,7 @@ import {
   ProofOutput,
 } from '../proofs';
 import { MemorySerialQueue, MutexSerialQueue, SerialQueue } from '../serial_queue';
+import { SchnorrSigner } from '../signer';
 import { UserState, UserStateEvent, UserStateFactory } from '../user_state';
 import { CoreSdkInterface } from './core_sdk_interface';
 import { CoreSdkOptions } from './core_sdk_options';
@@ -419,6 +421,51 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   // PUBLIC METHODS FROM HERE ON REQUIRE run() TO BE CALLED.
   // -------------------------------------------------------
 
+  public async createDepositProof(
+    assetId: number,
+    publicInput: bigint,
+    privateOutput: bigint,
+    noteRecipient: AccountId,
+    publicOwner: EthAddress,
+    txRefNo: number,
+  ) {
+    return this.serialQueue.push(async () => {
+      this.assertInitState(SdkInitState.RUNNING);
+
+      // Create a one time user to generate and sign the proof.
+      const privateKey = randomBytes(32);
+      const publicKey = await this.derivePublicKey(privateKey);
+      const accountNonce = 0;
+      const user = {
+        id: new AccountId(publicKey, accountNonce),
+        privateKey,
+        publicKey,
+        accountNonce,
+        syncedToRollup: -1,
+      };
+      const signer = new SchnorrSigner(this, publicKey, privateKey);
+      const spendingPublicKey = GrumpkinAddress.randomAddress();
+
+      const proofInput = await this.paymentProofCreator.createProofInput(
+        user,
+        [], // notes
+        BigInt(0), // privateInput
+        privateOutput,
+        BigInt(0), // senderPrivateOutput
+        publicInput,
+        BigInt(0), // publicOutput
+        assetId,
+        noteRecipient,
+        publicOwner,
+        spendingPublicKey,
+        0, // allowChain
+      );
+      const signature = await signer.signMessage(proofInput.signingData);
+
+      return this.paymentProofCreator.createProof(user, { ...proofInput, signature }, txRefNo);
+    });
+  }
+
   public async createPaymentProofInput(
     userId: AccountId,
     assetId: number,
@@ -562,17 +609,6 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     return this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
 
-      // Get userState before sending proofs to make sure that the tx owner has been added to the sdk.
-      const [
-        {
-          tx: { userId },
-        },
-      ] = proofs;
-      const userState = this.getUserState(userId);
-      if (proofs.some(({ tx }) => !tx.userId.equals(userId))) {
-        throw new Error('Inconsistent tx owners.');
-      }
-
       const txs = proofs.map(({ proofData, offchainTxData, signature }) => ({
         proofData: proofData.rawProofData,
         offchainTxData: offchainTxData.toBuffer(),
@@ -581,7 +617,12 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       const txIds = await this.rollupProvider.sendTxs(txs);
 
       for (const proof of proofs) {
-        await userState.addProof(proof);
+        const { userId } = proof.tx;
+        try {
+          await this.getUserState(userId).addProof(proof);
+        } catch (e) {
+          // Proof sender is not added.
+        }
 
         // Add the payment proof to recipient's account if they are not the sender.
         if ([ProofId.DEPOSIT, ProofId.SEND].includes(proof.tx.proofId)) {

@@ -100,7 +100,7 @@ describe('end-to-end virtual assets tests', () => {
     // Shield eth to all users' accounts.
     {
       debug(`shielding ETH for all accounts...`);
-      await batchDeposit(accounts, userIds, shieldValue, sdk, provider);
+      await batchDeposit(accounts, userIds, shieldValue, sdk);
       debug(`${sdk.fromBaseUnits(shieldValue, true)} shielded for all account.`);
       await debugBalance(ethAssetId, 0);
       await debugBalance(ethAssetId, 1);

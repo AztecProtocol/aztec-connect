@@ -87,10 +87,9 @@ describe('end-to-end defi tests', () => {
       const controllers = await asyncMap(accounts, async (depositor, i) => {
         debug(`shielding ${sdk.fromBaseUnits(shieldValue, true)} from ${depositor.toString()}...`);
 
-        const signer = await sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(depositor)!);
         // Last deposit pays for instant rollup to flush.
         const fee = depositFees[i == accounts.length - 1 ? TxSettlementTime.INSTANT : TxSettlementTime.NEXT_ROLLUP];
-        const controller = sdk.createDepositController(userIds[i], signer, shieldValue, fee, depositor);
+        const controller = sdk.createDepositController(depositor, shieldValue, fee, userIds[i]);
         await controller.createProof();
         await controller.depositFundsToContract();
         await controller.awaitDepositFundsToContract();

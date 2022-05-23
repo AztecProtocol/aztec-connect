@@ -18,6 +18,11 @@ import { ProofOutput } from '../proofs';
 import { Signer } from '../signer';
 import { createTxRefNo } from './create_tx_ref_no';
 
+export interface FeePayer {
+  userId: AccountId;
+  signer: Signer;
+}
+
 export class DepositController {
   private readonly publicInput: AssetValue;
   private proofOutput?: ProofOutput;
@@ -33,12 +38,11 @@ export class DepositController {
   } = { pendingDeposit: BigInt(0), pendingFunds: BigInt(0), requiredFunds: BigInt(0) };
 
   constructor(
-    public readonly userId: AccountId,
-    private readonly userSigner: Signer,
     public readonly assetValue: AssetValue,
     public readonly fee: AssetValue,
     public readonly from: EthAddress,
     public readonly to: AccountId,
+    public readonly feePayer: FeePayer | undefined,
     private readonly core: CoreSdkInterface,
     private readonly blockchain: ClientEthereumBlockchain,
     private readonly provider: EthereumProvider,
@@ -49,6 +53,10 @@ export class DepositController {
     }
     if (!value && !fee.value) {
       throw new Error('Deposit value must be greater than 0.');
+    }
+    const requireFeePayingTx = fee.value && fee.assetId !== assetId;
+    if (requireFeePayingTx && !feePayer) {
+      throw new Error('Fee payer not provided.');
     }
 
     this.publicInput = { assetId, value: value + (fee.assetId === assetId ? fee.value : BigInt(0)) };
@@ -196,33 +204,24 @@ export class DepositController {
     const { assetId, value } = this.publicInput;
     const requireFeePayingTx = !!this.fee.value && this.fee.assetId !== assetId;
     const privateOutput = requireFeePayingTx ? value : value - this.fee.value;
-    const [recipientPrivateOutput, senderPrivateOutput] = this.to.equals(this.userId)
-      ? [BigInt(0), privateOutput]
-      : [privateOutput, BigInt(0)];
     if (requireFeePayingTx && !txRefNo) {
       txRefNo = createTxRefNo();
     }
-    const spendingPublicKey = this.userSigner.getPublicKey();
 
-    const proofInput = await this.core.createPaymentProofInput(
-      this.userId,
+    this.proofOutput = await this.core.createDepositProof(
       assetId,
       value, // publicInput,
-      BigInt(0), // publicOutput
-      BigInt(0), // privateInput
-      recipientPrivateOutput,
-      senderPrivateOutput,
-      this.to, // noteRecipient
-      this.from, // publicOwner
-      spendingPublicKey,
-      0, // allowChain
+      privateOutput,
+      this.to,
+      this.from,
+      txRefNo,
     );
-    proofInput.signature = await this.userSigner.signMessage(proofInput.signingData);
-    this.proofOutput = await this.core.createPaymentProof(proofInput, txRefNo);
 
     if (requireFeePayingTx) {
+      const { userId, signer } = this.feePayer!;
+      const spendingPublicKey = signer.getPublicKey();
       const feeProofInput = await this.core.createPaymentProofInput(
-        this.userId,
+        userId,
         this.fee.assetId,
         BigInt(0),
         BigInt(0),
@@ -234,7 +233,7 @@ export class DepositController {
         spendingPublicKey,
         2,
       );
-      feeProofInput.signature = await this.userSigner.signMessage(feeProofInput.signingData);
+      feeProofInput.signature = await signer.signMessage(feeProofInput.signingData);
       this.feeProofOutput = await this.core.createPaymentProof(feeProofInput, txRefNo);
     }
   }

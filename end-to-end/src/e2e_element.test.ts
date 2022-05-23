@@ -107,10 +107,9 @@ describe('end-to-end async defi tests', () => {
       // This pays for all fees for non-fee paying assets, taken from the value above.
       const shieldValue = sdk.toBaseUnits(ethAssetId, '4');
       debug(`shielding ${sdk.fromBaseUnits(shieldValue, true)} from ${ethAddr.toString()}...`);
-      const signer = await sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(ethAddr)!);
       const fee = (await sdk.getDepositFees(ethAssetId))[TxSettlementTime.INSTANT];
 
-      const controller = sdk.createDepositController(userId, signer, shieldValue, fee, ethAddr);
+      const controller = sdk.createDepositController(ethAddr, shieldValue, fee, userId);
       await controller.createProof();
       await controller.sign();
       await controller.depositFundsToContract();

@@ -124,6 +124,25 @@ export class CoreSdkServerStub {
     return (await this.core.computeAliasHash(alias)).toString();
   }
 
+  public async createDepositProof(
+    assetId: number,
+    publicInput: string,
+    privateOutput: string,
+    noteRecipient: string,
+    publicOwner: string,
+    txRefNo: number,
+  ) {
+    const proofOutput = await this.core.createDepositProof(
+      assetId,
+      BigInt(publicInput),
+      BigInt(privateOutput),
+      AccountId.fromString(noteRecipient),
+      EthAddress.fromString(publicOwner),
+      txRefNo,
+    );
+    return proofOutputToJson(proofOutput);
+  }
+
   public async createPaymentProofInput(
     userId: string,
     assetId: number,

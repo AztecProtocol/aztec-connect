@@ -50,6 +50,15 @@ export interface CoreSdkInterface {
 
   computeAliasHash(alias: string): Promise<AliasHash>;
 
+  createDepositProof(
+    assetId: number,
+    publicInput: bigint,
+    privateOutput: bigint,
+    noteRecipient: AccountId,
+    publicOwner: EthAddress,
+    txRefNo: number,
+  ): Promise<ProofOutput>;
+
   createPaymentProofInput(
     userId: AccountId,
     assetId: number,

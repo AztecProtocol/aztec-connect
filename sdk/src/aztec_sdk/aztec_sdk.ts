@@ -7,12 +7,13 @@ import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { randomBytes } from '@aztec/barretenberg/crypto';
 import { TxSettlementTime } from '@aztec/barretenberg/rollup_provider';
 import { TxId } from '@aztec/barretenberg/tx_id';
-import { ClientEthereumBlockchain, validateSignature } from '@aztec/blockchain';
+import { ClientEthereumBlockchain, validateSignature, Web3Signer } from '@aztec/blockchain';
 import { EventEmitter } from 'events';
 import {
   AddSigningKeyController,
   DefiController,
   DepositController,
+  FeePayer,
   MigrateAccountController,
   RecoverAccountController,
   RegisterController,
@@ -85,7 +86,7 @@ export class AztecSdk extends EventEmitter {
     return this.core.awaitDefiSettlement(txId, timeout);
   }
 
-  public getLocalStatus() {
+  public async getLocalStatus() {
     return this.core.getLocalStatus();
   }
 
@@ -154,8 +155,38 @@ export class AztecSdk extends EventEmitter {
     return this.core.getUserData(userId);
   }
 
-  public getUsersData() {
+  public async getUsersData() {
     return this.core.getUsersData();
+  }
+
+  public getAccountKeySigningData() {
+    return Buffer.from(
+      'Sign this message to generate your Aztec Privacy Key. This key lets the application decrypt your balance on Aztec.\n\nIMPORTANT: Only sign this message if you trust the application.',
+    );
+  }
+
+  public getSpendingKeySigningData() {
+    return Buffer.from(
+      'Sign this message to generate your Aztec Spending Key. This key lets the application spend your funds on Aztec.\n\nIMPORTANT: Only sign this message if you trust the application.',
+    );
+  }
+
+  public async generateAccountKeyPair(account: EthAddress, provider = this.provider) {
+    const ethSigner = new Web3Signer(provider);
+    const signingData = this.getAccountKeySigningData();
+    const signature = await ethSigner.signPersonalMessage(signingData, account);
+    const privateKey = signature.slice(0, 32);
+    const publicKey = await this.derivePublicKey(privateKey);
+    return { publicKey, privateKey };
+  }
+
+  public async generateSpendingKeyPair(account: EthAddress, provider = this.provider) {
+    const ethSigner = new Web3Signer(provider);
+    const signingData = this.getSpendingKeySigningData();
+    const signature = await ethSigner.signPersonalMessage(signingData, account);
+    const privateKey = signature.slice(0, 32);
+    const publicKey = await this.derivePublicKey(privateKey);
+    return { publicKey, privateKey };
   }
 
   public async createSchnorrSigner(privateKey: Buffer) {
@@ -163,7 +194,7 @@ export class AztecSdk extends EventEmitter {
     return new SchnorrSigner(this.core, publicKey, privateKey);
   }
 
-  public derivePublicKey(privateKey: Buffer) {
+  public async derivePublicKey(privateKey: Buffer) {
     return this.core.derivePublicKey(privateKey);
   }
 
@@ -242,15 +273,14 @@ export class AztecSdk extends EventEmitter {
   }
 
   public createDepositController(
-    userId: AccountId,
-    userSigner: Signer,
+    from: EthAddress,
     value: AssetValue,
     fee: AssetValue,
-    from: EthAddress,
-    to = userId,
+    to: AccountId,
+    feePayer?: FeePayer,
     provider = this.provider,
   ) {
-    return new DepositController(userId, userSigner, value, fee, from, to, this.core, this.blockchain, provider);
+    return new DepositController(value, fee, from, to, feePayer, this.core, this.blockchain, provider);
   }
 
   public async getWithdrawFees(assetId: number, recipient?: EthAddress) {
@@ -374,24 +404,26 @@ export class AztecSdk extends EventEmitter {
 
   public createRegisterController(
     userId: AccountId,
-    userSigner: Signer,
     alias: string,
+    accountPrivateKey: Buffer,
     signingPublicKey: GrumpkinAddress,
     recoveryPublicKey: GrumpkinAddress | undefined,
     deposit: AssetValue,
     fee: AssetValue,
     depositor: EthAddress,
+    feePayer?: FeePayer,
     provider = this.provider,
   ) {
     return new RegisterController(
       userId,
-      userSigner,
       alias,
+      accountPrivateKey,
       signingPublicKey,
       recoveryPublicKey,
       deposit,
       fee,
       depositor,
+      feePayer,
       this.core,
       this.blockchain,
       provider,

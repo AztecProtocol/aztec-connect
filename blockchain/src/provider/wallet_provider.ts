@@ -75,7 +75,7 @@ export class WalletProvider implements EthereumProvider {
 
   private async personalSign(args: RequestArguments) {
     const [message, from] = args.params!;
-    const account = this.accounts.find(a => a.address.toLowerCase() === from);
+    const account = this.accounts.find(a => a.address.toLowerCase() === from.toLowerCase());
     if (account) {
       return await account.signMessage(Buffer.from(message.slice(2), 'hex'));
     }
@@ -84,7 +84,7 @@ export class WalletProvider implements EthereumProvider {
 
   private async sign(args: RequestArguments) {
     const [from, message] = args.params!;
-    const account = this.accounts.find(a => a.address.toLowerCase() === from);
+    const account = this.accounts.find(a => a.address.toLowerCase() === from.toLowerCase());
     if (account) {
       return await account.signMessage(Buffer.from(message.slice(2), 'hex'));
     }
@@ -94,7 +94,7 @@ export class WalletProvider implements EthereumProvider {
   private async signTypedData(args: RequestArguments) {
     const [from, data] = args.params!;
     const { types, domain, message } = JSON.parse(data);
-    const account = this.accounts.find(a => a.address.toLowerCase() === from);
+    const account = this.accounts.find(a => a.address.toLowerCase() === from.toLowerCase());
     if (account) {
       delete types.EIP712Domain;
       return await account._signTypedData(domain, types, message);

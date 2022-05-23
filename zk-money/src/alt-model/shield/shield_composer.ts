@@ -1,4 +1,4 @@
-import { AccountId, AztecSdk, EthAddress, DepositController, TxId } from '@aztec/sdk';
+import { AccountId, AztecSdk, EthAddress, DepositController, TxId, FeePayer } from '@aztec/sdk';
 import type { Provider } from '../../app';
 import createDebug from 'debug';
 import { Amount } from 'alt-model/assets';
@@ -54,7 +54,6 @@ export class ShieldComposer {
       await this.cachedSteps.deposit.exec(() => this.deposit(controller));
       await this.cachedSteps.approveProof.exec(() => this.approveProof(controller));
       const txId = await this.cachedSteps.sendProof.exec(() => this.sendProof(controller));
-      await this.cleanup(controller);
       this.stateObs.setPhase(ShieldComposerPhase.DONE);
 
       return txId;
@@ -67,40 +66,26 @@ export class ShieldComposer {
 
   private async createController() {
     const { targetOutput, fee, depositor, recipientAlias } = this.payload;
-    const { provider, sdk, keyVault, accountId } = this.deps;
+    const { provider, sdk, accountId } = this.deps;
+    const recipientAccount = (await sdk.getRemoteAccountId(recipientAlias))!;
 
     // If fees are taken in second asset we need access to the user's spending key.
     // Otherwise we can shield from nonce 0 and skip spending key generation.
+    let feePayer: FeePayer | undefined;
     const isShieldingFromNonce0 = targetOutput.id === fee.id;
-
-    if (isShieldingFromNonce0) {
-      try {
-        // We add the nonce 0 user to the sdk's store so the proof creator can check its state.
-        // This feels like an unnecessary implemention quirk to me.
-        await sdk.addUser(keyVault.accountPrivateKey, 0, true);
-      } catch {
-        // Already added
-      }
-    }
-
-    const depositorAccount = isShieldingFromNonce0 ? await new AccountId(keyVault.accountPublicKey, 0) : accountId;
-    const recipientAccount = await sdk.getAccountId(recipientAlias);
-
     if (!isShieldingFromNonce0) {
       this.stateObs.setPhase(ShieldComposerPhase.GENERATE_SPENDING_KEY);
+      const signerPrivateKey = (await createSigningKeys(provider, sdk)).privateKey;
+      const signer = await sdk.createSchnorrSigner(signerPrivateKey);
+      feePayer = { userId: accountId, signer };
     }
-    const signerPrivateKey = isShieldingFromNonce0
-      ? keyVault.accountPrivateKey
-      : (await createSigningKeys(provider, sdk)).privateKey;
-    const signer = await sdk.createSchnorrSigner(signerPrivateKey);
 
     return sdk.createDepositController(
-      depositorAccount,
-      signer,
+      depositor,
       targetOutput.toAssetValue(),
       fee.toAssetValue(),
-      depositor,
       recipientAccount,
+      feePayer,
       provider.ethereumProvider,
     );
   }
@@ -204,17 +189,5 @@ export class ShieldComposer {
     this.stateObs.setPhase(ShieldComposerPhase.SEND_PROOF);
     await this.walletAccountEnforcer.ensure();
     return await controller.send();
-  }
-
-  private async cleanup(controller: DepositController) {
-    const { userId } = controller;
-    if (userId.accountNonce === 0) {
-      // No longer need account nonce 0 of depositor address
-      try {
-        await this.deps.sdk.removeUser(controller.userId);
-      } catch {
-        // Already removed
-      }
-    }
   }
 }

@@ -12,13 +12,16 @@ import {
   proofOutputFromJson,
   ProofOutputJson,
 } from '../../proofs';
+import { MemorySerialQueue } from '../../serial_queue';
 
 /**
  * Implements the standard CoreSdkSerializedInterface.
  * Check permission for apis that access user data.
  * If permission has been granted for the origin, it then forwards the calls onto a CoreSdkServerStub.
  */
-export class MangoCoreSdk extends EventEmitter implements CoreSdkSerializedInterface {
+export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInterface {
+  private serialQueue = new MemorySerialQueue();
+
   constructor(private core: CoreSdkServerStub, private origin: string, private leveldb: LevelUp) {
     super();
 
@@ -92,6 +95,17 @@ export class MangoCoreSdk extends EventEmitter implements CoreSdkSerializedInter
 
   public async computeAliasHash(alias: string) {
     return this.core.computeAliasHash(alias);
+  }
+
+  public async createDepositProof(
+    assetId: number,
+    publicInput: string,
+    privateOutput: string,
+    noteRecipient: string,
+    publicOwner: string,
+    txRefNo: number,
+  ) {
+    return this.core.createDepositProof(assetId, publicInput, privateOutput, noteRecipient, publicOwner, txRefNo);
   }
 
   public async createPaymentProofInput(
@@ -270,34 +284,41 @@ export class MangoCoreSdk extends EventEmitter implements CoreSdkSerializedInter
   }
 
   public async addUser(privateKey: Uint8Array, accountNonce?: number, noSync?: boolean) {
-    let addUserError: Error;
-    try {
-      const userData = await this.core.addUser(privateKey, accountNonce, noSync);
-      await this.addPermission(userData.id);
-      return userData;
-    } catch (e: any) {
-      // User probably already exists.
-      addUserError = e;
-    }
+    return this.serialQueue.push(async () => {
+      let addUserError: Error;
+      try {
+        const userData = await this.core.addUser(privateKey, accountNonce, noSync);
+        await this.addPermission(userData.id);
+        return userData;
+      } catch (e: any) {
+        // User probably already exists.
+        addUserError = e;
+      }
 
-    // Get user data.
-    // It will throw if the user doesn't exist, which means something went wrong while calling core.addUser().
-    const publicKey = await this.core.derivePublicKey(privateKey);
-    const nonce = accountNonce ?? (await this.core.getLatestAccountNonce(publicKey));
-    const userId = new AccountId(GrumpkinAddress.fromString(publicKey), nonce).toString();
-    try {
-      const userData = await this.core.getUserData(userId);
-      await this.addPermission(userId);
-      return userData;
-    } catch (e) {
-      throw addUserError;
-    }
+      // Get user data.
+      // It will throw if the user doesn't exist, which means something went wrong while calling core.addUser().
+      const publicKey = await this.core.derivePublicKey(privateKey);
+      const nonce = accountNonce ?? (await this.core.getLatestAccountNonce(publicKey));
+      const userId = new AccountId(GrumpkinAddress.fromString(publicKey), nonce).toString();
+      try {
+        const userData = await this.core.getUserData(userId);
+        await this.addPermission(userId);
+        return userData;
+      } catch (e) {
+        throw addUserError;
+      }
+    });
   }
 
   public async removeUser(userId: string) {
-    await this.checkPermission(userId);
-    await this.core.removeUser(userId);
-    await this.removePermission(userId);
+    return this.serialQueue.push(async () => {
+      await this.checkPermission(userId);
+      const domains = await this.getUserDomains(userId);
+      if (domains.length === 1) {
+        await this.core.removeUser(userId);
+      }
+      await this.removePermission(userId);
+    });
   }
 
   public async getSigningKeys(userId: string) {
@@ -354,27 +375,34 @@ export class MangoCoreSdk extends EventEmitter implements CoreSdkSerializedInter
   }
 
   private async checkPermission(userId: string) {
-    if (!this.hasPermission(userId)) {
+    if (!(await this.hasPermission(userId))) {
       throw new Error(`User not found: ${userId}`);
     }
   }
 
   private async hasPermission(userId: string): Promise<boolean> {
-    const key = this.getKey(userId);
-    return await this.leveldb.get(key).catch(() => false);
+    const domains = await this.getUserDomains(userId);
+    return domains.includes(this.origin);
   }
 
   private async addPermission(userId: string) {
-    const key = this.getKey(userId);
-    await this.leveldb.put(key, true);
+    const domains = await this.getUserDomains(userId);
+    await this.updateUserDomains(userId, [...domains, this.origin]);
   }
 
   private async removePermission(userId: string) {
-    const key = this.getKey(userId);
-    await this.leveldb.del(key);
+    const domains = (await this.getUserDomains(userId)).filter(d => d !== this.origin);
+    await this.updateUserDomains(userId, domains);
   }
 
-  private getKey(userId: string) {
-    return `${this.origin}:${userId}`;
+  private async updateUserDomains(userId: string, domains: string[]) {
+    await this.leveldb.put(userId, Buffer.from(JSON.stringify(domains)));
+  }
+
+  private async getUserDomains(userId: string): Promise<string[]> {
+    return this.leveldb
+      .get(userId)
+      .then(buf => JSON.parse(buf.toString()))
+      .catch(() => []);
   }
 }

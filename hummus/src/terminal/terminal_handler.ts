@@ -379,7 +379,7 @@ export class TerminalHandler {
     await this.app.loadLatestAccount();
     // Stop monitoring pre-registration account.
     await user.remove();
-    this.printQueue.put(`done.\n`);
+    this.printQueue.put(`done. reload the page to login with the new account.\n`);
   }
 
   private async balance() {

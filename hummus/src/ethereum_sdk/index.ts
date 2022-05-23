@@ -99,9 +99,7 @@ export class EthereumSdk extends EventEmitter {
   }
 
   public async createDepositController(from: EthAddress, to: AccountId, value: AssetValue, fee: AssetValue) {
-    const userData = await this.aztecSdk.getUserData(to);
-    const aztecSigner = await this.aztecSdk.createSchnorrSigner(userData.privateKey);
-    return this.aztecSdk.createDepositController(to, aztecSigner, value, fee, from);
+    return this.aztecSdk.createDepositController(from, value, fee, to);
   }
 
   public async getDepositFees(assetId: number) {
@@ -138,12 +136,10 @@ export class EthereumSdk extends EventEmitter {
     depositor: EthAddress,
   ) {
     const userData = await this.aztecSdk.getUserData(accountId);
-    const aztecSigner = await this.aztecSdk.createSchnorrSigner(userData.privateKey);
-
     return this.aztecSdk.createRegisterController(
       accountId,
-      aztecSigner,
       alias,
+      userData.privateKey,
       signingPublicKey,
       recoveryPublicKey,
       { assetId: 0, value: BigInt(0) },

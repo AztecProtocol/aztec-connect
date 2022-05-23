@@ -82,6 +82,24 @@ export class CoreSdkDispatch extends EventEmitter implements CoreSdkSerializedIn
     return this.request('computeAliasHash', [alias]);
   }
 
+  public async createDepositProof(
+    assetId: number,
+    publicInput: string,
+    privateOutput: string,
+    noteRecipient: string,
+    publicOwner: string,
+    txRefNo: number,
+  ) {
+    return this.request('createDepositProof', [
+      assetId,
+      publicInput,
+      privateOutput,
+      noteRecipient,
+      publicOwner,
+      txRefNo,
+    ]);
+  }
+
   public async createPaymentProofInput(
     userId: string,
     assetId: number,

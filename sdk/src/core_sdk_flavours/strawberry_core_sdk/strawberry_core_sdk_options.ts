@@ -1,3 +1,3 @@
-import { MangoCoreSdkOptions } from '../mango_core_sdk';
+import { CaramelCoreSdkOptions } from '../caramel_core_sdk';
 
-export type StrawberryCoreSdkOptions = MangoCoreSdkOptions;
+export type StrawberryCoreSdkOptions = CaramelCoreSdkOptions;
