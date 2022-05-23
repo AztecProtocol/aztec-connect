@@ -2,7 +2,7 @@ import { AccountId, AztecSdk, EthAddress, DepositController, TxId, FeePayer } fr
 import type { Provider } from '../../app';
 import createDebug from 'debug';
 import { Amount } from 'alt-model/assets';
-import { retryUntil, CachedStep } from 'app/util';
+import { retryUntil, withinTimeLimit, CachedStep } from 'app/util';
 import { WalletAccountEnforcer } from './ensured_provider';
 import { Network } from 'app/networks';
 import { ShieldComposerPhase, ShieldComposerStateObs } from './shield_composer_state_obs';
@@ -122,7 +122,7 @@ export class ShieldComposer {
         this.stateObs.setPrompt('Awaiting transaction confirmation...');
         const timeout = 1000 * 60 * 30; // 30 mins
         const interval = this.deps.requiredNetwork.isFrequent ? 1000 : 10 * 1000;
-        const approved = retryUntil(sufficientAllowanceHasBeenApproved, timeout, interval);
+        const approved = await retryUntil(sufficientAllowanceHasBeenApproved, timeout, interval);
         this.stateObs.clearPrompt();
         if (!approved) throw new Error('Failed to grant deposit allowance');
       }
@@ -143,9 +143,7 @@ export class ShieldComposer {
     }
     this.stateObs.setPrompt('Awaiting transaction confirmation...');
     const timeout = 1000 * 60 * 30; // 30 mins
-    const interval = this.deps.requiredNetwork.isFrequent ? 1000 : 10 * 1000;
-    const depositHasCleared = () => controller.getRequiredFunds().then(funds => funds === 0n);
-    const confirmed = retryUntil(depositHasCleared, timeout, interval);
+    const confirmed = await withinTimeLimit(controller.awaitDepositFundsToContract(), timeout);
     this.stateObs.clearPrompt();
     if (!confirmed) throw new Error('Deposit confirmation timed out');
   }
@@ -184,7 +182,7 @@ export class ShieldComposer {
       this.stateObs.setPrompt('Awaiting transaction confirmation...');
       const timeout = 1000 * 60 * 30;
       const interval = this.deps.requiredNetwork.isFrequent ? 1000 : 10 * 1000;
-      const approved = retryUntil(() => controller.isProofApproved(), timeout, interval);
+      const approved = await retryUntil(() => controller.isProofApproved(), timeout, interval);
       if (!approved) throw new Error('Approval confirmation timed out');
     }
   }
