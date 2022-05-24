@@ -14,10 +14,9 @@ export function createSdkObs(config: Config): SdkObs {
 
   const sdkObs = Obs.input<SdkObsValue>(undefined);
   createAztecSdk(aztecJsonRpcProvider, {
-    serverUrl: config.rollupProviderUrl,
+    serverUrl: config.hostedSdkUrl,
     debug: config.debugFilter,
     minConfirmation,
-    flavour: SdkFlavour.PLAIN,
   })
     .then(sdk => {
       sdkObs.next(sdk);

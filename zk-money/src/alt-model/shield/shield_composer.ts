@@ -158,7 +158,7 @@ export class ShieldComposer {
       if (!digest) throw new Error('Proof digest unavailable');
       await this.walletAccountEnforcer.ensure();
       this.stateObs.setPrompt(
-        `Please sign the message in your wallet containing the following transaction ID: ${digest}`,
+        `Please sign the message in your wallet containing the following transaction ID: 0x${digest}`,
       );
       try {
         await controller.sign();
