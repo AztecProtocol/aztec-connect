@@ -1,10 +1,11 @@
 import { EthAddress } from '@aztec/barretenberg/address';
-import { Asset } from '@aztec/barretenberg/blockchain';
+import { Asset, EthereumProvider } from '@aztec/barretenberg/blockchain';
 import { DefiInteractionNote, packInteractionNotes } from '@aztec/barretenberg/note_algorithms';
 import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { Signer } from 'ethers';
 import { ethers } from 'hardhat';
-import { advanceBlocks, blocksToAdvance } from './fixtures/advance_block';
+import { evmSnapshot, evmRevert, advanceBlocksHardhat, blocksToAdvanceHardhat } from '../../ganache/hardhat-chain-manipulation';
+import { EthersAdapter } from '../../provider';
 import {
   createAccountProof,
   createDefiClaimProof,
@@ -29,10 +30,12 @@ describe('rollup_processor: extract defi notes', () => {
   let assets: Asset[];
   let assetAddresses: EthAddress[];
 
+  let snapshot: string;
+
   const escapeBlockLowerBound = 80;
   const escapeBlockUpperBound = 100;
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     signers = await ethers.getSigners();
     addresses = await Promise.all(signers.map(async u => EthAddress.fromString(await u.getAddress())));
     ({ rollupProcessor, assets, assetAddresses } = await setupTestRollupProcessor(signers, {
@@ -41,9 +44,19 @@ describe('rollup_processor: extract defi notes', () => {
       escapeBlockUpperBound,
     }));
     // Advance into block region where escapeHatch is active.
-    const blocks = await blocksToAdvance(escapeBlockLowerBound, escapeBlockUpperBound, ethers.provider);
-    await advanceBlocks(blocks, ethers.provider);
+    const blocks = await blocksToAdvanceHardhat(escapeBlockLowerBound, escapeBlockUpperBound, ethers.provider);
+    await advanceBlocksHardhat(blocks, ethers.provider);
   });
+
+
+  beforeEach(async () => {
+    snapshot = await evmSnapshot();
+  });
+
+  afterEach(async () => {
+    await evmRevert(snapshot);
+  });
+
 
   it('should extract defi notes from blocks between rollups', async () => {
     const inputAssetIdA = 1;
@@ -94,9 +107,9 @@ describe('rollup_processor: extract defi notes', () => {
         defiInteractionData:
           i === 2
             ? [
-                new DefiInteractionData(bridgeId, defiDepositAmount0),
-                new DefiInteractionData(bridgeId, defiDepositAmount1),
-              ]
+              new DefiInteractionData(bridgeId, defiDepositAmount0),
+              new DefiInteractionData(bridgeId, defiDepositAmount1),
+            ]
             : [],
         previousDefiInteractionHash: i === 4 ? previousDefiInteractionHash : undefined,
       });

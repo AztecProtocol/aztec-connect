@@ -2,9 +2,10 @@ import { EthAddress } from '@aztec/barretenberg/address';
 import { Asset } from '@aztec/barretenberg/blockchain';
 import { Signer } from 'ethers';
 import { ethers } from 'hardhat';
+import { evmSnapshot, evmRevert } from '../../ganache/hardhat-chain-manipulation';
 import { FeeDistributor } from '../fee_distributor';
 import { createDepositProof, createRollupProof } from './fixtures/create_mock_proof';
-import { setupTestRollupProcessor } from './fixtures/setup_test_rollup_processor';
+import { setupTestRollupProcessor } from './fixtures/setup_upgradeable_test_rollup_processor';
 import { RollupProcessor } from './rollup_processor';
 
 describe('rollup_processor: deposit', () => {
@@ -18,13 +19,25 @@ describe('rollup_processor: deposit', () => {
   let userAddresses: EthAddress[];
   const depositAmount = 60n;
 
-  beforeEach(async () => {
+  let snapshot: string;
+
+  beforeAll(async () => {
     const signers = await ethers.getSigners();
     [rollupProvider, ...userSigners] = signers;
     rollupProviderAddress = EthAddress.fromString(await rollupProvider.getAddress());
     userAddresses = await Promise.all(userSigners.map(async u => EthAddress.fromString(await u.getAddress())));
     ({ assets, rollupProcessor, feeDistributor, feeDistributorAddress } = await setupTestRollupProcessor(signers));
   });
+
+
+  beforeEach(async () => {
+    snapshot = await evmSnapshot();
+  });
+
+  afterEach(async () => {
+    await evmRevert(snapshot);
+  });
+
 
   it('should process a tx with fee', async () => {
     const txFee = 10n;

@@ -11,9 +11,10 @@ import { randomBytes } from 'crypto';
 import { Signer } from 'ethers';
 import { LogDescription } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
+import { evmSnapshot, evmRevert, setEthBalance } from '../../ganache/hardhat-chain-manipulation';
 import { createRollupProof, createSendProof, DefiInteractionData } from './fixtures/create_mock_proof';
 import { deployMockBridge, MockBridgeParams } from './fixtures/setup_defi_bridges';
-import { setupTestRollupProcessor } from './fixtures/setup_test_rollup_processor';
+import { setupTestRollupProcessor } from './fixtures/setup_upgradeable_test_rollup_processor';
 import { TestRollupProcessor } from './fixtures/test_rollup_processor';
 
 const parseInteractionResultFromLog = (log: LogDescription) => {
@@ -39,13 +40,22 @@ describe('rollup_processor: defi bridge failures', () => {
   let rollupProvider: Signer;
   let assetAddresses: EthAddress[];
 
+  let snapshot: string;
+
   const numberOfBridgeCalls = RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK;
 
   const topupToken = async (assetId: number, amount: bigint) =>
     assets[assetId].mint(amount, rollupProcessor.address, { signingAddress: addresses[0] });
 
-  const topupEth = async (amount: bigint) =>
-    signers[0].sendTransaction({ to: rollupProcessor.address.toString(), value: Number(amount) });
+    const topupEth = async (amount: bigint) => {
+      if (rollupProvider.provider) {
+        await setEthBalance(rollupProcessor.address, amount +
+          (await rollupProvider.provider?.getBalance(rollupProcessor.address.toString())).toBigInt()
+        );
+      } else {
+        await setEthBalance(rollupProcessor.address, amount);
+      }
+    }
 
   const dummyProof = () => createSendProof(0);
 
@@ -102,12 +112,22 @@ describe('rollup_processor: defi bridge failures', () => {
     return Buffer.concat([signature, offset, byteLength, reasonBytes]);
   };
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     signers = await ethers.getSigners();
     rollupProvider = signers[0];
     addresses = await Promise.all(signers.map(async u => EthAddress.fromString(await u.getAddress())));
     ({ rollupProcessor, assets, assetAddresses } = await setupTestRollupProcessor(signers));
   });
+
+
+  beforeEach(async () => {
+    snapshot = await evmSnapshot();
+  });
+
+  afterEach(async () => {
+    await evmRevert(snapshot);
+  });
+
 
   it('process failed defi interaction that converts token to eth', async () => {
     const bridgeId = await mockBridge({

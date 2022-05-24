@@ -21,10 +21,11 @@ export async function deployDev(signer: Signer, { dataTreeSize, roots }: TreeIni
   const uniswapRouter = await deployUniswap(signer);
   const verifier = vk ? await deployVerifier(signer, vk) : await deployMockVerifier(signer);
   const defiProxy = await deployDefiBridgeProxy(signer);
-  const rollup = await deployRollupProcessor(
+  const { rollup } = await deployRollupProcessor(
     signer,
     verifier,
     defiProxy,
+    await signer.getAddress(),
     escapeBlockLower,
     escapeBlockUpper,
     roots.dataRoot,

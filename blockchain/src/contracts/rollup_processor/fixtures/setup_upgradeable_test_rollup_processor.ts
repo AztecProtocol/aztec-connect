@@ -9,31 +9,31 @@ import { setupFeeDistributor } from '../../fee_distributor/fixtures/setup_fee_di
 import { setupUniswap } from '../../fee_distributor/fixtures/setup_uniswap';
 import { Contract, ContractFactory } from 'ethers';
 import UniswapBridge from '../../../artifacts/contracts/bridges/UniswapBridge.sol/UniswapBridge.json';
-import { upgrades } from 'hardhat';
+import { deployRollupProcessor } from '../../../deploy/deployers';
+import { ProxyAdmin } from '../proxy_admin';
+
+const hre = require('hardhat');
 
 async function deployDefiBridge(signer: Signer, rollupProcessor: TestRollupProcessor, uniswapRouter: Contract) {
   // TODO - Create a bridge contract with two output assets.
   const defiBridgeLibrary = new ContractFactory(UniswapBridge.abi, UniswapBridge.bytecode, signer);
   const defiBridge = await defiBridgeLibrary.deploy(rollupProcessor.address.toString(), uniswapRouter.address);
   await defiBridge.deployed();
-  await rollupProcessor.setSupportedBridge(EthAddress.fromString(defiBridge.address), 0);
+  await rollupProcessor.setSupportedBridge(EthAddress.fromString(defiBridge.address), 300000);
   return defiBridge;
 }
 
-export async function upgradeTestRollupProcessor(rollupProvider: Signer, rollupProcessorAddress: EthAddress) {
-  const UpgradedRollupProcessorContract = await ethers.getContractFactory(
-    'UpgradedTestRollupProcessor',
-    rollupProvider,
-  );
-
-  const newProcessor = await upgrades.upgradeProxy(rollupProcessorAddress.toString(), UpgradedRollupProcessorContract);
-  await newProcessor.deployed();
-
+export async function upgradeTestRollupProcessor(proxyAdmin: ProxyAdmin, rollupProcessorAddress: EthAddress) {
   const rollupProcessor = new TestRollupProcessor(
-    EthAddress.fromString(newProcessor.address),
+    rollupProcessorAddress,
     new EthersAdapter(ethers.provider),
   );
-  return rollupProcessor;
+
+  await proxyAdmin.upgradeUNSAFE(
+    rollupProcessorAddress,
+    await ethers.getContractFactory('TestRollupProcessor'),
+    [await rollupProcessor.escapeBlockLowerBound(), await rollupProcessor.escapeBlockUpperBound()],
+  );
 }
 
 export async function setupTestRollupProcessor(
@@ -50,26 +50,22 @@ export async function setupTestRollupProcessor(
   const defiBridgeProxy = await DefiBridgeProxy.deploy();
 
   await defiBridgeProxy.deployed();
-  const ownerAddress = await rollupProvider.getAddress();
-  const RollupProcessorContract = await ethers.getContractFactory('TestRollupProcessor', rollupProvider);
 
-  const rollupProcessorContract = await upgrades.deployProxy(
-    RollupProcessorContract,
-    [
-      mockVerifier.address,
-      escapeBlockLowerBound,
-      escapeBlockUpperBound,
-      defiBridgeProxy.address,
-      ownerAddress,
-      '0x18ceb5cd201e1cee669a5c3ad96d3c4e933a365b37046fc3178264bede32c68d',
-      '0x298329c7d0936453f354e4a5eef4897296cc0bf5a66f2a528318508d2088dafa',
-      '0x2fd2364bfe47ccb410eba3a958be9f39a8c6aca07db1abd15f5a211f51505071',
-      '0x0',
-      false,
-    ],
-    { initializer: 'initialize' },
+  const { rollup: rollupProcessorContract, proxyAdmin } = await deployRollupProcessor(
+    rollupProvider,
+    mockVerifier,
+    defiBridgeProxy,
+    await rollupProvider.getAddress(),
+    escapeBlockLowerBound,
+    escapeBlockUpperBound,
+    Buffer.from('18ceb5cd201e1cee669a5c3ad96d3c4e933a365b37046fc3178264bede32c68d', 'hex'),
+    Buffer.from('298329c7d0936453f354e4a5eef4897296cc0bf5a66f2a528318508d2088dafa', 'hex'),
+    Buffer.from('2fd2364bfe47ccb410eba3a958be9f39a8c6aca07db1abd15f5a211f51505071', 'hex'),
+    0,
+    false,
   );
-  await rollupProcessorContract.setRollupProvider(ownerAddress, true);
+
+  await upgradeTestRollupProcessor(proxyAdmin, EthAddress.fromString(rollupProcessorContract.address));
 
   const rollupProcessor = new TestRollupProcessor(
     EthAddress.fromString(rollupProcessorContract.address),
@@ -99,6 +95,7 @@ export async function setupTestRollupProcessor(
   // first bridge (ID of 1) is a UniSwap bridge
   await deployDefiBridge(signers[0], rollupProcessor, uniswapRouter);
   return {
+    proxyAdmin,
     rollupProcessor,
     rollupProcessorAddress: rollupProcessor.address,
     feeDistributor,

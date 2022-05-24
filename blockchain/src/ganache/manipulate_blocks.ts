@@ -33,6 +33,6 @@ export async function getCurrentBlockTime(provider: EthereumProvider) {
 
 export async function setBlockchainTime(unixTimestamp: number, provider: EthereumProvider) {
   const millisecondTimestamp = unixTimestamp * 1000;
-  await provider.request({ method: 'evm_setTime', params: [`0x${millisecondTimestamp.toString(16)}`]});
+  await provider.request({ method: 'evm_setTime', params: [`0x${millisecondTimestamp.toString(16)}`] });
   await advanceBlocks(1, provider);
 }

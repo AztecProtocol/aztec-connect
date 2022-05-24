@@ -1,3 +1,4 @@
+import { EthAddress } from '@aztec/barretenberg/address';
 import { TreeInitData } from '@aztec/barretenberg/environment';
 import { Signer } from 'ethers';
 import {
@@ -24,10 +25,11 @@ const FAST_GAS_PRICE_FEED_ADDRESS = '0x169e633a2d1e6c10dd91238ba11c4a708dfef37c'
 export async function deployMainnet(signer: Signer, { dataTreeSize, roots }: TreeInitData, vk?: string) {
   const verifier = vk ? await deployVerifier(signer, vk) : await deployMockVerifier(signer);
   const defiProxy = await deployDefiBridgeProxy(signer);
-  const rollup = await deployRollupProcessor(
+  const { rollup, proxyAdmin } = await deployRollupProcessor(
     signer,
     verifier,
     defiProxy,
+    await signer.getAddress(),
     escapeBlockLower,
     escapeBlockUpper,
     roots.dataRoot,
@@ -45,7 +47,8 @@ export async function deployMainnet(signer: Signer, { dataTreeSize, roots }: Tre
   await deployElementBridge(signer, rollup, ['dai'], expiryCutOff);
   await deployLidoBridge(signer, rollup);
 
-  await rollup.transferOwnership(MULTI_SIG_ADDRESS, { gasLimit });
+  // Transfers ownership of the proxyadmin to the multisig
+  await proxyAdmin.transferProxyAdminOwnership(EthAddress.fromString(MULTI_SIG_ADDRESS));
 
   const priceFeeds = [FAST_GAS_PRICE_FEED_ADDRESS, DAI_PRICE_FEED_ADDRESS];
 

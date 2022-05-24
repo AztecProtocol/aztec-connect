@@ -5,7 +5,7 @@ import { DefiInteractionNote, packInteractionNotes } from '@aztec/barretenberg/n
 import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { Signer } from 'ethers';
 import { ethers } from 'hardhat';
-import { advanceBlocks, blocksToAdvance } from './fixtures/advance_block';
+import { evmSnapshot, evmRevert, advanceBlocksHardhat, blocksToAdvanceHardhat } from '../../ganache/hardhat-chain-manipulation';
 import {
   createDefiDepositProof,
   createRollupProof,
@@ -24,13 +24,15 @@ describe('rollup_processor: extract async notes', () => {
   let assets: Asset[];
   let assetAddresses: EthAddress[];
 
+  let snapshot: string;
+
   const escapeBlockLowerBound = 80;
   const escapeBlockUpperBound = 100;
 
   const mockBridge = async (params: MockBridgeParams = {}) =>
     deployMockBridge(signers[0], rollupProcessor, assetAddresses, params);
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     signers = await ethers.getSigners();
     addresses = await Promise.all(signers.map(async u => EthAddress.fromString(await u.getAddress())));
     ({ rollupProcessor, assets, assetAddresses } = await setupTestRollupProcessor(signers, {
@@ -39,9 +41,19 @@ describe('rollup_processor: extract async notes', () => {
       escapeBlockUpperBound,
     }));
     // Advance into block region where escapeHatch is active.
-    const blocks = await blocksToAdvance(escapeBlockLowerBound, escapeBlockUpperBound, ethers.provider);
-    await advanceBlocks(blocks, ethers.provider);
+    const blocks = await blocksToAdvanceHardhat(escapeBlockLowerBound, escapeBlockUpperBound, ethers.provider);
+    await advanceBlocksHardhat(blocks, ethers.provider);
   });
+
+
+  beforeEach(async () => {
+    snapshot = await evmSnapshot();
+  });
+
+  afterEach(async () => {
+    await evmRevert(snapshot);
+  });
+
 
   it('should correctly extract sync and async defi notes', async () => {
     const inputAssetIdA = 1;

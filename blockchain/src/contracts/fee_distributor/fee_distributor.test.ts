@@ -6,6 +6,7 @@ import { setupAssets } from '../asset/fixtures/setup_assets';
 import { setupFeeDistributor } from './fixtures/setup_fee_distributor';
 import { setupUniswap } from './fixtures/setup_uniswap';
 import { FeeDistributor } from './fee_distributor';
+import { evmRevert, evmSnapshot } from '../../ganache/hardhat-chain-manipulation';
 
 describe('fee_distributor', () => {
   let feeDistributor: FeeDistributor;
@@ -19,7 +20,9 @@ describe('fee_distributor', () => {
   const initialUserTokenBalance = 10n ** 18n;
   const initialTotalSupply = 10n * 10n ** 18n;
 
-  beforeEach(async () => {
+  let snapshot: string;
+
+  beforeAll(async () => {
     signers = await ethers.getSigners();
     addresses = await Promise.all(signers.map(async u => EthAddress.fromString(await u.getAddress())));
     fakeRollupProccessor = addresses[3];
@@ -32,6 +35,14 @@ describe('fee_distributor', () => {
 
     assets = await setupAssets(signers[0], signers, initialUserTokenBalance);
     await Promise.all(assets.slice(1).map(a => createPair(a, initialTotalSupply)));
+  });
+
+  beforeEach(async () => {
+    snapshot = await evmSnapshot();
+  });
+
+  afterEach(async () => {
+    await evmRevert(snapshot);
   });
 
   it('deposit eth to fee distributor', async () => {

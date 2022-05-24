@@ -3,16 +3,31 @@
 pragma solidity >=0.8.4 <0.8.11;
 
 interface IRollupProcessor {
-    function defiBridgeProxy() external view returns (address);
+    /*----------------------------------------
+      MUTATING FUNCTIONS
+      ----------------------------------------*/
 
-    function offchainData(
-        uint256 rollupId,
-        uint256 chunk,
-        uint256 totalChunks,
-        bytes calldata offchainTxData
-    ) external;
+    function pause() external;
+
+    function unpause() external;
+
+    function setRollupProvider(address providerAddress, bool valid) external;
+
+    function setVerifier(address verifierAddress) external;
+
+    function setAllowThirdPartyContracts(bool _flag) external;
+
+    function setDefiBridgeProxy(address feeDistributorAddress) external;
+
+    function setSupportedAsset(address linkedToken, uint256 gasLimit) external;
+
+    function setSupportedBridge(address linkedBridge, uint256 gasLimit) external;
 
     function processRollup(bytes calldata proofData, bytes calldata signatures) external;
+
+    function receiveEthFromBridge(uint256 interactionNonce) external payable;
+
+    function approveProof(bytes32 _proofHash) external;
 
     function depositPendingFunds(
         uint256 assetId,
@@ -44,35 +59,48 @@ interface IRollupProcessor {
         bytes32 s
     ) external;
 
-    function setRollupProvider(address provderAddress, bool valid) external;
+    function offchainData(
+        uint256 rollupId,
+        uint256 chunk,
+        uint256 totalChunks,
+        bytes calldata offchainTxData
+    ) external;
 
-    function approveProof(bytes32 _proofHash) external;
+    function processAsyncDefiInteraction(uint256 interactionNonce) external returns (bool);
 
-    function pause() external;
+    /*----------------------------------------
+      NON-MUTATING FUNCTIONS
+      ----------------------------------------*/
 
-    function setDefiBridgeProxy(address feeDistributorAddress) external;
+    function rollupStateHash() external view returns (bytes32);
 
-    function setVerifier(address verifierAddress) external;
+    function defiBridgeProxy() external view returns (address);
 
-    function setSupportedAsset(address linkedToken, uint256 gasLimit) external;
+    function prevDefiInteractionsHash() external view returns (bytes32);
 
-    function setAllowThirdPartyContracts(bool _flag) external;
+    function paused() external view returns (bool);
 
-    function setSupportedBridge(address linkedBridge, uint256 gasLimit) external;
+    function getDataSize() external view returns (uint256);
 
-    function getSupportedAsset(uint256 assetId) external view returns (address);
+    function getPendingDefiInteractionHashes() external view returns (uint256);
 
-    function getSupportedAssets() external view returns (address[] memory, uint256[] memory);
+    function verifier() external view returns (address);
 
     function getSupportedBridge(uint256 bridgeAddressId) external view returns (address);
 
-    function getBridgeGasLimit(uint256 bridgeAddressId) external view returns (uint256);
+    function getSupportedAsset(uint256 assetId) external view returns (address);
 
-    function getSupportedBridges() external view returns (address[] memory, uint256[] memory);
+    function getBridgeGasLimit(uint256 bridgeAddressId) external view returns (uint256);
 
     function getEscapeHatchStatus() external view returns (bool, uint256);
 
-    function getUserPendingDeposit(uint256 assetId, address userAddress) external view returns (uint256);
+    function getDefiInteractionHashes() external view returns (bytes32[] memory);
 
-    function processAsyncDefiInteraction(uint256 interactionNonce) external returns (bool);
+    function getAsyncDefiInteractionHashes() external view returns (bytes32[] memory);
+
+    function getSupportedAssets() external view returns (address[] memory, uint256[] memory);
+
+    function getSupportedBridges() external view returns (address[] memory, uint256[] memory);
+
+    function getUserPendingDeposit(uint256 assetId, address userAddress) external view returns (uint256);
 }

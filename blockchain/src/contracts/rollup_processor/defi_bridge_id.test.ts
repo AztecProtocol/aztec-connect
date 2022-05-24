@@ -2,9 +2,10 @@ import { EthAddress } from '@aztec/barretenberg/address';
 import { virtualAssetIdFlag, virtualAssetIdPlaceholder } from '@aztec/barretenberg/bridge_id';
 import { Signer } from 'ethers';
 import { ethers } from 'hardhat';
+import { evmSnapshot, evmRevert } from '../../ganache/hardhat-chain-manipulation';
 import { createRollupProof, createSendProof, DefiInteractionData } from './fixtures/create_mock_proof';
 import { deployMockBridge, MockBridgeParams } from './fixtures/setup_defi_bridges';
-import { setupTestRollupProcessor } from './fixtures/setup_test_rollup_processor';
+import { setupTestRollupProcessor } from './fixtures/setup_upgradeable_test_rollup_processor';
 import { RollupProcessor } from './rollup_processor';
 
 describe('rollup_processor: defi bridge', () => {
@@ -13,16 +14,28 @@ describe('rollup_processor: defi bridge', () => {
   let rollupProvider: Signer;
   let assetAddresses: EthAddress[];
 
+  let snapshot: string;
+
   const dummyProof = () => createSendProof(0);
 
   const mockBridge = async (params: MockBridgeParams = {}) =>
     deployMockBridge(rollupProvider, rollupProcessor, assetAddresses, params);
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     signers = await ethers.getSigners();
     rollupProvider = signers[0];
     ({ rollupProcessor, assetAddresses } = await setupTestRollupProcessor(signers));
   });
+
+
+  beforeEach(async () => {
+    snapshot = await evmSnapshot();
+  });
+
+  afterEach(async () => {
+    await evmRevert(snapshot);
+  });
+
 
   it('revert if two real output assets are the same', async () => {
     const bridgeId = await mockBridge({

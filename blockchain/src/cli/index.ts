@@ -4,7 +4,7 @@ import { EthAddress } from '@aztec/barretenberg/address';
 import { EthereumRpc, TxHash } from '@aztec/barretenberg/blockchain';
 import { Command } from 'commander';
 import { purchaseTokens, MainnetAddresses, RollupProcessor, JsonRpcProvider } from '..';
-import { setBlockchainTime, getCurrentBlockTime } from '../manipulate_blocks';
+import { setBlockchainTime, getCurrentBlockTime } from '../ganache/manipulate_blocks';
 import { decodeErrorFromContractByTxHash, decodeSelector, retrieveContractSelectors } from '../contracts/decode_error';
 import { EthereumProvider } from '@aztec/barretenberg/blockchain';
 import * as RollupAbi from '../artifacts/contracts/RollupProcessor.sol/RollupProcessor.json';

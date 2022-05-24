@@ -4,10 +4,10 @@ import { DefiInteractionNote, packInteractionNotes } from '@aztec/barretenberg/n
 import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { randomBytes } from 'crypto';
 import { Signer } from 'ethers';
-import { Result } from 'ethers/lib/utils';
+import { keccak256, Result, toUtf8Bytes } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
+import { evmSnapshot, evmRevert, advanceBlocksHardhat, blocksToAdvanceHardhat } from '../../ganache/hardhat-chain-manipulation';
 import { FeeDistributor } from '../fee_distributor';
-import { advanceBlocks, blocksToAdvance } from './fixtures/advance_block';
 import {
   createAccountProof,
   createDefiClaimProof,
@@ -22,7 +22,6 @@ import {
 import { deployMockBridge, MockBridgeParams } from './fixtures/setup_defi_bridges';
 import {
   setupTestRollupProcessor,
-  upgradeTestRollupProcessor,
 } from './fixtures/setup_upgradeable_test_rollup_processor';
 import { TestRollupProcessor } from './fixtures/test_rollup_processor';
 
@@ -34,6 +33,9 @@ describe('rollup_processor', () => {
   let assets: Asset[];
   let assetAddresses: EthAddress[];
 
+  let snapshot: string;
+
+  const OWNER_ROLE = keccak256(toUtf8Bytes('OWNER_ROLE'));
   const escapeBlockLowerBound = 80;
   const escapeBlockUpperBound = 100;
 
@@ -51,7 +53,7 @@ describe('rollup_processor', () => {
     return eventArgs;
   };
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     signers = await ethers.getSigners();
     addresses = await Promise.all(signers.map(async u => EthAddress.fromString(await u.getAddress())));
     ({ rollupProcessor, feeDistributor, assets, assetAddresses } = await setupTestRollupProcessor(signers, {
@@ -60,25 +62,17 @@ describe('rollup_processor', () => {
       escapeBlockUpperBound,
     }));
     // Advance into block region where escapeHatch is active.
-    const blocks = await blocksToAdvance(escapeBlockLowerBound, escapeBlockUpperBound, ethers.provider);
-    await advanceBlocks(blocks, ethers.provider);
+    const blocks = await blocksToAdvanceHardhat(escapeBlockLowerBound, escapeBlockUpperBound, ethers.provider);
+    await advanceBlocksHardhat(blocks, ethers.provider);
   });
 
-  it('should be upgradeable', async () => {
-    const currentAddress = rollupProcessor.address;
-    expect(await rollupProcessor.foo()).toBe(1);
 
-    const newProcessor = await upgradeTestRollupProcessor(signers[0], currentAddress);
-
-    expect(newProcessor.address).toEqual(currentAddress);
-
-    expect(await newProcessor.foo()).toBe(2);
+  beforeEach(async () => {
+    snapshot = await evmSnapshot();
   });
 
-  it('should not be upgradeable by address other than owner', async () => {
-    await expect(upgradeTestRollupProcessor(signers[1], rollupProcessor.address)).rejects.toThrow(
-      'Ownable: caller is not the owner',
-    );
+  afterEach(async () => {
+    await evmRevert(snapshot);
   });
 
   it('should get contract status', async () => {
@@ -101,7 +95,7 @@ describe('rollup_processor', () => {
       rollupProcessor.setThirdPartyContractStatus(true, {
         signingAddress: EthAddress.fromString(await signers[1].getAddress()),
       }),
-    ).rejects.toThrow('Ownable: caller is not the owner');
+    ).rejects.toThrow(`AccessControl: account ${addresses[1].toString().toLowerCase()} is missing role ${OWNER_ROLE}`);
 
     await rollupProcessor.setThirdPartyContractStatus(true, {
       signingAddress: EthAddress.fromString(await signers[0].getAddress()),
@@ -319,7 +313,7 @@ describe('rollup_processor', () => {
     const { proofData, signatures } = await createRollupProof(signers[0], createSendProof(), {
       feeDistributorAddress: feeDistributor.address,
     });
-    await advanceBlocks(50, ethers.provider);
+    await advanceBlocksHardhat(50, ethers.provider);
 
     const { escapeOpen } = await rollupProcessor.getEscapeHatchStatus();
     expect(escapeOpen).toBe(false);
@@ -341,12 +335,12 @@ describe('rollup_processor', () => {
   it('should not be able to set the verifier if not the owner', async () => {
     await expect(
       rollupProcessor.setVerifier(EthAddress.randomAddress(), { signingAddress: addresses[1] }),
-    ).rejects.toThrow('Ownable: caller is not the owner');
+    ).rejects.toThrow(`AccessControl: account ${addresses[1].toString().toLowerCase()} is missing role ${OWNER_ROLE}`);
   });
 
   it('should get escape hatch open status', async () => {
-    const nextEscapeBlock = await blocksToAdvance(80, 100, ethers.provider);
-    await advanceBlocks(nextEscapeBlock, ethers.provider);
+    const nextEscapeBlock = await blocksToAdvanceHardhat(80, 100, ethers.provider);
+    await advanceBlocksHardhat(nextEscapeBlock, ethers.provider);
 
     const { escapeOpen, blocksRemaining } = await rollupProcessor.getEscapeHatchStatus();
     expect(escapeOpen).toBe(true);
@@ -354,8 +348,8 @@ describe('rollup_processor', () => {
   });
 
   it('should get escape hatch closed status', async () => {
-    const nextEscapeBlock = await blocksToAdvance(79, 100, ethers.provider);
-    await advanceBlocks(nextEscapeBlock, ethers.provider);
+    const nextEscapeBlock = await blocksToAdvanceHardhat(79, 100, ethers.provider);
+    await advanceBlocksHardhat(nextEscapeBlock, ethers.provider);
 
     const { escapeOpen, blocksRemaining } = await rollupProcessor.getEscapeHatchStatus();
     expect(escapeOpen).toBe(false);
@@ -410,9 +404,9 @@ describe('rollup_processor', () => {
         defiInteractionData:
           i === 2
             ? [
-                new DefiInteractionData(bridgeId, defiDepositAmount0),
-                new DefiInteractionData(bridgeId, defiDepositAmount1),
-              ]
+              new DefiInteractionData(bridgeId, defiDepositAmount0),
+              new DefiInteractionData(bridgeId, defiDepositAmount1),
+            ]
             : [],
         previousDefiInteractionHash: i === 3 ? previousDefiInteractionHash : undefined,
       });

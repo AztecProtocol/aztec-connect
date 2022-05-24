@@ -9,7 +9,7 @@ import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { TransactionReceipt, TransactionResponse } from '@ethersproject/abstract-provider';
 import { Web3Provider } from '@ethersproject/providers';
 import createDebug from 'debug';
-import { Contract, Event, utils } from 'ethers';
+import { BytesLike, Contract, Event, utils } from 'ethers';
 import { abi } from '../../artifacts/contracts/RollupProcessor.sol/RollupProcessor.json';
 import { decodeErrorFromContract, decodeErrorFromContractByTxHash } from '../decode_error';
 import { DefiInteractionEvent } from '@aztec/barretenberg/block_source/defi_interaction_event';
@@ -48,8 +48,36 @@ export class RollupProcessor {
     return this.rollupProcessor;
   }
 
+  async getImplementationVersion() {
+    return await this.rollupProcessor.getImplementationVersion();
+  }
+
+  async escapeBlockLowerBound() {
+    return await this.rollupProcessor.escapeBlockLowerBound();
+  }
+
+  async escapeBlockUpperBound() {
+    return await this.rollupProcessor.escapeBlockUpperBound();
+  }
+
+  async hasRole(role: BytesLike, address: EthAddress) {
+    return await this.rollupProcessor.hasRole(role, address.toString());
+  }
+
+  async rollupProviders(providerAddress: EthAddress) {
+    return await this.rollupProcessor.rollupProviders(providerAddress.toString());
+  }
+
+  async paused() {
+    return await this.rollupProcessor.paused();
+  }
+
   async verifier() {
     return EthAddress.fromString(await this.rollupProcessor.verifier());
+  }
+
+  async defiBridgeProxy() {
+    return EthAddress.fromString(await this.rollupProcessor.defiBridgeProxy());
   }
 
   async dataSize() {
@@ -64,6 +92,10 @@ export class RollupProcessor {
   async asyncDefiInteractionHashes() {
     const res = (await this.rollupProcessor.getAsyncDefiInteractionHashes()) as string[];
     return res.map(v => Buffer.from(v.slice(2), 'hex'));
+  }
+
+  async prevDefiInteractionsHash() {
+    return Buffer.from((await this.rollupProcessor.prevDefiInteractionsHash()).slice(2), 'hex');
   }
 
   async stateHash() {
@@ -99,6 +131,75 @@ export class RollupProcessor {
     }));
   }
 
+  async pause(options: SendTxOptions = {}) {
+    const { gasLimit } = { ...options };
+    const rollupProcessor = this.getContractWithSigner(options);
+    const tx = await rollupProcessor.pause({ gasLimit }).catch(fixEthersStackTrace);
+    return TxHash.fromString(tx.hash);
+  }
+
+  async unpause(options: SendTxOptions = {}) {
+    const { gasLimit } = { ...options };
+    const rollupProcessor = this.getContractWithSigner(options);
+    const tx = await rollupProcessor.unpause({ gasLimit }).catch(fixEthersStackTrace);
+    return TxHash.fromString(tx.hash);
+  }
+
+  async grantRole(role: BytesLike, address: EthAddress, options: SendTxOptions = {}) {
+    const { gasLimit } = { ...options };
+    const rollupProcessor = this.getContractWithSigner(options);
+    const tx = await rollupProcessor.grantRole(role, address.toString(), { gasLimit });
+    return TxHash.fromString(tx.hash);
+  }
+
+  async revokeRole(role: BytesLike, address: EthAddress, options: SendTxOptions = {}) {
+    const { gasLimit } = { ...options };
+    const rollupProcessor = this.getContractWithSigner(options);
+    const tx = await rollupProcessor.revokeRole(role, address.toString(), { gasLimit });
+    return TxHash.fromString(tx.hash);
+  }
+
+  async setRollupProvider(providerAddress: EthAddress, valid: boolean, options: SendTxOptions = {}) {
+    const { gasLimit } = { ...options };
+    const rollupProcessor = this.getContractWithSigner(options);
+    const tx = await rollupProcessor
+      .setRollupProvider(providerAddress.toString(), valid, { gasLimit })
+      .catch(fixEthersStackTrace);
+    return TxHash.fromString(tx.hash);
+  }
+
+  async setDefiBridgeProxy(providerAddress: EthAddress, options: SendTxOptions = {}) {
+    const { gasLimit } = { ...options };
+    const rollupProcessor = this.getContractWithSigner(options);
+    const tx = await rollupProcessor
+      .setDefiBridgeProxy(providerAddress.toString(), { gasLimit })
+      .catch(fixEthersStackTrace);
+    return TxHash.fromString(tx.hash);
+  }
+
+  async offchainData(
+    rollupId: bigint,
+    chunk: bigint,
+    totalChunks: bigint,
+    offchainTxData: BytesLike,
+    options: SendTxOptions = {},
+  ) {
+    const { gasLimit } = { ...options };
+    const rollupProcessor = this.getContractWithSigner(options);
+    const tx = await rollupProcessor
+      .offchainData(rollupId, chunk, totalChunks, offchainTxData, { gasLimit })
+      .catch(fixEthersStackTrace);
+    return TxHash.fromString(tx.hash);
+  }
+
+  async processRollup(encodedProofData: BytesLike, signatures: BytesLike, options: SendTxOptions = {}) {
+    const { gasLimit } = { ...options };
+    const rollupProcessor = this.getContractWithSigner(options);
+    const tx = await rollupProcessor
+      .processRollup(encodedProofData, signatures, { gasLimit })
+      .catch(fixEthersStackTrace);
+    return TxHash.fromString(tx.hash);
+  }
   async setVerifier(address: EthAddress, options: SendTxOptions = {}) {
     const { gasLimit } = { ...options };
     const rollupProcessor = this.getContractWithSigner(options);

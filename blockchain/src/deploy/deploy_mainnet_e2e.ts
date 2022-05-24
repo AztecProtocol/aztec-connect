@@ -24,10 +24,11 @@ const FAST_GAS_PRICE_FEED_ADDRESS = '0x169e633a2d1e6c10dd91238ba11c4a708dfef37c'
 export async function deployMainnetE2e(signer: Signer, { dataTreeSize, roots }: TreeInitData, vk?: string) {
   const verifier = vk ? await deployVerifier(signer, vk) : await deployMockVerifier(signer);
   const defiProxy = await deployDefiBridgeProxy(signer);
-  const rollup = await deployRollupProcessor(
+  const { rollup } = await deployRollupProcessor(
     signer,
     verifier,
     defiProxy,
+    await signer.getAddress(),
     escapeBlockLower,
     escapeBlockUpper,
     roots.dataRoot,
