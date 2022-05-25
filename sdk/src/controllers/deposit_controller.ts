@@ -151,13 +151,7 @@ export class DepositController {
     return txHash;
   }
 
-  public async depositFundsToContractWithPermit(deadline: bigint) {
-    throw new Error(
-      '`DepositController.depositFundsToContractWithPermit()` has been deprecated. Call `depositFundsToContract()` instead.',
-    );
-  }
-
-  public async depositFundsToContractWithNonStandardPermit(permitDeadline: bigint) {
+  public async depositFundsToContractWithNonStandardPermit(permitDeadline?: bigint) {
     const pendingFundsStatus = await this.getPendingFundsStatus();
     const value = pendingFundsStatus.requiredFunds;
     if (!value) {
@@ -166,13 +160,14 @@ export class DepositController {
 
     const isContract = await this.blockchain.isContract(this.from);
     const proofHash = isContract ? this.getProofHash() : undefined;
-    const { signature, nonce } = await this.createPermitArgsNonStandard(permitDeadline);
+    const deadline = permitDeadline ?? BigInt(Math.floor(Date.now() / 1000) + 5 * 60); // Default deadline is 5 mins from now.
+    const { signature, nonce } = await this.createPermitArgsNonStandard(deadline);
     const { assetId } = this.publicInput;
     const txHash = await this.blockchain.depositPendingFundsPermitNonStandard(
       assetId,
       value,
       nonce,
-      permitDeadline,
+      deadline,
       signature,
       proofHash,
       {
@@ -359,7 +354,7 @@ export class DepositController {
       nonce,
       deadline,
       asset.getStaticInfo().address,
-      chainId,
+      this.getContractChainId(chainId),
     );
     const ethSigner = new Web3Signer(this.provider);
     const signature = await ethSigner.signTypedData(permitData, this.from);
@@ -378,11 +373,23 @@ export class DepositController {
       nonce,
       deadline,
       asset.getStaticInfo().address,
-      chainId,
+      this.getContractChainId(chainId),
     );
     const ethSigner = new Web3Signer(this.provider);
     const signature = await ethSigner.signTypedData(permitData, this.from);
     return { signature, nonce };
+  }
+
+  private getContractChainId(chainId: number) {
+    // Any references to the chainId in the contracts on mainnet-fork (like the DOMAIN_SEPARATOR for permit data)
+    // will have to be 1.
+    switch (chainId) {
+      case 0xa57ec:
+      case 0xe2e:
+        return 1;
+      default:
+        return chainId;
+    }
   }
 
   private async awaitTransactionReceipt(

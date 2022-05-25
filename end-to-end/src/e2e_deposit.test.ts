@@ -1,4 +1,12 @@
-import { AccountId, AztecSdk, createAztecSdk, EthAddress, toBaseUnits, WalletProvider } from '@aztec/sdk';
+import {
+  AccountId,
+  AztecSdk,
+  createAztecSdk,
+  EthAddress,
+  toBaseUnits,
+  TxSettlementTime,
+  WalletProvider,
+} from '@aztec/sdk';
 import { EventEmitter } from 'events';
 import { createFundedWalletProvider } from './create_funded_wallet_provider';
 
@@ -24,14 +32,13 @@ describe('end-to-end tests', () => {
   let sdk: AztecSdk;
   let accounts: EthAddress[] = [];
   let userId!: AccountId;
-  const assetId = 0;
   const awaitSettlementTimeout = 600;
 
   beforeAll(async () => {
     provider = await createFundedWalletProvider(
       ETHEREUM_HOST,
-      1,
-      1,
+      2,
+      2,
       Buffer.from(PRIVATE_KEY, 'hex'),
       toBaseUnits('0.035', 18),
     );
@@ -55,16 +62,42 @@ describe('end-to-end tests', () => {
   });
 
   it('should deposit', async () => {
+    const assetId = 0;
     const depositValue = sdk.toBaseUnits(assetId, '0.03');
 
     expect(await sdk.getBalance(assetId, userId)).toBe(0n);
 
     const depositor = accounts[0];
-    const [fee] = await sdk.getDepositFees(assetId);
+    const fee = (await sdk.getDepositFees(assetId))[TxSettlementTime.INSTANT];
     const controller = sdk.createDepositController(depositor, depositValue, fee, userId);
     await controller.createProof();
 
     await controller.depositFundsToContract();
+    await controller.awaitDepositFundsToContract();
+
+    await controller.sign();
+    await controller.send();
+    await controller.awaitSettlement(awaitSettlementTimeout);
+
+    expect(await sdk.getBalanceAv(assetId, userId)).toEqual(depositValue);
+  });
+
+  it('should deposit with non standard permit', async () => {
+    const assetId = 1;
+    const initialBalance = sdk.toBaseUnits(assetId, '100');
+    const depositor = accounts[1];
+
+    await sdk.mint(assetId, initialBalance.value, depositor);
+
+    const depositValue = sdk.toBaseUnits(assetId, '60');
+
+    expect(await sdk.getBalance(assetId, userId)).toBe(0n);
+
+    const fee = (await sdk.getDepositFees(assetId))[TxSettlementTime.INSTANT];
+    const controller = sdk.createDepositController(depositor, depositValue, fee, userId);
+    await controller.createProof();
+
+    await controller.depositFundsToContractWithNonStandardPermit();
     await controller.awaitDepositFundsToContract();
 
     await controller.sign();
