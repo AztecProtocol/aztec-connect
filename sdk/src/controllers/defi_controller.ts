@@ -31,6 +31,10 @@ export class DefiController {
     }
 
     validateBridgeId(bridgeId);
+
+    if (bridgeId.inputAssetIdB === fee.assetId) {
+      throw new Error('Fee paying asset must be the first input asset.');
+    }
   }
 
   public async createProof() {

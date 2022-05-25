@@ -609,4 +609,46 @@ describe('defi controller', () => {
       }
     });
   });
+
+  describe('cannot be created from invalid args', () => {
+    const assetId = 0;
+    const bridgeId = new BridgeId(1, assetId, 3, 4, 5);
+    const depositValue = { assetId, value: 100n };
+    const fee = { assetId, value: 1n };
+
+    it('bridge id cannot have identical input assets', () => {
+      const invalidBridgeId = new BridgeId(0, assetId, 3, assetId);
+      expect(() => new DefiController(userId, userSigner, invalidBridgeId, depositValue, fee, coreSdk)).toThrow(
+        'Identical input assets.',
+      );
+    });
+
+    it('bridge id cannot have identical output assets', () => {
+      const invalidBridgeId = new BridgeId(0, assetId, 2, undefined, 2);
+      expect(() => new DefiController(userId, userSigner, invalidBridgeId, depositValue, fee, coreSdk)).toThrow(
+        'Identical output assets.',
+      );
+    });
+
+    it('deposit value cannot be 0', () => {
+      const invalidDepositValue = { assetId, value: 0n };
+      expect(() => new DefiController(userId, userSigner, bridgeId, invalidDepositValue, fee, coreSdk)).toThrow(
+        'Deposit value must be greater than 0.',
+      );
+    });
+
+    it('asset of deposit value must be the same as the first input asset', () => {
+      const invalidDepositValue = { assetId: assetId + 1, value: 100n };
+      expect(() => new DefiController(userId, userSigner, bridgeId, invalidDepositValue, fee, coreSdk)).toThrow(
+        'Incorrect deposit asset.',
+      );
+    });
+
+    it('fee cannot be paid with second input asset', () => {
+      const invalidFee = { assetId: bridgeId.inputAssetIdB!, value: 0n };
+      expect(() => new DefiController(userId, userSigner, bridgeId, depositValue, invalidFee, coreSdk)).toThrow(
+        'Fee paying asset must be the first input asset.',
+      );
+    });
+  });
 });

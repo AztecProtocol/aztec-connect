@@ -29,7 +29,7 @@ const {
  * Run the following:
  * blockchain: yarn start:ganache
  * halloumi: yarn start:e2e
- * falafel: yarn start:e2e
+ * falafel: export FEE_PAYING_ASSET_IDS=0,1 && yarn start:e2e
  * end-to-end: yarn test e2e_defi
  */
 describe('end-to-end defi tests', () => {
@@ -41,13 +41,14 @@ describe('end-to-end defi tests', () => {
   const debug = createDebug('bb:e2e_defi');
 
   const flushClaim = async () => {
-    await sdk.flushRollup(userIds[3], signers[3]);
+    const userIndex = userIds.length - 1;
+    await sdk.flushRollup(userIds[userIndex], signers[userIndex]);
   };
 
   beforeAll(async () => {
     debug(`funding initial ETH accounts...`);
     const privateKey = Buffer.from(PRIVATE_KEY, 'hex');
-    provider = await createFundedWalletProvider(ETHEREUM_HOST, 4, 4, privateKey, toBaseUnits('0.2', 18));
+    provider = await createFundedWalletProvider(ETHEREUM_HOST, 3, 3, privateKey, toBaseUnits('0.2', 18));
     accounts = provider.getAccounts();
 
     sdk = await createAztecSdk(provider, {
