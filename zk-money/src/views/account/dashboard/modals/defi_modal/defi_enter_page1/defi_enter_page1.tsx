@@ -33,10 +33,7 @@ export function DefiEnterPage1({
 }: DefiEnterPage1Props) {
   return (
     <div className={style.root}>
-      <div className={style.descriptionWrapper}>
-        <DescriptionSection text={recipe.longDescription} />
-        <img src={defiBridgeImage} />
-      </div>
+      <DescriptionSection text={recipe.longDescription} />
       <div className={style.statsWrapper}>
         <StatsSection recipe={recipe} />
         <DefiWebLinks recipe={recipe} />
