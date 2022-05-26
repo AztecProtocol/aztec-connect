@@ -52,7 +52,7 @@ export function TransactionTimeField({ tx }: TransactionTimeFieldProps) {
   return (
     <div className={style.row}>
       {tx.txId && <ExplorerLink label={''} txId={tx.txId} />}
-      {showTooltip && <Tooltip className={style.tooltip} text={getTooltipLabel(tx)} />}
+      {showTooltip && <Tooltip className={style.tooltip} content={getTooltipLabel(tx)} />}
       <img
         onMouseEnter={handleMouseOver}
         onMouseLeave={handleMouseLeave}

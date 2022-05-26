@@ -23,7 +23,7 @@ export function InfoTooltip({ className, text }: InfoTooltipProps) {
 
   return (
     <div className={style.infoWrapper}>
-      {showTooltip && <Tooltip text={text} />}
+      {showTooltip && <Tooltip content={text} />}
       <div
         onMouseEnter={handleMouseOver}
         onMouseLeave={handleMouseLeave}

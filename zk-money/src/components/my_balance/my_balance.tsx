@@ -1,6 +1,6 @@
 import { formatBulkPrice } from 'app';
 import styled from 'styled-components/macro';
-import { Card, CardHeaderSize, InfoTooltip } from 'ui-components';
+import { Card, CardHeaderSize, Hyperlink, InteractiveTooltip } from 'ui-components';
 import { useTotalValuation, useTotalSpendableValuation } from '../../alt-model/total_account_valuation_hooks';
 import { gradients } from '../../styles';
 import style from './my_balance.module.scss';
@@ -23,7 +23,26 @@ const InformationWrapper = styled.div`
   display: flex;
   flex-direction: row;
   justify-content: space-between;
+  padding: 10px 0px;
+  position: relative;
 `;
+
+function TooltipContent() {
+  return (
+    <p>
+      The total market value of assets held in zk.money, including illiquid DeFi positions.
+      <br />
+      <br />
+      Funds may be unavailable while the rollup settles to Ethereum mainnet.
+      <br />
+      <br /> Learn how we query prices and assets values{' '}
+      <Hyperlink
+        href="https://aztecnetwork.notion.site/New-zk-money-user-guide-803ea618e67b4beaa44fbe97360efa62"
+        label="here."
+      />
+    </p>
+  );
+}
 
 export function MyBalance() {
   const totalValuation = useTotalValuation();
@@ -44,7 +63,7 @@ export function MyBalance() {
             <h2 className={style.available}>
               {totalSpendableValuationStr ? `Available $${totalSpendableValuationStr}` : 'Loading...'}
             </h2>
-            <InfoTooltip text="[COPY-NEEDED]" />
+            <InteractiveTooltip content={<TooltipContent />} />
           </InformationWrapper>
         </div>
       }

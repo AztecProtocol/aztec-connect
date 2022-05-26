@@ -9,13 +9,22 @@ import { DefiInvestmentType } from 'alt-model/defi/types';
 
 const percentageFormatter = new Intl.NumberFormat('en-GB', { style: 'percent', maximumFractionDigits: 1 });
 
-function Apy({ expectedYield, investmentType }: { expectedYield?: number; investmentType: DefiInvestmentType }) {
+function Apy({
+  expectedYield,
+  investmentType,
+  roiType,
+}: {
+  expectedYield?: number;
+  investmentType: DefiInvestmentType;
+  roiType: string;
+}) {
   if (expectedYield === undefined) return <></>;
   const yieldStr = percentageFormatter.format(expectedYield / 100);
   const typeStr = investmentType === DefiInvestmentType.FIXED_YIELD ? 'Fixed' : 'Variable';
+
   return (
     <>
-      {typeStr}: {yieldStr} APY
+      {typeStr}: {yieldStr} {roiType}
     </>
   );
 }
@@ -25,12 +34,24 @@ function ApyFromTxAux({ position }: { position: DefiPosition_Pending | DefiPosit
 
   const expectedYield = useCurrentAssetYield(position.recipe, interactionNonce);
 
-  return <Apy expectedYield={expectedYield} investmentType={position.recipe.investmentType} />;
+  return (
+    <Apy
+      expectedYield={expectedYield}
+      investmentType={position.recipe.investmentType}
+      roiType={position.recipe.roiType}
+    />
+  );
 }
 
 function ApyFromDefaultAux({ position }: { position: DefiPosition_Closable | DefiPosition_Pending }) {
   const expectedYield = useDefaultExpectedAssetYield(position.recipe);
-  return <Apy expectedYield={expectedYield} investmentType={position.recipe.investmentType} />;
+  return (
+    <Apy
+      expectedYield={expectedYield}
+      investmentType={position.recipe.investmentType}
+      roiType={position.recipe.roiType}
+    />
+  );
 }
 
 export function renderApyField(position: DefiPosition) {

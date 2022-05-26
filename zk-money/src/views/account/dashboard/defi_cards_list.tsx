@@ -27,13 +27,13 @@ interface InvestmentsFilterProps {
 function getInvestmentTypeLabel(type: DefiInvestmentType): string {
   switch (type) {
     case DefiInvestmentType.FIXED_YIELD:
-      return 'FIXED YIELD';
+      return 'Fixed Yield';
     case DefiInvestmentType.YIELD:
-      return 'YIELD';
+      return 'Yield';
     case DefiInvestmentType.STAKING:
-      return 'STAKING';
+      return 'Staking';
     case DefiInvestmentType.BORROW:
-      return 'BORROW';
+      return 'Borrow';
   }
 }
 

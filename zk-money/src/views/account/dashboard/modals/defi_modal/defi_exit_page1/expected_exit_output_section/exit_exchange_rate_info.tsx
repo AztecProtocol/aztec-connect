@@ -1,7 +1,7 @@
 import type { DefiRecipe } from 'alt-model/defi/types';
 import { useExpectedOutput } from 'alt-model/defi/defi_info_hooks';
 import { useAmount } from 'alt-model/asset_hooks';
-import { InfoTooltip } from 'ui-components';
+import { InteractiveTooltip } from 'ui-components';
 import { Amount } from 'alt-model/assets';
 import { useAmountBulkPrice } from 'alt-model';
 import { formatBulkPrice } from 'app';
@@ -31,7 +31,9 @@ export function ExitExchangeRateInfo(props: ExitExchangeRateInfoProps) {
     <div className={style.root}>
       {exchangeStr}
       <span className={style.price}> (${formatBulkPrice(expectedOutputBulkPrice)})</span>
-      <InfoTooltip text="Prices are fetched live. Final settlement price may differ based on rollup latency." />
+      <InteractiveTooltip
+        content={<p>Prices are fetched live. Final settlement price may differ based on rollup latency.</p>}
+      />
     </div>
   );
 }

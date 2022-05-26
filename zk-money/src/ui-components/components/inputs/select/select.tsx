@@ -44,11 +44,13 @@ export function Select<T>(props: SelectProps<T>) {
     }
   };
 
+  const activeLabel = props.options.find(x => x.value === props.value)?.label;
+
   return (
     <div className={cx(style.selectBox, props.className)} onClick={handleTriggerDropdown}>
       <div className={style.innerFrame}>
         <GradientDisclosureIcon />
-        <span className={style.value}>{props.value || props.placeholder}</span>
+        <span className={style.value}>{activeLabel || props.placeholder}</span>
         {props.value && (
           <div className={style.closeButton} onClick={handleOptionUnselect}>
             <CloseMiniIcon />
