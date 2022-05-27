@@ -36,7 +36,7 @@ function ClosableInteractionField({
   );
 }
 
-function TicksAndTooltip(props: { txId: TxId; tooltip: string; filledTicks: 1 | 2; totalTicks: 2 | 3 }) {
+function TicksAndTooltip(props: { txId: TxId; tooltip: string; filledTicks: 1 | 2; totalTicks: 2 | 3; label: string }) {
   const [showTooltip, setShowTooltip] = useState(false);
 
   const handleMouseOver = () => {
@@ -52,6 +52,7 @@ function TicksAndTooltip(props: { txId: TxId; tooltip: string; filledTicks: 1 | 
 
   return (
     <div className={style.statusColumn}>
+      <div className={style.statusLabel}>{props.label}</div>
       <Hyperlink icon={HyperlinkIcon.Open} label={''} href={explorerLink} />
       <img onMouseEnter={handleMouseOver} onMouseLeave={handleMouseLeave} className={style.ticks} src={icon} />
       {showTooltip && <Tooltip className={style.tooltip} content={props.tooltip} />}
@@ -69,7 +70,7 @@ function AsyncEntering(props: { tx: UserDefiTx }) {
   const tooltip = estimate
     ? `zk${inputAsset.symbol} deposit settles ${estimate}`
     : `Awaiting zk${inputAsset.symbol} deposit settlement`;
-  return <TicksAndTooltip txId={props.tx.txId} tooltip={tooltip} filledTicks={1} totalTicks={2} />;
+  return <TicksAndTooltip txId={props.tx.txId} tooltip={tooltip} filledTicks={1} totalTicks={2} label="Entering" />;
 }
 
 function AsyncOpen(props: { auxData: number }) {
@@ -85,7 +86,7 @@ function AsyncExiting(props: { tx: UserDefiTx }) {
   const tooltip = estimate
     ? `zk${outputAsset.symbol} claim settles ${estimate}`
     : `Awaiting zk${outputAsset.symbol} claim settlement`;
-  return <TicksAndTooltip txId={props.tx.txId} tooltip={tooltip} filledTicks={1} totalTicks={2} />;
+  return <TicksAndTooltip txId={props.tx.txId} tooltip={tooltip} filledTicks={1} totalTicks={2} label="Exiting" />;
 }
 
 function renderAsyncField(position: DefiPosition_NonInteractable) {
@@ -110,7 +111,7 @@ function SyncEntering_AwaitingDeposit(props: { tx: UserDefiTx }) {
   const tooltip = estimate
     ? `zk${inputAsset.symbol} deposit settles ${estimate}`
     : `Awaiting zk${inputAsset.symbol} deposit settlement`;
-  return <TicksAndTooltip txId={props.tx.txId} tooltip={tooltip} filledTicks={1} totalTicks={3} />;
+  return <TicksAndTooltip txId={props.tx.txId} tooltip={tooltip} filledTicks={1} totalTicks={3} label="Entering" />;
 }
 
 function SyncEntering_AwaitingClaim(props: { tx: UserDefiTx }) {
@@ -120,7 +121,7 @@ function SyncEntering_AwaitingClaim(props: { tx: UserDefiTx }) {
   const tooltip = estimate
     ? `Investment active. zk${outputAsset.symbol} funds settle in ${estimate}.`
     : `Investment active. Awaiting settlement of zk${outputAsset.symbol} funds.`;
-  return <TicksAndTooltip txId={props.tx.txId} tooltip={tooltip} filledTicks={2} totalTicks={3} />;
+  return <TicksAndTooltip txId={props.tx.txId} tooltip={tooltip} filledTicks={2} totalTicks={3} label="Entering" />;
 }
 
 function renderSyncEnteringField(position: DefiPosition_NonInteractable) {
@@ -146,7 +147,7 @@ function SyncExiting_AwaitingDeposit(props: { tx: UserDefiTx }) {
   const tooltip = estimate
     ? `zk${asset.symbol} deposit settles ${estimate}`
     : `Awaiting zk${asset.symbol} deposit settlement`;
-  return <TicksAndTooltip txId={props.tx.txId} tooltip={tooltip} filledTicks={1} totalTicks={3} />;
+  return <TicksAndTooltip txId={props.tx.txId} tooltip={tooltip} filledTicks={1} totalTicks={3} label="Exiting" />;
 }
 
 function SyncExiting_AwaitingClaim(props: { tx: UserDefiTx }) {
@@ -156,7 +157,7 @@ function SyncExiting_AwaitingClaim(props: { tx: UserDefiTx }) {
   const tooltip = estimate
     ? `zk${outputAsset.symbol} claim settles ${estimate}`
     : `Awaiting settlement of zk${outputAsset.symbol} claim`;
-  return <TicksAndTooltip txId={props.tx.txId} tooltip={tooltip} filledTicks={2} totalTicks={3} />;
+  return <TicksAndTooltip txId={props.tx.txId} tooltip={tooltip} filledTicks={2} totalTicks={3} label="Exiting" />;
 }
 
 function renderSyncExitingField(position: DefiPosition_NonInteractable) {
