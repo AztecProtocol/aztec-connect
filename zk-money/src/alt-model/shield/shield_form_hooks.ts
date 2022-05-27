@@ -116,8 +116,10 @@ export function useShieldForm(preselectedAssetId?: number) {
     }
     lockedComposer.compose().then(txId => {
       if (txId) {
-        const timeToSettlement = [nextSettlementTime, instantSettlementTime][fields.speed]!;
-        localStorage.setItem(txId.toString(), timeToSettlement.toString());
+        const timeToSettlement = [nextSettlementTime, instantSettlementTime][fields.speed];
+        if (timeToSettlement) {
+          localStorage.setItem(txId.toString(), timeToSettlement.toString());
+        }
         rpStatusPoller.invalidate();
       }
     });

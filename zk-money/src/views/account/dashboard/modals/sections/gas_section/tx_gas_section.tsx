@@ -48,8 +48,8 @@ interface TxGasSectionProps {
 export function TxGasSection(props: TxGasSectionProps) {
   const { speed, onChangeSpeed, feeAmounts, balanceType, deductionIsFromL1 } = props;
   const asset = feeAmounts?.[0]?.info;
-  const rpStatus = useRollupProviderStatus();
-  const { instantSettlementTime, nextSettlementTime } = estimateTxSettlementTimes(rpStatus);
+  const rollupProviderStatus = useRollupProviderStatus();
+  const { instantSettlementTime, nextSettlementTime } = estimateTxSettlementTimes(rollupProviderStatus);
 
   const options = [
     {

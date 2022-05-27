@@ -19,8 +19,9 @@
 }
 
 .lastSegment {
-  justify-content: right;
+  justify-content: space-between;
   gap: 15px;
+  flex-direction: row-reverse;
 }
 
 .logo {
@@ -33,7 +34,6 @@
 }
 
 .apy {
-  // @include mixins.gradient_font;
   font-size: 16px;
 }
 

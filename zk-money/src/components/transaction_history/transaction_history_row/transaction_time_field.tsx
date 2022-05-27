@@ -2,14 +2,14 @@ import { useState } from 'react';
 import moment from 'moment';
 import type { TxId, UserTx } from '@aztec/sdk';
 import { useExplorerTxLink } from 'alt-model/explorer_link_hooks';
-import { Hyperlink, HyperlinkIcon, HyperlinkTheme, Tooltip } from 'ui-components';
-import oneTick from '../../../images/one_tick.svg';
-import twoTicks from '../../../images/two_ticks.svg';
+import { Hyperlink, HyperlinkIcon, Tooltip } from 'ui-components';
+import oneTick from 'images/two_ticks_one.svg';
+import twoTicks from 'images/two_ticks_two.svg';
 import style from './transaction_time_field.module.scss';
 
 function ExplorerLink(props: { txId: TxId; label: string }) {
   const link = useExplorerTxLink(props.txId);
-  return <Hyperlink theme={HyperlinkTheme.Gray} label={''} href={link} icon={HyperlinkIcon.Open} />;
+  return <Hyperlink label={''} href={link} icon={HyperlinkIcon.Open} />;
 }
 
 function getTooltipLabel(tx: UserTx) {
@@ -49,6 +49,7 @@ export function TransactionTimeField({ tx }: TransactionTimeFieldProps) {
   const handleMouseLeave = () => {
     setShowTooltip(false);
   };
+
   return (
     <div className={style.row}>
       {tx.txId && <ExplorerLink label={''} txId={tx.txId} />}

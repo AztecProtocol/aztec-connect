@@ -6,60 +6,40 @@ import { useMemo } from 'react';
 import { exitingRecipeMatcher, recipeMatcher } from './recipe_matchers';
 import { DefiRecipe } from './types';
 
-export type DefiPosition_Pending = {
-  type: 'pending';
+export type DefiPosition_NonInteractable = {
+  type: 'async' | 'sync-entering' | 'sync-exiting';
   tx: UserDefiTx;
   recipe: DefiRecipe;
 };
-export type DefiPosition_PendingExit = {
-  type: 'pending-exit';
-  tx: UserDefiTx;
-  recipe: DefiRecipe;
-};
-export type DefiPosition_Closable = {
-  type: 'closable';
+
+export type DefiPosition_Interactable = {
+  type: 'sync-open';
   handleValue: AssetValue;
   recipe: DefiRecipe;
 };
-export type DefiPosition_Async = {
-  type: 'async';
-  tx: UserDefiTx;
-  recipe: DefiRecipe;
-};
-export type DefiPosition = DefiPosition_Pending | DefiPosition_PendingExit | DefiPosition_Closable | DefiPosition_Async;
+
+export type DefiPosition = DefiPosition_NonInteractable | DefiPosition_Interactable;
 
 function aggregatePositions(balances: AssetValue[], defiTxs: UserDefiTx[], recipes: DefiRecipe[]) {
   const positions: DefiPosition[] = [];
   for (const assetValue of balances) {
     const recipe = recipes.find(x => x.openHandleAsset?.id === assetValue.assetId);
-    if (recipe) positions.push({ type: 'closable', handleValue: assetValue, recipe });
+    if (recipe) positions.push({ type: 'sync-open', handleValue: assetValue, recipe });
   }
   for (const tx of defiTxs) {
     const { state, isAsync } = tx.interactionResult;
-    if (isAsync) {
-      if (
-        state === UserDefiInteractionResultState.AWAITING_FINALISATION ||
-        state === UserDefiInteractionResultState.AWAITING_SETTLEMENT
-      ) {
+    if (state !== UserDefiInteractionResultState.SETTLED) {
+      if (isAsync) {
         const recipe = recipes.find(recipeMatcher(tx.bridgeId));
         if (recipe) positions.push({ type: 'async', tx, recipe });
-      } else if (state === UserDefiInteractionResultState.PENDING) {
-        const recipe = recipes.find(recipeMatcher(tx.bridgeId));
-        if (recipe) positions.push({ type: 'pending', tx, recipe });
-      }
-    } else {
-      if (
-        state === UserDefiInteractionResultState.PENDING ||
-        state === UserDefiInteractionResultState.AWAITING_FINALISATION ||
-        state === UserDefiInteractionResultState.AWAITING_SETTLEMENT
-      ) {
-        const recipe = recipes.find(recipeMatcher(tx.bridgeId));
-        if (recipe) {
-          positions.push({ type: 'pending', tx, recipe });
+      } else {
+        const enteringRecipe = recipes.find(recipeMatcher(tx.bridgeId));
+        if (enteringRecipe) {
+          positions.push({ type: 'sync-entering', tx, recipe: enteringRecipe });
         } else {
           const exitingRecipe = recipes.find(exitingRecipeMatcher(tx.bridgeId));
           if (exitingRecipe) {
-            positions.push({ type: 'pending-exit', tx, recipe: exitingRecipe });
+            positions.push({ type: 'sync-exiting', tx, recipe: exitingRecipe });
           }
         }
       }

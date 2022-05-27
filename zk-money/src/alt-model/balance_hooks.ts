@@ -77,7 +77,10 @@ export function useSpendableBalances() {
   const [spendableBalances, setSpendableBalances] = useState<AssetValue[]>();
   useEffect(() => {
     if (sdk && accountId) {
-      const updateSpendableSums = () => sdk.getSpendableSums(accountId).then(setSpendableBalances);
+      const updateSpendableSums = async () => {
+        const spendableSums = await sdk.getSpendableSums(accountId);
+        setSpendableBalances(spendableSums);
+      };
       updateSpendableSums();
       return listenAccountUpdated(sdk, accountId, updateSpendableSums);
     }

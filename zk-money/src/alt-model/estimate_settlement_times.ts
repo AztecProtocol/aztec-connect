@@ -12,9 +12,9 @@ function estimateNextSettlementTime(nextPublishTimeMs: number, nowMs: number, pu
   if (publishIntervalSeconds > 0) new Date(nowMs + APPROX_ROLLUP_PROOF_DURATION_MS + publishIntervalSeconds * 1000);
 }
 
-export function estimateTxSettlementTimes(rpStatus?: RollupProviderStatus): EstimatedTxSettlementTimes {
-  if (!rpStatus) return {};
-  const { nextPublishTime, runtimeConfig } = rpStatus;
+export function estimateTxSettlementTimes(rollupProviderStatus?: RollupProviderStatus): EstimatedTxSettlementTimes {
+  if (!rollupProviderStatus) return {};
+  const { nextPublishTime, runtimeConfig } = rollupProviderStatus;
   const nextPublishTimeMs = nextPublishTime.getTime();
   const nowMs = Date.now();
   const instantSettlementTime = new Date(nowMs + APPROX_ROLLUP_PROOF_DURATION_MS);
@@ -23,14 +23,14 @@ export function estimateTxSettlementTimes(rpStatus?: RollupProviderStatus): Esti
 }
 
 function estimateDefiBatchSettlementTime(
-  rpStatus?: RollupProviderStatus,
+  rollupProviderStatus?: RollupProviderStatus,
   bridgeStatus?: BridgeStatus,
   nextSettlementTime?: Date,
 ) {
-  if (!rpStatus || !bridgeStatus) return;
+  if (!rollupProviderStatus || !bridgeStatus) return;
   const { nextPublishTime, rollupFrequency } = bridgeStatus;
   if (nextPublishTime) return new Date(nextPublishTime.getTime() + APPROX_ROLLUP_PROOF_DURATION_MS);
-  const publishIntervalSeconds = rpStatus.runtimeConfig.publishInterval;
+  const publishIntervalSeconds = rollupProviderStatus.runtimeConfig.publishInterval;
   if (rollupFrequency > 0 && publishIntervalSeconds > 0 && nextSettlementTime) {
     const defiBatchInterval = rollupFrequency * (publishIntervalSeconds * 1000);
     return new Date(nextSettlementTime.getTime() + defiBatchInterval + APPROX_ROLLUP_PROOF_DURATION_MS);
@@ -42,13 +42,13 @@ interface EstimatedDefiSettlementTimes extends EstimatedTxSettlementTimes {
 }
 
 export function estimateDefiSettlementTimes(
-  rpStatus?: RollupProviderStatus,
+  rollupProviderStatus?: RollupProviderStatus,
   bridgeStatus?: BridgeStatus,
 ): EstimatedDefiSettlementTimes {
-  const { instantSettlementTime, nextSettlementTime } = estimateTxSettlementTimes(rpStatus);
+  const { instantSettlementTime, nextSettlementTime } = estimateTxSettlementTimes(rollupProviderStatus);
   return {
     instantSettlementTime,
     nextSettlementTime,
-    batchSettlementTime: estimateDefiBatchSettlementTime(rpStatus, bridgeStatus, nextSettlementTime),
+    batchSettlementTime: estimateDefiBatchSettlementTime(rollupProviderStatus, bridgeStatus, nextSettlementTime),
   };
 }

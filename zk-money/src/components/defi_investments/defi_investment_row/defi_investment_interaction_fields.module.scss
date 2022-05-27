@@ -1,18 +1,11 @@
 @use '../../../ui-components/styles/mixins';
 
 .fixedTerm {
-  @include mixins.gradient_font;
-  font-size: 12px;
-  font-style: italic;
-  height: 36px;
+  text-align: right;
+  font-size: 16px;
   position: relative;
-  padding: 0 16px;
   display: flex;
   align-items: center;
-}
-
-.fixedTerm:before {
-  @include mixins.gradient_border(10px, 1px);
 }
 
 .claimButton {
@@ -22,4 +15,29 @@
 .claimButtonContent {
   font-weight: normal;
   font-size: 20px;
+}
+
+.stepNumber {
+  font-size: 14px;
+}
+
+.statusColumn {
+  display: flex;
+  flex-direction: row;
+  justify-content: right;
+  width: 100%;
+  grid-gap: 15px;
+  gap: 15px;
+  align-items: center;
+  position: relative;
+}
+
+.tooltip {
+  bottom: 30px;
+  position: absolute;
+}
+
+.ticks {
+  cursor: help;
+  height: 12px;
 }

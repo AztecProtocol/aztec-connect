@@ -131,8 +131,10 @@ export function useDefiForm(recipe: DefiRecipe, mode: FlowDirection) {
     }
     lockedComposer.compose().then(txId => {
       if (txId) {
-        const timeToSettlement = [batchSettlementTime, nextSettlementTime, instantSettlementTime][fields.speed]!;
-        localStorage.setItem(txId.toString(), timeToSettlement.toString());
+        const timeToSettlement = [batchSettlementTime, nextSettlementTime, instantSettlementTime][fields.speed];
+        if (timeToSettlement) {
+          localStorage.setItem(txId.toString(), timeToSettlement.toString());
+        }
         // Submitting a defi proof should affect `rpStatus.bridgeStatus`
         rpStatusPoller.invalidate();
       }

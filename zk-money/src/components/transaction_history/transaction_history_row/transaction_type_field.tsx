@@ -50,7 +50,6 @@ export function TransactionTypeField({ tx }: TransactionTypeFieldProps) {
     <div className={style.root}>
       <div className={style.top}>
         <div className={style.label}>{getTxTypeLabel(tx)}</div>
-        {iconSrc && <img alt="" src={iconSrc} />}
       </div>
       <div className={style.bottom}>{isDefi && <DefiRecipeName tx={tx} />}</div>
     </div>

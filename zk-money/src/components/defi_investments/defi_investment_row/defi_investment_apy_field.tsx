@@ -1,11 +1,6 @@
-import type {
-  DefiPosition,
-  DefiPosition_Async,
-  DefiPosition_Closable,
-  DefiPosition_Pending,
-} from 'alt-model/defi/open_position_hooks';
+import type { DefiPosition } from 'alt-model/defi/open_position_hooks';
 import { useDefaultExpectedAssetYield, useCurrentAssetYield } from 'alt-model/defi/defi_info_hooks';
-import { DefiInvestmentType } from 'alt-model/defi/types';
+import { DefiInvestmentType, DefiRecipe } from 'alt-model/defi/types';
 
 const percentageFormatter = new Intl.NumberFormat('en-GB', { style: 'percent', maximumFractionDigits: 1 });
 
@@ -29,40 +24,39 @@ function Apy({
   );
 }
 
-function ApyFromTxAux({ position }: { position: DefiPosition_Pending | DefiPosition_Async }) {
-  const { interactionNonce = 0 } = position.tx.interactionResult;
-
-  const expectedYield = useCurrentAssetYield(position.recipe, interactionNonce);
-
-  return (
-    <Apy
-      expectedYield={expectedYield}
-      investmentType={position.recipe.investmentType}
-      roiType={position.recipe.roiType}
-    />
-  );
+function ApyFromInteractionNonce({
+  recipe,
+  interactionNonce,
+  position,
+}: {
+  recipe: DefiRecipe;
+  interactionNonce: number;
+  position: DefiPosition;
+}) {
+  const expectedYield = useCurrentAssetYield(recipe, interactionNonce);
+  return <Apy expectedYield={expectedYield} investmentType={recipe.investmentType} roiType={position.recipe.roiType} />;
 }
 
-function ApyFromDefaultAux({ position }: { position: DefiPosition_Closable | DefiPosition_Pending }) {
-  const expectedYield = useDefaultExpectedAssetYield(position.recipe);
-  return (
-    <Apy
-      expectedYield={expectedYield}
-      investmentType={position.recipe.investmentType}
-      roiType={position.recipe.roiType}
-    />
-  );
+function ApyFromDefaultAux({ recipe, position }: { recipe: DefiRecipe; position: DefiPosition }) {
+  const expectedYield = useDefaultExpectedAssetYield(recipe);
+  return <Apy expectedYield={expectedYield} investmentType={recipe.investmentType} roiType={position.recipe.roiType} />;
 }
 
 export function renderApyField(position: DefiPosition) {
   switch (position.type) {
-    case 'pending':
-      return <ApyFromDefaultAux position={position} />;
-    case 'async':
-      return <ApyFromTxAux position={position} />;
-    case 'closable':
-      return <ApyFromDefaultAux position={position} />;
-    case 'pending-exit':
-      return <>Exiting...</>;
+    case 'async': {
+      const { interactionNonce } = position.tx.interactionResult;
+      if (interactionNonce !== undefined) {
+        return (
+          <ApyFromInteractionNonce recipe={position.recipe} interactionNonce={interactionNonce} position={position} />
+        );
+      } else {
+        return <ApyFromDefaultAux recipe={position.recipe} position={position} />;
+      }
+    }
+    case 'sync-entering':
+    case 'sync-exiting':
+    case 'sync-open':
+      return <ApyFromDefaultAux recipe={position.recipe} position={position} />;
   }
 }
