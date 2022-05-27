@@ -2,6 +2,9 @@ import EventEmitter from 'events';
 import { EventMessage, isEventMessage, ResponseMessage } from './messages';
 import { TransportConnect } from './transport_connect';
 import { TransportSocket } from './transport_socket';
+import { createLogger } from '@aztec/barretenberg/debug';
+
+const debug = createLogger('aztec:transport_client');
 
 interface PendingRequest {
   msgId: number;
@@ -44,13 +47,16 @@ export class TransportClient<Payload> extends EventEmitter {
       throw new Error('Socket not open.');
     }
     const msgId = this.msgId++;
+    const msg = { msgId, payload };
+    debug(`->`, msg);
     return new Promise<any>((resolve, reject) => {
       this.pendingRequests.push({ resolve, reject, msgId });
-      this.socket!.send({ msgId, payload });
+      this.socket!.send(msg);
     });
   }
 
   private async handleSocketMessage(msg: ResponseMessage<Payload> | EventMessage<Payload>) {
+    debug(`<-`, msg);
     if (isEventMessage(msg)) {
       this.emit('event_msg', msg.payload);
       return;

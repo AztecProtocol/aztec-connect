@@ -10,7 +10,7 @@
     "clean": "rm -rf ./cache ./data ./dest ./src/artifacts",
     "start:ganache": "yarn compile && ganache-cli -h 0.0.0.0 -l 12000000 -e 10000 -m 'test test test test test test test test test test test junk'",
     "start:ganache:fork": "yarn compile && ganache-cli -f https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35 --chain.chainId 0xe2e --fork.blockNumber 14728000 -h 0.0.0.0 -l 15000000 -e 10000 -m 'test test test test test test test test test test test junk'",
-    "test": "cd ./src/contracts/verifier/fixtures && ./create_fixture.sh true true && yarn compile && NODE_NO_WARNINGS=1 yarn jest",
+    "test": "cd ./src/contracts/verifier/fixtures && ./create_fixture.sh true true && yarn compile && NODE_NO_WARNINGS=1 yarn jest --silent",
     "deploy": "node ./dest/deploy/index.js",
     "ganache:tools": "node ./dest/cli/index.js",
     "verify:goerli": "hardhat verify --network goerli --contract contracts/RollupProcessor.sol:RollupProcessor"

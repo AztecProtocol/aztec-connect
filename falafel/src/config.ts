@@ -84,6 +84,15 @@ function getPerChainBridgeConfig(chainId: number): BridgeConfig[] {
           rollupFrequency: 3,
         },
       ];
+    case 1337:
+      return [
+        {
+          bridgeId: new BridgeId(1, 0, 1).toBigInt(),
+          numTxs: 1,
+          gas: 200000,
+          rollupFrequency: 1,
+        },
+      ];
     default:
       return [];
   }

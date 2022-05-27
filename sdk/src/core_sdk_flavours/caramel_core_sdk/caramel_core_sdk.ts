@@ -177,7 +177,8 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
     newSigningPublicKey2: string | undefined,
     newAccountPrivateKey: Uint8Array | undefined,
   ) {
-    await this.checkPermission(userId);
+    // TODO: Uncomment after new accounting system.
+    // await this.checkPermission(userId);
     return this.core.createAccountProofInput(
       userId,
       aliasHash,
@@ -219,10 +220,11 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
   }
 
   public async sendProofs(proofs: ProofOutputJson[]) {
-    const {
-      tx: { userId },
-    } = proofOutputFromJson(proofs[0]);
-    await this.checkPermission(userId.toString());
+    // TODO: Add back once new accounting system.
+    // const {
+    //   tx: { userId },
+    // } = proofOutputFromJson(proofs[0]);
+    // await this.checkPermission(userId.toString());
     return this.core.sendProofs(proofs);
   }
 
@@ -376,7 +378,7 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
 
   private async checkPermission(userId: string) {
     if (!(await this.hasPermission(userId))) {
-      throw new Error(`User not found: ${userId}`);
+      throw new Error(`User not permitted: ${userId}`);
     }
   }
 

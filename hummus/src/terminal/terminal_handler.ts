@@ -1,6 +1,21 @@
-import { GrumpkinAddress, MemoryFifo, ProofId, SdkEvent, TxType, UserPaymentTx } from '@aztec/sdk';
+import {
+  AssetValue,
+  AztecSdk,
+  AztecSdkUser,
+  BridgeId,
+  createAztecSdk,
+  DefiSettlementTime,
+  EthAddress,
+  EthereumProvider,
+  EthereumRpc,
+  GrumpkinAddress,
+  MemoryFifo,
+  ProofId,
+  SdkEvent,
+  TxType,
+  UserPaymentTx,
+} from '@aztec/sdk';
 import createDebug from 'debug';
-import { AppEvent, AppInitAction, AppInitState, AppInitStatus, WebSdk } from '../web_sdk';
 import { Terminal } from './terminal';
 
 const debug = createDebug('bb:terminal_handler');
@@ -23,9 +38,8 @@ export class TerminalHandler {
   private preInitCmds = { help: this.help, init: this.init };
   private postInitCmds = {
     help: this.help,
-    // mint: this.mint,
-    // approve: this.approve,
     deposit: this.deposit,
+    defi: this.defiDeposit,
     withdraw: this.withdraw,
     transfer: this.transfer,
     register: this.registerAlias,
@@ -34,25 +48,33 @@ export class TerminalHandler {
     status: this.status,
   };
   private assetId = 0;
+  private sdk!: AztecSdk;
+  private provider!: EthereumProvider;
+  private ethAddress!: EthAddress;
+  private user!: AztecSdkUser;
 
-  constructor(private app: WebSdk, private terminal: Terminal) {}
+  constructor(private terminal: Terminal) {}
 
   public start() {
-    this.processCommands();
+    this.controlQueue.process(fn => fn());
     this.processPrint();
     this.printQueue.put('\x01\x01\x01\x01aztec zero knowledge terminal.\x01\n');
 
     if (window.ethereum) {
+      this.provider = window.ethereum;
       this.printQueue.put("type command or 'help'\n");
       this.printQueue.put(TermControl.PROMPT);
       this.terminal.on('cmd', this.queueCommand);
-
-      if (this.app.isInitialized()) {
-        this.registerHandlers();
-      }
     } else {
       this.printQueue.put('requires chrome with metamask.\n');
     }
+  }
+
+  private async handleCommand(cmd: string, args: string[], cmds: any) {
+    if (!cmds[cmd]) {
+      return;
+    }
+    await cmds[cmd].call(this, ...args);
   }
 
   /**
@@ -64,7 +86,7 @@ export class TerminalHandler {
     this.controlQueue.put(async () => {
       try {
         const [cmd, ...args] = cmdStr.toLowerCase().split(/ +/g);
-        if (!this.app.isInitialized()) {
+        if (!this.sdk) {
           await this.handleCommand(cmd, args, this.preInitCmds);
         } else {
           await this.handleCommand(cmd, args, this.postInitCmds);
@@ -78,63 +100,17 @@ export class TerminalHandler {
   };
 
   /**
-   * Registered before the app has been initialized, unregistered after.
-   * Any initialization messages are added to the print queue.
-   */
-  private initProgressHandler = (initStatus: AppInitStatus) => {
-    const msg = this.getInitString(initStatus);
-    if (msg) {
-      this.printQueue.put(msg + '\n');
-    }
-  };
-
-  /**
    * Called after the app has been initialized.
    */
   private registerHandlers() {
-    this.app.on(AppEvent.UPDATED_INIT_STATE, this.handleInitStateChange);
-    this.app.on(SdkEvent.DESTROYED, this.handleSdkDestroyed);
+    this.sdk.on(SdkEvent.DESTROYED, this.handleSdkDestroyed);
   }
 
   private unregisterHandlers() {
-    this.app.off(AppEvent.UPDATED_INIT_STATE, this.handleInitStateChange);
-    this.app.off(SdkEvent.DESTROYED, this.handleSdkDestroyed);
+    if (this.sdk) {
+      this.sdk.off(SdkEvent.DESTROYED, this.handleSdkDestroyed);
+    }
   }
-
-  /**
-   * If the app transitions to initializing state, lock the terminal until it is initialized again.
-   */
-  private handleInitStateChange = (initStatus: AppInitStatus, previousStatus: AppInitStatus) => {
-    if (initStatus.initState === AppInitState.INITIALIZING) {
-      if (
-        initStatus.initAction === AppInitAction.AWAITING_PERMISSION_TO_LINK &&
-        previousStatus.initAction === AppInitAction.AWAITING_PROVIDER_SIGNATURE
-      ) {
-        debug('received request to link account, but already waiting on signature acceptence.');
-        this.app.destroy();
-      } else if (initStatus.initAction === AppInitAction.AWAITING_PERMISSION_TO_LINK) {
-        this.app.linkAccount();
-      } else {
-        // Lock the terminal.
-        this.controlQueue.put(async () => {
-          this.printQueue.put(TermControl.LOCK);
-          const msg = this.getInitString(initStatus);
-          if (msg) {
-            this.printQueue.put('\r' + msg + '\n');
-          }
-        });
-      }
-    }
-    if (initStatus.initState === AppInitState.INITIALIZED) {
-      this.controlQueue.put(async () => {
-        this.printQueue.put(TermControl.LOCK);
-        this.printQueue.put(`\ruser: ${this.app.getAddress().toString().slice(0, 12)}...\n`);
-        await this.app.getUser().awaitSynchronised();
-        await this.balance();
-        this.printQueue.put(TermControl.PROMPT);
-      });
-    }
-  };
 
   private handleSdkDestroyed = () => {
     this.controlQueue.put(async () => {
@@ -145,17 +121,6 @@ export class TerminalHandler {
     });
   };
 
-  private getInitString({ initAction, network }: AppInitStatus) {
-    switch (initAction) {
-      case AppInitAction.CHANGE_NETWORK:
-        return `set network to ${network}...`;
-      case AppInitAction.LINK_PROVIDER_ACCOUNT:
-        return `requesting account access...`;
-      case AppInitAction.AWAITING_PROVIDER_SIGNATURE:
-        return `check provider to link aztec account...`;
-    }
-  }
-
   public stop() {
     this.terminal.stop();
     this.controlQueue.cancel();
@@ -163,17 +128,15 @@ export class TerminalHandler {
     this.unregisterHandlers();
   }
 
-  private isTermControl(toBeDetermined: any): toBeDetermined is TermControl {
-    return !isNaN(toBeDetermined);
-  }
-
   private async processPrint() {
+    const isTermControl = (tbd: any): tbd is TermControl => !isNaN(tbd);
+
     while (true) {
       const item = await this.printQueue.get();
       if (item === null) {
         break;
       }
-      if (this.isTermControl(item)) {
+      if (isTermControl(item)) {
         switch (item) {
           case TermControl.PROMPT:
             await this.terminal.prompt();
@@ -193,35 +156,16 @@ export class TerminalHandler {
     }
   }
 
-  private async processCommands() {
-    while (true) {
-      const fn = await this.controlQueue.get();
-      if (fn === null) {
-        break;
-      }
-      await fn();
-    }
-  }
-
-  private async handleCommand(cmd: string, args: string[], cmds: any) {
-    if (!cmds[cmd]) {
-      return;
-    }
-    await cmds[cmd].call(this, ...args);
-  }
-
   private async help() {
-    if (!this.app.isInitialized()) {
+    if (!this.sdk) {
       this.printQueue.put('init [server]\n');
     } else {
       this.printQueue.put(
-        // TODO: multi asset support.
-        // 'mint <amount> <asset>\n' +
-        // 'approve <amount> <asset>\n' +
         'deposit <amount>\n' +
+          'defi <amount> <bridge id>\n' +
           'withdraw <amount>\n' +
           'transfer <to> <amount>\n' +
-          'register <alias>\n' +
+          'register <alias> [amount]\n' +
           'balance\n' +
           'fees\n' +
           'status [num] [from]\n',
@@ -240,21 +184,25 @@ export class TerminalHandler {
   }
 
   private async init(server: string) {
-    this.app.off(AppEvent.UPDATED_INIT_STATE, this.initProgressHandler);
     this.unregisterHandlers();
-
-    this.app.on(AppEvent.UPDATED_INIT_STATE, this.initProgressHandler);
 
     const deployTag = await this.getDeployTag();
     const serverUrl = server || (deployTag ? `https://${deployTag}-sdk.aztec.network/` : 'http://localhost:1234');
-    await this.app.init({ serverUrl, debug: 'bb:*' });
-    this.app.off(AppEvent.UPDATED_INIT_STATE, this.initProgressHandler);
+    this.sdk = await createAztecSdk(window.ethereum, {
+      serverUrl,
+      debug: window.localStorage.getItem('debug') || 'bb:*',
+    });
+    await this.sdk.run();
 
-    const sdk = this.app.getSdk()!;
+    const ethereumRpc = new EthereumRpc(this.provider);
+    [this.ethAddress] = await ethereumRpc.getAccounts();
+    this.printQueue.put(`check provider to create account key...\n`);
+    const { publicKey, privateKey } = await this.sdk.generateAccountKeyPair(this.ethAddress, this.provider);
+
     try {
       const {
         blockchainStatus: { dataSize, dataRoot, nullRoot },
-      } = await sdk.getRemoteStatus();
+      } = await this.sdk.getRemoteStatus();
       this.printQueue.put(`data size: ${dataSize}\n`);
       this.printQueue.put(`data root: ${dataRoot.slice(0, 8).toString('hex')}...\n`);
       this.printQueue.put(`null root: ${nullRoot.slice(0, 8).toString('hex')}...\n`);
@@ -262,37 +210,23 @@ export class TerminalHandler {
       this.printQueue.put('failed to get server status.\n');
     }
 
-    this.printQueue.put(`syncing user: ${this.app.getAddress().toString().slice(0, 12)}...\n`);
-    await this.app.getUser().awaitSynchronised();
+    await this.sdk.addUser(privateKey, 0);
+    this.user = await this.sdk.addUser(privateKey, 1);
+
+    this.printQueue.put(`syncing user: ${publicKey.toString().slice(0, 12)}...\n`);
+    await this.sdk.awaitUserSynchronised(this.user.id);
     await this.balance();
 
     this.registerHandlers();
   }
 
-  // private async mint(value: string) {
-  //   this.assertRegistered();
-  //   const userAsset = this.app.getUser().getAsset(this.assetId);
-  //   this.printQueue.put('requesting mint...\n');
-  //   await userAsset.mint(userAsset.toBaseUnits(value));
-  //   await this.balance();
-  // }
-
-  // private async approve(value: string) {
-  //   const userAsset = this.app.getUser().getAsset(this.assetId);
-  //   this.printQueue.put('requesting approval...\n');
-  //   await userAsset.approve(userAsset.toBaseUnits(value));
-  //   this.printQueue.put('approval complete.\n');
-  // }
-
   private async deposit(valueStr: string) {
     await this.assertRegistered();
-    const value = this.app.getSdk().toBaseUnits(this.assetId, valueStr);
-    const [fee] = await this.app.getSdk().getDepositFees(this.assetId);
+    const value = this.sdk.toBaseUnits(this.assetId, valueStr);
+    const [, fee] = await this.sdk.getDepositFees(this.assetId);
     const publicInput = value.value + fee.value;
-    const depositor = this.app.getAddress();
-    const userId = (await this.app.getUser().getUserData()).id;
-    const controller = await this.app.getSdk().createDepositController(depositor, userId, value, fee);
-    const assetBalance = await this.app.getSdk().getPublicBalance(this.assetId, depositor);
+    const controller = this.sdk.createDepositController(this.ethAddress, value, fee, this.user.id);
+    const assetBalance = await this.sdk.getPublicBalance(this.assetId, this.ethAddress);
     const pendingBalance = await controller.getPendingFunds();
     if (assetBalance + pendingBalance < publicInput) {
       throw new Error('insufficient balance.');
@@ -310,13 +244,27 @@ export class TerminalHandler {
     this.printQueue.put(`deposit proof sent.\n`);
   }
 
+  private async defiDeposit(valueStr: string, bridgeIdStr: string) {
+    await this.assertRegistered();
+    const value = this.sdk.toBaseUnits(this.assetId, valueStr);
+    const bridgeId = BridgeId.fromString(bridgeIdStr);
+    const fee = (await this.sdk.getDefiFees(bridgeId, this.user.id, value))[DefiSettlementTime.INSTANT];
+    const { privateKey } = await this.sdk.getUserData(this.user.id);
+    const userSigner = await this.sdk.createSchnorrSigner(privateKey);
+    const controller = this.sdk.createDefiController(this.user.id, userSigner, bridgeId, value, fee);
+    this.printQueue.put(`generating proof...\n`);
+    await controller.createProof();
+    await controller.send();
+    this.printQueue.put(`defi deposit proof sent.\n`);
+  }
+
   private async withdraw(valueStr: string) {
     await this.assertRegistered();
-    const userId = (await this.app.getUser().getUserData()).id;
-    const recipient = this.app.getAddress();
-    const value = this.app.getSdk().toBaseUnits(this.assetId, valueStr);
-    const [fee] = await this.app.getSdk().getWithdrawFees(this.assetId);
-    const controller = await this.app.getSdk().createWithdrawController(userId, recipient, value, fee);
+    const value = this.sdk.toBaseUnits(this.assetId, valueStr);
+    const [, fee] = await this.sdk.getWithdrawFees(this.assetId);
+    const { privateKey } = await this.sdk.getUserData(this.user.id);
+    const userSigner = await this.sdk.createSchnorrSigner(privateKey);
+    const controller = this.sdk.createWithdrawController(this.user.id, userSigner, value, fee, this.ethAddress);
     await controller.createProof();
     await controller.send();
     this.printQueue.put(`withdrawl proof sent.\n`);
@@ -324,14 +272,15 @@ export class TerminalHandler {
 
   private async transfer(alias: string, valueStr: string) {
     await this.assertRegistered();
-    const to = await this.app.getSdk().getAccountId(alias);
+    const to = await this.sdk.getAccountId(alias);
     if (!to) {
       throw new Error(`unknown user: ${alias}`);
     }
-    const userId = (await this.app.getUser().getUserData()).id;
-    const value = this.app.getSdk().toBaseUnits(this.assetId, valueStr);
-    const [fee] = await this.app.getSdk().getTransferFees(this.assetId);
-    const controller = await this.app.getSdk().createTransferController(userId, to, value, fee);
+    const value = this.sdk.toBaseUnits(this.assetId, valueStr);
+    const [, fee] = await this.sdk.getTransferFees(this.assetId);
+    const { privateKey } = await this.sdk.getUserData(this.user.id);
+    const userSigner = await this.sdk.createSchnorrSigner(privateKey);
+    const controller = this.sdk.createTransferController(this.user.id, userSigner, value, fee, to);
     await controller.createProof();
     await controller.send();
     this.printQueue.put(`transfer proof sent.\n`);
@@ -344,25 +293,32 @@ export class TerminalHandler {
   }
 
   private async isRegistered() {
-    return (await this.app.getUser().getUserData()).id.accountNonce != 0;
+    const { publicKey } = await this.user.getUserData();
+    return (await this.sdk.getLatestAccountNonce(publicKey)) > 0;
   }
 
-  private async registerAlias(alias: string) {
+  private async registerAlias(alias: string, valueStr = '0') {
     if (await this.isRegistered()) {
       throw new Error('account already has an alias.');
     }
-    if (!(await this.app.getSdk().isAliasAvailable(alias))) {
+    if (!(await this.sdk.isAliasAvailable(alias))) {
       throw new Error('alias already registered.');
     }
-    const fee = (await this.app.getSdk().getRegisterFees({ assetId: this.assetId, value: 0n }))[0];
-    const user = this.app.getUser();
-    const { id, publicKey: newSigningPublicKey } = await user.getUserData();
+    const deposit = { assetId: 0, value: BigInt(valueStr) };
+    const [, fee] = await this.sdk.getRegisterFees(deposit);
+    const { id, publicKey: newSigningPublicKey, privateKey } = await this.user.getUserData();
+    console.log(id);
     const recoveryPublicKey = GrumpkinAddress.randomAddress();
-    const address = this.app.getAddress();
-    await this.app.getSdk().addUser(this.app.getAddress(), 1);
-    const controller = await this.app
-      .getSdk()
-      .createRegisterController(id, alias, newSigningPublicKey, recoveryPublicKey, fee.assetId, fee.value, address);
+    const controller = this.sdk.createRegisterController(
+      id,
+      alias,
+      privateKey,
+      newSigningPublicKey,
+      recoveryPublicKey,
+      deposit,
+      fee,
+      this.ethAddress,
+    );
     const pendingDeposit = await controller.getPendingFunds();
     if (pendingDeposit < fee.value) {
       this.printQueue.put(`depositing funds to contract...\n`);
@@ -376,28 +332,26 @@ export class TerminalHandler {
     await controller.send();
     this.printQueue.put(`registration proof sent.\nawaiting settlement...\n`);
     await controller.awaitSettlement();
-    await this.app.loadLatestAccount();
-    // Stop monitoring pre-registration account.
-    await user.remove();
-    this.printQueue.put(`done. reload the page to login with the new account.\n`);
+    this.printQueue.put(`done.\n`);
   }
 
   private async balance() {
-    const sdk = this.app.getSdk();
-    const address = this.app.getAddress();
-    const userId = (await this.app.getUser().getUserData()).id;
     this.printQueue.put(
-      `public: ${sdk.fromBaseUnits(this.assetId, await sdk.getPublicBalance(this.assetId, address))}\n`,
+      `public: ${this.sdk.fromBaseUnits(await this.sdk.getPublicBalanceAv(this.assetId, this.ethAddress), true, 6)}\n`,
     );
-    this.printQueue.put(`private: ${sdk.fromBaseUnits(this.assetId, await sdk.getBalance(this.assetId, userId))}\n`);
-    const fundsPendingDeposit = await sdk.getUserPendingDeposit(this.assetId, address);
+    this.printQueue.put(
+      `private: ${this.sdk.fromBaseUnits(await this.sdk.getBalanceAv(this.assetId, this.user.id), true, 6)}\n`,
+    );
+    const fundsPendingDeposit = await this.sdk.getUserPendingDeposit(this.assetId, this.ethAddress);
     if (fundsPendingDeposit > 0) {
-      this.printQueue.put(`pending deposit: ${sdk.fromBaseUnits(this.assetId, fundsPendingDeposit)}\n`);
+      this.printQueue.put(
+        `pending deposit: ${this.sdk.fromBaseUnits({ assetId: this.assetId, value: fundsPendingDeposit })}\n`,
+      );
     }
   }
 
   private async fees() {
-    const { symbol } = this.app.getSdk().getAssetInfo(this.assetId);
+    const { symbol } = this.sdk.getAssetInfo(this.assetId);
     const txTypes = [
       TxType.ACCOUNT,
       TxType.DEPOSIT,
@@ -405,34 +359,30 @@ export class TerminalHandler {
       TxType.WITHDRAW_TO_WALLET,
       TxType.WITHDRAW_TO_CONTRACT,
     ];
-    const txFees = await this.app.getSdk().getTxFees(this.assetId);
+    const txFees = await this.sdk.getTxFees(this.assetId);
     txTypes.forEach(txType => {
-      this.printQueue.put(
-        `${TxType[txType]}: ${this.app.getSdk().fromBaseUnits(this.assetId, txFees[txType][0].value)} ${symbol}\n`,
-      );
+      this.printQueue.put(`${TxType[txType]}: ${this.sdk.fromBaseUnits(txFees[txType][0])} ${symbol}\n`);
     });
   }
 
   private async status(num = '1', from = '0') {
-    const user = this.app.getUser();
-    const txs = await user.getPaymentTxs();
+    const txs = await this.user.getPaymentTxs();
     const f = Math.max(0, +from);
     const n = Math.min(Math.max(+num, 0), 5);
-    const printTx = (tx: UserPaymentTx, action: string, value: bigint) => {
-      const asset = this.app.getSdk().getAssetInfo(tx.value.assetId);
+    const printTx = (tx: UserPaymentTx, action: string, value: AssetValue) => {
+      const asset = this.sdk.getAssetInfo(tx.value.assetId);
       this.printQueue.put(
-        `${tx.txId.toString().slice(2, 10)}: ${action} ${this.app.getSdk().fromBaseUnits(this.assetId, value)} ${
-          asset.symbol
-        } ${tx.settled ? 'settled' : 'pending'}\n`,
+        `${tx.txId.toString().slice(2, 10)}: ${action} ${this.sdk.fromBaseUnits(value)} ${asset.symbol} ${
+          tx.settled ? 'settled' : 'pending'
+        }\n`,
       );
     };
     for (const tx of txs.slice(f, f + n)) {
-      const { value } = tx.value;
       if (!tx.isSender) {
-        printTx(tx, 'RECEIVE', value);
+        printTx(tx, 'RECEIVE', tx.value);
         return;
       }
-      printTx(tx, ProofId[tx.proofId], value);
+      printTx(tx, ProofId[tx.proofId], tx.value);
     }
   }
 }

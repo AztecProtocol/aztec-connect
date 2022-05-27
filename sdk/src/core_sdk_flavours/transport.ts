@@ -13,7 +13,7 @@ export interface DispatchMsg {
 
 export function createDispatchFn(container: any, target: string, debug = console.error) {
   return async ({ fn, args }: DispatchMsg) => {
-    debug(`dispatching to ${target}: ${fn}(${args})`);
+    debug(`dispatching to ${target}: ${fn}`, args);
     if (!container[target][fn] || typeof container[target][fn] !== 'function') {
       debug(`dispatch error, undefined or not a function on ${target}: ${fn}`);
       return;

@@ -4,7 +4,6 @@ import ReactDOM from 'react-dom';
 import { createGlobalStyle } from 'styled-components';
 import { minDemo } from './min_demo';
 import { Terminal, TerminalComponent } from './terminal';
-import { WebSdk } from './web_sdk';
 
 declare global {
   interface Window {
@@ -29,11 +28,10 @@ async function main() {
   if (window.location.pathname === '/min-demo') {
     await minDemo();
   } else {
-    const app = new WebSdk(window.ethereum);
     ReactDOM.render(
       <>
         <GlobalStyle />
-        <TerminalComponent app={app} terminal={new Terminal(12, 40)} />
+        <TerminalComponent terminal={new Terminal(12, 40)} />
       </>,
       document.getElementById('root'),
     );

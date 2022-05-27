@@ -6,7 +6,7 @@ function main() {
   const iframeBackend = new IframeBackend(document.referrer);
 
   /**
-   * Messages from our transport layer, are function calls to be dispatched to sharedWorkerBackend.
+   * Messages from our transport layer, are function calls to be dispatched to iframeBackend.
    * We can descend an arbitrary component stack by adding dispatch functions to classes, and nesting our messages.
    * An example message may look like:
    *   const msg = {

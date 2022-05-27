@@ -31,10 +31,11 @@ export class Iframe {
   }
 
   private async awaitFrameReady(fn: () => void) {
-    let resolveFrameCreated;
-    const frameReadyPromise = new Promise(resolve => {
-      resolveFrameCreated = resolve;
-    });
+    let resolveFrameCreated: () => void;
+    const frameReadyPromise = Promise.race([
+      new Promise<void>(resolve => (resolveFrameCreated = resolve)),
+      new Promise((_, reject) => setTimeout(() => reject(new Error(`Aztec SDK load timeout: ${this.src}`)), 10000)),
+    ]);
 
     const handleFrameReadyEvent = (e: MessageEvent) => {
       if (e.origin !== this.origin) {

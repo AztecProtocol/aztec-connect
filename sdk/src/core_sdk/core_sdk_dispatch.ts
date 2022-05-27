@@ -185,7 +185,7 @@ export class CoreSdkDispatch extends EventEmitter implements CoreSdkSerializedIn
     inputNotes: NoteJson[],
     spendingPublicKey: string,
   ) {
-    return this.request('createDefiProof', [userId, bridgeId, depositValue, inputNotes, spendingPublicKey]);
+    return this.request('createDefiProofInput', [userId, bridgeId, depositValue, inputNotes, spendingPublicKey]);
   }
 
   public async createDefiProof(input: JoinSplitProofInputJson, txRefNo: number) {
