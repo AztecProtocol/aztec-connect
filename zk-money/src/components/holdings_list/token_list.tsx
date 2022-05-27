@@ -26,10 +26,10 @@ export function TokenList() {
 
   return (
     <>
-      {slicePage(balances ?? [], page).map((balance, idx) => {
+      {slicePage(balances ?? [], page).map(balance => {
         return (
           <Holding
-            key={idx}
+            key={balance.assetId}
             assetValue={balance}
             onSend={setSendModalAsset}
             onShield={setShieldModalAsset}
