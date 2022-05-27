@@ -1,41 +1,52 @@
 import { AppAction, LoginMode } from '../app';
 
+export enum Pages {
+  HOME = '/',
+  SIGNIN = '/signin',
+  SIGNUP = '/signup',
+  DASHBOARD = '/dashboard',
+  EARN = '/earn',
+  SEND = '/send',
+  TRADE = '/trade',
+  BALANCE = '/balance',
+}
+
 const views = [
   {
-    path: '/',
+    path: Pages.HOME,
     action: AppAction.NADA,
   },
   {
-    path: '/signin',
+    path: Pages.SIGNIN,
     action: AppAction.LOGIN,
   },
   {
-    path: '/signup',
+    path: Pages.SIGNUP,
     action: AppAction.LOGIN,
   },
   {
-    path: '/dashboard',
+    path: Pages.DASHBOARD,
     action: AppAction.ACCOUNT,
   },
   {
-    path: '/earn',
+    path: Pages.EARN,
     action: AppAction.ACCOUNT,
   },
   {
-    path: '/send',
+    path: Pages.SEND,
     action: AppAction.ACCOUNT,
   },
   {
-    path: '/trade',
+    path: Pages.TRADE,
     action: AppAction.ACCOUNT,
   },
   {
-    path: '/balance',
+    path: Pages.BALANCE,
     action: AppAction.ACCOUNT,
   },
 ];
 
-export const appPaths = views.map(p => p.path);
+export const appPaths = views.map(p => p.path.toString());
 
 export const getActionFromUrl = (url: string) => views.find(v => v.path === url)?.action || AppAction.NADA;
 
@@ -43,8 +54,8 @@ export const getUrlFromAction = (action: AppAction) => views.find(v => v.action 
 
 export const getLoginModeFromUrl = (url: string) => {
   switch (url) {
-    case '/signup':
-    case '/':
+    case Pages.SIGNUP:
+    case Pages.HOME:
       return LoginMode.SIGNUP;
     default:
       return LoginMode.LOGIN;
@@ -54,10 +65,8 @@ export const getLoginModeFromUrl = (url: string) => {
 export const getUrlFromLoginMode = (mode: LoginMode) => {
   switch (mode) {
     case LoginMode.SIGNUP:
-      return '/signup';
+      return Pages.SIGNUP;
     default:
-      return '/signin';
+      return Pages.SIGNIN;
   }
 };
-
-export const getAccountUrl = () => '/balance';

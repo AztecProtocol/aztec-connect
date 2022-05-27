@@ -239,7 +239,7 @@ export const UserAccount: React.FunctionComponent<UserAccountProps> = ({ account
                 <Text text={`Account Nonce: ${userId.accountNonce}`} nowrap />
               </DropdownItem>
               <DropdownItem>
-                <TextLink text="Switch user" onClick={onLogout} color="indigo" weight="semibold" nowrap />
+                <TextLink text="Switch User" onClick={onLogout} color="indigo" weight="semibold" nowrap />
               </DropdownItem>
             </DropdownItemRoot>
           </Dropdown>

@@ -27,7 +27,7 @@ import { getSupportStatus } from '../device_support';
 import { spacings, Theme } from '../styles';
 import { Home, HomeState } from '../views/home';
 import { Login } from '../views/login';
-import { getAccountUrl, getActionFromUrl, getLoginModeFromUrl, getUrlFromAction, getUrlFromLoginMode } from './views';
+import { getActionFromUrl, getLoginModeFromUrl, getUrlFromAction, getUrlFromLoginMode, Pages } from './views';
 import { UserAccount } from '../components/template/user_account';
 import { NavigateFunction, Route, Routes } from 'react-router-dom';
 import { SdkObs } from 'alt-model/top_level_context/sdk_obs';
@@ -168,15 +168,13 @@ export class AppView extends PureComponent<AppProps, AppState> {
     if (action === this.state.action) {
       return;
     }
-
     if (action === AppAction.ACCOUNT) {
-      const url = getAccountUrl();
-      if (window.location.pathname === '/signin' || window.location.pathname === '/signup') {
-        setTimeout(() => this.props.navigate(url), 0);
+      if (window.location.pathname === Pages.SIGNIN || window.location.pathname === Pages.SIGNUP) {
+        setTimeout(() => this.props.navigate(Pages.BALANCE), 0);
       }
     } else {
       const url = getUrlFromAction(action);
-      if (window.location.pathname === '/balance') {
+      if (window.location.pathname === Pages.BALANCE) {
         setTimeout(() => this.props.navigate(url), 0);
       }
     }
@@ -297,9 +295,9 @@ export class AppView extends PureComponent<AppProps, AppState> {
 
   private getTheme = () => {
     if (
-      window.location.pathname === '/' ||
-      window.location.pathname === '/signin' ||
-      window.location.pathname === '/signup'
+      window.location.pathname === Pages.HOME ||
+      window.location.pathname === Pages.SIGNIN ||
+      window.location.pathname === Pages.SIGNUP
     ) {
       return Theme.GRADIENT;
     }
@@ -326,10 +324,11 @@ export class AppView extends PureComponent<AppProps, AppState> {
     const processingAction = this.app.isProcessingAction();
     const allowReset = action !== AppAction.ACCOUNT && (!processingAction || systemMessage.type === MessageType.ERROR);
     const isLoggedIn = step === LoginStep.DONE;
+
     const shouldCenterContent =
-      window.location.pathname === '/trade' ||
-      window.location.pathname === '/signup' ||
-      window.location.pathname === '/signin';
+      window.location.pathname === Pages.TRADE ||
+      window.location.pathname === Pages.SIGNUP ||
+      window.location.pathname === Pages.SIGNIN;
 
     const accountComponent = isLoggedIn ? (
       <AccountItem>
@@ -354,6 +353,7 @@ export class AppView extends PureComponent<AppProps, AppState> {
         >
           <Navbar
             path={window.location.pathname}
+            appAction={action}
             theme={theme}
             isLoggedIn={isLoggedIn}
             accountComponent={accountComponent}
@@ -362,12 +362,11 @@ export class AppView extends PureComponent<AppProps, AppState> {
           <TransitionGroup
             style={{
               margin: shouldCenterContent ? 'auto 0 auto 0' : 'initial',
-              // paddingTop: shouldCenterContent ? '64px' : 'initial',
             }}
           >
             <CSSTransition key={window.location.pathname} classNames="fade" timeout={250}>
               <Routes location={window.location.pathname}>
-                {['/signup', '/signin'].map((path: string) => (
+                {[Pages.SIGNUP, Pages.SIGNIN].map((path: string) => (
                   <Route
                     key={path}
                     path={path}
@@ -394,7 +393,7 @@ export class AppView extends PureComponent<AppProps, AppState> {
                   />
                 ))}
                 <Route
-                  path="/earn"
+                  path={Pages.EARN}
                   element={
                     <Earn
                       isLoggedIn={isLoggedIn}
@@ -403,10 +402,10 @@ export class AppView extends PureComponent<AppProps, AppState> {
                     />
                   }
                 />
-                <Route path="/trade" element={<Trade />} />
-                <Route path="/balance" element={<Balance onOpenDefiExitModal={this.handleOpenDefiExitModal} />} />
+                <Route path={Pages.TRADE} element={<Trade />} />
+                <Route path={Pages.BALANCE} element={<Balance onOpenDefiExitModal={this.handleOpenDefiExitModal} />} />
                 <Route
-                  path="/"
+                  path={Pages.HOME}
                   element={
                     <Home
                       isLoggedIn={isLoggedIn}

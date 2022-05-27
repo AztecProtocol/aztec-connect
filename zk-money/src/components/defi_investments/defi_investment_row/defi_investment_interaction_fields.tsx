@@ -67,7 +67,7 @@ function AsyncEntering(props: { tx: UserDefiTx }) {
   const estimate = getTimeUntilTransactionEstimation(props.tx.txId.toString());
   const inputAsset = useAsset(props.tx.bridgeId.inputAssetIdA);
   const tooltip = estimate
-    ? `zk${inputAsset.symbol} deposit settles in ${estimate}`
+    ? `zk${inputAsset.symbol} deposit settles ${estimate}`
     : `Awaiting zk${inputAsset.symbol} deposit settlement`;
   return <TicksAndTooltip txId={props.tx.txId} tooltip={tooltip} filledTicks={1} totalTicks={2} />;
 }
@@ -83,7 +83,7 @@ function AsyncExiting(props: { tx: UserDefiTx }) {
   const estimate = getTimeUntilNextRollup(nextPublishTime);
   const outputAsset = useAsset(props.tx.bridgeId.outputAssetIdA);
   const tooltip = estimate
-    ? `zk${outputAsset.symbol} claim settles in ${estimate}`
+    ? `zk${outputAsset.symbol} claim settles ${estimate}`
     : `Awaiting zk${outputAsset.symbol} claim settlement`;
   return <TicksAndTooltip txId={props.tx.txId} tooltip={tooltip} filledTicks={1} totalTicks={2} />;
 }
@@ -108,7 +108,7 @@ function SyncEntering_AwaitingDeposit(props: { tx: UserDefiTx }) {
   const estimate = getTimeUntilTransactionEstimation(props.tx.txId.toString());
   const inputAsset = useAsset(props.tx.bridgeId.inputAssetIdA);
   const tooltip = estimate
-    ? `zk${inputAsset.symbol} deposit settles in ${estimate}`
+    ? `zk${inputAsset.symbol} deposit settles ${estimate}`
     : `Awaiting zk${inputAsset.symbol} deposit settlement`;
   return <TicksAndTooltip txId={props.tx.txId} tooltip={tooltip} filledTicks={1} totalTicks={3} />;
 }
@@ -144,7 +144,7 @@ function SyncExiting_AwaitingDeposit(props: { tx: UserDefiTx }) {
   const estimate = getTimeUntilTransactionEstimation(props.tx.txId.toString());
   const asset = useAsset(props.tx.bridgeId.inputAssetIdA);
   const tooltip = estimate
-    ? `zk${asset.symbol} deposit settles in ${estimate}`
+    ? `zk${asset.symbol} deposit settles ${estimate}`
     : `Awaiting zk${asset.symbol} deposit settlement`;
   return <TicksAndTooltip txId={props.tx.txId} tooltip={tooltip} filledTicks={1} totalTicks={3} />;
 }
@@ -154,7 +154,7 @@ function SyncExiting_AwaitingClaim(props: { tx: UserDefiTx }) {
   const estimate = getTimeUntilNextRollup(nextPublishTime);
   const outputAsset = useAsset(props.tx.bridgeId.inputAssetIdA);
   const tooltip = estimate
-    ? `zk${outputAsset.symbol} claim settles in ${estimate}`
+    ? `zk${outputAsset.symbol} claim settles ${estimate}`
     : `Awaiting settlement of zk${outputAsset.symbol} claim`;
   return <TicksAndTooltip txId={props.tx.txId} tooltip={tooltip} filledTicks={2} totalTicks={3} />;
 }
