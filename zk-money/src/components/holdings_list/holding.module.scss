@@ -12,16 +12,21 @@
 
 .assetWrapper {
   display: flex;
-  width: 230px;
   flex-direction: row;
   align-items: center;
-  width: 33%;
+  width: 35%;
 }
 
 .holdingUnits {
   font-size: 18px;
   white-space: pre;
   margin-left: 20px;
+}
+
+.spendable {
+  margin-left: 20px;
+  font-size: 14px;
+  opacity: 0.85;
 }
 
 .buttonIcon {

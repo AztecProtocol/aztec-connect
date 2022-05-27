@@ -1,7 +1,6 @@
 import { EthAddress } from '@aztec/sdk';
 import { useAmountBulkPrice } from 'alt-model';
 import { Amount } from 'alt-model/assets/amount';
-import { DefiInvestmentType } from 'alt-model/defi/types';
 import { getAssetIcon } from 'alt-model/known_assets/known_asset_display_data';
 import { formatBulkPrice } from 'app';
 import { ShieldedAssetIcon } from 'components';
@@ -12,7 +11,8 @@ interface CostBreakdownProps {
   amount?: Amount;
   fee?: Amount;
   recipient: string;
-  deductionsAreFromL1?: boolean;
+  deductionIsFromL1?: boolean;
+  feeDeductionIsFromL1?: boolean;
   investmentLabel?: string;
   investmentReturn?: Amount;
 }
@@ -85,12 +85,11 @@ export function CostBreakdown({
   amount,
   fee,
   recipient,
-  deductionsAreFromL1,
+  deductionIsFromL1,
+  feeDeductionIsFromL1,
   investmentLabel,
   investmentReturn,
 }: CostBreakdownProps) {
-  const assetIsZk = !deductionsAreFromL1;
-  const layer = assetIsZk ? 'L2' : 'L1';
   const amountBulkPrice = useAmountBulkPrice(amount);
   const feeBulkPrice = useAmountBulkPrice(fee);
   const totalBulkPrice =
@@ -106,29 +105,29 @@ export function CostBreakdown({
         label={amountLabel}
         cost={maybeBulkPriceStr(amountBulkPrice)}
         address={amount?.address}
-        value={amount?.format({ layer })}
-        assetIsZk={assetIsZk}
+        value={amount?.format({ layer: deductionIsFromL1 ? 'L1' : 'L2' })}
+        assetIsZk={!deductionIsFromL1}
       />
       <Row
         label="Transaction Fee"
         cost={maybeBulkPriceStr(feeBulkPrice)}
         address={fee?.address}
-        value={fee?.format({ layer })}
-        assetIsZk={assetIsZk}
+        value={fee?.format({ layer: feeDeductionIsFromL1 ? 'L1' : 'L2' })}
+        assetIsZk={!feeDeductionIsFromL1}
       />
       <Row
         label="Total"
         cost={maybeBulkPriceStr(totalBulkPrice)}
         address={totalAddress}
-        value={totalAmount?.format({ layer })}
-        assetIsZk={assetIsZk}
+        value={totalAmount?.format({ layer: deductionIsFromL1 ? 'L1' : 'L2' })}
+        assetIsZk={!deductionIsFromL1}
       />
       {investmentLabel && investmentReturn && (
         <InvestmentRow
           address={investmentReturn?.address}
           assetIsZk={true}
           label={investmentLabel}
-          value={investmentReturn?.format({ layer, uniform: true })}
+          value={investmentReturn?.format({ layer: 'L1', uniform: true })}
         />
       )}
     </div>

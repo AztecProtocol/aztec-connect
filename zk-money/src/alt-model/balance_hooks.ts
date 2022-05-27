@@ -1,10 +1,19 @@
+import type { AssetValue, JoinSplitTx } from '@aztec/sdk';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
-import { AssetValue, JoinSplitTx } from '@aztec/sdk';
 import { useEffect, useMemo, useState } from 'react';
 import { listenAccountUpdated } from './event_utils';
 import { useApp } from './app_context';
 import { useProviderState } from './provider_hooks';
-import { useSdk } from './top_level_context';
+import { useRemoteAssets, useSdk } from './top_level_context';
+import { getIsDust } from './assets/asset_helpers';
+
+function useWithoutDust(assetValues?: AssetValue[]) {
+  const assets = useRemoteAssets();
+  return useMemo(
+    () => assetValues?.filter(assetValue => !getIsDust(assetValue, assets[assetValue.assetId])),
+    [assetValues, assets],
+  );
+}
 
 export function useBalance(assetId?: number) {
   const { accountId } = useApp();
@@ -35,7 +44,7 @@ export function useBalances() {
       return listenAccountUpdated(sdk, accountId, updateBalances);
     }
   }, [sdk, accountId]);
-  return balances;
+  return useWithoutDust(balances);
 }
 
 export function useSpendableBalance(assetId: number) {
@@ -85,7 +94,7 @@ export function useSpendableBalances() {
       return listenAccountUpdated(sdk, accountId, updateSpendableSums);
     }
   }, [accountId, sdk]);
-  return spendableBalances;
+  return useWithoutDust(spendableBalances);
 }
 
 export function useDepositPendingShieldBalance(assetId: number) {

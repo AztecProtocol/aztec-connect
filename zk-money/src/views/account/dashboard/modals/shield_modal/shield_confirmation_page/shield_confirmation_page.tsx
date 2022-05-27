@@ -6,10 +6,9 @@ import {
   ShieldFormValidationResult,
   ShieldComposerPayload,
 } from 'alt-model/shield';
-import { CostBreakdown, Row } from '../../modal_molecules/cost_breakdown';
+import { CostBreakdown } from '../../modal_molecules/cost_breakdown';
 import { Disclaimer } from '../../modal_molecules/disclaimer';
 import { TransactionComplete } from '../../modal_molecules/transaction_complete';
-import { VerticalSplitSection } from '../../sections/vertical_split_section';
 import { ShieldSubmissionSteps } from './shield_submission_steps';
 import style from './shield_confirmation_page.module.scss';
 
@@ -43,7 +42,8 @@ export function ShieldConfirmationPage({
         amountLabel="Shield Amount"
         amount={lockedComposerPayload.targetOutput}
         fee={lockedComposerPayload.fee}
-        deductionsAreFromL1
+        deductionIsFromL1
+        feeDeductionIsFromL1={validationResult.targetAssetIsPayingFee}
       />
       <BorderBox>
         {showingDeclaration ? (
