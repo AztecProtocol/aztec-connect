@@ -13,20 +13,27 @@ async function checkAliasExists(sdk: AztecSdk, aliasInput: string) {
   return !availableRemotely;
 }
 
-export function useAccountIdForAlias(alias: string) {
+export function useAccountIdForAlias(aliasInput: string, debounceMs: number) {
   const sdk = useSdk();
   const [accountIdFetchState, setAccountIdFetchState] = useState<{ accountId?: AccountId; isLoading: boolean }>({
     isLoading: false,
   });
+  const alias = formatAliasInput(aliasInput);
   useEffect(() => {
-    const gatedSetter = createGatedSetter(setAccountIdFetchState);
-    gatedSetter.set({ isLoading: false });
-    if (sdk) {
-      gatedSetter.set({ isLoading: true });
-      sdk.getRemoteAccountId(alias).then(accountId => gatedSetter.set({ isLoading: false, accountId }));
+    if (!isValidAliasInput(alias)) {
+      setAccountIdFetchState({ isLoading: false });
+      return;
     }
-    return gatedSetter.close;
-  }, [sdk, alias]);
+    const gatedSetter = createGatedSetter(setAccountIdFetchState);
+    gatedSetter.set({ isLoading: true });
+    const task = setTimeout(() => {
+      sdk?.getAccountId(alias).then(accountId => gatedSetter.set({ isLoading: false, accountId }));
+    }, debounceMs);
+    return () => {
+      gatedSetter.close();
+      clearTimeout(task);
+    };
+  }, [sdk, alias, debounceMs]);
   return accountIdFetchState;
 }
 

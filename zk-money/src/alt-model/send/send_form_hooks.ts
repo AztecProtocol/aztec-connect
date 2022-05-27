@@ -82,7 +82,10 @@ export function useSendForm(preselectedAssetId?: number) {
   const ethAddress = useMemo(() => getEthAddress(recipientStr, sendMode), [recipientStr, sendMode]);
   const isContract = useIsContractWallet(ethAddress);
   const txType = getTxType(fields.sendMode, isContract);
-  const { accountId: recipientAccountId, isLoading: isLoadingRecipient } = useAccountIdForAlias(fields.recipientStr);
+  const { accountId: recipientAccountId, isLoading: isLoadingRecipient } = useAccountIdForAlias(
+    fields.recipientStr,
+    200,
+  );
   const recipient = getRecipient(fields.sendMode, ethAddress, recipientAccountId);
 
   const rpStatus = useRollupProviderStatus();
