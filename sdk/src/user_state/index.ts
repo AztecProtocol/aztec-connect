@@ -103,7 +103,7 @@ export class UserState extends EventEmitter {
       const blocks = await this.rollupProvider.getBlocks(firstBlockRequiredByUs);
       const blocksBeforeShared = blocks.filter(b => b.rollupId < sharedBlockContexts[0].block.rollupId);
       const blocksAfterShared = blocks.filter(
-        b => b.rollupId > sharedBlockContexts[sharedBlockContexts.length].block.rollupId,
+        b => b.rollupId > sharedBlockContexts[sharedBlockContexts.length - 1].block.rollupId,
       );
       const allBlocks = [
         ...blocksBeforeShared.map(x => new BlockContext(x, this.pedersen)),

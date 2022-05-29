@@ -1,10 +1,10 @@
 import { WorkerPool } from '@aztec/barretenberg/wasm';
-import createDebug from 'debug';
+import { createLogger } from '@aztec/barretenberg/debug';
 import { CoreSdkDispatch, SdkEvent } from '../../core_sdk';
 import { JobQueueWorker } from '../job_queue';
 import { DispatchMsg } from '../transport';
 
-const debug = createDebug('bb:banana_core_sdk');
+const debug = createLogger('bb:banana_core_sdk');
 
 export class BananaCoreSdk extends CoreSdkDispatch {
   constructor(

@@ -15,7 +15,8 @@
     "build:dev": "tsc -p tsconfig.dest.json --watch",
     "clean": "rm -rf ./dest ./dist",
     "test:debug": "node --inspect-brk=0.0.0.0:9221 ./node_modules/.bin/jest",
-    "test": "jest"
+    "test": "jest",
+    "start": "serve -p 1234 ./dist"
   },
   "jest": {
     "transform": {
@@ -49,14 +50,13 @@
     "@aztec/blockchain": "file:../blockchain/dest",
     "@types/levelup": "^4.3.0",
     "async-mutex": "^0.3.2",
-    "broadcast-channel": "^3.1.0",
     "detect-node": "^2.0.4",
     "dexie": "^3.0.1",
-    "events": "^3.3.0",
     "level-js": "^5.0.2",
     "leveldown": "^5.6.0",
     "levelup": "^4.4.0",
     "memdown": "^5.1.0",
+    "serve": "^13.0.2",
     "sqlite3": "5.0.0",
     "tslib": "^2.0.0",
     "typeorm": "0.2.38"
@@ -69,9 +69,9 @@
     "@typescript-eslint/eslint-plugin": "^4.1.1",
     "@typescript-eslint/parser": "^4.1.1",
     "assert": "^2.0.0",
-    "crypto-browserify": "^3.12.0",
     "eslint": "^7.9.0",
     "eslint-config-prettier": "^6.11.0",
+    "events": "^3.3.0",
     "fake-indexeddb": "^3.0.2",
     "jest": "^26.6.1",
     "os-browserify": "^0.3.0",

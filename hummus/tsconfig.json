@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "es2020",
     "module": "es6",
-    "lib": ["es2020", "dom"],
+    "lib": ["es2021", "dom"],
     "moduleResolution": "node",
     "jsx": "react",
     "noEmit": true,

@@ -1,5 +1,8 @@
 import { EventEmitter } from 'events';
 import { blockCursor, Cursor, spinnerCursor } from './cursor';
+import createDebug from 'debug';
+
+const debug = createDebug('bb:terminal');
 
 export enum EscapeChars {
   PAUSE = '\x01',
@@ -85,6 +88,13 @@ export class Terminal extends EventEmitter {
   }
 
   async putString(str: string) {
+    debug(
+      str
+        .replace(/\n$/, '')
+        .replaceAll('\n', ' ')
+        .replaceAll(/[\r\1]/g, ''),
+    );
+
     const savedInputLocked = this.inputLocked;
     const savedCursor = this.cursor;
     this.inputLocked = true;

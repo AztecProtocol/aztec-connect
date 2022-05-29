@@ -6,6 +6,7 @@ import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { randomBytes } from '@aztec/barretenberg/crypto';
 import { TxSettlementTime } from '@aztec/barretenberg/rollup_provider';
+import { sleep } from '@aztec/barretenberg/sleep';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { ClientEthereumBlockchain, validateSignature, Web3Signer } from '@aztec/blockchain';
 import { EventEmitter } from 'events';
@@ -84,6 +85,28 @@ export class AztecSdk extends EventEmitter {
 
   public async awaitDefiSettlement(txId: TxId, timeout?: number) {
     return this.core.awaitDefiSettlement(txId, timeout);
+  }
+
+  public async awaitAllUserTxsSettled() {
+    const users = await this.core.getUsersData();
+    while (true) {
+      const txs = (await Promise.all(users.map(u => this.core.getUserTxs(u.id)))).flat();
+      if (txs.every(tx => tx.settled)) {
+        break;
+      }
+      await sleep(1000);
+    }
+  }
+
+  public async awaitAllUserTxsClaimed() {
+    const users = await this.core.getUsersData();
+    while (true) {
+      const txs = (await Promise.all(users.map(u => this.getDefiTxs(u.id)))).flat();
+      if (txs.every(tx => tx.interactionResult.claimSettled)) {
+        break;
+      }
+      await sleep(1000);
+    }
   }
 
   public async getLocalStatus() {

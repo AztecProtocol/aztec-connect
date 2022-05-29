@@ -26,6 +26,7 @@
   "dependencies": {
     "@types/detect-node": "^2.0.0",
     "@types/levelup": "^4.3.0",
+    "buffer-browserify": "^0.2.5",
     "debug": "^4.1.1",
     "detect-node": "^2.0.4",
     "fs-extra": "10.0.0",

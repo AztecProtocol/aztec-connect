@@ -17,16 +17,15 @@ async function getServerUrl() {
     if (deployTag) {
       return `https://api.aztec.network/${deployTag}/falafel`;
     } else {
-      return await fetch('/ROLLUP_PROVIDER_URL').then(resp => {
-        if (!resp.ok) {
-          throw new Error('Failed to fetch /ROLLUP_PROVIDER_URL.');
-        }
-        return resp.text();
-      });
+      const resp = await fetch('/ROLLUP_PROVIDER_URL');
+      if (!resp.ok) {
+        throw new Error('Failed to fetch /ROLLUP_PROVIDER_URL.');
+      }
+      return resp.text();
     }
-  } else {
-    return 'http://localhost:8081';
   }
+
+  return 'http://localhost:8081';
 }
 
 export interface IframeBackend extends EventEmitter {

@@ -52,14 +52,35 @@ services:
     ports:
       - '8081:8081'
 
+  sdk:
+    image: 278380418400.dkr.ecr.eu-west-2.amazonaws.com/sdk:latest
+    depends_on:
+      - falafel
+    command: >
+      sh -c "
+      echo http://falafel:8081 > /usr/src/sdk/dist/ROLLUP_PROVIDER_URL;
+      yarn start
+      "
+    ports:
+      - '1234:1234'
+
+  hummus:
+    image: 278380418400.dkr.ecr.eu-west-2.amazonaws.com/hummus:latest
+    depends_on:
+      - sdk
+    ports:
+      - '8080:8080'
+
   end-to-end:
     image: 278380418400.dkr.ecr.eu-west-2.amazonaws.com/end-to-end:latest
     environment:
       ETHEREUM_HOST: http://ganache:8545
       ROLLUP_HOST: http://falafel:8081
+      SDK_HOST: http://sdk:1234
+      HUMMUS_HOST: http://hummus:8080
       PROVERLESS: ${PROVERLESS}
     depends_on:
-      - falafel
+      - hummus
     command: >
       sh -c "
       apk add curl jq bash;

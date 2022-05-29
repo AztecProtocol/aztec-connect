@@ -23,6 +23,7 @@ PROJECTS=(
   halloumi
   falafel
   sdk
+  hummus
   end-to-end
   wasabi
   zk-money

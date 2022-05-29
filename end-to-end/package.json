@@ -25,9 +25,10 @@
     "rootDir": "./src"
   },
   "dependencies": {
+    "@aztec/blockchain": "file:../blockchain/dest",
     "@aztec/sdk": "file:../sdk/dest",
     "debug": "^4.3.3",
-    "@aztec/blockchain": "file:../blockchain/dest",
+    "puppeteer": "^14.1.1",
     "typescript": "^4.4.4"
   },
   "devDependencies": {

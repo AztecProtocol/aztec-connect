@@ -14,6 +14,7 @@ import {
   SdkEvent,
   TxType,
   UserPaymentTx,
+  WalletProvider,
 } from '@aztec/sdk';
 import createDebug from 'debug';
 import { Terminal } from './terminal';
@@ -60,14 +61,9 @@ export class TerminalHandler {
     this.processPrint();
     this.printQueue.put('\x01\x01\x01\x01aztec zero knowledge terminal.\x01\n');
 
-    if (window.ethereum) {
-      this.provider = window.ethereum;
-      this.printQueue.put("type command or 'help'\n");
-      this.printQueue.put(TermControl.PROMPT);
-      this.terminal.on('cmd', this.queueCommand);
-    } else {
-      this.printQueue.put('requires chrome with metamask.\n');
-    }
+    this.printQueue.put("type command or 'help'\n");
+    this.printQueue.put(TermControl.PROMPT);
+    this.terminal.on('cmd', this.queueCommand);
   }
 
   private async handleCommand(cmd: string, args: string[], cmds: any) {
@@ -162,7 +158,8 @@ export class TerminalHandler {
     } else {
       this.printQueue.put(
         'deposit <amount>\n' +
-          'defi <amount> <bridge id>\n' +
+          'defi <amount> <bridge id> <input asset>\n' +
+          '     <output asset> [aux data]\n' +
           'withdraw <amount>\n' +
           'transfer <to> <amount>\n' +
           'register <alias> [amount]\n' +
@@ -177,7 +174,7 @@ export class TerminalHandler {
     // If we haven't overridden our deploy tag, we discover it at runtime. All s3 deployments have a file
     // called DEPLOY_TAG in their root containing the deploy tag.
     if (process.env.NODE_ENV === 'production') {
-      return await fetch('/DEPLOY_TAG').then(resp => resp.text());
+      return await fetch('/DEPLOY_TAG').then(resp => (resp.ok ? resp.text() : ''));
     } else {
       return '';
     }
@@ -186,12 +183,31 @@ export class TerminalHandler {
   private async init(server: string) {
     this.unregisterHandlers();
 
+    if (!window.ethereum) {
+      throw new Error('No provider found.');
+    }
+
+    if (window.ethereum instanceof WalletProvider) {
+      this.printQueue.put(`using injected wallet provider.\n`);
+    }
+
+    if (window.ethereum.enable) {
+      this.printQueue.put(`requesting account access...\n`);
+      await window.ethereum.enable();
+    }
+
+    this.provider = window.ethereum;
+
     const deployTag = await this.getDeployTag();
     const serverUrl = server || (deployTag ? `https://${deployTag}-sdk.aztec.network/` : 'http://localhost:1234');
-    this.sdk = await createAztecSdk(window.ethereum, {
+    this.sdk = await createAztecSdk(this.provider, {
       serverUrl,
       debug: window.localStorage.getItem('debug') || 'bb:*',
     });
+
+    // Expose sdk for use in tests.
+    window.aztecSdk = this.sdk;
+
     await this.sdk.run();
 
     const ethereumRpc = new EthereumRpc(this.provider);
@@ -244,10 +260,17 @@ export class TerminalHandler {
     this.printQueue.put(`deposit proof sent.\n`);
   }
 
-  private async defiDeposit(valueStr: string, bridgeIdStr: string) {
+  private async defiDeposit(
+    valueStr: string,
+    addressIdStr: string,
+    inputAssetStr: string,
+    outputAssetStr: string,
+    auxData = '',
+  ) {
     await this.assertRegistered();
-    const value = this.sdk.toBaseUnits(this.assetId, valueStr);
-    const bridgeId = BridgeId.fromString(bridgeIdStr);
+    const inputAsset = +inputAssetStr;
+    const value = this.sdk.toBaseUnits(inputAsset, valueStr);
+    const bridgeId = new BridgeId(+addressIdStr, inputAsset, +outputAssetStr, undefined, undefined, +auxData);
     const fee = (await this.sdk.getDefiFees(bridgeId, this.user.id, value))[DefiSettlementTime.INSTANT];
     const { privateKey } = await this.sdk.getUserData(this.user.id);
     const userSigner = await this.sdk.createSchnorrSigner(privateKey);
@@ -267,7 +290,7 @@ export class TerminalHandler {
     const controller = this.sdk.createWithdrawController(this.user.id, userSigner, value, fee, this.ethAddress);
     await controller.createProof();
     await controller.send();
-    this.printQueue.put(`withdrawl proof sent.\n`);
+    this.printQueue.put(`withdraw proof sent.\n`);
   }
 
   private async transfer(alias: string, valueStr: string) {
@@ -335,18 +358,17 @@ export class TerminalHandler {
     this.printQueue.put(`done.\n`);
   }
 
-  private async balance() {
+  private async balance(assetIdStr = '') {
+    const assetId = assetIdStr ? +assetIdStr : this.assetId;
     this.printQueue.put(
-      `public: ${this.sdk.fromBaseUnits(await this.sdk.getPublicBalanceAv(this.assetId, this.ethAddress), true, 6)}\n`,
+      `public: ${this.sdk.fromBaseUnits(await this.sdk.getPublicBalanceAv(assetId, this.ethAddress), true, 6)}\n`,
     );
     this.printQueue.put(
-      `private: ${this.sdk.fromBaseUnits(await this.sdk.getBalanceAv(this.assetId, this.user.id), true, 6)}\n`,
+      `private: ${this.sdk.fromBaseUnits(await this.sdk.getBalanceAv(assetId, this.user.id), true, 6)}\n`,
     );
-    const fundsPendingDeposit = await this.sdk.getUserPendingDeposit(this.assetId, this.ethAddress);
+    const fundsPendingDeposit = await this.sdk.getUserPendingDeposit(assetId, this.ethAddress);
     if (fundsPendingDeposit > 0) {
-      this.printQueue.put(
-        `pending deposit: ${this.sdk.fromBaseUnits({ assetId: this.assetId, value: fundsPendingDeposit })}\n`,
-      );
+      this.printQueue.put(`pending deposit: ${this.sdk.fromBaseUnits({ assetId, value: fundsPendingDeposit })}\n`);
     }
   }
 
