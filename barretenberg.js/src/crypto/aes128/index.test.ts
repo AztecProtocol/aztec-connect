@@ -11,11 +11,9 @@ describe('aes128', () => {
     barretenberg = new BarretenbergWasm();
     await barretenberg.init();
     aes128 = new Aes128(barretenberg);
-
   });
 
-  it('should correctly encrypt input', async () => {
-
+  it('should correctly encrypt input', () => {
     const data = randomBytes(32);
     const key = randomBytes(16);
     const iv = randomBytes(16);
@@ -29,7 +27,7 @@ describe('aes128', () => {
     expect(result).toEqual(expected);
   });
 
-  it('should correctly decrypt input', async () => {
+  it('should correctly decrypt input', () => {
     const data = randomBytes(32);
     const key = randomBytes(16);
     const iv = randomBytes(16);

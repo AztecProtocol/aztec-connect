@@ -6,7 +6,7 @@ import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { Signer } from 'ethers';
 import { LogDescription } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
-import { evmSnapshot, evmRevert, setEthBalance } from '../../ganache/hardhat-chain-manipulation';
+import { evmSnapshot, evmRevert, setEthBalance } from '../../ganache/hardhat_chain_manipulation';
 import { createRollupProof, createSendProof, DefiInteractionData } from './fixtures/create_mock_proof';
 import { mockAsyncBridge } from './fixtures/setup_defi_bridges';
 import { setupTestRollupProcessor } from './fixtures/setup_upgradeable_test_rollup_processor';
@@ -38,19 +38,19 @@ describe('rollup_processor: async defi bridge', () => {
 
   const numberOfBridgeCalls = RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK;
 
-  const topupToken = async (assetId: number, amount: bigint) =>
+  const topupToken = (assetId: number, amount: bigint) =>
     assets[assetId].mint(amount, rollupProcessor.address, { signingAddress: addresses[0] });
 
   const topupEth = async (amount: bigint) => {
     if (rollupProvider.provider) {
-      await setEthBalance(rollupProcessor.address, amount +
-        (await rollupProvider.provider?.getBalance(rollupProcessor.address.toString())).toBigInt()
+      await setEthBalance(
+        rollupProcessor.address,
+        amount + (await rollupProvider.provider.getBalance(rollupProcessor.address.toString())).toBigInt(),
       );
     } else {
       await setEthBalance(rollupProcessor.address, amount);
     }
-  }
-
+  };
 
   const dummyProof = () => createSendProof();
 
@@ -87,7 +87,6 @@ describe('rollup_processor: async defi bridge', () => {
     ({ rollupProcessor, assets, assetAddresses } = await setupTestRollupProcessor(signers));
   });
 
-
   beforeEach(async () => {
     snapshot = await evmSnapshot();
   });
@@ -95,7 +94,6 @@ describe('rollup_processor: async defi bridge', () => {
   afterEach(async () => {
     await evmRevert(snapshot);
   });
-
 
   it('process defi interaction data that has two output assets', async () => {
     const inputValue = 20n;

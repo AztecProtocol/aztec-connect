@@ -6,7 +6,7 @@ import { Signer } from 'ethers';
 import { keccak256, toUtf8Bytes } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 import { createPermitData, createPermitDataNonStandard } from '../../create_permit_data';
-import { evmSnapshot, evmRevert } from '../../ganache/hardhat-chain-manipulation';
+import { evmSnapshot, evmRevert } from '../../ganache/hardhat_chain_manipulation';
 import { EthersAdapter } from '../../provider';
 import { Web3Signer } from '../../signer';
 import { createDepositProof, createRollupProof, mergeInnerProofs } from './fixtures/create_mock_proof';
@@ -35,7 +35,6 @@ describe('rollup_processor: deposit', () => {
     ({ assets, rollupProcessor } = await setupTestRollupProcessor(signers));
   });
 
-
   beforeEach(async () => {
     snapshot = await evmSnapshot();
   });
@@ -43,7 +42,6 @@ describe('rollup_processor: deposit', () => {
   afterEach(async () => {
     await evmRevert(snapshot);
   });
-
 
   it('should deposit eth and convert to notes', async () => {
     const ethAsset = assets[0];
@@ -368,7 +366,16 @@ describe('rollup_processor: deposit', () => {
     await expect(
       rollupProcessor.contract
         .connect(userSigners[0])
-        .depositPendingFundsPermit(virtualAssetId, 1, userAddresses[0].toString(), RANDOM_BYTES, 0, badSig.v, badSig.r, badSig.s),
+        .depositPendingFundsPermit(
+          virtualAssetId,
+          1,
+          userAddresses[0].toString(),
+          RANDOM_BYTES,
+          0,
+          badSig.v,
+          badSig.r,
+          badSig.s,
+        ),
     ).rejects.toThrow('INVALID_ASSET_ID');
 
     const { proofData, signatures } = await createRollupProof(
@@ -389,7 +396,17 @@ describe('rollup_processor: deposit', () => {
     await expect(
       rollupProcessor.contract
         .connect(userSigners[0])
-        .depositPendingFundsPermitNonStandard(virtualAssetId, 1, userAddresses[0].toString(), RANDOM_BYTES, 0, 0, badSig.v, badSig.r, badSig.s),
+        .depositPendingFundsPermitNonStandard(
+          virtualAssetId,
+          1,
+          userAddresses[0].toString(),
+          RANDOM_BYTES,
+          0,
+          0,
+          badSig.v,
+          badSig.r,
+          badSig.s,
+        ),
     ).rejects.toThrow('INVALID_ASSET_ID');
 
     const { proofData, signatures } = await createRollupProof(

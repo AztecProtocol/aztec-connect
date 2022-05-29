@@ -3,7 +3,7 @@ import { randomBytes } from 'crypto';
 import { Contract, Wallet } from 'ethers';
 import { ethers } from 'hardhat';
 import { TokenPriceFeed } from '.';
-import { evmSnapshot, evmRevert } from '../../ganache/hardhat-chain-manipulation';
+import { evmSnapshot, evmRevert } from '../../ganache/hardhat_chain_manipulation';
 import { EthersAdapter, WalletProvider } from '../../provider';
 import { setupPriceFeeds } from './fixtures/setup_price_feeds';
 
@@ -24,7 +24,6 @@ describe('price_feed', () => {
     priceFeed = new TokenPriceFeed(EthAddress.fromString(priceFeedContract.address), ethereumProvider);
   });
 
-
   beforeEach(async () => {
     snapshot = await evmSnapshot();
   });
@@ -32,7 +31,6 @@ describe('price_feed', () => {
   afterEach(async () => {
     await evmRevert(snapshot);
   });
-
 
   it('get latest price and round', async () => {
     expect(await priceFeed.price()).toBe(initialPrice);

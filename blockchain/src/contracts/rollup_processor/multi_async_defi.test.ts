@@ -21,7 +21,7 @@ import { mockAsyncBridge } from './fixtures/setup_defi_bridges';
 import { setupTestRollupProcessor } from './fixtures/setup_upgradeable_test_rollup_processor';
 import { TestRollupProcessor } from './fixtures/test_rollup_processor';
 import { InnerProofOutput } from './fixtures/create_mock_proof';
-import { evmSnapshot, evmRevert } from '../../ganache/hardhat-chain-manipulation';
+import { evmSnapshot, evmRevert } from '../../ganache/hardhat_chain_manipulation';
 
 const parseInteractionResultFromLog = (log: LogDescription) => {
   const {
@@ -44,10 +44,10 @@ describe('rollup_processor: multi async defi', () => {
   let addresses: EthAddress[];
   let rollupProvider: Signer;
   let assetAddresses: EthAddress[];
-  
+
   let snapshot: string;
 
-  const topupToken = async (assetId: number, amount: bigint) =>
+  const topupToken = (assetId: number, amount: bigint) =>
     assets[assetId].mint(amount, rollupProcessor.address, { signingAddress: addresses[0] });
 
   const dummyProof = () => createSendProof();
@@ -85,7 +85,6 @@ describe('rollup_processor: multi async defi', () => {
     ({ rollupProcessor, assets, assetAddresses } = await setupTestRollupProcessor(signers));
   });
 
-
   beforeEach(async () => {
     snapshot = await evmSnapshot();
   });
@@ -93,7 +92,6 @@ describe('rollup_processor: multi async defi', () => {
   afterEach(async () => {
     await evmRevert(snapshot);
   });
-
 
   it('process multiple async defi interactions', async () => {
     const outputValueA = 12n;

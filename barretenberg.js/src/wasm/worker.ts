@@ -12,21 +12,21 @@ const worker = {
     await wasm.init(module, initial);
   },
 
-  async transferToHeap(buffer: Uint8Array, offset: number) {
+  transferToHeap(buffer: Uint8Array, offset: number) {
     wasm.transferToHeap(buffer, offset);
   },
 
-  async sliceMemory(start: number, end: number) {
+  sliceMemory(start: number, end: number) {
     const mem = wasm.sliceMemory(start, end);
-    return Transfer(mem, [mem.buffer]) as any as Uint8Array;
+    return Promise.resolve(Transfer(mem, [mem.buffer]) as any as Uint8Array);
   },
 
-  async call(name: string, ...args: any) {
-    return wasm.call(name, ...args);
+  call(name: string, ...args: any) {
+    return Promise.resolve(wasm.call(name, ...args));
   },
 
-  async memSize() {
-    return wasm.getMemory().length;
+  memSize() {
+    return Promise.resolve(wasm.getMemory().length);
   },
 
   logs() {
@@ -43,8 +43,8 @@ const worker = {
     await wasm.acquire();
   },
 
-  async release() {
-    await wasm.release();
+  release() {
+    wasm.release();
   },
 };
 

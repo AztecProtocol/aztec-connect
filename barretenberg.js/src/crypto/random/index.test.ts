@@ -1,7 +1,7 @@
 import { randomBytes } from '.';
 
 describe('random', () => {
-  it('randomBytes returns a filled byte array', async () => {
+  it('randomBytes returns a filled byte array', () => {
     const data = randomBytes(32);
     expect(data.length).toEqual(32);
     let identical = true;

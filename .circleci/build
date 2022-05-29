@@ -57,6 +57,9 @@ if ! check_rebuild $LAST_SUCCESSFUL_COMMIT; then
   exit 0
 fi
 
+# Convert any symlinked files in project root to real files. Docker cannot reference files outside its scope.
+resolve_symlinks
+
 # Pull latest parents that are not ours.
 echo "$DOCKERHUB_PASSWORD" | docker login -u aztecprotocolci --password-stdin
 PARENTS=$(cat $DOCKERFILE | sed -n -e 's/^FROM \([^[:space:]]\+\).*/\1/p' | grep -v $ECR_DEPLOY_URL | sort | uniq)

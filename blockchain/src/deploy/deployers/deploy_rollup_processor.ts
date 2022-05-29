@@ -35,9 +35,9 @@ export async function deployRollupProcessor(
       initNullRoot,
       initRootsRoot,
       initDataSize,
-      allowThirdPartyContracts
+      allowThirdPartyContracts,
     ],
-    [escapeHatchBlockLower, escapeHatchBlockUpper]
+    [escapeHatchBlockLower, escapeHatchBlockUpper],
   );
 
   await rollup.setRollupProvider(signerAddress, true, { gasLimit });

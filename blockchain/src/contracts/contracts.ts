@@ -82,7 +82,7 @@ export class Contracts {
     const newAssets = await Promise.all(
       supportedAssets
         .slice(this.assets.length - 1)
-        .map(async ({ address, gasLimit }) =>
+        .map(({ address, gasLimit }) =>
           TokenAsset.fromAddress(address, this.ethereumProvider, gasLimit, this.confirmations),
         ),
     );
@@ -125,39 +125,39 @@ export class Contracts {
   }
 
   public async getVerifierContractAddress() {
-    return this.rollupProcessor.verifier();
+    return await this.rollupProcessor.verifier();
   }
 
   async createRollupTxs(dataBuf: Buffer, signatures: Buffer[], offchainTxData: Buffer[]) {
-    return this.rollupProcessor.createRollupTxs(dataBuf, signatures, offchainTxData);
+    return await this.rollupProcessor.createRollupTxs(dataBuf, signatures, offchainTxData);
   }
 
   public async sendTx(data: Buffer, options: SendTxOptions = {}) {
-    return this.rollupProcessor.sendTx(data, options);
+    return await this.rollupProcessor.sendTx(data, options);
   }
 
   public async estimateGas(data: Buffer) {
-    return this.rollupProcessor.estimateGas(data);
+    return await this.rollupProcessor.estimateGas(data);
   }
 
   public async getRollupBlocksFrom(rollupId: number, minConfirmations = this.confirmations) {
-    return this.rollupProcessor.getRollupBlocksFrom(rollupId, minConfirmations);
+    return await this.rollupProcessor.getRollupBlocksFrom(rollupId, minConfirmations);
   }
 
   public async getRollupBlock(rollupId: number) {
-    return this.rollupProcessor.getRollupBlock(rollupId);
+    return await this.rollupProcessor.getRollupBlock(rollupId);
   }
 
   public async getUserPendingDeposit(assetId: number, account: EthAddress) {
-    return this.rollupProcessor.getUserPendingDeposit(assetId, account);
+    return await this.rollupProcessor.getUserPendingDeposit(assetId, account);
   }
 
   public async getTransactionByHash(txHash: TxHash) {
-    return this.ethereumRpc.getTransactionByHash(txHash);
+    return await this.ethereumRpc.getTransactionByHash(txHash);
   }
 
   public async getTransactionReceipt(txHash: TxHash) {
-    return this.provider.getTransactionReceipt(txHash.toString());
+    return await this.provider.getTransactionReceipt(txHash.toString());
   }
 
   public async getChainId() {
@@ -166,26 +166,26 @@ export class Contracts {
   }
 
   public async getBlockNumber() {
-    return this.provider.getBlockNumber();
+    return await this.provider.getBlockNumber();
   }
 
   public async signPersonalMessage(message: Buffer, address: EthAddress) {
     const signer = new Web3Signer(this.ethereumProvider);
-    return signer.signPersonalMessage(message, address);
+    return await signer.signPersonalMessage(message, address);
   }
 
   public async signMessage(message: Buffer, address: EthAddress) {
     const signer = new Web3Signer(this.ethereumProvider);
-    return signer.signMessage(message, address);
+    return await signer.signMessage(message, address);
   }
 
   public async signTypedData(data: TypedData, address: EthAddress) {
     const signer = new Web3Signer(this.ethereumProvider);
-    return signer.signTypedData(data, address);
+    return await signer.signTypedData(data, address);
   }
 
   public async getAssetPrice(assetId: number) {
-    return this.priceFeeds[assetId].price();
+    return await this.priceFeeds[assetId].price();
   }
 
   public getPriceFeed(assetId: number) {
@@ -200,7 +200,7 @@ export class Contracts {
   }
 
   public async getUserProofApprovalStatus(address: EthAddress, txId: Buffer) {
-    return this.rollupProcessor.getProofApprovalStatus(address, txId);
+    return await this.rollupProcessor.getProofApprovalStatus(address, txId);
   }
 
   public async isContract(address: EthAddress) {
@@ -221,7 +221,7 @@ export class Contracts {
   }
 
   public async getSupportedBridges() {
-    return this.rollupProcessor.getSupportedBridges();
+    return await this.rollupProcessor.getSupportedBridges();
   }
 
   public async getRevertError(txHash: TxHash) {

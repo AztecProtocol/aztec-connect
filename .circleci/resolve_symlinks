@@ -1,0 +1,6 @@
+#!/bin/bash
+# When run in a given directory, find all symlinks and replace them with the file they point to.
+# Required before running docker build to ensure files outside the project scope are brought in.
+set -e
+
+find . -maxdepth 1 -type l -exec sh -c "sed -i '' {}" \;

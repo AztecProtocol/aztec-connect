@@ -10,7 +10,7 @@ jest.setTimeout(10 * 60 * 1000);
 describe.skip('contract tests', () => {
   let contract: RollupProcessor;
 
-  beforeAll(async () => {
+  beforeAll(() => {
     const ethereumProvider = new JsonRpcProvider(ETHEREUM_HOST);
     contract = new RollupProcessor(
       EthAddress.fromString('0x737901bea3eeb88459df9ef1be8ff3ae1b42a2ba'),

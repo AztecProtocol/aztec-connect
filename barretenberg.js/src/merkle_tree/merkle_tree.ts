@@ -131,7 +131,7 @@ export class MerkleTree {
   }
 
   public async updateElement(index: number, value: Buffer) {
-    return this.updateLeafHash(index, value.equals(Buffer.alloc(32, 0)) ? this.initialLeafValue : value);
+    return await this.updateLeafHash(index, value.equals(Buffer.alloc(32, 0)) ? this.initialLeafValue : value);
   }
 
   public async updateLeafHash(index: number, leafHash: Buffer) {
@@ -185,7 +185,7 @@ export class MerkleTree {
   public async updateElements(index: number, values: Buffer[]) {
     debug(`update elements at index ${index} with ${values.length} leaves...`);
     const zeroBuf = Buffer.alloc(32, 0);
-    return this.updateLeafHashes(
+    return await this.updateLeafHashes(
       index,
       values.map(v => (v.equals(zeroBuf) ? this.initialLeafValue : v)),
     );
@@ -289,6 +289,6 @@ export class MerkleTree {
   }
 
   private async dbGet(key: Buffer): Promise<Buffer | undefined> {
-    return this.db.get(key).catch(() => {});
+    return await this.db.get(key).catch(() => {});
   }
 }

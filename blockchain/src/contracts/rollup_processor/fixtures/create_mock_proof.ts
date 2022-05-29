@@ -226,7 +226,7 @@ export const createSigData = (
   return new Keccak(256).update(message).digest();
 };
 
-export const createRollupProof = async (
+export const createRollupProof = (
   rollupProvider: Signer,
   innerProofOutput: InnerProofOutput,
   {

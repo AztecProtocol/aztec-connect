@@ -140,7 +140,7 @@ export class BarretenbergWasm extends EventEmitter {
     await this.mutexQ.get();
   }
 
-  async release() {
+  release() {
     if (this.mutexQ.length() !== 0) {
       throw new Error('Release called but not acquired.');
     }

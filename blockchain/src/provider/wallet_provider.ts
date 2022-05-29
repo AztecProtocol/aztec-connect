@@ -128,7 +128,7 @@ export class WalletProvider implements EthereumProvider {
     if (account) {
       return this.signTxLocally(tx, account);
     }
-    return this.provider.request(args);
+    return await this.provider.request(args);
   }
 
   private async sendTransaction(args: RequestArguments) {

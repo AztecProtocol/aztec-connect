@@ -28,7 +28,7 @@ describe('compute_nullifier', () => {
     pubKey = new GrumpkinAddress(grumpkin.mul(Grumpkin.one, privateKey));
   });
 
-  it('should compute correct nullifier', async () => {
+  it('should compute correct nullifier', () => {
     const inputNote1 = new TreeNote(pubKey, BigInt(100), 0, 0, noteSecret, Buffer.alloc(32), dummyNullifier);
     inputNote1.noteSecret = noteSecret;
 
@@ -39,7 +39,7 @@ describe('compute_nullifier', () => {
     expect(nullifier1.toString('hex')).toEqual('0d57355d79c04da7fae6919005d23900345b9fb0c11917fa4ada00cc56582845');
   });
 
-  it('should commit to claim note and compute its nullifier', async () => {
+  it('should commit to claim note and compute its nullifier', () => {
     const bridgeId = BridgeId.fromBigInt(BigInt(456));
     const ownerId = new AccountId(pubKey, 0);
     const claimNoteTxData = new ClaimNoteTxData(BigInt(100), bridgeId, noteSecret, dummyNullifier);
@@ -57,14 +57,14 @@ describe('compute_nullifier', () => {
     expect(nullifier.toString('hex')).toEqual('039395785283f875f10902a7548d83ad959b5a06c8c32943a7735ee2c9f14e1e');
   });
 
-  it('should create correct commitment for defi interaction note', async () => {
+  it('should create correct commitment for defi interaction note', () => {
     const bridgeId = BridgeId.fromBigInt(BigInt(456));
     const note = new DefiInteractionNote(bridgeId, 1, BigInt(123), BigInt(456), BigInt(789), true);
     const commitment = noteAlgos.defiInteractionNoteCommitment(note);
     expect(commitment.toString('hex')).toEqual('0196130e904cada31725bd8b7bb73de20eda978c92a2e05cd735429df1c88a47');
   });
 
-  it('should compute correct alias id nullifier', async () => {
+  it('should compute correct alias id nullifier', () => {
     const accountNonce = 1;
     const accountAliasId = AccountAliasId.fromAlias('pebble', accountNonce, blake2s);
     const nullifier = noteAlgos.accountAliasIdNullifier(accountAliasId);

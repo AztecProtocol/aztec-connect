@@ -3,7 +3,7 @@ import { Asset } from '@aztec/barretenberg/blockchain';
 import { virtualAssetIdFlag } from '@aztec/barretenberg/bridge_id';
 import { Signer } from 'ethers';
 import { ethers } from 'hardhat';
-import { evmSnapshot, evmRevert } from '../../ganache/hardhat-chain-manipulation';
+import { evmSnapshot, evmRevert } from '../../ganache/hardhat_chain_manipulation';
 import { EthersAdapter } from '../../provider';
 import { TokenAsset } from '../asset';
 import {
@@ -50,7 +50,6 @@ describe('rollup_processor: withdraw', () => {
     await rollupProcessor.sendTx(tx);
   });
 
-
   beforeEach(async () => {
     snapshot = await evmSnapshot();
   });
@@ -58,7 +57,6 @@ describe('rollup_processor: withdraw', () => {
   afterEach(async () => {
     await evmRevert(snapshot);
   });
-
 
   it('should withdraw eth', async () => {
     const preWithdrawalBalance = await assets[0].balanceOf(userAddresses[0]);

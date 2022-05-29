@@ -12,7 +12,8 @@ import UniswapBridge from '../../../artifacts/contracts/bridges/UniswapBridge.so
 import { deployRollupProcessor } from '../../../deploy/deployers';
 import { ProxyAdmin } from '../proxy_admin';
 
-const hre = require('hardhat');
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+// require('hardhat');
 
 async function deployDefiBridge(signer: Signer, rollupProcessor: TestRollupProcessor, uniswapRouter: Contract) {
   // TODO - Create a bridge contract with two output assets.
@@ -24,16 +25,12 @@ async function deployDefiBridge(signer: Signer, rollupProcessor: TestRollupProce
 }
 
 export async function upgradeTestRollupProcessor(proxyAdmin: ProxyAdmin, rollupProcessorAddress: EthAddress) {
-  const rollupProcessor = new TestRollupProcessor(
-    rollupProcessorAddress,
-    new EthersAdapter(ethers.provider),
-  );
+  const rollupProcessor = new TestRollupProcessor(rollupProcessorAddress, new EthersAdapter(ethers.provider));
 
-  await proxyAdmin.upgradeUNSAFE(
-    rollupProcessorAddress,
-    await ethers.getContractFactory('TestRollupProcessor'),
-    [await rollupProcessor.escapeBlockLowerBound(), await rollupProcessor.escapeBlockUpperBound()],
-  );
+  await proxyAdmin.upgradeUNSAFE(rollupProcessorAddress, await ethers.getContractFactory('TestRollupProcessor'), [
+    await rollupProcessor.escapeBlockLowerBound(),
+    await rollupProcessor.escapeBlockUpperBound(),
+  ]);
 }
 
 export async function setupTestRollupProcessor(

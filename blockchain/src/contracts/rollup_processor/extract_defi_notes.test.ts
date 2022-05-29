@@ -1,11 +1,15 @@
 import { EthAddress } from '@aztec/barretenberg/address';
-import { Asset, EthereumProvider } from '@aztec/barretenberg/blockchain';
+import { Asset } from '@aztec/barretenberg/blockchain';
 import { DefiInteractionNote, packInteractionNotes } from '@aztec/barretenberg/note_algorithms';
 import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { Signer } from 'ethers';
 import { ethers } from 'hardhat';
-import { evmSnapshot, evmRevert, advanceBlocksHardhat, blocksToAdvanceHardhat } from '../../ganache/hardhat-chain-manipulation';
-import { EthersAdapter } from '../../provider';
+import {
+  evmSnapshot,
+  evmRevert,
+  advanceBlocksHardhat,
+  blocksToAdvanceHardhat,
+} from '../../ganache/hardhat_chain_manipulation';
 import {
   createAccountProof,
   createDefiClaimProof,
@@ -48,7 +52,6 @@ describe('rollup_processor: extract defi notes', () => {
     await advanceBlocksHardhat(blocks, ethers.provider);
   });
 
-
   beforeEach(async () => {
     snapshot = await evmSnapshot();
   });
@@ -56,7 +59,6 @@ describe('rollup_processor: extract defi notes', () => {
   afterEach(async () => {
     await evmRevert(snapshot);
   });
-
 
   it('should extract defi notes from blocks between rollups', async () => {
     const inputAssetIdA = 1;
@@ -107,9 +109,9 @@ describe('rollup_processor: extract defi notes', () => {
         defiInteractionData:
           i === 2
             ? [
-              new DefiInteractionData(bridgeId, defiDepositAmount0),
-              new DefiInteractionData(bridgeId, defiDepositAmount1),
-            ]
+                new DefiInteractionData(bridgeId, defiDepositAmount0),
+                new DefiInteractionData(bridgeId, defiDepositAmount1),
+              ]
             : [],
         previousDefiInteractionHash: i === 4 ? previousDefiInteractionHash : undefined,
       });

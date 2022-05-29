@@ -81,19 +81,19 @@ export class ClientEthereumBlockchain {
   }
 
   public async hasPermitSupport(assetId: number) {
-    return this.permitSupportAssetIds.includes(assetId);
+    return await this.permitSupportAssetIds.includes(assetId);
   }
 
   public async getUserPendingDeposit(assetId: number, account: EthAddress) {
-    return this.rollupProcessor.getUserPendingDeposit(assetId, account);
+    return await this.rollupProcessor.getUserPendingDeposit(assetId, account);
   }
 
   public async getUserProofApprovalStatus(account: EthAddress, txId: Buffer) {
-    return this.rollupProcessor.getProofApprovalStatus(account, txId);
+    return await this.rollupProcessor.getProofApprovalStatus(account, txId);
   }
 
   public async depositPendingFunds(assetId: number, amount: bigint, proofHash?: Buffer, options?: SendTxOptions) {
-    return this.rollupProcessor.depositPendingFunds(assetId, amount, proofHash, options);
+    return await this.rollupProcessor.depositPendingFunds(assetId, amount, proofHash, options);
   }
 
   public async depositPendingFundsPermit(
@@ -104,7 +104,14 @@ export class ClientEthereumBlockchain {
     proofHash?: Buffer,
     options?: SendTxOptions,
   ) {
-    return this.rollupProcessor.depositPendingFundsPermit(assetId, amount, deadline, signature, proofHash, options);
+    return await this.rollupProcessor.depositPendingFundsPermit(
+      assetId,
+      amount,
+      deadline,
+      signature,
+      proofHash,
+      options,
+    );
   }
 
   public async depositPendingFundsPermitNonStandard(
@@ -116,7 +123,7 @@ export class ClientEthereumBlockchain {
     proofHash?: Buffer,
     options?: SendTxOptions,
   ) {
-    return this.rollupProcessor.depositPendingFundsPermitNonStandard(
+    return await this.rollupProcessor.depositPendingFundsPermitNonStandard(
       assetId,
       amount,
       nonce,
@@ -128,11 +135,11 @@ export class ClientEthereumBlockchain {
   }
 
   public async approveProof(txId: Buffer, options?: SendTxOptions) {
-    return this.rollupProcessor.approveProof(txId, options);
+    return await this.rollupProcessor.approveProof(txId, options);
   }
 
   public async processAsyncDefiInteraction(interactionNonce: number, options?: SendTxOptions) {
-    return this.rollupProcessor.processAsyncDefiInteraction(interactionNonce, options);
+    return await this.rollupProcessor.processAsyncDefiInteraction(interactionNonce, options);
   }
 
   public async isContract(address: EthAddress) {

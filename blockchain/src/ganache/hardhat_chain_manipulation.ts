@@ -41,11 +41,11 @@ export const setTime = async (timestamp: BigNumberish) => {
 
 export async function advanceBlocksHardhat(blocks: number, provider: JsonRpcProvider) {
   // Hardhat don't like leading zeros in hexes, e.g., 0x01 so we use a regex to remove them.
-  let diff_clean = `0x${BigNumber.from(blocks).toHexString().substring(2).replace(/^0+/, '')}`;
+  let diffClean = `0x${BigNumber.from(blocks).toHexString().substring(2).replace(/^0+/, '')}`;
   if (blocks == 0) {
-    diff_clean = '0x0';
+    diffClean = '0x0';
   }
-  await hre.network.provider.send('hardhat_mine', [diff_clean]);
+  await hre.network.provider.send('hardhat_mine', [diffClean]);
   return await getCurrentBlockNumber(new EthersAdapter(provider));
 }
 

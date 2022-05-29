@@ -1,7 +1,7 @@
 setup_env: &setup_env
   run:
     name: 'Setup environment'
-    command: cd .circleci && ./setup_env "$CIRCLE_SHA1" "$CIRCLE_BRANCH" "$CIRCLE_TAG" "$CIRCLE_JOB" "$CIRCLE_REPOSITORY_URL"
+    command: cd .circleci && ./setup_env "$CIRCLE_SHA1" "$CIRCLE_TAG" "$CIRCLE_JOB" "$CIRCLE_REPOSITORY_URL"
 
 version: 2.1
 parameters:

@@ -8,7 +8,7 @@ import { deployMainnetE2e } from './deploy_mainnet_e2e';
 
 const { ETHEREUM_HOST, PRIVATE_KEY, VK } = process.env;
 
-async function getSigner() {
+function getSigner() {
   if (!ETHEREUM_HOST) {
     throw new Error('ETHEREUM_HOST not set.');
   }
@@ -18,7 +18,7 @@ async function getSigner() {
   return new NonceManager(signer);
 }
 
-async function deploy(chainId: number, signer: Signer, treeInitData: TreeInitData, vk?: string) {
+function deploy(chainId: number, signer: Signer, treeInitData: TreeInitData, vk?: string) {
   switch (chainId) {
     case 1:
     case 0xa57ec:
@@ -39,7 +39,7 @@ async function deploy(chainId: number, signer: Signer, treeInitData: TreeInitDat
  * This drastically improves deployment times.
  */
 async function main() {
-  const signer = await getSigner();
+  const signer = getSigner();
 
   const signerAddress = await signer.getAddress();
   console.error(`Signer: ${signerAddress}`);

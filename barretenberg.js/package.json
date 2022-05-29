@@ -4,10 +4,11 @@
   "main": "index.js",
   "license": "GPL-2.0",
   "scripts": {
-    "build": "yarn clean && tsc -p tsconfig.dest.json && parcel build ./src/wasm/worker.ts --no-source-maps --out-dir ./dest && node ./package.js",
+    "build": "yarn clean && yarn formatting && tsc -p tsconfig.dest.json && parcel build ./src/wasm/worker.ts --no-source-maps --out-dir ./dest && node ./package.js",
     "build:dev": "tsc -p tsconfig.dest.json --watch",
     "clean": "rm -rf ./dest ./.cache",
     "test": "jest",
+    "formatting": "prettier --check ./src && eslint --max-warnings 0 ./src",
     "symlink-wasm": "cp -R ./src/wasm/barretenberg.wasm ./dest/wasm"
   },
   "jest": {
@@ -45,13 +46,13 @@
     "@types/jest": "^26.0.20",
     "@types/memdown": "^3.0.0",
     "@types/node": "^15.6.2",
-    "@typescript-eslint/eslint-plugin": "^4.1.1",
-    "@typescript-eslint/parser": "^4.1.1",
-    "eslint": "^7.9.0",
-    "eslint-config-prettier": "^6.11.0",
+    "@typescript-eslint/eslint-plugin": "^5.25.0",
+    "@typescript-eslint/parser": "^5.25.0",
+    "eslint": "^8.16.0",
+    "eslint-config-prettier": "^8.5.0",
     "jest": "^27.0.3",
     "parcel-bundler": "^1.12.5",
-    "prettier": "^2.0.5",
+    "prettier": "^2.6.2",
     "ts-jest": "^27.0.2",
     "ts-node": "^10.0.0",
     "typescript": "^4.4.4"

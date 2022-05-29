@@ -16,6 +16,6 @@ git checkout FETCH_HEAD
 
 cd .circleci
 BASH_ENV=/tmp/bash_env
-source ./setup_env "$COMMIT_HASH" "$COMMIT_BRANCH" "$COMMIT_TAG" "$JOB_NAME" "$GIT_REPOSITORY_URL"
+source ./setup_env "$COMMIT_HASH" "$COMMIT_TAG" "$JOB_NAME" "$GIT_REPOSITORY_URL"
 cd ../$PROJECT_DIR
 build $@

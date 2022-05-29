@@ -15,7 +15,7 @@ describe('schnorr', () => {
     grumpkin = new Grumpkin(barretenberg);
   });
 
-  it('should verify signature', async () => {
+  it('should verify signature', () => {
     // prettier-ignore
     const pk = Buffer.from([
       0x0b, 0x9b, 0x3a, 0xde, 0xe6, 0xb3, 0xd8, 0x1b, 0x28, 0xa0, 0x88, 0x6b, 0x2a, 0x84, 0x15, 0xc7, 0xda, 0x31, 0x29,
@@ -29,7 +29,7 @@ describe('schnorr', () => {
     expect(verified).toBe(true);
   });
 
-  it('should create + verify multi signature', async () => {
+  it('should create + verify multi signature', () => {
     const pks: Buffer[] = [];
     const pubKeys: Buffer[] = [];
     const roundOnePublicOutputs: Buffer[] = [];
@@ -47,14 +47,16 @@ describe('schnorr', () => {
 
     // round one
     for (let i = 0; i < numSigners; ++i) {
-        const { publicOutput, privateOutput } = schnorr.multiSigRoundOne();
+      const { publicOutput, privateOutput } = schnorr.multiSigRoundOne();
       roundOnePublicOutputs.push(publicOutput);
       roundOnePrivateOutputs.push(privateOutput);
     }
 
     // round two
     for (let i = 0; i < numSigners; ++i) {
-      roundTwoOutputs.push(schnorr.multiSigRoundTwo(msg, pks[i], roundOnePrivateOutputs[i], pubKeys, roundOnePublicOutputs));
+      roundTwoOutputs.push(
+        schnorr.multiSigRoundTwo(msg, pks[i], roundOnePrivateOutputs[i], pubKeys, roundOnePublicOutputs),
+      );
     }
 
     // generate signature

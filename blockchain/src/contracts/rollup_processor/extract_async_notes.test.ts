@@ -5,7 +5,12 @@ import { DefiInteractionNote, packInteractionNotes } from '@aztec/barretenberg/n
 import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { Signer } from 'ethers';
 import { ethers } from 'hardhat';
-import { evmSnapshot, evmRevert, advanceBlocksHardhat, blocksToAdvanceHardhat } from '../../ganache/hardhat-chain-manipulation';
+import {
+  evmSnapshot,
+  evmRevert,
+  advanceBlocksHardhat,
+  blocksToAdvanceHardhat,
+} from '../../ganache/hardhat_chain_manipulation';
 import {
   createDefiDepositProof,
   createRollupProof,
@@ -29,7 +34,7 @@ describe('rollup_processor: extract async notes', () => {
   const escapeBlockLowerBound = 80;
   const escapeBlockUpperBound = 100;
 
-  const mockBridge = async (params: MockBridgeParams = {}) =>
+  const mockBridge = (params: MockBridgeParams = {}) =>
     deployMockBridge(signers[0], rollupProcessor, assetAddresses, params);
 
   beforeAll(async () => {
@@ -45,7 +50,6 @@ describe('rollup_processor: extract async notes', () => {
     await advanceBlocksHardhat(blocks, ethers.provider);
   });
 
-
   beforeEach(async () => {
     snapshot = await evmSnapshot();
   });
@@ -53,7 +57,6 @@ describe('rollup_processor: extract async notes', () => {
   afterEach(async () => {
     await evmRevert(snapshot);
   });
-
 
   it('should correctly extract sync and async defi notes', async () => {
     const inputAssetIdA = 1;

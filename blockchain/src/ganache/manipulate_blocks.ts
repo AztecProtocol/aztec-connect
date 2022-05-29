@@ -1,8 +1,5 @@
 import { EthereumProvider } from '@aztec/barretenberg/blockchain';
-
-async function sleep(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
+import { sleep } from '@aztec/barretenberg/sleep';
 
 export async function getCurrentBlockNumber(provider: EthereumProvider) {
   return parseInt(await provider.request({ method: 'eth_blockNumber', params: [] }));

@@ -6,7 +6,12 @@ import { randomBytes } from 'crypto';
 import { Signer } from 'ethers';
 import { keccak256, Result, toUtf8Bytes } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
-import { evmSnapshot, evmRevert, advanceBlocksHardhat, blocksToAdvanceHardhat } from '../../ganache/hardhat-chain-manipulation';
+import {
+  evmSnapshot,
+  evmRevert,
+  advanceBlocksHardhat,
+  blocksToAdvanceHardhat,
+} from '../../ganache/hardhat_chain_manipulation';
 import { FeeDistributor } from '../fee_distributor';
 import {
   createAccountProof,
@@ -20,9 +25,7 @@ import {
   mergeInnerProofs,
 } from './fixtures/create_mock_proof';
 import { deployMockBridge, MockBridgeParams } from './fixtures/setup_defi_bridges';
-import {
-  setupTestRollupProcessor,
-} from './fixtures/setup_upgradeable_test_rollup_processor';
+import { setupTestRollupProcessor } from './fixtures/setup_upgradeable_test_rollup_processor';
 import { TestRollupProcessor } from './fixtures/test_rollup_processor';
 
 describe('rollup_processor', () => {
@@ -39,7 +42,7 @@ describe('rollup_processor', () => {
   const escapeBlockLowerBound = 80;
   const escapeBlockUpperBound = 100;
 
-  const mockBridge = async (params: MockBridgeParams = {}) =>
+  const mockBridge = (params: MockBridgeParams = {}) =>
     deployMockBridge(signers[0], rollupProcessor, assetAddresses, params);
 
   // Extracts the 'args' of each event emitted by the tx.
@@ -65,7 +68,6 @@ describe('rollup_processor', () => {
     const blocks = await blocksToAdvanceHardhat(escapeBlockLowerBound, escapeBlockUpperBound, ethers.provider);
     await advanceBlocksHardhat(blocks, ethers.provider);
   });
-
 
   beforeEach(async () => {
     snapshot = await evmSnapshot();
@@ -404,9 +406,9 @@ describe('rollup_processor', () => {
         defiInteractionData:
           i === 2
             ? [
-              new DefiInteractionData(bridgeId, defiDepositAmount0),
-              new DefiInteractionData(bridgeId, defiDepositAmount1),
-            ]
+                new DefiInteractionData(bridgeId, defiDepositAmount0),
+                new DefiInteractionData(bridgeId, defiDepositAmount1),
+              ]
             : [],
         previousDefiInteractionHash: i === 3 ? previousDefiInteractionHash : undefined,
       });

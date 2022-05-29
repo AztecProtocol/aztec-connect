@@ -3,7 +3,6 @@ import { Sha256 } from '.';
 
 import { randomBytes, createHash } from 'crypto';
 
-
 describe('sha256', () => {
   let barretenberg!: BarretenbergWasm;
   let sha256!: Sha256;
@@ -12,11 +11,9 @@ describe('sha256', () => {
     barretenberg = new BarretenbergWasm();
     await barretenberg.init();
     sha256 = new Sha256(barretenberg);
-
   });
 
-  it('should correctly hash data', async () => {
-
+  it('should correctly hash data', () => {
     const data = randomBytes(67);
 
     const expected = createHash('sha256').update(data).digest();

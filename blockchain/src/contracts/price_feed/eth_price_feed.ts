@@ -1,15 +1,14 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { PriceFeed } from '@aztec/barretenberg/blockchain';
 
 export class EthPriceFeed implements PriceFeed {
   constructor() {}
 
-  async price() {
-    return BigInt(10) ** BigInt(18);
+  price() {
+    return Promise.resolve(BigInt(10) ** BigInt(18));
   }
 
-  async latestRound() {
-    return BigInt(0);
+  latestRound() {
+    return Promise.resolve(BigInt(0));
   }
 
   async getRoundData(roundId: bigint) {
@@ -20,7 +19,7 @@ export class EthPriceFeed implements PriceFeed {
     };
   }
 
-  async getHistoricalPrice(roundId: bigint) {
-    return this.price();
+  async getHistoricalPrice() {
+    return await this.price();
   }
 }

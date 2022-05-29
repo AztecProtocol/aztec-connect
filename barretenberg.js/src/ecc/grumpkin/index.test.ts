@@ -15,7 +15,7 @@ describe('grumpkin', () => {
     grumpkin = new Grumpkin(barretenberg);
   });
 
-  it('should correctly perform scalar muls', async () => {
+  it('should correctly perform scalar muls', () => {
     const exponent = randomBytes(32);
 
     const numPoints = 2048;

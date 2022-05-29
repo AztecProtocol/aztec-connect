@@ -60,16 +60,16 @@ export class Schnorr {
   ) {
     const pubKeysBuffer = serializeBufferArrayToVector(pubKeys);
     const roundOneOutputsBuffer = serializeBufferArrayToVector(roundOnePublicOutputs);
-    let msgPtr = 32;
+    const msgPtr = 32;
 
     this.wasm.transferToHeap(msg, msgPtr);
-    let pkPtr = msgPtr + msg.length;
+    const pkPtr = msgPtr + msg.length;
     this.wasm.transferToHeap(pk, pkPtr);
-    let roundOnePrivatePtr = pkPtr + 32;
+    const roundOnePrivatePtr = pkPtr + 32;
     this.wasm.transferToHeap(signerrRoundOnePrivateOutput, roundOnePrivatePtr);
-    let pubKeysPtr = roundOnePrivatePtr + 64;
+    const pubKeysPtr = roundOnePrivatePtr + 64;
     this.wasm.transferToHeap(pubKeysBuffer, pubKeysPtr);
-    let roundOnePtr = pubKeysPtr + pubKeysBuffer.length;
+    const roundOnePtr = pubKeysPtr + pubKeysBuffer.length;
     this.wasm.transferToHeap(roundOneOutputsBuffer, roundOnePtr);
 
     this.wasm.call(
@@ -95,14 +95,14 @@ export class Schnorr {
     const roundOneOutputsBuffer = serializeBufferArrayToVector(roundOneOutputs);
     const roundTwoOutputsBuffer = serializeBufferArrayToVector(roundTwoOutputs);
 
-    let msgPtr = 64;
+    const msgPtr = 64;
 
     this.wasm.transferToHeap(msg, msgPtr);
-    let pubKeysPtr = msgPtr + msg.length;
+    const pubKeysPtr = msgPtr + msg.length;
     this.wasm.transferToHeap(pubKeysBuffer, pubKeysPtr);
-    let roundOnePtr = pubKeysPtr + pubKeysBuffer.length;
+    const roundOnePtr = pubKeysPtr + pubKeysBuffer.length;
     this.wasm.transferToHeap(roundOneOutputsBuffer, roundOnePtr);
-    let roundTwoPtr = roundOnePtr + roundOneOutputsBuffer.length;
+    const roundTwoPtr = roundOnePtr + roundOneOutputsBuffer.length;
     this.wasm.transferToHeap(roundTwoOutputsBuffer, roundTwoPtr);
 
     this.wasm.call('multisig_combine_signatures', msgPtr, msg.length, pubKeysPtr, roundOnePtr, roundTwoPtr, 0, 32);

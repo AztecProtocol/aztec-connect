@@ -68,7 +68,7 @@ export class WorldStateDb {
     return subTreeRoot;
   }
 
-  public async get(treeId: number, index: bigint): Promise<Buffer> {
+  public get(treeId: number, index: bigint): Promise<Buffer> {
     return new Promise(resolve => this.stdioQueue.put(async () => resolve(await this.get_(treeId, index))));
   }
 
@@ -82,7 +82,7 @@ export class WorldStateDb {
     return result;
   }
 
-  public async getHashPath(treeId: number, index: bigint): Promise<HashPath> {
+  public getHashPath(treeId: number, index: bigint): Promise<HashPath> {
     return new Promise(resolve => this.stdioQueue.put(async () => resolve(await this.getHashPath_(treeId, index))));
   }
 
@@ -103,7 +103,7 @@ export class WorldStateDb {
     return path;
   }
 
-  public async put(treeId: number, index: bigint, value: Buffer): Promise<Buffer> {
+  public put(treeId: number, index: bigint, value: Buffer): Promise<Buffer> {
     if (value.length !== 32) {
       throw Error('Values must be 32 bytes.');
     }
@@ -124,7 +124,7 @@ export class WorldStateDb {
     return this.roots[treeId];
   }
 
-  public async batchPut(entries: PutEntry[]) {
+  public batchPut(entries: PutEntry[]) {
     return new Promise(resolve => this.stdioQueue.put(async () => resolve(await this.batchPut_(entries))));
   }
 

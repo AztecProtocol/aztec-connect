@@ -2,7 +2,7 @@ import { RollupProofDataOffsets } from '@aztec/barretenberg/rollup_proof';
 import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { Signer, utils } from 'ethers';
 import { ethers } from 'hardhat';
-import { evmSnapshot, evmRevert } from '../../ganache/hardhat-chain-manipulation';
+import { evmSnapshot, evmRevert } from '../../ganache/hardhat_chain_manipulation';
 import { createRollupProof, createSendProof } from './fixtures/create_mock_proof';
 import { setupTestRollupProcessor } from './fixtures/setup_upgradeable_test_rollup_processor';
 import { RollupProcessor } from './rollup_processor';
@@ -10,7 +10,7 @@ import { RollupProcessor } from './rollup_processor';
 describe('rollup_processor: state', () => {
   let rollupProvider: Signer;
   let rollupProcessor: RollupProcessor;
-  
+
   let snapshot: string;
 
   beforeAll(async () => {
@@ -19,7 +19,6 @@ describe('rollup_processor: state', () => {
     ({ rollupProcessor } = await setupTestRollupProcessor(signers));
   });
 
-
   beforeEach(async () => {
     snapshot = await evmSnapshot();
   });
@@ -27,7 +26,6 @@ describe('rollup_processor: state', () => {
   afterEach(async () => {
     await evmRevert(snapshot);
   });
-
 
   it('should update merkle tree state', async () => {
     const { proofData, signatures, rollupProofData } = await createRollupProof(rollupProvider, createSendProof());

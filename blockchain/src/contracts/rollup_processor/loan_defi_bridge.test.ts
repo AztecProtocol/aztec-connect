@@ -16,7 +16,7 @@ import { WorldStateConstants } from '@aztec/barretenberg/world_state';
 import { Signer } from 'ethers';
 import { LogDescription } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
-import { evmSnapshot, evmRevert, setEthBalance } from '../../ganache/hardhat-chain-manipulation';
+import { evmSnapshot, evmRevert, setEthBalance } from '../../ganache/hardhat_chain_manipulation';
 import { EthersAdapter } from '../../provider';
 import { DefiBridge } from '../defi_bridge';
 import { createRollupProof, createSendProof, DefiInteractionData } from './fixtures/create_mock_proof';
@@ -50,18 +50,19 @@ describe('rollup_processor: defi bridge with loans', () => {
 
   let snapshot: string;
 
-  const topupToken = async (assetId: number, amount: bigint) =>
+  const topupToken = (assetId: number, amount: bigint) =>
     assets[assetId].mint(amount, rollupProcessor.address, { signingAddress: addresses[0] });
 
   const topupEth = async (amount: bigint) => {
     if (rollupProvider.provider) {
-      await setEthBalance(rollupProcessor.address, amount +
-        (await rollupProvider.provider?.getBalance(rollupProcessor.address.toString())).toBigInt()
+      await setEthBalance(
+        rollupProcessor.address,
+        amount + (await rollupProvider.provider.getBalance(rollupProcessor.address.toString())).toBigInt(),
       );
     } else {
       await setEthBalance(rollupProcessor.address, amount);
     }
-  }
+  };
 
   const dummyProof = () => createSendProof(0);
 
@@ -110,7 +111,6 @@ describe('rollup_processor: defi bridge with loans', () => {
     ({ rollupProcessor, assets, assetAddresses } = await setupTestRollupProcessor(signers));
   });
 
-
   beforeEach(async () => {
     snapshot = await evmSnapshot();
   });
@@ -118,7 +118,6 @@ describe('rollup_processor: defi bridge with loans', () => {
   afterEach(async () => {
     await evmRevert(snapshot);
   });
-
 
   // TODO ADD A TEST THAT ENSURES BRIDGE THROWS IF NON-VIRTUAL ASSETS ARE PROVIDED
   it('process defi interaction data that draws and repays a loan', async () => {

@@ -1,3 +1,4 @@
+// eslint-disable-next-line camelcase
 import { LidoBridge__factory } from '@aztec/bridge-clients/client-dest/typechain-types/factories/LidoBridge__factory';
 import { Contract, Signer } from 'ethers';
 

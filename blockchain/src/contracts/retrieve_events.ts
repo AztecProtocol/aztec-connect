@@ -1,4 +1,4 @@
-import { EthereumProvider } from "@aztec/barretenberg/blockchain";
+import { EthereumProvider } from '@aztec/barretenberg/blockchain';
 import { Contract } from 'ethers';
 import { Web3Provider } from '@ethersproject/providers';
 import { abis } from './contract_abis';

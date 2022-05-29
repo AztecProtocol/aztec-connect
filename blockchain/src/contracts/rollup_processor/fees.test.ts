@@ -2,7 +2,7 @@ import { EthAddress } from '@aztec/barretenberg/address';
 import { Asset } from '@aztec/barretenberg/blockchain';
 import { Signer } from 'ethers';
 import { ethers } from 'hardhat';
-import { evmSnapshot, evmRevert } from '../../ganache/hardhat-chain-manipulation';
+import { evmSnapshot, evmRevert } from '../../ganache/hardhat_chain_manipulation';
 import { FeeDistributor } from '../fee_distributor';
 import { createDepositProof, createRollupProof } from './fixtures/create_mock_proof';
 import { setupTestRollupProcessor } from './fixtures/setup_upgradeable_test_rollup_processor';
@@ -29,7 +29,6 @@ describe('rollup_processor: deposit', () => {
     ({ assets, rollupProcessor, feeDistributor, feeDistributorAddress } = await setupTestRollupProcessor(signers));
   });
 
-
   beforeEach(async () => {
     snapshot = await evmSnapshot();
   });
@@ -37,7 +36,6 @@ describe('rollup_processor: deposit', () => {
   afterEach(async () => {
     await evmRevert(snapshot);
   });
-
 
   it('should process a tx with fee', async () => {
     const txFee = 10n;

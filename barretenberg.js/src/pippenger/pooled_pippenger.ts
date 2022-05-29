@@ -37,6 +37,6 @@ export class PooledPippenger implements Pippenger {
   }
 
   public async sumElements(buffer: Uint8Array) {
-    return this.pool[0].sumElements(buffer);
+    return await this.pool[0].sumElements(buffer);
   }
 }

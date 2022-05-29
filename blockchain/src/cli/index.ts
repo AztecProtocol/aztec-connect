@@ -3,7 +3,8 @@ import { Contract } from 'ethers';
 import { EthAddress } from '@aztec/barretenberg/address';
 import { EthereumRpc, TxHash } from '@aztec/barretenberg/blockchain';
 import { Command } from 'commander';
-import { purchaseTokens, MainnetAddresses, RollupProcessor, JsonRpcProvider } from '..';
+import { MainnetAddresses, purchaseTokens } from '../tokens';
+import { JsonRpcProvider } from '../provider';
 import { setBlockchainTime, getCurrentBlockTime } from '../ganache/manipulate_blocks';
 import { decodeErrorFromContractByTxHash, decodeSelector, retrieveContractSelectors } from '../contracts/decode_error';
 import { EthereumProvider } from '@aztec/barretenberg/blockchain';
@@ -13,6 +14,7 @@ import { ElementBridgeData } from '@aztec/bridge-clients/client-dest/src/client/
 import { WalletProvider } from '../provider';
 import { getTokenBalance, getWethBalance } from '../tokens';
 import { LogDescription } from 'ethers/lib/utils';
+import { RollupProcessor } from '../contracts';
 
 const { PRIVATE_KEY } = process.env;
 
@@ -78,7 +80,7 @@ export async function getContractSelectors(
   return await retrieveContractSelectors(contract, type);
 }
 
-export const createElementBridgeData = async (
+export const createElementBridgeData = (
   rollupAddress: EthAddress,
   elementBridgeAddress: EthAddress,
   provider: EthereumProvider,

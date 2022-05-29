@@ -52,7 +52,7 @@ export async function setupUniswap(owner: Signer) {
 
   return {
     uniswapRouter,
-    createPair: async (asset: Asset, initialTotalSupply = 10n ** 18n) =>
+    createPair: (asset: Asset, initialTotalSupply = 10n ** 18n) =>
       createPair(owner, uniswapFactory, asset, weth, initialTotalSupply),
   };
 }

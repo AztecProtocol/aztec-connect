@@ -6,7 +6,7 @@ import { setupAssets } from '../asset/fixtures/setup_assets';
 import { setupFeeDistributor } from './fixtures/setup_fee_distributor';
 import { setupUniswap } from './fixtures/setup_uniswap';
 import { FeeDistributor } from './fee_distributor';
-import { evmRevert, evmSnapshot } from '../../ganache/hardhat-chain-manipulation';
+import { evmRevert, evmSnapshot } from '../../ganache/hardhat_chain_manipulation';
 
 describe('fee_distributor', () => {
   let feeDistributor: FeeDistributor;

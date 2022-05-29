@@ -230,15 +230,15 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   }
 
   public async getUserPendingDeposit(assetId: number, account: EthAddress) {
-    return this.contracts.getUserPendingDeposit(assetId, account);
+    return await this.contracts.getUserPendingDeposit(assetId, account);
   }
 
   public async getUserProofApprovalStatus(account: EthAddress, txId: Buffer) {
-    return this.contracts.getUserProofApprovalStatus(account, txId);
+    return await this.contracts.getUserProofApprovalStatus(account, txId);
   }
 
   async createRollupTxs(dataBuf: Buffer, signatures: Buffer[], offchainTxData: Buffer[]) {
-    return this.contracts.createRollupTxs(dataBuf, signatures, offchainTxData);
+    return await this.contracts.createRollupTxs(dataBuf, signatures, offchainTxData);
   }
 
   public sendTx(tx: Buffer, options: SendTxOptions = {}) {
@@ -299,7 +299,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
 
   public async getTransactionReceiptSafe(txHash: TxHash, timeoutSeconds?: number) {
     const confs = this.getRequiredConfirmations();
-    return this.getTransactionReceipt(txHash, timeoutSeconds, confs);
+    return await this.getTransactionReceipt(txHash, timeoutSeconds, confs);
   }
 
   /**
@@ -310,19 +310,19 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   }
 
   public async signPersonalMessage(message: Buffer, address: EthAddress) {
-    return this.contracts.signPersonalMessage(message, address);
+    return await this.contracts.signPersonalMessage(message, address);
   }
 
   public async signMessage(message: Buffer, address: EthAddress) {
-    return this.contracts.signMessage(message, address);
+    return await this.contracts.signMessage(message, address);
   }
 
   public async signTypedData(data: TypedData, address: EthAddress) {
-    return this.contracts.signTypedData(data, address);
+    return await this.contracts.signTypedData(data, address);
   }
 
   public async getAssetPrice(assetId: number) {
-    return this.contracts.getAssetPrice(assetId);
+    return await this.contracts.getAssetPrice(assetId);
   }
 
   public getPriceFeed(assetId: number) {
@@ -334,15 +334,15 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   }
 
   public async isContract(address: EthAddress) {
-    return this.contracts.isContract(address);
+    return await this.contracts.isContract(address);
   }
 
   public async estimateGas(data: Buffer) {
-    return this.contracts.estimateGas(data);
+    return await this.contracts.estimateGas(data);
   }
 
   public async getChainId() {
-    return this.contracts.getChainId();
+    return await this.contracts.getChainId();
   }
 
   public getRollupBalance(assetId: number) {
@@ -354,7 +354,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   }
 
   public async getFeeData() {
-    return this.contracts.getFeeData();
+    return await this.contracts.getFeeData();
   }
 
   public getBridgeGas(bridgeId: bigint) {
