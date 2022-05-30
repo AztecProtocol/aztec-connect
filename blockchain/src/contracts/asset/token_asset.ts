@@ -6,6 +6,7 @@ import { Contract } from 'ethers';
 import { fromBaseUnits, toBaseUnits } from '../../units';
 
 const abi = [
+  'function transfer(address to, uint256 amount) public returns(bool)',
   'function decimals() public view returns (uint8)',
   'function approve(address spender, uint256 amount) public returns (bool)',
   'function allowance(address owner, address spender) public view returns (uint256)',
@@ -91,7 +92,7 @@ export class TokenAsset implements Asset {
 
   async transfer(value: bigint, from: EthAddress, to: EthAddress, options: SendTxOptions = {}) {
     const contract = this.getContractWithSigner(from, options);
-    const res = await contract.transfer(from.toString(), to.toString(), value).catch(fixEthersStackTrace);
+    const res = await contract.transfer(to.toString(), value).catch(fixEthersStackTrace);
     const receipt = await res.wait(this.minConfirmations);
     return TxHash.fromString(receipt.transactionHash);
   }

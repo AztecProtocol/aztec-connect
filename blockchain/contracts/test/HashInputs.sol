@@ -2,11 +2,7 @@
 // Copyright 2022 Aztec
 pragma solidity >=0.8.4;
 
-import {SafeMath} from '@openzeppelin/contracts/utils/math/SafeMath.sol';
-import {Types} from '../verifier/cryptography/Types.sol';
-import {Bn254Crypto} from '../verifier/cryptography/Bn254Crypto.sol';
 import {Decoder} from '../Decoder.sol';
-
 import {IVerifier} from '../interfaces/IVerifier.sol';
 
 /**

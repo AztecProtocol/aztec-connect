@@ -1,5 +1,5 @@
 import { Contract, ContractFactory, Signer } from 'ethers';
-import AztecFeeDistributor from '../../artifacts/contracts/AztecFeeDistributor.sol/AztecFeeDistributor.json';
+import AztecFeeDistributor from '../../artifacts/contracts/periphery/AztecFeeDistributor.sol/AztecFeeDistributor.json';
 
 const gasLimit = 5000000;
 

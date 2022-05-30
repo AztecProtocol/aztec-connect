@@ -72,13 +72,11 @@ describe('rollup_processor: deposit', () => {
     const asset = assets[1];
     const txFee = 10n;
     const publicInput = depositAmount + txFee;
-    const prepaidFee = 10n ** 18n;
 
     await asset.approve(publicInput, userAddresses[0], rollupProcessor.address);
     await rollupProcessor.depositPendingFunds(1, publicInput, undefined, {
       signingAddress: userAddresses[0],
     });
-    await feeDistributor.deposit(EthAddress.ZERO, prepaidFee);
 
     const { proofData, signatures } = await createRollupProof(
       rollupProvider,
@@ -89,7 +87,7 @@ describe('rollup_processor: deposit', () => {
     const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
     await rollupProcessor.sendTx(tx);
 
-    expect(await feeDistributor.txFeeBalance(EthAddress.ZERO)).toBe(prepaidFee);
+    expect(await feeDistributor.txFeeBalance(EthAddress.ZERO)).toBe(0n);
     expect(await feeDistributor.txFeeBalance(asset.getStaticInfo().address)).toBe(txFee);
     expect(await asset.balanceOf(feeDistributor.address)).toBe(txFee);
     expect(await asset.balanceOf(rollupProcessor.address)).toBe(depositAmount);

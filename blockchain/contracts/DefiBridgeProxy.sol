@@ -1,35 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2022 Aztec
 pragma solidity >=0.8.4;
-pragma experimental ABIEncoderV2;
 
-import {SafeMath} from '@openzeppelin/contracts/utils/math/SafeMath.sol';
 import {IDefiBridge} from './interfaces/IDefiBridge.sol';
 import {AztecTypes} from './AztecTypes.sol';
-
 import {TokenTransfers} from './libraries/TokenTransfers.sol';
 
 contract DefiBridgeProxy {
-    bytes4 private constant BALANCE_OF_SELECTOR = 0x70a08231; // bytes4(keccak256('balanceOf(address)'));
-    bytes4 private constant TRANSFER_SELECTOR = 0xa9059cbb; // bytes4(keccak256('transfer(address,uint256)'));
-    bytes4 private constant DEPOSIT_SELECTOR = 0xb6b55f25; // bytes4(keccak256('deposit(uint256)'));
-    bytes4 private constant WITHDRAW_SELECTOR = 0x2e1a7d4d; // bytes4(keccak256('withdraw(uint256)'));
-    bytes4 private constant TRANSFER_FROM_SELECTOR = 0x23b872dd; // bytes4(keccak256('transferFrom(address,address,uint256)'));
-
-    error DEFI_BRIDGE_PROXY_TRANSFER_FAILED();
     error OUTPUT_A_EXCEEDS_252_BITS(uint256 outputValue);
     error OUTPUT_B_EXCEEDS_252_BITS(uint256 outputValue);
-    error INCORRECT_ASSET_A_VALUE();
-    error INCORRECT_ASSET_B_VALUE();
     error ASYNC_NONZERO_OUTPUT_VALUES(uint256 outputValueA, uint256 outputValueB);
     error INSUFFICIENT_ETH_PAYMENT();
-
-    event AztecBridgeInteraction(
-        address indexed bridgeAddress,
-        uint256 outputValueA,
-        uint256 outputValueB,
-        bool isAsync
-    );
 
     /**
      * @dev Use interaction result data to pull tokens into DefiBridgeProxy
@@ -47,6 +28,9 @@ contract DefiBridgeProxy {
         address bridgeContract,
         uint256 ethPaymentsSlot
     ) internal {
+        if (outputValue == 0) {
+            return;
+        }
         if (asset.assetType == AztecTypes.AztecAssetType.ETH) {
             uint256 ethPayment;
             uint256 ethPaymentsSlotBase;
@@ -62,7 +46,7 @@ contract DefiBridgeProxy {
             assembly {
                 sstore(ethPaymentsSlotBase, 0) // ethPayments[interactionNonce] = 0;
             }
-        } else if (asset.assetType == AztecTypes.AztecAssetType.ERC20 && outputValue > 0) {
+        } else if (asset.assetType == AztecTypes.AztecAssetType.ERC20) {
             TokenTransfers.safeTransferFrom(asset.erc20Address, bridgeContract, address(this), outputValue);
         }
     }
@@ -130,13 +114,11 @@ contract DefiBridgeProxy {
         }
         // Call bridge.convert(), which will return output values for the two output assets.
         // If input is ETH, send it along with call to convert.
-        IDefiBridge bridgeContract = IDefiBridge(bridgeAddress);
-        (outputValueA, outputValueB, isAsync) = bridgeContract.convert{
-            value: (inputAssetA.assetType == AztecTypes.AztecAssetType.ETH ||
-                inputAssetB.assetType == AztecTypes.AztecAssetType.ETH)
-                ? totalInputValue
-                : 0
-        }(
+        uint256 ethValue = (inputAssetA.assetType == AztecTypes.AztecAssetType.ETH ||
+            inputAssetB.assetType == AztecTypes.AztecAssetType.ETH)
+            ? totalInputValue
+            : 0;
+        (outputValueA, outputValueB, isAsync) = IDefiBridge(bridgeAddress).convert{value: ethValue}(
             inputAssetA,
             inputAssetB,
             outputAssetA,

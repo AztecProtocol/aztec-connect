@@ -52,6 +52,10 @@ export class RollupProcessor {
     return await this.rollupProcessor.getImplementationVersion();
   }
 
+  async getDataSize() {
+    return (await this.rollupProcessor.getDataSize()).toNumber();
+  }
+
   async escapeBlockLowerBound() {
     return await this.rollupProcessor.escapeBlockLowerBound();
   }
@@ -84,9 +88,21 @@ export class RollupProcessor {
     return +(await this.rollupProcessor.getDataSize());
   }
 
+  async getPendingDefiInteractionHashesLength() {
+    return +(await this.rollupProcessor.getPendingDefiInteractionHashesLength());
+  }
+
+  async getDefiInteractionHashesLength() {
+    return +(await this.rollupProcessor.getDefiInteractionHashesLength());
+  }
+
   async defiInteractionHashes() {
     const res = (await this.rollupProcessor.getDefiInteractionHashes()) as string[];
     return res.map(v => Buffer.from(v.slice(2), 'hex'));
+  }
+
+  async getAsyncDefiInteractionHashesLength() {
+    return +(await this.rollupProcessor.getAsyncDefiInteractionHashesLength());
   }
 
   async asyncDefiInteractionHashes() {
@@ -106,6 +122,10 @@ export class RollupProcessor {
     return EthAddress.fromString(await this.rollupProcessor.getSupportedBridge(bridgeAddressId));
   }
 
+  async getSupportedBridgesLength() {
+    return (await this.rollupProcessor.getSupportedBridgesLength()).toNumber();
+  }
+
   async getSupportedBridges() {
     const [bridgeAddresses, gasLimits]: any[][] = await this.rollupProcessor.getSupportedBridges();
     return bridgeAddresses.map((a, i) => ({
@@ -121,6 +141,10 @@ export class RollupProcessor {
 
   async getSupportedAsset(assetId: number) {
     return EthAddress.fromString(await this.rollupProcessor.getSupportedAsset(assetId));
+  }
+
+  async getSupportedAssetsLength() {
+    return (await this.rollupProcessor.getSupportedAssetsLength()).toNumber();
   }
 
   async getSupportedAssets() {
@@ -400,7 +424,7 @@ export class RollupProcessor {
   }
 
   async getUserPendingDeposit(assetId: number, account: EthAddress) {
-    return BigInt(await this.rollupProcessor.getUserPendingDeposit(assetId, account.toString()));
+    return BigInt(await this.rollupProcessor.userPendingDeposits(assetId, account.toString()));
   }
 
   async getThirdPartyContractStatus(options: SendTxOptions = {}) {

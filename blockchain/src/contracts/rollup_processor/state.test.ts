@@ -46,6 +46,44 @@ describe('rollup_processor: state', () => {
     expect(await rollupProcessor.stateHash()).toEqual(expected);
   });
 
+  it('should pass with 3 rollups where intermediate have odd size', async () => {
+    {
+      const { proofData, signatures } = await createRollupProof(rollupProvider, createSendProof(), { rollupSize: 28 });
+      const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
+      expect(await rollupProcessor.sendTx(tx));
+    }
+
+    {
+      const datasize = await rollupProcessor.getDataSize();
+      const rollupSize = 3;
+      const numDataLeaves = rollupSize * 2;
+      const expectedStart = datasize + numDataLeaves - (datasize % numDataLeaves);
+
+      const { proofData, signatures } = await createRollupProof(rollupProvider, createSendProof(), {
+        rollupId: 1,
+        rollupSize: rollupSize,
+        dataStartIndex: expectedStart,
+      });
+      const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
+      expect(await rollupProcessor.sendTx(tx));
+    }
+
+    {
+      const datasize = await rollupProcessor.getDataSize();
+      const rollupSize = 28;
+      const numDataLeaves = rollupSize * 2;
+      const expectedStart = datasize + numDataLeaves - (datasize % numDataLeaves);
+
+      const { proofData, signatures } = await createRollupProof(rollupProvider, createSendProof(), {
+        rollupId: 2,
+        dataStartIndex: expectedStart,
+        rollupSize: rollupSize,
+      });
+      const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
+      expect(await rollupProcessor.sendTx(tx));
+    }
+  });
+
   it('should reject for incorrect rollupId', async () => {
     const { proofData, signatures } = await createRollupProof(rollupProvider, createSendProof());
     proofData.writeUInt32BE(666, RollupProofDataOffsets.ROLLUP_ID);
@@ -59,7 +97,27 @@ describe('rollup_processor: state', () => {
     proofData.writeUInt32BE(666, RollupProofDataOffsets.DATA_START_INDEX);
 
     const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
-    await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('INCORRECT_DATA_START_INDEX');
+    await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('INCORRECT_DATA_START_INDEX(666, 0)');
+  });
+
+  it('should reject for incorrect data start index 2', async () => {
+    {
+      const { proofData, signatures } = await createRollupProof(rollupProvider, createSendProof());
+      const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
+      expect(await rollupProcessor.sendTx(tx));
+    }
+
+    const datasize = await rollupProcessor.getDataSize();
+    const expectedStart = datasize + 6 - (datasize % 6);
+
+    const { proofData, signatures } = await createRollupProof(rollupProvider, createSendProof(), {
+      rollupId: 1,
+      rollupSize: 3,
+    });
+    proofData.writeUInt32BE(665, RollupProofDataOffsets.DATA_START_INDEX);
+
+    const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
+    await expect(rollupProcessor.sendTx(tx)).rejects.toThrow(`INCORRECT_DATA_START_INDEX(665, ${expectedStart})`);
   });
 
   it('should reject for incorrect old data root', async () => {

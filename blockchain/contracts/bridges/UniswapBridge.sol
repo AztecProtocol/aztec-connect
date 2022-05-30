@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2022 Aztec
-pragma solidity >=0.8.4 <0.8.11;
-pragma experimental ABIEncoderV2;
-
-import {SafeMath} from '@openzeppelin/contracts/utils/math/SafeMath.sol';
+pragma solidity >=0.8.4;
 
 // import {UniswapV2Library} from '@uniswap/v2-periphery/contracts/libraries/UniswapV2Library.sol';
 import {IUniswapV2Router02} from '@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol';
@@ -14,8 +11,6 @@ import {IERC20Permit} from '../interfaces/IERC20Permit.sol';
 import {AztecTypes} from '../AztecTypes.sol';
 
 contract UniswapBridge is IDefiBridge {
-    using SafeMath for uint256;
-
     address public immutable rollupProcessor;
     address public weth;
 

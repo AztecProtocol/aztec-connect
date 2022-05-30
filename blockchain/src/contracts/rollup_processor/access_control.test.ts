@@ -50,14 +50,14 @@ describe('rollup_processor_access_control', () => {
     expect(await rollupProcessor.hasRole(EMERGENCY_ROLE, addresses[0])).toBe(true);
     expect(await rollupProcessor.paused()).toBe(false);
 
-    expect(await rollupProcessor.pause({ signingAddress: addresses[0] })).toBeTruthy();
+    expect(await rollupProcessor.pause({ signingAddress: addresses[0] }));
 
     expect(await rollupProcessor.paused()).toBe(true);
   });
 
   it('holder of EMERGENCY_ROLE should not be able to pause if already paused', async () => {
     expect(await rollupProcessor.hasRole(EMERGENCY_ROLE, addresses[0])).toBe(true);
-    expect(await rollupProcessor.pause({ signingAddress: addresses[0] })).toBeTruthy();
+    expect(await rollupProcessor.pause({ signingAddress: addresses[0] }));
 
     expect(await rollupProcessor.paused()).toBe(true);
 
@@ -99,12 +99,12 @@ describe('rollup_processor_access_control', () => {
     expect(await rollupProcessor.hasRole(DEFAULT_ADMIN_ROLE, addresses[0])).toBe(true);
     expect(await rollupProcessor.paused()).toBe(false);
 
-    expect(await rollupProcessor.grantRole(EMERGENCY_ROLE, userAddress, { signingAddress: addresses[0] })).toBeTruthy();
+    expect(await rollupProcessor.grantRole(EMERGENCY_ROLE, userAddress, { signingAddress: addresses[0] }));
 
     expect(await rollupProcessor.hasRole(EMERGENCY_ROLE, userAddress)).toBe(true);
     expect(await rollupProcessor.paused()).toBe(false);
 
-    expect(await rollupProcessor.pause({ signingAddress: userAddress })).toBeTruthy();
+    expect(await rollupProcessor.pause({ signingAddress: userAddress }));
 
     expect(await rollupProcessor.paused()).toBe(true);
   });
@@ -115,9 +115,7 @@ describe('rollup_processor_access_control', () => {
     expect(await rollupProcessor.hasRole(DEFAULT_ADMIN_ROLE, addresses[0])).toBe(true);
     expect(await rollupProcessor.paused()).toBe(false);
 
-    expect(
-      await rollupProcessor.revokeRole(EMERGENCY_ROLE, userAddress, { signingAddress: addresses[0] }),
-    ).toBeTruthy();
+    expect(await rollupProcessor.revokeRole(EMERGENCY_ROLE, userAddress, { signingAddress: addresses[0] }));
 
     expect(await rollupProcessor.hasRole(EMERGENCY_ROLE, userAddress)).toBe(false);
     expect(await rollupProcessor.paused()).toBe(false);
@@ -132,12 +130,12 @@ describe('rollup_processor_access_control', () => {
   it('holder of OWNER_ROLE can unpause when paused', async () => {
     const userAddress = addresses[0];
     expect(await rollupProcessor.paused()).toBe(false);
-    expect(await rollupProcessor.pause({ signingAddress: userAddress })).toBeTruthy();
+    expect(await rollupProcessor.pause({ signingAddress: userAddress }));
     expect(await rollupProcessor.paused()).toBe(true);
 
     expect(await rollupProcessor.hasRole(OWNER_ROLE, userAddress)).toBe(true);
 
-    expect(await rollupProcessor.unpause({ signingAddress: userAddress })).toBeTruthy();
+    expect(await rollupProcessor.unpause({ signingAddress: userAddress }));
 
     expect(await rollupProcessor.paused()).toBe(false);
   });
@@ -157,26 +155,11 @@ describe('rollup_processor_access_control', () => {
     const userAddress = addresses[1];
 
     expect(await rollupProcessor.paused()).toBe(false);
-    expect(await rollupProcessor.pause({ signingAddress: addresses[0] })).toBeTruthy();
+    expect(await rollupProcessor.pause({ signingAddress: addresses[0] }));
     expect(await rollupProcessor.paused()).toBe(true);
     expect(await rollupProcessor.grantRole(EMERGENCY_ROLE, userAddress, { signingAddress: addresses[0] }));
 
     expect(await rollupProcessor.hasRole(EMERGENCY_ROLE, userAddress)).toBe(true);
-    expect(await rollupProcessor.hasRole(OWNER_ROLE, userAddress)).toBe(false);
-    await expect(rollupProcessor.unpause({ signingAddress: userAddress })).rejects.toThrow(
-      `AccessControl: account ${userAddress.toString().toLowerCase()} is missing role ${OWNER_ROLE}`,
-    );
-
-    expect(await rollupProcessor.paused()).toBe(true);
-  });
-
-  it('non-holder of OWNER_ROLE cannot unpause when paused', async () => {
-    const userAddress = addresses[1];
-
-    expect(await rollupProcessor.paused()).toBe(false);
-    expect(await rollupProcessor.pause({ signingAddress: addresses[0] })).toBeTruthy();
-    expect(await rollupProcessor.paused()).toBe(true);
-
     expect(await rollupProcessor.hasRole(OWNER_ROLE, userAddress)).toBe(false);
     await expect(rollupProcessor.unpause({ signingAddress: userAddress })).rejects.toThrow(
       `AccessControl: account ${userAddress.toString().toLowerCase()} is missing role ${OWNER_ROLE}`,
@@ -190,10 +173,10 @@ describe('rollup_processor_access_control', () => {
     expect(await rollupProcessor.hasRole(OWNER_ROLE, userAddress)).toBe(true);
     expect(await rollupProcessor.rollupProviders(userAddress)).toBe(true);
 
-    expect(await rollupProcessor.setRollupProvider(userAddress, false, { signingAddress: userAddress })).toBeTruthy();
+    expect(await rollupProcessor.setRollupProvider(userAddress, false, { signingAddress: userAddress }));
     expect(await rollupProcessor.rollupProviders(userAddress)).toBe(false);
 
-    expect(await rollupProcessor.setRollupProvider(userAddress, true, { signingAddress: userAddress })).toBeTruthy();
+    expect(await rollupProcessor.setRollupProvider(userAddress, true, { signingAddress: userAddress }));
     expect(await rollupProcessor.rollupProviders(userAddress)).toBe(true);
   });
 
@@ -218,8 +201,7 @@ describe('rollup_processor_access_control', () => {
     expect(await rollupProcessor.hasRole(OWNER_ROLE, userAddress)).toBe(true);
     const verifier = await rollupProcessor.verifier();
 
-    expect(await rollupProcessor.setVerifier(userAddress, { signingAddress: userAddress })).toBeTruthy();
-
+    expect(await rollupProcessor.setVerifier(userAddress, { signingAddress: userAddress }));
     expect(await rollupProcessor.verifier()).toStrictEqual(userAddress);
     expect(await rollupProcessor.verifier()).not.toStrictEqual(verifier);
   });
@@ -242,10 +224,10 @@ describe('rollup_processor_access_control', () => {
     expect(await rollupProcessor.hasRole(OWNER_ROLE, userAddress)).toBe(true);
     expect(await rollupProcessor.getThirdPartyContractStatus()).toBe(false);
 
-    expect(await rollupProcessor.setThirdPartyContractStatus(true, { signingAddress: userAddress })).toBeTruthy();
+    expect(await rollupProcessor.setThirdPartyContractStatus(true, { signingAddress: userAddress }));
     expect(await rollupProcessor.getThirdPartyContractStatus()).toBe(true);
 
-    expect(await rollupProcessor.setThirdPartyContractStatus(false, { signingAddress: userAddress })).toBeTruthy();
+    expect(await rollupProcessor.setThirdPartyContractStatus(false, { signingAddress: userAddress }));
     expect(await rollupProcessor.getThirdPartyContractStatus()).toBe(false);
   });
 
@@ -265,8 +247,7 @@ describe('rollup_processor_access_control', () => {
     expect(await rollupProcessor.hasRole(OWNER_ROLE, userAddress)).toBe(true);
     const defiBridgeProxy = await rollupProcessor.defiBridgeProxy();
 
-    expect(await rollupProcessor.setDefiBridgeProxy(userAddress, { signingAddress: userAddress })).toBeTruthy();
-
+    expect(await rollupProcessor.setDefiBridgeProxy(userAddress, { signingAddress: userAddress }));
     expect(await rollupProcessor.defiBridgeProxy()).toStrictEqual(userAddress);
     expect(await rollupProcessor.defiBridgeProxy()).not.toStrictEqual(defiBridgeProxy);
   });
@@ -290,8 +271,7 @@ describe('rollup_processor_access_control', () => {
 
     const supportedBefore = await rollupProcessor.getSupportedAssets();
 
-    expect(await rollupProcessor.setSupportedAsset(userAddress, 1, { signingAddress: userAddress })).toBeTruthy();
-
+    expect(await rollupProcessor.setSupportedAsset(userAddress, 1, { signingAddress: userAddress }));
     const supportedAfter = await rollupProcessor.getSupportedAssets();
 
     expect(supportedAfter.length).toBe(supportedBefore.length + 1);
@@ -317,13 +297,11 @@ describe('rollup_processor_access_control', () => {
     expect(await rollupProcessor.hasRole(OWNER_ROLE, userAddress)).toBe(false);
 
     expect(await rollupProcessor.getThirdPartyContractStatus()).toBe(false);
-    expect(await rollupProcessor.setThirdPartyContractStatus(true, { signingAddress: addresses[0] })).toBeTruthy();
+    expect(await rollupProcessor.setThirdPartyContractStatus(true, { signingAddress: addresses[0] }));
     expect(await rollupProcessor.getThirdPartyContractStatus()).toBe(true);
-
     const supportedBefore = await rollupProcessor.getSupportedAssets();
 
-    expect(await rollupProcessor.setSupportedAsset(userAddress, 1, { signingAddress: userAddress })).toBeTruthy();
-
+    expect(await rollupProcessor.setSupportedAsset(userAddress, 1, { signingAddress: userAddress }));
     const supportedAfter = await rollupProcessor.getSupportedAssets();
 
     expect(supportedAfter.length).toBe(supportedBefore.length + 1);
@@ -352,8 +330,7 @@ describe('rollup_processor_access_control', () => {
 
     const supportedBefore = await rollupProcessor.getSupportedBridges();
 
-    expect(await rollupProcessor.setSupportedBridge(userAddress, 1, { signingAddress: userAddress })).toBeTruthy();
-
+    expect(await rollupProcessor.setSupportedBridge(userAddress, 1, { signingAddress: userAddress }));
     const supportedAfter = await rollupProcessor.getSupportedBridges();
 
     expect(supportedAfter.length).toBe(supportedBefore.length + 1);
@@ -379,13 +356,11 @@ describe('rollup_processor_access_control', () => {
     expect(await rollupProcessor.hasRole(OWNER_ROLE, userAddress)).toBe(false);
 
     expect(await rollupProcessor.getThirdPartyContractStatus()).toBe(false);
-    expect(await rollupProcessor.setThirdPartyContractStatus(true, { signingAddress: addresses[0] })).toBeTruthy();
+    expect(await rollupProcessor.setThirdPartyContractStatus(true, { signingAddress: addresses[0] }));
     expect(await rollupProcessor.getThirdPartyContractStatus()).toBe(true);
-
     const supportedBefore = await rollupProcessor.getSupportedBridges();
 
-    expect(await rollupProcessor.setSupportedBridge(userAddress, 1, { signingAddress: userAddress })).toBeTruthy();
-
+    expect(await rollupProcessor.setSupportedBridge(userAddress, 1, { signingAddress: userAddress }));
     const supportedAfter = await rollupProcessor.getSupportedBridges();
 
     expect(supportedAfter.length).toBe(supportedBefore.length + 1);
@@ -441,22 +416,16 @@ describe('rollup_processor_access_control', () => {
     expect(await rollupProcessor.hasRole(OWNER_ROLE, userAddress)).toBe(false);
 
     // Get admin role
-    expect(
-      await rollupProcessor.grantRole(DEFAULT_ADMIN_ROLE, userAddress, { signingAddress: adminAddress }),
-    ).toBeTruthy();
+    expect(await rollupProcessor.grantRole(DEFAULT_ADMIN_ROLE, userAddress, { signingAddress: adminAddress }));
 
     // Revoke old roles, held by the old admin
-    expect(
-      await rollupProcessor.revokeRole(DEFAULT_ADMIN_ROLE, adminAddress, { signingAddress: userAddress }),
-    ).toBeTruthy();
-    expect(await rollupProcessor.revokeRole(OWNER_ROLE, adminAddress, { signingAddress: userAddress })).toBeTruthy();
-    expect(
-      await rollupProcessor.revokeRole(EMERGENCY_ROLE, adminAddress, { signingAddress: userAddress }),
-    ).toBeTruthy();
+    expect(await rollupProcessor.revokeRole(DEFAULT_ADMIN_ROLE, adminAddress, { signingAddress: userAddress }));
+    expect(await rollupProcessor.revokeRole(OWNER_ROLE, adminAddress, { signingAddress: userAddress }));
+    expect(await rollupProcessor.revokeRole(EMERGENCY_ROLE, adminAddress, { signingAddress: userAddress }));
 
     // Add new roles to self
-    expect(await rollupProcessor.grantRole(EMERGENCY_ROLE, userAddress, { signingAddress: userAddress })).toBeTruthy();
-    expect(await rollupProcessor.grantRole(OWNER_ROLE, userAddress, { signingAddress: userAddress })).toBeTruthy();
+    expect(await rollupProcessor.grantRole(EMERGENCY_ROLE, userAddress, { signingAddress: userAddress }));
+    expect(await rollupProcessor.grantRole(OWNER_ROLE, userAddress, { signingAddress: userAddress }));
 
     expect(await rollupProcessor.hasRole(EMERGENCY_ROLE, adminAddress)).toBe(false);
     expect(await rollupProcessor.hasRole(EMERGENCY_ROLE, userAddress)).toBe(true);

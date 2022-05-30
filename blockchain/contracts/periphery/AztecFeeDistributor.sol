@@ -1,22 +1,22 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2022 Aztec
-pragma solidity >=0.8.4 <0.8.11;
+pragma solidity >=0.8.4;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
-import {SafeMath} from '@openzeppelin/contracts/utils/math/SafeMath.sol';
 
 import {IUniswapV2Router02} from '@uniswap/v2-periphery/contracts/interfaces/IUniswapV2Router02.sol';
 import {IUniswapV2Pair} from '@uniswap/v2-core/contracts/interfaces/IUniswapV2Pair.sol';
 import {IWETH} from '@uniswap/v2-periphery/contracts/interfaces/IWETH.sol';
+
+import {TokenTransfers} from '../libraries/TokenTransfers.sol';
+import {IFeeDistributor} from './interfaces/IFeeDistributor.sol';
 
 /**
  * @title UniswapV2LibraryErrata
  * @dev Methods from UniswapV2Library that we need. Re-implemented due to the original from @uniswap failing to compile w. Solidity >=0.8.0
  */
 library UniswapV2LibraryErrata {
-    using SafeMath for uint256;
-
     // returns sorted token addresses, used to handle return values from pairs sorted in this order
     function sortTokens(address tokenA, address tokenB) internal pure returns (address token0, address token1) {
         require(tokenA != tokenB, 'UniswapV2Library: IDENTICAL_ADDRESSES');
@@ -65,17 +65,15 @@ library UniswapV2LibraryErrata {
     ) internal pure returns (uint256 amountOut) {
         require(amountIn > 0, 'UniswapV2Library: INSUFFICIENT_INPUT_AMOUNT');
         require(reserveIn > 0 && reserveOut > 0, 'UniswapV2Library: INSUFFICIENT_LIQUIDITY');
-        uint256 amountInWithFee = amountIn.mul(997);
-        uint256 numerator = amountInWithFee.mul(reserveOut);
-        uint256 denominator = reserveIn.mul(1000).add(amountInWithFee);
+        uint256 amountInWithFee = amountIn * 997;
+        uint256 numerator = amountInWithFee * reserveOut;
+        uint256 denominator = reserveIn * 1000 + amountInWithFee;
         amountOut = numerator / denominator;
     }
 }
 
-import {IFeeDistributor} from './interfaces/IFeeDistributor.sol';
-
 contract AztecFeeDistributor is IFeeDistributor, Ownable {
-    using SafeMath for uint256;
+    using TokenTransfers for address;
 
     uint256 public override feeLimit = 4e17;
     address public override aztecFeeClaimer;
@@ -130,36 +128,24 @@ contract AztecFeeDistributor is IFeeDistributor, Ownable {
         }
     }
 
-    function deposit(address assetAddress, uint256 amount) external payable override returns (uint256 depositedAmount) {
-        if (assetAddress == address(0)) {
-            require(amount == msg.value, 'Fee Distributor: WRONG_AMOUNT');
-        } else {
-            require(msg.value == 0, 'Fee Distributor: WRONG_PAYMENT_TYPE');
-
-            IERC20(assetAddress).transferFrom(msg.sender, address(this), amount);
-
-            uint256 balance = IERC20(assetAddress).balanceOf(address(this));
-            uint256 outputValue = getAmountOut(assetAddress, balance);
-            if (outputValue >= convertConstant.mul(tx.gasprice)) {
-                swapTokensForETH(assetAddress, balance, outputValue);
-
-                emit Convert(assetAddress, balance, outputValue);
-            }
-        }
-
-        depositedAmount = amount;
-    }
-
-    function convert(address assetAddress, uint256 minOutputValue) public override returns (uint256 outputValue) {
+    function convert(address assetAddress, uint256 minOutputValue)
+        public
+        override
+        onlyOwner
+        returns (uint256 outputValue)
+    {
         require(assetAddress != address(0), 'Fee Distributor: NOT_A_TOKEN_ASSET');
 
         uint256 inputValue = IERC20(assetAddress).balanceOf(address(this));
         require(inputValue > 0, 'Fee Distributor: EMPTY_BALANCE');
 
-        outputValue = getAmountOut(assetAddress, inputValue);
-        require(outputValue >= minOutputValue, 'Fee Distributor: INSUFFICIENT_OUTPUT_AMOUNT');
-
-        swapTokensForETH(assetAddress, inputValue, outputValue);
+        if (assetAddress == WETH) {
+            IWETH(WETH).withdraw(inputValue);
+        } else {
+            outputValue = getAmountOut(assetAddress, inputValue);
+            require(outputValue >= minOutputValue, 'Fee Distributor: INSUFFICIENT_OUTPUT_AMOUNT');
+            swapTokensForETH(assetAddress, inputValue, outputValue);
+        }
 
         emit Convert(assetAddress, inputValue, outputValue);
     }
@@ -175,8 +161,7 @@ contract AztecFeeDistributor is IFeeDistributor, Ownable {
         uint256 outputValue
     ) internal {
         address pair = UniswapV2LibraryErrata.pairFor(factory, assetAddress, WETH);
-        (bool success, ) = assetAddress.call(abi.encodeWithSelector(0xa9059cbb, pair, inputValue));
-        require(success, 'Fee Distributor: TRANSFER_FAILED');
+        assetAddress.safeTransferTo(pair, inputValue);
 
         (uint256 amountOut0, uint256 amountOut1) = assetAddress < WETH
             ? (uint256(0), outputValue)

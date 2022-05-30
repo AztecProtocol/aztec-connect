@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2022 Aztec
 pragma solidity >=0.8.4;
-pragma experimental ABIEncoderV2;
 
 import {IDefiBridge} from '../interfaces/IDefiBridge.sol';
 import {AztecTypes} from '../AztecTypes.sol';
@@ -14,40 +13,37 @@ contract ReentryBridge is IDefiBridge {
     /*----------------------------------------
       ERROR TAGS
       ----------------------------------------*/
+    error PAUSED();
+    error NOT_PAUSED();
     error LOCKED_NO_REENTER();
+    error INVALID_PROVIDER();
+    error THIRD_PARTY_CONTRACTS_FLAG_NOT_SET();
+    error INSUFFICIENT_DEPOSIT();
     error INVALID_ASSET_ID();
     error INVALID_ASSET_ADDRESS();
-    error PROOF_VERIFICATION_FAILED();
-    error INCORRECT_STATE_HASH(bytes32 oldStateHash, bytes32 newStateHash);
-    error INCORRECT_DATA_START_INDEX(uint256 providedIndex, uint256 expectedIndex);
+    error INVALID_LINKED_TOKEN_ADDRESS();
+    error INVALID_LINKED_BRIDGE_ADDRESS();
+    error INVALID_BRIDGE_ID();
+    error INVALID_BRIDGE_ADDRESS();
+    error BRIDGE_ID_IS_INCONSISTENT();
     error BRIDGE_WITH_IDENTICAL_INPUT_ASSETS(uint256 inputAssetId);
     error BRIDGE_WITH_IDENTICAL_OUTPUT_ASSETS(uint256 outputAssetId);
-    error BRIDGE_ID_IS_INCONSISTENT();
+    error ZERO_TOTAL_INPUT_VALUE();
+    error ARRAY_OVERFLOW();
+    error MSG_VALUE_WRONG_AMOUNT();
+    error INSUFFICIENT_ETH_PAYMENT();
+    error WITHDRAW_TO_ZERO_ADDRESS();
+    error DEPOSIT_TOKENS_WRONG_PAYMENT_TYPE();
+    error INSUFFICIENT_TOKEN_APPROVAL();
+    error NONZERO_OUTPUT_VALUE_ON_NOT_USED_ASSET(uint256 outputValue);
+    error INCORRECT_STATE_HASH(bytes32 oldStateHash, bytes32 newStateHash);
+    error INCORRECT_DATA_START_INDEX(uint256 providedIndex, uint256 expectedIndex);
     error INCORRECT_PREVIOUS_DEFI_INTERACTION_HASH(
         bytes32 providedDefiInteractionHash,
         bytes32 expectedDefiInteractionHash
     );
-    error ZERO_TOTAL_INPUT_VALUE();
-    error ARRAY_OVERFLOW();
-    error ZERO_BRIDGE_ADDRESS_ID();
-    error ASYNC_CALLBACK_BAD_CALLER_ADDRESS();
-    error MSG_VALUE_WRONG_AMOUNT();
-    error TOKEN_TRANSFER_FAILED();
-    error INSUFFICIENT_ETH_TRANSFER();
-    error WITHDRAW_TO_ZERO_ADDRESS();
-    error INVALID_DEPOSITOR();
-    error INSUFFICIENT_DEPOSIT();
-    error INVALID_LINKED_TOKEN_ADDRESS();
-    error INVALID_LINKED_BRIDGE_ADDRESS();
-    error TOKEN_ASSET_IS_NOT_LINKED();
-    error DEPOSIT_TOKENS_WRONG_PAYMENT_TYPE();
-    error INSUFFICIENT_TOKEN_APPROVAL();
-    error INVALID_PROVIDER();
-    error INVALID_BRIDGE_ID();
-    error INVALID_BRIDGE_ADDRESS();
-    error NONZERO_OUTPUT_VALUE_ON_NOT_USED_ASSET(uint256 outputValue);
     error PUBLIC_INPUTS_HASH_VERIFICATION_FAILED(uint256, uint256);
-    error THIRD_PARTY_CONTRACTS_FLAG_NOT_SET();
+    error PROOF_VERIFICATION_FAILED();
 
     address public immutable rollupProcessor;
 

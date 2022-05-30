@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2022 Aztec
-pragma solidity >=0.8.4 <0.8.11;
+pragma solidity >=0.8.4;
 
 interface IRollupProcessor {
     /*----------------------------------------
@@ -74,19 +74,29 @@ interface IRollupProcessor {
 
     function rollupStateHash() external view returns (bytes32);
 
+    function userPendingDeposits(uint256 assetId, address userAddress) external view returns (uint256);
+
     function defiBridgeProxy() external view returns (address);
 
     function prevDefiInteractionsHash() external view returns (bytes32);
 
     function paused() external view returns (bool);
 
-    function getDataSize() external view returns (uint256);
-
-    function getPendingDefiInteractionHashes() external view returns (uint256);
-
     function verifier() external view returns (address);
 
+    function getDataSize() external view returns (uint256);
+
+    function getPendingDefiInteractionHashesLength() external view returns (uint256);
+
+    function getDefiInteractionHashesLength() external view returns (uint256);
+
+    function getAsyncDefiInteractionHashesLength() external view returns (uint256 res);
+
     function getSupportedBridge(uint256 bridgeAddressId) external view returns (address);
+
+    function getSupportedBridgesLength() external view returns (uint256);
+
+    function getSupportedAssetsLength() external view returns (uint256);
 
     function getSupportedAsset(uint256 assetId) external view returns (address);
 
@@ -101,6 +111,4 @@ interface IRollupProcessor {
     function getSupportedAssets() external view returns (address[] memory, uint256[] memory);
 
     function getSupportedBridges() external view returns (address[] memory, uint256[] memory);
-
-    function getUserPendingDeposit(uint256 assetId, address userAddress) external view returns (uint256);
 }

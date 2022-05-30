@@ -730,4 +730,65 @@ describe('rollup_processor: reentry', () => {
 
     await expect(rollupProcessor.depositPendingFunds(assetId, 0n)).rejects.toThrow('LOCKED_NO_REENTER');
   });
+
+  it('should revert when async reenter tries to execute same interaction nonce twice', async () => {
+    const asyncReenter = await (
+      await ethers.getContractFactory('ReentryAsync', rollupProvider)
+    ).deploy(rollupProcessor.address.toString());
+    await setEthBalance(EthAddress.fromString(asyncReenter.address), 10n * 10n ** 18n);
+
+    expect(await rollupProcessor.setSupportedBridge(EthAddress.fromString(asyncReenter.address), 5000000));
+    const bridgeAddressId = (await rollupProcessor.getSupportedBridges()).length;
+
+    const bridgeId = new BridgeId(bridgeAddressId, 0, 0);
+
+    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+      defiInteractionData: [new DefiInteractionData(bridgeId, amount)],
+    });
+
+    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+    const txHash = await rollupProcessor.sendTx(tx);
+    const interactions: DefiInteractionEvent[] = [];
+    await expectResult(interactions, interactions, txHash);
+
+    await asyncReenter.setValues(0, 1000);
+
+    await expect(rollupProcessor.processAsyncDefiInteraction(0)).rejects.toThrow('INVALID_BRIDGE_ID()');
+  });
+
+  it('failing async will revert and not "spend" the interactionNonce', async () => {
+    const failingBridge = await (
+      await ethers.getContractFactory('FailingBridge', rollupProvider)
+    ).deploy(rollupProcessor.address.toString());
+    await setEthBalance(EthAddress.fromString(failingBridge.address), 10n * 10n ** 18n);
+
+    expect(await rollupProcessor.setSupportedBridge(EthAddress.fromString(failingBridge.address), 1000000));
+    const bridgeAddressId = (await rollupProcessor.getSupportedBridges()).length;
+
+    const bridgeId = new BridgeId(bridgeAddressId, 0, 0);
+
+    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+      defiInteractionData: [new DefiInteractionData(bridgeId, amount)],
+    });
+
+    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+    const txHash = await rollupProcessor.sendTx(tx);
+    const interactions: DefiInteractionEvent[] = [];
+    await expectResult(interactions, interactions, txHash);
+
+    expect((await rollupProcessor.contract.pendingDefiInteractions(0)).bridgeId.toNumber()).toBe(bridgeAddressId);
+
+    const assetBalance = await assets[0].balanceOf(rollupProcessor.address);
+
+    expect(await rollupProcessor.processAsyncDefiInteraction(0));
+    expect(await assets[0].balanceOf(rollupProcessor.address)).toBe(assetBalance);
+
+    expect((await rollupProcessor.contract.pendingDefiInteractions(0)).bridgeId.toNumber()).toBe(bridgeAddressId);
+
+    await failingBridge.setComplete(true, 0);
+    expect(await rollupProcessor.processAsyncDefiInteraction(0));
+
+    expect((await rollupProcessor.contract.pendingDefiInteractions(0)).bridgeId.toNumber()).toBe(0);
+    expect(await assets[0].balanceOf(rollupProcessor.address)).toBe(assetBalance + amount);
+  });
 });

@@ -1,13 +1,14 @@
 import '@nomiclabs/hardhat-waffle';
 import '@nomiclabs/hardhat-ethers';
 import '@nomiclabs/hardhat-etherscan';
+import 'hardhat-contract-sizer'
 
 const config = {
   solidity: {
     version: '0.8.10',
     settings: {
       evmVersion: 'london',
-      optimizer: { enabled: true, runs: 200 },
+      optimizer: { enabled: true, runs: 2000 },
     },
   },
   networks: {

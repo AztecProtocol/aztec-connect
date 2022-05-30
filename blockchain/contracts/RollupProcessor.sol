@@ -8,7 +8,6 @@ import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 
 import {IVerifier} from './interfaces/IVerifier.sol';
 import {IRollupProcessor} from './interfaces/IRollupProcessor.sol';
-import {IFeeDistributor} from './interfaces/IFeeDistributor.sol';
 import {IERC20Permit} from './interfaces/IERC20Permit.sol';
 import {IDefiBridge} from './interfaces/IDefiBridge.sol';
 
@@ -27,42 +26,37 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
     /*----------------------------------------
       ERROR TAGS
       ----------------------------------------*/
+    error PAUSED();
+    error NOT_PAUSED();
     error LOCKED_NO_REENTER();
+    error INVALID_PROVIDER();
+    error THIRD_PARTY_CONTRACTS_FLAG_NOT_SET();
+    error INSUFFICIENT_DEPOSIT();
     error INVALID_ASSET_ID();
     error INVALID_ASSET_ADDRESS();
-    error PROOF_VERIFICATION_FAILED();
-    error INCORRECT_STATE_HASH(bytes32 oldStateHash, bytes32 newStateHash);
-    error INCORRECT_DATA_START_INDEX(uint256 providedIndex, uint256 expectedIndex);
+    error INVALID_LINKED_TOKEN_ADDRESS();
+    error INVALID_LINKED_BRIDGE_ADDRESS();
+    error INVALID_BRIDGE_ID();
+    error INVALID_BRIDGE_ADDRESS();
+    error BRIDGE_ID_IS_INCONSISTENT();
     error BRIDGE_WITH_IDENTICAL_INPUT_ASSETS(uint256 inputAssetId);
     error BRIDGE_WITH_IDENTICAL_OUTPUT_ASSETS(uint256 outputAssetId);
-    error BRIDGE_ID_IS_INCONSISTENT();
+    error ZERO_TOTAL_INPUT_VALUE();
+    error ARRAY_OVERFLOW();
+    error MSG_VALUE_WRONG_AMOUNT();
+    error INSUFFICIENT_ETH_PAYMENT();
+    error WITHDRAW_TO_ZERO_ADDRESS();
+    error DEPOSIT_TOKENS_WRONG_PAYMENT_TYPE();
+    error INSUFFICIENT_TOKEN_APPROVAL();
+    error NONZERO_OUTPUT_VALUE_ON_NOT_USED_ASSET(uint256 outputValue);
+    error INCORRECT_STATE_HASH(bytes32 oldStateHash, bytes32 newStateHash);
+    error INCORRECT_DATA_START_INDEX(uint256 providedIndex, uint256 expectedIndex);
     error INCORRECT_PREVIOUS_DEFI_INTERACTION_HASH(
         bytes32 providedDefiInteractionHash,
         bytes32 expectedDefiInteractionHash
     );
-    error ZERO_TOTAL_INPUT_VALUE();
-    error ARRAY_OVERFLOW();
-    error ZERO_BRIDGE_ADDRESS_ID();
-    error ASYNC_CALLBACK_BAD_CALLER_ADDRESS();
-    error MSG_VALUE_WRONG_AMOUNT();
-    error TOKEN_TRANSFER_FAILED();
-    error INSUFFICIENT_ETH_TRANSFER();
-    error WITHDRAW_TO_ZERO_ADDRESS();
-    error INVALID_DEPOSITOR();
-    error INSUFFICIENT_DEPOSIT();
-    error INVALID_LINKED_TOKEN_ADDRESS();
-    error INVALID_LINKED_BRIDGE_ADDRESS();
-    error TOKEN_ASSET_IS_NOT_LINKED();
-    error DEPOSIT_TOKENS_WRONG_PAYMENT_TYPE();
-    error INSUFFICIENT_TOKEN_APPROVAL();
-    error INVALID_PROVIDER();
-    error INVALID_BRIDGE_ID();
-    error INVALID_BRIDGE_ADDRESS();
-    error NONZERO_OUTPUT_VALUE_ON_NOT_USED_ASSET(uint256 outputValue);
     error PUBLIC_INPUTS_HASH_VERIFICATION_FAILED(uint256, uint256);
-    error THIRD_PARTY_CONTRACTS_FLAG_NOT_SET();
-    error PAUSED();
-    error NOT_PAUSED();
+    error PROOF_VERIFICATION_FAILED();
 
     /*----------------------------------------
       EVENTS
@@ -246,15 +240,25 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
     // the value of hashing a 'zeroed' defi interaction result
     bytes32 private constant DEFI_RESULT_ZERO_HASH = 0x2d25a1e3a51eb293004c4b56abe12ed0da6bca2b4a21936752a85d102593c1b4;
 
+    // roles used in access control
     bytes32 public constant OWNER_ROLE = keccak256('OWNER_ROLE');
     bytes32 public constant EMERGENCY_ROLE = keccak256('EMERGENCY_ROLE');
 
+    // bounds used for escapehatch
     uint256 public immutable escapeBlockLowerBound;
     uint256 public immutable escapeBlockUpperBound;
 
     /*----------------------------------------
       STATE VARIABLES
       ----------------------------------------*/
+    RollupState internal rollupState;
+
+    // Array of supported ERC20 token address.
+    address[] internal supportedAssets;
+
+    // Array of supported bridge contract addresses (similar to assetIds)
+    address[] internal supportedBridges;
+
     // asyncDefiInteractionHashes and defiInteractionHashes are custom implementations of an array type!!
     // we store the length fields for each array inside the `rollupState` storage slot
     // we access array elements in the traditional manner: array.slot[i] = keccak256(array.slot) + i
@@ -265,37 +269,33 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
     bytes32 internal defiInteractionHashes;
 
     // Mapping from assetId to mapping of userAddress to public userBalance stored on this contract
-    mapping(uint256 => mapping(address => uint256)) internal userPendingDeposits;
+    mapping(uint256 => mapping(address => uint256)) public userPendingDeposits;
 
+    // Mapping from user address to mapping of proof hashes to flag for approval
     mapping(address => mapping(bytes32 => bool)) public depositProofApprovals;
 
-    RollupState internal rollupState;
-
+    // The hash of the latest rollup state
     bytes32 public override(IRollupProcessor) rollupStateHash;
 
+    // The address of the defi bridge proxy
     address public override(IRollupProcessor) defiBridgeProxy;
+
+    // Flag to allow third party contracts to list assets and bridges when out of BETA
     bool public allowThirdPartyContracts;
 
-    // Array of supported ERC20 token address.
-    address[] private supportedAssets;
-
-    // Array of supported bridge contract addresses (similar to assetIds)
-    address[] private supportedBridges;
-
+    // Mapping from address to flag, true if address is approved, false otherwise
     mapping(address => bool) public rollupProviders;
 
     // map defiInteractionNonce to PendingDefiBridgeInteraction
     mapping(uint256 => PendingDefiBridgeInteraction) public pendingDefiInteractions;
 
-    /**
-     * @dev Used by brige contracts to send RollupProcessor ETH during a bridge interaction
-     */
+    // map interaction nonces to eth send to RollupProcessor during a bridge interaction
     mapping(uint256 => uint256) public ethPayments;
 
-    // we need a way to register ERC20 Gas Limits for withdrawals to a specific asset id
+    // map asset id to Gas Limit
     mapping(uint256 => uint256) public assetGasLimits;
 
-    // we need a way to register Bridge Gas Limits for dynamic limits per DeFi protocol
+    // map bridge id to Gas Limit
     mapping(uint256 => uint256) public bridgeGasLimits;
 
     // stores the hash of the hashes of the pending defi interactions, the notes of which are expected to be added in the 'next' rollup
@@ -399,6 +399,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
      */
     constructor(uint256 _escapeBlockLowerBound, uint256 _escapeBlockUpperBound) {
         _disableInitializers();
+        rollupState.paused = true;
 
         escapeBlockLowerBound = _escapeBlockLowerBound;
         escapeBlockUpperBound = _escapeBlockUpperBound;
@@ -789,6 +790,12 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
         if (address(bridgeContract) == address(0)) {
             revert INVALID_BRIDGE_ADDRESS();
         }
+
+        // delete pendingDefiInteractions[interactionNonce]
+        // N.B. only need to delete 1st slot value `bridgeId`. Deleting vars costs gas post-London
+        // setting bridgeId to 0 is enough to cause future calls with this interaction nonce to fail
+        pendingDefiInteractions[interactionNonce].bridgeId = 0;
+
         // Copy some variables to front of stack to get around stack too deep errors
         InteractionInputs memory inputs = InteractionInputs(
             totalInputValue,
@@ -805,13 +812,9 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
         );
 
         if (!interactionCompleted) {
+            pendingDefiInteractions[inputs.interactionNonce].bridgeId = bridgeId;
             return false;
         }
-
-        // delete pendingDefiInteractions[interactionNonce]
-        // N.B. only need to delete 1st slot value `bridgeId`. Deleting vars costs gas post-London
-        // setting bridgeId to 0 is enough to cause future calls with this interaction nonce to fail
-        pendingDefiInteractions[inputs.interactionNonce].bridgeId = 0;
 
         if (outputValueB > 0 && outputAssetB.assetType == AztecTypes.AztecAssetType.NOT_USED) {
             revert NONZERO_OUTPUT_VALUE_ON_NOT_USED_ASSET(outputValueB);
@@ -1224,14 +1227,15 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
         uint256 outputValue,
         uint256 interactionNonce
     ) internal {
+        if (outputValue == 0) {
+            return;
+        }
         if (asset.assetType == AztecTypes.AztecAssetType.ETH) {
             if (outputValue > ethPayments[interactionNonce]) {
-                revert INSUFFICIENT_ETH_TRANSFER();
+                revert INSUFFICIENT_ETH_PAYMENT();
             }
-            if (ethPayments[interactionNonce] != 0) {
-                ethPayments[interactionNonce] = 0;
-            }
-        } else if (asset.assetType == AztecTypes.AztecAssetType.ERC20 && outputValue > 0) {
+            ethPayments[interactionNonce] = 0;
+        } else if (asset.assetType == AztecTypes.AztecAssetType.ERC20) {
             address tokenAddress = asset.erc20Address;
             TokenTransfers.safeTransferFrom(tokenAddress, bridgeContract, address(this), outputValue);
         }
@@ -1243,10 +1247,10 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
      * @param feeReceiver fee beneficiary as described kby the rollup provider
      */
     function transferFee(bytes memory proofData, address feeReceiver) internal {
-        for (uint256 i = 0; i < NUMBER_OF_ASSETS; ++i) {
-            uint256 assetId = extractAssetId(proofData, i);
+        for (uint256 i = 0; i < NUMBER_OF_ASSETS; ) {
             uint256 txFee = extractTotalTxFee(proofData, i);
             if (txFee > 0) {
+                uint256 assetId = extractAssetId(proofData, i);
                 if (assetId == ethAssetId) {
                     // We explicitly do not throw if this call fails, as this opens up the possiblity of
                     // griefing attacks, as engineering a failed fee will invalidate an entire rollup block
@@ -1262,6 +1266,9 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
                         assetGasLimits[assetId]
                     );
                 }
+            }
+            unchecked {
+                ++i;
             }
         }
     }
@@ -1315,9 +1322,9 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
 
     /**
      * @dev Get true if the contract is paused, false otherwise
-     * @return paused - True if paused, false otherwise
+     * @return isPaused - True if paused, false otherwise
      */
-    function paused() external view override(IRollupProcessor) returns (bool paused) {
+    function paused() external view override(IRollupProcessor) returns (bool isPaused) {
         return rollupState.paused;
     }
 
@@ -1338,7 +1345,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
      * copies their values into `defiInteractionHashes[]`. Loop is bounded to < 512 so that tx does not exceed block gas limit
      * @return res the number of pending interactions
      */
-    function getPendingDefiInteractionHashes() public view override(IRollupProcessor) returns (uint256 res) {
+    function getPendingDefiInteractionHashesLength() public view override(IRollupProcessor) returns (uint256 res) {
         assembly {
             let state := sload(rollupState.slot)
             let defiInteractionHashesLength := and(ARRAY_LENGTH_MASK, shr(DEFIINTERACTIONHASHES_BIT_OFFSET, state))
@@ -1352,13 +1359,21 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
 
     /**
      * @dev get the address of the PLONK verification smart contract
-     * @return verifier address of the verification smart contract
+     * @return verifierAddress - address of the verification smart contract
      */
-    function verifier() public view override(IRollupProcessor) returns (address verifier) {
+    function verifier() public view override(IRollupProcessor) returns (address verifierAddress) {
         // asm implementation to reduce compiled bytecode size
         assembly {
-            verifier := and(sload(rollupState.slot), ADDRESS_MASK)
+            verifierAddress := and(sload(rollupState.slot), ADDRESS_MASK)
         }
+    }
+
+    /**
+     * @dev Get the number of supported bridges
+     * @return res The number of supported bridges
+     */
+    function getSupportedBridgesLength() external view override(IRollupProcessor) returns (uint256 res) {
+        res = supportedBridges.length;
     }
 
     /**
@@ -1367,6 +1382,14 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
      */
     function getSupportedBridge(uint256 bridgeAddressId) public view override(IRollupProcessor) returns (address) {
         return supportedBridges[bridgeAddressId - 1];
+    }
+
+    /**
+     * @dev Get the number of supported assets
+     * @return res The number of supported assets
+     */
+    function getSupportedAssetsLength() external view override(IRollupProcessor) returns (uint256 res) {
+        res = supportedAssets.length;
     }
 
     /**
@@ -1422,6 +1445,18 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
     }
 
     /**
+     * @dev Get number of defi interaction hashes
+     * A defi interaction hash represents a synchronous defi interaction that has resolved, but whose interaction result data
+     * has not yet been added into the Aztec Defi Merkle tree. This step is needed in order to convert L2 Defi claim notes into L2 value notes
+     * @return res the number of pending defi interaction hashes
+     */
+    function getDefiInteractionHashesLength() public view override(IRollupProcessor) returns (uint256 res) {
+        assembly {
+            res := and(ARRAY_LENGTH_MASK, shr(DEFIINTERACTIONHASHES_BIT_OFFSET, sload(rollupState.slot)))
+        }
+    }
+
+    /**
      * @dev Get all pending defi interaction hashes
      * A defi interaction hash represents a synchronous defi interaction that has resolved, but whose interaction result data
      * has not yet been added into the Aztec Defi Merkle tree. This step is needed in order to convert L2 Defi claim notes into L2 value notes
@@ -1446,6 +1481,18 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
             }
         }
         return res;
+    }
+
+    /**
+     * @dev Get number of asynchronous defi interaction hashes
+     * An async defi interaction hash represents an asynchronous defi interaction that has resolved, but whose interaction result data
+     * has not yet been added into the Aztec Defi Merkle tree. This step is needed in order to convert L2 Defi claim notes into L2 value notes
+     * @return res the number of pending async defi interaction hashes
+     */
+    function getAsyncDefiInteractionHashesLength() public view override(IRollupProcessor) returns (uint256 res) {
+        assembly {
+            res := and(ARRAY_LENGTH_MASK, shr(ASYNCDEFIINTERACTIONHASHES_BIT_OFFSET, sload(rollupState.slot)))
+        }
     }
 
     /**
@@ -1484,9 +1531,13 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
         override(IRollupProcessor)
         returns (address[] memory, uint256[] memory)
     {
-        uint256[] memory gasLimits = new uint256[](supportedBridges.length);
-        for (uint256 i = 0; i < supportedBridges.length; ++i) {
+        uint256 supportedBridgesLength = supportedBridges.length;
+        uint256[] memory gasLimits = new uint256[](supportedBridgesLength);
+        for (uint256 i = 0; i < supportedBridgesLength; ) {
             gasLimits[i] = bridgeGasLimits[i + 1];
+            unchecked {
+                ++i;
+            }
         }
         return (supportedBridges, gasLimits);
     }
@@ -1500,61 +1551,20 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
         override(IRollupProcessor)
         returns (address[] memory, uint256[] memory)
     {
-        uint256[] memory gasLimits = new uint256[](supportedAssets.length);
-        for (uint256 i = 0; i < supportedAssets.length; ++i) {
+        uint256 supportedAssetsLength = supportedAssets.length;
+        uint256[] memory gasLimits = new uint256[](supportedAssetsLength);
+        for (uint256 i = 0; i < supportedAssetsLength; ) {
             gasLimits[i] = assetGasLimits[i + 1];
+            unchecked {
+                ++i;
+            }
         }
         return (supportedAssets, gasLimits);
     }
 
-    /**
-     * @dev Get the balance of a user, for a particular asset, held on the user's behalf
-     * by this contract
-     * @param assetId - unique identifier of the asset
-     * @param userAddress - Ethereum address of the user who's balance is being queried
-     */
-    function getUserPendingDeposit(uint256 assetId, address userAddress)
-        external
-        view
-        override(IRollupProcessor)
-        returns (uint256 userPendingDeposit)
-    {
-        assembly {
-            mstore(0x00, assetId)
-            mstore(0x20, userPendingDeposits.slot)
-            mstore(0x20, keccak256(0x00, 0x40))
-            mstore(0x00, userAddress)
-            userPendingDeposit := sload(keccak256(0x00, 0x40))
-        }
-    }
-
     /*----------------------------------------
-      INTERNAL/PRIVATE NON-MUTATING FUNCTIONS 
+      INTERNAL/PRIVATE NON-MUTATING FUNCTIONS
       ----------------------------------------*/
-
-    /**
-     * @dev Get number of defi interaction hashes
-     * A defi interaction hash represents a synchronous defi interaction that has resolved, but whose interaction result data
-     * has not yet been added into the Aztec Defi Merkle tree. This step is needed in order to convert L2 Defi claim notes into L2 value notes
-     * @return res the number of pending defi interaction hashes
-     */
-    function getDefiInteractionHashesLength() internal view returns (uint256 res) {
-        assembly {
-            res := and(ARRAY_LENGTH_MASK, shr(DEFIINTERACTIONHASHES_BIT_OFFSET, sload(rollupState.slot)))
-        }
-    }
-
-    /**
-     * @dev Get number of asynchronous defi interaction hashes
-     * An async defi interaction hash represents an asynchronous defi interaction that has resolved, but whose interaction result data
-     * has not yet been added into the Aztec Defi Merkle tree. This step is needed in order to convert L2 Defi claim notes into L2 value notes
-     * @return res the number of pending async defi interaction hashes
-     */
-    function getAsyncDefiInteractionHashesLength() internal view returns (uint256 res) {
-        assembly {
-            res := and(ARRAY_LENGTH_MASK, shr(ASYNCDEFIINTERACTIONHASHES_BIT_OFFSET, sload(rollupState.slot)))
-        }
-    }
 
     /**
      * @dev helper function to sanitise a given bridge gas limit value to be within pre-defined limits
@@ -1598,7 +1608,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
      * | 152 - 184 | bitConfig       | Bit-array that contains boolean bridge settings. |
      * | 184 - 248 | auxData         | 64 bits of custom data to be passed to the bridge contract. Structure is defined/checked by the bridge contract. |
      *
-     * Structure of the `bigConfig` parameter is as follows
+     * Structure of the `bitConfig` parameter is as follows
      * | bit | parameter               | description |
      * | 0   | secondInputInUse        | Does the bridge have a second input asset? |
      * | 1   | secondOutputInUse       | Does the bridge have a second output asset? |
@@ -1878,6 +1888,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
         internal
         returns (bytes32[] memory nextExpectedHashes)
     {
+        uint256 defiInteractionHashesLength;
         // Verify that nextExpectedDefiInteractionsHash equals the value given in the rollup
         // Then remove the set of pending hashes
         {
@@ -1888,21 +1899,20 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
             if (providedDefiInteractionsHash != prevDefiInteractionsHash) {
                 revert INCORRECT_PREVIOUS_DEFI_INTERACTION_HASH(providedDefiInteractionsHash, prevDefiInteractionsHash);
             }
-            (uint256 defiInteractionHashesLength, uint256 numPendingInteractions) = getDefiHashesLengths();
+            uint256 numPendingInteractions;
+            (defiInteractionHashesLength, numPendingInteractions) = getDefiHashesLengths();
             // numPendingInteraction equals the number of interactions expected to be in the given rollup
             // this is the length of the defiInteractionHashes array, capped at the NUM_BRIDGE_CALLS as per the following
             // numPendingInteractions = min(defiInteractionsHashesLength, numberOfBridgeCalls)
-            // Compute the offset we use to index `defiInteractionHashes[]`
-            // If defiInteractionHashes.length > numberOfBridgeCalls, offset = defiInteractionhashes.length - numberOfBridgeCalls.
-            // Else offset = 0
-            uint256 offset = defiInteractionHashesLength - numPendingInteractions;
+
+            // Reduce DefiInteractionHashes.length by numPendingInteractions
+            defiInteractionHashesLength -= numPendingInteractions;
 
             assembly {
-                // Update DefiInteractionHashes.length (we've reduced length by up to numberOfBridgeCalls)
-                // this effectively truncates the array at offset
+                // Update DefiInteractionHashes.length in storage
                 let state := sload(rollupState.slot)
                 let oldState := and(not(shl(DEFIINTERACTIONHASHES_BIT_OFFSET, ARRAY_LENGTH_MASK)), state)
-                let newState := or(oldState, shl(DEFIINTERACTIONHASHES_BIT_OFFSET, offset))
+                let newState := or(oldState, shl(DEFIINTERACTIONHASHES_BIT_OFFSET, defiInteractionHashesLength))
                 sstore(rollupState.slot, newState)
             }
         }
@@ -1910,20 +1920,15 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
 
         // ### Process DefiBridge Calls
         uint256 proofDataPtr;
-        uint256 defiInteractionHashesLength;
         assembly {
             proofDataPtr := add(proofData, BRIDGE_IDS_OFFSET)
-            defiInteractionHashesLength := and(
-                ARRAY_LENGTH_MASK,
-                shr(DEFIINTERACTIONHASHES_BIT_OFFSET, sload(rollupState.slot))
-            )
         }
         BridgeResult memory bridgeResult;
         assembly {
             bridgeResult := mload(0x40)
             mstore(0x40, add(bridgeResult, 0x80))
         }
-        for (uint256 i = 0; i < NUMBER_OF_BRIDGE_CALLS; ++i) {
+        for (uint256 i = 0; i < NUMBER_OF_BRIDGE_CALLS; ) {
             uint256 bridgeId;
             assembly {
                 bridgeId := mload(proofDataPtr)
@@ -2101,6 +2106,9 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
                 // advance interactionNonce and proofDataPtr
                 interactionNonce := add(interactionNonce, 0x01)
                 proofDataPtr := add(proofDataPtr, 0x20)
+            }
+            unchecked {
+                ++i;
             }
         }
 

@@ -42,7 +42,7 @@ describe('rollup_processor: ', () => {
     expect(await rollupProcessor.hasRole(OWNER_ROLE, addresses[0])).toBe(true);
     expect(await rollupProcessor.paused()).toBe(false);
 
-    expect(await rollupProcessor.pause({ signingAddress: addresses[0] })).toBeTruthy();
+    expect(await rollupProcessor.pause({ signingAddress: addresses[0] }));
     expect(await rollupProcessor.paused()).toBe(true);
   });
 

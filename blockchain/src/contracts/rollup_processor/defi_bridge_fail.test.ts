@@ -8,8 +8,8 @@ import { computeInteractionHashes } from '@aztec/barretenberg/note_algorithms';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof/rollup_proof_data';
 import { WorldStateConstants } from '@aztec/barretenberg/world_state';
 import { randomBytes } from 'crypto';
-import { Signer } from 'ethers';
-import { LogDescription } from 'ethers/lib/utils';
+import { Contract, Signer } from 'ethers';
+import { keccak256, LogDescription, toUtf8Bytes } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
 import { evmSnapshot, evmRevert, setEthBalance } from '../../ganache/hardhat_chain_manipulation';
 import { createRollupProof, createSendProof, DefiInteractionData } from './fixtures/create_mock_proof';
@@ -326,5 +326,148 @@ describe('rollup_processor: defi bridge failures', () => {
     await rollupProcessor.stubAsyncTransactionHashes(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK);
     const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
     await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('ARRAY_OVERFLOW');
+  });
+
+  describe('Cases using additional bridge implementations', () => {
+    let reentryBridge: Contract;
+    let failingAsyncBridge: Contract;
+    let reentryBridgeAddressId: number;
+    let failingAsyncBridgeAddressId: number;
+
+    const formatCustomErrorMsg = (reason: string) => {
+      return Buffer.from(keccak256(toUtf8Bytes(reason)).substring(2), 'hex').subarray(0, 4);
+    };
+
+    beforeAll(async () => {
+      reentryBridge = await (
+        await ethers.getContractFactory('ReentryBridge', rollupProvider)
+      ).deploy(rollupProcessor.address.toString());
+      expect(await rollupProcessor.setSupportedBridge(EthAddress.fromString(reentryBridge.address), 1000000));
+      reentryBridgeAddressId = (await rollupProcessor.getSupportedBridges()).length;
+
+      failingAsyncBridge = await (
+        await ethers.getContractFactory('FailingAsyncBridge', rollupProvider)
+      ).deploy(rollupProcessor.address.toString());
+      expect(await rollupProcessor.setSupportedBridge(EthAddress.fromString(failingAsyncBridge.address), 1000000));
+      failingAsyncBridgeAddressId = await rollupProcessor.getSupportedBridgesLength();
+
+      await topupEth(10n * 10n ** 18n);
+      await setEthBalance(EthAddress.fromString(reentryBridge.address), 10n * 10n ** 18n);
+      await setEthBalance(EthAddress.fromString(failingAsyncBridge.address), 10n * 10n ** 18n);
+    });
+
+    it('process defi interaction that fails because it transfer insufficient eth', async () => {
+      const bridgeId = new BridgeId(reentryBridgeAddressId, 0, 0);
+      const inputValue = 1n;
+
+      await reentryBridge.addAction(0, false, true, true, '0x', 2, 0);
+
+      const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+        defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
+      });
+
+      const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+      const txHash = await rollupProcessor.sendTx(tx);
+
+      await expectFailedResult(bridgeId, inputValue, txHash, formatCustomErrorMsg('INSUFFICIENT_ETH_PAYMENT()'));
+    });
+
+    it('process defi interaction that fails because finalize outputvalue > eth', async () => {
+      const bridgeId = new BridgeId(failingAsyncBridgeAddressId, 0, 0);
+      const inputValue = 1n;
+
+      const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+        defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
+      });
+
+      const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+      await rollupProcessor.sendTx(tx);
+
+      await failingAsyncBridge.setReturnValues(1, 0);
+
+      await expect(rollupProcessor.processAsyncDefiInteraction(0)).rejects.toThrow('INSUFFICIENT_ETH_PAYMENT()');
+    });
+
+    it('process defi interaction that fails because async but `outputValueA > 0`', async () => {
+      const bridgeId = new BridgeId(failingAsyncBridgeAddressId, 0, 0);
+      const inputValue = 1n;
+
+      await failingAsyncBridge.setReturnValues(1, 0);
+
+      const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+        defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
+      });
+
+      const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+      const txHash = await rollupProcessor.sendTx(tx);
+
+      const errorBuffer = Buffer.alloc(4 + 32 + 32);
+      formatCustomErrorMsg('ASYNC_NONZERO_OUTPUT_VALUES(uint256,uint256)').copy(errorBuffer, 0, 0, 4);
+      errorBuffer[32 + 4 - 1] = 1;
+
+      await expectFailedResult(bridgeId, inputValue, txHash, errorBuffer);
+    });
+
+    it('process defi interaction that fails because async but `outputValueB > 0`', async () => {
+      const bridgeId = new BridgeId(failingAsyncBridgeAddressId, 0, 0);
+      const inputValue = 1n;
+
+      await failingAsyncBridge.setReturnValues(0, 1);
+
+      const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+        defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
+      });
+
+      const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+      const txHash = await rollupProcessor.sendTx(tx);
+
+      const errorBuffer = Buffer.alloc(4 + 32 + 32);
+      formatCustomErrorMsg('ASYNC_NONZERO_OUTPUT_VALUES(uint256,uint256)').copy(errorBuffer, 0, 0, 4);
+      errorBuffer[32 + 32 + 4 - 1] = 1;
+
+      await expectFailedResult(bridgeId, inputValue, txHash, errorBuffer);
+    });
+
+    it('process defi interaction that fails because returns with `outputValueA` cannot be in 252 bits', async () => {
+      const bridgeId = new BridgeId(reentryBridgeAddressId, 0, 0);
+      const inputValue = 1n;
+      const outputValueA = 2n ** 252n;
+
+      await reentryBridge.addAction(0, false, true, true, '0x', outputValueA, 0);
+
+      const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+        defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
+      });
+
+      const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+      const txHash = await rollupProcessor.sendTx(tx);
+
+      const errorBuffer = Buffer.alloc(4 + 32);
+      formatCustomErrorMsg('OUTPUT_A_EXCEEDS_252_BITS(uint256)').copy(errorBuffer, 0, 0, 4);
+      toBufferBE(outputValueA, 32).copy(errorBuffer, 4, 0, 32);
+
+      await expectFailedResult(bridgeId, inputValue, txHash, errorBuffer);
+    });
+
+    it('process defi interaction that fails because returns with `outputValueB` cannot be in 252 bits', async () => {
+      const bridgeId = new BridgeId(reentryBridgeAddressId, 0, 0);
+      const inputValue = 1n;
+      const outputValueB = 2n ** 252n;
+
+      await reentryBridge.addAction(0, false, true, true, '0x', 0, outputValueB);
+
+      const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+        defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
+      });
+
+      const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+      const txHash = await rollupProcessor.sendTx(tx);
+
+      const errorBuffer = Buffer.alloc(4 + 32);
+      formatCustomErrorMsg('OUTPUT_B_EXCEEDS_252_BITS(uint256)').copy(errorBuffer, 0, 0, 4);
+      toBufferBE(outputValueB, 32).copy(errorBuffer, 4, 0, 32);
+
+      await expectFailedResult(bridgeId, inputValue, txHash, errorBuffer);
+    });
   });
 });

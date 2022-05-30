@@ -337,7 +337,9 @@ describe('rollup_processor: deposit', () => {
 
   it('should revert for depositing virtual asset', async () => {
     const tokenAssetId = 1;
-    await expect(rollupProcessor.contract.getSupportedAsset(tokenAssetId)).not.toBeFalsy();
+    expect(await rollupProcessor.contract.getSupportedAsset(tokenAssetId)).toBe(
+      assets[tokenAssetId].getStaticInfo().address.toString(),
+    );
 
     const virtualAssetId = tokenAssetId + virtualAssetIdFlag;
     await expect(rollupProcessor.contract.getSupportedAsset(virtualAssetId)).rejects.toThrow('INVALID_ASSET_ID');
@@ -358,7 +360,9 @@ describe('rollup_processor: deposit', () => {
 
   it('should revert for depositing virtual asset with standard permit', async () => {
     const tokenAssetId = 1;
-    await expect(rollupProcessor.contract.getSupportedAsset(tokenAssetId)).not.toBeFalsy();
+    expect(await rollupProcessor.contract.getSupportedAsset(tokenAssetId)).toBe(
+      assets[tokenAssetId].getStaticInfo().address.toString(),
+    );
 
     const virtualAssetId = tokenAssetId + virtualAssetIdFlag;
     await expect(rollupProcessor.contract.getSupportedAsset(virtualAssetId)).rejects.toThrow('INVALID_ASSET_ID');
@@ -388,7 +392,9 @@ describe('rollup_processor: deposit', () => {
 
   it('should revert for depositing virtual asset with non-standard permit', async () => {
     const tokenAssetId = 1;
-    await expect(rollupProcessor.contract.getSupportedAsset(tokenAssetId)).not.toBeFalsy();
+    expect(await rollupProcessor.contract.getSupportedAsset(tokenAssetId)).toBe(
+      assets[tokenAssetId].getStaticInfo().address.toString(),
+    );
 
     const virtualAssetId = tokenAssetId + virtualAssetIdFlag;
     await expect(rollupProcessor.contract.getSupportedAsset(virtualAssetId)).rejects.toThrow('INVALID_ASSET_ID');

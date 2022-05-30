@@ -2,7 +2,7 @@ import { EthAddress } from '@aztec/barretenberg/address';
 import { EthereumProvider, SendTxOptions, TxHash } from '@aztec/barretenberg/blockchain';
 import { Web3Provider } from '@ethersproject/providers';
 import { Contract } from 'ethers';
-import { abi } from '../../artifacts/contracts/AztecFeeDistributor.sol/AztecFeeDistributor.json';
+import { abi } from '../../artifacts/contracts/periphery/AztecFeeDistributor.sol/AztecFeeDistributor.json';
 
 const fixEthersStackTrace = (err: Error) => {
   err.stack! += new Error().stack;
@@ -46,19 +46,6 @@ export class FeeDistributor {
 
   async txFeeBalance(asset: EthAddress) {
     return BigInt(await this.feeDistributor.txFeeBalance(asset.toString()).catch(fixEthersStackTrace));
-  }
-
-  async deposit(asset: EthAddress, amount: bigint, options: SendTxOptions = this.defaults) {
-    const { gasLimit, gasPrice } = options;
-    const contract = this.getContractWithSigner(options);
-    const tx = await contract
-      .deposit(asset.toString(), amount, {
-        value: asset.equals(EthAddress.ZERO) ? amount : undefined,
-        gasLimit,
-        gasPrice,
-      })
-      .catch(fixEthersStackTrace);
-    return TxHash.fromString(tx.hash);
   }
 
   async convert(asset: EthAddress, minOutputValue: bigint, options: SendTxOptions = this.defaults) {

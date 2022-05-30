@@ -11,6 +11,7 @@ import {
 import { ProxyAdmin } from './proxy_admin';
 import { setupTestRollupProcessor } from './fixtures/setup_upgradeable_test_rollup_processor';
 import { TestRollupProcessor } from './fixtures/test_rollup_processor';
+import { EthersAdapter } from '../../provider';
 
 describe('rollup_processor: upgradable test', () => {
   let rollupProcessor: TestRollupProcessor;
@@ -46,6 +47,21 @@ describe('rollup_processor: upgradable test', () => {
 
   afterEach(async () => {
     await evmRevert(snapshot);
+  });
+
+  it('try to deposit directly to implementation', async () => {
+    const implementationAddress = await proxyAdmin.getProxyImplementation(rollupProcessor.address);
+    const testProcessor = new TestRollupProcessor(
+      EthAddress.fromString(implementationAddress),
+      new EthersAdapter(ethers.provider),
+    );
+
+    const depositAmount = 50n;
+    await expect(
+      testProcessor.depositPendingFunds(0, depositAmount, undefined, {
+        signingAddress: addresses[0],
+      }),
+    ).rejects.toThrow('PAUSED()');
   });
 
   it('cannot initialize implementation directly', async () => {
@@ -202,7 +218,7 @@ describe('rollup_processor: upgradable test', () => {
         ],
         [escapeBlockLowerBound, escapeBlockUpperBound],
       ),
-    ).toBeTruthy();
+    );
 
     expect(await rollupProcessor.getImplementationVersion()).toBe(2);
     expect(await rollupProcessor.hasRole(OWNER_ROLE, addresses[0])).toBe(true);
@@ -296,7 +312,7 @@ describe('rollup_processor: upgradable test', () => {
         ],
         [escapeBlockLowerBound, escapeBlockUpperBound],
       ),
-    ).toBeTruthy();
+    );
 
     expect(await rollupProcessor.getImplementationVersion()).toBe(2);
 

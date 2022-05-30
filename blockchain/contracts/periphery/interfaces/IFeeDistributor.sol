@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2022 Aztec
-pragma solidity >=0.8.4 <0.8.11;
+pragma solidity >=0.8.4;
 
 interface IFeeDistributor {
     event FeeReimbursed(address receiver, uint256 amount);
@@ -25,8 +25,6 @@ interface IFeeDistributor {
     function setConvertConstant(uint256 _convertConstant) external;
 
     function txFeeBalance(address assetAddress) external view returns (uint256);
-
-    function deposit(address assetAddress, uint256 amount) external payable returns (uint256 depositedAmount);
 
     function convert(address assetAddress, uint256 minOutputValue) external returns (uint256 outputValue);
 }

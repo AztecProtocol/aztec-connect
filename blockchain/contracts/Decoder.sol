@@ -2,9 +2,6 @@
 // Copyright 2022 Aztec
 pragma solidity >=0.8.4;
 
-import {Types} from './verifier/cryptography/Types.sol';
-import {Bn254Crypto} from './verifier/cryptography/Bn254Crypto.sol';
-
 /**
  * ----------------------------------------
  *  PROOF DATA SPECIFICATION
@@ -174,7 +171,9 @@ contract Decoder {
      * Advance the calldatapointer by 1 byte to move to the next transaction
      */
     function paddingTx(uint256 inPtr, uint256) internal pure returns (uint256) {
-        return (inPtr + 0x1);
+        unchecked{
+            return (inPtr + 0x1);
+        }
     }
 
     /**

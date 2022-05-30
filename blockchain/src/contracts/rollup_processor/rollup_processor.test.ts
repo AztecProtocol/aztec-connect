@@ -147,7 +147,7 @@ describe('rollup_processor', () => {
       signingAddress: EthAddress.fromString(await signers[0].getAddress()),
     });
 
-    await expect(rollupProcessor.setSupportedAsset(assetAddr, 0, { signingAddress: nonOwner })).resolves.toBeTruthy();
+    expect(await rollupProcessor.setSupportedAsset(assetAddr, 0, { signingAddress: nonOwner }));
   });
 
   it('should set new supported asset with a custom gas limit within pre-defined contract limits', async () => {
@@ -291,9 +291,7 @@ describe('rollup_processor', () => {
       signingAddress: EthAddress.fromString(await signers[0].getAddress()),
     });
 
-    await expect(
-      rollupProcessor.setSupportedBridge(bridgeAddr, gasLimit, { signingAddress: nonOwner }),
-    ).resolves.toBeTruthy();
+    expect(await rollupProcessor.setSupportedBridge(bridgeAddr, gasLimit, { signingAddress: nonOwner }));
   });
 
   it('should approve a proof', async () => {
@@ -506,5 +504,26 @@ describe('rollup_processor', () => {
         innerProofData: [innerProofs[0], InnerProofData.PADDING],
       });
     }
+  });
+
+  it('check getters', async () => {
+    expect((await rollupProcessor.getSupportedAssets()).length).toBe(await rollupProcessor.getSupportedAssetsLength());
+
+    expect((await rollupProcessor.getSupportedBridges()).length).toBe(
+      await rollupProcessor.getSupportedBridgesLength(),
+    );
+
+    expect((await rollupProcessor.defiInteractionHashes()).length).toBe(
+      await rollupProcessor.getDefiInteractionHashesLength(),
+    );
+
+    expect((await rollupProcessor.asyncDefiInteractionHashes()).length).toBe(
+      await rollupProcessor.getAsyncDefiInteractionHashesLength(),
+    );
+
+    expect(await rollupProcessor.getPendingDefiInteractionHashesLength()).toBe(
+      (await rollupProcessor.getAsyncDefiInteractionHashesLength()) +
+        (await rollupProcessor.getDefiInteractionHashesLength()),
+    );
   });
 });
