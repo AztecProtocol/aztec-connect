@@ -31,6 +31,7 @@ import { Theme } from '../styles';
 import { Account } from '../views/account';
 import { Home, HomeState } from '../views/home';
 import { Login } from '../views/login';
+import { RegistrationClosed } from './login/registration_closed';
 import { getAccountUrl, getActionFromUrl, getLoginModeFromUrl, getUrlFromAction, getUrlFromLoginMode } from './views';
 
 interface RouteParams {
@@ -371,6 +372,7 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
         {(() => {
           switch (action) {
             case AppAction.LOGIN: {
+              if (loginState.mode === LoginMode.SIGNUP) return <RegistrationClosed />;
               return (
                 <Login
                   worldState={worldState}
