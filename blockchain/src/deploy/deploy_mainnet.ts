@@ -2,8 +2,6 @@ import { EthAddress } from '@aztec/barretenberg/address';
 import { TreeInitData } from '@aztec/barretenberg/environment';
 import { Signer } from 'ethers';
 import { keccak256, toUtf8Bytes } from 'ethers/lib/utils';
-import { RollupProcessor } from '../contracts';
-import { EthersAdapter } from '../provider';
 import {
   deployDefiBridgeProxy,
   deployElementBridge,
@@ -62,15 +60,15 @@ export async function deployMainnet(signer: Signer, { dataTreeSize, roots }: Tre
 
   const priceFeeds = [FAST_GAS_PRICE_FEED_ADDRESS, DAI_PRICE_FEED_ADDRESS];
 
-  const rollupProcessor = new RollupProcessor(EthAddress.fromString(rollup.address), new EthersAdapter(signer));
   // Grant roles to multisig wallets
-  await rollupProcessor.grantRole(DEFAULT_ADMIN_ROLE, EthAddress.fromString(MULTI_SIG_ADDRESS));
-  await rollupProcessor.grantRole(OWNER_ROLE, EthAddress.fromString(MULTI_SIG_ADDRESS));
-  await rollupProcessor.grantRole(EMERGENCY_MULTI_SIG_ADDRESS, EthAddress.fromString(EMERGENCY_MULTI_SIG_ADDRESS));
+  await rollup.grantRole(DEFAULT_ADMIN_ROLE, MULTI_SIG_ADDRESS);
+  await rollup.grantRole(OWNER_ROLE, MULTI_SIG_ADDRESS);
+  await rollup.grantRole(EMERGENCY_ROLE, EMERGENCY_MULTI_SIG_ADDRESS);
 
   // Revoke roles from the deployer
-  await rollupProcessor.revokeRole(EMERGENCY_ROLE, EthAddress.fromString(await signer.getAddress()));
-  await rollupProcessor.revokeRole(OWNER_ROLE, EthAddress.fromString(await signer.getAddress()));
+  await rollup.revokeRole(EMERGENCY_ROLE, await signer.getAddress());
+  await rollup.revokeRole(OWNER_ROLE, await signer.getAddress());
+
   // TODO: Revoking of the default admin role should be done manually with the multi-sig to ensure correct setup
 
   return { rollup, priceFeeds, feeDistributor };
