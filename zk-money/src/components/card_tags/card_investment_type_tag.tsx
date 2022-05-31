@@ -15,5 +15,5 @@ function getLabel(type: DefiInvestmentType) {
 }
 
 export function CardInvestmentTypeTag(props: { investmentType: DefiInvestmentType }) {
-  return <CardTag motif="white">{getLabel(props.investmentType)}</CardTag>;
+  return <CardTag>{getLabel(props.investmentType)}</CardTag>;
 }

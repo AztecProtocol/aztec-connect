@@ -1,0 +1,22 @@
+.cardHeaderButtonsWrapper {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  position: absolute;
+  right: 0;
+}
+
+.cardHeaderLogo {
+  width: 100px;
+  position: absolute;
+  left: 0;
+}
+
+.cardHeader {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: row;
+  position: relative;
+  align-items: center;
+}

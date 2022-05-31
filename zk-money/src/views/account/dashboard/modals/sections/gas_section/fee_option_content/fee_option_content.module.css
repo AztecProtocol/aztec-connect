@@ -1,18 +1,21 @@
 .root {
   display: grid;
   grid-template-columns: 0.7fr 0.7fr 1fr 0.5fr;
-  font-size: 14px;
+  font-size: 16px;
   align-items: end;
 }
 
 .time {
-  font-weight: 300;
+  font-size: 16px;
+  font-weight: 450;
 }
 
 .amount {
+  font-size: 16px;
   padding-right: 20px;
 }
 
 .price {
-  opacity: 0.2;
+  font-size: 14px;
+  opacity: 0.8;
 }

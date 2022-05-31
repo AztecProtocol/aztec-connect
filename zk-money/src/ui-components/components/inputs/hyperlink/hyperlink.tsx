@@ -1,6 +1,8 @@
 import { bindStyle } from 'ui-components/util/classnames';
 import infoIcon from '../../../images/info_icon.svg';
 import openIcon from '../../../images/open_icon.svg';
+import whiteInfoIcon from '../../../images/info_icon_white.svg';
+import whiteOpenIcon from '../../../images/open_icon_white.svg';
 import style from './hyperlink.module.scss';
 
 export enum HyperlinkIcon {
@@ -11,6 +13,7 @@ export enum HyperlinkIcon {
 interface HyperlinkProps {
   label: string;
   href?: string;
+  theme?: 'gradient' | 'white';
   icon?: HyperlinkIcon;
   className?: string;
   onClick?: () => void;
@@ -20,24 +23,24 @@ interface HyperlinkProps {
 
 const cx = bindStyle(style);
 
-function getIcon(icon?: HyperlinkIcon) {
+function getIcon(icon?: HyperlinkIcon, theme?: 'gradient' | 'white') {
   switch (icon) {
     case HyperlinkIcon.Info:
-      return infoIcon;
+      return theme === 'white' ? whiteInfoIcon : infoIcon;
     case HyperlinkIcon.Open:
-      return openIcon;
+      return theme === 'white' ? whiteOpenIcon : openIcon;
   }
 }
 
 export function Hyperlink(props: HyperlinkProps) {
-  const icon = getIcon(props.icon);
+  const icon = getIcon(props.icon, props.theme);
 
   return (
     <a
       onClick={props.onClick}
       onMouseEnter={props.onMouseEnter}
       onMouseLeave={props.onMouseLeave}
-      className={cx(style.actionButton, props.className, style.gradient)}
+      className={cx(style.actionButton, props.className, props.theme === 'white' ? style.white : style.gradient)}
       href={props.href}
       target="_blank"
       rel="noreferrer"

@@ -31,8 +31,8 @@
   background-clip: text;
   -webkit-background-clip: text;
   -moz-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  -moz-text-fill-color: transparent;
+  -webkit-text-fill-color: rgba(255, 255, 255, 0);
+  -moz-text-fill-color: rgba(255, 255, 255, 0);
 }
 
 @mixin reset_input() {
@@ -40,15 +40,15 @@
   font-family: inherit !important;
   border: none;
   outline-width: 0;
-  outline-color: transparent;
+  outline-color: rgba(255, 255, 255, 0);
   background-image: none;
-  background-color: transparent;
+  background-color: rgba(255, 255, 255, 0);
   box-shadow: none;
 
   &:focus,
   &:hover {
-    background: transparent;
-    border-color: transparent;
+    background: rgba(255, 255, 255, 0);
+    border-color: rgba(255, 255, 255, 0);
     box-shadow: none;
     outline: none;
   }

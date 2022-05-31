@@ -19,7 +19,7 @@ const UsernameRoot = styled.div`
   align-items: center;
   cursor: pointer;
   box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
-  border-radius: 18px;
+  border-radius: 10px;
   height: 36px;
   padding: 14px;
 
@@ -29,9 +29,7 @@ const UsernameRoot = styled.div`
 `;
 
 const UserName = styled(Text)`
-  @media (max-width: ${breakpoints.s}) {
-    display: none;
-  }
+  font-weight: 450;
 `;
 
 const AvatarRoot = styled.div`

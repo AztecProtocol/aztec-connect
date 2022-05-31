@@ -1,6 +1,6 @@
 .defiCardsListWrapper {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid: auto/repeat(3, 1fr);
   flex-direction: row;
   justify-content: space-between;
   align-items: center;

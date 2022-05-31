@@ -1,0 +1,400 @@
+@keyframes float {
+  0% {
+    filter: drop-shadow(0rem 0rem 0.4rem rgba(0, 0, 0, 0.3));
+    transform: translatey(0px);
+  }
+  50% {
+    filter: drop-shadow(0rem 15px 0.4rem rgba(0, 0, 0, 0.3));
+    transform: translatey(-15px);
+  }
+  100% {
+    filter: drop-shadow(0rem 0rem 0.4rem rgba(0, 0, 0, 0.3));
+    transform: translatey(0px);
+  }
+}
+
+.title {
+  opacity: 0.95;
+  letter-spacing: 0.05em;
+  font-size: 44.2px;
+  line-height: 140%;
+}
+
+.sectionTitle {
+  font-weight: 450;
+  font-size: 33.16px;
+}
+
+.subtitle {
+  font-size: 16px;
+  line-height: 170%;
+  letter-spacing: 0.05em;
+}
+
+.animation {
+  position: absolute;
+  overflow: hidden;
+  height: 50vh;
+  top: 45vh;
+}
+
+.borderIntermediate {
+  transform: translateY(30px) rotate(180deg);
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0) -35%, white 90%);
+}
+
+.borderLower {
+  transform: translateY(60px) rotate(180deg);
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, white 90%);
+}
+
+.bottomBorderIntermediate {
+  transform: rotate(0deg) translateY(-720px);
+  opacity: 0.3;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0) 60%, white 80%, white 90%);
+}
+
+.bottomBorderLower {
+  transform: rotate(0deg) translateY(-750px);
+  opacity: 1;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0) 60%, white 80%, white 90%);
+}
+
+.bottomWave {
+  width: 100%;
+  margin-top: -5px;
+}
+
+.topWave {
+  width: 100%;
+}
+
+.banner {
+  display: flex;
+  flex-direction: row;
+  grid-gap: 15%;
+  gap: 10%;
+  height: calc(95vh - 50%);
+  padding: 0 10% 50px 10%;
+
+  .cardsGraphic {
+    width: 420px;
+    transform: translatey(0px);
+    animation: float 6s ease-in-out infinite;
+  }
+
+  .text {
+    display: flex;
+    gap: 40px;
+    flex-direction: column;
+    justify-content: center;
+
+    .bold {
+      font-weight: 500;
+    }
+
+    .links {
+      font-weight: 450;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 1;
+    }
+  }
+
+  .shieldButton {
+    border: 2px solid white;
+    width: 160px;
+  }
+}
+
+.favoriteApps {
+  display: flex;
+  background: white;
+  flex-direction: column;
+  color: hsl(222deg, 32%, 18%);
+  margin-top: -7px;
+  padding: 50px 10% 0 10%;
+
+  .boxes {
+    display: flex;
+    flex-direction: row;
+    gap: 40px;
+    margin-bottom: 50px;
+  }
+
+  .subtitle {
+    margin-top: 30px;
+  }
+
+  .logos {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    margin: 60px 0;
+    display: grid;
+    grid: auto/repeat(5, 1fr);
+    gap: 50px;
+    justify-items: center;
+    align-items: center;
+
+    .logo {
+      max-height: 40px;
+      padding: 7px;
+    }
+  }
+
+  .infoBoxWrapper {
+    width: 50%;
+
+    .sectionTitle {
+      font-weight: 450;
+      font-size: 18.66px;
+      margin: 30px 0;
+    }
+
+    .infoBox {
+      display: flex;
+      height: 275px;
+      flex-direction: row;
+      gap: 30px;
+      padding: 35px 30px;
+      border-radius: 20px;
+      box-shadow: 0px 4px 10px rgb(0 0 0 / 10%);
+    }
+
+    .info {
+      display: flex;
+      flex-direction: column;
+      align-items: baseline;
+      gap: 10px;
+      width: 50%;
+
+      .subtitle {
+        margin-top: 0px;
+      }
+
+      .logo {
+        height: 60px;
+      }
+
+      .title {
+        font-size: 18.66px;
+        font-weight: 450;
+      }
+    }
+  }
+}
+
+.bottomContent {
+  padding: 0px 10% 0 10%;
+  margin: 50px 0% 190px 0%;
+
+  .number {
+    font-size: 24.88px;
+    font-weight: 450;
+    width: 45px;
+    min-width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    background-color: white;
+    color: #940dff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .content {
+    flex-direction: column;
+    gap: 20px;
+    display: flex;
+  }
+
+  .contentWrapper {
+    display: flex;
+    flex-direction: row;
+    gap: 250px;
+  }
+
+  .howItWorksWrapper {
+    margin-top: 50px;
+    display: grid;
+    row-gap: 20px;
+    grid: auto/repeat(3, 1fr);
+    column-gap: 40px;
+  }
+
+  .whyZk {
+    width: 100%;
+    height: 160px;
+    margin: 30px 0;
+  }
+
+  .line {
+    position: absolute;
+    height: calc(100% + 20px);
+    left: 20px;
+    width: 6px;
+    top: 40px;
+    background-color: white;
+  }
+
+  .steps {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: 50px;
+    margin-bottom: 80px;
+    margin-top: 50px;
+
+    .content {
+      width: 50%;
+    }
+
+    .stepImage {
+      height: 150px;
+      margin-left: auto;
+    }
+  }
+
+  .step {
+    display: flex;
+    flex-direction: row;
+    gap: 50px;
+    position: relative;
+  }
+
+  .title {
+    font-weight: 450;
+    font-size: 18.66px;
+  }
+
+  .description {
+    font-size: 16px;
+    line-height: 170%;
+    letter-spacing: 0.05em;
+  }
+}
+
+@media (max-width: 1024px) {
+  .banner {
+    padding: 0 10% 100px 10%;
+
+    .cardsGraphic {
+      width: 350px;
+    }
+  }
+
+  .favoriteApps {
+    .infoBoxWrapper {
+      .infoBox {
+        height: 300px;
+      }
+    }
+  }
+
+  .bottomContent {
+    margin: 100px 0% 190px 0%;
+  }
+}
+
+@media (max-width: 900px) {
+  .banner {
+    .cardsGraphic {
+      width: 250px;
+    }
+  }
+
+  .favoriteApps {
+    .infoBoxWrapper {
+      .infoBox {
+        height: 350px;
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .banner {
+    flex-direction: column;
+
+    .cardsGraphic {
+      width: 200px;
+      margin-bottom: 10px;
+    }
+  }
+
+  .favoriteApps {
+    .infoBoxWrapper {
+      width: 100%;
+
+      .infoBox {
+        height: initial;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .info {
+        width: 100%;
+      }
+    }
+
+    .boxes {
+      flex-direction: column;
+    }
+
+    .logos {
+      grid: auto/repeat(2, 1fr);
+    }
+  }
+  .bottomContent {
+    .steps {
+      .stepImage {
+        display: none;
+      }
+
+      .content {
+        width: 100%;
+      }
+    }
+
+    .howItWorksWrapper {
+      grid: auto/repeat(1, 1fr);
+      grid-template-areas:
+        'whyImage1'
+        'whyContent1'
+        'whyImage2'
+        'whyContent2'
+        'whyImage3'
+        'whyContent3';
+
+      .whyImage1 {
+        grid-area: whyImage1;
+      }
+      .whyImage2 {
+        grid-area: whyImage2;
+      }
+      .whyImage3 {
+        grid-area: whyImage3;
+      }
+      .whyContent1 {
+        grid-area: whyContent1;
+      }
+      .whyContent2 {
+        grid-area: whyContent2;
+      }
+      .whyContent3 {
+        grid-area: whyContent3;
+      }
+    }
+  }
+}
+
+@media (max-width: 600px) {
+  .favoriteApps {
+    .logos {
+      grid: auto/repeat(1, 1fr);
+    }
+  }
+}

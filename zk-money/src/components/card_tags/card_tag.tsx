@@ -1,19 +1,9 @@
-import styled, { css } from 'styled-components/macro';
+import styled from 'styled-components/macro';
 
-const motifs = {
-  white: css`
-    background-color: white;
-    color: #1c7cff;
-  `,
-  frost: css`
-    background-color: #4db5ff;
-    color: white;
-  `,
-};
-type Motif = keyof typeof motifs;
-
-export const CardTag = styled.div<{ motif: Motif }>`
-  ${props => motifs[props.motif]}
+export const CardTag = styled.div`
+  background-color: #00000025;
+  border: 1px solid white;
+  color: white;
   font-size: 14px;
   padding: 0 10px;
   border-radius: 5px;

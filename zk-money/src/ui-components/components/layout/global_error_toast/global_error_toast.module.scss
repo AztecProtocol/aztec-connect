@@ -5,7 +5,7 @@
   top: 150px;
   left: 50%;
   transform: translate(-50%, 0);
-  transition: opacity 0.2s, transform 0.2s;
+  transition: opacity 0.2s cubic-bezier(0.215, 0.61, 0.355, 1), transform 0.2s cubic-bezier(0.215, 0.61, 0.355, 1);
 
   background-color: white;
   border: solid red 2px;

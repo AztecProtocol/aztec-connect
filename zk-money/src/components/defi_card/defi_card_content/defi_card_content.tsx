@@ -44,7 +44,8 @@ export const DefiCardContent = (props: DefiCardContentProps) => {
         <DefiCardProgress recipe={props.recipe} />
         <Button
           className={cx(style.defiCardButton, !props.isLoggedIn && style.disabledButton)}
-          theme="gradient"
+          theme={'custom'}
+          gradient={props.recipe.gradient}
           text={`Earn`}
           onClick={handleClickDeposit}
         />

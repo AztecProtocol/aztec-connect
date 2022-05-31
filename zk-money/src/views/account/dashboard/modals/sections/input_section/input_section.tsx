@@ -11,7 +11,8 @@ interface InputSectionProps {
 export function InputSection(props: InputSectionProps) {
   return (
     <div className={style.content}>
-      <BlockTitle title={props.title} info={props.titleComponent} />
+      {/* <BlockTitle title={props.title} info={props.titleComponent} /> */}
+      <div className={style.title}>{props.title}</div>
       <div className={style.component}>{props.component}</div>
       <div className={style.errorMessage}>{props.errorMessage}</div>
     </div>

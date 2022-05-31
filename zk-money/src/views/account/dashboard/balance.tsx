@@ -11,7 +11,7 @@ interface BalanceProps {
 
 export function Balance(props: BalanceProps) {
   return (
-    <div>
+    <div className={style.balanceWrapper}>
       <div className={style.balances}>
         <MyBalance />
         <ShieldMore />

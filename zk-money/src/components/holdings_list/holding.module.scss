@@ -39,7 +39,7 @@
   justify-content: center;
   align-items: center;
   cursor: pointer;
-  transition: transform 0.2s ease-in-out;
+  transition: transform 0.15s cubic-bezier(0.215, 0.61, 0.355, 1);
 }
 
 .disabled {

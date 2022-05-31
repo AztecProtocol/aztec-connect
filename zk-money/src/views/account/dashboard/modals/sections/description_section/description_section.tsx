@@ -9,9 +9,5 @@ interface DescriptionSectionProps {
 }
 
 export function DescriptionSection({ text, className }: DescriptionSectionProps) {
-  return (
-    <div className={cx(style.descriptionSection, className)}>
-      <Text size="xs" text={text} />
-    </div>
-  );
+  return <div className={cx(style.descriptionSection, className)}>{text}</div>;
 }

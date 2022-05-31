@@ -8,6 +8,7 @@ import { ContentWrapper } from './content_wrapper';
 import { Footer } from './footer';
 import { debounce } from 'lodash';
 import { isSafari } from 'device_support';
+import { Pages } from 'views/views';
 
 export * from './content_wrapper';
 export * from './system_message_popup';
@@ -52,6 +53,7 @@ const Background = styled.div<BackgroundProps>`
   z-index: -999999;
 `;
 interface ContentRootProps {
+  fullWidth: boolean;
   extraFooterSpace: boolean;
 }
 
@@ -60,6 +62,8 @@ const ContentRoot = styled(ContentWrapper)<ContentRootProps>`
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+
+  ${({ fullWidth }) => fullWidth && 'width: 100%; max-width: initial;'}
 
   @media (max-width: ${breakpoints.m}) {
     ${({ extraFooterSpace }) => extraFooterSpace && 'padding-bottom: 216px;'}
@@ -112,10 +116,14 @@ export const Template: React.FunctionComponent<TemplateProps> = ({
     return () => window.removeEventListener('resize', resize);
   }, []);
 
+  const fullWidth = window.location.pathname === Pages.HOME;
+
   return (
     <>
       <Root theme={theme}>
-        <ContentRoot extraFooterSpace={withCookie && theme === Theme.GRADIENT}>{!isLoading && children}</ContentRoot>
+        <ContentRoot fullWidth={fullWidth} extraFooterSpace={withCookie && theme === Theme.GRADIENT}>
+          {!isLoading && children}
+        </ContentRoot>
         {!isLoading && (
           <>
             {theme === Theme.WHITE && <Footer />}

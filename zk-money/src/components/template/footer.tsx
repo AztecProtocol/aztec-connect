@@ -51,6 +51,7 @@ const FooterRoot = styled.div`
   margin-top: 80px;
   width: 100%;
   background: ${colours.greyLight};
+  padding: 0 10%;
   font-size: ${fontSizes.m};
   line-height: ${lineHeights.m};
 `;

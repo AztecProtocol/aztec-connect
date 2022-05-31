@@ -8,8 +8,8 @@ $primary_to: #0094ff;
   background-clip: text;
   -webkit-background-clip: text;
   -moz-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  -moz-text-fill-color: transparent;
+  -webkit-text-fill-color: rgba(255, 255, 255, 0);
+  -moz-text-fill-color: rgba(255, 255, 255, 0);
 }
 
 .dropdownWrapper {

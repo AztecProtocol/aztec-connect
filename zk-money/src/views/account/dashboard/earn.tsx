@@ -1,6 +1,7 @@
 import { DefiInvestmentsSection } from 'components/defi_investments/defi_investments_section';
 import { DefiRecipe } from '../../../alt-model/defi/types';
 import { DefiCardsList } from './defi_cards_list';
+import style from './earn.module.scss';
 
 interface EarnProps {
   onOpenDefiEnterModal: (recipe: DefiRecipe) => void;
@@ -11,7 +12,7 @@ interface EarnProps {
 export function Earn(props: EarnProps) {
   const { onOpenDefiEnterModal, onOpenDefiExitModal, isLoggedIn } = props;
   return (
-    <div>
+    <div className={style.earnWrapper}>
       <DefiCardsList onSelect={onOpenDefiEnterModal} isLoggedIn={isLoggedIn} />
       {isLoggedIn && <DefiInvestmentsSection onOpenDefiExitModal={onOpenDefiExitModal} />}
     </div>

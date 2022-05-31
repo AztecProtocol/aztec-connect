@@ -14,6 +14,7 @@ const Root = styled.div`
   background: rgba(255, 255, 255, 0.2);
   box-shadow: 0px 1px 3px rgba(255, 255, 255, 0.1);
   border-radius: ${borderRadiuses.m};
+  margin: 0 10% 5% 10%;
 
   @media (max-width: ${breakpoints.s}) {
     padding: ${spacings.l};

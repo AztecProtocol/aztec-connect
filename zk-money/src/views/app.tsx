@@ -2,7 +2,6 @@ import { AztecSdk } from '@aztec/sdk';
 import { Navbar } from 'ui-components';
 import { BroadcastChannel } from 'broadcast-channel';
 import { PureComponent } from 'react';
-import styled from 'styled-components/macro';
 import type { CutdownAsset } from 'app/types';
 import { AppContext } from '../alt-model/app_context';
 import {
@@ -67,10 +66,6 @@ enum CrossTabEvent {
   LOGGED_IN = 'CROSS_TAB_LOGGED_IN',
   LOGGED_OUT = 'CROSS_TAB_LOGGED_OUT',
 }
-
-const AccountItem = styled.div`
-  padding: ${spacings.xxs} 0;
-`;
 
 const LEGACY_APP_ASSETS: CutdownAsset[] = [
   {
@@ -253,8 +248,7 @@ export class AppView extends PureComponent<AppProps, AppState> {
     this.props.navigate(url);
   };
 
-  private handleSignupAndShield = (amount: bigint) => {
-    this.app.updateShieldForAliasAmountPreselection(amount);
+  private handleSignup = () => {
     const url = getUrlFromLoginMode(LoginMode.SIGNUP);
     this.props.navigate(url);
   };
@@ -331,9 +325,7 @@ export class AppView extends PureComponent<AppProps, AppState> {
       window.location.pathname === Pages.SIGNIN;
 
     const accountComponent = isLoggedIn ? (
-      <AccountItem>
-        <UserAccount account={accountState!} worldState={worldState} onLogout={this.handleLogout} />
-      </AccountItem>
+      <UserAccount account={accountState!} worldState={worldState} onLogout={this.handleLogout} />
     ) : undefined;
 
     return (
@@ -410,7 +402,7 @@ export class AppView extends PureComponent<AppProps, AppState> {
                     <Home
                       isLoggedIn={isLoggedIn}
                       onLogin={this.handleLogin}
-                      onSignupAndShield={this.handleSignupAndShield}
+                      onSignup={this.handleSignup}
                       homeState={homeState}
                     />
                   }

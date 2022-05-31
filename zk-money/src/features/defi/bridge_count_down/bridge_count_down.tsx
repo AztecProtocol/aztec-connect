@@ -21,9 +21,13 @@ export function BridgeCountDown({ recipe, compact }: BridgeCountDownProps) {
     <div>
       <div className={cx(style.info, { compact })}>
         <div>
-          {compact && <br />} {timeStr}
+          {compact && <br />} {timeStr} until batch
         </div>
-        {!compact && <div>{remainingSlots} slots remaining until batch</div>}
+        {!compact && (
+          <div>
+            {remainingSlots}/{data?.totalSlots ?? 1}
+          </div>
+        )}
       </div>
       <ProgressBar progress={progress} />
     </div>

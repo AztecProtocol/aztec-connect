@@ -4,7 +4,7 @@ import { borderRadiuses, inputSizes, inputFontSizeKeys, InputSize, spacings, gra
 import { Spinner, SpinnerTheme } from './spinner';
 import { TextLink } from './text_link';
 
-export type ButtonTheme = 'gradient' | 'white';
+export type ButtonTheme = 'gradient' | 'white' | 'custom';
 
 const outlinedStyle = css`
   position: relative;
@@ -47,6 +47,7 @@ interface StyledButtonProps {
   outlined: boolean;
   disabled: boolean;
   isLoading: boolean;
+  gradient?: string[];
 }
 
 const StyledButton = styled(TextLink)<StyledButtonProps>`
@@ -62,12 +63,16 @@ const StyledButton = styled(TextLink)<StyledButtonProps>`
   user-select: none;
   cursor: pointer;
 
-  ${({ theme }: StyledButtonProps) => {
+  ${({ theme, gradient }: StyledButtonProps) => {
     switch (theme) {
       case 'white':
         return `background: ${colours.white}; box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);`;
       case 'gradient':
         return `background: linear-gradient(134.14deg, ${gradients.primary.from} 18.37%, ${gradients.primary.to} 82.04%);`;
+      case 'custom':
+        return gradient
+          ? `background: linear-gradient(134.14deg, ${gradient[0]} 18.37%, ${gradient[1]} 82.04%);`
+          : `background: linear-gradient(134.14deg, ${gradients.primary.from} 18.37%, ${gradients.primary.to} 82.04%);`;
       default:
         return '';
     }
@@ -140,6 +145,7 @@ interface ButtonProps {
   target?: '_blank';
   disabled?: boolean;
   isLoading?: boolean;
+  gradient?: string[];
 }
 
 export const Button: React.FunctionComponent<ButtonProps> = ({
@@ -149,6 +155,7 @@ export const Button: React.FunctionComponent<ButtonProps> = ({
   parentBackground,
   size = 'm',
   text,
+  gradient,
   children,
   onClick,
   to,
@@ -156,28 +163,34 @@ export const Button: React.FunctionComponent<ButtonProps> = ({
   target,
   disabled = false,
   isLoading = false,
-}) => (
-  <StyledButton
-    className={className}
-    theme={theme}
-    outlined={outlined}
-    parentBackground={parentBackground}
-    inputSize={size}
-    size={inputFontSizeKeys[size]}
-    weight="semibold"
-    color={(theme === 'gradient') !== outlined ? 'white' : 'gradient'}
-    to={to}
-    href={href}
-    target={target}
-    onClick={onClick}
-    disabled={disabled}
-    isLoading={isLoading}
-  >
-    <ContentRoot isLoading={isLoading}>{text || children}</ContentRoot>
-    {isLoading && (
-      <SpinnerRoot>
-        <Spinner theme={(theme === 'gradient') !== outlined ? SpinnerTheme.WHITE : SpinnerTheme.GRADIENT} size="xs" />
-      </SpinnerRoot>
-    )}
-  </StyledButton>
-);
+}) => {
+  const isThemeGradient = theme === 'gradient';
+  const isThemeCustom = theme === 'custom';
+
+  return (
+    <StyledButton
+      className={className}
+      theme={theme}
+      gradient={gradient}
+      outlined={outlined}
+      parentBackground={parentBackground}
+      inputSize={size}
+      size={inputFontSizeKeys[size]}
+      weight="semibold"
+      color={isThemeGradient !== outlined || isThemeCustom ? 'white' : 'gradient'}
+      to={to}
+      href={href}
+      target={target}
+      onClick={onClick}
+      disabled={disabled}
+      isLoading={isLoading}
+    >
+      <ContentRoot isLoading={isLoading}>{text || children}</ContentRoot>
+      {isLoading && (
+        <SpinnerRoot>
+          <Spinner theme={(theme === 'gradient') !== outlined ? SpinnerTheme.WHITE : SpinnerTheme.GRADIENT} size="xs" />
+        </SpinnerRoot>
+      )}
+    </StyledButton>
+  );
+};

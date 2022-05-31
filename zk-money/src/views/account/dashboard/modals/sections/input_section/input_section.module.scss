@@ -1,7 +1,14 @@
+.title {
+  font-weight: 450;
+  font-size: 18.66px;
+  margin: 20px 0;
+}
+
 .content {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  height: 100%;
 }
 
 .errorMessage {

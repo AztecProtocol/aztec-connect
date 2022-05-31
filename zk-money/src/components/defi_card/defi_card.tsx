@@ -13,6 +13,7 @@ interface DefiCardProps {
 export const DefiCard: React.FunctionComponent<DefiCardProps> = props => {
   return (
     <Card
+      gradient={props.recipe.gradient}
       className={props.className}
       cardHeader={<DefiCardHeader recipe={props.recipe} />}
       cardContent={<DefiCardContent {...props} />}

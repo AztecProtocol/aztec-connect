@@ -3,7 +3,7 @@ import { FontSize } from './typography';
 export const inputSizes = {
   s: '40px',
   m: '48px',
-  l: '56px',
+  l: '50px',
 };
 export type InputSize = keyof typeof inputSizes;
 

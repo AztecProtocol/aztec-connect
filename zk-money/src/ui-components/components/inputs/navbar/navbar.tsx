@@ -64,7 +64,6 @@ export function Navbar({
       </div>
 
       <div className={style.accountRoot}>
-        <div />
         {LINKS.map(link => (
           <Link
             key={link.url}
@@ -79,19 +78,21 @@ export function Navbar({
           </Link>
         ))}
         {isLoggedIn || appAction === AppAction.ACCOUNT ? (
-          <div className={style.accountWrapper}>
-            <Link
-              to={Pages.BALANCE}
-              className={cx(style.link, isSafari && style.noLetterSpacing, style.navLink, {
-                active: Pages.BALANCE === location.pathname,
-                white: theme === Theme.WHITE,
-                gradient: theme === Theme.GRADIENT,
-              })}
-            >
-              Wallet
-            </Link>
-            <div className={style.accountComponent}>{accountComponent}</div>
-          </div>
+          <>
+            <div className={style.accountWrapper}>
+              <Link
+                to={Pages.BALANCE}
+                className={cx(style.link, isSafari && style.noLetterSpacing, style.navLink, {
+                  active: Pages.BALANCE === location.pathname,
+                  white: theme === Theme.WHITE,
+                  gradient: theme === Theme.GRADIENT,
+                })}
+              >
+                Wallet
+              </Link>
+            </div>
+            {accountComponent && <div className={style.accountComponent}>{accountComponent}</div>}
+          </>
         ) : (
           <Link
             to={Pages.SIGNIN}

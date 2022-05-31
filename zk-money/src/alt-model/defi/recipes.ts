@@ -1,11 +1,11 @@
 import createDebug from 'debug';
 import { EthAddress, RollupProviderStatus } from '@aztec/sdk';
 import { BridgeFlowAssets, DefiInvestmentType, DefiRecipe, KeyBridgeStat } from './types';
-import lidoLogo from '../../images/lido_white.svg';
-import lidoMiniLogo from '../../images/lido_mini_logo.png';
-import elementFiLogo from '../../images/element_fi_logo.svg';
-import elementMiniLogo from '../../images/element_mini_logo.png';
-import ethToDaiBanner from '../../images/eth_to_dai_banner.svg';
+import lidoLogo from 'images/lido_white.svg';
+import lidoMiniLogo from 'images/lido_mini_logo.png';
+import elementFiLogo from 'images/element_fi_logo.svg';
+import elementMiniLogo from 'images/element_mini_logo.png';
+import ethToDaiBanner from 'images/eth_to_dai_banner.svg';
 import { createElementAdaptor } from './bridge_data_adaptors/element_adaptor';
 import { KNOWN_MAINNET_ASSET_ADDRESSES as KMAA } from 'alt-model/known_assets/known_asset_addresses';
 import { RemoteAsset } from 'alt-model/types';
@@ -82,6 +82,7 @@ const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
   {
     id: 'lido-finance.ETH-to-wStETH',
     addressId: 2,
+    gradient: ['#F29883', '#FDE2B6'],
     openHandleAssetAddress: KMAA.wstETH,
     entryInputAssetAddressA: KMAA.ETH,
     entryOutputAssetAddressA: KMAA.wstETH,

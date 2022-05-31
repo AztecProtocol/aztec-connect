@@ -11,7 +11,7 @@ const Content = styled.div`
 
 export function CardAssetTag({ asset }: { asset: RemoteAsset }) {
   return (
-    <CardTag motif="frost">
+    <CardTag>
       <Content>
         <ShieldedAssetIcon white size={18} address={asset.address} />
         zk{asset.symbol}

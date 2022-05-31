@@ -7,11 +7,8 @@
   display: flex;
   align-items: center;
   padding: spacings.$xxl 0;
-  padding: 64px 0 104px 0;
-
-  @media (max-width: breakpoints.$s) {
-    padding: spacings.$xl 0;
-  }
+  justify-content: space-between;
+  padding: 35px 10% 50px 10%;
 }
 
 .logoRoot {
@@ -19,21 +16,10 @@
   align-items: center;
   flex-shrink: 0;
   line-height: 0;
-
-  @media (max-width: breakpoints.$s) {
-    display: flex;
-    justify-content: center;
-    width: 100%;
-  }
-}
-
-.logoRoot.enabled {
   cursor: pointer;
 }
 
 .logo {
-  margin-right: spacings.$xs;
-  height: 44px;
   clip-path: url(#svgPath);
   background: linear-gradient(
     101.14deg,
@@ -46,7 +32,7 @@
   background-size: 300% 300%;
   overflow: initial;
   height: 48px;
-  transition: background-position 1.25s ease;
+  transition: background-position 1.25s cubic-bezier(0.215, 0.61, 0.355, 1);
 }
 
 .logo.gradient {
@@ -58,12 +44,13 @@
 }
 
 .accountRoot {
-  flex: 1;
   display: flex;
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
   margin-top: 5px;
+  gap: 90px;
+  flex-shrink: 0;
 }
 
 .accountItem {
@@ -93,9 +80,12 @@
 }
 
 .navLink {
-  border-bottom: 2px solid transparent;
+  border-bottom: 2px solid rgba(255, 255, 255, 0);
   position: relative;
   padding-bottom: 5px;
+  opacity: 1;
+  font-weight: 450;
+  font-size: 16px;
 }
 
 .noLetterSpacing {
@@ -103,11 +93,7 @@
 }
 
 .navLink:hover {
-  opacity: 1;
-}
-
-.navLink.active {
-  opacity: 1;
+  opacity: 0.5;
 }
 
 .navLink.white.active::before {
@@ -131,7 +117,7 @@
 }
 
 .balanceLink.gradient::before {
-  @include mixins.gradient_border(10px, 2px, transparent, transparent);
+  @include mixins.gradient_border(10px, 2px, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0));
 }
 
 .balanceLink.gradient:hover::before {
@@ -158,12 +144,33 @@
   position: relative;
 }
 
-.accountComponent {
-  position: absolute;
-  top: 60px;
-}
-
 .disableAnimation {
   clip-path: initial;
   transition: initial;
+}
+
+@media (max-width: 768px) {
+  .accountRoot {
+    gap: 50px;
+  }
+}
+
+@media (max-width: 600px) {
+  .logoRoot {
+    transform: scale(0.75);
+    transform-origin: center left;
+  }
+
+  .accountRoot {
+    gap: 30px;
+    position: absolute;
+    text-align: right;
+    top: 35px;
+    right: 35px;
+    flex-direction: column;
+  }
+
+  .link {
+    width: 100%;
+  }
 }

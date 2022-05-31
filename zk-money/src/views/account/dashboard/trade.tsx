@@ -11,9 +11,7 @@ export function Trade() {
         Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin varius tempus diam, vitae varius mauris pretium
         sodales. Donec molestie, sem eu ultrices venenatis, mi lacus euismod nibh, vel ultrices lectus nunc vitae nisl.{' '}
       </div>
-      <Button className={style.button} theme="white">
-        Read More
-      </Button>
+      <Button className={style.button}>Read More</Button>
     </div>
   );
 }
