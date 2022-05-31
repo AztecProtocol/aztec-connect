@@ -1,6 +1,7 @@
 import { Amount } from 'alt-model/assets';
 import { TouchedFormFields } from 'alt-model/form_fields_hooks';
 import { assetIsSupportedForShielding } from 'alt-model/shield/shieldable_assets';
+import { getAssetPreferredFractionalDigits } from 'alt-model/known_assets/known_asset_display_data';
 import { SendFormValidationResult, SendFormFields } from './send_form_validation';
 
 function getAmountInputFeedback(result: SendFormValidationResult, touched: boolean) {
@@ -27,6 +28,10 @@ function getAmountInputFeedback(result: SendFormValidationResult, touched: boole
     } else {
       return requiredStr;
     }
+  }
+  if (result.issues?.precisionIsTooHigh) {
+    const digits = getAssetPreferredFractionalDigits(result.state.asset.address);
+    return `Please enter no more than ${digits} decimal places.`;
   }
 }
 

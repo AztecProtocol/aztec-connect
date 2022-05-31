@@ -5,7 +5,7 @@ import type { RemoteAsset } from 'alt-model/types';
 import { Amount } from 'alt-model/assets';
 import { max, min } from 'app';
 import { StrOrMax } from 'alt-model/forms/constants';
-import { amountFromStrOrMaxRoundedDown } from 'alt-model/forms/helpers';
+import { amountFromStrOrMaxRoundedDown, getPrecisionIsTooHigh } from 'alt-model/forms/helpers';
 
 export interface DefiFormFields {
   amountStrOrMax: StrOrMax;
@@ -33,6 +33,7 @@ export interface DefiFormValidationResult {
   insufficientFeePayingAssetBalance?: boolean;
   beyondTransactionLimit?: boolean;
   noAmount?: boolean;
+  precisionIsTooHigh?: boolean;
   isValid?: boolean;
   validPayload?: DefiComposerPayload;
   maxOutput?: bigint;
@@ -72,8 +73,14 @@ export function validateDefiForm(input: DefiFormValidationInput): DefiFormValida
   const insufficientTargetAssetBalance = balanceInTargetAsset < requiredInputInTargetAssetCoveringCosts;
   const insufficientFeePayingAssetBalance = balanceInFeePayingAsset < feeAmount.baseUnits;
 
+  const precisionIsTooHigh = getPrecisionIsTooHigh(targetDepositAmount);
+
   const isValid =
-    !insufficientTargetAssetBalance && !insufficientFeePayingAssetBalance && !beyondTransactionLimit && !noAmount;
+    !insufficientTargetAssetBalance &&
+    !insufficientFeePayingAssetBalance &&
+    !beyondTransactionLimit &&
+    !noAmount &&
+    !precisionIsTooHigh;
   const validPayload = isValid ? { targetDepositAmount, feeAmount } : undefined;
 
   return {
@@ -81,6 +88,7 @@ export function validateDefiForm(input: DefiFormValidationInput): DefiFormValida
     insufficientFeePayingAssetBalance,
     beyondTransactionLimit,
     noAmount,
+    precisionIsTooHigh,
     isValid,
     validPayload,
     maxOutput,

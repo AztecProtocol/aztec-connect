@@ -16,3 +16,11 @@ export function amountFromStrOrMaxRoundedDown(amountStrOrMax: StrOrMax, maxL2Out
   }
   return Amount.from(amountStrOrMax, asset);
 }
+
+export function getPrecisionIsTooHigh(amount: Amount) {
+  const digits = getAssetPreferredFractionalDigits(amount.info.address);
+  if (digits === undefined) return false;
+  const truncation = 10n ** BigInt(amount.info.decimals - digits);
+  const truncationHasImpact = (amount.baseUnits / truncation) * truncation !== amount.baseUnits;
+  return truncationHasImpact;
+}

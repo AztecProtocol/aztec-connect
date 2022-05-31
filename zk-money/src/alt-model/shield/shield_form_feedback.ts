@@ -1,5 +1,6 @@
 import { Amount } from 'alt-model/assets';
 import { TouchedFormFields } from 'alt-model/form_fields_hooks';
+import { getAssetPreferredFractionalDigits } from 'alt-model/known_assets/known_asset_display_data';
 import { ShieldFormValidationResult, ShieldFormFields } from './shield_form_validation';
 
 function getAmountInputFeedback(result: ShieldFormValidationResult, touched: boolean) {
@@ -41,6 +42,10 @@ function getAmountInputFeedback(result: ShieldFormValidationResult, touched: boo
     return `Transaction requires ${requiredAmount?.format({ layer: 'L1' })}. You have ${balanceAmount?.format({
       layer: 'L1',
     })} available.`;
+  }
+  if (result.precisionIsTooHigh) {
+    const digits = getAssetPreferredFractionalDigits(result.input.targetAsset.address);
+    return `Please enter no more than ${digits} decimal places.`;
   }
 }
 

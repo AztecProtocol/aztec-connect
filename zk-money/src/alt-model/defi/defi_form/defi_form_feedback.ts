@@ -1,5 +1,6 @@
 import { Amount } from 'alt-model/assets';
 import { TouchedFormFields } from 'alt-model/form_fields_hooks';
+import { getAssetPreferredFractionalDigits } from 'alt-model/known_assets/known_asset_display_data';
 import { assetIsSupportedForShielding } from 'alt-model/shield/shieldable_assets';
 import { DefiFormValidationResult, DefiFormFields } from './defi_form_validation';
 
@@ -28,6 +29,10 @@ function getAmountInputFeedback(result: DefiFormValidationResult, touched: boole
     } else {
       return requiredStr;
     }
+  }
+  if (result.precisionIsTooHigh) {
+    const digits = getAssetPreferredFractionalDigits(result.input.depositAsset.address);
+    return `Please enter no more than ${digits} decimal places.`;
   }
 }
 

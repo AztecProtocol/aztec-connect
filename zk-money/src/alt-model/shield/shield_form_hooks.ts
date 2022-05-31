@@ -46,7 +46,7 @@ export function useShieldForm(preselectedAssetId?: number) {
   const feeAmounts = useDepositFeeAmounts(fields.assetId);
   const feeAmount = feeAmounts?.[fields.speed];
   const balanceInFeePayingAsset = useMaxSpendableValue(feeAmount?.id);
-  const targetAssetAddressStr = targetAsset?.address.toString();
+  const targetAssetAddressStr = targetAsset.address.toString();
   const transactionLimit = isKnownAssetAddressString(targetAssetAddressStr)
     ? config.txAmountLimits[targetAssetAddressStr]
     : undefined;

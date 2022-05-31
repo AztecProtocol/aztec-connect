@@ -108,7 +108,6 @@ export function useSendForm(preselectedAssetId?: number) {
     transactionLimit,
     recipient,
     isLoadingRecipient,
-    // txType,
   });
   const feedback = getSendFormFeedback(validationResult, touchedFields, attemptedLock);
   const composerState = useMaybeObs(lockedComposer?.stateObs);

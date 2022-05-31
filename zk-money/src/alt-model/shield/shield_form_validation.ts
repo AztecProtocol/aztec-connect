@@ -7,7 +7,7 @@ import type { StrOrMax } from 'alt-model/forms/constants';
 import type { KeyVault } from 'app/key_vault';
 import { Amount } from 'alt-model/assets/amount';
 import { max, min } from 'app';
-import { amountFromStrOrMaxRoundedDown } from 'alt-model/forms/helpers';
+import { amountFromStrOrMaxRoundedDown, getPrecisionIsTooHigh } from 'alt-model/forms/helpers';
 
 export interface ShieldFormFields {
   assetId: number;
@@ -19,7 +19,7 @@ export interface ShieldFormFields {
 interface ShieldFormValidationInputs {
   fields: ShieldFormFields;
   amountFactory?: AmountFactory;
-  targetAsset?: RemoteAsset;
+  targetAsset: RemoteAsset;
   l1Balance?: bigint;
   l1PendingBalance?: bigint;
   keyVault?: KeyVault;
@@ -50,6 +50,7 @@ export interface ShieldFormValidationResult {
   requiresSpendingKey?: boolean;
   beyondTransactionLimit?: boolean;
   noAmount?: boolean;
+  precisionIsTooHigh?: boolean;
   isValid?: boolean;
   validPayload?: ShieldComposerPayload;
   maxL2Output?: bigint;
@@ -137,6 +138,7 @@ export function validateShieldForm(input: ShieldFormValidationInputs): ShieldFor
   const mustAllowForFee = targetAssetIsPayingFee && couldShieldIfThereWereNoCosts;
   const mustAllowForGas = isEth && couldShieldIfThereWereNoCosts;
 
+  const precisionIsTooHigh = getPrecisionIsTooHigh(targetL2OutputAmount);
   const aliasIsValid = !!recipientUserId && !isLoadingRecipientUserId;
 
   const isValid =
@@ -144,6 +146,7 @@ export function validateShieldForm(input: ShieldFormValidationInputs): ShieldFor
     !insufficientFeePayingAssetBalance &&
     !beyondTransactionLimit &&
     !noAmount &&
+    !precisionIsTooHigh &&
     aliasIsValid;
   const validPayload = isValid
     ? {
@@ -162,6 +165,7 @@ export function validateShieldForm(input: ShieldFormValidationInputs): ShieldFor
     requiresSpendingKey,
     beyondTransactionLimit,
     noAmount,
+    precisionIsTooHigh,
     isValid,
     validPayload,
     input,

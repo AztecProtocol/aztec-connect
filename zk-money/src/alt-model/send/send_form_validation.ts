@@ -2,7 +2,7 @@ import { TxSettlementTime } from '@aztec/sdk';
 import { Amount } from 'alt-model/assets';
 import { AmountFactory } from 'alt-model/assets/amount_factory';
 import { StrOrMax } from 'alt-model/forms/constants';
-import { amountFromStrOrMaxRoundedDown } from 'alt-model/forms/helpers';
+import { amountFromStrOrMaxRoundedDown, getPrecisionIsTooHigh } from 'alt-model/forms/helpers';
 import { RemoteAsset } from 'alt-model/types';
 import { max, min } from 'app';
 import { Recipient, SendComposerPayload } from './send_form_composer';
@@ -19,7 +19,7 @@ export interface SendFormFields {
 interface SendFormValidationInput {
   fields: SendFormFields;
   amountFactory?: AmountFactory;
-  asset?: RemoteAsset;
+  asset: RemoteAsset;
   balanceInTargetAsset?: bigint;
   feeAmount?: Amount;
   feeAmounts?: (Amount | undefined)[];
@@ -44,6 +44,7 @@ interface SendFormValidationResultIssues {
   insufficientFeePayingAssetBalance?: boolean;
   beyondTransactionLimit?: boolean;
   unrecognisedTargetAmount?: boolean;
+  precisionIsTooHigh?: boolean;
 }
 
 export interface SendFormValidationResult {
@@ -65,13 +66,7 @@ export function validateSendForm(input: SendFormValidationInput): SendFormValida
     recipient,
     isLoadingRecipient,
   } = input;
-  if (
-    !asset ||
-    !amountFactory ||
-    !feeAmount ||
-    balanceInTargetAsset === undefined ||
-    balanceInFeePayingAsset === undefined
-  ) {
+  if (!amountFactory || !feeAmount || balanceInTargetAsset === undefined || balanceInFeePayingAsset === undefined) {
     return { isLoading: true, state: { ...input } };
   }
   if (transactionLimit === undefined) {
@@ -93,11 +88,14 @@ export function validateSendForm(input: SendFormValidationInput): SendFormValida
   const insufficientFeePayingAssetBalance = balanceInFeePayingAsset < feeAmount.baseUnits;
   const invalidRecipient = !isLoadingRecipient && !recipient;
 
+  const precisionIsTooHigh = getPrecisionIsTooHigh(targetAmount);
+
   const isInvalid =
     insufficientTargetAssetBalance ||
     insufficientFeePayingAssetBalance ||
     beyondTransactionLimit ||
     noAmount ||
+    precisionIsTooHigh ||
     invalidRecipient;
   const isValid = !isInvalid;
   const validComposerPayload = isValid && recipient ? { targetAmount, feeAmount, recipient } : undefined;
@@ -108,6 +106,7 @@ export function validateSendForm(input: SendFormValidationInput): SendFormValida
       insufficientFeePayingAssetBalance,
       beyondTransactionLimit,
       noAmount,
+      precisionIsTooHigh,
     },
     state: {
       ...input,
