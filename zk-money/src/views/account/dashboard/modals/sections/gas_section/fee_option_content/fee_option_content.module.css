@@ -6,7 +6,7 @@
 }
 
 .time {
-  font-weight: 450;
+  font-weight: 300;
 }
 
 .amount {
@@ -14,6 +14,5 @@
 }
 
 .price {
-  font-size: 11px;
-  opacity: 0.8;
+  opacity: 0.2;
 }

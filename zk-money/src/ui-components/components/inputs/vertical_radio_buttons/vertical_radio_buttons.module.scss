@@ -4,15 +4,26 @@
 .root {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 8px;
+  padding-top: 14px;
 }
 
 .opt {
-  height: 20px;
   display: flex;
-  gap: 24px;
+  gap: 20px;
   cursor: pointer;
   align-items: center;
+  padding: 8px 20px;
+  border-radius: 10px;
+  transition: all ease 0.3s;
+  position: relative;
+  border: 1px solid rgba(0, 0, 0, 0);
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+  &.selected {
+    border: 1px solid;
+  }
 }
 
 .cell {
@@ -29,11 +40,11 @@
   @include mixins.gradient_border(4px, 1px, #e9e6e6, #e9e6e6);
 }
 
-.cell.selected::before {
+.selected .cell::before {
   @include mixins.gradient_border(4px, 1px);
 }
 
-.cell.selected .circle {
+.selected .cell .circle {
   width: 10px;
   height: 10px;
   border-radius: 5px;

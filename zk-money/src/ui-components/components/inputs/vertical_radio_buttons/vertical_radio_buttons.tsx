@@ -5,7 +5,7 @@ const cx = bindStyle(style);
 
 type SomeId = string | number;
 
-interface RadioButtonOption<TId extends SomeId> {
+export interface RadioButtonOption<TId extends SomeId> {
   id: TId;
   content: React.ReactNode;
 }
@@ -20,8 +20,12 @@ export function VerticalRadioButtons<TId extends SomeId>(props: VerticalRadioBut
   return (
     <div className={style.root}>
       {props.options.map(opt => (
-        <div key={opt.id} className={style.opt} onClick={() => props.onChangeValue(opt.id)}>
-          <div className={cx(style.cell, { selected: opt.id === props.value })}>
+        <div
+          key={opt.id}
+          className={cx(style.opt, { selected: opt.id === props.value })}
+          onClick={() => props.onChangeValue(opt.id)}
+        >
+          <div className={cx(style.cell)}>
             <div className={style.circle} />
           </div>
           <div className={style.optContent}>{opt.content}</div>

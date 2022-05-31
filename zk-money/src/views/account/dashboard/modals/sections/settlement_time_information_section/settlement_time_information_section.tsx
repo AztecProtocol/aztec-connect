@@ -28,9 +28,13 @@ interface SettlementProgressBarProps {
 function SettlementProgressBar(props: SettlementProgressBarProps) {
   return (
     <div className={style.settlementWrapper}>
-      <div className={style.title}>{props.remainingSlots} slots remaining until batch</div>
+      {props.progress === 1 && <div className={style.title}>Congrats, you're paying for the full batch. 🎉</div>}
+      {props.progress !== 1 && <div className={style.title}>{props.remainingSlots} slots remaining until batch</div>}
       <ProgressBar className={style.bar} progress={props.progress} />
-      <div className={style.text}>Pay a Fast Track or Instant fee to send the batch more quickly.</div>
+      {props.progress === 1 && <div className={style.text}>You're getting faster settlement as a result.</div>}
+      {props.progress !== 1 && (
+        <div className={style.text}>Pay a Fast Track or Instant fee to send the batch more quickly.</div>
+      )}
     </div>
   );
 }

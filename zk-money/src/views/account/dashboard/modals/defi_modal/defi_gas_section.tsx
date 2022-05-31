@@ -1,7 +1,7 @@
 import type { Amount } from 'alt-model/assets';
 import type { DefiRecipe } from 'alt-model/defi/types';
 import { BridgeId, DefiSettlementTime } from '@aztec/sdk';
-import { VerticalRadioButtons } from 'ui-components';
+import { VerticalRadioButtons, RadioButtonOption } from 'ui-components';
 import { InputSection } from '../sections/input_section';
 import { MiniL2BalanceIndicator } from '../sections/amount_section/mini_balance_indicators';
 import { SectionInfo } from '../modal_molecules/section_info';
@@ -45,8 +45,21 @@ export function DefiGasSection(props: DefiGasSectionProps) {
     bridgeStatus,
   );
 
-  const options = [
-    {
+  const options: RadioButtonOption<DefiSettlementTime>[] = [];
+
+  if (batchSettlementTime && nextSettlementTime && batchSettlementTime.getTime() === nextSettlementTime.getTime()) {
+    options.push({
+      id: DefiSettlementTime.DEADLINE,
+      content: (
+        <FeeOptionContent
+          label="Batched"
+          expectedTimeOfSettlement={nextSettlementTime}
+          feeAmount={feeAmounts?.[DefiSettlementTime.DEADLINE]}
+        />
+      ),
+    });
+  } else {
+    options.push({
       id: DefiSettlementTime.DEADLINE,
       content: (
         <FeeOptionContent
@@ -55,8 +68,8 @@ export function DefiGasSection(props: DefiGasSectionProps) {
           feeAmount={feeAmounts?.[DefiSettlementTime.DEADLINE]}
         />
       ),
-    },
-    {
+    });
+    options.push({
       id: DefiSettlementTime.NEXT_ROLLUP,
       content: (
         <FeeOptionContent
@@ -65,18 +78,19 @@ export function DefiGasSection(props: DefiGasSectionProps) {
           feeAmount={feeAmounts?.[DefiSettlementTime.NEXT_ROLLUP]}
         />
       ),
-    },
-    {
-      id: DefiSettlementTime.INSTANT,
-      content: (
-        <FeeOptionContent
-          label="Instant"
-          expectedTimeOfSettlement={instantSettlementTime}
-          feeAmount={feeAmounts?.[DefiSettlementTime.INSTANT]}
-        />
-      ),
-    },
-  ];
+    });
+  }
+
+  options.push({
+    id: DefiSettlementTime.INSTANT,
+    content: (
+      <FeeOptionContent
+        label="Instant"
+        expectedTimeOfSettlement={instantSettlementTime}
+        feeAmount={feeAmounts?.[DefiSettlementTime.INSTANT]}
+      />
+    ),
+  });
 
   return (
     <InputSection

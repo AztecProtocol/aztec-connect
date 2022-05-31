@@ -4,10 +4,7 @@
   font-size: 14px;
   padding-top: 30px;
   line-height: 160%;
-}
-
-.root p {
-  margin-bottom: 10px;
+  min-height: 85px;
 }
 
 .root b {

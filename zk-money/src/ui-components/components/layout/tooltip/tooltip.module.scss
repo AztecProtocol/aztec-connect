@@ -1,7 +1,7 @@
 @use '../../../styles/mixins.scss';
 
 .tooltip {
-  background-color: rgba(255, 255, 255, 0.9);
+  background-color: rgba(255, 255, 255, 0.98);
   padding: 15px 20px;
   font-size: 16px;
   min-width: 220px;
@@ -13,4 +13,7 @@
   line-height: 150%;
   letter-spacing: 0.03em;
   color: black;
+  a {
+    display: initial;
+  }
 }
