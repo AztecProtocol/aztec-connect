@@ -43,7 +43,8 @@ export async function deployRollupProcessor(
   await rollup.setRollupProvider(signerAddress, true, { gasLimit });
 
   console.error(`RollupProcessor contract address: ${rollup.address}`);
-  console.error(`Proxy admin contract address: ${proxyAdmin.address}`);
+  console.error(`Proxy admin contract address    : ${proxyAdmin.address}`);
+  console.error(`Proxy Deployer contract address : ${proxyAdmin.proxyDeployer.address}`);
 
   return { rollup, proxyAdmin };
 }

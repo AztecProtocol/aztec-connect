@@ -1,16 +1,22 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { Contract, ContractFactory, Signer } from 'ethers';
+import { formatBytes32String } from 'ethers/lib/utils';
 import * as ProxyAdminContract from '../../artifacts/@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol/ProxyAdmin.json';
 import * as ProxyContract from '../../artifacts/@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol/TransparentUpgradeableProxy.json';
+import * as ProxyDeployer from '../../artifacts/contracts/periphery/ProxyDeployer.sol/ProxyDeployer.json';
 
 /**
  * Thin wrapper around the Proxy Admin contract.
  */
 export class ProxyAdmin {
   proxyAdmin: Contract;
+  proxyDeployer: Contract;
+
+  vanitySalt: string = formatBytes32String('Aztec Connect');
 
   constructor(private signer: Signer) {
     this.proxyAdmin = new Contract(EthAddress.ZERO.toString(), ProxyAdminContract.abi, this.signer);
+    this.proxyDeployer = new Contract(EthAddress.ZERO.toString(), ProxyDeployer.abi, this.signer);
   }
 
   connectNewSigner(signer: Signer) {
@@ -25,6 +31,8 @@ export class ProxyAdmin {
   async deployInstance() {
     const factory = new ContractFactory(ProxyAdminContract.abi, ProxyAdminContract.bytecode, this.signer);
     this.proxyAdmin = await (await factory.deploy()).deployed();
+    const deployerFactory = new ContractFactory(ProxyDeployer.abi, ProxyDeployer.bytecode, this.signer);
+    this.proxyDeployer = await (await deployerFactory.deploy()).deployed();
   }
 
   get address() {
@@ -92,11 +100,17 @@ export class ProxyAdmin {
     constructorArgs: unknown[],
   ): Promise<Contract> {
     const implementation = await (await implementationFactory.deploy(...constructorArgs)).deployed();
-    const proxyFactory = new ContractFactory(ProxyContract.abi, ProxyContract.bytecode, this.signer);
     const calldata = implementation.interface.encodeFunctionData('initialize', initializeArgs);
-    const proxy = await (
-      await proxyFactory.deploy(implementation.address, this.proxyAdmin.address, calldata)
-    ).deployed();
+
+    const tx = await (
+      await this.proxyDeployer.deployProxy(implementation.address, this.proxyAdmin.address, calldata, this.vanitySalt)
+    ).wait();
+
+    const events = tx.events;
+    const proxyDeployedEvent = events[events.length - 1];
+    const proxyAddress = proxyDeployedEvent.args['proxy'];
+
+    const proxy = new Contract(proxyAddress, ProxyContract.abi, this.signer);
 
     return implementation.attach(proxy.address);
   }
