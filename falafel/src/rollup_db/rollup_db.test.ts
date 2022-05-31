@@ -448,6 +448,31 @@ describe('rollup_db', () => {
     expect(settledRollups2[0].rollupProof).not.toBeUndefined();
   });
 
+  it('should erase db', async () => {
+    const tx0 = randomTx();
+    const tx1 = randomTx();
+    const rollupProof = randomRollupProof([tx0, tx1], 0);
+    const rollup = randomRollup(0, rollupProof);
+
+    await rollupDb.addRollup(rollup);
+
+    {
+      const txs = await rollupDb.getUnsettledTxs();
+      const rollups = await rollupDb.getUnsettledRollups();
+      expect(txs.length).toBe(2);
+      expect(rollups.length).toBe(1);
+    }
+
+    await rollupDb.eraseDb();
+
+    {
+      const txs = await rollupDb.getUnsettledTxs();
+      const rollups = await rollupDb.getUnsettledRollups();
+      expect(txs.length).toBe(0);
+      expect(rollups.length).toBe(0);
+    }
+  });
+
   it('should get unsettled tx count', async () => {
     const tx0 = randomTx();
     await rollupDb.addTx(tx0);

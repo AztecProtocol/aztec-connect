@@ -98,6 +98,9 @@ export class RollupPublisher {
 
     mainLoop: while (!this.interrupted) {
       await this.awaitGasPriceBelowThresholdAndSufficientBalance(rollupTxs, defaultSignerAddress);
+      if (this.interrupted) {
+        break;
+      }
 
       let nonce = await this.ethereumRpc.getTransactionCount(defaultSignerAddress);
 

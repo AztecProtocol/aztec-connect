@@ -411,11 +411,11 @@ export class TypeOrmRollupDb implements RollupDb {
   }
 
   public async eraseDb() {
-    await this.txRep.clear();
-    await this.accountRep.clear();
-    await this.assetMetricsRep.clear();
-    await this.claimRep.clear();
-    await this.rollupRep.clear();
-    await this.rollupProofRep.clear();
+    await this.accountRep.delete({});
+    await this.assetMetricsRep.delete({});
+    await this.claimRep.delete({});
+    await this.rollupRep.delete({});
+    await this.rollupProofRep.delete({});
+    await this.txRep.delete({});
   }
 }
