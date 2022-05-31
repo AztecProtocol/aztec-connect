@@ -6,6 +6,7 @@ import { getEnvironment } from './config';
 import { Views } from './views';
 import { TopLevelContextProvider } from 'alt-model/top_level_context/top_level_context_provider';
 import { ErrorToast } from 'ui-components/components/layout/global_error_toast';
+import { AppInitFailed } from 'views/app_init_failed';
 
 declare global {
   interface Window {
@@ -13,18 +14,28 @@ declare global {
   }
 }
 
-async function main() {
-  const { config, initialRollupProviderStatus } = await getEnvironment();
-
-  ReactDOM.render(
-    <TopLevelContextProvider config={config} initialRollupProviderStatus={initialRollupProviderStatus}>
+async function rootRender() {
+  try {
+    const { config, initialRollupProviderStatus } = await getEnvironment();
+    return (
+      <TopLevelContextProvider config={config} initialRollupProviderStatus={initialRollupProviderStatus}>
+        <BrowserRouter>
+          <Views config={config} />
+        </BrowserRouter>
+        <ErrorToast />
+      </TopLevelContextProvider>
+    );
+  } catch {
+    return (
       <BrowserRouter>
-        <Views config={config} />
+        <AppInitFailed />
       </BrowserRouter>
-      <ErrorToast />
-    </TopLevelContextProvider>,
-    document.getElementById('root'),
-  );
+    );
+  }
+}
+
+async function main() {
+  ReactDOM.render(await rootRender(), document.getElementById('root'));
 }
 
 main().catch(console.log);
