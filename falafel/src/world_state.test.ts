@@ -433,7 +433,7 @@ describe('world_state', () => {
   it('tx is rejected if it breaches the pending deposit', async () => {
     await worldState.start();
     const publicAssetId = 0;
-    const publicOwner = EthAddress.randomAddress();
+    const publicOwner = EthAddress.random();
     const publicValue = 10000n;
     const txDao = buildTxDao({
       proofId: ProofId.DEPOSIT,
@@ -455,7 +455,7 @@ describe('world_state', () => {
   it('txs are rejected once they breach the pending deposit', async () => {
     await worldState.start();
     const publicAssetId = 0;
-    const publicOwner = EthAddress.randomAddress();
+    const publicOwner = EthAddress.random();
     const publicValue = 10000n;
     // load these into pending txs
     pendingTxs = Array.from({ length: 4 }).map((_, i) =>
@@ -478,9 +478,9 @@ describe('world_state', () => {
   it('pending deposit validation is based on asset and owner', async () => {
     await worldState.start();
     const publicAssetId1 = 0;
-    const publicOwner1 = EthAddress.randomAddress();
+    const publicOwner1 = EthAddress.random();
     const publicAssetId2 = 1;
-    const publicOwner2 = EthAddress.randomAddress();
+    const publicOwner2 = EthAddress.random();
     const publicValue = 10000n;
     const owner1Txs = Array.from({ length: 4 }).map((_, i) =>
       buildTxDao({
@@ -517,9 +517,9 @@ describe('world_state', () => {
   it('txs are still accepted even if after a tx that was rejected', async () => {
     await worldState.start();
     const publicAssetId1 = 0;
-    const publicOwner1 = EthAddress.randomAddress();
+    const publicOwner1 = EthAddress.random();
     const publicAssetId2 = 0;
-    const publicOwner2 = EthAddress.randomAddress();
+    const publicOwner2 = EthAddress.random();
     // for tx set 1 index 2 will breach and be rejected, 3 will be accepted, 4 rejected and 5 accepted
     // for tx set 2 indexes 1 and 2 will breach and be rejected, 3 will be accepted, 4 rejected and 5 accepted
     const publicValues = [10000n, 10000n, 10000n, 5000n, 5000n, 4000n];
@@ -555,7 +555,7 @@ describe('world_state', () => {
   it('tx is rejected if chains off note 1 of rejected tx', async () => {
     await worldState.start();
     const publicAssetId1 = 0;
-    const publicOwner1 = EthAddress.randomAddress();
+    const publicOwner1 = EthAddress.random();
     const chainedCommitment = randomBytes(32);
     // index 2 will breach and be rejected, 3 will be accepted, 4 rejected and 5 accepted
     const publicValues = [10000n, 10000n, 10000n, 5000n, 5000n, 4000n];
@@ -587,7 +587,7 @@ describe('world_state', () => {
   it('tx is rejected if chains off note 2 of rejected tx', async () => {
     await worldState.start();
     const publicAssetId1 = 0;
-    const publicOwner1 = EthAddress.randomAddress();
+    const publicOwner1 = EthAddress.random();
     const chainedCommitment = randomBytes(32);
     // index 2 will breach and be rejected, 3 will be accepted, 4 rejected and 5 accepted
     const publicValues = [10000n, 10000n, 10000n, 5000n, 5000n, 4000n];
@@ -619,7 +619,7 @@ describe('world_state', () => {
   it('all txs in chain are rejected', async () => {
     await worldState.start();
     const publicAssetId1 = 0;
-    const publicOwner1 = EthAddress.randomAddress();
+    const publicOwner1 = EthAddress.random();
     const spentNullifier = randomBytes(32);
     const chainedCommitment1 = randomBytes(32);
     const chainedCommitment2 = randomBytes(32);

@@ -206,7 +206,7 @@ interface UserAccountProps {
 export const UserAccount: React.FunctionComponent<UserAccountProps> = ({ account, worldState, onLogout }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const isSynced = worldState.accountSyncedToRollup === worldState.latestRollup;
-  const { userId, alias } = account;
+  const { alias } = account;
 
   return (
     <Root>
@@ -236,10 +236,7 @@ export const UserAccount: React.FunctionComponent<UserAccountProps> = ({ account
             </DropdownTitle>
             <DropdownItemRoot>
               <DropdownItem>
-                <Text text={`Account Nonce: ${userId.accountNonce}`} nowrap />
-              </DropdownItem>
-              <DropdownItem>
-                <TextLink text="Switch User" onClick={onLogout} color="indigo" weight="semibold" nowrap />
+                <TextLink text="Switch user" onClick={onLogout} color="indigo" weight="semibold" nowrap />
               </DropdownItem>
             </DropdownItemRoot>
           </Dropdown>

@@ -21,13 +21,13 @@ Note: `pedersen::compress` is collision resistant (see the large comment above t
 
 An **Account Note** associates a spending key with an account. It consists of the following field elements. See the dedicated [account_circuit.md](./account_circuit.md) for more details.
 
-- `account_alias_id`: a concatentation of the 224 bit `alias_hash`, with the 32-bit `account_nonce`. `account_alias_id` is enforced to be smaller than $p$ (the bn-254 curve size), thus not all 32 byte values are possible.
+- `alias_hash`: the 224 bit `alias_hash`
 - `account_public_key.x`: the x-coordinate of the account public key
 - `spending_public_key.x`: the x-coordinate of the spending key that is been assigned to this account via this note.
 
 An account note commitment is:
 
-- `pedersen::compress(account_alias_id, account_public_key.x, signing_pub_key.x)`
+- `pedersen::compress(alias_hash, account_public_key.x, signing_pub_key.x)`
   - Pedersen GeneratorIndex: `ACCOUNT_NOTE_COMMITMENT`
   - `allow_zero_inputs = true`
 
@@ -38,7 +38,7 @@ Consists of the following:
 - `secret`: a random value to hide the contents of the
   commitment.
 - `owner.x` and `owner.y`: the public key of the owner of the value note. This is a Grumpkin point.
-- `account_nonce`: see the [account circuit doc](./account_circuit.md) for more details. This nonce links this value note with an account note.
+- `account_required`: Is the note linked to an existing account or can the note be spent without an account, by directly signing with the owner key
 - `creator_pubkey`: Optional. Allows the sender of a value note to inform the recipient who the note came from.
 - `value`: the value contained in this note.
 - `asset_id`: unique identifier for the 'currency' of this note. The RollupProcessor.sol maps asset_id's with either ETH or the address of some ERC-20 contract.
@@ -46,12 +46,12 @@ Consists of the following:
 
 **partial commitment**
 
-- `pedersen::compress(secret, owner.x, owner.y, account_nonce, creator_pubkey)`
+- `pedersen::compress(secret, owner.x, owner.y, account_required, creator_pubkey)`
   - Pedersen GeneratorIndex: `VALUE_NOTE_PARTIAL_COMMITMENT`
   - `allow_zero_inputs = true`
     - `creator_pubkey` can be zero.
 
-> _Note:_ The `account_nonce` plays a role in enabling the revocation of spending keys. The `secret` is to construct a hiding Pedersen commitment to hide the note details.
+> _Note:_ The `secret` is to construct a hiding Pedersen commitment to hide the note details.
 
 **complete commitment**
 
@@ -63,7 +63,7 @@ Consists of the following:
 In other words:
 
 $$
-Comm(\text{ValueNote}) = \big( [(note.secret \cdot g_0 + note.owner.x \cdot g_1 + note.owner.y \cdot g_2 + note.account\_nonce \cdot g_3 + note.creator\_pubkey \cdot g_4).x] \cdot h_0 + \\ note.value \cdot h_1 + note.asset\_id \cdot h_2 + note.input\_nullifier \cdot h_5 \big) .x
+Comm(\text{ValueNote}) = \big( [(note.secret \cdot g_0 + note.owner.x \cdot g_1 + note.owner.y \cdot g_2 + note.account\_required \cdot g_3 + note.creator\_pubkey \cdot g_4).x] \cdot h_0 + \\ note.value \cdot h_1 + note.asset\_id \cdot h_2 + note.input\_nullifier \cdot h_5 \big) .x
 $$
 
 (The generator indexing is just for illustration. Consult the code.)

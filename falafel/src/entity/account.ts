@@ -1,4 +1,4 @@
-import { Entity, Index, JoinColumn, OneToOne, PrimaryColumn } from 'typeorm';
+import { Column, Entity, Index, JoinColumn, OneToOne, PrimaryColumn } from 'typeorm';
 import { bufferColumn } from './init_entities';
 import { TxDao } from './tx';
 
@@ -8,15 +8,12 @@ export class AccountDao {
     Object.assign(this, init);
   }
 
-  @PrimaryColumn(...bufferColumn({ length: 32 }))
-  public aliasHash!: Buffer;
-
   @PrimaryColumn(...bufferColumn({ length: 64 }))
-  public accountPubKey!: Buffer;
+  public accountPublicKey!: Buffer;
 
-  @PrimaryColumn()
+  @Column(...bufferColumn({ length: 32 }))
   @Index({ unique: false })
-  public accountNonce!: number;
+  public aliasHash!: Buffer;
 
   @OneToOne(() => TxDao, { nullable: true, onDelete: 'CASCADE' })
   @JoinColumn()

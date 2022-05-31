@@ -5,16 +5,16 @@ import { UserDefiTx } from '@aztec/sdk';
 import { useSdk } from './top_level_context';
 
 export function useDefiTxs() {
-  const { accountId } = useApp();
+  const { userId } = useApp();
   const sdk = useSdk();
   const [txs, setTxs] = useState<UserDefiTx[]>();
   useEffect(() => {
     setTxs(undefined);
-    if (sdk && accountId) {
-      const updateTxs = () => sdk.getDefiTxs(accountId).then(setTxs);
+    if (sdk && userId) {
+      const updateTxs = () => sdk.getDefiTxs(userId).then(setTxs);
       updateTxs();
-      return listenAccountUpdated(sdk, accountId, updateTxs);
+      return listenAccountUpdated(sdk, userId, updateTxs);
     }
-  }, [sdk, accountId]);
+  }, [sdk, userId]);
   return txs;
 }

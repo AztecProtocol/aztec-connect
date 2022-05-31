@@ -10,7 +10,7 @@ describe('OffchainDefiDepositData', () => {
     const userData = new OffchainDefiDepositData(
       BridgeId.random(),
       randomBytes(32), // partialState
-      GrumpkinAddress.randomAddress(), // partialStateSecretEphPubKey
+      GrumpkinAddress.random(), // partialStateSecretEphPubKey
       toBigIntBE(randomBytes(32)), // depositValue
       toBigIntBE(randomBytes(32)), // txFee
       ViewingKey.random(),
@@ -27,7 +27,7 @@ describe('OffchainDefiDepositData', () => {
         new OffchainDefiDepositData(
           BridgeId.random(),
           randomBytes(33),
-          GrumpkinAddress.randomAddress(),
+          GrumpkinAddress.random(),
           toBigIntBE(randomBytes(32)),
           toBigIntBE(randomBytes(32)),
           ViewingKey.random(),
@@ -42,7 +42,7 @@ describe('OffchainDefiDepositData', () => {
         new OffchainDefiDepositData(
           BridgeId.random(),
           randomBytes(32),
-          GrumpkinAddress.randomAddress(),
+          GrumpkinAddress.random(),
           toBigIntBE(randomBytes(32)),
           toBigIntBE(randomBytes(32)),
           ViewingKey.EMPTY,

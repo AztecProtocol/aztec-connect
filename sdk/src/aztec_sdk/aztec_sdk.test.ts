@@ -1,4 +1,4 @@
-import { AccountId } from '@aztec/barretenberg/account_id';
+import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { ClientEthereumBlockchain } from '@aztec/blockchain';
 import { CoreSdk } from '../core_sdk';
@@ -46,7 +46,7 @@ describe('aztec sdk', () => {
   });
 
   describe('getDefiFees', () => {
-    const userId = AccountId.random();
+    const userId = GrumpkinAddress.random();
 
     it('return fees for a bridge without specifying deposit value', async () => {
       const bridgeId = new BridgeId(0, assetId, 3);

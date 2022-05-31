@@ -1,8 +1,11 @@
 import { Blake2s, randomBytes } from '../crypto';
 
 export class AliasHash {
+  static SIZE = 28;
+  static ZERO = new AliasHash(Buffer.alloc(AliasHash.SIZE));
+
   constructor(private buffer: Buffer) {
-    if (buffer.length !== 28) {
+    if (buffer.length !== AliasHash.SIZE) {
       throw new Error('Invalid alias hash buffer.');
     }
   }

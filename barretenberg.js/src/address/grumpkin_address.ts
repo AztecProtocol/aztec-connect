@@ -2,10 +2,11 @@ import { randomBytes } from '../crypto';
 import { Grumpkin } from '../ecc/grumpkin';
 
 export class GrumpkinAddress {
-  public static ZERO = new GrumpkinAddress(Buffer.alloc(64));
+  public static SIZE = 64;
+  public static ZERO = new GrumpkinAddress(Buffer.alloc(GrumpkinAddress.SIZE));
 
   constructor(private buffer: Buffer) {
-    if (buffer.length !== 64) {
+    if (buffer.length !== GrumpkinAddress.SIZE) {
       throw new Error('Invalid address buffer.');
     }
   }
@@ -24,7 +25,7 @@ export class GrumpkinAddress {
   /**
    * NOT a valid address! Do not use in proofs.
    */
-  public static randomAddress() {
+  public static random() {
     return new GrumpkinAddress(randomBytes(64));
   }
 
@@ -53,5 +54,10 @@ export class GrumpkinAddress {
 
   toString() {
     return `0x${this.buffer.toString('hex')}`;
+  }
+
+  toShortString() {
+    const str = this.toString();
+    return `${str.slice(0, 10)}...${str.slice(-4)}`;
   }
 }

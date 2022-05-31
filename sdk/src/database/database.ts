@@ -1,4 +1,4 @@
-import { AccountId, AliasHash } from '@aztec/barretenberg/account_id';
+import { AliasHash } from '@aztec/barretenberg/account_id';
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { MutexDatabase } from '@aztec/barretenberg/mutex';
 import { TxId } from '@aztec/barretenberg/tx_id';
@@ -6,30 +6,21 @@ import { CoreAccountTx, CoreClaimTx, CoreDefiTx, CorePaymentTx, CoreUserTx } fro
 import { Note } from '../note';
 import { UserData } from '../user';
 
-// export interface SigningKey {
-//   accountId: AccountId;
-//   key: Buffer; // only contains x coordinate of a grumpkin address.
-//   treeIndex: number;
-// }
-
-// export interface Alias {
-//   aliasHash: AliasHash;
-//   address: GrumpkinAddress;
-//   latestNonce: number;
-// }
-
-// Temporary workaround. Parcel can't find Alias and SigningKey if they are declared as interfaces :/
-export class SigningKey {
+export class SpendingKey {
   constructor(
-    public accountId: AccountId,
+    public userId: GrumpkinAddress,
     public key: Buffer, // only contains x coordinate of a grumpkin address.
     public treeIndex: number,
     public hashPath: Buffer,
-  ) {}
+  ) {
+    if (key.length !== 32) {
+      throw new Error('Invalid key buffer.');
+    }
+  }
 }
 
 export class Alias {
-  constructor(public aliasHash: AliasHash, public address: GrumpkinAddress, public latestNonce: number) {}
+  constructor(public accountPublicKey: GrumpkinAddress, public aliasHash: AliasHash, public index: number) {}
 }
 
 export interface Database extends MutexDatabase {
@@ -41,31 +32,31 @@ export interface Database extends MutexDatabase {
   getNote(commitment: Buffer): Promise<Note | undefined>;
   getNoteByNullifier(nullifier: Buffer): Promise<Note | undefined>;
   nullifyNote(nullifier: Buffer): Promise<void>;
-  getUserNotes(userId: AccountId): Promise<Note[]>;
-  getUserPendingNotes(userId: AccountId): Promise<Note[]>;
+  getNotes(userId: GrumpkinAddress): Promise<Note[]>;
+  getPendingNotes(userId: GrumpkinAddress): Promise<Note[]>;
   removeNote(nullifier: Buffer): Promise<void>;
 
-  getUser(userId: AccountId): Promise<UserData | undefined>;
+  getUser(userId: GrumpkinAddress): Promise<UserData | undefined>;
   getUsers(): Promise<UserData[]>;
   addUser(user: UserData): Promise<void>;
   updateUser(user: UserData): Promise<void>;
-  removeUser(userId: AccountId): Promise<void>;
+  removeUser(userId: GrumpkinAddress): Promise<void>;
   resetUsers(): Promise<void>;
 
   addPaymentTx(tx: CorePaymentTx): Promise<void>;
-  getPaymentTx(txId: TxId, userId: AccountId): Promise<CorePaymentTx | undefined>;
-  getPaymentTxs(userId): Promise<CorePaymentTx[]>;
-  settlePaymentTx(txId: TxId, userId: AccountId, settled: Date): Promise<void>;
+  getPaymentTx(userId: GrumpkinAddress, txId: TxId): Promise<CorePaymentTx | undefined>;
+  getPaymentTxs(userId: GrumpkinAddress): Promise<CorePaymentTx[]>;
+  settlePaymentTx(userId: GrumpkinAddress, txId: TxId, settled: Date): Promise<void>;
 
   addAccountTx(tx: CoreAccountTx): Promise<void>;
   getAccountTx(txId: TxId): Promise<CoreAccountTx | undefined>;
-  getAccountTxs(userId): Promise<CoreAccountTx[]>;
+  getAccountTxs(userId: GrumpkinAddress): Promise<CoreAccountTx[]>;
   settleAccountTx(txId: TxId, settled: Date): Promise<void>;
 
   addDefiTx(tx: CoreDefiTx): Promise<void>;
   getDefiTx(txId: TxId): Promise<CoreDefiTx | undefined>;
-  getDefiTxs(userId): Promise<CoreDefiTx[]>;
-  getDefiTxsByNonce(userId, interactionNonce: number): Promise<CoreDefiTx[]>;
+  getDefiTxs(userId: GrumpkinAddress): Promise<CoreDefiTx[]>;
+  getDefiTxsByNonce(userId: GrumpkinAddress, interactionNonce: number): Promise<CoreDefiTx[]>;
   settleDefiDeposit(txId: TxId, interactionNonce: number, isAsync: boolean, settled: Date): Promise<void>;
   updateDefiTxFinalisationResult(
     txId: TxId,
@@ -79,25 +70,21 @@ export interface Database extends MutexDatabase {
   addClaimTx(tx: CoreClaimTx): Promise<void>;
   getClaimTx(nullifier: Buffer): Promise<CoreClaimTx | undefined>;
 
-  getUserTxs(userId: AccountId): Promise<CoreUserTx[]>;
+  getUserTxs(userId: GrumpkinAddress): Promise<CoreUserTx[]>;
   isUserTxSettled(txId: TxId): Promise<boolean>;
-  getPendingUserTxs(userId: AccountId): Promise<TxId[]>;
-  removeUserTx(txId: TxId, userId: AccountId): Promise<void>;
+  getPendingUserTxs(userId: GrumpkinAddress): Promise<TxId[]>;
+  removeUserTx(userId: GrumpkinAddress, txId: TxId): Promise<void>;
 
-  addUserSigningKey(signingKey: SigningKey): Promise<void>;
-  addUserSigningKeys(signingKeys: SigningKey[]): Promise<void>;
-  getUserSigningKeys(accountId: AccountId): Promise<SigningKey[]>;
-  getUserSigningKey(accountId: AccountId, signingKey: GrumpkinAddress): Promise<SigningKey | undefined>;
-  removeUserSigningKeys(accountId: AccountId): Promise<void>;
+  addSpendingKey(spendingKey: SpendingKey): Promise<void>;
+  addSpendingKeys(spendingKeys: SpendingKey[]): Promise<void>;
+  getSpendingKey(userId: GrumpkinAddress, spendingKey: GrumpkinAddress): Promise<SpendingKey | undefined>;
+  getSpendingKeys(userId: GrumpkinAddress): Promise<SpendingKey[]>;
+  removeSpendingKeys(userId: GrumpkinAddress): Promise<void>;
 
-  setAlias(alias: Alias): Promise<void>;
-  setAliases(alias: Alias[]): Promise<void>;
-  getAlias(aliasHash: AliasHash, address: GrumpkinAddress): Promise<Alias | undefined>;
+  addAlias(alias: Alias): Promise<void>;
+  addAliases(alias: Alias[]): Promise<void>;
+  getAlias(accountPublicKey: GrumpkinAddress): Promise<Alias | undefined>;
   getAliases(aliasHash: AliasHash): Promise<Alias[]>;
-  getLatestNonceByAddress(address: GrumpkinAddress): Promise<number | undefined>;
-  getLatestNonceByAliasHash(aliasHash: AliasHash): Promise<number | undefined>;
-  getAliasHashByAddress(address: GrumpkinAddress, accountNonce?: number): Promise<AliasHash | undefined>;
-  getAccountId(aliasHash: AliasHash, accountNonce?: number): Promise<AccountId | undefined>;
 
   deleteKey(name: string): Promise<void>;
   addKey(name: string, value: Buffer): Promise<void>;

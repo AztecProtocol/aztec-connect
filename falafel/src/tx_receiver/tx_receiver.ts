@@ -169,11 +169,11 @@ export class TxReceiver {
   }
 
   private async validateAccountProof(proof: ProofData, offchainTxData: Buffer) {
-    const { accountPublicKey, accountAliasId, spendingPublicKey1, spendingPublicKey2 } =
+    const { accountPublicKey, aliasHash, spendingPublicKey1, spendingPublicKey2 } =
       OffchainAccountData.fromBuffer(offchainTxData);
     const expectedCommitments = [proof.noteCommitment1, proof.noteCommitment2];
     [spendingPublicKey1, spendingPublicKey2].forEach((spendingKey, i) => {
-      const commitment = this.noteAlgo.accountNoteCommitment(accountAliasId, accountPublicKey, spendingKey);
+      const commitment = this.noteAlgo.accountNoteCommitment(aliasHash, accountPublicKey, spendingKey);
       if (!commitment.equals(expectedCommitments[i])) {
         throw new Error('Invalid offchain account data.');
       }

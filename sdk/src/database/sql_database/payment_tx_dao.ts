@@ -1,9 +1,8 @@
-import { AccountId } from '@aztec/barretenberg/account_id';
-import { EthAddress } from '@aztec/barretenberg/address';
+import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { AfterInsert, AfterLoad, AfterUpdate, Column, Entity, Index, PrimaryColumn } from 'typeorm';
 import { CorePaymentTx } from '../../core_tx';
-import { accountIdTransformer, bigintTransformer, ethAddressTransformer, txIdTransformer } from './transformer';
+import { bigintTransformer, ethAddressTransformer, grumpkinAddressTransformer, txIdTransformer } from './transformer';
 
 @Entity({ name: 'paymentTx' })
 @Index(['txId', 'userId'], { unique: true })
@@ -11,8 +10,8 @@ export class PaymentTxDao implements CorePaymentTx {
   @PrimaryColumn('blob', { transformer: [txIdTransformer] })
   public txId!: TxId;
 
-  @PrimaryColumn('blob', { transformer: [accountIdTransformer] })
-  public userId!: AccountId;
+  @PrimaryColumn('blob', { transformer: [grumpkinAddressTransformer] })
+  public userId!: GrumpkinAddress;
 
   @Column()
   public proofId!: number;

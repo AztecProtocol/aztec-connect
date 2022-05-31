@@ -1,9 +1,8 @@
-import { AccountId, AliasHash } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetValue } from '@aztec/barretenberg/asset';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { SchnorrSignature } from '@aztec/barretenberg/crypto';
-import { AccountTx, JoinSplitTx, RollupProviderStatus } from '@aztec/barretenberg/rollup_provider';
+import { JoinSplitTx, RollupProviderStatus } from '@aztec/barretenberg/rollup_provider';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { CoreUserTx } from '../core_tx';
 import { Note } from '../note';
@@ -14,7 +13,7 @@ import { SdkEvent, SdkStatus } from './sdk_status';
 
 export interface CoreSdkInterface {
   on(event: SdkEvent.UPDATED_USERS, listener: () => void): this;
-  on(event: SdkEvent.UPDATED_USER_STATE, listener: (userId: AccountId) => void): this;
+  on(event: SdkEvent.UPDATED_USER_STATE, listener: (userId: GrumpkinAddress) => void): this;
   on(event: SdkEvent.UPDATED_WORLD_STATE, listener: (rollupId: number, latestRollupId: number) => void): this;
   on(event: SdkEvent.DESTROYED, listener: () => void): this;
 
@@ -28,46 +27,46 @@ export interface CoreSdkInterface {
 
   getRemoteStatus(): Promise<RollupProviderStatus>;
 
+  isAccountRegistered(accountPublicKey: GrumpkinAddress): Promise<boolean>;
+
+  isRemoteAccountRegistered(accountPublicKey: GrumpkinAddress): Promise<boolean>;
+
+  isAliasRegistered(alias: string): Promise<boolean>;
+
+  isRemoteAliasRegistered(alias: string): Promise<boolean>;
+
+  accountExists(accountPublicKey: GrumpkinAddress, alias: string): Promise<boolean>;
+
+  remoteAccountExists(accountPublicKey: GrumpkinAddress, alias: string): Promise<boolean>;
+
+  getAccountPublicKey(alias: string): Promise<GrumpkinAddress | undefined>;
+
+  getRemoteUnsettledAccountPublicKey(alias: string): Promise<GrumpkinAddress | undefined>;
+
   getTxFees(assetId: number): Promise<AssetValue[][]>;
 
   getDefiFees(bridgeId: BridgeId): Promise<AssetValue[]>;
-
-  getLatestAccountNonce(publicKey: GrumpkinAddress): Promise<number>;
-
-  getRemoteLatestAccountNonce(publicKey: GrumpkinAddress): Promise<number>;
-
-  getLatestAliasNonce(alias: string): Promise<number>;
-
-  getRemoteLatestAliasNonce(alias: string): Promise<number>;
-
-  getAccountId(alias: string, accountNonce?: number): Promise<AccountId | undefined>;
-
-  getRemoteAccountId(alias: string, accountNonce?: number): Promise<AccountId | undefined>;
-
-  isAliasAvailable(alias: string): Promise<boolean>;
-
-  isRemoteAliasAvailable(alias: string): Promise<boolean>;
-
-  computeAliasHash(alias: string): Promise<AliasHash>;
 
   createDepositProof(
     assetId: number,
     publicInput: bigint,
     privateOutput: bigint,
-    noteRecipient: AccountId,
-    publicOwner: EthAddress,
+    depositor: EthAddress,
+    recipient: GrumpkinAddress,
+    recipientAccountRequired: boolean,
     txRefNo: number,
   ): Promise<ProofOutput>;
 
   createPaymentProofInput(
-    userId: AccountId,
+    userId: GrumpkinAddress,
     assetId: number,
     publicInput: bigint,
     publicOutput: bigint,
     privateInput: bigint,
     recipientPrivateOutput: bigint,
     senderPrivateOutput: bigint,
-    noteRecipient: AccountId | undefined,
+    noteRecipient: GrumpkinAddress | undefined,
+    recipientAccountRequired: boolean,
     publicOwner: EthAddress | undefined,
     spendingPublicKey: GrumpkinAddress,
     allowChain: number,
@@ -76,30 +75,29 @@ export interface CoreSdkInterface {
   createPaymentProof(input: JoinSplitProofInput, txRefNo: number): Promise<ProofOutput>;
 
   createAccountProofSigningData(
-    signingPubKey: GrumpkinAddress,
+    userId: GrumpkinAddress,
     alias: string,
-    accountNonce: number,
     migrate: boolean,
-    accountPublicKey: GrumpkinAddress,
+    spendingPublicKey: GrumpkinAddress,
     newAccountPublicKey?: GrumpkinAddress,
-    newSigningPubKey1?: GrumpkinAddress,
-    newSigningPubKey2?: GrumpkinAddress,
+    newSpendingPublicKey1?: GrumpkinAddress,
+    newSpendingPublicKey2?: GrumpkinAddress,
   ): Promise<Buffer>;
 
   createAccountProofInput(
-    userId: AccountId,
-    aliasHash: AliasHash,
+    userId: GrumpkinAddress,
+    alias: string,
     migrate: boolean,
-    signingPublicKey: GrumpkinAddress,
-    newSigningPublicKey1: GrumpkinAddress | undefined,
-    newSigningPublicKey2: GrumpkinAddress | undefined,
+    spendingPublicKey: GrumpkinAddress,
+    newSpendingPublicKey1: GrumpkinAddress | undefined,
+    newSpendingPublicKey2: GrumpkinAddress | undefined,
     newAccountPrivateKey: Buffer | undefined,
   ): Promise<AccountProofInput>;
 
   createAccountProof(input: AccountProofInput, txRefNo: number): Promise<ProofOutput>;
 
   createDefiProofInput(
-    userId: AccountId,
+    userId: GrumpkinAddress,
     bridgeId: BridgeId,
     depositValue: bigint,
     inputNotes: Note[],
@@ -112,9 +110,9 @@ export interface CoreSdkInterface {
 
   awaitSynchronised(): Promise<void>;
 
-  isUserSynching(userId: AccountId): Promise<boolean>;
+  isUserSynching(userId: GrumpkinAddress): Promise<boolean>;
 
-  awaitUserSynchronised(userId: AccountId): Promise<void>;
+  awaitUserSynchronised(userId: GrumpkinAddress): Promise<void>;
 
   awaitSettlement(txId: TxId, timeout?: number): Promise<void>;
 
@@ -126,9 +124,9 @@ export interface CoreSdkInterface {
 
   getDefiInteractionNonce(txId: TxId): Promise<number | undefined>;
 
-  userExists(userId: AccountId): Promise<boolean>;
+  userExists(userId: GrumpkinAddress): Promise<boolean>;
 
-  getUserData(userId: AccountId): Promise<UserData>;
+  getUserData(userId: GrumpkinAddress): Promise<UserData>;
 
   getUsersData(): Promise<UserData[]>;
 
@@ -136,34 +134,50 @@ export interface CoreSdkInterface {
 
   constructSignature(message: Buffer, privateKey: Buffer): Promise<SchnorrSignature>;
 
-  addUser(privateKey: Buffer, accountNonce?: number, noSync?: boolean): Promise<UserData>;
+  addUser(accountPrivateKey: Buffer, noSync?: boolean): Promise<UserData>;
 
-  removeUser(userId: AccountId): Promise<void>;
+  removeUser(userId: GrumpkinAddress): Promise<void>;
 
-  getSigningKeys(userId: AccountId): Promise<Buffer[]>;
+  getSpendingKeys(userId: GrumpkinAddress): Promise<Buffer[]>;
 
-  getBalances(userId: AccountId): Promise<AssetValue[]>;
+  getBalances(userId: GrumpkinAddress, unsafe?: boolean): Promise<AssetValue[]>;
 
-  getBalance(assetId: number, userId: AccountId): Promise<bigint>;
+  getBalance(userId: GrumpkinAddress, assetId: number, unsafe?: boolean): Promise<bigint>;
 
-  getSpendableSum(assetId: number, userId: AccountId, excludePendingNotes?: boolean): Promise<bigint>;
-
-  getSpendableSums(userId: AccountId, excludePendingNotes?: boolean): Promise<AssetValue[]>;
-
-  getMaxSpendableValue(
+  getSpendableSum(
+    userId: GrumpkinAddress,
     assetId: number,
-    userId: AccountId,
-    numNotes?: number,
     excludePendingNotes?: boolean,
+    unsafe?: boolean,
   ): Promise<bigint>;
 
-  pickNotes(userId: AccountId, assetId: number, value: bigint, excludePendingNotes?: boolean): Promise<Note[]>;
+  getSpendableSums(userId: GrumpkinAddress, excludePendingNotes?: boolean, unsafe?: boolean): Promise<AssetValue[]>;
 
-  pickNote(userId: AccountId, assetId: number, value: bigint, excludePendingNotes?: boolean): Promise<Note | undefined>;
+  getMaxSpendableValue(
+    userId: GrumpkinAddress,
+    assetId: number,
+    numNotes?: number,
+    excludePendingNotes?: boolean,
+    unsafe?: boolean,
+  ): Promise<bigint>;
 
-  getUserTxs(userId: AccountId): Promise<CoreUserTx[]>;
+  pickNotes(
+    userId: GrumpkinAddress,
+    assetId: number,
+    value: bigint,
+    excludePendingNotes?: boolean,
+    unsafe?: boolean,
+  ): Promise<Note[]>;
 
-  getRemoteUnsettledAccountTxs(): Promise<AccountTx[]>;
+  pickNote(
+    userId: GrumpkinAddress,
+    assetId: number,
+    value: bigint,
+    excludePendingNotes?: boolean,
+    unsafe?: boolean,
+  ): Promise<Note | undefined>;
+
+  getUserTxs(userId: GrumpkinAddress): Promise<CoreUserTx[]>;
 
   getRemoteUnsettledPaymentTxs(): Promise<JoinSplitTx[]>;
 }

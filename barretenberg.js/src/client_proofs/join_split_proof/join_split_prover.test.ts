@@ -2,7 +2,7 @@ import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import levelup from 'levelup';
 import memdown from 'memdown';
-import { AccountAliasId } from '../../account_id';
+import { AliasHash } from '../../account_id';
 import { EthAddress, GrumpkinAddress } from '../../address';
 import { Crs } from '../../crs';
 import { Blake2s, Pedersen, Schnorr, Sha256, SinglePedersen } from '../../crypto';
@@ -81,6 +81,7 @@ describe('join_split_proof', () => {
     const publicOwner = EthAddress.ZERO;
     const assetId = 1;
     const txFee = BigInt(20);
+    const accountRequired = false;
 
     const inputNote1EphKey = createEphemeralPrivKey(grumpkin);
     const inputNote2EphKey = createEphemeralPrivKey(grumpkin);
@@ -94,7 +95,7 @@ describe('join_split_proof', () => {
       pubKey,
       BigInt(100),
       assetId,
-      0,
+      accountRequired,
       inputNoteNullifier1,
       inputNote1EphKey,
       grumpkin,
@@ -103,7 +104,7 @@ describe('join_split_proof', () => {
       pubKey,
       BigInt(50),
       assetId,
-      0,
+      accountRequired,
       inputNoteNullifier2,
       inputNote2EphKey,
       grumpkin,
@@ -119,7 +120,7 @@ describe('join_split_proof', () => {
       pubKey,
       BigInt(80),
       assetId,
-      0,
+      true,
       expectedNullifier1,
       outputNote1EphKey,
       grumpkin,
@@ -128,7 +129,7 @@ describe('join_split_proof', () => {
       pubKey,
       BigInt(50),
       assetId,
-      0,
+      false,
       expectedNullifier2,
       outputNote2EphKey,
       grumpkin,
@@ -141,9 +142,7 @@ describe('join_split_proof', () => {
     const inputNote1Path = await tree.getHashPath(0);
     const inputNote2Path = await tree.getHashPath(1);
     const accountNotePath = await tree.getHashPath(2);
-
-    const nonce = 0;
-    const accountAliasId = AccountAliasId.fromAlias('user_zero', nonce, blake2s);
+    const aliasHash = AliasHash.fromAlias('user_zero', blake2s);
 
     const numInputNotes = 2;
     const tx = new JoinSplitTx(
@@ -159,7 +158,8 @@ describe('join_split_proof', () => {
       [outputNote1, outputNote2],
       ClaimNoteTxData.EMPTY,
       privateKey,
-      accountAliasId,
+      aliasHash,
+      accountRequired,
       2,
       accountNotePath,
       pubKey,

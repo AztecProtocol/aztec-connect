@@ -16,21 +16,21 @@ const {
 describe('end-to-end account tests', () => {
   let provider: WalletProvider;
   let sdk: AztecSdk;
-  let depositor: EthAddress;
+  let addresses: EthAddress[];
   const assetId = 0;
-  const awaitSettlementTimeout = 600;
   const debug = createDebug('bb:e2e_account');
 
   beforeAll(async () => {
     debug(`funding initial ETH accounts...`);
     const initialBalance = 2n * 10n ** 16n; // 0.02
-    provider = await createFundedWalletProvider(ETHEREUM_HOST, 1, 1, Buffer.from(PRIVATE_KEY, 'hex'), initialBalance);
-    [depositor] = provider.getAccounts();
+    provider = await createFundedWalletProvider(ETHEREUM_HOST, 2, 1, Buffer.from(PRIVATE_KEY, 'hex'), initialBalance);
+    addresses = provider.getAccounts();
 
     sdk = await createAztecSdk(provider, {
       serverUrl: ROLLUP_HOST,
       memoryDb: true,
       minConfirmation: 1,
+      debug: 'bb:*',
     });
     await sdk.run();
     await sdk.awaitSynchronised();
@@ -40,25 +40,30 @@ describe('end-to-end account tests', () => {
     await sdk.destroy();
   });
 
-  const expectEqualSigningKeys = (signingKeys: Buffer[], publicKeys: GrumpkinAddress[]) => {
-    expect(signingKeys.length).toBe(publicKeys.length);
-    expect(signingKeys).toEqual(expect.arrayContaining(publicKeys.map(key => key.toBuffer().slice(0, 32))));
+  const expectEqualSpendingKeys = (spendingKeys: Buffer[], publicKeys: GrumpkinAddress[]) => {
+    expect(spendingKeys.length).toBe(publicKeys.length);
+    expect(spendingKeys).toEqual(expect.arrayContaining(publicKeys.map(key => key.toBuffer().slice(0, 32))));
   };
 
-  it('should create and recover account, add and remove signing keys.', async () => {
-    const accountPrivateKey = provider.getPrivateKeyForAddress(depositor)!;
-    const accountPubKey = await sdk.derivePublicKey(accountPrivateKey);
+  it('should create and recover account, add spending keys.', async () => {
+    const account0 = await sdk.generateAccountKeyPair(addresses[0]);
+    const account1 = await sdk.generateAccountKeyPair(addresses[1]);
+    const alias = randomBytes(8).toString('hex');
 
-    expect(await sdk.getLatestAccountNonce(accountPubKey)).toBe(0);
+    expect(await sdk.isAccountRegistered(account0.publicKey)).toBe(false);
+    expect(await sdk.isAccountRegistered(account1.publicKey)).toBe(false);
+    expect(await sdk.isAliasRegistered(alias)).toBe(false);
 
+    // Rollup 0: Register
     debug('creating new account and shielding...');
     // The recoveryPublicKey is a single use key allowing the addition of the trustedThirdPartyPublicKey.
-    const user1 = await sdk.addUser(accountPrivateKey, 1);
-    const signer1 = await sdk.createSchnorrSigner(randomBytes(32));
-    const alias = randomBytes(8).toString('hex');
+    const user0 = await sdk.addUser(account0.privateKey);
+    const spendingKey0 = await sdk.generateSpendingKeyPair(addresses[0]);
+    const signer0 = await sdk.createSchnorrSigner(spendingKey0.privateKey);
     const thirdPartySigner = await sdk.createSchnorrSigner(randomBytes(32));
-    const recoveryPayloads = await sdk.generateAccountRecoveryData(alias, accountPubKey, [
-      thirdPartySigner.getPublicKey(),
+    const trustedThirdPartyPublicKey = thirdPartySigner.getPublicKey();
+    const recoveryPayloads = await sdk.generateAccountRecoveryData(account0.publicKey, alias, [
+      trustedThirdPartyPublicKey,
     ]);
     const { recoveryPublicKey } = recoveryPayloads[0];
     {
@@ -67,14 +72,14 @@ describe('end-to-end account tests', () => {
       const txFee = (await sdk.getRegisterFees(depositValue))[TxSettlementTime.INSTANT];
 
       const controller = sdk.createRegisterController(
-        user1.id,
+        user0.id,
         alias,
-        accountPrivateKey,
-        signer1.getPublicKey(),
+        account0.privateKey,
+        signer0.getPublicKey(),
         recoveryPublicKey,
         depositValue,
         txFee,
-        depositor,
+        addresses[0],
       );
 
       await controller.depositFundsToContract();
@@ -83,104 +88,103 @@ describe('end-to-end account tests', () => {
       await controller.createProof();
       await controller.sign();
 
-      expect(await user1.getBalance(assetId)).toBe(BigInt(0));
+      expect((await user0.getBalance(assetId)).value).toBe(BigInt(0));
 
       await controller.send();
       debug(`waiting to settle...`);
-      await controller.awaitSettlement(awaitSettlementTimeout);
+      await controller.awaitSettlement();
 
-      expect(await user1.getBalance(assetId)).toBe(depositValue.value);
+      expect(await user0.getBalance(assetId)).toEqual(depositValue);
     }
 
-    expect(await sdk.getAccountId(alias)).toEqual(user1.id);
-    expect(await sdk.getLatestAccountNonce(accountPubKey)).toBe(1);
+    expectEqualSpendingKeys(await user0.getSpendingKeys(), [signer0.getPublicKey(), recoveryPublicKey]);
 
-    // Check new account was created with the expected singing keys.
-    expectEqualSigningKeys(await user1.getSigningKeys(), [signer1.getPublicKey(), recoveryPublicKey]);
+    await sdk.awaitSynchronised();
+    expect(await sdk.isAccountRegistered(account0.publicKey)).toBe(true);
+    expect(await sdk.isAccountRegistered(account1.publicKey)).toBe(false);
+    expect(await sdk.isAliasRegistered(alias)).toBe(true);
 
-    // // Recover account. Adds the trustedThirdPartyPublicKey to list of signing keys.
-    // {
-    //   const [fee] = await sdk.getRecoverAccountFees(assetId);
-    //   const controller = sdk.createRecoverAccountController(recoveryPayloads[0], fee);
-    //   await controller.createProof();
-    //   await controller.send();
-    //   await controller.awaitSettlement(awaitSettlementTimeout);
-    // }
+    // Rollup 1: Recover
+    debug('recovering account...');
+    {
+      // Add the trustedThirdPartyPublicKey to the list of spending keys.
+      // Pay the fee from an eth address.
+      const depositValue = { assetId, value: 0n };
+      const fee = (await sdk.getRecoverAccountFees(assetId))[TxSettlementTime.INSTANT];
+      const depositor = addresses[0];
+      const controller = sdk.createRecoverAccountController(alias, recoveryPayloads[0], depositValue, fee, depositor);
+      await controller.createProof();
 
-    // expectEqualSigningKeys(await user1.getSigningKeys(), [
-    //   signer1.getPublicKey(),
-    //   recoveryPublicKey,
-    //   recoveryPayloads[0].trustedThirdPartyPublicKey,
-    // ]);
+      await controller.depositFundsToContract();
+      await controller.awaitDepositFundsToContract();
+      await controller.sign();
 
-    // // Add new signing key.
-    // const signer2 = sdk.createSchnorrSigner(randomBytes(32));
-    // {
-    //   const [fee] = await sdk.getAddSigningKeyFees(assetId);
-    //   const controller = sdk.createAddSigningKeyController(
-    //     user1.id,
-    //     thirdPartySigner,
-    //     signer2.getPublicKey(),
-    //     undefined,
-    //     fee,
-    //   );
-    //   await controller.createProof();
-    //   await controller.send();
-    //   await controller.awaitSettlement(awaitSettlementTimeout);
-    // }
+      await controller.send();
+      debug(`waiting to settle...`);
+      await controller.awaitSettlement();
+    }
 
-    // expectEqualSigningKeys(await user1.getSigningKeys(), [
-    //   signer1.getPublicKey(),
-    //   recoveryPublicKey,
-    //   recoveryPayloads[0].trustedThirdPartyPublicKey,
-    //   signer2.getPublicKey(),
-    // ]);
+    expectEqualSpendingKeys(await user0.getSpendingKeys(), [
+      signer0.getPublicKey(),
+      recoveryPublicKey,
+      trustedThirdPartyPublicKey,
+    ]);
 
-    // // Migrate account, revoking previous signers in the process.
-    // const signer3 = sdk.createSchnorrSigner(randomBytes(32));
-    // {
-    //   const [fee] = await sdk.getMigrateAccountFees(assetId);
-    //   const controller = await sdk.createMigrateAccountController(
-    //     user1.id,
-    //     signer2,
-    //     signer3.getPublicKey(),
-    //     undefined,
-    //     undefined,
-    //     fee,
-    //   );
-    //   await controller.createProof();
-    //   await controller.send();
-    //   await controller.awaitSettlement(awaitSettlementTimeout);
-    // }
+    // Rollup 2: Add new spending key
+    debug(`adding new spending key...`);
+    const newSigner = await sdk.createSchnorrSigner(randomBytes(32));
+    {
+      const fee = (await sdk.getAddSpendingKeyFees(assetId))[TxSettlementTime.INSTANT];
+      const controller = sdk.createAddSpendingKeyController(
+        user0.id,
+        thirdPartySigner,
+        alias,
+        newSigner.getPublicKey(),
+        undefined,
+        fee,
+      );
+      await controller.createProof();
+      await controller.send();
+      await controller.awaitSettlement();
+    }
 
-    // expect(await sdk.getLatestAccountNonce(accountPubKey)).toBe(2);
+    expectEqualSpendingKeys(await user0.getSpendingKeys(), [
+      signer0.getPublicKey(),
+      recoveryPublicKey,
+      trustedThirdPartyPublicKey,
+      newSigner.getPublicKey(),
+    ]);
 
-    // const user2 = await sdk.getUser(new AccountId(accountPubKey, 2));
-    // expectEqualSigningKeys(await user2.getSigningKeys(), [signer3.getPublicKey()]);
+    await sdk.awaitSynchronised();
+    expect(await sdk.isAccountRegistered(account0.publicKey)).toBe(true);
+    expect(await sdk.isAccountRegistered(account1.publicKey)).toBe(false);
+    expect(await sdk.isAliasRegistered(alias)).toBe(true);
 
-    // // Migrate account to another account public key.
-    // const account3PrivKey = randomBytes(32);
-    // const newAccountPubKey = sdk.derivePublicKey(account3PrivKey);
-    // {
-    //   const [fee] = await sdk.getMigrateAccountFees(assetId);
-    //   const controller = await sdk.createMigrateAccountController(
-    //     user2.id,
-    //     signer3,
-    //     signer3.getPublicKey(),
-    //     signer2.getPublicKey(),
-    //     account3PrivKey,
-    //     fee,
-    //   );
-    //   await controller.createProof();
-    //   await controller.send();
-    //   await controller.awaitSettlement(awaitSettlementTimeout);
-    // }
+    // Rollup 3: Migrate
+    debug(`migrating account...`);
+    const spendingKey1 = await sdk.generateSpendingKeyPair(addresses[1]);
+    const user1 = await sdk.addUser(account1.privateKey);
+    {
+      const fee = (await sdk.getMigrateAccountFees(assetId))[TxSettlementTime.INSTANT];
+      const controller = await sdk.createMigrateAccountController(
+        user0.id,
+        newSigner,
+        alias,
+        account1.privateKey,
+        spendingKey1.publicKey,
+        undefined,
+        fee,
+      );
+      await controller.createProof();
+      await controller.send();
+      await controller.awaitSettlement();
+    }
 
-    // expect(await sdk.getLatestAccountNonce(accountPubKey)).toBe(2);
-    // expect(await sdk.getLatestAccountNonce(newAccountPubKey)).toBe(3);
+    expectEqualSpendingKeys(await user1.getSpendingKeys(), [spendingKey1.publicKey]);
 
-    // const user3 = await sdk.getUser(new AccountId(newAccountPubKey, 3));
-    // expectEqualSigningKeys(await user3.getSigningKeys(), [signer3.getPublicKey(), signer2.getPublicKey()]);
-    // expect(await sdk.getAccountId(alias)).toEqual(user3.id);
+    await sdk.awaitSynchronised();
+    expect(await sdk.isAccountRegistered(account0.publicKey)).toBe(true);
+    expect(await sdk.isAccountRegistered(account1.publicKey)).toBe(true);
+    expect(await sdk.isAliasRegistered(alias)).toBe(true);
   });
 });

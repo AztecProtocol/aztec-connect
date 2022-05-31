@@ -142,7 +142,7 @@ export class ElementAgent {
 
   private async measureBalances() {
     for (const assetValue of this.originalAssetValues) {
-      const balance = await this.sdk.getBalance(assetValue.assetId, this.user!.user.id);
+      const balance = await this.sdk.getBalance(this.user!.user.id, assetValue.assetId);
       const asset = this.sdk.getAssetInfo(assetValue.assetId);
       const originalBalance = assetValue.value;
       console.log(

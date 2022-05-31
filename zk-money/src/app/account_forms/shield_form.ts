@@ -1,6 +1,5 @@
 import { CutdownAsset } from 'app/types';
 import {
-  AccountId,
   AztecSdk,
   DepositController,
   EthAddress,
@@ -147,7 +146,7 @@ interface AccountGasCost {
 }
 
 export class ShieldForm extends EventEmitter implements AccountForm {
-  private readonly userId: AccountId;
+  private readonly userId: GrumpkinAddress;
   private readonly alias: string;
   private readonly asset: CutdownAsset;
   readonly isNewAccount: boolean;
@@ -170,7 +169,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
   private readonly aliasDebounceWait = 1000;
 
   constructor(
-    accountState: { userId: AccountId; alias: string },
+    accountState: { userId: GrumpkinAddress; alias: string },
     private assetState: { asset: CutdownAsset; spendableBalance: bigint },
     private readonly newSpendingPublicKey: GrumpkinAddress | undefined,
     private provider: Provider | undefined,
@@ -663,7 +662,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     const recipient = form.recipient.value.input;
     const outputNoteOwner = recipient === this.alias ? this.userId : (await this.accountUtils.getAccountId(recipient))!;
     if (this.isNewAccount) {
-      await this.accountUtils.addUser(accountPrivateKey, this.userId.accountNonce);
+      await this.accountUtils.addUser(accountPrivateKey);
     }
     return this.isNewAccount
       ? this.sdk.createRegisterController(
@@ -683,6 +682,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
           depositValue,
           fee,
           outputNoteOwner,
+          true, // recipientAccountRequired: (depositing to an account that is registered - though not yet settled)
           undefined,
           this.provider?.ethereumProvider,
         );

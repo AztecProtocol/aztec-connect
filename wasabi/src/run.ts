@@ -95,7 +95,7 @@ export async function run(
     [fundingAddress] = await ethereumRpc.getAccounts();
   }
 
-  const fundingAddressBalance = await sdk.getPublicBalanceAv(0, fundingAddress);
+  const fundingAddressBalance = await sdk.getPublicBalance(fundingAddress, 0);
   console.log(`primary funding account: ${fundingAddress} (${sdk.fromBaseUnits(fundingAddressBalance, true)})`);
 
   // Create a unique address for this process.
@@ -117,7 +117,7 @@ export async function run(
       assets,
       loops,
     );
-    while ((await sdk.getPublicBalance(0, processAddress)) < fundingThreshold) {
+    while ((await sdk.getPublicBalance(processAddress, 0)).value < fundingThreshold) {
       try {
         console.log(`funding process address ${processAddress} with ${toFund} wei...`);
         const txHash = await asset.transfer(toFund, fundingAddress, processAddress);
@@ -156,7 +156,7 @@ export async function run(
 
   // We are exiting gracefully, refund the funding account from our process account.
   const fee = toBaseUnits('420', 12);
-  const value = (await sdk.getPublicBalance(0, processAddress)) - fee;
+  const value = (await sdk.getPublicBalance(processAddress, 0)).value - fee;
   if (value > 0) {
     console.log(`refunding funding address ${fundingAddress} with ${value} wei...`);
     const txHash = await asset.transfer(value, processAddress, fundingAddress);

@@ -12,9 +12,9 @@ const initConfig = {
   },
   default: {
     initRoots: {
-      initDataRoot: '27f02a53c9a91e244f6f2d04d29c30684fb1f4b384ca72182f95325191315f8f',
-      initNullRoot: '23f0ce83b1262404c1f7e3e43c221fb1177ce198fe697691036f0fca58d69dba',
-      initRootsRoot: '18d5893d8b28a101fea70db8f4ed9027fcb40786c3bc8b4ca5552bf16d13f376',
+      initDataRoot: '1417c092da90cfd39679299b8e381dd295dba6074b410e830ef6d3b7040b6eac',
+      initNullRoot: '0225131cf7530ba9f617dba641b32020a746a6e0124310c09aac7c7c8a2e0ce5',
+      initRootsRoot: '08ddeab28afc61bd560f0153f7399c9bb437c7cd280d0f4c19322227fcd80e05',
     },
     initDataSize: 8,
     accountsData: './data/default/accounts',
@@ -23,6 +23,15 @@ const initConfig = {
       aliases: ['account1', 'account2', 'account3', 'account4'],
     },
   },
+  /*   default: {
+    initRoots: {
+      initDataRoot: '18ceb5cd201e1cee669a5c3ad96d3c4e933a365b37046fc3178264bede32c68d',
+      initNullRoot: '298329c7d0936453f354e4a5eef4897296cc0bf5a66f2a528318508d2088dafa',
+      initRootsRoot: '2fd2364bfe47ccb410eba3a958be9f39a8c6aca07db1abd15f5a211f51505071',
+    },
+    initDataSize: 0,
+    accountsData: '',
+  }, */
 };
 
 export function getInitData(chainId: number) {

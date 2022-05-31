@@ -42,7 +42,7 @@ export class EthAddress {
     return new EthAddress(Buffer.from(address.replace(/^0x/i, ''), 'hex'));
   }
 
-  public static randomAddress() {
+  public static random() {
     return new EthAddress(randomBytes(20));
   }
 

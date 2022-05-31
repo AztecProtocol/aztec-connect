@@ -55,7 +55,7 @@ export class UniswapAgent {
   }
 
   private async getBalance(assetId = 0) {
-    return await this.sdk.getBalanceAv(assetId, this.user!.user.id);
+    return await this.sdk.getBalance(this.user!.user.id, assetId);
   }
 
   private static async calcDeposit(sdk: AztecSdk, numTransfers: number) {

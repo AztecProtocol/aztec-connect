@@ -28,15 +28,15 @@ describe('tx fee resolver', () => {
 
   const assets: Partial<BlockchainAsset>[] = [
     {
-      address: EthAddress.randomAddress(),
+      address: EthAddress.random(),
       decimals: 18,
     },
     {
-      address: EthAddress.randomAddress(),
+      address: EthAddress.random(),
       decimals: 8,
     },
     {
-      address: EthAddress.randomAddress(),
+      address: EthAddress.random(),
       decimals: 18,
     },
   ];

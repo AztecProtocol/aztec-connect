@@ -1,5 +1,5 @@
 import { ProofId } from '@aztec/barretenberg/client_proofs';
-import { AccountId, AztecSdk, EthAddress, GrumpkinAddress } from '@aztec/sdk';
+import { AztecSdk, EthAddress, GrumpkinAddress } from '@aztec/sdk';
 import createDebug from 'debug';
 import { formatAliasInput, isValidAliasInput } from './alias';
 import { Network } from './networks';
@@ -9,18 +9,17 @@ const debug = createDebug('zm:account_utils');
 export class AccountUtils {
   constructor(private sdk: AztecSdk, private requiredNetwork: Network) {}
 
-  async addUser(privateKey: Buffer, nonce: number, noSync = !nonce) {
-    const publicKey = await this.sdk.derivePublicKey(privateKey);
-    const userId = new AccountId(publicKey, nonce);
+  async addUser(privateKey: Buffer, noSync?: boolean) {
+    const userId = await this.sdk.derivePublicKey(privateKey);
     try {
-      await this.sdk.addUser(privateKey, nonce, noSync);
+      await this.sdk.addUser(privateKey, noSync);
       debug(`Added user ${userId}.`);
     } catch (e) {
       // Do nothing if user is already added to the sdk.
     }
   }
 
-  async removeUser(userId: AccountId) {
+  async removeUser(userId: GrumpkinAddress) {
     try {
       await this.sdk.removeUser(userId);
       debug(`Removed user ${userId}.`);
@@ -33,21 +32,15 @@ export class AccountUtils {
 
   async getAliasPublicKey(aliasInput: string) {
     const alias = formatAliasInput(aliasInput);
-    return (await this.sdk.getRemoteAccountId(alias))?.publicKey;
-  }
-
-  async getAliasNonce(aliasInput: string) {
-    const alias = formatAliasInput(aliasInput);
-    return this.sdk.getRemoteLatestAliasNonce(alias);
-  }
-
-  async getAccountNonce(publicKey: GrumpkinAddress) {
-    return this.sdk.getRemoteLatestAccountNonce(publicKey);
+    const publicKey = await this.sdk.getAccountPublicKey(alias);
+    if (publicKey) return publicKey;
+    return this.sdk.getRemoteUnsettledAccountPublicKey(aliasInput);
   }
 
   async isAliasAvailable(aliasInput: string) {
     const alias = formatAliasInput(aliasInput);
-    return this.sdk.isRemoteAliasAvailable(alias);
+    const isRegistered = await this.sdk.isAliasRegistered(alias);
+    return !isRegistered;
   }
 
   async isValidRecipient(aliasInput: string) {
@@ -56,7 +49,7 @@ export class AccountUtils {
     }
 
     const alias = formatAliasInput(aliasInput);
-    return !(await this.sdk.isAliasAvailable(alias)) || !(await this.sdk.isRemoteAliasAvailable(alias));
+    return this.sdk.isAliasRegistered(alias);
   }
 
   async getAccountId(aliasInput: string) {
@@ -65,7 +58,7 @@ export class AccountUtils {
     }
 
     const alias = formatAliasInput(aliasInput);
-    return this.sdk.getRemoteAccountId(alias);
+    return this.sdk.getAccountPublicKey(alias);
   }
 
   async getPendingBalance(assetId: number, ethAddress: EthAddress) {

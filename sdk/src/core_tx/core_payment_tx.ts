@@ -1,5 +1,4 @@
-import { AccountId } from '@aztec/barretenberg/account_id';
-import { EthAddress } from '@aztec/barretenberg/address';
+import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { TxId } from '@aztec/barretenberg/tx_id';
 
@@ -15,7 +14,7 @@ export type PaymentProofId = ProofId.DEPOSIT | ProofId.WITHDRAW | ProofId.SEND;
 export class CorePaymentTx {
   constructor(
     public readonly txId: TxId,
-    public readonly userId: AccountId,
+    public readonly userId: GrumpkinAddress,
     public readonly proofId: PaymentProofId,
     public readonly assetId: number,
     public readonly publicValue: bigint,
@@ -62,7 +61,7 @@ export const corePaymentTxToJson = (tx: CorePaymentTx): CorePaymentTxJson => ({
 export const corePaymentTxFromJson = (json: CorePaymentTxJson) =>
   new CorePaymentTx(
     TxId.fromString(json.txId),
-    AccountId.fromString(json.userId),
+    GrumpkinAddress.fromString(json.userId),
     json.proofId,
     json.assetId,
     BigInt(json.publicValue),
@@ -92,7 +91,7 @@ export const createCorePaymentTxForRecipient = (
     created,
     settled,
   }: CorePaymentTx,
-  recipient: AccountId,
+  recipient: GrumpkinAddress,
 ) =>
   new CorePaymentTx(
     txId,

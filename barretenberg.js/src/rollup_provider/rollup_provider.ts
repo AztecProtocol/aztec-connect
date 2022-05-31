@@ -1,10 +1,10 @@
-import { AccountId } from '../account_id';
+import { AliasHash } from '../account_id';
 import { GrumpkinAddress } from '../address';
 import { AssetValue } from '../asset';
 import { BlockSource } from '../block_source';
 import { BridgeId } from '../bridge_id';
-import { AccountProofData, JoinSplitProofData } from '../client_proofs';
-import { OffchainAccountData, OffchainJoinSplitData } from '../offchain_tx_data';
+import { JoinSplitProofData } from '../client_proofs';
+import { OffchainJoinSplitData } from '../offchain_tx_data';
 import { TxId } from '../tx_id';
 import { RollupProviderStatus } from './rollup_provider_status';
 
@@ -71,24 +71,24 @@ export interface InitialWorldState {
   initialAccounts: Buffer;
 }
 
-export interface AccountTx {
-  proofData: AccountProofData;
-  offchainTxData: OffchainAccountData;
+export interface Account {
+  accountPublicKey: GrumpkinAddress;
+  aliasHash: AliasHash;
 }
 
-export interface AccountTxJson {
-  proofData: string;
-  offchainTxData: string;
+export interface AccountJson {
+  accountPublicKey: string;
+  aliasHash: string;
 }
 
-export const accountTxToJson = ({ proofData, offchainTxData }: AccountTx): AccountTxJson => ({
-  proofData: proofData.proofData.rawProofData.toString('hex'),
-  offchainTxData: offchainTxData.toBuffer().toString('hex'),
+export const accountToJson = ({ accountPublicKey, aliasHash }: Account): AccountJson => ({
+  accountPublicKey: accountPublicKey.toString(),
+  aliasHash: aliasHash.toString(),
 });
 
-export const accountTxFromJson = ({ proofData, offchainTxData }: AccountTxJson): AccountTx => ({
-  proofData: AccountProofData.fromBuffer(Buffer.from(proofData, 'hex')),
-  offchainTxData: OffchainAccountData.fromBuffer(Buffer.from(offchainTxData, 'hex')),
+export const accountFromJson = ({ accountPublicKey, aliasHash }: AccountJson): Account => ({
+  accountPublicKey: GrumpkinAddress.fromString(accountPublicKey),
+  aliasHash: AliasHash.fromString(aliasHash),
 });
 
 export interface JoinSplitTx {
@@ -116,13 +116,13 @@ export interface RollupProvider extends BlockSource {
   getStatus(): Promise<RollupProviderStatus>;
   getTxFees(assetId: number): Promise<AssetValue[][]>;
   getDefiFees(bridgeId: BridgeId): Promise<AssetValue[]>;
-  getPendingTxs: () => Promise<PendingTx[]>;
-  getPendingNoteNullifiers: () => Promise<Buffer[]>;
-  clientLog: (msg: any) => Promise<void>;
+  getPendingTxs(): Promise<PendingTx[]>;
+  getPendingNoteNullifiers(): Promise<Buffer[]>;
+  clientLog(msg: any): Promise<void>;
   getInitialWorldState(): Promise<InitialWorldState>;
-  getLatestAccountNonce(accountPubKey: GrumpkinAddress): Promise<number>;
-  getLatestAliasNonce(alias: string): Promise<number>;
-  getAccountId(alias: string, accountNonce?: number): Promise<AccountId | undefined>;
-  getUnsettledAccountTxs: () => Promise<AccountTx[]>;
-  getUnsettledPaymentTxs: () => Promise<JoinSplitTx[]>;
+  isAccountRegistered(accountPublicKey: GrumpkinAddress): Promise<boolean>;
+  isAliasRegistered(alias: string): Promise<boolean>;
+  accountExists(accountPublicKey: GrumpkinAddress, alias: string): Promise<boolean>;
+  getUnsettledAccounts(): Promise<Account[]>;
+  getUnsettledPaymentTxs(): Promise<JoinSplitTx[]>;
 }

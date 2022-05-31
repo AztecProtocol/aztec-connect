@@ -1,5 +1,4 @@
-import { AccountId } from '@aztec/barretenberg/account_id';
-import { EthAddress } from '@aztec/barretenberg/address';
+import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetValue } from '@aztec/barretenberg/asset';
 import { EthereumProvider, TxHash } from '@aztec/barretenberg/blockchain';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
@@ -15,13 +14,8 @@ import {
 } from '@aztec/blockchain';
 import { CoreSdkInterface } from '../core_sdk';
 import { ProofOutput } from '../proofs';
-import { Signer } from '../signer';
 import { createTxRefNo } from './create_tx_ref_no';
-
-export interface FeePayer {
-  userId: AccountId;
-  signer: Signer;
-}
+import { FeePayer } from './fee_payer';
 
 export class DepositController {
   private readonly publicInput: AssetValue;
@@ -40,8 +34,9 @@ export class DepositController {
   constructor(
     public readonly assetValue: AssetValue,
     public readonly fee: AssetValue,
-    public readonly from: EthAddress,
-    public readonly to: AccountId,
+    public readonly depositor: EthAddress,
+    public readonly recipient: GrumpkinAddress,
+    public readonly recipientAccountRequired: boolean,
     public readonly feePayer: FeePayer | undefined,
     private readonly core: CoreSdkInterface,
     private readonly blockchain: ClientEthereumBlockchain,
@@ -75,7 +70,7 @@ export class DepositController {
   public async getPublicAllowance() {
     const { assetId } = this.publicInput;
     const { rollupContractAddress } = await this.core.getLocalStatus();
-    return this.blockchain.getAsset(assetId).allowance(this.from, rollupContractAddress);
+    return this.blockchain.getAsset(assetId).allowance(this.depositor, rollupContractAddress);
   }
 
   public async hasPermitSupport() {
@@ -99,7 +94,7 @@ export class DepositController {
     const { rollupContractAddress } = await this.core.getLocalStatus();
     const approveTxHash = await this.blockchain
       .getAsset(assetId)
-      .approve(value, this.from, rollupContractAddress, { provider: this.provider });
+      .approve(value, this.depositor, rollupContractAddress, { provider: this.provider });
 
     this.pendingFundsStatus = { ...pendingFundsStatus, approveTxHash };
     return approveTxHash;
@@ -128,21 +123,21 @@ export class DepositController {
       throw new Error(`Required allowance has increased since approve() was called.`);
     }
 
-    const isContract = await this.blockchain.isContract(this.from);
+    const isContract = await this.blockchain.isContract(this.depositor);
     const proofHash = isContract ? this.getProofHash() : undefined;
     const permitSupport = await this.hasPermitSupport();
     const { assetId } = this.publicInput;
     let txHash: TxHash;
     if (!permitSupport) {
       txHash = await this.blockchain.depositPendingFunds(assetId, value, proofHash, {
-        signingAddress: this.from,
+        signingAddress: this.depositor,
         provider: this.provider,
       });
     } else {
       const deadline = permitDeadline ?? BigInt(Math.floor(Date.now() / 1000) + 5 * 60); // Default deadline is 5 mins from now.
       const { signature } = await this.createPermitArgs(value, deadline);
       txHash = await this.blockchain.depositPendingFundsPermit(assetId, value, deadline, signature, proofHash, {
-        signingAddress: this.from,
+        signingAddress: this.depositor,
         provider: this.provider,
       });
     }
@@ -158,7 +153,7 @@ export class DepositController {
       throw new Error('User has deposited enough funds.');
     }
 
-    const isContract = await this.blockchain.isContract(this.from);
+    const isContract = await this.blockchain.isContract(this.depositor);
     const proofHash = isContract ? this.getProofHash() : undefined;
     const deadline = permitDeadline ?? BigInt(Math.floor(Date.now() / 1000) + 5 * 60); // Default deadline is 5 mins from now.
     const { signature, nonce } = await this.createPermitArgsNonStandard(deadline);
@@ -171,7 +166,7 @@ export class DepositController {
       signature,
       proofHash,
       {
-        signingAddress: this.from,
+        signingAddress: this.depositor,
         provider: this.provider,
       },
     );
@@ -189,7 +184,7 @@ export class DepositController {
     const { assetId } = this.publicInput;
     const expectedPendingDeposit = pendingDeposit + requiredFunds;
     const checkOnchainData = async () => {
-      const value = await this.blockchain.getUserPendingDeposit(assetId, this.from);
+      const value = await this.blockchain.getUserPendingDeposit(assetId, this.depositor);
       return value === expectedPendingDeposit;
     };
     await this.awaitTransactionReceipt(txHash, checkOnchainData, timeout, interval);
@@ -207,14 +202,16 @@ export class DepositController {
       assetId,
       value, // publicInput,
       privateOutput,
-      this.to,
-      this.from,
+      this.depositor,
+      this.recipient,
+      this.recipientAccountRequired,
       txRefNo,
     );
 
     if (requireFeePayingTx) {
       const { userId, signer } = this.feePayer!;
       const spendingPublicKey = signer.getPublicKey();
+      const accountRequired = !spendingPublicKey.equals(userId);
       const feeProofInput = await this.core.createPaymentProofInput(
         userId,
         this.fee.assetId,
@@ -223,7 +220,8 @@ export class DepositController {
         this.fee.value,
         BigInt(0),
         BigInt(0),
-        undefined,
+        userId,
+        accountRequired,
         undefined,
         spendingPublicKey,
         2,
@@ -243,13 +241,13 @@ export class DepositController {
 
   public async isProofApproved() {
     const proofHash = this.getProofHash();
-    return !!(await this.blockchain.getUserProofApprovalStatus(this.from, proofHash));
+    return !!(await this.blockchain.getUserProofApprovalStatus(this.depositor, proofHash));
   }
 
   public async approveProof() {
     const proofHash = this.getProofHash();
     const approveProofTxHash = await this.blockchain.approveProof(proofHash, {
-      signingAddress: this.from,
+      signingAddress: this.depositor,
       provider: this.provider,
     });
     this.pendingFundsStatus = { ...this.pendingFundsStatus, approveProofTxHash };
@@ -280,7 +278,7 @@ export class DepositController {
 
     const ethSigner = new Web3Signer(this.provider);
     const signingData = this.getSigningData();
-    this.proofOutput.signature = await ethSigner.signMessage(signingData, this.from);
+    this.proofOutput.signature = await ethSigner.signMessage(signingData, this.depositor);
   }
 
   public isSignatureValid() {
@@ -292,7 +290,7 @@ export class DepositController {
     }
 
     const signingData = this.getSigningData();
-    return validateSignature(this.from, this.proofOutput.signature, signingData);
+    return validateSignature(this.depositor, this.proofOutput.signature, signingData);
   }
 
   public getProofs() {
@@ -325,14 +323,14 @@ export class DepositController {
 
   private async getPendingFundsStatus() {
     const { assetId } = this.publicInput;
-    const pendingDeposit = await this.blockchain.getUserPendingDeposit(assetId, this.from);
+    const pendingDeposit = await this.blockchain.getUserPendingDeposit(assetId, this.depositor);
     const txs = await this.core.getRemoteUnsettledPaymentTxs();
     const unsettledDeposit = txs
       .filter(
         tx =>
           tx.proofData.proofData.proofId === ProofId.DEPOSIT &&
           tx.proofData.publicAssetId === assetId &&
-          tx.proofData.publicOwner.equals(this.from),
+          tx.proofData.publicOwner.equals(this.depositor),
       )
       .reduce((sum, tx) => sum + BigInt(tx.proofData.publicValue), BigInt(0));
     const pendingFunds = pendingDeposit - unsettledDeposit;
@@ -344,11 +342,11 @@ export class DepositController {
   private async createPermitArgs(value: bigint, deadline: bigint) {
     const { assetId } = this.publicInput;
     const asset = this.blockchain.getAsset(assetId);
-    const nonce = await asset.getUserNonce(this.from);
+    const nonce = await asset.getUserNonce(this.depositor);
     const { rollupContractAddress, chainId } = await this.core.getLocalStatus();
     const permitData = createPermitData(
       asset.getStaticInfo().name,
-      this.from,
+      this.depositor,
       rollupContractAddress,
       value,
       nonce,
@@ -357,18 +355,18 @@ export class DepositController {
       this.getContractChainId(chainId),
     );
     const ethSigner = new Web3Signer(this.provider);
-    const signature = await ethSigner.signTypedData(permitData, this.from);
+    const signature = await ethSigner.signTypedData(permitData, this.depositor);
     return { signature };
   }
 
   private async createPermitArgsNonStandard(deadline: bigint) {
     const { assetId } = this.publicInput;
     const asset = this.blockchain.getAsset(assetId);
-    const nonce = await asset.getUserNonce(this.from);
+    const nonce = await asset.getUserNonce(this.depositor);
     const { rollupContractAddress, chainId } = await this.core.getLocalStatus();
     const permitData = createPermitDataNonStandard(
       asset.getStaticInfo().name,
-      this.from,
+      this.depositor,
       rollupContractAddress,
       nonce,
       deadline,
@@ -376,7 +374,7 @@ export class DepositController {
       this.getContractChainId(chainId),
     );
     const ethSigner = new Web3Signer(this.provider);
-    const signature = await ethSigner.signTypedData(permitData, this.from);
+    const signature = await ethSigner.signTypedData(permitData, this.depositor);
     return { signature, nonce };
   }
 

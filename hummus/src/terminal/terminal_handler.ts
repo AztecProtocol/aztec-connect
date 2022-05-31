@@ -8,7 +8,6 @@ import {
   EthAddress,
   EthereumProvider,
   EthereumRpc,
-  GrumpkinAddress,
   MemoryFifo,
   ProofId,
   SdkEvent,
@@ -226,8 +225,7 @@ export class TerminalHandler {
       this.printQueue.put('failed to get server status.\n');
     }
 
-    await this.sdk.addUser(privateKey, 0);
-    this.user = await this.sdk.addUser(privateKey, 1);
+    this.user = await this.sdk.addUser(privateKey);
 
     this.printQueue.put(`syncing user: ${publicKey.toString().slice(0, 12)}...\n`);
     await this.sdk.awaitUserSynchronised(this.user.id);
@@ -242,9 +240,9 @@ export class TerminalHandler {
     const [, fee] = await this.sdk.getDepositFees(this.assetId);
     const publicInput = value.value + fee.value;
     const controller = this.sdk.createDepositController(this.ethAddress, value, fee, this.user.id);
-    const assetBalance = await this.sdk.getPublicBalance(this.assetId, this.ethAddress);
+    const assetBalance = await this.sdk.getPublicBalance(this.ethAddress, this.assetId);
     const pendingBalance = await controller.getPendingFunds();
-    if (assetBalance + pendingBalance < publicInput) {
+    if (assetBalance.value + pendingBalance < publicInput) {
       throw new Error('insufficient balance.');
     }
     if (publicInput > pendingBalance) {
@@ -272,8 +270,8 @@ export class TerminalHandler {
     const value = this.sdk.toBaseUnits(inputAsset, valueStr);
     const bridgeId = new BridgeId(+addressIdStr, inputAsset, +outputAssetStr, undefined, undefined, +auxData);
     const fee = (await this.sdk.getDefiFees(bridgeId, this.user.id, value))[DefiSettlementTime.INSTANT];
-    const { privateKey } = await this.sdk.getUserData(this.user.id);
-    const userSigner = await this.sdk.createSchnorrSigner(privateKey);
+    const spendingKey = await this.sdk.generateSpendingKeyPair(this.ethAddress);
+    const userSigner = await this.sdk.createSchnorrSigner(spendingKey.privateKey);
     const controller = this.sdk.createDefiController(this.user.id, userSigner, bridgeId, value, fee);
     this.printQueue.put(`generating proof...\n`);
     await controller.createProof();
@@ -285,8 +283,8 @@ export class TerminalHandler {
     await this.assertRegistered();
     const value = this.sdk.toBaseUnits(this.assetId, valueStr);
     const [, fee] = await this.sdk.getWithdrawFees(this.assetId);
-    const { privateKey } = await this.sdk.getUserData(this.user.id);
-    const userSigner = await this.sdk.createSchnorrSigner(privateKey);
+    const spendingKey = await this.sdk.generateSpendingKeyPair(this.ethAddress);
+    const userSigner = await this.sdk.createSchnorrSigner(spendingKey.privateKey);
     const controller = this.sdk.createWithdrawController(this.user.id, userSigner, value, fee, this.ethAddress);
     await controller.createProof();
     await controller.send();
@@ -295,14 +293,14 @@ export class TerminalHandler {
 
   private async transfer(alias: string, valueStr: string) {
     await this.assertRegistered();
-    const to = await this.sdk.getAccountId(alias);
+    const to = await this.sdk.getAccountPublicKey(alias);
     if (!to) {
       throw new Error(`unknown user: ${alias}`);
     }
     const value = this.sdk.toBaseUnits(this.assetId, valueStr);
     const [, fee] = await this.sdk.getTransferFees(this.assetId);
-    const { privateKey } = await this.sdk.getUserData(this.user.id);
-    const userSigner = await this.sdk.createSchnorrSigner(privateKey);
+    const spendingKey = await this.sdk.generateSpendingKeyPair(this.ethAddress);
+    const userSigner = await this.sdk.createSchnorrSigner(spendingKey.privateKey);
     const controller = this.sdk.createTransferController(this.user.id, userSigner, value, fee, to);
     await controller.createProof();
     await controller.send();
@@ -316,28 +314,27 @@ export class TerminalHandler {
   }
 
   private async isRegistered() {
-    const { publicKey } = await this.user.getUserData();
-    return (await this.sdk.getLatestAccountNonce(publicKey)) > 0;
+    return await this.sdk.isAccountRegistered(this.user.id);
   }
 
   private async registerAlias(alias: string, valueStr = '0') {
     if (await this.isRegistered()) {
       throw new Error('account already has an alias.');
     }
-    if (!(await this.sdk.isAliasAvailable(alias))) {
+    if (await this.sdk.isAliasRegistered(alias)) {
       throw new Error('alias already registered.');
     }
     const deposit = { assetId: 0, value: BigInt(valueStr) };
     const [, fee] = await this.sdk.getRegisterFees(deposit);
-    const { id, publicKey: newSigningPublicKey, privateKey } = await this.user.getUserData();
+    const spendingKey = await this.sdk.generateSpendingKeyPair(this.ethAddress);
+    const { id, accountPrivateKey } = await this.user.getUserData();
     console.log(id);
-    const recoveryPublicKey = GrumpkinAddress.randomAddress();
     const controller = this.sdk.createRegisterController(
       id,
       alias,
-      privateKey,
-      newSigningPublicKey,
-      recoveryPublicKey,
+      accountPrivateKey,
+      spendingKey.publicKey,
+      undefined,
       deposit,
       fee,
       this.ethAddress,
@@ -361,14 +358,19 @@ export class TerminalHandler {
   private async balance(assetIdStr = '') {
     const assetId = assetIdStr ? +assetIdStr : this.assetId;
     this.printQueue.put(
-      `public: ${this.sdk.fromBaseUnits(await this.sdk.getPublicBalanceAv(assetId, this.ethAddress), true, 6)}\n`,
+      `public: ${this.sdk.fromBaseUnits(await this.sdk.getPublicBalance(this.ethAddress, assetId), true, 6)}\n`,
     );
     this.printQueue.put(
-      `private: ${this.sdk.fromBaseUnits(await this.sdk.getBalanceAv(assetId, this.user.id), true, 6)}\n`,
+      `private: ${this.sdk.fromBaseUnits(await this.sdk.getBalance(this.user.id, assetId), true, 6)}\n`,
     );
     const fundsPendingDeposit = await this.sdk.getUserPendingDeposit(assetId, this.ethAddress);
     if (fundsPendingDeposit > 0) {
-      this.printQueue.put(`pending deposit: ${this.sdk.fromBaseUnits({ assetId, value: fundsPendingDeposit })}\n`);
+      this.printQueue.put(
+        `pending deposit: ${this.sdk.fromBaseUnits({
+          assetId,
+          value: fundsPendingDeposit,
+        })}\n`,
+      );
     }
   }
 
@@ -387,7 +389,7 @@ export class TerminalHandler {
     });
   }
 
-  private async status(num = '1', from = '0') {
+  private async status(num = `1`, from = '0') {
     const txs = await this.user.getPaymentTxs();
     const f = Math.max(0, +from);
     const n = Math.min(Math.max(+num, 0), 5);

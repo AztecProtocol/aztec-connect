@@ -2,7 +2,7 @@ import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { assetValueToJson } from '@aztec/barretenberg/asset';
 import { ProofData } from '@aztec/barretenberg/client_proofs';
 import {
-  AccountTxJson,
+  AccountJson,
   JoinSplitTxJson,
   partialRuntimeConfigFromJson,
   PendingTxJson,
@@ -20,13 +20,19 @@ import { PromiseReadable } from 'promise-readable';
 import requestIp from 'request-ip';
 import { buildSchemaSync } from 'type-graphql';
 import { Container } from 'typedi';
+import { AccountDao } from './entity';
 import { TxDao } from './entity/tx';
 import { Metrics } from './metrics';
 import { JoinSplitTxResolver, RollupResolver, ServerStatusResolver, TxResolver } from './resolver';
 import { Server } from './server';
 import { Tx } from './tx_receiver';
 
-const toTxJson = ({ proofData, offchainTxData }: TxDao): AccountTxJson | JoinSplitTxJson => ({
+const toAccountJson = ({ accountPublicKey, aliasHash }: AccountDao): AccountJson => ({
+  accountPublicKey: accountPublicKey.toString('hex'),
+  aliasHash: aliasHash.toString('hex'),
+});
+
+const toTxJson = ({ proofData, offchainTxData }: TxDao): JoinSplitTxJson => ({
   proofData: proofData.toString('hex'),
   offchainTxData: offchainTxData.toString('hex'),
 });
@@ -198,32 +204,32 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     ctx.status = 200;
   });
 
-  router.post('/get-latest-account-nonce', recordMetric, async (ctx: Koa.Context) => {
+  router.post('/is-account-registered', recordMetric, async (ctx: Koa.Context) => {
     const stream = new PromiseReadable(ctx.req);
     const data = JSON.parse((await stream.readAll()) as string);
-    const accountPubKey = GrumpkinAddress.fromString(data.accountPubKey);
-    ctx.body = await server.getLatestAccountNonce(accountPubKey);
+    const accountPublicKey = GrumpkinAddress.fromString(data.accountPublicKey);
+    ctx.body = (await server.isAccountRegistered(accountPublicKey)) ? 1 : 0;
     ctx.status = 200;
   });
 
-  router.post('/get-latest-alias-nonce', recordMetric, async (ctx: Koa.Context) => {
+  router.post('/is-alias-registered', recordMetric, async (ctx: Koa.Context) => {
     const stream = new PromiseReadable(ctx.req);
     const { alias } = JSON.parse((await stream.readAll()) as string);
-    ctx.body = await server.getLatestAliasNonce(alias);
+    ctx.body = (await server.isAliasRegistered(alias)) ? 1 : 0;
     ctx.status = 200;
   });
 
-  router.post('/get-account-id', recordMetric, async (ctx: Koa.Context) => {
+  router.post('/account-exists', recordMetric, async (ctx: Koa.Context) => {
     const stream = new PromiseReadable(ctx.req);
-    const { alias, accountNonce } = JSON.parse((await stream.readAll()) as string);
-    const accountId = await server.getAccountId(alias, accountNonce ? +accountNonce : undefined);
-    ctx.body = accountId?.toString() || '';
+    const data = JSON.parse((await stream.readAll()) as string);
+    const accountPublicKey = GrumpkinAddress.fromString(data.accountPublicKey);
+    ctx.body = (await server.accountExists(accountPublicKey, data.alias)) ? 1 : 0;
     ctx.status = 200;
   });
 
-  router.get('/get-unsettled-account-txs', recordMetric, async (ctx: Koa.Context) => {
-    const txs = await server.getUnsettledAccountTxs();
-    ctx.body = txs.map(toTxJson);
+  router.get('/get-unsettled-accounts', recordMetric, async (ctx: Koa.Context) => {
+    const accounts = await server.getUnsettledAccounts();
+    ctx.body = accounts.map(toAccountJson);
     ctx.status = 200;
   });
 

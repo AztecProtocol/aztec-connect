@@ -1,4 +1,4 @@
-import { AccountAliasId, AccountId, AliasHash } from '@aztec/barretenberg/account_id';
+import { AliasHash } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
@@ -8,7 +8,7 @@ import { randomBytes } from 'crypto';
 import { CoreAccountTx, CoreClaimTx, CoreDefiTx, CorePaymentTx } from '../../core_tx';
 import { Note } from '../../note';
 import { UserData } from '../../user';
-import { Alias, SigningKey } from '../database';
+import { Alias, SpendingKey } from '../database';
 
 export const randomInt = () => {
   return Math.floor(Math.random() * 2 ** 32);
@@ -21,10 +21,10 @@ export const randomNote = (note: Partial<Note> = {}, treeNote: Partial<TreeNote>
   new Note(
     note.treeNote ||
       new TreeNote(
-        treeNote.ownerPubKey || GrumpkinAddress.randomAddress(),
+        treeNote.ownerPubKey || GrumpkinAddress.random(),
         inputOrDefault(treeNote.value, BigInt(randomInt())),
         inputOrDefault(treeNote.assetId, randomInt()),
-        inputOrDefault(treeNote.accountNonce, randomInt()),
+        treeNote.accountRequired || false,
         treeNote.noteSecret || randomBytes(32),
         treeNote.creatorPubKey || randomBytes(32),
         treeNote.inputNullifier || randomBytes(32),
@@ -40,30 +40,28 @@ export const randomNote = (note: Partial<Note> = {}, treeNote: Partial<TreeNote>
 export const randomClaimTx = (): CoreClaimTx => ({
   nullifier: randomBytes(32),
   defiTxId: TxId.random(),
-  userId: AccountId.random(),
+  userId: GrumpkinAddress.random(),
   secret: randomBytes(32),
   interactionNonce: randomInt(),
 });
 
-export const randomUser = (): UserData => {
-  const id = AccountId.random();
+export const randomUser = (user: Partial<UserData> = {}): UserData => {
+  const id = user.id || GrumpkinAddress.random();
   return {
     id,
-    privateKey: randomBytes(32),
-    publicKey: id.publicKey,
-    accountNonce: id.accountNonce,
-    aliasHash: AliasHash.random(),
-    syncedToRollup: randomInt(),
+    accountPublicKey: id,
+    accountPrivateKey: user.accountPrivateKey || randomBytes(32),
+    syncedToRollup: user.syncedToRollup ?? randomInt(),
   };
 };
 
 export const randomAccountTx = (tx: Partial<CoreAccountTx> = {}) =>
   new CoreAccountTx(
     tx.txId || TxId.random(),
-    tx.userId || AccountId.random(),
+    tx.userId || GrumpkinAddress.random(),
     tx.aliasHash || AliasHash.random(),
-    tx.newSigningPubKey1 || randomBytes(32),
-    tx.newSigningPubKey2 || randomBytes(32),
+    tx.newSpendingPublicKey1 || randomBytes(32),
+    tx.newSpendingPublicKey2 || randomBytes(32),
     tx.migrated || false,
     inputOrDefault(tx.txRefNo, randomInt()),
     tx.created || new Date(),
@@ -73,11 +71,11 @@ export const randomAccountTx = (tx: Partial<CoreAccountTx> = {}) =>
 export const randomPaymentTx = (tx: Partial<CorePaymentTx> = {}) =>
   new CorePaymentTx(
     tx.txId || TxId.random(),
-    tx.userId || AccountId.random(),
+    tx.userId || GrumpkinAddress.random(),
     inputOrDefault(tx.proofId, ProofId.SEND),
     inputOrDefault(tx.assetId, randomInt()),
     inputOrDefault(tx.publicValue, BigInt(randomInt())),
-    tx.publicOwner || EthAddress.randomAddress(),
+    tx.publicOwner || EthAddress.random(),
     inputOrDefault(tx.privateInput, BigInt(randomInt())),
     inputOrDefault(tx.recipientPrivateOutput, BigInt(randomInt())),
     inputOrDefault(tx.senderPrivateOutput, BigInt(randomInt())),
@@ -91,7 +89,7 @@ export const randomPaymentTx = (tx: Partial<CorePaymentTx> = {}) =>
 export const randomDefiTx = (tx: Partial<CoreDefiTx> = {}) =>
   new CoreDefiTx(
     tx.txId || TxId.random(),
-    tx.userId || AccountId.random(),
+    tx.userId || GrumpkinAddress.random(),
     tx.bridgeId || BridgeId.random(),
     inputOrDefault(tx.depositValue, BigInt(randomInt())),
     inputOrDefault(tx.txFee, BigInt(randomInt())),
@@ -108,17 +106,16 @@ export const randomDefiTx = (tx: Partial<CoreDefiTx> = {}) =>
     tx.claimSettled,
   );
 
-export const randomAccountAliasId = () => new AccountAliasId(AliasHash.random(), randomInt());
-
-export const randomSigningKey = (): SigningKey => ({
-  accountId: AccountId.random(),
-  key: randomBytes(32),
-  treeIndex: randomInt(),
-  hashPath: randomBytes(32),
+export const randomSpendingKey = (spendingKey: Partial<SpendingKey> = {}): SpendingKey => ({
+  userId: spendingKey.userId || GrumpkinAddress.random(),
+  key: spendingKey.key || randomBytes(32),
+  treeIndex: inputOrDefault(spendingKey.treeIndex, randomInt()),
+  hashPath: spendingKey.hashPath || randomBytes(32),
 });
 
-export const randomAlias = (): Alias => ({
-  aliasHash: AliasHash.random(),
-  address: GrumpkinAddress.randomAddress(),
-  latestNonce: randomInt(),
-});
+export const randomAlias = (alias: Partial<Alias> = {}) =>
+  new Alias(
+    alias.accountPublicKey || GrumpkinAddress.random(),
+    alias.aliasHash || AliasHash.random(),
+    alias.index ?? randomInt(),
+  );

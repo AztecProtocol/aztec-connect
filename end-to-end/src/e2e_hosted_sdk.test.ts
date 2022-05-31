@@ -92,8 +92,8 @@ describe('hummus terminal test', () => {
   async function getBalance(alias: string, assetId: number) {
     return await page.evaluate(
       async (alias, assetId) => {
-        const accountId = await window.aztecSdk.getAccountId(alias, 1);
-        return window.aztecSdk.getBalance(assetId, accountId!);
+        const accountPublicKey = await window.aztecSdk.getAccountPublicKey(alias);
+        return (await window.aztecSdk.getBalance(accountPublicKey!, assetId)).value;
       },
       alias,
       assetId,

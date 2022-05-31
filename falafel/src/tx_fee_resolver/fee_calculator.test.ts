@@ -80,8 +80,8 @@ describe('fee calculator', () => {
         { assetId, value: 13190800n },
       ],
       [
-        { assetId, value: 1104400n },
-        { assetId, value: 10104400n },
+        { assetId, value: 1115600n },
+        { assetId, value: 10115600n },
       ],
       [
         { assetId, value: 1187600n },

@@ -278,22 +278,22 @@ export class Server {
     return this.rollupDb.getUnsettledNullifiers();
   }
 
-  public async getLatestAccountNonce(accountPublicKey: GrumpkinAddress) {
-    return this.rollupDb.getLatestAccountNonce(accountPublicKey);
+  public async isAccountRegistered(accountPublicKey: GrumpkinAddress) {
+    return this.rollupDb.isAccountRegistered(accountPublicKey);
   }
 
-  public async getLatestAliasNonce(alias: string) {
+  public async isAliasRegistered(alias: string) {
     const aliasHash = AliasHash.fromAlias(alias, this.blake);
-    return this.rollupDb.getLatestAliasNonce(aliasHash);
+    return this.rollupDb.isAliasRegistered(aliasHash);
   }
 
-  public async getAccountId(alias: string, accountNonce?: number) {
+  public async accountExists(accountPublicKey: GrumpkinAddress, alias: string) {
     const aliasHash = AliasHash.fromAlias(alias, this.blake);
-    return this.rollupDb.getAccountId(aliasHash, accountNonce);
+    return this.rollupDb.accountExists(accountPublicKey, aliasHash);
   }
 
-  public async getUnsettledAccountTxs() {
-    return this.rollupDb.getUnsettledAccountTxs();
+  public async getUnsettledAccounts() {
+    return this.rollupDb.getUnsettledAccounts();
   }
 
   public async getUnsettledPaymentTxs() {

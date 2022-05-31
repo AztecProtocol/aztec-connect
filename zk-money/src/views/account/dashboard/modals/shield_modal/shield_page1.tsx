@@ -82,8 +82,8 @@ export function ShieldPage1({
               theme={InputTheme.WHITE}
               recipientType="L2"
               recipientStr={fields.recipientAlias}
-              isLoading={validationResult.input.aliasIsValid === undefined}
-              isValid={!!validationResult.input.aliasIsValid}
+              isLoading={validationResult.input.isLoadingRecipientUserId}
+              isValid={!!validationResult.input.recipientUserId}
               onChangeValue={onChangeRecipientAlias}
             />
             <AmountSection

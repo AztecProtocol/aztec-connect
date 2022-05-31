@@ -1,4 +1,4 @@
-import { AccountAliasId, AccountId } from '../account_id';
+import { AliasHash } from '../account_id';
 import { GrumpkinAddress } from '../address';
 import { BridgeId } from '../bridge_id';
 import { Blake2s } from '../crypto';
@@ -29,21 +29,25 @@ describe('compute_nullifier', () => {
   });
 
   it('should compute correct nullifier', () => {
-    const inputNote1 = new TreeNote(pubKey, BigInt(100), 0, 0, noteSecret, Buffer.alloc(32), dummyNullifier);
+    const inputNote1 = new TreeNote(pubKey, BigInt(100), 0, true, noteSecret, Buffer.alloc(32), dummyNullifier);
     inputNote1.noteSecret = noteSecret;
 
     const inputNote1Enc = noteAlgos.valueNoteCommitment(inputNote1);
 
     const nullifier1 = noteAlgos.valueNoteNullifier(inputNote1Enc, privateKey);
 
-    expect(nullifier1.toString('hex')).toEqual('0d57355d79c04da7fae6919005d23900345b9fb0c11917fa4ada00cc56582845');
+    expect(nullifier1.toString('hex')).toEqual('1d6bac88f87297f2b81d0131534f1eec5f15404bb85721020cccc6497677c9f5');
   });
 
   it('should commit to claim note and compute its nullifier', () => {
     const bridgeId = BridgeId.fromBigInt(BigInt(456));
-    const ownerId = new AccountId(pubKey, 0);
     const claimNoteTxData = new ClaimNoteTxData(BigInt(100), bridgeId, noteSecret, dummyNullifier);
-    const partialState = noteAlgos.valueNotePartialCommitment(claimNoteTxData.partialStateSecret, ownerId);
+    const accountRequired = false;
+    const partialState = noteAlgos.valueNotePartialCommitment(
+      claimNoteTxData.partialStateSecret,
+      pubKey,
+      accountRequired,
+    );
     const inputNote = new TreeClaimNote(
       claimNoteTxData.value,
       claimNoteTxData.bridgeId,
@@ -64,10 +68,14 @@ describe('compute_nullifier', () => {
     expect(commitment.toString('hex')).toEqual('0196130e904cada31725bd8b7bb73de20eda978c92a2e05cd735429df1c88a47');
   });
 
-  it('should compute correct alias id nullifier', () => {
-    const accountNonce = 1;
-    const accountAliasId = AccountAliasId.fromAlias('pebble', accountNonce, blake2s);
-    const nullifier = noteAlgos.accountAliasIdNullifier(accountAliasId);
-    expect(nullifier.toString('hex')).toEqual('01ef0643a2bc47eeed66a6a123326171a90773e9251684e7d87f8771177d09b3');
+  it('should compute correct alias hash nullifier', () => {
+    const aliasHash = AliasHash.fromAlias('pebble', blake2s);
+    const nullifier = noteAlgos.accountAliasHashNullifier(aliasHash);
+    expect(nullifier.toString('hex')).toEqual('0c61620f2cef41c6c9401025a658170a6b756d3f5d3af33c8d53f39b21d84ca6');
+  });
+
+  it('should compute correct public key nullifier', () => {
+    const nullifier = noteAlgos.accountPublicKeyNullifier(pubKey);
+    expect(nullifier.toString('hex')).toEqual('293e4583639708553c09d48eb546ea2a784c75e5619f099b41fa7ea42b68bde8');
   });
 });

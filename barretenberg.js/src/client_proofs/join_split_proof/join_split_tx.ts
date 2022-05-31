@@ -1,4 +1,4 @@
-import { AccountAliasId, AliasHash } from '../../account_id';
+import { AliasHash } from '../../account_id';
 import { EthAddress, GrumpkinAddress } from '../../address';
 import { toBigIntBE, toBufferBE } from '../../bigint_buffer';
 import { HashPath } from '../../merkle_tree';
@@ -19,10 +19,11 @@ export class JoinSplitTx {
     public outputNotes: TreeNote[],
     public claimNote: ClaimNoteTxData,
     public accountPrivateKey: Buffer,
-    public accountAliasId: AccountAliasId,
+    public aliasHash: AliasHash,
+    public accountRequired: boolean,
     public accountIndex: number,
     public accountPath: HashPath,
-    public signingPubKey: GrumpkinAddress,
+    public spendingPublicKey: GrumpkinAddress,
     public backwardLink: Buffer,
     public allowChain: number,
   ) {}
@@ -47,11 +48,11 @@ export class JoinSplitTx {
       this.claimNote.toBuffer(),
 
       this.accountPrivateKey,
-      this.accountAliasId.aliasHash.toBuffer32(),
-      numToUInt32BE(this.accountAliasId.accountNonce),
+      this.aliasHash.toBuffer32(),
+      Buffer.from([+this.accountRequired]),
       numToUInt32BE(this.accountIndex),
       this.accountPath.toBuffer(),
-      this.signingPubKey.toBuffer(),
+      this.spendingPublicKey.toBuffer(),
 
       this.backwardLink,
       numToUInt32BE(this.allowChain),
@@ -92,14 +93,13 @@ export class JoinSplitTx {
     dataStart += 32;
     const aliasHash = new AliasHash(buf.slice(dataStart + 4, dataStart + 32));
     dataStart += 32;
-    const accountNonce = buf.readUInt32BE(dataStart);
-    dataStart += 4;
-    const accountAliasId = new AccountAliasId(aliasHash, accountNonce);
+    const accountRequired = !!buf[dataStart];
+    dataStart += 1;
     const accountIndex = buf.readUInt32BE(dataStart);
     dataStart += 4;
     const accountPath = HashPath.deserialize(buf, dataStart);
     dataStart += accountPath.adv;
-    const signingPubKey = new GrumpkinAddress(buf.slice(dataStart, dataStart + 64));
+    const spendingPublicKey = new GrumpkinAddress(buf.slice(dataStart, dataStart + 64));
     dataStart += 64;
     const backwardLink = buf.slice(dataStart, dataStart + 32);
     dataStart += 32;
@@ -117,10 +117,11 @@ export class JoinSplitTx {
       [outputNote0, outputNote1],
       claimNote,
       accountPrivateKey,
-      accountAliasId,
+      aliasHash,
+      accountRequired,
       accountIndex,
       accountPath.elem,
-      signingPubKey,
+      spendingPublicKey,
       backwardLink,
       allowChain,
     );

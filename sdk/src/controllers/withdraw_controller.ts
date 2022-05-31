@@ -1,5 +1,4 @@
-import { AccountId } from '@aztec/barretenberg/account_id';
-import { EthAddress } from '@aztec/barretenberg/address';
+import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetValue } from '@aztec/barretenberg/asset';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { CoreSdkInterface } from '../core_sdk';
@@ -14,11 +13,11 @@ export class WithdrawController {
   private txId!: TxId;
 
   constructor(
-    public readonly userId: AccountId,
+    public readonly userId: GrumpkinAddress,
     private readonly userSigner: Signer,
     public readonly assetValue: AssetValue,
     public readonly fee: AssetValue,
-    public readonly to: EthAddress,
+    public readonly recipient: EthAddress,
     private readonly core: CoreSdkInterface,
   ) {
     if (!assetValue.value) {
@@ -32,6 +31,7 @@ export class WithdrawController {
     const privateInput = value + (!requireFeePayingTx ? this.fee.value : BigInt(0));
     const txRefNo = requireFeePayingTx ? createTxRefNo() : 0;
     const spendingPublicKey = this.userSigner.getPublicKey();
+    const accountRequired = !spendingPublicKey.equals(this.userId);
 
     const proofInput = await this.core.createPaymentProofInput(
       this.userId,
@@ -41,8 +41,9 @@ export class WithdrawController {
       privateInput,
       BigInt(0),
       BigInt(0),
-      undefined,
-      this.to,
+      this.userId,
+      accountRequired,
+      this.recipient,
       spendingPublicKey,
       2,
     );
@@ -58,7 +59,8 @@ export class WithdrawController {
         this.fee.value,
         BigInt(0),
         BigInt(0),
-        undefined,
+        this.userId,
+        accountRequired,
         undefined,
         spendingPublicKey,
         2,

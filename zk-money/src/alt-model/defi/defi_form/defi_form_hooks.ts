@@ -42,7 +42,7 @@ function useDefiFormBridgeId(recipe: DefiRecipe, { inA, outA }: BridgeInteractio
 }
 
 export function useDefiForm(recipe: DefiRecipe, mode: FlowDirection) {
-  const { accountId, config } = useApp();
+  const { userId, config } = useApp();
   const [fields, setFields] = useState<DefiFormFields>({
     amountStrOrMax: mode === 'exit' ? MAX_MODE : '',
     speed: DefiSettlementTime.DEADLINE,
@@ -101,12 +101,12 @@ export function useDefiForm(recipe: DefiRecipe, mode: FlowDirection) {
       debug('Attempted to recreate DefiComposer');
       return;
     }
-    if (!validationResult.validPayload || !sdk || !awaitCorrectProvider || !accountId || !bridgeId) {
+    if (!validationResult.validPayload || !sdk || !awaitCorrectProvider || !userId || !bridgeId) {
       debug('Attempted to create DefiComposer with incomplete dependencies', {
         validationResult,
         sdk,
         awaitCorrectProvider,
-        accountId,
+        userId,
         bridgeId,
       });
       return;
@@ -114,7 +114,7 @@ export function useDefiForm(recipe: DefiRecipe, mode: FlowDirection) {
     const composer = new DefiComposer(validationResult.validPayload, {
       sdk,
       awaitCorrectProvider,
-      accountId,
+      userId,
       bridgeId,
     });
     setLockedComposer(composer);

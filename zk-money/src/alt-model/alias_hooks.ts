@@ -1,53 +1,42 @@
-import type { AccountId, AztecSdk } from '@aztec/sdk';
+import type { GrumpkinAddress } from '@aztec/sdk';
 import { formatAliasInput, isValidAliasInput } from 'app';
 import { createGatedSetter } from 'app/util';
 import { useEffect, useState } from 'react';
+import { useApp } from './app_context';
 import { useSdk } from './top_level_context';
 
-async function checkAliasExists(sdk: AztecSdk, aliasInput: string) {
-  const alias = formatAliasInput(aliasInput);
-  if (!isValidAliasInput(aliasInput)) return false;
-  const availableLocally = await sdk.isAliasAvailable(alias);
-  if (!availableLocally) return true;
-  const availableRemotely = await sdk.isRemoteAliasAvailable(alias);
-  return !availableRemotely;
-}
-
-export function useAccountIdForAlias(aliasInput: string, debounceMs: number) {
+export function useUserIdForAlias(aliasInput: string, debounceMs: number, allowOwnAlias?: boolean) {
+  const { alias: userAlias, userId } = useApp();
   const sdk = useSdk();
-  const [accountIdFetchState, setAccountIdFetchState] = useState<{ accountId?: AccountId; isLoading: boolean }>({
+  const [userIdFetchState, setUserIdFetchState] = useState<{
+    userId?: GrumpkinAddress;
+    isLoading: boolean;
+  }>({
     isLoading: false,
   });
   const alias = formatAliasInput(aliasInput);
   useEffect(() => {
     if (!isValidAliasInput(alias)) {
-      setAccountIdFetchState({ isLoading: false });
+      setUserIdFetchState({ isLoading: false });
       return;
     }
-    const gatedSetter = createGatedSetter(setAccountIdFetchState);
+    if (userAlias === alias) {
+      if (allowOwnAlias) {
+        setUserIdFetchState({ isLoading: false, userId });
+      } else {
+        setUserIdFetchState({ isLoading: false, userId: undefined });
+      }
+      return;
+    }
+    const gatedSetter = createGatedSetter(setUserIdFetchState);
     gatedSetter.set({ isLoading: true });
     const task = setTimeout(() => {
-      sdk?.getAccountId(alias).then(accountId => gatedSetter.set({ isLoading: false, accountId }));
+      sdk?.getAccountPublicKey(alias).then(userId => gatedSetter.set({ isLoading: false, userId }));
     }, debounceMs);
     return () => {
       gatedSetter.close();
       clearTimeout(task);
     };
-  }, [sdk, alias, debounceMs]);
-  return accountIdFetchState;
-}
-
-export function useAliasIsValidRecipient(aliasInput: string, debounceMs = 500) {
-  const sdk = useSdk();
-  const [availabilty, setAvailabilty] = useState<boolean>();
-  useEffect(() => {
-    if (sdk) {
-      const task = setTimeout(() => {
-        setAvailabilty(undefined);
-        checkAliasExists(sdk, aliasInput).then(setAvailabilty);
-      }, debounceMs);
-      return () => clearTimeout(task);
-    }
-  }, [sdk, aliasInput, debounceMs]);
-  return availabilty;
+  }, [sdk, alias, userAlias, allowOwnAlias, userId, debounceMs]);
+  return userIdFetchState;
 }

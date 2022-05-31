@@ -227,9 +227,8 @@ export class WorldState {
     const accountDaos = accounts.map(
       a =>
         new AccountDao({
+          accountPublicKey: a.alias.address,
           aliasHash: a.alias.aliasHash,
-          accountPubKey: a.alias.address,
-          accountNonce: a.alias.accountNonce,
         }),
     );
     await this.rollupDb.addAccounts(accountDaos);

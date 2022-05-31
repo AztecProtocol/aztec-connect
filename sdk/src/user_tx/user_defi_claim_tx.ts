@@ -1,4 +1,4 @@
-import { AccountId } from '@aztec/barretenberg/account_id';
+import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetValue } from '@aztec/barretenberg/asset';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
@@ -10,7 +10,7 @@ export class UserDefiClaimTx {
   constructor(
     public readonly txId: TxId | undefined,
     public readonly defiTxId: TxId,
-    public readonly userId: AccountId,
+    public readonly userId: GrumpkinAddress,
     public readonly bridgeId: BridgeId,
     public readonly depositValue: AssetValue,
     public readonly success: boolean,

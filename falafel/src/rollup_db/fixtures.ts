@@ -1,4 +1,4 @@
-import { AccountAliasId, AliasHash } from '@aztec/barretenberg/account_id';
+import { AliasHash } from '@aztec/barretenberg/account_id';
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { TxType } from '@aztec/barretenberg/blockchain';
@@ -18,18 +18,15 @@ const txTypeToProofId = (txType: TxType) => (txType < TxType.WITHDRAW_TO_CONTRAC
 export const randomTx = ({
   txType = TxType.TRANSFER,
   signature = Buffer.alloc(0),
-  accountPublicKey = GrumpkinAddress.randomAddress(),
+  accountPublicKey = GrumpkinAddress.random(),
   aliasHash = AliasHash.random(),
-  accountNonce = 1,
 } = {}) => {
   const proofId = txTypeToProofId(txType);
   const proofData = new ProofData(
     Buffer.concat([numToUInt32BE(proofId, 32), randomBytes(32 * (ProofData.NUM_PUBLIC_INPUTS - 1))]),
   );
   const offchainTxData =
-    txType === TxType.ACCOUNT
-      ? new OffchainAccountData(accountPublicKey, new AccountAliasId(aliasHash, accountNonce)).toBuffer()
-      : randomBytes(160);
+    txType === TxType.ACCOUNT ? new OffchainAccountData(accountPublicKey, aliasHash).toBuffer() : randomBytes(160);
   return new TxDao({
     id: proofData.txId,
     proofData: proofData.rawProofData,
@@ -44,16 +41,11 @@ export const randomTx = ({
   });
 };
 
-export const randomAccountTx = ({
-  accountPublicKey = GrumpkinAddress.randomAddress(),
-  aliasHash = AliasHash.random(),
-  accountNonce = 1,
-} = {}) =>
+export const randomAccountTx = ({ accountPublicKey = GrumpkinAddress.random(), aliasHash = AliasHash.random() } = {}) =>
   randomTx({
     txType: TxType.ACCOUNT,
     accountPublicKey,
     aliasHash,
-    accountNonce,
   });
 
 export const randomRollupProof = (txs: TxDao[], dataStartIndex = 0, rollupSize = txs.length) =>

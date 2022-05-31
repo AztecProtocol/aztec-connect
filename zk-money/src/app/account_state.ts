@@ -1,4 +1,4 @@
-import type { AccountId } from '@aztec/sdk';
+import type { GrumpkinAddress } from '@aztec/sdk';
 
 export enum AccountVersion {
   V0 = 0,
@@ -6,6 +6,6 @@ export enum AccountVersion {
   UNKNOWN = -1,
 }
 export interface AccountState {
-  userId: AccountId;
+  userId: GrumpkinAddress;
   alias: string;
 }

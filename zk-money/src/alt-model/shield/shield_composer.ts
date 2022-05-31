@@ -1,4 +1,4 @@
-import { AccountId, AztecSdk, EthAddress, DepositController, TxId, FeePayer } from '@aztec/sdk';
+import { GrumpkinAddress, AztecSdk, EthAddress, DepositController, TxId, FeePayer } from '@aztec/sdk';
 import type { Provider } from '../../app';
 import createDebug from 'debug';
 import { Amount } from 'alt-model/assets';
@@ -15,13 +15,13 @@ export type ShieldComposerPayload = Readonly<{
   targetOutput: Amount;
   fee: Amount;
   depositor: EthAddress;
-  recipientAlias: string;
+  recipientUserId: GrumpkinAddress;
 }>;
 
 export interface ShieldComposerDeps {
   sdk: AztecSdk;
   keyVault: KeyVault;
-  accountId: AccountId;
+  userId: GrumpkinAddress;
   provider: Provider;
   requiredNetwork: Network;
 }
@@ -66,26 +66,26 @@ export class ShieldComposer {
   }
 
   private async createController() {
-    const { targetOutput, fee, depositor, recipientAlias } = this.payload;
-    const { provider, sdk, accountId } = this.deps;
-    const recipientAccount = (await sdk.getRemoteAccountId(recipientAlias))!;
+    const { targetOutput, fee, depositor, recipientUserId } = this.payload;
+    const { provider, sdk, userId } = this.deps;
 
     // If fees are taken in second asset we need access to the user's spending key.
     // Otherwise we can shield from nonce 0 and skip spending key generation.
     let feePayer: FeePayer | undefined;
-    const isShieldingFromNonce0 = targetOutput.id === fee.id;
-    if (!isShieldingFromNonce0) {
+    const isPayingFeeWithNotes = targetOutput.id !== fee.id;
+    if (isPayingFeeWithNotes) {
       this.stateObs.setPhase(ShieldComposerPhase.GENERATE_SPENDING_KEY);
       const signerPrivateKey = (await createSigningKeys(provider, sdk)).privateKey;
       const signer = await sdk.createSchnorrSigner(signerPrivateKey);
-      feePayer = { userId: accountId, signer };
+      feePayer = { userId, signer };
     }
 
     return sdk.createDepositController(
       depositor,
       targetOutput.toAssetValue(),
       fee.toAssetValue(),
-      recipientAccount,
+      recipientUserId,
+      true, // recipientAccountRequired (depositing to a registered account)
       feePayer,
       provider.ethereumProvider,
     );
@@ -135,8 +135,7 @@ export class ShieldComposer {
     this.stateObs.setPrompt(`Please make a deposit of ${requiredAmount.format({ layer: 'L1' })} from your wallet.`);
     const expireIn = 60n * 5n; // 5 minutes
     const deadline = BigInt(Math.floor(Date.now() / 1000)) + expireIn;
-    const isDai = this.payload.targetOutput.id === this.deps.sdk.getAssetIdByAddress(KNOWN_MAINNET_ASSET_ADDRESSES.DAI);
-    if (isDai) {
+    if (this.isDai()) {
       await controller.depositFundsToContractWithNonStandardPermit(deadline);
     } else {
       await controller.depositFundsToContract(deadline);
@@ -146,6 +145,15 @@ export class ShieldComposer {
     const confirmed = await withinTimeLimit(controller.awaitDepositFundsToContract(), timeout);
     this.stateObs.clearPrompt();
     if (!confirmed) throw new Error('Deposit confirmation timed out');
+  }
+
+  private isDai() {
+    try {
+      return this.payload.targetOutput.id === this.deps.sdk.getAssetIdByAddress(KNOWN_MAINNET_ASSET_ADDRESSES.DAI);
+    } catch {
+      // This should only happen when testing with a backend that isn't forked from mainnet
+      return false;
+    }
   }
 
   private async approveProof(controller: DepositController) {

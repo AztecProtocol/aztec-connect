@@ -1,13 +1,8 @@
-import { AccountId, AliasHash } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { assetValueFromJson } from '@aztec/barretenberg/asset';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { SchnorrSignature } from '@aztec/barretenberg/crypto';
-import {
-  accountTxFromJson,
-  joinSplitTxFromJson,
-  rollupProviderStatusFromJson,
-} from '@aztec/barretenberg/rollup_provider';
+import { joinSplitTxFromJson, rollupProviderStatusFromJson } from '@aztec/barretenberg/rollup_provider';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import EventEmitter from 'events';
 import { coreUserTxFromJson } from '../core_tx';
@@ -31,7 +26,7 @@ import { SdkEvent, sdkStatusFromJson } from './sdk_status';
 
 /**
  * Implements the standard CoreSdkInterface.
- * Translates the CoreSdkInterface from normal types such as bigint, Buffer, AccountId, etc. into types
+ * Translates the CoreSdkInterface from normal types such as bigint, Buffer, GrumpkinAddress, etc. into types
  * that can be serialized over a MessageChannel.
  * It forwards the calls onto an implementation of CoreSdkSerializedInterface.
  */
@@ -46,7 +41,7 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
         switch (event) {
           case SdkEvent.UPDATED_USER_STATE: {
             const [userId] = args;
-            this.emit(event, AccountId.fromString(userId));
+            this.emit(event, GrumpkinAddress.fromString(userId));
             break;
           }
           default:
@@ -78,6 +73,40 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
     return rollupProviderStatusFromJson(json);
   }
 
+  public async isAccountRegistered(accountPublicKey: GrumpkinAddress) {
+    return this.backend.isAccountRegistered(accountPublicKey.toString());
+  }
+
+  public async isRemoteAccountRegistered(accountPublicKey: GrumpkinAddress) {
+    return this.backend.isRemoteAccountRegistered(accountPublicKey.toString());
+  }
+
+  public async isAliasRegistered(alias: string) {
+    return this.backend.isAliasRegistered(alias);
+  }
+
+  public async isRemoteAliasRegistered(alias: string) {
+    return this.backend.isRemoteAliasRegistered(alias);
+  }
+
+  public async accountExists(accountPublicKey: GrumpkinAddress, alias: string) {
+    return this.backend.accountExists(accountPublicKey.toString(), alias);
+  }
+
+  public async remoteAccountExists(accountPublicKey: GrumpkinAddress, alias: string) {
+    return this.backend.remoteAccountExists(accountPublicKey.toString(), alias);
+  }
+
+  public async getAccountPublicKey(alias: string) {
+    const key = await this.backend.getAccountPublicKey(alias);
+    return key ? GrumpkinAddress.fromString(key) : undefined;
+  }
+
+  public async getRemoteUnsettledAccountPublicKey(alias: string) {
+    const key = await this.backend.getRemoteUnsettledAccountPublicKey(alias);
+    return key ? GrumpkinAddress.fromString(key) : undefined;
+  }
+
   public async getTxFees(assetId: number) {
     const txFees = await this.backend.getTxFees(assetId);
     return txFees.map(fees => fees.map(assetValueFromJson));
@@ -88,73 +117,37 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
     return fees.map(assetValueFromJson);
   }
 
-  public async getLatestAccountNonce(publicKey: GrumpkinAddress) {
-    return this.backend.getLatestAccountNonce(publicKey.toString());
-  }
-
-  public async getRemoteLatestAccountNonce(publicKey: GrumpkinAddress) {
-    return this.backend.getRemoteLatestAccountNonce(publicKey.toString());
-  }
-
-  public async getLatestAliasNonce(alias: string) {
-    return this.backend.getLatestAliasNonce(alias);
-  }
-
-  public async getRemoteLatestAliasNonce(alias: string) {
-    return this.backend.getRemoteLatestAliasNonce(alias);
-  }
-
-  public async getAccountId(alias: string, accountNonce?: number) {
-    const accountId = await this.backend.getAccountId(alias, accountNonce);
-    return accountId ? AccountId.fromString(accountId) : undefined;
-  }
-
-  public async getRemoteAccountId(alias: string, accountNonce?: number) {
-    const accountId = await this.backend.getRemoteAccountId(alias, accountNonce);
-    return accountId ? AccountId.fromString(accountId) : undefined;
-  }
-
-  public async isAliasAvailable(alias: string) {
-    return this.backend.isAliasAvailable(alias);
-  }
-
-  public async isRemoteAliasAvailable(alias: string) {
-    return this.backend.isRemoteAliasAvailable(alias);
-  }
-
-  public async computeAliasHash(alias: string) {
-    const hash = await this.backend.computeAliasHash(alias);
-    return AliasHash.fromString(hash);
-  }
-
   public async createDepositProof(
     assetId: number,
     publicInput: bigint,
     privateOutput: bigint,
-    noteRecipient: AccountId,
-    publicOwner: EthAddress,
+    depositor: EthAddress,
+    recipient: GrumpkinAddress,
+    recipientAccountRequired: boolean,
     txRefNo: number,
   ) {
     const json = await this.backend.createDepositProof(
       assetId,
       publicInput.toString(),
       privateOutput.toString(),
-      noteRecipient.toString(),
-      publicOwner.toString(),
+      depositor.toString(),
+      recipient.toString(),
+      recipientAccountRequired,
       txRefNo,
     );
     return proofOutputFromJson(json);
   }
 
   public async createPaymentProofInput(
-    userId: AccountId,
+    userId: GrumpkinAddress,
     assetId: number,
     publicInput: bigint,
     publicOutput: bigint,
     privateInput: bigint,
     recipientPrivateOutput: bigint,
     senderPrivateOutput: bigint,
-    noteRecipient: AccountId | undefined,
+    noteRecipient: GrumpkinAddress | undefined,
+    recipientAccountRequired: boolean,
     publicOwner: EthAddress | undefined,
     spendingPublicKey: GrumpkinAddress,
     allowChain: number,
@@ -168,6 +161,7 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
       recipientPrivateOutput.toString(),
       senderPrivateOutput.toString(),
       noteRecipient ? noteRecipient.toString() : undefined,
+      recipientAccountRequired,
       publicOwner ? publicOwner.toString() : undefined,
       spendingPublicKey.toString(),
       allowChain,
@@ -181,44 +175,42 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
   }
 
   public async createAccountProofSigningData(
-    signingPubKey: GrumpkinAddress,
-    alias: string,
-    accountNonce: number,
-    migrate: boolean,
     accountPublicKey: GrumpkinAddress,
+    alias: string,
+    migrate: boolean,
+    spendingPublicKey: GrumpkinAddress,
     newAccountPublicKey?: GrumpkinAddress,
-    newSigningPubKey1?: GrumpkinAddress,
-    newSigningPubKey2?: GrumpkinAddress,
+    newSpendingPublicKey1?: GrumpkinAddress,
+    newSpendingPublicKey2?: GrumpkinAddress,
   ) {
     const signingData = await this.backend.createAccountProofSigningData(
-      signingPubKey.toString(),
-      alias,
-      accountNonce,
-      migrate,
       accountPublicKey.toString(),
+      alias,
+      migrate,
+      spendingPublicKey.toString(),
       newAccountPublicKey ? newAccountPublicKey.toString() : undefined,
-      newSigningPubKey1 ? newSigningPubKey1.toString() : undefined,
-      newSigningPubKey2 ? newSigningPubKey2.toString() : undefined,
+      newSpendingPublicKey1 ? newSpendingPublicKey1.toString() : undefined,
+      newSpendingPublicKey2 ? newSpendingPublicKey2.toString() : undefined,
     );
     return Buffer.from(signingData);
   }
 
   public async createAccountProofInput(
-    userId: AccountId,
-    aliasHash: AliasHash,
+    userId: GrumpkinAddress,
+    alias: string,
     migrate: boolean,
-    signingPublicKey: GrumpkinAddress,
-    newSigningPublicKey1: GrumpkinAddress | undefined,
-    newSigningPublicKey2: GrumpkinAddress | undefined,
+    spendingPublicKey: GrumpkinAddress,
+    newSpendingPublicKey1: GrumpkinAddress | undefined,
+    newSpendingPublicKey2: GrumpkinAddress | undefined,
     newAccountPrivateKey: Buffer | undefined,
   ) {
     const json = await this.backend.createAccountProofInput(
       userId.toString(),
-      aliasHash.toString(),
+      alias,
       migrate,
-      signingPublicKey.toString(),
-      newSigningPublicKey1 ? newSigningPublicKey1.toString() : undefined,
-      newSigningPublicKey2 ? newSigningPublicKey2.toString() : undefined,
+      spendingPublicKey.toString(),
+      newSpendingPublicKey1 ? newSpendingPublicKey1.toString() : undefined,
+      newSpendingPublicKey2 ? newSpendingPublicKey2.toString() : undefined,
       newAccountPrivateKey ? new Uint8Array(newAccountPrivateKey) : undefined,
     );
     return accountProofInputFromJson(json);
@@ -230,7 +222,7 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
   }
 
   public async createDefiProofInput(
-    userId: AccountId,
+    userId: GrumpkinAddress,
     bridgeId: BridgeId,
     depositValue: bigint,
     inputNotes: Note[],
@@ -260,11 +252,11 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
     await this.backend.awaitSynchronised();
   }
 
-  public async isUserSynching(userId: AccountId) {
+  public async isUserSynching(userId: GrumpkinAddress) {
     return this.backend.isUserSynching(userId.toString());
   }
 
-  public async awaitUserSynchronised(userId: AccountId) {
+  public async awaitUserSynchronised(userId: GrumpkinAddress) {
     await this.backend.awaitUserSynchronised(userId.toString());
   }
 
@@ -288,11 +280,11 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
     return this.backend.getDefiInteractionNonce(txId.toString());
   }
 
-  public async userExists(userId: AccountId) {
+  public async userExists(userId: GrumpkinAddress) {
     return this.backend.userExists(userId.toString());
   }
 
-  public async getUserData(userId: AccountId) {
+  public async getUserData(userId: GrumpkinAddress) {
     const json = await this.backend.getUserData(userId.toString());
     return userDataFromJson(json);
   }
@@ -312,69 +304,88 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
     return SchnorrSignature.fromString(signature);
   }
 
-  public async addUser(privateKey: Buffer, accountNonce?: number, noSync?: boolean) {
-    const json = await this.backend.addUser(new Uint8Array(privateKey), accountNonce, noSync);
+  public async addUser(privateKey: Buffer, noSync?: boolean) {
+    const json = await this.backend.addUser(new Uint8Array(privateKey), noSync);
     return userDataFromJson(json);
   }
 
-  public async removeUser(userId: AccountId) {
+  public async removeUser(userId: GrumpkinAddress) {
     await this.backend.removeUser(userId.toString());
   }
 
-  public async getSigningKeys(userId: AccountId) {
-    const keys = await this.backend.getSigningKeys(userId.toString());
+  public async getSpendingKeys(userId: GrumpkinAddress) {
+    const keys = await this.backend.getSpendingKeys(userId.toString());
     return keys.map(k => Buffer.from(k));
   }
 
-  public async getBalances(userId: AccountId) {
-    const balances = await this.backend.getBalances(userId.toString());
+  public async getBalances(userId: GrumpkinAddress, unsafe?: boolean) {
+    const balances = await this.backend.getBalances(userId.toString(), unsafe);
     return balances.map(assetValueFromJson);
   }
 
-  public async getBalance(assetId: number, userId: AccountId) {
-    const balanceStr = await this.backend.getBalance(assetId, userId.toString());
+  public async getBalance(userId: GrumpkinAddress, assetId: number, unsafe?: boolean) {
+    const balanceStr = await this.backend.getBalance(userId.toString(), assetId, unsafe);
     return BigInt(balanceStr);
   }
 
-  public async getSpendableSum(assetId: number, userId: AccountId, excludePendingNotes?: boolean) {
-    const valueStr = await this.backend.getSpendableSum(assetId, userId.toString(), excludePendingNotes);
+  public async getSpendableSum(
+    userId: GrumpkinAddress,
+    assetId: number,
+    excludePendingNotes?: boolean,
+    unsafe?: boolean,
+  ) {
+    const valueStr = await this.backend.getSpendableSum(userId.toString(), assetId, excludePendingNotes, unsafe);
     return BigInt(valueStr);
   }
 
-  public async getSpendableSums(userId: AccountId, excludePendingNotes?: boolean) {
-    const sums = await this.backend.getSpendableSums(userId.toString(), excludePendingNotes);
+  public async getSpendableSums(userId: GrumpkinAddress, excludePendingNotes?: boolean, unsafe?: boolean) {
+    const sums = await this.backend.getSpendableSums(userId.toString(), excludePendingNotes, unsafe);
     return sums.map(assetValueFromJson);
   }
 
   public async getMaxSpendableValue(
+    userId: GrumpkinAddress,
     assetId: number,
-    userId: AccountId,
     numNotes?: number,
     excludePendingNotes?: boolean,
+    unsafe?: boolean,
   ) {
-    const valueStr = await this.backend.getMaxSpendableValue(assetId, userId.toString(), numNotes, excludePendingNotes);
+    const valueStr = await this.backend.getMaxSpendableValue(
+      userId.toString(),
+      assetId,
+      numNotes,
+      excludePendingNotes,
+      unsafe,
+    );
     return BigInt(valueStr);
   }
 
-  public async pickNotes(userId: AccountId, assetId: number, value: bigint, excludePendingNotes?: boolean) {
-    return (await this.backend.pickNotes(userId.toString(), assetId, value.toString(), excludePendingNotes)).map(
-      noteFromJson,
-    );
+  public async pickNotes(
+    userId: GrumpkinAddress,
+    assetId: number,
+    value: bigint,
+    excludePendingNotes?: boolean,
+    unsafe?: boolean,
+  ) {
+    return (
+      await this.backend.pickNotes(userId.toString(), assetId, value.toString(), excludePendingNotes, unsafe)
+    ).map(noteFromJson);
   }
 
-  public async pickNote(userId: AccountId, assetId: number, value: bigint, excludePendingNotes?: boolean) {
-    const note = await this.backend.pickNote(userId.toString(), assetId, value.toString(), excludePendingNotes);
+  public async pickNote(
+    userId: GrumpkinAddress,
+    assetId: number,
+    value: bigint,
+    excludePendingNotes?: boolean,
+    unsafe?: boolean,
+  ) {
+    const note = await this.backend.pickNote(userId.toString(), assetId, value.toString(), excludePendingNotes, unsafe);
     return note ? noteFromJson(note) : undefined;
   }
 
-  public async getUserTxs(userId: AccountId) {
+  public async getUserTxs(userId: GrumpkinAddress) {
     const txs = await this.backend.getUserTxs(userId.toString());
     return txs.map(coreUserTxFromJson);
-  }
-
-  public async getRemoteUnsettledAccountTxs() {
-    const txs = await this.backend.getRemoteUnsettledAccountTxs();
-    return txs.map(accountTxFromJson);
   }
 
   public async getRemoteUnsettledPaymentTxs() {

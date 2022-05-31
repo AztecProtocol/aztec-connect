@@ -36,6 +36,10 @@ export class DefiDepositProofCreator {
     inputNotes: Note[],
     spendingPublicKey: GrumpkinAddress,
   ) {
+    if (spendingPublicKey.equals(user.id)) {
+      throw new Error('Cannot spend notes for defi deposit using account key.');
+    }
+
     const assetId = bridgeId.inputAssetIdA;
     const proofInput = await this.txFactory.createTx(
       user,
@@ -46,6 +50,8 @@ export class DefiDepositProofCreator {
       {
         bridgeId,
         defiDepositValue: depositValue,
+        newNoteOwner: user.id,
+        newNoteOwnerAccountRequired: true,
       },
     );
 
@@ -85,14 +91,18 @@ export class DefiDepositProofCreator {
       txRefNo,
       new Date(),
     );
-    const partialState = this.noteAlgos.valueNotePartialCommitment(partialStateSecret, user.id);
+    const partialState = this.noteAlgos.valueNotePartialCommitment(
+      partialStateSecret,
+      user.id,
+      true, // accountRequired
+    );
     const offchainTxData = new OffchainDefiDepositData(
       bridgeId,
       partialState,
       partialStateSecretEphPubKey!,
       depositValue,
       txFee,
-      viewingKeys[0], // contains [value, asset_id, accountNonce, creatorPubKey] of the change note (returned to the sender)
+      viewingKeys[0], // contains [value, asset_id, accountRequired, creatorPubKey] of the change note (returned to the sender)
       txRefNo,
     );
 
@@ -101,8 +111,12 @@ export class DefiDepositProofCreator {
       proofData,
       offchainTxData,
       outputNotes: [
-        this.txFactory.generateNewNote(outputNotes[0], user.privateKey, { allowChain: proofData.allowChainFromNote1 }),
-        this.txFactory.generateNewNote(outputNotes[1], user.privateKey, { allowChain: proofData.allowChainFromNote2 }),
+        this.txFactory.generateNewNote(outputNotes[0], user.accountPrivateKey, {
+          allowChain: proofData.allowChainFromNote1,
+        }),
+        this.txFactory.generateNewNote(outputNotes[1], user.accountPrivateKey, {
+          allowChain: proofData.allowChainFromNote2,
+        }),
       ],
     };
   }

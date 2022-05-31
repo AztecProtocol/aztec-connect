@@ -1,19 +1,8 @@
-import { AccountId, SdkEvent, AztecSdk } from '@aztec/sdk';
+import { SdkEvent, AztecSdk, GrumpkinAddress } from '@aztec/sdk';
 
-export function listenAccountUpdated(
-  sdk: AztecSdk,
-  accountId: AccountId,
-  func: () => void,
-  opts?: { includeNonce0?: boolean },
-) {
-  const nonce0Id = new AccountId(accountId.publicKey, 0);
-  const handleUpdatedUserState = (otherAccountId: AccountId) => {
-    if (
-      otherAccountId.publicKey.equals(accountId.publicKey) ||
-      (opts?.includeNonce0 && otherAccountId.equals(nonce0Id))
-    ) {
-      func();
-    }
+export function listenAccountUpdated(sdk: AztecSdk, userId: GrumpkinAddress, func: () => void) {
+  const handleUpdatedUserState = (address: GrumpkinAddress) => {
+    if (address.equals(userId)) func();
   };
   sdk.on(SdkEvent.UPDATED_USER_STATE, handleUpdatedUserState);
   return () => {

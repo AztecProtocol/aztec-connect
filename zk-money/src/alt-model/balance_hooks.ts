@@ -16,84 +16,81 @@ function useWithoutDust(assetValues?: AssetValue[]) {
 }
 
 export function useBalance(assetId?: number) {
-  const { accountId } = useApp();
+  const { userId } = useApp();
   const sdk = useSdk();
   const [balance, setBalance] = useState(() => {
-    if (sdk && accountId && assetId !== undefined) return BigInt(0);
+    if (sdk && userId && assetId !== undefined) return BigInt(0);
   });
   useEffect(() => {
-    if (sdk && accountId && assetId !== undefined) {
-      const updateBalance = async () => setBalance(await sdk.getBalance(assetId, accountId));
+    if (sdk && userId && assetId !== undefined) {
+      const updateBalance = async () => setBalance((await sdk.getBalance(userId, assetId)).value);
       updateBalance();
-      return listenAccountUpdated(sdk, accountId, updateBalance);
+      return listenAccountUpdated(sdk, userId, updateBalance);
     } else {
       setBalance(undefined);
     }
-  }, [sdk, accountId, assetId]);
+  }, [sdk, userId, assetId]);
   return balance;
 }
 
 export function useBalances() {
-  const { accountId } = useApp();
+  const { userId } = useApp();
   const sdk = useSdk();
   const [balances, setBalances] = useState<AssetValue[]>();
   useEffect(() => {
-    if (accountId && sdk) {
-      const updateBalances = async () => setBalances(await sdk.getBalances(accountId));
+    if (userId && sdk) {
+      const updateBalances = async () => setBalances(await sdk.getBalances(userId));
       updateBalances();
-      return listenAccountUpdated(sdk, accountId, updateBalances);
+      return listenAccountUpdated(sdk, userId, updateBalances);
     }
-  }, [sdk, accountId]);
+  }, [sdk, userId]);
   return useWithoutDust(balances);
 }
 
 export function useSpendableBalance(assetId: number) {
-  const { accountId } = useApp();
+  const { userId } = useApp();
   const sdk = useSdk();
   const [spendableBalance, setSpendableBalance] = useState<bigint>();
   useEffect(() => {
-    if (sdk && accountId) {
-      const updateSpendableBalance = () => sdk.getSpendableSum(assetId, accountId).then(setSpendableBalance);
+    if (sdk && userId) {
+      const updateSpendableBalance = () => sdk.getSpendableSum(userId, assetId).then(setSpendableBalance);
       updateSpendableBalance();
-      return listenAccountUpdated(sdk, accountId, updateSpendableBalance);
+      return listenAccountUpdated(sdk, userId, updateSpendableBalance);
     }
-  }, [sdk, accountId, assetId]);
+  }, [sdk, userId, assetId]);
   return spendableBalance;
 }
 
 // maxSpendableValue is the sum of the two highest avaiable notes
 export function useMaxSpendableValue(assetId?: number) {
-  const { accountId } = useApp();
+  const { userId } = useApp();
   const sdk = useSdk();
   const [maxSpendableValue, setMaxSpendableValue] = useState<bigint>();
   useEffect(() => {
-    if (sdk && accountId) {
+    if (sdk && userId) {
       if (assetId !== undefined) {
-        const updateMaxSpendableValue = () => sdk.getMaxSpendableValue(assetId, accountId).then(setMaxSpendableValue);
+        const updateMaxSpendableValue = () => sdk.getMaxSpendableValue(userId, assetId).then(setMaxSpendableValue);
         updateMaxSpendableValue();
-        return listenAccountUpdated(sdk, accountId, updateMaxSpendableValue);
+        return listenAccountUpdated(sdk, userId, updateMaxSpendableValue);
       } else {
         setMaxSpendableValue(undefined);
       }
     }
-  }, [sdk, accountId, assetId]);
+  }, [sdk, userId, assetId]);
   return maxSpendableValue;
 }
 
 export function useSpendableBalances() {
-  const { accountId } = useApp();
+  const { userId } = useApp();
   const sdk = useSdk();
   const [spendableBalances, setSpendableBalances] = useState<AssetValue[]>();
   useEffect(() => {
-    if (sdk && accountId) {
-      const updateSpendableSums = async () => {
-        const spendableSums = await sdk.getSpendableSums(accountId);
-        setSpendableBalances(spendableSums);
-      };
+    if (sdk && userId) {
+      const updateSpendableSums = () => sdk.getSpendableSums(userId).then(setSpendableBalances);
       updateSpendableSums();
-      return listenAccountUpdated(sdk, accountId, updateSpendableSums);
+      return listenAccountUpdated(sdk, userId, updateSpendableSums);
     }
-  }, [accountId, sdk]);
+  }, [userId, sdk]);
   return useWithoutDust(spendableBalances);
 }
 

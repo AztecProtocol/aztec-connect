@@ -12,7 +12,7 @@ describe('RollupWithdrawProofData', () => {
   it('can get typed data from proof data', () => {
     const assetId = 123;
     const publicValue = BigInt(123);
-    const publicOwner = EthAddress.randomAddress();
+    const publicOwner = EthAddress.random();
     const innerProofData = new InnerProofData(
       ProofId.WITHDRAW,
       randomBytes(32),

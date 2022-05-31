@@ -205,7 +205,7 @@ $$ Comm(\text{Note}) = note.value\cdot h_0 + note.secret\cdot h_1 + note.assetid
 
 An **Account Note** associates a spending key with an account. It consists of the following three field elements.
 
-- `account_alias_id`- a concatentation of the 224 bit `alias_hash`, with the 32-bit `nonce`. `account_alias_id` is enforced to be smaller than $p$ (the bn-254 curve size), thus not all 32 byte values are possible.
+- `account_alias_hash`- a concatentation of the 224 bit `alias_hash`, with the 32-bit `nonce`. `account_alias_hash` is enforced to be smaller than $p$ (the bn-254 curve size), thus not all 32 byte values are possible.
 - `account_public_key.x`: the x-coordinate of the account public key
 - `spending_public_key.x`: the x-coordinate of the spending key that is been assigned to this account via this note.
 
@@ -215,7 +215,7 @@ $$ Cm(A) = A.accountaliasid\cdot h*{20} + A.accountpublickey.x\cdot h*{21} + A.s
 The **Account Nullifier** $nf(A)$ of an account note $A$ is a pedersen hash of
 
 - 1 - (the account circuit proof id)
-- `A.account_alias_id`
+- `A.account_alias_hash`
 
 ## Note encryption and decryption
 

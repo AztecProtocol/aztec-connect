@@ -1,11 +1,12 @@
-import { AccountId, AliasHash } from '@aztec/barretenberg/account_id';
+import { AliasHash } from '@aztec/barretenberg/account_id';
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { TxHash, TxType } from '@aztec/barretenberg/blockchain';
 import { randomBytes } from 'crypto';
 import { Connection, createConnection } from 'typeorm';
-import { AssetMetricsDao, AccountDao, ClaimDao, RollupDao, RollupProofDao, TxDao } from '../entity';
+import { AccountDao, AssetMetricsDao, ClaimDao, RollupDao, RollupProofDao, TxDao } from '../entity';
 import { RollupDb, TypeOrmRollupDb } from './';
 import { randomAccountTx, randomClaim, randomRollup, randomRollupProof, randomTx } from './fixtures';
+import { txDaoToAccountDao } from './tx_dao_to_account_dao';
 
 describe('rollup_db', () => {
   let connection: Connection;
@@ -43,31 +44,37 @@ describe('rollup_db', () => {
     expect(await rollupDb.getAccountCount()).toBe(1);
   });
 
-  it('should count accounts that have nonce 1', async () => {
+  it('should count accounts that have unique account public key', async () => {
+    const aliasHash0 = AliasHash.random();
+    const aliasHash1 = AliasHash.random();
+    const aliasHash2 = AliasHash.random();
+    const accountPublicKey = GrumpkinAddress.random();
     const txs = [
-      randomAccountTx({ accountNonce: 1 }),
-      randomAccountTx({ accountNonce: 2 }),
-      randomAccountTx({ accountNonce: 1 }),
-      randomAccountTx({ accountNonce: 3 }),
+      randomAccountTx({ aliasHash: aliasHash0 }),
+      randomAccountTx({ aliasHash: aliasHash0, accountPublicKey }),
+      randomAccountTx({ aliasHash: aliasHash1 }),
+      randomAccountTx({ aliasHash: aliasHash0, accountPublicKey }),
+      randomAccountTx({ aliasHash: aliasHash2 }),
+      randomAccountTx({ aliasHash: aliasHash2 }),
+      randomAccountTx({ aliasHash: aliasHash1 }),
     ];
     for (const tx of txs) {
       await rollupDb.addTx(tx);
     }
 
-    expect(await rollupDb.getAccountTxCount()).toBe(4);
-    expect(await rollupDb.getAccountCount()).toBe(2);
+    expect(await rollupDb.getAccountTxCount()).toBe(7);
+    expect(await rollupDb.getAccountCount()).toBe(6);
   });
 
   it('should delete an account when its tx is deleted', async () => {
-    const accountPublicKey0 = GrumpkinAddress.randomAddress();
-    const accountPublicKey1 = GrumpkinAddress.randomAddress();
+    const accountPublicKeys = [...Array(4)].map(() => GrumpkinAddress.random());
     const aliasHash0 = AliasHash.random();
     const aliasHash1 = AliasHash.random();
     const txs = [
-      randomAccountTx({ accountPublicKey: accountPublicKey0, aliasHash: aliasHash0, accountNonce: 1 }),
-      randomAccountTx({ accountPublicKey: accountPublicKey0, aliasHash: aliasHash0, accountNonce: 2 }),
-      randomAccountTx({ accountPublicKey: accountPublicKey0, aliasHash: aliasHash1, accountNonce: 3 }),
-      randomAccountTx({ accountPublicKey: accountPublicKey1, aliasHash: aliasHash1, accountNonce: 4 }),
+      randomAccountTx({ accountPublicKey: accountPublicKeys[0], aliasHash: aliasHash0 }),
+      randomAccountTx({ accountPublicKey: accountPublicKeys[1], aliasHash: aliasHash0 }),
+      randomAccountTx({ accountPublicKey: accountPublicKeys[2], aliasHash: aliasHash1 }),
+      randomAccountTx({ accountPublicKey: accountPublicKeys[3], aliasHash: aliasHash1 }),
     ];
     for (const tx of txs) {
       await rollupDb.addTx(tx);
@@ -75,18 +82,22 @@ describe('rollup_db', () => {
     const rollupProof = randomRollupProof([txs[0], txs[2]]);
     await rollupDb.addRollupProof(rollupProof);
 
-    expect(await rollupDb.getLatestAliasNonce(aliasHash0)).toBe(2);
-    expect(await rollupDb.getLatestAliasNonce(aliasHash1)).toBe(4);
-    expect(await rollupDb.getLatestAccountNonce(accountPublicKey0)).toBe(3);
-    expect(await rollupDb.getLatestAccountNonce(accountPublicKey1)).toBe(4);
+    expect(await rollupDb.accountExists(accountPublicKeys[0], aliasHash0)).toBe(true);
+    expect(await rollupDb.accountExists(accountPublicKeys[1], aliasHash0)).toBe(true);
+    expect(await rollupDb.accountExists(accountPublicKeys[2], aliasHash1)).toBe(true);
+    expect(await rollupDb.accountExists(accountPublicKeys[3], aliasHash1)).toBe(true);
+    expect(await rollupDb.accountExists(accountPublicKeys[0], aliasHash1)).toBe(false);
+    expect(await rollupDb.accountExists(accountPublicKeys[1], aliasHash1)).toBe(false);
+    expect(await rollupDb.accountExists(accountPublicKeys[2], aliasHash0)).toBe(false);
+    expect(await rollupDb.accountExists(accountPublicKeys[3], aliasHash0)).toBe(false);
 
     // txs[1] and txs[3] will be deleted.
     await rollupDb.deletePendingTxs();
 
-    expect(await rollupDb.getLatestAliasNonce(aliasHash0)).toBe(1);
-    expect(await rollupDb.getLatestAliasNonce(aliasHash1)).toBe(3);
-    expect(await rollupDb.getLatestAccountNonce(accountPublicKey0)).toBe(3);
-    expect(await rollupDb.getLatestAccountNonce(accountPublicKey1)).toBe(0);
+    expect(await rollupDb.accountExists(accountPublicKeys[0], aliasHash0)).toBe(true);
+    expect(await rollupDb.accountExists(accountPublicKeys[1], aliasHash0)).toBe(false);
+    expect(await rollupDb.accountExists(accountPublicKeys[2], aliasHash1)).toBe(true);
+    expect(await rollupDb.accountExists(accountPublicKeys[3], aliasHash1)).toBe(false);
   });
 
   it('should bulk add txs', async () => {
@@ -347,54 +358,6 @@ describe('rollup_db', () => {
     expect(await rollupDb.getAccountCount()).toBe(2);
   });
 
-  it('should return latest nonce for an account public key or alias hash', async () => {
-    const accountPubKey0 = GrumpkinAddress.randomAddress();
-    const accountPubKey1 = GrumpkinAddress.randomAddress();
-    const aliasHash0 = AliasHash.random();
-    const aliasHash1 = AliasHash.random();
-    const txs = [
-      randomAccountTx({ accountPublicKey: accountPubKey0, aliasHash: aliasHash0, accountNonce: 3 }),
-      randomAccountTx({ accountPublicKey: accountPubKey0, aliasHash: aliasHash1, accountNonce: 5 }),
-      randomAccountTx({ accountPublicKey: accountPubKey1, aliasHash: aliasHash1, accountNonce: 6 }),
-      randomAccountTx({ accountPublicKey: accountPubKey1, aliasHash: aliasHash0, accountNonce: 9 }),
-    ];
-    for (const tx of txs) {
-      await rollupDb.addTx(tx);
-    }
-
-    expect(await rollupDb.getLatestAccountNonce(accountPubKey0)).toBe(5);
-    expect(await rollupDb.getLatestAccountNonce(accountPubKey1)).toBe(9);
-    expect(await rollupDb.getLatestAccountNonce(GrumpkinAddress.randomAddress())).toBe(0);
-
-    expect(await rollupDb.getLatestAliasNonce(aliasHash0)).toBe(9);
-    expect(await rollupDb.getLatestAliasNonce(aliasHash1)).toBe(6);
-    expect(await rollupDb.getLatestAliasNonce(AliasHash.random())).toBe(0);
-  });
-
-  it('get account id for an alias hash and an optional nonce', async () => {
-    const accountPubKey0 = GrumpkinAddress.randomAddress();
-    const accountPubKey1 = GrumpkinAddress.randomAddress();
-    const aliasHash0 = AliasHash.random();
-    const aliasHash1 = AliasHash.random();
-    const txs = [
-      randomAccountTx({ accountPublicKey: accountPubKey0, aliasHash: aliasHash0, accountNonce: 1 }),
-      randomAccountTx({ accountPublicKey: accountPubKey1, aliasHash: aliasHash0, accountNonce: 3 }),
-      randomAccountTx({ accountPublicKey: accountPubKey1, aliasHash: aliasHash1, accountNonce: 2 }),
-    ];
-    for (const tx of txs) {
-      await rollupDb.addTx(tx);
-    }
-
-    expect(await rollupDb.getAccountId(aliasHash0)).toEqual(new AccountId(accountPubKey1, 3));
-    expect(await rollupDb.getAccountId(aliasHash0, 0)).toEqual(new AccountId(accountPubKey0, 0));
-    expect(await rollupDb.getAccountId(aliasHash0, 1)).toEqual(new AccountId(accountPubKey0, 1));
-    expect(await rollupDb.getAccountId(aliasHash0, 2)).toEqual(new AccountId(accountPubKey1, 2));
-    expect(await rollupDb.getAccountId(aliasHash0, 3)).toEqual(new AccountId(accountPubKey1, 3));
-    expect(await rollupDb.getAccountId(aliasHash0, 4)).toBe(undefined);
-
-    expect(await rollupDb.getAccountId(aliasHash1)).toEqual(new AccountId(accountPubKey1, 2));
-  });
-
   it('should update existing rollup', async () => {
     const tx0 = randomTx();
     const tx1 = randomTx();
@@ -629,6 +592,35 @@ describe('rollup_db', () => {
 
     const saved = await rollupDb.getPendingTxs();
     expect(saved).toEqual(claimedTxs.sort((a, b) => (a.created.getTime() > b.created.getTime() ? 1 : -1)));
+  });
+
+  it('should get unsettled accounts', async () => {
+    const txs = [
+      TxType.ACCOUNT,
+      TxType.DEPOSIT,
+      TxType.ACCOUNT, // settled
+      TxType.DEPOSIT, // settled
+      TxType.TRANSFER,
+      TxType.ACCOUNT, // rollup created
+      TxType.DEFI_CLAIM,
+      TxType.ACCOUNT,
+    ].map(txType => randomTx({ txType }));
+
+    await rollupDb.addTxs(txs);
+
+    const rollupProof0 = randomRollupProof([txs[2], txs[3]], 0);
+    await rollupDb.addRollupProof(rollupProof0);
+
+    const rollupProof1 = randomRollupProof([txs[5]], 0);
+    await rollupDb.addRollupProof(rollupProof1);
+
+    const rollup = randomRollup(0, rollupProof0);
+    await rollupDb.addRollup(rollup);
+    const settledTxIds = rollupProof0.txs.map(tx => tx.id);
+    await rollupDb.confirmMined(rollup.id, 0, 0n, new Date(), TxHash.random(), [], settledTxIds, [], randomBytes(32));
+
+    const expectedAccounts = [txs[7], txs[5], txs[0]].map(txDaoToAccountDao);
+    expect(await rollupDb.getUnsettledAccounts()).toEqual(expectedAccounts);
   });
 
   it('should delete txs by id', async () => {

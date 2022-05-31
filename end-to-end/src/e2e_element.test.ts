@@ -1,20 +1,21 @@
+import { getCurrentBlockTime, MainnetAddresses, setBlockchainTime, TokenStore } from '@aztec/blockchain';
 import {
-  AccountId,
   AztecSdk,
   BridgeId,
   createAztecSdk,
   DefiSettlementTime,
   EthAddress,
+  GrumpkinAddress,
+  SchnorrSigner,
   toBaseUnits,
   TxSettlementTime,
   WalletProvider,
 } from '@aztec/sdk';
-import { setBlockchainTime, getCurrentBlockTime, TokenStore, MainnetAddresses } from '@aztec/blockchain';
-import { EventEmitter } from 'events';
-import { createFundedWalletProvider } from './create_funded_wallet_provider';
-import { depositTokensToAztec, defiDepositTokens } from './sdk_utils';
 import createDebug from 'debug';
+import { EventEmitter } from 'events';
 import { asyncMap } from './async_map';
+import { createFundedWalletProvider } from './create_funded_wallet_provider';
+import { registerUsers } from './sdk_utils';
 
 jest.setTimeout(20 * 60 * 1000);
 EventEmitter.defaultMaxListeners = 30;
@@ -39,18 +40,14 @@ describe('end-to-end async defi tests', () => {
   let provider: WalletProvider;
   let sdk: AztecSdk;
   let ethAddr!: EthAddress;
-  let userId!: AccountId;
+  let userId: GrumpkinAddress;
+  let signer: SchnorrSigner;
   let timeAtTestStart = 0;
   const ethAssetId = 0;
   const debug = createDebug('bb:e2e_element');
 
-  const sendFlushTx = async () => {
-    const signer = await sdk.createSchnorrSigner(provider.getPrivateKeyForAddress(ethAddr)!);
-    await sdk.flushRollup(userId, signer);
-  };
-
   const debugBalance = async (assetId: number) => {
-    debug(`balance: ${await sdk.getFormattedBalance(assetId, userId)}`);
+    debug(`balance: ${await sdk.getFormattedBalance(userId, assetId)}`);
   };
 
   const formatTime = (unixTimeInSeconds: number) => {
@@ -71,9 +68,6 @@ describe('end-to-end async defi tests', () => {
     });
     await sdk.run();
     await sdk.awaitSynchronised();
-
-    const user = await sdk.addUser(provider.getPrivateKeyForAddress(ethAddr)!);
-    userId = user.id;
   });
 
   afterAll(async () => {
@@ -107,20 +101,12 @@ describe('end-to-end async defi tests', () => {
       // This pays for all fees for non-fee paying assets, taken from the value above.
       const shieldValue = sdk.toBaseUnits(ethAssetId, '4');
       debug(`shielding ${sdk.fromBaseUnits(shieldValue, true)} from ${ethAddr.toString()}...`);
-      const fee = (await sdk.getDepositFees(ethAssetId))[TxSettlementTime.INSTANT];
-
-      const controller = sdk.createDepositController(ethAddr, shieldValue, fee, userId);
-      await controller.createProof();
-      await controller.sign();
-      await controller.depositFundsToContract();
-      await controller.awaitDepositFundsToContract();
-
-      debug(`waiting for shield to settle...`);
-      await controller.send();
-      await controller.awaitSettlement();
+      [userId] = await registerUsers(sdk, [ethAddr], shieldValue);
+      const spendingKey = await sdk.generateSpendingKeyPair(ethAddr);
+      signer = await sdk.createSchnorrSigner(spendingKey.privateKey);
 
       await debugBalance(ethAssetId);
-      expect(await sdk.getBalance(ethAssetId, userId)).toEqual(shieldValue.value);
+      expect(await sdk.getBalance(userId, ethAssetId)).toEqual(shieldValue);
     }
 
     // Purchase the required input assets for the test and deposit them into Aztec.
@@ -138,15 +124,31 @@ describe('end-to-end async defi tests', () => {
       const recAv = { value: totalQuantityReceived, assetId };
 
       debug(`depositing ${sdk.fromBaseUnits(recAv, true)} minus fees to aztec...`);
-      return await depositTokensToAztec(
+      const tokenAssetId = sdk.getAssetIdByAddress(tokenAddress);
+      const tokenDepositFee = (await sdk.getDepositFees(tokenAssetId))[
+        i == assetSpecs.length - 1 ? TxSettlementTime.INSTANT : TxSettlementTime.NEXT_ROLLUP
+      ];
+      const value = (await sdk.isFeePayingAsset(tokenAssetId))
+        ? totalQuantityReceived - tokenDepositFee.value
+        : totalQuantityReceived;
+      const tokenAssetValue = { assetId: tokenAssetId, value };
+      const feePayer = tokenDepositFee.assetId !== tokenAssetId ? { userId, signer } : undefined;
+      const controller = sdk.createDepositController(
         ethAddr,
+        tokenAssetValue,
+        tokenDepositFee,
         userId,
-        tokenAddress,
-        totalQuantityReceived,
-        i == assetSpecs.length - 1 ? TxSettlementTime.INSTANT : TxSettlementTime.NEXT_ROLLUP,
-        sdk,
+        true,
+        feePayer,
         provider,
       );
+      await controller.createProof();
+      await controller.sign();
+      await controller.approve();
+      await controller.depositFundsToContract();
+      await controller.awaitDepositFundsToContract();
+      await controller.send();
+      return controller;
     });
 
     debug('waiting for token deposits to settle...');
@@ -160,17 +162,25 @@ describe('end-to-end async defi tests', () => {
     // Deposit half of our balance for each asset into element.
     const defiDepositControllers = await asyncMap(assetSpecs, async ({ tokenAddress, assetId, expiry }, i) => {
       await debugBalance(assetId);
-      const toDeposit = await sdk.getBalanceAv(assetId, userId);
+      const toDeposit = await sdk.getBalance(userId, assetId);
       toDeposit.value /= 2n;
       debug(`depositing ${sdk.fromBaseUnits(toDeposit, true)} to element tranche with expiry ${formatTime(expiry)}...`);
-      return await defiDepositTokens(
+      const bridgeId = new BridgeId(elementBridgeId, assetId, assetId, undefined, undefined, expiry);
+      const tokenAssetId = sdk.getAssetIdByAddress(tokenAddress);
+      const tokenAssetValue = { assetId: tokenAssetId, value: toDeposit.value };
+      const tokenDepositFee = (await sdk.getDefiFees(bridgeId, userId, tokenAssetValue))[
+        i === assetSpecs.length - 1 ? DefiSettlementTime.INSTANT : DefiSettlementTime.NEXT_ROLLUP
+      ];
+      const defiDepositController = sdk.createDefiController(
         userId,
-        tokenAddress,
-        toDeposit.value,
-        i === assetSpecs.length - 1 ? DefiSettlementTime.INSTANT : DefiSettlementTime.NEXT_ROLLUP,
-        new BridgeId(elementBridgeId, assetId, assetId, undefined, undefined, expiry),
-        sdk,
+        signer,
+        bridgeId,
+        tokenAssetValue,
+        tokenDepositFee,
       );
+      await defiDepositController.createProof();
+      await defiDepositController.send();
+      return defiDepositController;
     });
 
     debug('waiting for defi deposits to settle...');
@@ -183,8 +193,8 @@ describe('end-to-end async defi tests', () => {
       const { assetId, value } = defiDepositControllers[i].depositValue;
       const totalQuantityDepositedToAztec = tokenDepositControllers[i].assetValue.value;
       await debugBalance(assetId);
-      const balance = await sdk.getBalance(assetId, userId);
-      expect(balance).toEqual(totalQuantityDepositedToAztec - value - (feeAssetId === assetId ? feeValue : 0n));
+      const balance = await sdk.getBalance(userId, assetId);
+      expect(balance.value).toEqual(totalQuantityDepositedToAztec - value - (feeAssetId === assetId ? feeValue : 0n));
     }
 
     // Set the chain time to after the last expiry.
@@ -205,20 +215,28 @@ describe('end-to-end async defi tests', () => {
     // We will perform an interaction that fails (sending to an expired tranche).
     // This interaction will finalise immediately.
     debug(`depositing to an expired tranche...`);
-    const failedDefiController = await defiDepositTokens(
-      userId,
-      lusdSpec.tokenAddress,
-      await sdk.getBalance(lusdSpec.assetId, userId),
-      DefiSettlementTime.INSTANT,
-      new BridgeId(elementBridgeId, lusdSpec.assetId, lusdSpec.assetId, undefined, undefined, 1632834462),
-      sdk,
-    );
+    const failedDefiController = await (async () => {
+      const bridgeId = new BridgeId(
+        elementBridgeId,
+        lusdSpec.assetId,
+        lusdSpec.assetId,
+        undefined,
+        undefined,
+        1632834462,
+      );
+      const tokenAssetValue = await sdk.getBalance(userId, lusdSpec.assetId);
+      const tokenDepositFee = (await sdk.getDefiFees(bridgeId, userId, tokenAssetValue))[DefiSettlementTime.INSTANT];
+      const controller = sdk.createDefiController(userId, signer, bridgeId, tokenAssetValue, tokenDepositFee);
+      await controller.createProof();
+      await controller.send();
+      return controller;
+    })();
 
     debug(`awaiting defi deposits to be finalised...`);
     await Promise.all([...defiDepositControllers, failedDefiController].map(c => c.awaitDefiFinalisation()));
 
     debug('flushing to settle claims...');
-    await sendFlushTx();
+    await sdk.flushRollup(userId, signer);
 
     // All assets should now have more than we initially received minus any fees paid.
     for (let i = 0; i < assetSpecs.length; ++i) {
@@ -226,8 +244,8 @@ describe('end-to-end async defi tests', () => {
       const { assetId } = defiDepositControllers[i].depositValue;
       const totalQuantityDepositedToAztec = tokenDepositControllers[i].assetValue.value;
       await debugBalance(assetId);
-      const balance = await sdk.getBalance(assetId, userId);
-      expect(balance).toBeGreaterThan(totalQuantityDepositedToAztec - (feeAssetId === assetId ? feeValue : 0n));
+      const balance = await sdk.getBalance(userId, assetId);
+      expect(balance.value).toBeGreaterThan(totalQuantityDepositedToAztec - (feeAssetId === assetId ? feeValue : 0n));
     }
 
     await debugBalance(ethAssetId);

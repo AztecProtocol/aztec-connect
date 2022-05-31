@@ -1,4 +1,4 @@
-import type { AccountId, AztecSdk, BridgeId } from '@aztec/sdk';
+import type { GrumpkinAddress, AztecSdk, BridgeId } from '@aztec/sdk';
 import type { Provider } from '../../../app';
 import type { Amount } from 'alt-model/assets';
 import createDebug from 'debug';
@@ -14,7 +14,7 @@ export type DefiComposerPayload = Readonly<{
 
 export interface DefiComposerDeps {
   sdk: AztecSdk;
-  accountId: AccountId;
+  userId: GrumpkinAddress;
   awaitCorrectProvider: () => Promise<Provider>;
   bridgeId: BridgeId;
 }
@@ -27,7 +27,7 @@ export class DefiComposer {
     this.stateObs.clearError();
     try {
       const { targetDepositAmount, feeAmount } = this.payload;
-      const { sdk, accountId, awaitCorrectProvider, bridgeId } = this.deps;
+      const { sdk, userId, awaitCorrectProvider, bridgeId } = this.deps;
 
       this.stateObs.setPhase(DefiComposerPhase.GENERATING_KEY);
       const provider = await awaitCorrectProvider();
@@ -36,7 +36,7 @@ export class DefiComposer {
 
       this.stateObs.setPhase(DefiComposerPhase.CREATING_PROOF);
       const controller = sdk.createDefiController(
-        accountId,
+        userId,
         signer,
         bridgeId,
         targetDepositAmount.toAssetValue(),

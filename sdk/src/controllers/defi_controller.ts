@@ -1,4 +1,4 @@
-import { AccountId } from '@aztec/barretenberg/account_id';
+import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetValue } from '@aztec/barretenberg/asset';
 import { BridgeId, validateBridgeId } from '@aztec/barretenberg/bridge_id';
 import { TxId } from '@aztec/barretenberg/tx_id';
@@ -15,7 +15,7 @@ export class DefiController {
   private txId?: TxId;
 
   constructor(
-    public readonly userId: AccountId,
+    public readonly userId: GrumpkinAddress,
     private readonly userSigner: Signer,
     public readonly bridgeId: BridgeId,
     public readonly depositValue: AssetValue,
@@ -35,6 +35,10 @@ export class DefiController {
     if (bridgeId.inputAssetIdB === fee.assetId) {
       throw new Error('Fee paying asset must be the first input asset.');
     }
+
+    if (userSigner.getPublicKey().equals(this.userId)) {
+      throw new Error('Defi deposit not available for non registered user.');
+    }
   }
 
   public async createProof() {
@@ -42,8 +46,8 @@ export class DefiController {
     const hasTwoAssets = this.bridgeId.numInputAssets === 2;
     const requireFeePayingTx = !!this.fee.value && this.fee.assetId !== assetId;
     const privateInput = value + (!requireFeePayingTx ? this.fee.value : BigInt(0));
-    const note1 = hasTwoAssets ? await this.core.pickNote(this.userId, assetId, privateInput) : undefined;
-    let notes = note1 ? [note1] : await this.core.pickNotes(this.userId, assetId, privateInput);
+    const note1 = hasTwoAssets ? await this.core.pickNote(this.userId, assetId, privateInput, false) : undefined;
+    let notes = note1 ? [note1] : await this.core.pickNotes(this.userId, assetId, privateInput, false);
     if (!notes.length) {
       throw new Error(`Failed to find no more than 2 notes of asset ${assetId} that sum to ${privateInput}.`);
     }
@@ -78,6 +82,7 @@ export class DefiController {
     }
 
     const spendingPublicKey = this.userSigner.getPublicKey();
+    const accountRequired = true;
     const txRefNo = requireFeePayingTx || requireJoinSplitTx ? createTxRefNo() : 0;
 
     // Create a defi deposit tx with 0 change value.
@@ -106,6 +111,7 @@ export class DefiController {
           noteValue,
           BigInt(0),
           this.userId,
+          accountRequired,
           undefined,
           spendingPublicKey,
           3, // allowChain
@@ -145,7 +151,8 @@ export class DefiController {
         this.fee.value,
         BigInt(0),
         BigInt(0),
-        undefined,
+        this.userId,
+        accountRequired,
         undefined,
         spendingPublicKey,
         2,

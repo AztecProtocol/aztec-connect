@@ -15,8 +15,12 @@ export interface AccountNotePair {
   note2: Buffer;
 }
 
+export interface NullifierPair {
+  nullifier1: Buffer;
+  nullifier2: Buffer;
+}
+
 export interface AccountAlias {
-  accountNonce: number;
   aliasHash: Buffer;
   address: Buffer;
 }
@@ -34,7 +38,7 @@ export interface Roots {
 
 export interface AccountData {
   notes: AccountNotePair;
-  nullifier: Buffer;
+  nullifiers: NullifierPair;
   alias: AccountAlias;
   signingKeys: SigningKeys;
 }
@@ -124,8 +128,15 @@ export class InitHelpers {
           `Alias grumpkin address has length ${account.alias.address.length}, it should be ${ADDRESS_LENGTH}`,
         );
       }
-      if (account.nullifier.length !== NULLIFIER_LENGTH) {
-        throw new Error(`Nullifier has length ${account.nullifier.length}, it should be ${NULLIFIER_LENGTH}`);
+      if (account.nullifiers.nullifier1.length !== NULLIFIER_LENGTH) {
+        throw new Error(
+          `Nullifier1 has length ${account.nullifiers.nullifier1.length}, it should be ${NULLIFIER_LENGTH}`,
+        );
+      }
+      if (account.nullifiers.nullifier2.length !== NULLIFIER_LENGTH) {
+        throw new Error(
+          `Nullifier1 has length ${account.nullifiers.nullifier2.length}, it should be ${NULLIFIER_LENGTH}`,
+        );
       }
       if (account.signingKeys.signingKey1.length !== SIGNING_KEY_LENGTH) {
         throw new Error(
@@ -139,15 +150,13 @@ export class InitHelpers {
       }
     });
     const dataToWrite = accountData.flatMap(account => {
-      const nonBuf = Buffer.alloc(4);
-      nonBuf.writeUInt32BE(account.alias.accountNonce);
       return [
-        nonBuf,
         account.alias.aliasHash,
         account.alias.address,
         account.notes.note1,
         account.notes.note2,
-        account.nullifier,
+        account.nullifiers.nullifier1,
+        account.nullifiers.nullifier2,
         account.signingKeys.signingKey1,
         account.signingKeys.signingKey2,
       ];
@@ -157,7 +166,7 @@ export class InitHelpers {
 
   public static parseAccountTreeData(data: Buffer) {
     const lengthOfAccountData =
-      4 + ALIAS_HASH_LENGTH + ADDRESS_LENGTH + 2 * NOTE_LENGTH + NULLIFIER_LENGTH + 2 * SIGNING_KEY_LENGTH;
+      ALIAS_HASH_LENGTH + ADDRESS_LENGTH + 2 * NOTE_LENGTH + 2 * NULLIFIER_LENGTH + 2 * SIGNING_KEY_LENGTH;
     const numAccounts = data.length / lengthOfAccountData;
     if (numAccounts === 0) {
       return [];
@@ -166,25 +175,27 @@ export class InitHelpers {
     for (let i = 0; i < numAccounts; i++) {
       let start = i * lengthOfAccountData;
       const alias: AccountAlias = {
-        accountNonce: data.readUInt32BE(start),
-        aliasHash: data.slice(start + 4, start + (4 + ALIAS_HASH_LENGTH)),
-        address: data.slice(start + (4 + ALIAS_HASH_LENGTH), start + (4 + ALIAS_HASH_LENGTH + ADDRESS_LENGTH)),
+        aliasHash: data.slice(start, start + ALIAS_HASH_LENGTH),
+        address: data.slice(start + ALIAS_HASH_LENGTH, start + (ALIAS_HASH_LENGTH + ADDRESS_LENGTH)),
       };
-      start += 4 + ALIAS_HASH_LENGTH + ADDRESS_LENGTH;
+      start += ALIAS_HASH_LENGTH + ADDRESS_LENGTH;
       const notes: AccountNotePair = {
         note1: data.slice(start, start + NOTE_LENGTH),
         note2: data.slice(start + NOTE_LENGTH, start + 2 * NOTE_LENGTH),
       };
       start += 2 * NOTE_LENGTH;
-      const nullifier = data.slice(start, start + NULLIFIER_LENGTH);
-      start += NULLIFIER_LENGTH;
+      const nullifiers: NullifierPair = {
+        nullifier1: data.slice(start, start + NULLIFIER_LENGTH),
+        nullifier2: data.slice(start + NULLIFIER_LENGTH, start + 2 * NULLIFIER_LENGTH),
+      };
+      start += 2 * NULLIFIER_LENGTH;
       const signingKeys: SigningKeys = {
         signingKey1: data.slice(start, start + SIGNING_KEY_LENGTH),
         signingKey2: data.slice(start + SIGNING_KEY_LENGTH, start + 2 * SIGNING_KEY_LENGTH),
       };
       const account: AccountData = {
         notes,
-        nullifier,
+        nullifiers,
         alias,
         signingKeys,
       };
@@ -240,17 +251,16 @@ export class InitHelpers {
 
   public static async populateNullifierTree(accounts: AccountData[], merkleTree: WorldStateDb, nullTreeIndex: number) {
     const emptyBuffer = Buffer.alloc(32, 0);
-    const entries = accounts.flatMap((account): PutEntry[] => {
-      const nullifiers: Array<PutEntry> = [];
-      if (account.nullifier.compare(emptyBuffer)) {
-        nullifiers.push({
+    const entries = accounts
+      .flatMap(account => [account.nullifiers.nullifier1, account.nullifiers.nullifier2])
+      .filter(nullifier => !nullifier.equals(emptyBuffer))
+      .map((nullifier): PutEntry => {
+        return {
           treeId: nullTreeIndex,
-          index: toBigIntBE(account.nullifier),
+          index: toBigIntBE(nullifier),
           value: toBufferBE(BigInt(1), 32),
-        });
-      }
-      return nullifiers;
-    });
+        };
+      });
     console.log(`Batch inserting ${entries.length} notes into nullifier tree...`);
     await merkleTree.batchPut(entries);
     const root = merkleTree.getRoot(nullTreeIndex);

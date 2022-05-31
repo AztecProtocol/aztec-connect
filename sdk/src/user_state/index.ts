@@ -1,8 +1,8 @@
-import { AccountId } from '@aztec/barretenberg/account_id';
 import { EthAddress } from '@aztec/barretenberg/address';
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { virtualAssetIdFlag } from '@aztec/barretenberg/bridge_id';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
+import { Pedersen } from '@aztec/barretenberg/crypto';
 import { createLogger } from '@aztec/barretenberg/debug';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
 import { MemoryFifo } from '@aztec/barretenberg/fifo';
@@ -23,14 +23,13 @@ import { RollupProvider } from '@aztec/barretenberg/rollup_provider';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { ViewingKey } from '@aztec/barretenberg/viewing_key';
 import { EventEmitter } from 'events';
+import { BlockContext } from '../block_context/block_context';
 import { CoreAccountTx, CoreDefiTx, CorePaymentTx, PaymentProofId } from '../core_tx';
 import { Database } from '../database';
 import { Note } from '../note';
 import { NotePicker } from '../note_picker';
 import { ProofOutput } from '../proofs';
 import { UserData } from '../user';
-import { BlockContext } from '../block_context/block_context';
-import { Pedersen } from '@aztec/barretenberg/crypto';
 
 const debug = createLogger('bb:user_state');
 
@@ -204,7 +203,7 @@ export class UserState extends EventEmitter {
     const viewingKeysBuf = Buffer.concat(viewingKeys.flat().map(vk => vk.toBuffer()));
     const decryptedTreeNotes = await batchDecryptNotes(
       viewingKeysBuf,
-      this.user.privateKey,
+      this.user.accountPrivateKey,
       this.noteAlgos,
       this.grumpkin,
     );
@@ -213,7 +212,7 @@ export class UserState extends EventEmitter {
       decryptedTreeNotes,
       inputNullifiers,
       noteCommitments,
-      this.user.privateKey,
+      this.user.accountPrivateKey,
       this.grumpkin,
       this.noteAlgos,
     );
@@ -281,11 +280,11 @@ export class UserState extends EventEmitter {
     const pendingUserTxIds = await this.db.getPendingUserTxs(this.user.id);
     for (const userTxId of pendingUserTxIds) {
       if (!pendingTxs.some(tx => tx.txId.equals(userTxId))) {
-        await this.db.removeUserTx(userTxId, this.user.id);
+        await this.db.removeUserTx(this.user.id, userTxId);
       }
     }
 
-    const pendingNotes = await this.db.getUserPendingNotes(this.user.id);
+    const pendingNotes = await this.db.getPendingNotes(this.user.id);
     for (const note of pendingNotes) {
       if (
         !pendingTxs.some(tx => tx.noteCommitment1.equals(note.commitment) || tx.noteCommitment2.equals(note.commitment))
@@ -307,34 +306,28 @@ export class UserState extends EventEmitter {
       return;
     }
 
-    const { txId, userId, newSigningPubKey1, newSigningPubKey2, aliasHash } = tx;
+    const { txId, userId, newSpendingPublicKey1, newSpendingPublicKey2 } = tx;
 
-    if (newSigningPubKey1) {
-      this.debug(`added signing key ${newSigningPubKey1.toString('hex')}.`);
+    if (newSpendingPublicKey1) {
+      this.debug(`added spending key ${newSpendingPublicKey1.toString('hex')}.`);
       const hashPath = await blockContext.getBlockSubtreeHashPath(noteStartIndex);
-      await this.db.addUserSigningKey({
-        accountId: userId,
-        key: newSigningPubKey1,
+      await this.db.addSpendingKey({
+        userId,
+        key: newSpendingPublicKey1,
         treeIndex: noteStartIndex,
         hashPath: hashPath.toBuffer(),
       });
     }
 
-    if (newSigningPubKey2) {
-      this.debug(`added signing key ${newSigningPubKey2.toString('hex')}.`);
+    if (newSpendingPublicKey2) {
+      this.debug(`added spending key ${newSpendingPublicKey2.toString('hex')}.`);
       const hashPath = await blockContext.getBlockSubtreeHashPath(noteStartIndex + 1);
-      await this.db.addUserSigningKey({
-        accountId: userId,
-        key: newSigningPubKey2,
+      await this.db.addSpendingKey({
+        userId,
+        key: newSpendingPublicKey2,
         treeIndex: noteStartIndex + 1,
         hashPath: hashPath.toBuffer(),
       });
-    }
-
-    if (!this.user.aliasHash || !this.user.aliasHash.equals(aliasHash)) {
-      this.debug(`updated alias hash ${aliasHash.toString()}.`);
-      this.user = { ...this.user, aliasHash };
-      await this.db.updateUser(this.user);
     }
 
     const savedTx = await this.db.getAccountTx(txId);
@@ -374,10 +367,10 @@ export class UserState extends EventEmitter {
     await this.refreshNotePicker();
 
     const txId = new TxId(proof.txId);
-    const savedTx = await this.db.getPaymentTx(txId, this.user.id);
+    const savedTx = await this.db.getPaymentTx(this.user.id, txId);
     if (savedTx) {
       this.debug(`settling payment tx: ${txId}`);
-      await this.db.settlePaymentTx(txId, this.user.id, created);
+      await this.db.settlePaymentTx(this.user.id, txId, created);
     } else {
       const tx = this.recoverPaymentTx(
         proof,
@@ -409,7 +402,11 @@ export class UserState extends EventEmitter {
       return;
     }
     const { bridgeId, partialStateSecretEphPubKey } = offchainTxData;
-    const partialStateSecret = deriveNoteSecret(partialStateSecretEphPubKey, this.user.privateKey, this.grumpkin);
+    const partialStateSecret = deriveNoteSecret(
+      partialStateSecretEphPubKey,
+      this.user.accountPrivateKey,
+      this.grumpkin,
+    );
     const txId = new TxId(proof.txId);
     const { rollupId, bridgeIds } = rollupProofData;
     const interactionNonce =
@@ -466,15 +463,16 @@ export class UserState extends EventEmitter {
     const { defiTxId, userId, secret, interactionNonce } = claim;
     const { noteCommitment1, noteCommitment2, nullifier2 } = proof;
     const { bridgeId, depositValue, outputValueA, outputValueB, success } = (await this.db.getDefiTx(defiTxId))!;
+    const accountRequired = true;
 
     // When generating output notes, set creatorPubKey to 0 (it's a DeFi txn, recipient of note is same as creator of claim note)
     if (!success) {
       {
         const treeNote = new TreeNote(
-          userId.publicKey,
+          userId,
           depositValue,
           bridgeId.inputAssetIdA,
-          userId.accountNonce,
+          accountRequired,
           secret,
           Buffer.alloc(32),
           nullifier1,
@@ -484,10 +482,10 @@ export class UserState extends EventEmitter {
 
       if (bridgeId.numInputAssets === 2) {
         const treeNote = new TreeNote(
-          userId.publicKey,
+          userId,
           depositValue,
           bridgeId.inputAssetIdB!,
-          userId.accountNonce,
+          accountRequired,
           secret,
           Buffer.alloc(32),
           nullifier2,
@@ -497,10 +495,10 @@ export class UserState extends EventEmitter {
     }
     if (outputValueA) {
       const treeNote = new TreeNote(
-        userId.publicKey,
+        userId,
         outputValueA,
         bridgeId.firstOutputVirtual ? virtualAssetIdFlag + interactionNonce : bridgeId.outputAssetIdA,
-        userId.accountNonce,
+        accountRequired,
         secret,
         Buffer.alloc(32),
         nullifier1,
@@ -509,10 +507,10 @@ export class UserState extends EventEmitter {
     }
     if (outputValueB) {
       const treeNote = new TreeNote(
-        userId.publicKey,
+        userId,
         outputValueB,
         bridgeId.secondOutputVirtual ? virtualAssetIdFlag + interactionNonce : bridgeId.outputAssetIdB!,
-        userId.accountNonce,
+        accountRequired,
         secret,
         Buffer.alloc(32),
         nullifier2,
@@ -527,15 +525,9 @@ export class UserState extends EventEmitter {
   }
 
   private async processSettledNote(index: number, treeNote: TreeNote, commitment: Buffer, blockContext: BlockContext) {
-    const { ownerPubKey, value, accountNonce } = treeNote;
-    const noteOwner = new AccountId(ownerPubKey, accountNonce);
-    if (!noteOwner.equals(this.user.id)) {
-      return;
-    }
-
+    const { value } = treeNote;
     const hashPath = await blockContext.getBlockSubtreeHashPath(index);
-
-    const nullifier = this.noteAlgos.valueNoteNullifier(commitment, this.user.privateKey);
+    const nullifier = this.noteAlgos.valueNoteNullifier(commitment, this.user.accountPrivateKey);
     const note = new Note(
       treeNote,
       commitment,
@@ -559,6 +551,7 @@ export class UserState extends EventEmitter {
     if (!note || !note.owner.equals(this.user.id)) {
       return;
     }
+
     await this.db.nullifyNote(nullifier);
     this.debug(`nullified note at index ${note.index} with value ${note.value}.`);
     return note;
@@ -616,16 +609,16 @@ export class UserState extends EventEmitter {
   }
 
   private recoverAccountTx(proof: InnerProofData, offchainTxData: OffchainAccountData, blockCreated: Date) {
-    const { nullifier1 } = proof;
-    const { accountPublicKey, accountAliasId, spendingPublicKey1, spendingPublicKey2, txRefNo } = offchainTxData;
+    const { accountPublicKey, aliasHash, spendingPublicKey1, spendingPublicKey2, txRefNo } = offchainTxData;
     const txId = new TxId(proof.txId);
-    const userId = new AccountId(accountPublicKey, accountAliasId.accountNonce);
-    const migrated = !!toBigIntBE(nullifier1);
+    const { nullifier1, nullifier2 } = proof;
+    // A tx is for account migration when it nullifies the accountPublicKey (nullifier2) but not the aliasHash (nullifier1).
+    const migrated = !toBigIntBE(nullifier1) && !!toBigIntBE(nullifier2);
 
     return new CoreAccountTx(
       txId,
-      userId,
-      accountAliasId.aliasHash,
+      accountPublicKey,
+      aliasHash,
       toBigIntBE(spendingPublicKey1) ? spendingPublicKey1 : undefined,
       toBigIntBE(spendingPublicKey2) ? spendingPublicKey2 : undefined,
       migrated,
@@ -644,7 +637,11 @@ export class UserState extends EventEmitter {
   ) {
     const { bridgeId, depositValue, txFee, partialStateSecretEphPubKey, txRefNo } = offchainTxData;
     const txId = new TxId(proof.txId);
-    const partialStateSecret = deriveNoteSecret(partialStateSecretEphPubKey, this.user.privateKey, this.grumpkin);
+    const partialStateSecret = deriveNoteSecret(
+      partialStateSecretEphPubKey,
+      this.user.accountPrivateKey,
+      this.grumpkin,
+    );
 
     return new CoreDefiTx(
       txId,
@@ -663,7 +660,7 @@ export class UserState extends EventEmitter {
 
   private async refreshNotePicker() {
     const notesMap: Map<number, Note[]> = new Map();
-    const notes = await this.db.getUserNotes(this.user.id);
+    const notes = await this.db.getNotes(this.user.id);
     notes.forEach(note => {
       const assetNotes = notesMap.get(note.assetId) || [];
       notesMap.set(note.assetId, [...assetNotes, note]);
@@ -672,60 +669,60 @@ export class UserState extends EventEmitter {
     this.notePickers = assetIds.map(assetId => ({ assetId, notePicker: new NotePicker(notesMap.get(assetId)) }));
   }
 
-  public async pickNotes(assetId: number, value: bigint, excludePendingNotes?: boolean) {
+  public async pickNotes(assetId: number, value: bigint, excludePendingNotes = false, unsafe = false) {
     const { notePicker } = this.notePickers.find(np => np.assetId === assetId) || {};
     if (!notePicker) {
       return [];
     }
     const pendingNullifiers = await this.rollupProvider.getPendingNoteNullifiers();
-    return notePicker.pick(value, pendingNullifiers, excludePendingNotes);
+    return notePicker.pick(value, pendingNullifiers, excludePendingNotes, unsafe);
   }
 
-  public async pickNote(assetId: number, value: bigint, excludePendingNotes?: boolean) {
+  public async pickNote(assetId: number, value: bigint, excludePendingNotes = false, unsafe = false) {
     const { notePicker } = this.notePickers.find(np => np.assetId === assetId) || {};
     if (!notePicker) {
       return;
     }
     const pendingNullifiers = await this.rollupProvider.getPendingNoteNullifiers();
-    return notePicker.pickOne(value, pendingNullifiers, excludePendingNotes);
+    return notePicker.pickOne(value, pendingNullifiers, excludePendingNotes, unsafe);
   }
 
-  public async getSpendableSum(assetId: number, excludePendingNotes?: boolean) {
+  public async getSpendableSum(assetId: number, excludePendingNotes = false, unsafe = false) {
     const { notePicker } = this.notePickers.find(np => np.assetId === assetId) || {};
     if (!notePicker) {
       return BigInt(0);
     }
     const pendingNullifiers = await this.rollupProvider.getPendingNoteNullifiers();
-    return notePicker.getSpendableSum(pendingNullifiers, excludePendingNotes);
+    return notePicker.getSpendableSum(pendingNullifiers, excludePendingNotes, unsafe);
   }
 
-  public async getSpendableSums(excludePendingNotes?: boolean) {
+  public async getSpendableSums(excludePendingNotes = false, unsafe = false) {
     const pendingNullifiers = await this.rollupProvider.getPendingNoteNullifiers();
     return this.notePickers
       .map(({ assetId, notePicker }) => ({
         assetId,
-        value: notePicker.getSpendableSum(pendingNullifiers, excludePendingNotes),
+        value: notePicker.getSpendableSum(pendingNullifiers, excludePendingNotes, unsafe),
       }))
       .filter(assetValue => assetValue.value > BigInt(0));
   }
 
-  public async getMaxSpendableValue(assetId: number, numNotes?: number, excludePendingNotes?: boolean) {
+  public async getMaxSpendableValue(assetId: number, numNotes?: number, excludePendingNotes = false, unsafe = false) {
     const { notePicker } = this.notePickers.find(np => np.assetId === assetId) || {};
     if (!notePicker) {
       return BigInt(0);
     }
     const pendingNullifiers = await this.rollupProvider.getPendingNoteNullifiers();
-    return notePicker.getMaxSpendableValue(pendingNullifiers, numNotes, excludePendingNotes);
+    return notePicker.getMaxSpendableValue(pendingNullifiers, numNotes, excludePendingNotes, unsafe);
   }
 
-  public getBalance(assetId: number) {
+  public getBalance(assetId: number, unsafe = false) {
     const { notePicker } = this.notePickers.find(np => np.assetId === assetId) || {};
-    return notePicker ? notePicker.getSum() : BigInt(0);
+    return notePicker ? notePicker.getSum(unsafe) : BigInt(0);
   }
 
-  public getBalances() {
+  public getBalances(unsafe = false) {
     return this.notePickers
-      .map(({ assetId, notePicker }) => ({ assetId, value: notePicker.getSum() }))
+      .map(({ assetId, notePicker }) => ({ assetId, value: notePicker.getSum(unsafe) }))
       .filter(assetValue => assetValue.value > BigInt(0));
   }
 
@@ -760,9 +757,8 @@ export class UserState extends EventEmitter {
   }
 
   private async processPendingNote(note: Note) {
-    const { ownerPubKey, value, accountNonce } = note.treeNote;
-    const noteOwner = new AccountId(ownerPubKey, accountNonce);
-    if (!noteOwner.equals(this.user.id)) {
+    const { ownerPubKey, value } = note.treeNote;
+    if (!ownerPubKey.equals(this.user.id)) {
       return;
     }
 

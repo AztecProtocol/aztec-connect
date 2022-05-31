@@ -1,5 +1,6 @@
-import { AccountId, AliasHash } from '@aztec/barretenberg/account_id';
+import { AliasHash } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
+import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { Block } from '@aztec/barretenberg/block_source';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { AccountProver, JoinSplitProver, ProofId, UnrolledProver } from '@aztec/barretenberg/client_proofs';
@@ -24,7 +25,7 @@ import { EventEmitter } from 'events';
 import { LevelUp } from 'levelup';
 import { BlockContext } from '../block_context/block_context';
 import { CorePaymentTx, createCorePaymentTxForRecipient } from '../core_tx';
-import { Alias, Database, SigningKey } from '../database';
+import { Alias, Database, SpendingKey } from '../database';
 import { Note } from '../note';
 import {
   AccountProofCreator,
@@ -201,53 +202,51 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     return await this.rollupProvider.getStatus();
   }
 
+  public async isAccountRegistered(accountPublicKey: GrumpkinAddress) {
+    return !!(await this.db.getAlias(accountPublicKey));
+  }
+
+  public async isRemoteAccountRegistered(accountPublicKey: GrumpkinAddress) {
+    return this.rollupProvider.isAccountRegistered(accountPublicKey);
+  }
+
+  public async isAliasRegistered(alias: string) {
+    const aliasHash = await this.computeAliasHash(alias);
+    return (await this.db.getAliases(aliasHash)).length > 0;
+  }
+
+  public async isRemoteAliasRegistered(alias: string) {
+    return this.rollupProvider.isAliasRegistered(alias);
+  }
+
+  public async accountExists(accountPublicKey: GrumpkinAddress, alias: string) {
+    const aliasHash = await this.computeAliasHash(alias);
+    const savedAlias = await this.db.getAlias(accountPublicKey);
+    return !!savedAlias && savedAlias.aliasHash.equals(aliasHash);
+  }
+
+  public async remoteAccountExists(accountPublicKey: GrumpkinAddress, alias: string) {
+    return this.rollupProvider.accountExists(accountPublicKey, alias);
+  }
+
+  public async getAccountPublicKey(alias: string) {
+    const aliasHash = await this.computeAliasHash(alias);
+    const aliases = await this.db.getAliases(aliasHash);
+    return aliases[0]?.accountPublicKey;
+  }
+
+  public async getRemoteUnsettledAccountPublicKey(alias: string) {
+    const aliasHash = await this.computeAliasHash(alias);
+    const accounts = await this.rollupProvider.getUnsettledAccounts();
+    return accounts.find(a => a.aliasHash.equals(aliasHash))?.accountPublicKey;
+  }
+
   public async getTxFees(assetId: number) {
     return this.rollupProvider.getTxFees(assetId);
   }
 
   public async getDefiFees(bridgeId: BridgeId) {
     return this.rollupProvider.getDefiFees(bridgeId);
-  }
-
-  /**
-   * Return the latest nonce for a given public key, derived from chain data.
-   */
-  public async getLatestAccountNonce(publicKey: GrumpkinAddress) {
-    return (await this.db.getLatestNonceByAddress(publicKey)) || 0;
-  }
-
-  public async getRemoteLatestAccountNonce(publicKey: GrumpkinAddress) {
-    return (await this.rollupProvider.getLatestAccountNonce(publicKey)) || 0;
-  }
-
-  public async getLatestAliasNonce(alias: string) {
-    const aliasHash = await this.computeAliasHash(alias);
-    return (await this.db.getLatestNonceByAliasHash(aliasHash)) ?? 0;
-  }
-
-  public async getRemoteLatestAliasNonce(alias: string) {
-    return this.rollupProvider.getLatestAliasNonce(alias);
-  }
-
-  public async getAccountId(alias: string, accountNonce?: number) {
-    const aliasHash = await this.computeAliasHash(alias);
-    return this.db.getAccountId(aliasHash, accountNonce);
-  }
-
-  public async getRemoteAccountId(alias: string, accountNonce?: number) {
-    return this.rollupProvider.getAccountId(alias, accountNonce);
-  }
-
-  public async isAliasAvailable(alias: string) {
-    return !(await this.getLatestAliasNonce(alias));
-  }
-
-  public async isRemoteAliasAvailable(alias: string) {
-    return !(await this.rollupProvider.getLatestAliasNonce(alias));
-  }
-
-  public async computeAliasHash(alias: string) {
-    return AliasHash.fromAlias(alias, this.blake2s);
   }
 
   public async getDefiInteractionNonce(txId: TxId) {
@@ -258,11 +257,11 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     return tx.interactionNonce;
   }
 
-  public async userExists(userId: AccountId) {
+  public async userExists(userId: GrumpkinAddress) {
     return !!(await this.db.getUser(userId));
   }
 
-  public async getUserData(userId: AccountId) {
+  public async getUserData(userId: GrumpkinAddress) {
     return this.getUserState(userId).getUser();
   }
 
@@ -278,15 +277,11 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     return this.schnorr.constructSignature(message, privateKey);
   }
 
-  public async addUser(privateKey: Buffer, accountNonce?: number, noSync = false) {
+  public async addUser(accountPrivateKey: Buffer, noSync = false) {
     return this.serialQueue.push(async () => {
-      const publicKey = await this.derivePublicKey(privateKey);
-      if (accountNonce === undefined) {
-        accountNonce = await this.getLatestAccountNonce(publicKey);
-      }
-      const id = new AccountId(publicKey, accountNonce);
-      if (await this.db.getUser(id)) {
-        throw new Error(`User already exists: ${id}`);
+      const accountPublicKey = await this.derivePublicKey(accountPrivateKey);
+      if (await this.db.getUser(accountPublicKey)) {
+        throw new Error(`User already exists: ${accountPublicKey}`);
       }
 
       let syncedToRollup = -1;
@@ -297,8 +292,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
         syncedToRollup = nextRollupId - 1;
       }
 
-      const aliasHash = accountNonce > 0 ? await this.db.getAliasHashByAddress(publicKey) : undefined;
-      const user = { id, privateKey, publicKey, accountNonce, aliasHash, syncedToRollup };
+      const user = { id: accountPublicKey, accountPrivateKey, accountPublicKey, syncedToRollup };
       await this.db.addUser(user);
 
       const userState = this.userStateFactory.createUserState(user);
@@ -312,7 +306,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     });
   }
 
-  public async removeUser(userId: AccountId) {
+  public async removeUser(userId: GrumpkinAddress) {
     const userState = this.getUserState(userId);
     this.userStates = this.userStates.filter(us => us !== userState);
     this.stopSyncingUserState(userState);
@@ -321,54 +315,68 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     this.emit(SdkEvent.UPDATED_USERS);
   }
 
-  public async getSigningKeys(userId: AccountId) {
-    const keys = await this.db.getUserSigningKeys(userId);
+  public async getSpendingKeys(userId: GrumpkinAddress) {
+    const keys = await this.db.getSpendingKeys(userId);
     return keys.map(k => k.key);
   }
 
-  public async getBalances(userId: AccountId) {
-    return this.getUserState(userId).getBalances();
+  public async getBalances(userId: GrumpkinAddress, unsafe?: boolean) {
+    return this.getUserState(userId).getBalances(unsafe);
   }
 
-  public async getBalance(assetId: number, userId: AccountId) {
+  public async getBalance(userId: GrumpkinAddress, assetId: number, unsafe?: boolean) {
     const userState = this.getUserState(userId);
-    return userState.getBalance(assetId);
+    return userState.getBalance(assetId, unsafe);
   }
 
-  public async getSpendableSum(assetId: number, userId: AccountId, excludePendingNotes?: boolean) {
+  public async getSpendableSum(
+    userId: GrumpkinAddress,
+    assetId: number,
+    excludePendingNotes?: boolean,
+    unsafe?: boolean,
+  ) {
     const userState = this.getUserState(userId);
-    return userState.getSpendableSum(assetId, excludePendingNotes);
+    return userState.getSpendableSum(assetId, excludePendingNotes, unsafe);
   }
 
-  public async getSpendableSums(userId: AccountId, excludePendingNotes?: boolean) {
+  public async getSpendableSums(userId: GrumpkinAddress, excludePendingNotes?: boolean, unsafe?: boolean) {
     const userState = this.getUserState(userId);
-    return userState.getSpendableSums(excludePendingNotes);
+    return userState.getSpendableSums(excludePendingNotes, unsafe);
   }
 
   public async getMaxSpendableValue(
+    userId: GrumpkinAddress,
     assetId: number,
-    userId: AccountId,
     numNotes?: number,
     excludePendingNotes?: boolean,
+    unsafe?: boolean,
   ) {
     const userState = this.getUserState(userId);
-    return userState.getMaxSpendableValue(assetId, numNotes, excludePendingNotes);
+    return userState.getMaxSpendableValue(assetId, numNotes, excludePendingNotes, unsafe);
   }
 
-  public async pickNotes(userId: AccountId, assetId: number, value: bigint, excludePendingNotes?: boolean) {
-    return this.getUserState(userId).pickNotes(assetId, value, excludePendingNotes);
+  public async pickNotes(
+    userId: GrumpkinAddress,
+    assetId: number,
+    value: bigint,
+    excludePendingNotes?: boolean,
+    unsafe?: boolean,
+  ) {
+    return this.getUserState(userId).pickNotes(assetId, value, excludePendingNotes, unsafe);
   }
 
-  public async pickNote(userId: AccountId, assetId: number, value: bigint, excludePendingNotes?: boolean) {
-    return this.getUserState(userId).pickNote(assetId, value, excludePendingNotes);
+  public async pickNote(
+    userId: GrumpkinAddress,
+    assetId: number,
+    value: bigint,
+    excludePendingNotes?: boolean,
+    unsafe?: boolean,
+  ) {
+    return this.getUserState(userId).pickNote(assetId, value, excludePendingNotes, unsafe);
   }
 
-  public async getUserTxs(userId: AccountId) {
+  public async getUserTxs(userId: GrumpkinAddress) {
     return this.db.getUserTxs(userId);
-  }
-
-  public async getRemoteUnsettledAccountTxs() {
-    return this.rollupProvider.getUnsettledAccountTxs();
   }
 
   public async getRemoteUnsettledPaymentTxs() {
@@ -424,26 +432,25 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     assetId: number,
     publicInput: bigint,
     privateOutput: bigint,
-    noteRecipient: AccountId,
-    publicOwner: EthAddress,
+    depositor: EthAddress,
+    recipient: GrumpkinAddress,
+    recipientAccountRequired: boolean,
     txRefNo: number,
   ) {
     return this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
 
       // Create a one time user to generate and sign the proof.
-      const privateKey = randomBytes(32);
-      const publicKey = await this.derivePublicKey(privateKey);
-      const accountNonce = 0;
+      const accountPrivateKey = randomBytes(32);
+      const accountPublicKey = await this.derivePublicKey(accountPrivateKey);
       const user = {
-        id: new AccountId(publicKey, accountNonce),
-        privateKey,
-        publicKey,
-        accountNonce,
+        id: accountPublicKey,
+        accountPrivateKey,
+        accountPublicKey,
         syncedToRollup: -1,
       };
-      const signer = new SchnorrSigner(this, publicKey, privateKey);
-      const spendingPublicKey = GrumpkinAddress.randomAddress();
+      const signer = new SchnorrSigner(this, accountPublicKey, accountPrivateKey);
+      const spendingPublicKey = accountPublicKey;
 
       const proofInput = await this.paymentProofCreator.createProofInput(
         user,
@@ -454,8 +461,9 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
         publicInput,
         BigInt(0), // publicOutput
         assetId,
-        noteRecipient,
-        publicOwner,
+        recipient,
+        recipientAccountRequired,
+        depositor,
         spendingPublicKey,
         0, // allowChain
       );
@@ -466,14 +474,15 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   }
 
   public async createPaymentProofInput(
-    userId: AccountId,
+    userId: GrumpkinAddress,
     assetId: number,
     publicInput: bigint,
     publicOutput: bigint,
     privateInput: bigint,
     recipientPrivateOutput: bigint,
     senderPrivateOutput: bigint,
-    noteRecipient: AccountId | undefined,
+    noteRecipient: GrumpkinAddress | undefined,
+    recipientAccountRequired: boolean,
     publicOwner: EthAddress | undefined,
     spendingPublicKey: GrumpkinAddress,
     allowChain: number,
@@ -484,7 +493,8 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       const userState = this.getUserState(userId);
       const user = userState.getUser();
 
-      const notes = privateInput ? await userState.pickNotes(assetId, privateInput) : [];
+      const unsafe = spendingPublicKey.equals(userId);
+      const notes = privateInput ? await userState.pickNotes(assetId, privateInput, false, unsafe) : [];
       if (privateInput && !notes.length) {
         throw new Error(`Failed to find no more than 2 notes that sum to ${privateInput}.`);
       }
@@ -499,6 +509,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
         publicOutput,
         assetId,
         noteRecipient,
+        recipientAccountRequired,
         publicOwner,
         spendingPublicKey,
         allowChain,
@@ -511,7 +522,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       this.assertInitState(SdkInitState.RUNNING);
 
       const { outputNotes } = input.tx;
-      const userId = new AccountId(outputNotes[1].ownerPubKey, outputNotes[1].accountNonce);
+      const userId = outputNotes[1].ownerPubKey;
       const userState = this.getUserState(userId);
       const user = userState.getUser();
       return this.paymentProofCreator.createProof(user, input, txRefNo);
@@ -519,53 +530,52 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   }
 
   public async createAccountProofSigningData(
-    signingPubKey: GrumpkinAddress,
-    alias: string,
-    accountNonce: number,
-    migrate: boolean,
     accountPublicKey: GrumpkinAddress,
+    alias: string,
+    migrate: boolean,
+    spendingPublicKey: GrumpkinAddress,
     newAccountPublicKey?: GrumpkinAddress,
-    newSigningPubKey1?: GrumpkinAddress,
-    newSigningPubKey2?: GrumpkinAddress,
+    newSpendingPublicKey1?: GrumpkinAddress,
+    newSpendingPublicKey2?: GrumpkinAddress,
   ) {
     return this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
-      const aliasHash = await this.computeAliasHash(alias);
-      const tx = await this.accountProofCreator.createAccountTx(
-        signingPubKey,
-        aliasHash,
-        accountNonce,
-        migrate,
+      const aliasHash = this.computeAliasHash(alias);
+      const { signingData } = await this.accountProofCreator.createProofInput(
         accountPublicKey,
+        aliasHash,
+        migrate,
+        spendingPublicKey,
         newAccountPublicKey,
-        newSigningPubKey1,
-        newSigningPubKey2,
+        newSpendingPublicKey1,
+        newSpendingPublicKey2,
+        false, // spendingKeyExists
       );
-      return this.accountProofCreator.computeSigningData(tx);
+      return signingData;
     });
   }
 
   public async createAccountProofInput(
-    userId: AccountId,
-    aliasHash: AliasHash,
+    userId: GrumpkinAddress,
+    alias: string,
     migrate: boolean,
-    signingPublicKey: GrumpkinAddress,
-    newSigningPublicKey1: GrumpkinAddress | undefined,
-    newSigningPublicKey2: GrumpkinAddress | undefined,
+    spendingPublicKey: GrumpkinAddress,
+    newSpendingPublicKey1: GrumpkinAddress | undefined,
+    newSpendingPublicKey2: GrumpkinAddress | undefined,
     newAccountPrivateKey: Buffer | undefined,
   ) {
     return this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
+      const aliasHash = await this.computeAliasHash(alias);
       const newAccountPublicKey = newAccountPrivateKey ? await this.derivePublicKey(newAccountPrivateKey) : undefined;
       return this.accountProofCreator.createProofInput(
+        userId,
         aliasHash,
-        userId.accountNonce,
         migrate,
-        userId.publicKey,
-        signingPublicKey,
+        spendingPublicKey,
         newAccountPublicKey,
-        newSigningPublicKey1,
-        newSigningPublicKey2,
+        newSpendingPublicKey1,
+        newSpendingPublicKey2,
       );
     });
   }
@@ -578,7 +588,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   }
 
   public async createDefiProofInput(
-    userId: AccountId,
+    userId: GrumpkinAddress,
     bridgeId: BridgeId,
     depositValue: bigint,
     inputNotes: Note[],
@@ -597,7 +607,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       this.assertInitState(SdkInitState.RUNNING);
 
       const { outputNotes } = input.tx;
-      const userId = new AccountId(outputNotes[1].ownerPubKey, outputNotes[1].accountNonce);
+      const userId = outputNotes[1].ownerPubKey;
       const userState = this.getUserState(userId);
       const user = userState.getUser();
       return this.defiDepositProofCreator.createProof(user, input, txRefNo);
@@ -657,13 +667,13 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     }
   }
 
-  public async isUserSynching(userId: AccountId) {
+  public async isUserSynching(userId: GrumpkinAddress) {
     this.assertInitState(SdkInitState.RUNNING);
 
     return this.getUserState(userId).isSyncing();
   }
 
-  public async awaitUserSynchronised(userId: AccountId) {
+  public async awaitUserSynchronised(userId: GrumpkinAddress) {
     this.assertInitState(SdkInitState.RUNNING);
 
     await this.getUserState(userId).awaitSynchronised();
@@ -752,7 +762,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   // PRIVATE METHODS
   // ---------------
 
-  private getUserState(userId: AccountId) {
+  private getUserState(userId: GrumpkinAddress) {
     const userState = this.userStates.find(us => us.getUser().id.equals(userId));
     if (!userState) {
       throw new Error(`User not found: ${userId}`);
@@ -815,6 +825,10 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   private async stopSyncingUserState(userState: UserState) {
     userState.removeAllListeners();
     await userState.stopSync();
+  }
+
+  private computeAliasHash(alias: string) {
+    return AliasHash.fromAlias(alias, this.blake2s);
   }
 
   private async createJoinSplitProofCreators(recreateKeys: boolean, proverless: boolean) {
@@ -893,46 +907,41 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   }
 
   private async syncAliasesAndKeys(accounts: AccountData[], hashPathMap: { [key: number]: HashPath }) {
-    const aliases = new Array<Alias>();
-    const uniqueSigningKeys = new Map<string, SigningKey>();
+    const aliases: Alias[] = [];
+    const spendingKeys: SpendingKey[] = [];
 
-    // There can be duplicate account/nonce/signing key combinations.
+    // There can be duplicate account/spending key combinations.
     // We need to just keep the most recent one.
     // This loop simulates upserts by keeping the most recent version before inserting into the DB.
-    let noteIndex = 0;
-    for (let i = 0; i < accounts.length; i++) {
+    let treeIndex = 0;
+    for (const account of accounts) {
       const {
-        alias: { address, accountNonce },
+        alias: { aliasHash, address },
         signingKeys: { signingKey1, signingKey2 },
-      } = accounts[i];
-      const accountId = new AccountId(new GrumpkinAddress(address), accountNonce);
-
-      const signingKeys = [signingKey1, signingKey2];
-      for (let j = 0; j < signingKeys.length; j++) {
-        const key = signingKeys[j];
-        const keyVal = key.toString('hex') + ' - ' + accountId.toString();
-        const sk: SigningKey = { treeIndex: noteIndex, key, accountId, hashPath: hashPathMap[noteIndex].toBuffer() };
-        uniqueSigningKeys.set(keyVal, sk);
-        noteIndex++;
-      }
+      } = account;
+      const accountPublicKey = new GrumpkinAddress(address);
 
       aliases.push({
-        aliasHash: new AliasHash(accounts[i].alias.aliasHash),
-        address: new GrumpkinAddress(accounts[i].alias.address),
-        latestNonce: accounts[i].alias.accountNonce,
+        accountPublicKey,
+        aliasHash: new AliasHash(aliasHash),
+        index: treeIndex,
+      });
+
+      [signingKey1, signingKey2].forEach(key => {
+        spendingKeys.push({ userId: accountPublicKey, treeIndex, key, hashPath: hashPathMap[treeIndex].toBuffer() });
+        treeIndex++;
       });
     }
-    const keys = [...uniqueSigningKeys.values()];
 
     debug(`synching with ${aliases.length} aliases`);
     const aliasesTimer = new Timer();
-    await this.db.setAliases(aliases);
+    await this.db.addAliases(aliases);
     debug(`aliases saved in ${aliasesTimer.s()}s`);
 
-    debug(`synching with ${keys.length} signing keys`);
+    debug(`synching with ${spendingKeys.length} spending keys`);
     const keysTimer = new Timer();
-    await this.db.addUserSigningKeys(keys);
-    debug(`signing keys saved in ${keysTimer.s()}s`);
+    await this.db.addSpendingKeys(spendingKeys);
+    debug(`spending keys saved in ${keysTimer.s()}s`);
   }
 
   // Returns a mapping of tree index to hash path for all account notes
@@ -1144,29 +1153,39 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   private async processAliases(rollups: RollupProofData[], offchainTxData: Buffer[][]) {
     const processRollup = (rollup: RollupProofData, offchainData: Buffer[]) => {
       const aliases: Alias[] = [];
+      let offchainIndex = -1;
       for (let i = 0; i < rollup.innerProofData.length; ++i) {
         const proof = rollup.innerProofData[i];
+        if (proof.isPadding()) {
+          continue;
+        }
+
+        offchainIndex++;
+
         if (proof.proofId !== ProofId.ACCOUNT) {
           continue;
         }
 
-        const { accountPublicKey, accountAliasId, spendingPublicKey1 } = OffchainAccountData.fromBuffer(
-          offchainData[i],
-        );
-        const commitment = this.noteAlgos.accountNoteCommitment(accountAliasId, accountPublicKey, spendingPublicKey1);
-        // Only need to check one commitment to make sure the accountAliasId and accountPublicKey pair is valid.
-        if (commitment.equals(proof.noteCommitment1)) {
-          aliases.push({
-            address: accountPublicKey,
-            aliasHash: accountAliasId.aliasHash,
-            latestNonce: accountAliasId.accountNonce,
-          });
+        const createOrMigrate = !!toBigIntBE(proof.nullifier2);
+        if (createOrMigrate) {
+          const { accountPublicKey, aliasHash, spendingPublicKey1 } = OffchainAccountData.fromBuffer(
+            offchainData[offchainIndex],
+          );
+          const commitment = this.noteAlgos.accountNoteCommitment(aliasHash, accountPublicKey, spendingPublicKey1);
+          // Only need to check one commitment to make sure the aliasHash and accountPublicKey pair is valid.
+          if (commitment.equals(proof.noteCommitment1)) {
+            aliases.push({
+              accountPublicKey,
+              aliasHash,
+              index: rollup.dataStartIndex + i * 2,
+            });
+          }
         }
       }
       return aliases;
     };
 
     const aliases = rollups.map((rollup, i) => processRollup(rollup, offchainTxData[i])).flat();
-    await this.db.setAliases(aliases);
+    await this.db.addAliases(aliases);
   }
 }

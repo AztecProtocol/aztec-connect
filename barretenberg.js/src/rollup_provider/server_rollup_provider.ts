@@ -1,4 +1,3 @@
-import { AccountId } from '../account_id';
 import { GrumpkinAddress } from '../address';
 import { assetValueFromJson, AssetValueJson } from '../asset';
 import { ServerBlockSource } from '../block_source';
@@ -6,7 +5,7 @@ import { BridgeId } from '../bridge_id';
 import { fetch } from '../iso_fetch';
 import { Tx } from '../rollup_provider';
 import { TxId } from '../tx_id';
-import { accountTxFromJson, joinSplitTxFromJson, pendingTxFromJson, RollupProvider, txToJson } from './rollup_provider';
+import { accountFromJson, joinSplitTxFromJson, pendingTxFromJson, RollupProvider, txToJson } from './rollup_provider';
 import { rollupProviderStatusFromJson } from './rollup_provider_status';
 
 export class ServerRollupProvider extends ServerBlockSource implements RollupProvider {
@@ -66,28 +65,27 @@ export class ServerRollupProvider extends ServerBlockSource implements RollupPro
     };
   }
 
-  async getLatestAccountNonce(accountPubKey: GrumpkinAddress) {
-    const response = await this.fetch('/get-latest-account-nonce', {
-      accountPubKey: accountPubKey.toString(),
+  async isAccountRegistered(accountPublicKey: GrumpkinAddress) {
+    const response = await this.fetch('/is-account-registered', {
+      accountPublicKey: accountPublicKey.toString(),
     });
-    return +(await response.text());
+    return +(await response.text()) === 1;
   }
 
-  async getLatestAliasNonce(alias: string) {
-    const response = await this.fetch('/get-latest-alias-nonce', { alias });
-    return +(await response.text());
+  async isAliasRegistered(alias: string) {
+    const response = await this.fetch('/is-alias-registered', { alias });
+    return +(await response.text()) === 1;
   }
 
-  async getAccountId(alias: string, accountNonce?: number) {
-    const response = await this.fetch('/get-account-id', { alias, accountNonce });
-    const accountId = await response.text();
-    return accountId ? AccountId.fromString(accountId) : undefined;
+  async accountExists(accountPublicKey: GrumpkinAddress, alias: string) {
+    const response = await this.fetch('/account-exists', { accountPublicKey: accountPublicKey.toString(), alias });
+    return +(await response.text()) === 1;
   }
 
-  async getUnsettledAccountTxs() {
-    const response = await this.fetch('/get-unsettled-account-txs');
-    const txs = await response.json();
-    return txs.map(accountTxFromJson);
+  async getUnsettledAccounts() {
+    const response = await this.fetch('/get-unsettled-accounts');
+    const accounts = await response.json();
+    return accounts.map(accountFromJson);
   }
 
   async getUnsettledPaymentTxs() {

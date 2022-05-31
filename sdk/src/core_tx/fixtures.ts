@@ -1,12 +1,13 @@
-import { AccountId, AliasHash } from '@aztec/barretenberg/account_id';
+import { AliasHash } from '@aztec/barretenberg/account_id';
+import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
+import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { randomBytes } from 'crypto';
-import { CoreDefiTx } from './core_defi_tx';
 import { CoreAccountTx } from './core_account_tx';
+import { CoreDefiTx } from './core_defi_tx';
 import { CorePaymentTx } from './core_payment_tx';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
 
 const inputOrDefault = <T>(inputValue: T | undefined, defaultValue: T) =>
   inputValue !== undefined ? inputValue : defaultValue;
@@ -14,10 +15,10 @@ const inputOrDefault = <T>(inputValue: T | undefined, defaultValue: T) =>
 export const randomCoreAccountTx = (tx: Partial<CoreAccountTx> = {}) =>
   new CoreAccountTx(
     tx.txId || TxId.random(),
-    tx.userId || AccountId.random(),
+    tx.userId || GrumpkinAddress.random(),
     tx.aliasHash || AliasHash.random(),
-    tx.newSigningPubKey1 || randomBytes(32),
-    tx.newSigningPubKey2 || randomBytes(32),
+    tx.newSpendingPublicKey1 || randomBytes(32),
+    tx.newSpendingPublicKey2 || randomBytes(32),
     tx.migrated || false,
     tx.txRefNo || 0,
     tx.created || new Date(),
@@ -27,7 +28,7 @@ export const randomCoreAccountTx = (tx: Partial<CoreAccountTx> = {}) =>
 export const randomCorePaymentTx = (tx: Partial<CorePaymentTx> = {}) =>
   new CorePaymentTx(
     tx.txId || TxId.random(),
-    tx.userId || AccountId.random(),
+    tx.userId || GrumpkinAddress.random(),
     inputOrDefault(tx.proofId, ProofId.SEND),
     tx.assetId || 0,
     tx.publicValue || BigInt(0),
@@ -45,7 +46,7 @@ export const randomCorePaymentTx = (tx: Partial<CorePaymentTx> = {}) =>
 export const randomCoreDefiTx = (tx: Partial<CoreDefiTx> = {}) =>
   new CoreDefiTx(
     tx.txId || TxId.random(),
-    tx.userId || AccountId.random(),
+    tx.userId || GrumpkinAddress.random(),
     tx.bridgeId || BridgeId.random(),
     inputOrDefault(tx.depositValue, toBigIntBE(randomBytes(4))),
     inputOrDefault(tx.txFee, toBigIntBE(randomBytes(4))),

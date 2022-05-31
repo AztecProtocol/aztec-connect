@@ -1,4 +1,4 @@
-import { AccountAliasId } from '@aztec/barretenberg/account_id';
+import { AliasHash } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { Blockchain } from '@aztec/barretenberg/blockchain';
@@ -78,22 +78,17 @@ describe('tx receiver', () => {
   });
 
   const mockAccountTx = () => {
-    const accountPublicKey = GrumpkinAddress.randomAddress();
-    const accountAliasId = AccountAliasId.random();
+    const accountPublicKey = GrumpkinAddress.random();
+    const aliasHash = AliasHash.random();
     const spendingPublicKey1 = randomBytes(32);
     const spendingPublicKey2 = randomBytes(32);
-    const offchainTxData = new OffchainAccountData(
-      accountPublicKey,
-      accountAliasId,
-      spendingPublicKey1,
-      spendingPublicKey2,
-    );
+    const offchainTxData = new OffchainAccountData(accountPublicKey, aliasHash, spendingPublicKey1, spendingPublicKey2);
     return mockTx({ proofId: ProofId.ACCOUNT, offchainTxData: offchainTxData.toBuffer() });
   };
 
   const mockDefiDepositTx = ({ bridgeId = new BridgeId(0, 0, 1), defiDepositValue = 1n, txFee = 1n } = {}) => {
     const partialState = randomBytes(32);
-    const partialStateSecretEphPubKey = GrumpkinAddress.randomAddress();
+    const partialStateSecretEphPubKey = GrumpkinAddress.random();
     const viewingKey = ViewingKey.random();
     const offchainTxData = new OffchainDefiDepositData(
       bridgeId,
@@ -404,7 +399,7 @@ describe('tx receiver', () => {
 
     it('reject a defi deposit tx with inconsistent offchain data', async () => {
       const partialState = randomBytes(32);
-      const partialStateSecretEphPubKey = GrumpkinAddress.randomAddress();
+      const partialStateSecretEphPubKey = GrumpkinAddress.random();
       const viewingKey = ViewingKey.random();
       const bridgeId = new BridgeId(0, 1, 2);
       const defiDepositValue = 1n;

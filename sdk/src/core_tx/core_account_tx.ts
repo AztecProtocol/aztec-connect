@@ -1,4 +1,5 @@
-import { AccountId, AliasHash } from '@aztec/barretenberg/account_id';
+import { AliasHash } from '@aztec/barretenberg/account_id';
+import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { TxId } from '@aztec/barretenberg/tx_id';
 
@@ -7,10 +8,10 @@ export class CoreAccountTx {
 
   constructor(
     public readonly txId: TxId,
-    public readonly userId: AccountId,
+    public readonly userId: GrumpkinAddress,
     public readonly aliasHash: AliasHash,
-    public readonly newSigningPubKey1: Buffer | undefined,
-    public readonly newSigningPubKey2: Buffer | undefined,
+    public readonly newSpendingPublicKey1: Buffer | undefined,
+    public readonly newSpendingPublicKey2: Buffer | undefined,
     public readonly migrated: boolean,
     public readonly txRefNo: number,
     public readonly created: Date,
@@ -23,8 +24,8 @@ export interface CoreAccountTxJson {
   txId: string;
   userId: string;
   aliasHash: string;
-  newSigningPubKey1: string | undefined;
-  newSigningPubKey2: string | undefined;
+  newSpendingPublicKey1: string | undefined;
+  newSpendingPublicKey2: string | undefined;
   migrated: boolean;
   txRefNo: number;
   created: Date;
@@ -36,17 +37,17 @@ export const coreAccountTxToJson = (tx: CoreAccountTx): CoreAccountTxJson => ({
   txId: tx.txId.toString(),
   userId: tx.userId.toString(),
   aliasHash: tx.aliasHash.toString(),
-  newSigningPubKey1: tx.newSigningPubKey1 ? tx.newSigningPubKey1.toString('hex') : undefined,
-  newSigningPubKey2: tx.newSigningPubKey2 ? tx.newSigningPubKey2.toString('hex') : undefined,
+  newSpendingPublicKey1: tx.newSpendingPublicKey1 ? tx.newSpendingPublicKey1.toString('hex') : undefined,
+  newSpendingPublicKey2: tx.newSpendingPublicKey2 ? tx.newSpendingPublicKey2.toString('hex') : undefined,
 });
 
 export const coreAccountTxFromJson = (json: CoreAccountTxJson) =>
   new CoreAccountTx(
     TxId.fromString(json.txId),
-    AccountId.fromString(json.userId),
+    GrumpkinAddress.fromString(json.userId),
     AliasHash.fromString(json.aliasHash),
-    json.newSigningPubKey1 ? Buffer.from(json.newSigningPubKey1, 'hex') : undefined,
-    json.newSigningPubKey2 ? Buffer.from(json.newSigningPubKey2, 'hex') : undefined,
+    json.newSpendingPublicKey1 ? Buffer.from(json.newSpendingPublicKey1, 'hex') : undefined,
+    json.newSpendingPublicKey2 ? Buffer.from(json.newSpendingPublicKey2, 'hex') : undefined,
     json.migrated,
     json.txRefNo,
     json.created,

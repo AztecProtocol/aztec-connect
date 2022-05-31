@@ -1,20 +1,11 @@
-import { AccountId, AliasHash } from '@aztec/barretenberg/account_id';
+import { AliasHash } from '@aztec/barretenberg/account_id';
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { TxId } from '@aztec/barretenberg/tx_id';
-import {
-  Connection,
-  ConnectionOptions,
-  getConnection,
-  IsNull,
-  LessThanOrEqual,
-  MoreThan,
-  MoreThanOrEqual,
-  Repository,
-} from 'typeorm';
+import { Connection, ConnectionOptions, getConnection, IsNull, LessThanOrEqual, MoreThan, Repository } from 'typeorm';
 import { CoreAccountTx, CoreClaimTx, CoreDefiTx, CorePaymentTx } from '../../core_tx';
 import { Note } from '../../note';
 import { UserData } from '../../user';
-import { Alias, Database, SigningKey } from '../database';
+import { Alias, Database, SpendingKey } from '../database';
 import { AccountTxDao } from './account_tx_dao';
 import { AliasDao } from './alias_dao';
 import { ClaimTxDao } from './claim_tx_dao';
@@ -23,8 +14,8 @@ import { KeyDao } from './key_dao';
 import { MutexDao } from './mutex_dao';
 import { NoteDao, noteDaoToNote, noteToNoteDao } from './note_dao';
 import { PaymentTxDao } from './payment_tx_dao';
+import { SpendingKeyDao } from './spending_key_dao';
 import { UserDataDao } from './user_data_dao';
-import { UserKeyDao } from './user_key_dao';
 
 export const getOrmConfig = (memoryDb = false, identifier?: string): ConnectionOptions => {
   const folder = identifier ? `/${identifier}` : '';
@@ -44,7 +35,7 @@ export const getOrmConfig = (memoryDb = false, identifier?: string): ConnectionO
       NoteDao,
       PaymentTxDao,
       UserDataDao,
-      UserKeyDao,
+      SpendingKeyDao,
     ],
     synchronize: true,
     logging: false,
@@ -74,8 +65,8 @@ const toCoreAccountTx = (tx: AccountTxDao) =>
     tx.txId,
     tx.userId,
     tx.aliasHash,
-    tx.newSigningPubKey1,
-    tx.newSigningPubKey2,
+    tx.newSpendingPublicKey1,
+    tx.newSpendingPublicKey2,
     tx.migrated,
     tx.txRefNo,
     tx.created,
@@ -118,7 +109,7 @@ export class SQLDatabase implements Database {
   private noteRep: Repository<NoteDao>;
   private paymentTxRep: Repository<PaymentTxDao>;
   private userDataRep: Repository<UserDataDao>;
-  private userKeyRep: Repository<UserKeyDao>;
+  private spendingKeyRep: Repository<SpendingKeyDao>;
   private mutex: Repository<MutexDao>;
 
   constructor(private connection: Connection) {
@@ -130,7 +121,7 @@ export class SQLDatabase implements Database {
     this.noteRep = this.connection.getRepository(NoteDao);
     this.paymentTxRep = this.connection.getRepository(PaymentTxDao);
     this.userDataRep = this.connection.getRepository(UserDataDao);
-    this.userKeyRep = this.connection.getRepository(UserKeyDao);
+    this.spendingKeyRep = this.connection.getRepository(SpendingKeyDao);
     this.mutex = this.connection.getRepository(MutexDao);
   }
 
@@ -162,11 +153,11 @@ export class SQLDatabase implements Database {
     await this.noteRep.update({ nullifier }, { nullified: true });
   }
 
-  async getUserNotes(userId: AccountId) {
+  async getNotes(userId: GrumpkinAddress) {
     return (await this.noteRep.find({ where: { owner: userId, nullified: false } })).map(noteDaoToNote);
   }
 
-  async getUserPendingNotes(userId: AccountId) {
+  async getPendingNotes(userId: GrumpkinAddress) {
     return (await this.noteRep.find({ where: { owner: userId, index: IsNull() } })).map(noteDaoToNote);
   }
 
@@ -174,7 +165,7 @@ export class SQLDatabase implements Database {
     await this.noteRep.delete({ nullifier });
   }
 
-  async getUser(userId: AccountId) {
+  async getUser(userId: GrumpkinAddress) {
     return this.userDataRep.findOne({ id: userId });
   }
 
@@ -190,22 +181,21 @@ export class SQLDatabase implements Database {
     await this.userDataRep.update({ id: user.id }, user);
   }
 
-  async removeUser(userId: AccountId) {
+  async removeUser(userId: GrumpkinAddress) {
     const user = await this.getUser(userId);
     if (!user) return;
 
     await this.accountTxRep.delete({ userId });
     await this.claimTxRep.delete({ userId });
     await this.paymentTxRep.delete({ userId });
-    await this.userKeyRep.delete({ accountId: userId });
+    await this.spendingKeyRep.delete({ userId });
     await this.noteRep.delete({ owner: userId });
     await this.userDataRep.delete({ id: userId });
   }
 
   async resetUsers() {
-    await this.aliasRep.clear();
     await this.noteRep.clear();
-    await this.userKeyRep.clear();
+    await this.spendingKeyRep.clear();
     await this.accountTxRep.clear();
     await this.claimTxRep.clear();
     await this.paymentTxRep.clear();
@@ -216,7 +206,7 @@ export class SQLDatabase implements Database {
     await this.paymentTxRep.save({ ...tx }); // save() will mutate tx, changing undefined values to null.
   }
 
-  async getPaymentTx(txId: TxId, userId: AccountId) {
+  async getPaymentTx(userId: GrumpkinAddress, txId: TxId) {
     const tx = await this.paymentTxRep.findOne({ txId, userId });
     return tx ? toCorePaymentTx(tx) : undefined;
   }
@@ -226,7 +216,7 @@ export class SQLDatabase implements Database {
     return sortUserTxs(txs).map(toCorePaymentTx);
   }
 
-  async settlePaymentTx(txId: TxId, userId: AccountId, settled: Date) {
+  async settlePaymentTx(userId: GrumpkinAddress, txId: TxId, settled: Date) {
     await this.paymentTxRep.update({ txId, userId }, { settled });
   }
 
@@ -262,7 +252,7 @@ export class SQLDatabase implements Database {
     return sortUserTxs(txs).map(toCoreDefiTx);
   }
 
-  async getDefiTxsByNonce(userId: AccountId, interactionNonce: number) {
+  async getDefiTxsByNonce(userId: GrumpkinAddress, interactionNonce: number) {
     const txs = await this.defiTxRep.find({ where: { userId, interactionNonce }, order: { settled: 'DESC' } });
     return sortUserTxs(txs).map(toCoreDefiTx);
   }
@@ -293,7 +283,7 @@ export class SQLDatabase implements Database {
     return this.claimTxRep.findOne({ nullifier });
   }
 
-  async getUserTxs(userId: AccountId) {
+  async getUserTxs(userId: GrumpkinAddress) {
     const txs = (
       await Promise.all([this.getAccountTxs(userId), this.getPaymentTxs(userId), this.getDefiTxs(userId)])
     ).flat();
@@ -319,7 +309,7 @@ export class SQLDatabase implements Database {
     return !!accountTx?.settled;
   }
 
-  async getPendingUserTxs(userId: AccountId) {
+  async getPendingUserTxs(userId: GrumpkinAddress) {
     const unsettledTxs = await Promise.all([
       this.accountTxRep.find({ where: { userId, settled: IsNull() } }),
       this.paymentTxRep.find({ where: { userId, settled: IsNull() } }),
@@ -328,7 +318,7 @@ export class SQLDatabase implements Database {
     return unsettledTxs.flat().map(({ txId }) => txId);
   }
 
-  async removeUserTx(txId: TxId, userId: AccountId) {
+  async removeUserTx(userId: GrumpkinAddress, txId: TxId) {
     await Promise.all([
       this.accountTxRep.delete({ txId }),
       this.paymentTxRep.delete({ txId, userId }),
@@ -336,8 +326,8 @@ export class SQLDatabase implements Database {
     ]);
   }
 
-  async addUserSigningKey(signingKey: SigningKey) {
-    await this.userKeyRep.save(signingKey);
+  async addSpendingKey(spendingKey: SpendingKey) {
+    await this.spendingKeyRep.save(spendingKey);
   }
 
   // attempt to efficiently bulk upsert a large number of entities in one transaction
@@ -345,7 +335,7 @@ export class SQLDatabase implements Database {
   // the batch size that's possible with the given entity isn't known in advance, so we use an initial size and attempt the set of upserts
   // if the operation fails we reduce the batch size and try again
   // here we are using QueryRunner instead of EntityManager as it gives us finer control over the transaction execution
-  async addBulkItems<Entity, InputType>(
+  private async addBulkItems<Entity, InputType>(
     entityName: string,
     items: InputType[],
     newEntity: { new (input: InputType): Entity },
@@ -383,64 +373,38 @@ export class SQLDatabase implements Database {
     }
   }
 
-  async addUserSigningKeys(signingKeys: SigningKey[]) {
-    await this.addBulkItems('UserKeyDao', signingKeys, UserKeyDao, 100);
+  async addSpendingKeys(spendingKeys: SpendingKey[]) {
+    await this.addBulkItems('SpendingKeyDao', spendingKeys, SpendingKeyDao, 100);
   }
 
-  async getUserSigningKeys(accountId: AccountId) {
-    return await this.userKeyRep.find({ accountId });
-  }
-
-  async getUserSigningKey(accountId: AccountId, key: GrumpkinAddress) {
+  async getSpendingKey(userId: GrumpkinAddress, key: GrumpkinAddress) {
     const keyBuffer = key.toBuffer();
-    const signingKey = await this.userKeyRep.findOne({ where: { accountId, key: keyBuffer.slice(0, 32) } });
-    return signingKey ?? undefined;
+    const spendingKey = await this.spendingKeyRep.findOne({ where: { userId, key: keyBuffer.slice(0, 32) } });
+    return spendingKey ?? undefined;
   }
 
-  async removeUserSigningKeys(accountId: AccountId) {
-    await this.userKeyRep.delete({ accountId });
+  async getSpendingKeys(userId: GrumpkinAddress) {
+    return await this.spendingKeyRep.find({ userId });
   }
 
-  async setAlias(alias: Alias) {
+  async removeSpendingKeys(userId: GrumpkinAddress) {
+    await this.spendingKeyRep.delete({ userId });
+  }
+
+  async addAlias(alias: Alias) {
     await this.aliasRep.save(alias);
   }
 
-  async setAliases(aliases: Alias[]) {
+  async addAliases(aliases: Alias[]) {
     await this.addBulkItems('AliasDao', aliases, AliasDao, 100);
   }
 
-  async getAlias(aliasHash: AliasHash, address: GrumpkinAddress) {
-    return this.aliasRep.findOne({ aliasHash, address });
+  async getAlias(accountPublicKey: GrumpkinAddress) {
+    return this.aliasRep.findOne({ accountPublicKey });
   }
 
   async getAliases(aliasHash: AliasHash) {
-    return this.aliasRep.find({ aliasHash });
-  }
-
-  async getLatestNonceByAddress(address: GrumpkinAddress) {
-    const alias = await this.aliasRep.findOne({ where: { address }, order: { latestNonce: 'DESC' } });
-    return alias?.latestNonce;
-  }
-
-  async getLatestNonceByAliasHash(aliasHash: AliasHash) {
-    const alias = await this.aliasRep.findOne({ where: { aliasHash }, order: { latestNonce: 'DESC' } });
-    return alias?.latestNonce;
-  }
-
-  async getAliasHashByAddress(address: GrumpkinAddress, accountNonce?: number) {
-    const alias = await this.aliasRep.findOne({
-      where: { address, latestNonce: MoreThanOrEqual(accountNonce || 0) },
-      order: { latestNonce: accountNonce !== undefined ? 'ASC' : 'DESC' },
-    });
-    return alias?.aliasHash;
-  }
-
-  async getAccountId(aliasHash: AliasHash, accountNonce?: number) {
-    const alias = await this.aliasRep.findOne({
-      where: { aliasHash, latestNonce: MoreThanOrEqual(accountNonce || 0) },
-      order: { latestNonce: accountNonce !== undefined ? 'ASC' : 'DESC' },
-    });
-    return alias ? new AccountId(alias.address, accountNonce ?? alias.latestNonce) : undefined;
+    return this.aliasRep.find({ where: { aliasHash }, order: { index: 'DESC' } });
   }
 
   async addKey(name: string, value: Buffer) {

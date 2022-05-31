@@ -37,8 +37,8 @@ export class ViewingKey {
 
   /**
    * Returns the AES encrypted "viewing key".
-   * [AES: [32 bytes value][4 bytes assetId][4 bytes accountNonce][32 bytes creatorPubKey]] [64 bytes ephPubKey]
-   * @param noteBuf = Buffer.concat([value, assetId, accountNonce, creatorPubKey]);
+   * [AES: [32 bytes value][4 bytes assetId][4 bytes accountRequired][32 bytes creatorPubKey]] [64 bytes ephPubKey]
+   * @param noteBuf = Buffer.concat([value, assetId, accountRequired, creatorPubKey]);
    * @param ownerPubKey - the public key contained within a value note
    * @param ephPrivKey - a random field element (also used alongside the ownerPubKey in deriving a value note's secret)
    */

@@ -1,4 +1,4 @@
-import { AccountId, AztecSdk, createAztecSdk, EthAddress, JsonRpcProvider } from '@aztec/sdk';
+import { AztecSdk, createAztecSdk, EthAddress, GrumpkinAddress, JsonRpcProvider } from '@aztec/sdk';
 import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
 
@@ -18,6 +18,7 @@ interface MinFormProps {
 
 function MinForm({ grumpkinPrivKey }: MinFormProps) {
   const [sdk, setSdk] = useState<AztecSdk>();
+  const [userId, setUserId] = useState(GrumpkinAddress.ZERO);
   const [busy, setBusy] = useState(false);
 
   return (
@@ -37,13 +38,13 @@ function MinForm({ grumpkinPrivKey }: MinFormProps) {
               debug: 'bb:*',
             });
             await sdk.run();
-            const grumpkinPubKey = await sdk.derivePublicKey(grumpkinPrivKey);
-            const accountId = new AccountId(grumpkinPubKey, 1);
-            if (!(await sdk.userExists(accountId))) {
-              await sdk.addUser(grumpkinPrivKey, accountId.accountNonce);
+            const accountPublicKey = await sdk.derivePublicKey(grumpkinPrivKey);
+            if (!(await sdk.userExists(accountPublicKey))) {
+              await sdk.addUser(grumpkinPrivKey);
             }
             log('init complete');
             setSdk(sdk);
+            setUserId(accountPublicKey);
             setBusy(false);
           }}
         ></input>
@@ -54,15 +55,15 @@ function MinForm({ grumpkinPrivKey }: MinFormProps) {
           onClick={async () => {
             setBusy(true);
             const signer = await sdk!.createSchnorrSigner(grumpkinPrivKey);
-            const accountId = new AccountId(signer.getPublicKey(), 0);
             const start = new Date().getTime();
             log(`creating js proof...`);
             const controller = sdk!.createTransferController(
-              accountId,
+              userId,
               signer,
               { assetId: 0, value: BigInt(0) },
               { assetId: 0, value: BigInt(0) },
-              accountId,
+              userId,
+              false,
             );
             await controller.createProof();
             log(`${new Date().getTime() - start}ms`);
@@ -75,15 +76,14 @@ function MinForm({ grumpkinPrivKey }: MinFormProps) {
           disabled={!sdk || busy}
           onClick={async () => {
             setBusy(true);
-            const publicKey = await sdk!.derivePublicKey(grumpkinPrivKey);
-            const accountId = new AccountId(publicKey, 1);
             const start = new Date().getTime();
             log(`creating account proof...`);
+            const spendingKey = GrumpkinAddress.random();
             const controller = sdk!.createRegisterController(
-              accountId,
+              userId,
               'blah',
               grumpkinPrivKey,
-              accountId.publicKey,
+              spendingKey,
               undefined,
               {
                 assetId: 0,

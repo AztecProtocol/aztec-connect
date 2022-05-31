@@ -1,38 +1,31 @@
-import { AccountId, AliasHash } from '@aztec/barretenberg/account_id';
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
 
 export * from './recovery_payload';
 
 export interface UserData {
-  id: AccountId;
-  privateKey: Buffer;
-  publicKey: GrumpkinAddress;
-  accountNonce: number;
-  aliasHash?: AliasHash;
+  id: GrumpkinAddress;
+  accountPublicKey: GrumpkinAddress;
+  accountPrivateKey: Buffer;
   syncedToRollup: number;
 }
 
 export interface UserDataJson {
   id: string;
-  privateKey: string;
-  publicKey: string;
-  accountNonce: number;
-  aliasHash?: string;
+  accountPublicKey: string;
+  accountPrivateKey: string;
   syncedToRollup: number;
 }
 
-export const userDataToJson = ({ id, privateKey, publicKey, aliasHash, ...rest }: UserData): UserDataJson => ({
+export const userDataToJson = ({ id, accountPublicKey, accountPrivateKey, ...rest }: UserData): UserDataJson => ({
   ...rest,
   id: id.toString(),
-  privateKey: privateKey.toString('hex'),
-  publicKey: publicKey.toString(),
-  aliasHash: aliasHash ? aliasHash.toString() : undefined,
+  accountPublicKey: accountPublicKey.toString(),
+  accountPrivateKey: accountPrivateKey.toString('hex'),
 });
 
-export const userDataFromJson = ({ id, privateKey, publicKey, aliasHash, ...rest }: UserDataJson): UserData => ({
+export const userDataFromJson = ({ id, accountPublicKey, accountPrivateKey, ...rest }: UserDataJson): UserData => ({
   ...rest,
-  id: AccountId.fromString(id),
-  privateKey: Buffer.from(privateKey, 'hex'),
-  publicKey: GrumpkinAddress.fromString(publicKey),
-  aliasHash: aliasHash ? AliasHash.fromString(aliasHash) : undefined,
+  id: GrumpkinAddress.fromString(id),
+  accountPublicKey: GrumpkinAddress.fromString(accountPublicKey),
+  accountPrivateKey: Buffer.from(accountPrivateKey, 'hex'),
 });

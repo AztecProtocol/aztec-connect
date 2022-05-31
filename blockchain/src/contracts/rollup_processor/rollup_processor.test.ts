@@ -120,7 +120,7 @@ describe('rollup_processor', () => {
   });
 
   it('should set new supported asset with default gas limit', async () => {
-    const assetAddr = EthAddress.randomAddress();
+    const assetAddr = EthAddress.random();
     const txHash = await rollupProcessor.setSupportedAsset(assetAddr, 0);
 
     // Check event was emitted.
@@ -137,7 +137,7 @@ describe('rollup_processor', () => {
   });
 
   it('should set new supported asset if not owner when the THIRD_PARTY_CONTRACTS flag is set', async () => {
-    const assetAddr = EthAddress.randomAddress();
+    const assetAddr = EthAddress.random();
     const nonOwner = EthAddress.fromString(await signers[1].getAddress());
     await expect(rollupProcessor.setSupportedAsset(assetAddr, 0, { signingAddress: nonOwner })).rejects.toThrow(
       'THIRD_PARTY_CONTRACTS_FLAG_NOT_SET',
@@ -151,7 +151,7 @@ describe('rollup_processor', () => {
   });
 
   it('should set new supported asset with a custom gas limit within pre-defined contract limits', async () => {
-    const assetAddr = EthAddress.randomAddress();
+    const assetAddr = EthAddress.random();
     const gasLimit = 800000;
     const txHash = await rollupProcessor.setSupportedAsset(assetAddr, gasLimit);
 
@@ -171,7 +171,7 @@ describe('rollup_processor', () => {
   });
 
   it('should set new supported asset with a minimum gas limit', async () => {
-    const assetAddr = EthAddress.randomAddress();
+    const assetAddr = EthAddress.random();
     const gasLimit = 10000;
     const minimumGasLimit = 55000;
     const txHash = await rollupProcessor.setSupportedAsset(assetAddr, gasLimit);
@@ -192,7 +192,7 @@ describe('rollup_processor', () => {
   });
 
   it('should set new supported asset with a maximum gas limit', async () => {
-    const assetAddr = EthAddress.randomAddress();
+    const assetAddr = EthAddress.random();
     const gasLimit = 1600000;
     const maximumGasLimit = 1500000;
     const txHash = await rollupProcessor.setSupportedAsset(assetAddr, gasLimit);
@@ -213,7 +213,7 @@ describe('rollup_processor', () => {
   });
 
   it('should set new supported bridge with limit within pre-defined contract limits', async () => {
-    const bridgeAddr = EthAddress.randomAddress();
+    const bridgeAddr = EthAddress.random();
     const gasLimit = 1500000;
     const bridgeAddressId = 2;
     const txHash = await rollupProcessor.setSupportedBridge(bridgeAddr, gasLimit);
@@ -236,7 +236,7 @@ describe('rollup_processor', () => {
   });
 
   it('should set new supported bridge with minimum gas limit', async () => {
-    const bridgeAddr = EthAddress.randomAddress();
+    const bridgeAddr = EthAddress.random();
     const gasLimit = 20000;
     const minimumGasLimit = 35000;
     const txHash = await rollupProcessor.setSupportedBridge(bridgeAddr, gasLimit);
@@ -258,7 +258,7 @@ describe('rollup_processor', () => {
   });
 
   it('should set new supported bridge with maximum gas limit', async () => {
-    const bridgeAddr = EthAddress.randomAddress();
+    const bridgeAddr = EthAddress.random();
     const gasLimit = 6000000;
     const maximumGasLimit = 5000000;
     const txHash = await rollupProcessor.setSupportedBridge(bridgeAddr, gasLimit);
@@ -280,7 +280,7 @@ describe('rollup_processor', () => {
   });
 
   it('should set new supported bridge if not owner when the THIRD_PARTY_CONTRACTS flag is set', async () => {
-    const bridgeAddr = EthAddress.randomAddress();
+    const bridgeAddr = EthAddress.random();
     const gasLimit = 15000000;
     const nonOwner = EthAddress.fromString(await signers[1].getAddress());
     await expect(
@@ -325,17 +325,17 @@ describe('rollup_processor', () => {
   });
 
   it('should allow the owner to change the verifier address', async () => {
-    const randomAddress = EthAddress.randomAddress();
-    const txHash = await rollupProcessor.setVerifier(randomAddress);
+    const random = EthAddress.random();
+    const txHash = await rollupProcessor.setVerifier(random);
     const [{ verifierAddress }] = await fetchResults(txHash, 'VerifierUpdated');
 
-    expect(verifierAddress.toString()).toBe(randomAddress.toString());
+    expect(verifierAddress.toString()).toBe(random.toString());
   });
 
   it('should not be able to set the verifier if not the owner', async () => {
-    await expect(
-      rollupProcessor.setVerifier(EthAddress.randomAddress(), { signingAddress: addresses[1] }),
-    ).rejects.toThrow(`AccessControl: account ${addresses[1].toString().toLowerCase()} is missing role ${OWNER_ROLE}`);
+    await expect(rollupProcessor.setVerifier(EthAddress.random(), { signingAddress: addresses[1] })).rejects.toThrow(
+      `AccessControl: account ${addresses[1].toString().toLowerCase()} is missing role ${OWNER_ROLE}`,
+    );
   });
 
   it('should get escape hatch open status', async () => {

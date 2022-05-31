@@ -1,5 +1,5 @@
 import { randomBytes } from 'crypto';
-import { AccountAliasId } from '../../account_id';
+import { AliasHash } from '../../account_id';
 import { EthAddress, GrumpkinAddress } from '../../address';
 import { toBigIntBE } from '../../bigint_buffer';
 import { BridgeId } from '../../bridge_id';
@@ -21,10 +21,10 @@ const randomHashPath = (size = 4) =>
 
 const randomTreeNote = () =>
   new TreeNote(
-    GrumpkinAddress.randomAddress(),
+    GrumpkinAddress.random(),
     randomBigInt(),
     randomInt(),
-    randomInt(),
+    !!(randomInt() % 2),
     randomBytes(32),
     randomBytes(32),
     randomBytes(32),
@@ -38,7 +38,7 @@ describe('join split tx', () => {
     const tx = new JoinSplitTx(
       ProofId.WITHDRAW,
       BigInt(123),
-      EthAddress.randomAddress(),
+      EthAddress.random(),
       randomInt(),
       2,
       [randomInt(), randomInt()],
@@ -48,10 +48,11 @@ describe('join split tx', () => {
       [randomTreeNote(), randomTreeNote()],
       randomClaimNoteTxData(),
       randomBytes(32),
-      AccountAliasId.random(),
+      AliasHash.random(),
+      true,
       randomInt(),
       randomHashPath(),
-      GrumpkinAddress.randomAddress(),
+      GrumpkinAddress.random(),
       randomBytes(32),
       3,
     );

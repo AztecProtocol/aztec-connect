@@ -227,10 +227,10 @@ contract Decoder {
      */
     function accountTx(uint256 inPtr, uint256 outPtr) internal pure returns (uint256) {
         assembly {
-            calldatacopy(add(outPtr, 0x20), add(inPtr, 0x20), 0x60) // noteCommitment1 ... nullifier1
+            calldatacopy(add(outPtr, 0x20), add(inPtr, 0x20), 0x80) // noteCommitment1 ... nullifier2
         }
         unchecked {
-            return (inPtr + 0x61);
+            return (inPtr + 0x81);
         }
     }
 

@@ -1,26 +1,18 @@
-import { AccountId, AliasHash } from '@aztec/barretenberg/account_id';
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
-import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
+import { Column, Entity, PrimaryColumn } from 'typeorm';
 import { UserData } from '../../user';
-import { grumpkinAddressTransformer, accountIdTransformer, aliasHashTransformer } from './transformer';
+import { grumpkinAddressTransformer } from './transformer';
 
 @Entity({ name: 'userData' })
-@Index(['publicKey', 'accountNonce'], { unique: true })
 export class UserDataDao implements UserData {
-  @PrimaryColumn('blob', { transformer: [accountIdTransformer] })
-  public id!: AccountId;
+  @PrimaryColumn('blob', { transformer: [grumpkinAddressTransformer] })
+  public id!: GrumpkinAddress;
 
   @Column('blob', { transformer: [grumpkinAddressTransformer] })
-  public publicKey!: GrumpkinAddress;
+  public accountPublicKey!: GrumpkinAddress;
 
   @Column()
-  public privateKey!: Buffer;
-
-  @Column()
-  public accountNonce!: number;
-
-  @Column('blob', { nullable: true, transformer: [aliasHashTransformer] })
-  public aliasHash?: AliasHash;
+  public accountPrivateKey!: Buffer;
 
   @Column()
   public syncedToRollup!: number;

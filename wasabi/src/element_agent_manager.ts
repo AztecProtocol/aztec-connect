@@ -162,9 +162,9 @@ export class ElementAgentManager {
     for (let i = 0; i < acquiredAssets.originalBalances.length; i++) {
       const assetValue = acquiredAssets.originalBalances[i];
       const assetInfo = this.sdk.getAssetInfo(assetValue.assetId);
-      const balance = await this.sdk.getPublicBalance(assetValue.assetId, this.fundingAddress);
+      const balance = await this.sdk.getPublicBalance(this.fundingAddress, assetValue.assetId);
       console.log(
-        `funding address ${this.fundingAddress} original balance of ${assetInfo.name} was ${assetValue.value}, new balance is ${balance}`,
+        `funding address ${this.fundingAddress} original balance of ${assetInfo.name} was ${assetValue.value}, new balance is ${balance.value}`,
       );
     }
   }

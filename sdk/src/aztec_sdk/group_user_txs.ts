@@ -15,9 +15,20 @@ import {
 const emptyAssetValue = { assetId: 0, value: BigInt(0) };
 
 const toUserAccountTx = (
-  { txId, userId, aliasHash, newSigningPubKey1, newSigningPubKey2, migrated, created, settled }: CoreAccountTx,
+  { txId, userId, aliasHash, newSpendingPublicKey1, newSpendingPublicKey2, migrated, created, settled }: CoreAccountTx,
   fee: AssetValue,
-) => new UserAccountTx(txId, userId, aliasHash, newSigningPubKey1, newSigningPubKey2, migrated, fee, created, settled);
+) =>
+  new UserAccountTx(
+    txId,
+    userId,
+    aliasHash,
+    newSpendingPublicKey1,
+    newSpendingPublicKey2,
+    migrated,
+    fee,
+    created,
+    settled,
+  );
 
 const toUserPaymentTx = (
   { txId, userId, proofId, publicOwner, isSender, created, settled }: CorePaymentTx,

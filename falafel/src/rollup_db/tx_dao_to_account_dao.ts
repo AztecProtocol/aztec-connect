@@ -3,11 +3,10 @@ import { AccountDao } from '../entity/account';
 import { TxDao } from '../entity';
 
 export const txDaoToAccountDao = (txDao: TxDao) => {
-  const { accountPublicKey, accountAliasId } = OffchainAccountData.fromBuffer(txDao.offchainTxData);
+  const { accountPublicKey, aliasHash } = OffchainAccountData.fromBuffer(txDao.offchainTxData);
   return new AccountDao({
-    aliasHash: accountAliasId.aliasHash.toBuffer(),
-    accountPubKey: accountPublicKey.toBuffer(),
-    accountNonce: accountAliasId.accountNonce,
+    accountPublicKey: accountPublicKey.toBuffer(),
+    aliasHash: aliasHash.toBuffer(),
     tx: txDao,
   });
 };

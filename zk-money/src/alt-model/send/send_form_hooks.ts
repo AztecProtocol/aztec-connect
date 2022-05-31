@@ -1,5 +1,5 @@
 import createDebug from 'debug';
-import { AccountId, EthAddress, TxSettlementTime, TxType } from '@aztec/sdk';
+import { GrumpkinAddress, EthAddress, TxSettlementTime, TxType } from '@aztec/sdk';
 import { useApp } from 'alt-model/app_context';
 import { useAsset } from 'alt-model/asset_hooks';
 import { useMaxSpendableValue } from 'alt-model/balance_hooks';
@@ -16,7 +16,7 @@ import { SendFormFields, validateSendForm } from './send_form_validation';
 import { createGatedSetter, useMaybeObs } from 'app/util';
 import { SendComposerPhase } from './send_composer_state_obs';
 import { getSendFormFeedback } from './send_form_feedback';
-import { useAccountIdForAlias } from 'alt-model/alias_hooks';
+import { useUserIdForAlias } from 'alt-model/alias_hooks';
 import { estimateTxSettlementTimes } from 'alt-model/estimate_settlement_times';
 
 const debug = createDebug('zm:send_form_hooks');
@@ -52,16 +52,16 @@ function getTxType(sendMode: SendMode, isContact?: boolean) {
   return TxType.TRANSFER;
 }
 
-function getRecipient(sendMode: SendMode, address?: EthAddress, accountId?: AccountId): Recipient | undefined {
+function getRecipient(sendMode: SendMode, address?: EthAddress, userId?: GrumpkinAddress): Recipient | undefined {
   if (sendMode === SendMode.SEND) {
-    if (accountId) return { sendMode, accountId };
+    if (userId) return { sendMode, userId };
   } else if (sendMode === SendMode.WIDTHDRAW) {
     if (address) return { sendMode, address };
   }
 }
 
 export function useSendForm(preselectedAssetId?: number) {
-  const { accountId, config } = useApp();
+  const { userId, config } = useApp();
   const [fields, setFields] = useState<SendFormFields>({
     amountStrOrMax: '',
     speed: TxSettlementTime.NEXT_ROLLUP,
@@ -82,11 +82,8 @@ export function useSendForm(preselectedAssetId?: number) {
   const ethAddress = useMemo(() => getEthAddress(recipientStr, sendMode), [recipientStr, sendMode]);
   const isContract = useIsContractWallet(ethAddress);
   const txType = getTxType(fields.sendMode, isContract);
-  const { accountId: recipientAccountId, isLoading: isLoadingRecipient } = useAccountIdForAlias(
-    fields.recipientStr,
-    200,
-  );
-  const recipient = getRecipient(fields.sendMode, ethAddress, recipientAccountId);
+  const { userId: recipientUserId, isLoading: isLoadingRecipient } = useUserIdForAlias(fields.recipientStr, 200);
+  const recipient = getRecipient(fields.sendMode, ethAddress, recipientUserId);
 
   const rpStatus = useRollupProviderStatus();
   const { instantSettlementTime, nextSettlementTime } = estimateTxSettlementTimes(rpStatus);
@@ -128,19 +125,19 @@ export function useSendForm(preselectedAssetId?: number) {
       debug('Attempted to recreate DefiComposer');
       return;
     }
-    if (!validationResult.state.validComposerPayload || !sdk || !awaitCorrectProvider || !accountId) {
+    if (!validationResult.state.validComposerPayload || !sdk || !awaitCorrectProvider || !userId) {
       debug('Attempted to create DefiComposer with incomplete dependencies', {
         validationResult,
         sdk,
         awaitCorrectProvider,
-        accountId,
+        accountPublicKey: userId,
       });
       return;
     }
     const composer = new SendComposer(validationResult.state.validComposerPayload, {
       sdk,
       awaitCorrectProvider,
-      accountId,
+      userId,
     });
     setLockedComposer(composer);
   };

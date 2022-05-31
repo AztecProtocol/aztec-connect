@@ -1,4 +1,3 @@
-import { AccountId } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { JoinSplitProver, ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
 import { createLogger } from '@aztec/barretenberg/debug';
@@ -38,7 +37,8 @@ export class PaymentProofCreator {
     publicInput: bigint,
     publicOutput: bigint,
     assetId: number,
-    newNoteOwner: AccountId | undefined,
+    newNoteOwner: GrumpkinAddress | undefined,
+    newNoteOwnerAccountRequired: boolean,
     publicOwner: EthAddress | undefined,
     spendingPublicKey: GrumpkinAddress,
     allowChain: number,
@@ -57,6 +57,11 @@ export class PaymentProofCreator {
 
     if (recipientPrivateOutput && !newNoteOwner) {
       throw new Error('Note recipient undefined.');
+    }
+
+    const accountRequired = !spendingPublicKey.equals(user.accountPublicKey);
+    if (inputNotes.some(n => n.treeNote.accountRequired !== accountRequired)) {
+      throw new Error(`Cannot spend notes with ${accountRequired ? 'account' : 'spending'} key.`);
     }
 
     const proofId = (() => {
@@ -78,6 +83,7 @@ export class PaymentProofCreator {
       outputNoteValue1: recipientPrivateOutput,
       outputNoteValue2: changeValue + senderPrivateOutput,
       newNoteOwner,
+      newNoteOwnerAccountRequired,
       allowChain,
     });
 
@@ -100,8 +106,8 @@ export class PaymentProofCreator {
     const privateInput = inputNotes.reduce((sum, n) => sum + n.value, BigInt(0));
     const { value: recipientPrivateOutput } = outputNotes[0];
     const { assetId, value: senderPrivateOutput } = outputNotes[1];
-    const newNoteOwner = new AccountId(outputNotes[0].ownerPubKey, outputNotes[0].accountNonce);
-    const userId = new AccountId(outputNotes[1].ownerPubKey, outputNotes[1].accountNonce);
+    const newNoteOwner = outputNotes[0].ownerPubKey;
+    const userId = outputNotes[1].ownerPubKey;
     const coreTx = new PaymentTx(
       txId,
       userId,
@@ -124,8 +130,12 @@ export class PaymentProofCreator {
       proofData,
       offchainTxData,
       outputNotes: [
-        this.txFactory.generateNewNote(outputNotes[0], user.privateKey, { allowChain: proofData.allowChainFromNote1 }),
-        this.txFactory.generateNewNote(outputNotes[1], user.privateKey, { allowChain: proofData.allowChainFromNote2 }),
+        this.txFactory.generateNewNote(outputNotes[0], user.accountPrivateKey, {
+          allowChain: proofData.allowChainFromNote1,
+        }),
+        this.txFactory.generateNewNote(outputNotes[1], user.accountPrivateKey, {
+          allowChain: proofData.allowChainFromNote2,
+        }),
       ],
     };
   }

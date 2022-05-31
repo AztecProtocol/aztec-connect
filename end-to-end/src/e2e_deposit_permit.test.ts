@@ -24,7 +24,7 @@ const {
  * blockchain: yarn start:ganache
  * halloumi: yarn start:e2e
  * falafel: yarn start:e2e
- * end-to-end: yarn test ./src/e2e_deposit.test.ts
+ * end-to-end: yarn test ./src/e2e_deposit_permit.test.ts
  */
 
 describe('end-to-end tests', () => {
@@ -32,7 +32,6 @@ describe('end-to-end tests', () => {
   let sdk: AztecSdk;
   let depositor: EthAddress;
   let userId!: GrumpkinAddress;
-  const awaitSettlementTimeout = 600;
 
   beforeAll(async () => {
     provider = await createFundedWalletProvider(
@@ -40,7 +39,7 @@ describe('end-to-end tests', () => {
       1,
       1,
       Buffer.from(PRIVATE_KEY, 'hex'),
-      toBaseUnits('0.035', 18),
+      toBaseUnits('0.01', 18),
     );
     [depositor] = provider.getAccounts();
 
@@ -62,9 +61,13 @@ describe('end-to-end tests', () => {
     await sdk.destroy();
   });
 
-  it('should deposit', async () => {
-    const assetId = 0;
-    const depositValue = sdk.toBaseUnits(assetId, '0.03');
+  it('should deposit with non standard permit', async () => {
+    const assetId = 1;
+    const initialBalance = sdk.toBaseUnits(assetId, '100');
+
+    await sdk.mint(initialBalance, depositor);
+
+    const depositValue = sdk.toBaseUnits(assetId, '60');
 
     expect((await sdk.getBalance(userId, assetId)).value).toBe(0n);
 
@@ -72,12 +75,12 @@ describe('end-to-end tests', () => {
     const controller = sdk.createDepositController(depositor, depositValue, fee, userId);
     await controller.createProof();
 
-    await controller.depositFundsToContract();
+    await controller.depositFundsToContractWithNonStandardPermit();
     await controller.awaitDepositFundsToContract();
 
     await controller.sign();
     await controller.send();
-    await controller.awaitSettlement(awaitSettlementTimeout);
+    await controller.awaitSettlement();
 
     expect(await sdk.getBalance(userId, assetId)).toEqual(depositValue);
   });

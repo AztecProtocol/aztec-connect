@@ -1,9 +1,9 @@
-import { AztecSdk, createAztecSdk, EthAddress, EthereumRpc, TxSettlementTime } from '@aztec/sdk';
-import { randomBytes } from 'crypto';
+import { AztecSdk, createAztecSdk, EthAddress, EthereumRpc, GrumpkinAddress, TxSettlementTime } from '@aztec/sdk';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { asyncMap } from './async_map';
 import { createFundedWalletProvider } from './create_funded_wallet_provider';
+import { registerUsers } from './sdk_utils';
 
 jest.setTimeout(20 * 60 * 1000);
 EventEmitter.defaultMaxListeners = 30;
@@ -25,14 +25,18 @@ const {
 describe('end-to-end tests', () => {
   let sdk: AztecSdk;
   let addresses: EthAddress[] = [];
+  let userIds: GrumpkinAddress[] = [];
   const assetId = 0;
   const debug = createDebug('bb:e2e');
 
-  const createUser = async (accountPrivateKey = randomBytes(32), accountNonce = 0) => {
-    const userId = (await sdk.addUser(accountPrivateKey, accountNonce)).id;
-    const signingPrivateKey = !accountNonce ? accountPrivateKey : randomBytes(32);
-    const signer = await sdk.createSchnorrSigner(signingPrivateKey);
-    return { userId, signer, accountPrivateKey };
+  const debugBalance = async (userId: GrumpkinAddress) => {
+    const userIndex = userIds.findIndex(id => id.equals(userId));
+    debug(
+      `account ${userIndex} public / private balance: ${sdk.fromBaseUnits(
+        await sdk.getPublicBalance(addresses[userIndex], assetId),
+        true,
+      )} / ${await sdk.getFormattedBalance(userId, assetId, true, 6)}`,
+    );
   };
 
   beforeAll(async () => {
@@ -62,11 +66,14 @@ describe('end-to-end tests', () => {
     for (const addr of addresses) {
       debug(
         `address ${addr.toString()} public balance: ${sdk.fromBaseUnits(
-          await sdk.getPublicBalanceAv(assetId, addr),
+          await sdk.getPublicBalance(addr, assetId),
           true,
         )}`,
       );
     }
+
+    debug(`registering users...`);
+    userIds = await registerUsers(sdk, addresses.slice(0, 2), { assetId, value: 0n });
   });
 
   afterAll(async () => {
@@ -81,24 +88,14 @@ describe('end-to-end tests', () => {
     const withdrawalFees = await sdk.getWithdrawFees(assetId);
     const transferFees = await sdk.getTransferFees(assetId);
 
-    const users = await asyncMap(addresses, async (address, number) => ({ address, number, ...(await createUser()) }));
-    const depositUsers = users.slice(0, 2);
+    expect((await sdk.getBalance(userIds[0], assetId)).value).toBe(0n);
+    expect((await sdk.getBalance(userIds[1], assetId)).value).toBe(0n);
 
-    const debugBalance = async (assetId: number, user: typeof users[0]) =>
-      debug(
-        `account ${user.number} public / private balance: ${sdk.fromBaseUnits(
-          await sdk.getPublicBalanceAv(assetId, user.address),
-          true,
-        )} / ${await sdk.getFormattedBalance(assetId, user.userId, true, 6)}`,
-      );
-
-    expect(await sdk.getBalance(assetId, users[0].userId)).toBe(0n);
-    expect(await sdk.getBalance(assetId, users[1].userId)).toBe(0n);
-
-    // Rollup 0: Deposits.
+    // Rollup 1: Deposits.
     {
-      const depositControllers = await asyncMap(depositUsers, async ({ address, userId }, i) => {
-        const fee = depositFees[i == 0 ? TxSettlementTime.NEXT_ROLLUP : TxSettlementTime.INSTANT];
+      const depositControllers = await asyncMap(userIds, async (userId, i) => {
+        const address = addresses[i];
+        const fee = depositFees[i == userIds.length - 1 ? TxSettlementTime.INSTANT : TxSettlementTime.NEXT_ROLLUP];
         debug(
           `shielding ${sdk.fromBaseUnits(depositValue, true)} (fee: ${sdk.fromBaseUnits(
             fee,
@@ -116,61 +113,64 @@ describe('end-to-end tests', () => {
       });
 
       debug(`waiting to settle...`);
-      await asyncMap(depositUsers, async (user, i) => {
+      await asyncMap(userIds, async (userId, i) => {
         const controller = depositControllers[i];
         await controller.awaitSettlement();
-        debugBalance(assetId, user);
-        expect(await sdk.getBalanceAv(assetId, user.userId)).toEqual(depositValue);
+        debugBalance(userId);
+        expect(await sdk.getBalance(userId, assetId)).toEqual(depositValue);
       });
     }
 
-    // Rollup 1: Withdrawals and transfers.
+    // Rollup 2: Withdrawals and transfers.
     {
       const withdrawalFee = withdrawalFees[TxSettlementTime.NEXT_ROLLUP];
       const transferFee = transferFees[TxSettlementTime.INSTANT];
 
-      // UserA and UserB withdraws.
-      const withdrawControllers = await asyncMap(depositUsers, async (user, i) => {
-        const recipient = addresses[2];
+      // User 1 and user 2 withdraw to address 2.
+      const recipient = addresses[2];
+      const withdrawControllers = await asyncMap(userIds, async (userId, i) => {
         debug(
           `withdrawing ${sdk.fromBaseUnits(withdrawalValues[i], true)} (fee: ${sdk.fromBaseUnits(
             withdrawalFee,
           )}) from account ${i} to ${recipient.toString()}...`,
         );
-        const controller = sdk.createWithdrawController(
-          user.userId,
-          user.signer,
-          withdrawalValues[i],
-          withdrawalFee,
-          recipient,
-        );
+        const spendingKey = await sdk.generateSpendingKeyPair(addresses[i]);
+        const signer = await sdk.createSchnorrSigner(spendingKey.privateKey);
+        const controller = sdk.createWithdrawController(userId, signer, withdrawalValues[i], withdrawalFee, recipient);
         await controller.createProof();
         await controller.send();
         return controller;
       });
 
-      // Account 1 transfers to account 0.
-      const [{ userId: userA }, { userId: userB, signer: signerB }] = users;
+      // User 1 transfers to User 0.
       debug(
         `transferring ${sdk.fromBaseUnits(transferValue, true)} (fee: ${sdk.fromBaseUnits(
           transferFee,
         )}) from account 1 to account 0...`,
       );
-      const transferController = sdk.createTransferController(userB, signerB, transferValue, transferFee, userA);
+      const spendingKey = await sdk.generateSpendingKeyPair(addresses[1]);
+      const signer = await sdk.createSchnorrSigner(spendingKey.privateKey);
+      const transferController = sdk.createTransferController(
+        userIds[1],
+        signer,
+        transferValue,
+        transferFee,
+        userIds[0],
+      );
       await transferController.createProof();
       await transferController.send();
 
       debug(`waiting to settle...`);
       await Promise.all([...withdrawControllers, transferController].map(c => c.awaitSettlement()));
-      await asyncMap(users, async user => debugBalance(assetId, user));
+      await asyncMap(userIds, async userId => debugBalance(userId));
 
-      expect(await sdk.getPublicBalance(assetId, addresses[2])).toBe(
+      expect((await sdk.getPublicBalance(addresses[2], assetId)).value).toBe(
         withdrawalValues[0].value + withdrawalValues[1].value,
       );
-      expect(await sdk.getBalance(assetId, userA)).toBe(
+      expect((await sdk.getBalance(userIds[0], assetId)).value).toBe(
         depositValue.value - withdrawalValues[0].value - withdrawalFee.value + transferValue.value,
       );
-      expect(await sdk.getBalance(assetId, userB)).toBe(
+      expect((await sdk.getBalance(userIds[1], assetId)).value).toBe(
         depositValue.value - withdrawalValues[1].value - withdrawalFee.value - transferValue.value - transferFee.value,
       );
     }

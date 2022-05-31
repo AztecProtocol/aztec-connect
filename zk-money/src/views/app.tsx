@@ -343,7 +343,7 @@ export class AppView extends PureComponent<AppProps, AppState> {
             config,
             requiredNetwork: this.app.requiredNetwork,
             provider: this.state.provider,
-            accountId: this.state.accountState?.userId,
+            userId: this.state.accountState?.userId,
             alias: this.state.accountState?.alias,
             keyVault: this.app.keyVault,
             db: this.app.db,

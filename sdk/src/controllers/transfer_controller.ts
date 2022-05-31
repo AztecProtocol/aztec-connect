@@ -1,4 +1,4 @@
-import { AccountId } from '@aztec/barretenberg/account_id';
+import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetValue } from '@aztec/barretenberg/asset';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { CoreSdkInterface } from '../core_sdk';
@@ -13,11 +13,12 @@ export class TransferController {
   private txId!: TxId;
 
   constructor(
-    public readonly userId: AccountId,
+    public readonly userId: GrumpkinAddress,
     private readonly userSigner: Signer,
     public readonly assetValue: AssetValue,
     public readonly fee: AssetValue,
-    public readonly to: AccountId,
+    public readonly recipient: GrumpkinAddress,
+    public readonly recipientAccountRequired: boolean,
     private readonly core: CoreSdkInterface,
   ) {
     if (!assetValue.value) {
@@ -40,7 +41,8 @@ export class TransferController {
       privateInput,
       value,
       BigInt(0),
-      this.to,
+      this.recipient,
+      this.recipientAccountRequired,
       undefined,
       spendingPublicKey,
       2,
@@ -49,6 +51,7 @@ export class TransferController {
     this.proofOutput = await this.core.createPaymentProof(proofInput, txRefNo);
 
     if (requireFeePayingTx) {
+      const accountRequired = !spendingPublicKey.equals(this.userId);
       const feeProofInput = await this.core.createPaymentProofInput(
         this.userId,
         this.fee.assetId,
@@ -57,7 +60,8 @@ export class TransferController {
         this.fee.value,
         BigInt(0),
         BigInt(0),
-        undefined,
+        this.userId,
+        accountRequired,
         undefined,
         spendingPublicKey,
         2,

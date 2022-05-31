@@ -1,4 +1,3 @@
-import { AccountId } from '@aztec/barretenberg/account_id';
 import { TreeNote } from '@aztec/barretenberg/note_algorithms';
 
 export class Note {
@@ -21,7 +20,11 @@ export class Note {
   }
 
   get owner() {
-    return new AccountId(this.treeNote.ownerPubKey, this.treeNote.accountNonce);
+    return this.treeNote.ownerPubKey;
+  }
+
+  get ownerAccountRequired() {
+    return this.treeNote.accountRequired;
   }
 
   get pending() {

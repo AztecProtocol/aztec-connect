@@ -1,5 +1,4 @@
 import {
-  AccountId,
   AztecSdk,
   createAztecSdk,
   EthAddress,
@@ -46,28 +45,19 @@ describe('end-to-end migrated tests', () => {
   let walletProvider: WalletProvider;
   const assetId = 0;
 
-  const addUser = async (ethAddress: EthAddress, accountNonce: number, noSync = !accountNonce) => {
+  const addUser = async (ethAddress: EthAddress) => {
     const { privateKey: accountPrivateKey, publicKey } = await sdk.generateAccountKeyPair(ethAddress);
-    const userId = new AccountId(publicKey, accountNonce);
+    const userId = publicKey;
     try {
-      await sdk.addUser(accountPrivateKey, accountNonce, noSync);
+      await sdk.addUser(accountPrivateKey);
       debug(`added user ${userId}.`);
     } catch (e) {
       // Do nothing if user is already added to the sdk.
       debug(`user already present ${userId}`);
     }
-    const signingPrivateKey = !accountNonce
-      ? accountPrivateKey
-      : (await sdk.generateSpendingKeyPair(ethAddress)).privateKey;
+    const signingPrivateKey = (await sdk.generateSpendingKeyPair(ethAddress)).privateKey;
     const signer = await sdk.createSchnorrSigner(signingPrivateKey);
     return { userId, signer, accountPrivateKey };
-  };
-
-  const formatAliasInput = (aliasInput: string) => aliasInput.toLowerCase();
-
-  const getAliasNonce = async (aliasInput: string) => {
-    const alias = formatAliasInput(aliasInput);
-    return sdk.getRemoteLatestAliasNonce(alias);
   };
 
   beforeAll(async () => {
@@ -98,7 +88,7 @@ describe('end-to-end migrated tests', () => {
     for (const addr of addresses) {
       debug(
         `address ${addr.toString()} public balance: ${sdk.fromBaseUnits(
-          await sdk.getPublicBalanceAv(assetId, addr),
+          await sdk.getPublicBalance(addr, assetId),
           true,
         )}`,
       );
@@ -117,11 +107,10 @@ describe('end-to-end migrated tests', () => {
     const withdrawalFees = await sdk.getWithdrawFees(assetId);
     const transferFees = await sdk.getTransferFees(assetId);
 
-    const accounts: AccountId[] = [];
+    const accounts: GrumpkinAddress[] = [];
     const signers: SchnorrSigner[] = [];
     for (let i = 0; i < initialAccounts.aliases.length; i++) {
-      const nonce = await getAliasNonce(initialAccounts.aliases[i]);
-      const { userId, signer } = await addUser(walletProvider.getAccount(i), nonce);
+      const { userId, signer } = await addUser(walletProvider.getAccount(i));
       accounts.push(userId);
       signers.push(signer);
     }
@@ -135,25 +124,22 @@ describe('end-to-end migrated tests', () => {
 
     // all users should be retrievable by their alias
     for (const alias of initialAccounts.aliases) {
-      const account = await sdk.getAccountId(alias, await getAliasNonce(alias));
-      expect(account).toBeDefined();
-      expect(account?.accountNonce).toBe(1);
-      expect(account?.publicKey.equals(GrumpkinAddress.ZERO)).toBe(false);
+      const accountPublicKey = await sdk.getAccountPublicKey(alias);
+      expect(accountPublicKey!.equals(GrumpkinAddress.ZERO)).toBe(false);
     }
 
     // test an alias that doesn't exist
-    const undefinedAccount = await sdk.getAccountId('account5', await getAliasNonce('account5'));
-    expect(undefinedAccount).toBeUndefined();
+    expect(await sdk.getAccountPublicKey('account5')).toBeUndefined();
 
     const debugBalance = async (assetId: number, account: number) =>
       debug(
         `account ${account} public / private balance: ${sdk.fromBaseUnits(
-          await sdk.getPublicBalanceAv(assetId, addresses[account]),
+          await sdk.getPublicBalance(addresses[account], assetId),
           true,
-        )} / ${sdk.fromBaseUnits(await sdk.getBalanceAv(assetId, accounts[account]), true)}`,
+        )} / ${sdk.fromBaseUnits(await sdk.getBalance(accounts[account], assetId), true)}`,
       );
 
-    const balancesBeforeDeposits = await Promise.all(accounts.map(acc => sdk.getBalanceAv(assetId, acc)));
+    const balancesBeforeDeposits = await Promise.all(accounts.map(acc => sdk.getBalance(acc, assetId)));
 
     // Rollup 0: Account 1 -3 deposit into aztec
     {
@@ -185,15 +171,15 @@ describe('end-to-end migrated tests', () => {
       await debugBalance(assetId, 2);
 
       for (let i = 0; i < 3; i++) {
-        expect((await sdk.getBalanceAv(assetId, accounts[i])).value).toBe(
+        expect((await sdk.getBalance(accounts[i], assetId)).value).toBe(
           depositValue.value + balancesBeforeDeposits[i].value,
         );
       }
-      expect((await sdk.getBalanceAv(assetId, accounts[3])).value).toBe(balancesBeforeDeposits[3].value);
+      expect((await sdk.getBalance(accounts[3], assetId)).value).toBe(balancesBeforeDeposits[3].value);
     }
 
     const publicBalancesAfterDeposits = await Promise.all(
-      addresses.map(address => sdk.getPublicBalance(assetId, address)),
+      addresses.map(address => sdk.getPublicBalance(address, assetId)),
     );
 
     // Rollup 1
@@ -201,17 +187,17 @@ describe('end-to-end migrated tests', () => {
     // all transfer are done by requesting the alias
     // e.g. 0 -> 1, 1 -> 2 etc
     {
-      const aztecBalancesBeforeTransfers = await Promise.all(accounts.map(acc => sdk.getBalanceAv(assetId, acc)));
+      const aztecBalancesBeforeTransfers = await Promise.all(accounts.map(acc => sdk.getBalance(acc, assetId)));
       const transferControllers: TransferController[] = [];
       for (let i = 0; i < 3; i++) {
         const signer = signers[i];
         const sender = accounts[i];
         const recipientAlias = initialAccounts.aliases[i + 1];
-        const recipientAccount = await sdk.getAccountId(recipientAlias, await getAliasNonce(recipientAlias));
+        const recipientAccount = await sdk.getAccountPublicKey(recipientAlias);
 
         expect(recipientAccount).toBeTruthy();
 
-        debug(`transferring ${transferValue} from account ${i} to account ${i + 1}`);
+        debug(`transferring ${sdk.fromBaseUnits(transferValue, true)} from account ${i} to account ${i + 1}`);
         const controller = await sdk.createTransferController(
           sender,
           signer,
@@ -236,22 +222,24 @@ describe('end-to-end migrated tests', () => {
       const account3Expected = aztecBalancesBeforeTransfers[2].value - transferFees[TxSettlementTime.INSTANT].value;
       // received transfer from 3
       const account4Expected = aztecBalancesBeforeTransfers[3].value + transferValue.value;
-      expect((await sdk.getBalanceAv(assetId, accounts[0])).value).toBe(account1Expected);
-      expect((await sdk.getBalanceAv(assetId, accounts[1])).value).toBe(account2Expected);
-      expect((await sdk.getBalanceAv(assetId, accounts[2])).value).toBe(account3Expected);
-      expect((await sdk.getBalanceAv(assetId, accounts[3])).value).toBe(account4Expected);
+      expect((await sdk.getBalance(accounts[0], assetId)).value).toBe(account1Expected);
+      expect((await sdk.getBalance(accounts[1], assetId)).value).toBe(account2Expected);
+      expect((await sdk.getBalance(accounts[2], assetId)).value).toBe(account3Expected);
+      expect((await sdk.getBalance(accounts[3], assetId)).value).toBe(account4Expected);
     }
 
     // Rollup 2
     // All accounts withdraw, leaving them with differing amount within Aztec
     {
-      const aztecBalancesBeforeWithdrawals = await Promise.all(accounts.map(acc => sdk.getBalanceAv(assetId, acc)));
+      const aztecBalancesBeforeWithdrawals = await Promise.all(accounts.map(acc => sdk.getBalance(acc, assetId)));
       const withdrawControllers: WithdrawController[] = [];
       for (let i = 0; i < 4; i++) {
         const signer = signers[i];
         const recipient = addresses[i];
 
-        debug(`withdrawing ${withdrawValue} from account ${i} to address ${recipient.toString()}`);
+        debug(
+          `withdrawing ${sdk.fromBaseUnits(withdrawValue, true)} from account ${i} to address ${recipient.toString()}`,
+        );
         const withdrawController = sdk.createWithdrawController(
           accounts[i],
           signer,
@@ -267,11 +255,11 @@ describe('end-to-end migrated tests', () => {
       await Promise.all(withdrawControllers.map(c => c.awaitSettlement()));
       for (let i = 0; i < 4; i++) {
         const fee = withdrawalFees[i == 3 ? TxSettlementTime.INSTANT : TxSettlementTime.NEXT_ROLLUP];
-        expect((await sdk.getBalanceAv(assetId, accounts[i])).value).toBe(
+        expect((await sdk.getBalance(accounts[i], assetId)).value).toBe(
           aztecBalancesBeforeWithdrawals[i].value - withdrawValue.value - fee.value,
         );
-        expect((await sdk.getPublicBalanceAv(assetId, addresses[i])).value).toBe(
-          publicBalancesAfterDeposits[i] + withdrawValue.value,
+        expect((await sdk.getPublicBalance(addresses[i], assetId)).value).toBe(
+          publicBalancesAfterDeposits[i].value + withdrawValue.value,
         );
       }
     }

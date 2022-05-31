@@ -1,4 +1,4 @@
-import { AccountId } from '@aztec/barretenberg/account_id';
+import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetValue } from '@aztec/barretenberg/asset';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { TxId } from '@aztec/barretenberg/tx_id';
@@ -25,9 +25,9 @@ interface MockPaymentProof {
 
 describe('defi controller', () => {
   let coreSdk: Mockify<CoreSdkInterface>;
-  const userId = AccountId.random();
+  const userId = GrumpkinAddress.random();
   const userSigner = {
-    getPublicKey: jest.fn().mockReturnValue(userId.publicKey),
+    getPublicKey: jest.fn().mockReturnValue(GrumpkinAddress.random()),
     signMessage: jest.fn().mockResolvedValue(randomBytes(32)),
   };
   const defiTxId = TxId.random();
@@ -648,6 +648,13 @@ describe('defi controller', () => {
       const invalidFee = { assetId: bridgeId.inputAssetIdB!, value: 0n };
       expect(() => new DefiController(userId, userSigner, bridgeId, depositValue, invalidFee, coreSdk)).toThrow(
         'Fee paying asset must be the first input asset.',
+      );
+    });
+
+    it('cannot use unsafe notes for defi deposit', () => {
+      userSigner.getPublicKey.mockReturnValue(userId);
+      expect(() => new DefiController(userId, userSigner, bridgeId, depositValue, fee, coreSdk)).toThrow(
+        'Defi deposit not available for non registered user.',
       );
     });
   });

@@ -4,6 +4,7 @@ import { ProofData } from '@aztec/barretenberg/client_proofs';
 import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { AssetMetricsDao, RollupDao, RollupProofDao, TxDao } from '../entity';
 import { SyncRollupDb } from './sync_rollup_db';
+import { txDaoToAccountDao } from './tx_dao_to_account_dao';
 
 export class CachedRollupDb extends SyncRollupDb {
   private pendingTxCount!: number;
@@ -66,8 +67,9 @@ export class CachedRollupDb extends SyncRollupDb {
     return this.unsettledTxs.filter(tx => tx.txType < TxType.ACCOUNT);
   }
 
-  public async getUnsettledAccountTxs() {
-    return this.unsettledTxs.filter(tx => tx.txType === TxType.ACCOUNT);
+  public async getUnsettledAccounts() {
+    const unsettledAccountTxs = this.unsettledTxs.filter(tx => tx.txType === TxType.ACCOUNT);
+    return unsettledAccountTxs.map(txDaoToAccountDao);
   }
 
   public async getUnsettledNullifiers() {

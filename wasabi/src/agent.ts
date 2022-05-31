@@ -24,6 +24,7 @@ export interface UserData {
   address: EthAddress;
   signer: SchnorrSigner;
   user: AztecSdkUser;
+  userRegistered: boolean;
 }
 
 export class Agent {
@@ -38,9 +39,9 @@ export class Agent {
     const privateKey = randomBytes(32);
     console.log(`agent ${this.id} private key: ${privateKey.toString('hex')}`);
     const address = this.provider.addAccount(privateKey);
-    const user = await this.sdk.addUser(privateKey, undefined, true);
+    const user = await this.sdk.addUser(privateKey, true);
     const signer = await this.sdk.createSchnorrSigner(privateKey);
-    return { address, signer, user };
+    return { address, signer, user, userRegistered: false };
   }
 
   private async fundAddressWithEth(userData: UserData, deposit: bigint) {
@@ -75,7 +76,7 @@ export class Agent {
 
   public async sendDeposit(userData: UserData, deposit: bigint, assetId = 0, instant = false) {
     const assetInfo = this.sdk.getAssetInfo(assetId);
-    const { user, address } = userData;
+    const { user, address, userRegistered } = userData;
     const fee = (await this.sdk.getDepositFees(assetId))[
       instant ? TxSettlementTime.INSTANT : TxSettlementTime.NEXT_ROLLUP
     ];
@@ -89,6 +90,7 @@ export class Agent {
       { assetId, value: actualDepositValue },
       fee,
       user.id,
+      userRegistered,
     );
     await controller.createProof();
     await controller.sign();
@@ -115,32 +117,26 @@ export class Agent {
     const assetInfo = this.sdk.getAssetInfo(assetId);
     const { user, signer } = userData;
     const fee = (await this.sdk.getWithdrawFees(assetId))[TxSettlementTime.NEXT_ROLLUP];
-    let assetBalance = await user.getBalance(assetId);
+    const assetBalance = await user.getBalance(assetId);
     const ethBalance = await user.getBalance(0);
     if (assetId == fee.assetId) {
       // asset is fee paying
-      if (fee.value > assetBalance) {
+      if (fee.value > assetBalance.value) {
         return;
       }
       // minus the fee from the withdrawal amount
-      assetBalance -= fee.value;
+      assetBalance.value -= fee.value;
     } else {
       // asset is not fee paying
-      if (fee.value > ethBalance) {
+      if (fee.value > ethBalance.value) {
         return;
       }
     }
-    if (assetBalance == 0n) {
+    if (assetBalance.value == 0n) {
       return;
     }
     console.log(`agent ${this.id} withdrawing ${assetBalance} ${assetInfo.name} to ${userData.address.toString()}`);
-    const controller = this.sdk.createWithdrawController(
-      user.id,
-      signer,
-      { assetId, value: assetBalance },
-      fee,
-      userData.address,
-    );
+    const controller = this.sdk.createWithdrawController(user.id, signer, assetBalance, fee, userData.address);
     await controller.createProof();
     await controller.send();
     return controller;
@@ -148,7 +144,7 @@ export class Agent {
 
   public async repayFundingAddress(userData: UserData) {
     const fee = toBaseUnits('420', 12);
-    const value = (await this.sdk.getPublicBalance(0, userData.address)) - fee;
+    const value = (await this.sdk.getPublicBalance(userData.address, 0)).value - fee;
     if (value <= 0) {
       return;
     }

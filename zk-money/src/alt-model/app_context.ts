@@ -1,4 +1,4 @@
-import { AccountId } from '@aztec/sdk';
+import { GrumpkinAddress } from '@aztec/sdk';
 import { createContext, useContext } from 'react';
 import { Provider, RollupService, UserSession } from '../app';
 import { Database } from '../app/database';
@@ -10,7 +10,7 @@ interface AppContextValue {
   config: Config;
   requiredNetwork: Network;
   provider?: Provider;
-  accountId?: AccountId;
+  userId?: GrumpkinAddress;
   alias?: string;
   keyVault?: KeyVault;
   db: Database;

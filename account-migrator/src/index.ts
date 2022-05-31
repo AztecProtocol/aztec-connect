@@ -67,17 +67,17 @@ async function writeAndVerifyAccounts(accountsFile: string, accounts: AccountDat
     if (account.notes.note2.compare(readAccounts[accountIndex].notes.note2)) {
       throw new Error(`Note 2 of account index ${accountIndex} was different on file than it was on chain`);
     }
-    if (account.nullifier.compare(readAccounts[accountIndex].nullifier)) {
-      throw new Error(`Nullifier of account index ${accountIndex} was different on file than it was on chain`);
+    if (account.nullifiers.nullifier1.compare(readAccounts[accountIndex].nullifiers.nullifier1)) {
+      throw new Error(`Nullifier 1 of account index ${accountIndex} was different on file than it was on chain`);
+    }
+    if (account.nullifiers.nullifier2.compare(readAccounts[accountIndex].nullifiers.nullifier2)) {
+      throw new Error(`Nullifier 2 of account index ${accountIndex} was different on file than it was on chain`);
     }
     if (account.alias.address.compare(readAccounts[accountIndex].alias.address)) {
       throw new Error(`Address of account alias index ${accountIndex} was different on file than it was on chain`);
     }
     if (account.alias.aliasHash.compare(readAccounts[accountIndex].alias.aliasHash)) {
       throw new Error(`Alias Hash of account alias index ${accountIndex} was different on file than it was on chain`);
-    }
-    if (account.alias.nonce !== readAccounts[accountIndex].alias.nonce) {
-      throw new Error(`Nonce of account alias index ${accountIndex} was different on file than it was on chain`);
     }
     if (account.signingKeys.signingKey1.compare(readAccounts[accountIndex].signingKeys.signingKey1)) {
       throw new Error(
@@ -115,7 +115,7 @@ async function main() {
   );
   const accountProofs = options.aztecConnect ? await getAccountsConnect(options) : await getAccountsLegacy(options);
 
-  const accounts = new Array<AccountData>(accountProofs.accounts.length);
+  const accountsMap: { [key: string]: AccountData } = {};
 
   const barretenberg = await BarretenbergWasm.new();
   const noteAlgos = new NoteAlgorithms(barretenberg);
@@ -141,25 +141,23 @@ async function main() {
       );
     }
     const account: AccountData = {
-      nullifier:
-        oldNonce === accountAliasId.accountNonce
-          ? Buffer.alloc(32, 0)
-          : noteAlgos.accountAliasIdNullifier(accountAliasId),
+      nullifiers: {
+        nullifier1: noteAlgos.accountAliasHashNullifier(accountAliasId.aliasHash),
+        nullifier2: noteAlgos.accountPublicKeyNullifier(accountKey),
+      },
       notes: {
-        note1: noteAlgos.accountNoteCommitment(accountAliasId, accountKey, signingKey1),
-        note2: noteAlgos.accountNoteCommitment(accountAliasId, accountKey, signingKey2),
+        note1: noteAlgos.accountNoteCommitment(accountAliasId.aliasHash, accountKey, signingKey1),
+        note2: noteAlgos.accountNoteCommitment(accountAliasId.aliasHash, accountKey, signingKey2),
       },
       alias: {
         aliasHash: accountAliasId.aliasHash.toBuffer(),
         address: accountKey.toBuffer(),
-        nonce: accountAliasId.accountNonce,
       },
       signingKeys: {
         signingKey1,
         signingKey2,
       },
     };
-    accounts[i] = account;
     if (options.logDuplicates) {
       buildSigningKeyStrings(accountKey, accountAliasId.accountNonce, [signingKey1, signingKey2]).forEach(x => {
         if (duplicateKeys.has(x)) {
@@ -168,8 +166,10 @@ async function main() {
         duplicateKeys.add(x);
       });
     }
+    accountsMap[accountKey.toString()] = account;
   }
   console.log(`Completed in ${parseTimer.s()}s`);
+  const accounts = Object.values(accountsMap);
   // if chain id is specified then we are just verifying the roots against those stored for this chain id
   if (options.verify === undefined) {
     console.log(`Writing accounts data to file ${accountsFile}`);

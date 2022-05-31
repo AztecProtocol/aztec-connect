@@ -1,4 +1,4 @@
-import { AccountId, AliasHash } from '@aztec/barretenberg/account_id';
+import { AliasHash } from '@aztec/barretenberg/account_id';
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { TxHash, TxType } from '@aztec/barretenberg/blockchain';
@@ -6,7 +6,7 @@ import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { serializeBufferArrayToVector } from '@aztec/barretenberg/serialize';
 import { WorldStateConstants } from '@aztec/barretenberg/world_state';
 import { Connection, In, IsNull, LessThan, MoreThanOrEqual, Not, Repository } from 'typeorm';
-import { AssetMetricsDao, ClaimDao, AccountDao, RollupDao, RollupProofDao, TxDao } from '../entity';
+import { AccountDao, AssetMetricsDao, ClaimDao, RollupDao, RollupProofDao, TxDao } from '../entity';
 import { txDaoToAccountDao } from './tx_dao_to_account_dao';
 
 export type RollupDb = {
@@ -85,60 +85,29 @@ export class TypeOrmRollupDb implements RollupDb {
     return this.txRep.count({ where: { txType: TxType.DEFI_DEPOSIT } });
   }
 
-  public async getAccountTx(aliasHash: Buffer) {
-    return this.accountRep.findOne(
-      { aliasHash },
-      {
-        order: { accountNonce: 'DESC' },
-      },
-    );
-  }
-
-  public async getLatestAccountTx(accountPubKey: Buffer) {
-    return this.accountRep.findOne(
-      { accountPubKey },
-      {
-        order: { accountNonce: 'DESC' },
-      },
-    );
-  }
-
   public async getAccountTxCount() {
     return this.txRep.count({ where: { txType: TxType.ACCOUNT } });
   }
 
   public async getAccountCount() {
-    return this.accountRep.count({ where: { accountNonce: 1 } });
+    return this.accountRep.count();
   }
 
-  public async getLatestAccountNonce(accountPubKey: GrumpkinAddress) {
-    const account = await this.accountRep.findOne(
-      { accountPubKey: accountPubKey.toBuffer() },
-      { order: { accountNonce: 'DESC' } },
-    );
-    return account?.accountNonce || 0;
+  public async isAccountRegistered(accountPublicKey: GrumpkinAddress) {
+    const account = await this.accountRep.findOne({ accountPublicKey: accountPublicKey.toBuffer() });
+    return !!account;
   }
 
-  public async getLatestAliasNonce(aliasHash: AliasHash) {
-    const account = await this.accountRep.findOne(
-      { aliasHash: aliasHash.toBuffer() },
-      { order: { accountNonce: 'DESC' } },
-    );
-    return account?.accountNonce || 0;
+  public async isAliasRegistered(aliasHash: AliasHash) {
+    const account = await this.accountRep.findOne({ aliasHash: aliasHash.toBuffer() });
+    return !!account;
   }
 
-  public async getAccountId(aliasHash: AliasHash, accountNonce?: number) {
+  public async accountExists(accountPublicKey: GrumpkinAddress, aliasHash: AliasHash) {
     const account = await this.accountRep.findOne({
-      where: { aliasHash: aliasHash.toBuffer(), accountNonce: MoreThanOrEqual(accountNonce || 0) },
-      order: { accountNonce: accountNonce !== undefined ? 'ASC' : 'DESC' },
+      where: { accountPublicKey: accountPublicKey.toBuffer(), aliasHash: aliasHash.toBuffer() },
     });
-    if (!account) {
-      return;
-    }
-    return new AccountId(
-      new GrumpkinAddress(account.accountPubKey),
-      accountNonce === undefined ? account.accountNonce : accountNonce,
-    );
+    return !!account;
   }
 
   public async getTotalRollupsOfSize(rollupSize: number) {
@@ -163,10 +132,12 @@ export class TypeOrmRollupDb implements RollupDb {
     });
   }
 
-  public async getUnsettledAccountTxs() {
-    return await this.txRep.find({
+  public async getUnsettledAccounts() {
+    const unsettledAccountTxs = await this.txRep.find({
       where: { txType: TxType.ACCOUNT, mined: null },
+      order: { created: 'DESC' },
     });
+    return unsettledAccountTxs.map(txDaoToAccountDao);
   }
 
   public async getPendingTxs(take?: number) {

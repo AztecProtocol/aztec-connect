@@ -11,7 +11,7 @@ export class TreeNote {
     GrumpkinAddress.one(),
     BigInt(0),
     0,
-    0,
+    false,
     Buffer.alloc(32),
     Buffer.alloc(32),
     Buffer.alloc(32),
@@ -22,7 +22,7 @@ export class TreeNote {
     public ownerPubKey: GrumpkinAddress,
     public value: bigint,
     public assetId: number,
-    public accountNonce: number,
+    public accountRequired: boolean,
     public noteSecret: Buffer,
     public creatorPubKey: Buffer,
     public inputNullifier: Buffer,
@@ -32,7 +32,7 @@ export class TreeNote {
     return Buffer.concat([
       toBufferBE(this.value, 32),
       numToUInt32BE(this.assetId),
-      numToUInt32BE(this.accountNonce),
+      Buffer.from([this.accountRequired ? 1 : 0]),
       this.ownerPubKey.toBuffer(),
       this.noteSecret,
       this.creatorPubKey,
@@ -44,7 +44,7 @@ export class TreeNote {
     const noteBuf = Buffer.concat([
       toBufferBE(this.value, 32),
       numToUInt32BE(this.assetId),
-      numToUInt32BE(this.accountNonce),
+      numToUInt32BE(+this.accountRequired),
       this.creatorPubKey,
     ]);
     return ViewingKey.createFromEphPriv(noteBuf, this.ownerPubKey, ephPrivKey, grumpkin);
@@ -56,8 +56,8 @@ export class TreeNote {
     dataStart += 32;
     const assetId = buf.readUInt32BE(dataStart);
     dataStart += 4;
-    const accountNonce = buf.readUInt32BE(dataStart);
-    dataStart += 4;
+    const accountRequired = !!buf[dataStart];
+    dataStart += 1;
     const ownerPubKey = new GrumpkinAddress(buf.slice(dataStart, dataStart + 64));
     dataStart += 64;
     const noteSecret = buf.slice(dataStart, dataStart + 32);
@@ -65,7 +65,7 @@ export class TreeNote {
     const creatorPubKey = buf.slice(dataStart, dataStart + 32);
     dataStart += 32;
     const inputNullifier = buf.slice(dataStart, dataStart + 32);
-    return new TreeNote(ownerPubKey, value, assetId, accountNonce, noteSecret, creatorPubKey, inputNullifier);
+    return new TreeNote(ownerPubKey, value, assetId, accountRequired, noteSecret, creatorPubKey, inputNullifier);
   }
 
   /**
@@ -85,21 +85,21 @@ export class TreeNote {
     ownerPubKey: GrumpkinAddress,
     value: bigint,
     assetId: number,
-    accountNonce: number,
+    accountRequired: boolean,
     inputNullifier: Buffer,
     ephPrivKey: Buffer,
     grumpkin: Grumpkin,
     creatorPubKey: Buffer = Buffer.alloc(32),
   ) {
     const noteSecret = deriveNoteSecret(ownerPubKey, ephPrivKey, grumpkin);
-    return new TreeNote(ownerPubKey, value, assetId, accountNonce, noteSecret, creatorPubKey, inputNullifier);
+    return new TreeNote(ownerPubKey, value, assetId, accountRequired, noteSecret, creatorPubKey, inputNullifier);
   }
 
   static createFromEphPub(
     ownerPubKey: GrumpkinAddress,
     value: bigint,
     assetId: number,
-    accountNonce: number,
+    accountRequired: boolean,
     inputNullifier: Buffer,
     ephPubKey: GrumpkinAddress,
     ownerPrivKey: Buffer,
@@ -107,14 +107,14 @@ export class TreeNote {
     creatorPubKey: Buffer = Buffer.alloc(32),
   ) {
     const noteSecret = deriveNoteSecret(ephPubKey, ownerPrivKey, grumpkin);
-    return new TreeNote(ownerPubKey, value, assetId, accountNonce, noteSecret, creatorPubKey, inputNullifier);
+    return new TreeNote(ownerPubKey, value, assetId, accountRequired, noteSecret, creatorPubKey, inputNullifier);
   }
 
   static recover({ noteBuf, noteSecret }: DecryptedNote, inputNullifier: Buffer, ownerPubKey: GrumpkinAddress) {
     const value = toBigIntBE(noteBuf.slice(0, 32));
     const assetId = noteBuf.readUInt32BE(32);
-    const accountNonce = noteBuf.readUInt32BE(36);
+    const accountRequired = !!noteBuf.readUInt32BE(36);
     const creatorPubKey = noteBuf.slice(40, 72);
-    return new TreeNote(ownerPubKey, value, assetId, accountNonce, noteSecret, creatorPubKey, inputNullifier);
+    return new TreeNote(ownerPubKey, value, assetId, accountRequired, noteSecret, creatorPubKey, inputNullifier);
   }
 }

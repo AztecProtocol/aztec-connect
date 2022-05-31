@@ -1,4 +1,3 @@
-import { AccountId } from '@aztec/barretenberg/account_id';
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { randomBytes } from 'crypto';
 import levelup, { LevelUp } from 'levelup';
@@ -16,8 +15,8 @@ describe('caramel core sdk', () => {
   let sdk: CaramelCoreSdk;
   const origin = 'test.xyz';
   const users = [...new Array(2)].map(() => ({
-    id: new AccountId(GrumpkinAddress.randomAddress(), 1).toString(),
-    privateKey: new Uint8Array(randomBytes(32)),
+    id: GrumpkinAddress.random().toString(),
+    accountPrivateKey: new Uint8Array(randomBytes(32)),
   }));
 
   beforeEach(() => {
@@ -27,12 +26,14 @@ describe('caramel core sdk', () => {
       on: jest.fn(),
       addUser: jest
         .fn()
-        .mockImplementation(privateKey => users.find(u => u.privateKey.toString() === privateKey.toString())),
+        .mockImplementation(accountPrivateKey =>
+          users.find(u => u.accountPrivateKey.toString() === accountPrivateKey.toString()),
+        ),
       removeUser: jest.fn(),
       userExists: jest.fn().mockResolvedValue(true),
       derivePublicKey: jest.fn().mockImplementation(privateKey => {
-        const user = users.find(u => u.privateKey.toString() === privateKey.toString());
-        return user ? AccountId.fromString(user.id).publicKey.toString() : GrumpkinAddress.randomAddress().toString();
+        const user = users.find(u => u.accountPrivateKey.toString() === privateKey.toString());
+        return user?.id || GrumpkinAddress.random().toString();
       }),
       getUserData: jest.fn().mockImplementation(userId => users.find(u => u.id === userId)),
       getBalance: jest.fn().mockResolvedValue('0'),
@@ -45,12 +46,12 @@ describe('caramel core sdk', () => {
     const origin1 = 'one.xyz';
     const sdk1 = new CaramelCoreSdk(core as any, origin1, db);
 
-    await sdk.addUser(users[0].privateKey, 1);
+    await sdk.addUser(users[0].accountPrivateKey);
 
     expect(await sdk.userExists(users[0].id)).toBe(true);
     expect(await sdk1.userExists(users[0].id)).toBe(false);
 
-    await sdk1.addUser(users[0].privateKey, 1);
+    await sdk1.addUser(users[0].accountPrivateKey);
 
     expect(await sdk.userExists(users[0].id)).toBe(true);
     expect(await sdk1.userExists(users[0].id)).toBe(true);
@@ -64,7 +65,7 @@ describe('caramel core sdk', () => {
   it('user will be added when core.addUser throws but user exists in core sdk', async () => {
     core.addUser.mockRejectedValue(new Error('addUser error'));
 
-    await sdk.addUser(users[0].privateKey, 1);
+    await sdk.addUser(users[0].accountPrivateKey);
 
     expect(await sdk.userExists(users[0].id)).toBe(true);
   });
@@ -73,7 +74,7 @@ describe('caramel core sdk', () => {
     core.addUser.mockRejectedValue(new Error('addUser error'));
     core.getUserData.mockRejectedValue(new Error('getUserData error'));
 
-    await expect(sdk.addUser(users[0].privateKey, 1)).rejects.toThrow('addUser error');
+    await expect(sdk.addUser(users[0].accountPrivateKey)).rejects.toThrow('addUser error');
 
     expect(await sdk.userExists(users[0].id)).toBe(false);
   });
@@ -85,9 +86,9 @@ describe('caramel core sdk', () => {
     const origin2 = 'two.xyz';
     const sdk2 = new CaramelCoreSdk(core as any, origin2, db);
 
-    await sdk.addUser(users[0].privateKey, 1);
-    await sdk1.addUser(users[0].privateKey, 1);
-    await sdk2.addUser(users[0].privateKey, 1);
+    await sdk.addUser(users[0].accountPrivateKey);
+    await sdk1.addUser(users[0].accountPrivateKey);
+    await sdk2.addUser(users[0].accountPrivateKey);
 
     await sdk.removeUser(users[0].id);
 
@@ -105,12 +106,12 @@ describe('caramel core sdk', () => {
   it('can call getBalance after the user has been added', async () => {
     core.getBalance.mockResolvedValue('123');
 
-    await expect(sdk.getBalance(0, users[0].id)).rejects.toThrow();
-    await expect(sdk.getBalance(0, users[1].id)).rejects.toThrow();
+    await expect(sdk.getBalance(users[0].id, 0)).rejects.toThrow();
+    await expect(sdk.getBalance(users[1].id, 0)).rejects.toThrow();
 
-    await sdk.addUser(users[0].privateKey, 1);
+    await sdk.addUser(users[0].accountPrivateKey);
 
-    expect(await sdk.getBalance(0, users[0].id)).toBe('123');
-    await expect(sdk.getBalance(0, users[1].id)).rejects.toThrow();
+    expect(await sdk.getBalance(users[0].id, 0)).toBe('123');
+    await expect(sdk.getBalance(users[1].id, 0)).rejects.toThrow();
   });
 });

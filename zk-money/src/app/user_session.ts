@@ -1,5 +1,5 @@
 import type { CutdownAsset } from './types';
-import { AccountId, AztecSdk, GrumpkinAddress, SdkEvent, EthereumProvider, JsonRpcProvider } from '@aztec/sdk';
+import { AztecSdk, GrumpkinAddress, SdkEvent, EthereumProvider, JsonRpcProvider } from '@aztec/sdk';
 import { SdkObs } from 'alt-model/top_level_context/sdk_obs';
 import { createHash } from 'crypto';
 import createDebug from 'debug';
@@ -61,7 +61,7 @@ export interface LoginState {
   alias: string;
   aliasAvailability: ValueAvailability;
   rememberMe: boolean;
-  allowToProceed: boolean;
+  allowToProceed: boolean; // Depreciated: this is never set to false
 }
 
 export const initialLoginState: LoginState = {
@@ -218,7 +218,6 @@ export class UserSession extends EventEmitter {
     if (this.sdk) {
       this.sdk.off(SdkEvent.UPDATED_WORLD_STATE, this.handleWorldStateChange);
       this.sdk.off(SdkEvent.UPDATED_USER_STATE, this.handleUserStateChange);
-      await this.removeUnregisteredUsers();
     }
     debug('Session destroyed.');
   }
@@ -280,6 +279,12 @@ export class UserSession extends EventEmitter {
     }
   }
 
+  private async registrationExists(accountPublicKey: GrumpkinAddress) {
+    const isRegistered = await this.sdk.isAccountRegistered(accountPublicKey);
+    if (isRegistered) return true;
+    return this.sdk.isRemoteAccountRegistered(accountPublicKey);
+  }
+
   private async signupWithWallet() {
     this.emitSystemMessage('Please sign the message in your wallet to create a new account...', MessageType.WARNING);
 
@@ -291,9 +296,9 @@ export class UserSession extends EventEmitter {
     }
 
     const { accountPublicKey } = this.keyVault;
-    const nonce = await this.accountUtils.getAccountNonce(accountPublicKey);
+    const isRegistered = await this.registrationExists(accountPublicKey);
 
-    if (!nonce) {
+    if (!isRegistered) {
       this.toStep(LoginStep.SET_ALIAS);
     } else {
       // Attempt to sign up with a registered wallet.
@@ -320,10 +325,10 @@ export class UserSession extends EventEmitter {
     }
 
     const { accountPublicKey } = this.keyVault;
-    const nonce = await this.accountUtils.getAccountNonce(accountPublicKey);
+    const isRegistered = await this.registrationExists(accountPublicKey);
 
     // Attempt to log in with unknown pubKey.
-    if (!nonce) {
+    if (!isRegistered) {
       // TODO - show a signup link in error message.
       throw new Error('Account not registered.');
     }
@@ -442,11 +447,6 @@ export class UserSession extends EventEmitter {
       if (!(await this.accountUtils.isAliasAvailable(aliasInput))) {
         return this.emitSystemMessage('This alias has been taken.', MessageType.ERROR);
       }
-      const allowToProceed = await this.allowNewUser();
-      if (!allowToProceed) {
-        this.updateLoginState({ allowToProceed });
-        return;
-      }
     } else {
       const address = await this.accountUtils.getAliasPublicKey(aliasInput);
       if (!address?.equals(this.keyVault.accountPublicKey)) {
@@ -486,14 +486,11 @@ export class UserSession extends EventEmitter {
     }
 
     const { accountPublicKey, accountPrivateKey } = this.keyVault;
-    const userId = new AccountId(accountPublicKey, 0);
-    const newUserId = new AccountId(accountPublicKey, 1);
 
     // Add the user to the sdk so that the accountTx could be added for it.
     // Need to sync from the beginning when "migrating" account to a new alias.
     const noSync = this.loginState.mode === LoginMode.SIGNUP;
-    await this.accountUtils.addUser(accountPrivateKey, userId.accountNonce, true);
-    await this.accountUtils.addUser(accountPrivateKey, newUserId.accountNonce, noSync);
+    await this.accountUtils.addUser(accountPrivateKey, noSync);
 
     try {
       await this.shieldForAliasForm.submit();
@@ -502,18 +499,12 @@ export class UserSession extends EventEmitter {
       this.shieldForAliasForm.destroy();
     } catch (e) {
       debug(e);
-      await this.accountUtils.removeUser(userId);
       this.emitSystemMessage('Failed to send the proofs. Please try again later.', MessageType.ERROR);
       return;
     }
 
-    const latestUserNonce = await this.accountUtils.getAccountNonce(newUserId.publicKey);
-    if (latestUserNonce > newUserId.accountNonce) {
-      throw new Error('Account migration has been depreciated');
-    } else {
-      await this.initUserAccount(newUserId, false);
-      this.toStep(LoginStep.DONE);
-    }
+    await this.initUserAccount(accountPublicKey, false);
+    this.toStep(LoginStep.DONE);
 
     this.shieldForAliasForm = undefined;
   }
@@ -535,7 +526,6 @@ export class UserSession extends EventEmitter {
       if (isNewAlias) {
         await proceed(LoginStep.CREATE_ACCOUNT);
 
-        const userId = new AccountId(accountPublicKey, 1);
         const aliasInput = this.loginState.alias;
         const alias = formatAliasInput(aliasInput);
 
@@ -546,19 +536,17 @@ export class UserSession extends EventEmitter {
         await new Promise(resolve => setTimeout(resolve, 500));
         const spendingPublicKey = await this.requestSigningKey();
 
-        await this.createShieldForAliasForm(userId, alias, spendingPublicKey);
+        await this.createShieldForAliasForm(accountPublicKey, alias, spendingPublicKey);
 
         await proceed(LoginStep.CLAIM_USERNAME);
       } else {
         await proceed(LoginStep.ADD_ACCOUNT);
 
-        const nonce = await this.accountUtils.getAliasNonce(alias);
-        const userId = new AccountId(accountPublicKey, nonce);
-        await this.initUserAccount(userId, false);
+        await this.initUserAccount(accountPublicKey, false);
 
         await proceed(LoginStep.SYNC_DATA);
 
-        await this.awaitUserSynchronised(userId);
+        await this.awaitUserSynchronised(accountPublicKey);
 
         await proceed(LoginStep.DONE);
       }
@@ -585,21 +573,20 @@ export class UserSession extends EventEmitter {
 
       const { accountPublicKey, signerAddress, alias, version } = linkedAccount;
 
-      const nonce = await this.accountUtils.getAliasNonce(alias);
-      if (!nonce) {
+      const isRegistered = await this.registrationExists(accountPublicKey);
+      if (!isRegistered) {
         await this.db.deleteAccount(accountPublicKey);
         throw new Error('Account not registered.');
       }
 
-      const userId = new AccountId(accountPublicKey, nonce);
-      const { privateKey, publicKey } = await this.sdk.getUserData(userId);
-      this.keyVault = new KeyVault(privateKey, publicKey, signerAddress, version);
+      const { accountPrivateKey } = await this.sdk.getUserData(accountPublicKey);
+      this.keyVault = new KeyVault(accountPrivateKey, accountPublicKey, signerAddress, version);
 
       this.updateLoginState({
         alias,
       });
 
-      await this.initUserAccount(userId);
+      await this.initUserAccount(accountPublicKey);
 
       this.toStep(LoginStep.DONE);
     } catch (e) {
@@ -624,7 +611,7 @@ export class UserSession extends EventEmitter {
     this.stableEthereumProvider = new JsonRpcProvider(ethereumHost);
   }
 
-  private async createShieldForAliasForm(userId: AccountId, alias: string, spendingPublicKey: GrumpkinAddress) {
+  private async createShieldForAliasForm(userId: GrumpkinAddress, alias: string, spendingPublicKey: GrumpkinAddress) {
     const ethAccount = new EthAccount(
       this.provider,
       this.provider?.account,
@@ -715,12 +702,8 @@ export class UserSession extends EventEmitter {
     await this.createSdkMutex.unlock();
   }
 
-  private async initUserAccount(userId: AccountId, awaitSynchronised = true) {
-    if (!userId.accountNonce) {
-      throw new Error('User not registered.');
-    }
-
-    await this.accountUtils.addUser(this.keyVault.accountPrivateKey, userId.accountNonce);
+  private async initUserAccount(userId: GrumpkinAddress, awaitSynchronised = true) {
+    await this.accountUtils.addUser(this.keyVault.accountPrivateKey);
 
     await this.reviveUserProvider();
 
@@ -738,7 +721,7 @@ export class UserSession extends EventEmitter {
     this.emit(UserSessionEvent.SESSION_OPEN);
   }
 
-  private async subscribeToSyncProgress(userId: AccountId) {
+  private async subscribeToSyncProgress(userId: GrumpkinAddress) {
     const {
       blockchainStatus: { nextRollupId },
     } = await this.sdk.getRemoteStatus();
@@ -877,21 +860,11 @@ export class UserSession extends EventEmitter {
     return createHash('sha256').update(accountPublicKey.toBuffer()).digest();
   }
 
-  private async removeUnregisteredUsers() {
-    const users = await this.sdk.getUsersData();
-    const userZeros = users.filter(u => !u.accountNonce);
-    for (const userZero of userZeros) {
-      if (!users.some(u => u.publicKey.equals(userZero.publicKey) && u.accountNonce > 0)) {
-        await this.accountUtils.removeUser(userZero.id);
-      }
-    }
-  }
-
   private handleWorldStateChange = (syncedToRollup: number, latestRollup: number) => {
     this.updateWorldState({ ...this.worldState, syncedToRollup, latestRollup });
   };
 
-  private handleUserStateChange = async (userId: AccountId) => {
+  private handleUserStateChange = async (userId: GrumpkinAddress) => {
     if (!this.account?.userId.equals(userId)) return;
 
     const user = await this.sdk.getUserData(userId);
@@ -961,11 +934,7 @@ export class UserSession extends EventEmitter {
     this.emit(UserSessionEvent.UPDATED_SYSTEM_MESSAGE, { message, type });
   }
 
-  private async awaitUserSynchronised(userId: AccountId) {
-    if (!userId.accountNonce) {
-      return;
-    }
-
+  private async awaitUserSynchronised(userId: GrumpkinAddress) {
     const { latestRollup, accountSyncedToRollup } = this.worldState;
     if (accountSyncedToRollup > -1 || latestRollup === -1) {
       await this.sdk.awaitUserSynchronised(userId);
@@ -978,16 +947,6 @@ export class UserSession extends EventEmitter {
         }
       }
     }
-  }
-
-  private async allowNewUser() {
-    if (this.MAX_ACCOUNT_TXS_PER_ROLLUP >= this.TXS_PER_ROLLUP) {
-      return true;
-    }
-    const { pendingTxCount } = await this.sdk.getRemoteStatus();
-    const unsettledAccountTxs = await this.sdk.getRemoteUnsettledAccountTxs();
-    const numRollups = Math.max(1, Math.ceil(pendingTxCount / this.TXS_PER_ROLLUP));
-    return unsettledAccountTxs.length < numRollups * this.MAX_ACCOUNT_TXS_PER_ROLLUP;
   }
 
   private async rollupContractAddressChanged() {

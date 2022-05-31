@@ -12,7 +12,7 @@ describe('RollupDepositProofData', () => {
   it('can get typed data from proof data', () => {
     const assetId = 123;
     const publicValue = BigInt(123);
-    const publicOwner = EthAddress.randomAddress();
+    const publicOwner = EthAddress.random();
     const innerProofData = new InnerProofData(
       ProofId.DEPOSIT,
       randomBytes(32),

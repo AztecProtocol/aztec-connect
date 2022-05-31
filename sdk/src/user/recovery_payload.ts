@@ -1,14 +1,15 @@
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
-import { AccountId } from '@aztec/barretenberg/account_id';
 import { SchnorrSignature } from '@aztec/barretenberg/crypto';
 
 export class RecoveryData {
-  constructor(public accountId: AccountId, public signature: SchnorrSignature) {}
+  constructor(public accountPublicKey: GrumpkinAddress, public signature: SchnorrSignature) {}
 
   static fromBuffer(data: Buffer) {
-    const accountId = AccountId.fromBuffer(data.slice(0, 32));
-    const signature = new SchnorrSignature(data.slice(32, 96));
-    return new RecoveryData(accountId, signature);
+    let dataStart = 0;
+    const accountPublicKey = new GrumpkinAddress(data.slice(dataStart, dataStart + GrumpkinAddress.SIZE));
+    dataStart += GrumpkinAddress.SIZE;
+    const signature = new SchnorrSignature(data.slice(dataStart, dataStart + SchnorrSignature.SIZE));
+    return new RecoveryData(accountPublicKey, signature);
   }
 
   static fromString(data: string) {
@@ -16,7 +17,7 @@ export class RecoveryData {
   }
 
   toBuffer() {
-    return Buffer.concat([this.accountId.toBuffer(), this.signature.toBuffer()]);
+    return Buffer.concat([this.accountPublicKey.toBuffer(), this.signature.toBuffer()]);
   }
 
   toString() {
@@ -32,9 +33,12 @@ export class RecoveryPayload {
   ) {}
 
   static fromBuffer(data: Buffer) {
-    const trustedThirdPartyPublicKey = new GrumpkinAddress(data.slice(0, 64));
-    const recoveryPublicKey = new GrumpkinAddress(data.slice(64, 64 + 64));
-    const recoveryData = RecoveryData.fromBuffer(data.slice(64 + 64));
+    let dataStart = 0;
+    const trustedThirdPartyPublicKey = new GrumpkinAddress(data.slice(dataStart, dataStart + GrumpkinAddress.SIZE));
+    dataStart += GrumpkinAddress.SIZE;
+    const recoveryPublicKey = new GrumpkinAddress(data.slice(dataStart, dataStart + GrumpkinAddress.SIZE));
+    dataStart += GrumpkinAddress.SIZE;
+    const recoveryData = RecoveryData.fromBuffer(data.slice(dataStart));
     return new RecoveryPayload(trustedThirdPartyPublicKey, recoveryPublicKey, recoveryData);
   }
 

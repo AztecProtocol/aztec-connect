@@ -1,4 +1,4 @@
-import { AccountAliasId, AliasHash } from '../../account_id';
+import { AliasHash } from '../../account_id';
 import { GrumpkinAddress } from '../../address';
 import { HashPath } from '../../merkle_tree';
 import { numToUInt32BE } from '../../serialize';
@@ -8,13 +8,14 @@ export class AccountTx {
     public merkleRoot: Buffer,
     public accountPublicKey: GrumpkinAddress,
     public newAccountPublicKey: GrumpkinAddress,
-    public newSigningPubKey1: GrumpkinAddress,
-    public newSigningPubKey2: GrumpkinAddress,
-    public accountAliasId: AccountAliasId,
+    public newSpendingPublicKey1: GrumpkinAddress,
+    public newSpendingPublicKey2: GrumpkinAddress,
+    public aliasHash: AliasHash,
+    public create: boolean,
     public migrate: boolean,
     public accountIndex: number,
     public accountPath: HashPath,
-    public signingPubKey: GrumpkinAddress,
+    public spendingPublicKey: GrumpkinAddress,
   ) {}
 
   toBuffer() {
@@ -22,14 +23,14 @@ export class AccountTx {
       this.merkleRoot,
       this.accountPublicKey.toBuffer(),
       this.newAccountPublicKey.toBuffer(),
-      this.newSigningPubKey1.toBuffer(),
-      this.newSigningPubKey2.toBuffer(),
-      this.accountAliasId.aliasHash.toBuffer32(),
-      numToUInt32BE(this.accountAliasId.accountNonce),
+      this.newSpendingPublicKey1.toBuffer(),
+      this.newSpendingPublicKey2.toBuffer(),
+      this.aliasHash.toBuffer32(),
+      Buffer.from([this.create ? 1 : 0]),
       Buffer.from([this.migrate ? 1 : 0]),
       numToUInt32BE(this.accountIndex),
       this.accountPath.toBuffer(),
-      this.signingPubKey.toBuffer(),
+      this.spendingPublicKey.toBuffer(),
     ]);
   }
 
@@ -41,33 +42,33 @@ export class AccountTx {
     dataStart += 64;
     const newAccountPublicKey = new GrumpkinAddress(buf.slice(dataStart, dataStart + 64));
     dataStart += 64;
-    const newSigningPubKey1 = new GrumpkinAddress(buf.slice(dataStart, dataStart + 64));
+    const newSpendingPublicKey1 = new GrumpkinAddress(buf.slice(dataStart, dataStart + 64));
     dataStart += 64;
-    const newSigningPubKey2 = new GrumpkinAddress(buf.slice(dataStart, dataStart + 64));
+    const newSpendingPublicKey2 = new GrumpkinAddress(buf.slice(dataStart, dataStart + 64));
     dataStart += 64;
     const aliasHash = new AliasHash(buf.slice(dataStart + 4, dataStart + 32));
     dataStart += 32;
-    const accountNonce = buf.readUInt32BE(dataStart);
-    dataStart += 4;
-    const accountAliasId = new AccountAliasId(aliasHash, accountNonce);
+    const create = !!buf[dataStart];
+    dataStart += 1;
     const migrate = !!buf[dataStart];
     dataStart += 1;
     const accountIndex = buf.readUInt32BE(dataStart);
     dataStart += 4;
     const { elem: accountPath, adv } = HashPath.deserialize(buf, dataStart);
     dataStart += adv;
-    const signingPubKey = new GrumpkinAddress(buf.slice(dataStart, dataStart + 64));
+    const spendingPublicKey = new GrumpkinAddress(buf.slice(dataStart, dataStart + 64));
     return new AccountTx(
       merkleRoot,
       accountPublicKey,
       newAccountPublicKey,
-      newSigningPubKey1,
-      newSigningPubKey2,
-      accountAliasId,
+      newSpendingPublicKey1,
+      newSpendingPublicKey2,
+      aliasHash,
+      create,
       migrate,
       accountIndex,
       accountPath,
-      signingPubKey,
+      spendingPublicKey,
     );
   }
 }

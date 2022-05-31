@@ -1,7 +1,7 @@
 import type { AmountFactory } from 'alt-model/assets/amount_factory';
 import type { Network } from 'app/networks';
 import type { ShieldComposerPayload } from './shield_composer';
-import type { EthAddress, TxSettlementTime } from '@aztec/sdk';
+import type { EthAddress, GrumpkinAddress, TxSettlementTime } from '@aztec/sdk';
 import type { RemoteAsset } from 'alt-model/types';
 import type { StrOrMax } from 'alt-model/forms/constants';
 import type { KeyVault } from 'app/key_vault';
@@ -30,7 +30,8 @@ interface ShieldFormValidationInputs {
   balanceInFeePayingAsset?: bigint;
   transactionLimit?: bigint;
   depositor?: EthAddress;
-  aliasIsValid?: boolean;
+  recipientUserId?: GrumpkinAddress;
+  isLoadingRecipientUserId: boolean;
   currentNetwork?: Network;
   requiredNetwork: Network;
 }
@@ -73,7 +74,8 @@ export function validateShieldForm(input: ShieldFormValidationInputs): ShieldFor
     balanceInFeePayingAsset,
     transactionLimit,
     depositor,
-    aliasIsValid,
+    recipientUserId,
+    isLoadingRecipientUserId,
     currentNetwork,
     requiredNetwork,
   } = input;
@@ -135,6 +137,8 @@ export function validateShieldForm(input: ShieldFormValidationInputs): ShieldFor
   const mustAllowForFee = targetAssetIsPayingFee && couldShieldIfThereWereNoCosts;
   const mustAllowForGas = isEth && couldShieldIfThereWereNoCosts;
 
+  const aliasIsValid = !!recipientUserId && !isLoadingRecipientUserId;
+
   const isValid =
     !insufficientTargetAssetBalance &&
     !insufficientFeePayingAssetBalance &&
@@ -146,7 +150,7 @@ export function validateShieldForm(input: ShieldFormValidationInputs): ShieldFor
         targetOutput: targetL2OutputAmount,
         fee: feeAmount,
         depositor,
-        recipientAlias: fields.recipientAlias,
+        recipientUserId,
       }
     : undefined;
   return {

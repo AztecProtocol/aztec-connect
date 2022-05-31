@@ -6,17 +6,14 @@ import { useSdk } from './top_level_context';
 
 export function useUserTxs() {
   const sdk = useSdk();
-  const { accountId } = useApp();
+  const { userId } = useApp();
   const [txs, setTxs] = useState<UserTx[]>();
   useEffect(() => {
-    if (sdk && accountId) {
-      const updateTxs = () =>
-        sdk.getUserTxs(accountId).then(userTxs => {
-          setTxs(userTxs);
-        });
+    if (sdk && userId) {
+      const updateTxs = () => sdk.getUserTxs(userId).then(setTxs);
       updateTxs();
-      return listenAccountUpdated(sdk, accountId, updateTxs, { includeNonce0: true });
+      return listenAccountUpdated(sdk, userId, updateTxs);
     }
-  }, [sdk, accountId]);
+  }, [sdk, userId]);
   return txs;
 }

@@ -1,4 +1,4 @@
-import { AztecSdk, AccountId, EthAddress, TransferController, WithdrawController } from '@aztec/sdk';
+import { AztecSdk, GrumpkinAddress, EthAddress, TransferController, WithdrawController } from '@aztec/sdk';
 import { Amount } from 'alt-model/assets';
 import { createSigningKeys } from 'app/key_vault';
 import createDebug from 'debug';
@@ -11,7 +11,7 @@ const debug = createDebug('zm:send_composer');
 export type Recipient =
   | {
       sendMode: SendMode.SEND;
-      accountId: AccountId;
+      userId: GrumpkinAddress;
     }
   | {
       sendMode: SendMode.WIDTHDRAW;
@@ -26,7 +26,7 @@ export type SendComposerPayload = Readonly<{
 
 export interface SendComposerDeps {
   sdk: AztecSdk;
-  accountId: AccountId;
+  userId: GrumpkinAddress;
   awaitCorrectProvider: () => Promise<Provider>;
 }
 
@@ -39,7 +39,7 @@ export class SendComposer {
     this.stateObs.clearError();
     try {
       const { targetAmount, feeAmount, recipient } = this.payload;
-      const { sdk, accountId, awaitCorrectProvider } = this.deps;
+      const { sdk, userId, awaitCorrectProvider } = this.deps;
 
       this.stateObs.setPhase(SendComposerPhase.GENERATING_KEY);
       const provider = await awaitCorrectProvider();
@@ -51,15 +51,15 @@ export class SendComposer {
 
       if (recipient.sendMode === SendMode.SEND) {
         controller = sdk.createTransferController(
-          accountId,
+          userId,
           signer,
           targetAmount.toAssetValue(),
           feeAmount.toAssetValue(),
-          recipient.accountId,
+          recipient.userId,
         );
       } else {
         controller = sdk.createWithdrawController(
-          accountId,
+          userId,
           signer,
           targetAmount.toAssetValue(),
           feeAmount.toAssetValue(),

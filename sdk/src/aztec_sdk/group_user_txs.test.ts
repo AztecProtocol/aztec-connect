@@ -28,8 +28,8 @@ describe('groupUserTxs', () => {
           accountTx.txId,
           accountTx.userId,
           accountTx.aliasHash,
-          accountTx.newSigningPubKey1,
-          accountTx.newSigningPubKey2,
+          accountTx.newSpendingPublicKey1,
+          accountTx.newSpendingPublicKey2,
           accountTx.migrated,
           { assetId: 0, value: 0n },
           accountTx.created,
@@ -42,7 +42,7 @@ describe('groupUserTxs', () => {
       const accountTx = randomCoreAccountTx({ txRefNo });
       const depositAndFeeTx = randomCorePaymentTx({
         proofId: ProofId.DEPOSIT,
-        publicOwner: EthAddress.randomAddress(),
+        publicOwner: EthAddress.random(),
         publicValue: 100n,
         senderPrivateOutput: 80n,
         txRefNo,
@@ -53,8 +53,8 @@ describe('groupUserTxs', () => {
           accountTx.txId,
           accountTx.userId,
           accountTx.aliasHash,
-          accountTx.newSigningPubKey1,
-          accountTx.newSigningPubKey2,
+          accountTx.newSpendingPublicKey1,
+          accountTx.newSpendingPublicKey2,
           accountTx.migrated,
           { assetId: 0, value: 0n },
           accountTx.created,
@@ -77,7 +77,7 @@ describe('groupUserTxs', () => {
       const accountTx = randomCoreAccountTx({ txRefNo });
       const depositAndFeeTx = randomCorePaymentTx({
         proofId: ProofId.DEPOSIT,
-        publicOwner: EthAddress.randomAddress(),
+        publicOwner: EthAddress.random(),
         publicValue: 20n,
         txRefNo,
       });
@@ -86,8 +86,8 @@ describe('groupUserTxs', () => {
           accountTx.txId,
           accountTx.userId,
           accountTx.aliasHash,
-          accountTx.newSigningPubKey1,
-          accountTx.newSigningPubKey2,
+          accountTx.newSpendingPublicKey1,
+          accountTx.newSpendingPublicKey2,
           accountTx.migrated,
           { assetId: 0, value: 20n },
           accountTx.created,
@@ -104,8 +104,8 @@ describe('groupUserTxs', () => {
           accountTx.txId,
           accountTx.userId,
           accountTx.aliasHash,
-          accountTx.newSigningPubKey1,
-          accountTx.newSigningPubKey2,
+          accountTx.newSpendingPublicKey1,
+          accountTx.newSpendingPublicKey2,
           accountTx.migrated,
           { assetId: 0, value: 20n },
           accountTx.created,
@@ -118,7 +118,7 @@ describe('groupUserTxs', () => {
     it('recover deposit tx', () => {
       const depositTx = randomCorePaymentTx({
         proofId: ProofId.DEPOSIT,
-        publicOwner: EthAddress.randomAddress(),
+        publicOwner: EthAddress.random(),
         publicValue: 100n,
         senderPrivateOutput: 80n,
       });
@@ -140,7 +140,7 @@ describe('groupUserTxs', () => {
       const txRefNo = createTxRefNo();
       const depositTx = randomCorePaymentTx({
         proofId: ProofId.DEPOSIT,
-        publicOwner: EthAddress.randomAddress(),
+        publicOwner: EthAddress.random(),
         assetId: garbageAssetId,
         publicValue: 80n,
         senderPrivateOutput: 80n,
@@ -164,7 +164,7 @@ describe('groupUserTxs', () => {
     it('recover deposit tx sent to another account', () => {
       const depositTx = randomCorePaymentTx({
         proofId: ProofId.DEPOSIT,
-        publicOwner: EthAddress.randomAddress(),
+        publicOwner: EthAddress.random(),
         publicValue: 100n,
         recipientPrivateOutput: 80n,
         isRecipient: false,
@@ -186,7 +186,7 @@ describe('groupUserTxs', () => {
     it('recover deposit tx sent to another account without local state', () => {
       const depositTx = randomCorePaymentTx({
         proofId: ProofId.DEPOSIT,
-        publicOwner: EthAddress.randomAddress(),
+        publicOwner: EthAddress.random(),
         publicValue: 100n,
         isRecipient: false,
       });
@@ -207,7 +207,7 @@ describe('groupUserTxs', () => {
     it('recover deposit tx sent to us', () => {
       const depositTx = randomCorePaymentTx({
         proofId: ProofId.DEPOSIT,
-        publicOwner: EthAddress.randomAddress(),
+        publicOwner: EthAddress.random(),
         publicValue: 100n,
         recipientPrivateOutput: 80n,
         isRecipient: true,
@@ -232,7 +232,7 @@ describe('groupUserTxs', () => {
     it('recover withdraw tx', () => {
       const withdrawTx = randomCorePaymentTx({
         proofId: ProofId.WITHDRAW,
-        publicOwner: EthAddress.randomAddress(),
+        publicOwner: EthAddress.random(),
         publicValue: 80n,
         privateInput: 100n,
       });
@@ -254,7 +254,7 @@ describe('groupUserTxs', () => {
       const txRefNo = createTxRefNo();
       const withdrawTx = randomCorePaymentTx({
         proofId: ProofId.WITHDRAW,
-        publicOwner: EthAddress.randomAddress(),
+        publicOwner: EthAddress.random(),
         assetId: garbageAssetId,
         publicValue: 80n,
         privateInput: 80n,

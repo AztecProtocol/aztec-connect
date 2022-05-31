@@ -13,7 +13,7 @@ import { ShieldComposer } from './shield_composer';
 import { useApp } from 'alt-model/app_context';
 import { useMaybeObs } from 'app/util';
 import { useProviderState } from 'alt-model/provider_hooks';
-import { useAliasIsValidRecipient } from 'alt-model/alias_hooks';
+import { useUserIdForAlias } from 'alt-model/alias_hooks';
 import { isKnownAssetAddressString } from 'alt-model/known_assets/known_asset_addresses';
 import { useAsset } from 'alt-model/asset_hooks';
 import { useRollupProviderStatus, useRollupProviderStatusPoller } from 'alt-model/rollup_provider_hooks';
@@ -23,7 +23,7 @@ import { estimateTxSettlementTimes } from 'alt-model/estimate_settlement_times';
 const debug = createDebug('zm:shield_form_hooks');
 
 export function useShieldForm(preselectedAssetId?: number) {
-  const { alias, provider, requiredNetwork, config, keyVault, accountId } = useApp();
+  const { alias, provider, requiredNetwork, config, keyVault, userId } = useApp();
   const [fields, setFields] = useState<ShieldFormFields>({
     assetId: preselectedAssetId ?? 0,
     amountStrOrMax: '',
@@ -50,7 +50,11 @@ export function useShieldForm(preselectedAssetId?: number) {
   const transactionLimit = isKnownAssetAddressString(targetAssetAddressStr)
     ? config.txAmountLimits[targetAssetAddressStr]
     : undefined;
-  const aliasIsValid = useAliasIsValidRecipient(fields.recipientAlias);
+  const { userId: recipientUserId, isLoading: isLoadingRecipientUserId } = useUserIdForAlias(
+    fields.recipientAlias,
+    200,
+    true,
+  );
   const validationResult = validateShieldForm({
     fields,
     amountFactory,
@@ -65,7 +69,8 @@ export function useShieldForm(preselectedAssetId?: number) {
     balanceInFeePayingAsset,
     transactionLimit,
     depositor,
-    aliasIsValid,
+    recipientUserId,
+    isLoadingRecipientUserId,
     currentNetwork,
     requiredNetwork,
   });
@@ -86,7 +91,7 @@ export function useShieldForm(preselectedAssetId?: number) {
       debug('Attempted to recreate ShieldComposer');
       return;
     }
-    if (!validationResult.validPayload || !sdk || !keyVault || !accountId || !provider) {
+    if (!validationResult.validPayload || !sdk || !keyVault || !userId || !provider) {
       debug('Attempted to create ShieldComposer with incomplete dependencies', {
         validationResult,
         sdk,
@@ -98,7 +103,7 @@ export function useShieldForm(preselectedAssetId?: number) {
     const composer = new ShieldComposer(validationResult.validPayload, {
       sdk,
       keyVault,
-      accountId,
+      userId,
       provider,
       requiredNetwork,
     });

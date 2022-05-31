@@ -20,17 +20,17 @@ The inputs for the join-split circuit are all elements of the field $\mathbb{F}_
 1. `nullifier_1`
 1. `nullifier_2`
 1. `public_value`
-2. `public_owner`
-3. `public_asset_id`
+1. `public_owner`
+1. `public_asset_id`
 
-4. `old_data_tree_root`
+1. `old_data_tree_root`
 1. `tx_fee`
-2. `tx_fee_asset_id`
-3. `bridge_id`
-4. `defi_deposit_value`
-5. `defi_root` // Note: this will not be used by the circuit, but is included so that the number of public inputs is uniform across base-level circuits.
-6. `backward_link`
-7. `allow_chain`
+1. `tx_fee_asset_id`
+1. `bridge_id`
+1. `defi_deposit_value`
+1. `defi_root` // Note: this will not be used by the circuit, but is included so that the number of public inputs is uniform across base-level circuits.
+1. `backward_link`
+1. `allow_chain`
 
 ### Private Inputs: Detail
 
@@ -50,7 +50,7 @@ The inputs for the join-split circuit are all elements of the field $\mathbb{F}_
     secret,
     owner,
     asset_id,
-    account_nonce,
+    account_required,
     creator_pk,
     input_nullifier,
   },
@@ -60,7 +60,7 @@ The inputs for the join-split circuit are all elements of the field $\mathbb{F}_
     secret,
     owner,
     asset_id,
-    account_nonce,
+    account_required,
     creator_pk,
     input_nullifier,
   },
@@ -70,7 +70,7 @@ The inputs for the join-split circuit are all elements of the field $\mathbb{F}_
     secret,
     owner,
     asset_id,
-    account_nonce,
+    account_required,
     creator_pk, // (creator_pk = optional public key of note creator)
     input_nullifier,
   },
@@ -80,7 +80,7 @@ The inputs for the join-split circuit are all elements of the field $\mathbb{F}_
     secret,
     owner,
     asset_id,
-    account_nonce,
+    account_required,
     creator_pk, // (creator_pk = optional public key of note creator)
     input_nullifier,
   },
@@ -105,7 +105,7 @@ The inputs for the join-split circuit are all elements of the field $\mathbb{F}_
 
   account_private_key,
   alias_hash,
-  account_nonce,
+  account_required,
   account_note_index,
   account_note_path,
 
@@ -126,7 +126,6 @@ In the Pseudocode to follow, we use the following function names. See [notes & n
 - `partial_claim_note_commit()` - **Partial claim note commitment function**. Has the same assumptions as `value_note_commit`. Uses a different generator. Stresses that the data being committed to is _partial_ - a subset of the data committed to by `claim_note_commit` (in the claim circuit).
 - `account_note_commit()` - **Account note ommitment function**, which is assumed to be collision resistant.
 - `compute_nullifier()` - **Nullifier Function**, which we assume can be modeled as a random oracle, and only depends on `account_private_key` $mod r$.
-
 
 ### Circuit Logic (Pseudocode)
 
@@ -149,7 +148,7 @@ In the Pseudocode to follow, we use the following function names. See [notes & n
 
   account_note_index < 2 ** DATA_TREE_DEPTH
   alias_hash < 2 ** ALIAS_HASH_BIT_LENGTH
-  account_nonce < 2 ** ACCOUNT_NONCE_BIT_LENGTH
+  account_required < 2
 
   num_input_notes in {0, 1, 2}
   allow_chain in {0, 1, 2, 3}
@@ -168,11 +167,10 @@ In the Pseudocode to follow, we use the following function names. See [notes & n
 
 // account initialisations
   const account_pk = public_key(account_private_key);
-  const signer_pk = account_nonce ? signing_pk.x : account_pk.x;
+  const signer_pk = account_required ? signing_pk.x : account_pk.x;
 
-  const account_alias_id = concat( account_nonce, alias_hash );
   const account_note = {
-    account_alias_id,
+    alias_hash,
     account_pk,
     signer_pk,
   };
@@ -208,7 +206,7 @@ In the Pseudocode to follow, we use the following function names. See [notes & n
   );
 
   if (
-    (num_input_notes == 2) && 
+    (num_input_notes == 2) &&
     !is_defi_deposit
   ) {
     require(input_note_1.asset_id == input_note_2.asset_id);
@@ -223,8 +221,8 @@ In the Pseudocode to follow, we use the following function names. See [notes & n
   );
 
   require(
-    account_nonce == input_note_1.account_nonce &&
-    account_nonce == input_note_2.account_nonce
+    account_required == input_note_1.account_required &&
+    account_required == input_note_2.account_required
   );
 
   if (output_note_1.creator_pubkey) {
@@ -246,7 +244,7 @@ In the Pseudocode to follow, we use the following function names. See [notes & n
     const partial_value_note = {
       secret: partial_claim_note_data.note_secret,
       owner: input_note_1.owner,
-      account_nonce: input_note_1.account_nonce,
+      account_required: input_note_1.account_required,
       creator_pubkey = 0,
     };
     const partial_value_note_commitment = partial_value_note_commit(partial_value_note);

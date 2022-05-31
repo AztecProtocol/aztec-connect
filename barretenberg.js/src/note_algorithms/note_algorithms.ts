@@ -1,12 +1,12 @@
+import { AliasHash } from '../account_id';
+import { GrumpkinAddress } from '../address';
 import { toBigIntBE, toBufferBE } from '../bigint_buffer';
-import { AccountAliasId, AccountId } from '../account_id';
 import { ViewingKey } from '../viewing_key';
 import { BarretenbergWasm } from '../wasm';
 import { BarretenbergWorker } from '../wasm/worker';
 import { DefiInteractionNote } from './defi_interaction_note';
 import { TreeClaimNote } from './tree_claim_note';
 import { TreeNote } from './tree_note';
-import { GrumpkinAddress } from '../address';
 
 export class NoteAlgorithms {
   constructor(private wasm: BarretenbergWasm, private worker: BarretenbergWorker = wasm as any) {}
@@ -31,13 +31,13 @@ export class NoteAlgorithms {
     return Buffer.from(this.wasm.sliceMemory(0, 32));
   }
 
-  public valueNotePartialCommitment(noteSecret: Buffer, owner: AccountId) {
+  public valueNotePartialCommitment(noteSecret: Buffer, owner: GrumpkinAddress, accountRequired: boolean) {
     this.wasm.transferToHeap(noteSecret, 0);
-    this.wasm.transferToHeap(owner.publicKey.toBuffer(), 32);
+    this.wasm.transferToHeap(owner.toBuffer(), 32);
     // Currently this is only used for creating the value notes from a claim note.
     // Given these notes are owned by the creator of the claim note, we can leave creator pubkey as 0.
     this.wasm.transferToHeap(Buffer.alloc(32), 96);
-    this.wasm.call('notes__value_note_partial_commitment', 0, 32, 96, owner.accountNonce, 0);
+    this.wasm.call('notes__value_note_partial_commitment', 0, 32, 96, accountRequired, 0);
     return Buffer.from(this.wasm.sliceMemory(0, 32));
   }
 
@@ -77,17 +77,23 @@ export class NoteAlgorithms {
     return Buffer.from(this.wasm.sliceMemory(0, 32));
   }
 
-  public accountNoteCommitment(accountAliasId: AccountAliasId, publicKey: GrumpkinAddress, signingKey: Buffer) {
-    this.wasm.transferToHeap(accountAliasId.toBuffer(), 0);
-    this.wasm.transferToHeap(publicKey.toBuffer(), 32);
-    this.wasm.transferToHeap(signingKey, 64);
+  public accountNoteCommitment(aliasHash: AliasHash, accountPublicKey: GrumpkinAddress, spendingPublicKey: Buffer) {
+    this.wasm.transferToHeap(aliasHash.toBuffer32(), 0);
+    this.wasm.transferToHeap(accountPublicKey.toBuffer(), 32);
+    this.wasm.transferToHeap(spendingPublicKey, 64);
     this.wasm.call('notes__account_note_commitment', 0, 32, 64, 0);
     return Buffer.from(this.wasm.sliceMemory(0, 32));
   }
 
-  public accountAliasIdNullifier(accountAliasId: AccountAliasId) {
-    this.wasm.transferToHeap(accountAliasId.toBuffer(), 0);
-    this.wasm.call('notes__compute_account_alias_id_nullifier', 0, 0);
+  public accountAliasHashNullifier(aliasHash: AliasHash) {
+    this.wasm.transferToHeap(aliasHash.toBuffer32(), 0);
+    this.wasm.call('notes__compute_account_alias_hash_nullifier', 0, 0);
+    return Buffer.from(this.wasm.sliceMemory(0, 32));
+  }
+
+  public accountPublicKeyNullifier(accountPublicKey: GrumpkinAddress) {
+    this.wasm.transferToHeap(accountPublicKey.toBuffer(), 0);
+    this.wasm.call('notes__compute_account_public_key_nullifier', 0, 0);
     return Buffer.from(this.wasm.sliceMemory(0, 32));
   }
 

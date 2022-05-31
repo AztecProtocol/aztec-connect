@@ -1,4 +1,4 @@
-import { AccountAliasId, AccountId } from '@aztec/barretenberg/account_id';
+import { AliasHash } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { JoinSplitTx, ProofId } from '@aztec/barretenberg/client_proofs';
@@ -24,13 +24,14 @@ export class JoinSplitTxFactory {
     proofId: ProofId,
     assetId: number,
     inputNotes: Note[],
-    signingPubKey: GrumpkinAddress,
+    spendingPublicKey: GrumpkinAddress,
     {
       publicValue = BigInt(0),
       publicOwner = EthAddress.ZERO,
       outputNoteValue1 = BigInt(0),
       outputNoteValue2 = BigInt(0),
       newNoteOwner = user.id,
+      newNoteOwnerAccountRequired = true,
       bridgeId = BridgeId.ZERO,
       defiDepositValue = BigInt(0),
       allowChain = 0,
@@ -40,13 +41,18 @@ export class JoinSplitTxFactory {
       throw new Error('Cannot chain from more than one pending note.');
     }
 
-    const { id: accountId, aliasHash, privateKey, publicKey, accountNonce } = user;
-    if (accountNonce && !aliasHash) {
-      throw new Error('Alias hash not found.');
+    const { id: userId, accountPrivateKey, accountPublicKey } = user;
+
+    const accountRequired = !spendingPublicKey.equals(user.id);
+    const aliasHash = accountRequired ? (await this.db.getAlias(accountPublicKey))?.aliasHash : AliasHash.random();
+    if (!aliasHash) {
+      throw new Error('User not registered or not fully synced.');
     }
 
-    const accountAliasId = aliasHash ? new AccountAliasId(aliasHash, accountNonce) : AccountAliasId.random();
-    const { path: accountPath, index: accountIndex } = await this.getAccountPathAndIndex(accountId, signingPubKey);
+    const { path: accountPath, index: accountIndex } = await this.getAccountPathAndIndex(
+      accountPublicKey,
+      spendingPublicKey,
+    );
 
     const numInputNotes = inputNotes.length;
     const notes = [...inputNotes];
@@ -55,16 +61,16 @@ export class JoinSplitTxFactory {
     // Add gibberish notes to ensure we have two notes.
     for (let i = notes.length; i < 2; ++i) {
       const treeNote = TreeNote.createFromEphPriv(
-        publicKey, // owner
+        accountPublicKey, // owner
         BigInt(0), // value
         assetId,
-        accountNonce,
+        accountRequired,
         randomBytes(32), // inputNullifier - this is a dummy input nullifier for the dummy note.
         this.createEphemeralPrivKey(),
         this.grumpkin,
       );
       inputTreeNotes.push(treeNote);
-      notes.push(this.generateNewNote(treeNote, privateKey, { gibberish: true }));
+      notes.push(this.generateNewNote(treeNote, accountPrivateKey, { gibberish: true }));
     }
 
     const inputNoteIndices = notes.map(n => n.index || 0);
@@ -84,14 +90,14 @@ export class JoinSplitTxFactory {
     const inputNoteNullifiers = notes.map(n => n.nullifier);
 
     const newNotes = [
-      this.createNote(assetId, outputNoteValue1, newNoteOwner, inputNoteNullifiers[0]),
-      this.createNote(assetId, outputNoteValue2, accountId, inputNoteNullifiers[1]),
+      this.createNote(assetId, outputNoteValue1, newNoteOwner, newNoteOwnerAccountRequired, inputNoteNullifiers[0]),
+      this.createNote(assetId, outputNoteValue2, userId, accountRequired, inputNoteNullifiers[1]),
     ];
     const outputNotes = newNotes.map(n => n.note);
 
     const claimNote =
       proofId === ProofId.DEFI_DEPOSIT
-        ? this.createClaimNote(bridgeId, defiDepositValue, accountId, inputNoteNullifiers[0])
+        ? this.createClaimNote(bridgeId, defiDepositValue, userId, inputNoteNullifiers[0])
         : { note: ClaimNoteTxData.EMPTY, ephPubKey: undefined };
 
     const propagatedInputIndex = 1 + inputNotes.findIndex(n => n.allowChain);
@@ -99,7 +105,6 @@ export class JoinSplitTxFactory {
 
     const dataRoot = this.worldState.getRoot();
 
-    // For now, we will use the account key as the signing key (no account note required).
     const tx = new JoinSplitTx(
       proofId,
       publicValue,
@@ -112,11 +117,12 @@ export class JoinSplitTxFactory {
       inputTreeNotes,
       outputNotes,
       claimNote.note,
-      privateKey,
-      accountAliasId,
+      accountPrivateKey,
+      aliasHash,
+      accountRequired,
       accountIndex,
       accountPath,
-      signingPubKey,
+      spendingPublicKey,
       backwardLink,
       allowChain,
     );
@@ -127,22 +133,22 @@ export class JoinSplitTxFactory {
     return { tx, viewingKeys, partialStateSecretEphPubKey: claimNote.ephPubKey };
   }
 
-  private async getAccountPathAndIndex(accountId: AccountId, signingPubKey: GrumpkinAddress) {
-    if (accountId.accountNonce === 0) {
+  private async getAccountPathAndIndex(accountPublicKey: GrumpkinAddress, spendingPublicKey: GrumpkinAddress) {
+    if (spendingPublicKey.equals(accountPublicKey)) {
       return {
         path: this.worldState.buildZeroHashPath(WorldStateConstants.DATA_TREE_DEPTH),
         index: 0,
       };
     } else {
-      const signingKey = await this.db.getUserSigningKey(accountId, signingPubKey);
-      if (signingKey === undefined) {
-        throw new Error('Unknown signing key.');
+      const spendingKey = await this.db.getSpendingKey(accountPublicKey, spendingPublicKey);
+      if (spendingKey === undefined) {
+        throw new Error('Unknown spending key.');
       }
-      const immutableHashPath = HashPath.fromBuffer(signingKey.hashPath);
-      const path = await this.worldState.buildFullHashPath(signingKey.treeIndex, immutableHashPath);
+      const immutableHashPath = HashPath.fromBuffer(spendingKey.hashPath);
+      const path = await this.worldState.buildFullHashPath(spendingKey.treeIndex, immutableHashPath);
       return {
         path,
-        index: signingKey.treeIndex,
+        index: spendingKey.treeIndex,
       };
     }
   }
@@ -153,14 +159,21 @@ export class JoinSplitTxFactory {
     return new Note(treeNote, commitment, nullifier, allowChain, false);
   }
 
-  private createNote(assetId: number, value: bigint, owner: AccountId, inputNullifier: Buffer, sender?: AccountId) {
+  private createNote(
+    assetId: number,
+    value: bigint,
+    owner: GrumpkinAddress,
+    accountRequired: boolean,
+    inputNullifier: Buffer,
+    sender?: GrumpkinAddress,
+  ) {
     const { ephPrivKey } = this.createEphemeralKeyPair();
-    const creatorPubKey: Buffer = sender ? sender.publicKey.x() : Buffer.alloc(32);
+    const creatorPubKey = sender ? sender.x() : Buffer.alloc(32);
     const note = TreeNote.createFromEphPriv(
-      owner.publicKey,
+      owner,
       value,
       assetId,
-      owner.accountNonce,
+      accountRequired,
       inputNullifier,
       ephPrivKey,
       this.grumpkin,
@@ -170,9 +183,9 @@ export class JoinSplitTxFactory {
     return { note, viewingKey };
   }
 
-  private createClaimNote(bridgeId: BridgeId, value: bigint, owner: AccountId, inputNullifier: Buffer) {
+  private createClaimNote(bridgeId: BridgeId, value: bigint, owner: GrumpkinAddress, inputNullifier: Buffer) {
     const { ephPrivKey, ephPubKey } = this.createEphemeralKeyPair();
-    const noteSecret = deriveNoteSecret(owner.publicKey, ephPrivKey, this.grumpkin);
+    const noteSecret = deriveNoteSecret(owner, ephPrivKey, this.grumpkin);
     const note = new ClaimNoteTxData(value, bridgeId, noteSecret, inputNullifier);
     // ephPubKey is returned for the defi deposit use case, where we'd like to avoid creating a viewing key for the
     // partial claim note's partialState, since all we want to transmit is the ephPubKey (which we can do via offchain tx data).

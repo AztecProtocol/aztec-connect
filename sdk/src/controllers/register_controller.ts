@@ -1,15 +1,14 @@
-import { AccountId } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetValue } from '@aztec/barretenberg/asset';
 import { EthereumProvider } from '@aztec/barretenberg/blockchain';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { ClientEthereumBlockchain } from '@aztec/blockchain';
 import { CoreSdkInterface } from '../core_sdk';
-import { CorePaymentTx, createCorePaymentTxForRecipient } from '../core_tx';
 import { ProofOutput } from '../proofs';
 import { SchnorrSigner } from '../signer';
 import { createTxRefNo } from './create_tx_ref_no';
-import { DepositController, FeePayer } from './deposit_controller';
+import { DepositController } from './deposit_controller';
+import { FeePayer } from './fee_payer';
 
 export class RegisterController {
   private depositController?: DepositController;
@@ -17,12 +16,12 @@ export class RegisterController {
   private txId?: TxId;
 
   constructor(
-    public readonly userId: AccountId,
+    public readonly userId: GrumpkinAddress,
     public readonly alias: string,
     private readonly accountPrivateKey: Buffer,
-    public readonly signingPublicKey: GrumpkinAddress,
+    public readonly spendingPublicKey: GrumpkinAddress,
     public readonly recoveryPublicKey: GrumpkinAddress | undefined,
-    public readonly deposit: AssetValue,
+    public readonly depositValue: AssetValue,
     public readonly fee: AssetValue,
     public readonly depositor: EthAddress,
     public readonly feePayer: FeePayer | undefined,
@@ -30,16 +29,13 @@ export class RegisterController {
     blockchain: ClientEthereumBlockchain,
     provider: EthereumProvider,
   ) {
-    if (userId.accountNonce !== 1) {
-      throw new Error(`Expect new user to have account nonce 1. Got ${userId.accountNonce}.`);
-    }
-
-    if (deposit.value || fee.value) {
+    if (depositValue.value || fee.value) {
       this.depositController = new DepositController(
-        deposit,
+        depositValue,
         fee,
         depositor,
         this.userId,
+        true, // recipientAccountRequired
         feePayer,
         core,
         blockchain,
@@ -82,21 +78,19 @@ export class RegisterController {
 
   public async createProof() {
     const accountPublicKey = await this.core.derivePublicKey(this.accountPrivateKey);
-    if (!accountPublicKey.equals(this.userId.publicKey)) {
-      throw new Error('`accountPrivateKey` does not belong to the new user.');
+    if (!accountPublicKey.equals(this.userId)) {
+      throw new Error('`accountPrivateKey` does not belong to the user.');
     }
 
     const signer = new SchnorrSigner(this.core, accountPublicKey, this.accountPrivateKey);
-    const spendingPublicKey = signer.getPublicKey();
-    const aliasHash = await this.core.computeAliasHash(this.alias);
     const txRefNo = this.depositController ? createTxRefNo() : 0;
 
     const proofInput = await this.core.createAccountProofInput(
-      new AccountId(accountPublicKey, 0),
-      aliasHash,
-      true,
-      spendingPublicKey,
-      this.signingPublicKey,
+      this.userId,
+      this.alias,
+      false,
+      accountPublicKey,
+      this.spendingPublicKey,
       this.recoveryPublicKey,
       undefined,
     );
@@ -144,9 +138,7 @@ export class RegisterController {
     if (!this.depositController) {
       [this.txId] = await this.core.sendProofs([this.proofOutput]);
     } else {
-      const [{ tx, ...proofOutputData }] = this.depositController.getProofs();
-      const recipientTx = createCorePaymentTxForRecipient(tx as CorePaymentTx, this.userId);
-      const feeProofOutput = { tx: recipientTx, ...proofOutputData };
+      const [feeProofOutput] = this.depositController.getProofs();
       [this.txId] = await this.core.sendProofs([this.proofOutput, feeProofOutput]);
     }
     return this.txId;

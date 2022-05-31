@@ -1,4 +1,4 @@
-import { AccountAliasId, AccountId, AliasHash } from '@aztec/barretenberg/account_id';
+import { AliasHash } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { TxId } from '@aztec/barretenberg/tx_id';
@@ -17,16 +17,6 @@ export const grumpkinAddressTransformer: ValueTransformer = {
 export const aliasHashTransformer: ValueTransformer = {
   to: (entityValue?: AliasHash) => entityValue?.toBuffer(),
   from: (dbValue?: Buffer) => (dbValue ? new AliasHash(dbValue) : undefined),
-};
-
-export const accountAliasIdTransformer: ValueTransformer = {
-  to: (entityValue?: AccountAliasId) => entityValue?.toBuffer(),
-  from: (dbValue?: Buffer) => (dbValue ? AccountAliasId.fromBuffer(dbValue) : undefined),
-};
-
-export const accountIdTransformer: ValueTransformer = {
-  to: (entityValue?: AccountId) => entityValue?.toBuffer(),
-  from: (dbValue?: Buffer) => (dbValue ? AccountId.fromBuffer(dbValue) : undefined),
 };
 
 export const txIdTransformer: ValueTransformer = {
