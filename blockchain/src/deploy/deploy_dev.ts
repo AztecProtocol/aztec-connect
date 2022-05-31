@@ -36,6 +36,8 @@ export async function deployDev(signer: Signer, { dataTreeSize, roots }: TreeIni
   );
   const feeDistributor = await deployFeeDistributor(signer, rollup, uniswapRouter.address);
 
+  await rollup.setRollupProvider(await signer.getAddress(), true);
+
   const asset0 = await deployErc20(rollup, signer, true, 'DAI');
   const asset1 = await deployErc20(rollup, signer, true, 'BTC', 8);
 

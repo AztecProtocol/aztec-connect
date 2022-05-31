@@ -39,6 +39,8 @@ export async function deployMainnetE2e(signer: Signer, { dataTreeSize, roots }: 
   );
   const feeDistributor = await deployFeeDistributor(signer, rollup, UNISWAP_ROUTER_ADDRESS);
 
+  await rollup.setRollupProvider(await signer.getAddress(), true, { gasLimit });
+
   await rollup.setSupportedAsset(DAI_ADDRESS, 0, { gasLimit });
   await rollup.setSupportedAsset(LIDO_WSTETH_ADDRESS, 0, { gasLimit });
   await rollup.setSupportedAsset(elementTokenAddresses['lusd3crv-f'], 0, { gasLimit });

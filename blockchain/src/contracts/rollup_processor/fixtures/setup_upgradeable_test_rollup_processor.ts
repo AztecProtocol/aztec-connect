@@ -69,6 +69,8 @@ export async function setupTestRollupProcessor(
     new EthersAdapter(ethers.provider),
   );
 
+  await rollupProcessor.setRollupProvider(EthAddress.fromString(await rollupProvider.getAddress()), true);
+
   const assets = await setupAssets(rollupProvider, signers, 10n ** 18n, numberOfTokenAssets);
 
   const { uniswapRouter, createPair } = await setupUniswap(rollupProvider);
