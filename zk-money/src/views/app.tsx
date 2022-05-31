@@ -36,6 +36,7 @@ import { Earn } from './account/dashboard/earn';
 import { Trade } from './account/dashboard/trade';
 import { DefiRecipe, FlowDirection } from 'alt-model/defi/types';
 import { DefiModal } from 'views/account/dashboard/modals/defi_modal';
+import { IncentiveModal } from 'views/account/dashboard/modals/incentive_modal';
 import { KNOWN_MAINNET_ASSET_ADDRESSES } from 'alt-model/known_assets/known_asset_addresses';
 import './app.css';
 
@@ -51,6 +52,7 @@ interface AppState {
   activeDefiModal?: { recipe: DefiRecipe; flowDirection: FlowDirection };
   loginState: LoginState;
   worldState: WorldState;
+  activeIncentiveModal: boolean;
   providerState?: ProviderState;
   accountState?: AccountState;
   shieldForAliasForm?: ShieldFormValues;
@@ -92,6 +94,8 @@ export class AppView extends PureComponent<AppProps, AppState> {
 
     this.app = new App(config, LEGACY_APP_ASSETS, props.sdkObs, this.defaultAsset, loginMode);
 
+    const activeIncentiveModal = localStorage.getItem('incentiveModalWasClosed') !== 'true';
+
     this.state = {
       action: initialAction,
       loginState: this.app.loginState,
@@ -99,6 +103,7 @@ export class AppView extends PureComponent<AppProps, AppState> {
       providerState: this.app.providerState,
       accountState: this.app.accountState,
       shieldForAliasForm: this.app.shieldForAliasForm,
+      activeIncentiveModal,
       activeDefiModal: undefined,
       // path will be removed once we are able to add router to ui-components
       path: '/',
@@ -299,6 +304,16 @@ export class AppView extends PureComponent<AppProps, AppState> {
     return Theme.WHITE;
   };
 
+  private handleCloseIncentiveModal = () => {
+    this.setState({ activeIncentiveModal: false });
+    localStorage.setItem('incentiveModalWasClosed', 'true');
+  };
+
+  private handleSignUpFromIncentiveModal = () => {
+    this.handleSignup();
+    this.handleCloseIncentiveModal();
+  };
+
   render() {
     const {
       action,
@@ -311,6 +326,7 @@ export class AppView extends PureComponent<AppProps, AppState> {
       isLoading,
       homeState,
       activeDefiModal,
+      activeIncentiveModal,
     } = this.state;
     const { config } = this.props;
     const { step } = loginState;
@@ -412,6 +428,9 @@ export class AppView extends PureComponent<AppProps, AppState> {
           </TransitionGroup>
           {activeDefiModal && (
             <DefiModal onClose={() => this.setState({ activeDefiModal: undefined })} {...activeDefiModal} />
+          )}
+          {activeIncentiveModal && (
+            <IncentiveModal onSignUp={this.handleSignUpFromIncentiveModal} onClose={this.handleCloseIncentiveModal} />
           )}
         </AppContext.Provider>
       </Template>

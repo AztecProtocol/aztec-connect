@@ -1,0 +1,97 @@
+.incentiveModal {
+  width: 50vw !important;
+}
+
+.incentiveModalWrapper {
+  background-color: white;
+  height: 500px;
+  border-radius: 25px;
+  padding: 40px;
+  justify-content: space-between;
+  display: flex;
+  flex-direction: column;
+  color: #20293e;
+  position: relative;
+  overflow: hidden;
+}
+
+.background {
+  height: 100%;
+  top: 0;
+  right: 0;
+  position: absolute;
+}
+
+.close {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  padding: 10px;
+  height: 60px;
+  width: 60px;
+  cursor: pointer;
+}
+
+.text {
+  display: flex;
+  gap: 30px;
+  position: absolute;
+  flex-direction: column;
+}
+
+.title {
+  font-size: 44.2px;
+  font-weight: 450;
+  line-height: 120%;
+  letter-spacing: 0.05em;
+  padding-right: 25%;
+}
+
+.body {
+  padding-right: 25%;
+  letter-spacing: 0.05em;
+  font-size: 16px;
+  line-height: 130%;
+}
+
+.button {
+  width: 170px;
+}
+
+.body2 {
+  padding-right: 35%;
+}
+
+.gift {
+  position: absolute;
+  width: 250px;
+  bottom: -30px;
+  right: -15px;
+}
+
+@media (max-width: 1200px) {
+  .gift {
+    width: 200px;
+  }
+
+  .incentiveModalWrapper {
+    height: 600px;
+  }
+}
+
+@media (max-width: 1050px) {
+  .incentiveModalWrapper {
+    overflow: scroll;
+    height: 650px;
+  }
+
+  .button {
+    margin-bottom: 50px;
+  }
+}
+
+@media (max-width: 900px) {
+  .gift {
+    display: none;
+  }
+}

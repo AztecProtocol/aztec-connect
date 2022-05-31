@@ -43,6 +43,7 @@ interface ModalHeaderProps {
 interface ModalProps extends ModalHeaderProps {
   children: React.ReactNode;
   noPadding?: boolean;
+  className?: string;
 }
 
 export const ModalHeader: React.FunctionComponent<ModalHeaderProps> = ({ theme, title, onClose }) => (
@@ -86,7 +87,7 @@ export const Modal: React.FunctionComponent<ModalProps> = props => {
 
   return (
     <Overlay>
-      <ModalWrapper>{props.children}</ModalWrapper>
+      <ModalWrapper className={props.className}>{props.children}</ModalWrapper>
     </Overlay>
   );
 };
