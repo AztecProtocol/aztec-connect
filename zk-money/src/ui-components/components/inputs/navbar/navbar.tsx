@@ -20,7 +20,6 @@ interface NavbarProps {
   appAction: AppAction;
   path?: string;
   theme?: Theme;
-  onLogin?: () => void;
   onChange?: (path: string) => void;
   // NOTE: This is receiving an AccountComponent
   //     this should instead receive an AccountState and
@@ -42,19 +41,12 @@ const LINKS: LinkItem[] = [
 
 function getLogo(theme: Theme | undefined) {
   if (isSafari) {
-    return theme === Theme.GRADIENT ? <img src={zkMoneyLogoWhite} /> : <img src={zkMoneyLogo} />;
+    return <img src={theme === Theme.GRADIENT ? zkMoneyLogoWhite : zkMoneyLogo} alt="zk.money logo" />;
   }
   return <Logo className={cx(style.logo, theme === Theme.GRADIENT ? style.gradient : style.white)} />;
 }
 
-export function Navbar({
-  appAction,
-  isLoggedIn,
-  accountComponent,
-  theme,
-  onChange,
-  onLogin,
-}: NavbarProps): JSX.Element {
+export function Navbar({ appAction, isLoggedIn, accountComponent, theme, onChange }: NavbarProps): JSX.Element {
   const location = useLocation();
 
   return (

@@ -17,13 +17,7 @@ export function AppInitFailed() {
   }, [pathname]);
   return (
     <Template theme={Theme.GRADIENT} systemMessage={showingError ? ERR_MSG : undefined}>
-      <Navbar
-        path={window.location.pathname}
-        appAction={AppAction.NADA}
-        theme={Theme.GRADIENT}
-        isLoggedIn={false}
-        onLogin={handleInteraction}
-      />
+      <Navbar path={window.location.pathname} appAction={AppAction.NADA} theme={Theme.GRADIENT} isLoggedIn={false} />
       <Home
         onLogin={handleInteraction}
         onSignup={handleInteraction}

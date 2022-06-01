@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import styled, { css } from 'styled-components/macro';
-import { borderRadiuses, colours, defaultTextColour, fontSizes, spacings, Theme, themeColours } from '../styles';
+import { borderRadiuses, colours, defaultTextColour, spacings, Theme, themeColours } from '../styles';
 import { ClickOutside } from './click_outside';
 
 type DropdownPosition = 'top' | 'bottom';

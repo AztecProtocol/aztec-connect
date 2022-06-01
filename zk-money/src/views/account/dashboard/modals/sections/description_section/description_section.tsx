@@ -1,4 +1,3 @@
-import { Text } from 'components';
 import { bindStyle } from 'ui-components/util/classnames';
 import style from './description_section.module.scss';
 

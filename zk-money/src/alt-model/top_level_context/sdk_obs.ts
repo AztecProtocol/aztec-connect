@@ -1,4 +1,4 @@
-import { AztecSdk, createAztecSdk, JsonRpcProvider, SdkEvent, SdkFlavour } from '@aztec/sdk';
+import { AztecSdk, createAztecSdk, JsonRpcProvider, SdkEvent } from '@aztec/sdk';
 import { Obs } from 'app/util';
 import createDebug from 'debug';
 import { Config } from '../../config';

@@ -59,6 +59,7 @@ export function TransactionTimeField({ tx }: TransactionTimeFieldProps) {
         onMouseLeave={handleMouseLeave}
         className={style.ticks}
         src={tx.settled ? twoTicks : oneTick}
+        alt={tx.settled ? 'Two ticks out of two' : 'One tick out of two'}
       />
     </div>
   );

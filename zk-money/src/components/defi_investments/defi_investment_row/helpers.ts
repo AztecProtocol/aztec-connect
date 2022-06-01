@@ -5,7 +5,7 @@ import threeOneTick from 'images/three_ticks_one.svg';
 import threeTwoTicks from 'images/three_ticks_two.svg';
 
 export function getTicksIcon(filledTicks: 1 | 2, totalTicks: 2 | 3) {
-  if (totalTicks == 2) {
+  if (totalTicks === 2) {
     if (filledTicks === 1) {
       return twoOneTick;
     } else {
@@ -16,6 +16,21 @@ export function getTicksIcon(filledTicks: 1 | 2, totalTicks: 2 | 3) {
       return threeOneTick;
     } else {
       return threeTwoTicks;
+    }
+  }
+}
+export function getTicksIconAltText(filledTicks: 1 | 2, totalTicks: 2 | 3) {
+  if (totalTicks === 2) {
+    if (filledTicks === 1) {
+      return 'One tick out of two';
+    } else {
+      return 'Two ticks out of two';
+    }
+  } else {
+    if (filledTicks === 1) {
+      return 'One tick out of three';
+    } else {
+      return 'Two ticks out of three';
     }
   }
 }
