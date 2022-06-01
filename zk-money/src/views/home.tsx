@@ -124,7 +124,7 @@ export const Home: React.FunctionComponent<HomeProps> = ({ onLogin, onSignup, ho
                 Connect your Ethereum wallet to shield funds to Aztec and register an account alias.
               </div>
             </div>
-            <img src={shieldFunds} className={style.stepImage} />
+            <img src={shieldFunds} className={style.stepImage} alt="" />
           </div>
           <div className={style.step}>
             <div className={style.number}>2</div>
@@ -135,7 +135,7 @@ export const Home: React.FunctionComponent<HomeProps> = ({ onLogin, onSignup, ho
                 Funds can be used to interact with popular DeFi protocols like Element and Lido with full privacy.
               </div>
             </div>
-            <img src={privateDefi} className={style.stepImage} />
+            <img src={privateDefi} className={style.stepImage} alt="" />
           </div>
           <div className={style.step}>
             <div className={style.number}>3</div>
@@ -146,14 +146,14 @@ export const Home: React.FunctionComponent<HomeProps> = ({ onLogin, onSignup, ho
                 follow privacy best practices!
               </div>
             </div>
-            <img src={sendReceive} className={style.stepImage} />
+            <img src={sendReceive} className={style.stepImage} alt="" />
           </div>
         </div>
         <div className={style.sectionTitle}>Why zk.money?</div>
         <div className={style.howItWorksWrapper}>
-          <img className={cx(style.whyZk, style.whyImage1)} src={whyZkMoney1} />
-          <img className={cx(style.whyZk, style.whyImage2)} src={whyZkMoney2} />
-          <img className={cx(style.whyZk, style.whyImage3)} src={whyZkMoney3} />
+          <img className={cx(style.whyZk, style.whyImage1)} src={whyZkMoney1} alt="" />
+          <img className={cx(style.whyZk, style.whyImage2)} src={whyZkMoney2} alt="" />
+          <img className={cx(style.whyZk, style.whyImage3)} src={whyZkMoney3} alt="" />
           <div className={style.contentWrapper}>
             <div className={style.content}>
               <div className={style.title}>How does shielding work?</div>
@@ -201,7 +201,7 @@ export const Home: React.FunctionComponent<HomeProps> = ({ onLogin, onSignup, ho
 function Banner({ onShieldNow }: { onShieldNow: () => void }) {
   return (
     <div className={style.banner}>
-      <img src={cardStack} className={style.cardsGraphic} />
+      <img src={cardStack} className={style.cardsGraphic} alt="A stack of DeFi opportunity cards" />
       <div className={style.text}>
         <div className={style.title}>
           {`The `}
@@ -225,7 +225,7 @@ function Banner({ onShieldNow }: { onShieldNow: () => void }) {
 function FavoriteApps() {
   return (
     <div className={style.section}>
-      <img src={topWave} className={style.topWave} />
+      <img src={topWave} className={style.topWave} alt="" />
       <div className={style.favoriteApps}>
         <div className={style.sectionTitle}>Your favorite Dapps, made private.</div>
         <div className={style.subtitle}>
@@ -233,22 +233,22 @@ function FavoriteApps() {
           complete privacy, all via the magic of Aztec Connect.
         </div>
         <div className={style.logos}>
-          <img className={style.logo} src={aaveLogo} />
-          <img className={style.logo} src={compoundLogo} />
-          <img className={style.logo} src={uniswapLogo} />
-          <img className={style.logo} src={liquityLogo} />
-          <img className={style.logo} src={defipulseLogo} />
-          <img className={style.logo} src={ribbonLogo} />
-          <img className={style.logo} src={mstableLogo} />
-          <img className={style.logo} src={cowswapLogo} />
-          <img className={style.logo} src={setLogo} />
-          <img className={style.logo} src={tokemakLogo} />
+          <img className={style.logo} src={aaveLogo} alt="Aave logo" />
+          <img className={style.logo} src={compoundLogo} alt="Compound logo" />
+          <img className={style.logo} src={uniswapLogo} alt="Uniswap logo" />
+          <img className={style.logo} src={liquityLogo} alt="Liquidity logo" />
+          <img className={style.logo} src={defipulseLogo} alt="DeFi Pulse logo" />
+          <img className={style.logo} src={ribbonLogo} alt="Ribbon logo" />
+          <img className={style.logo} src={mstableLogo} alt="mStable logo" />
+          <img className={style.logo} src={cowswapLogo} alt="CowSwap logo" />
+          <img className={style.logo} src={setLogo} alt="Set logo" />
+          <img className={style.logo} src={tokemakLogo} alt="Tokemak logo" />
         </div>
         <div className={style.boxes}>
           <InfoBoxes />
         </div>
       </div>
-      <img className={style.bottomWave} src={bottomWave} />
+      <img className={style.bottomWave} src={bottomWave} alt="" />
     </div>
   );
 }
@@ -260,12 +260,12 @@ function InfoBoxes() {
         <div className={style.sectionTitle}>What do we support?</div>
         <div className={style.infoBox}>
           <div className={style.info}>
-            <img className={style.logo} src={stakingLogo} />
+            <img className={style.logo} src={stakingLogo} alt="" />
             <span className={style.title}>Staking</span>
             <div className={style.subtitle}>Stake Ether and other assets to earn continuous staking yields.</div>
           </div>
           <div className={style.info}>
-            <img className={style.logo} src={yieldLogo} />
+            <img className={style.logo} src={yieldLogo} alt="" />
             <span className={style.title}>Fixed Yield</span>
             <div className={style.subtitle}>Earn reliable fixed yields on funds deposited to Aztec.</div>
           </div>
@@ -275,14 +275,14 @@ function InfoBoxes() {
         <div className={style.sectionTitle}>What else can you do?</div>
         <div className={style.infoBox}>
           <div className={style.info}>
-            <img className={style.logo} src={privateSendLogo} />
+            <img className={style.logo} src={privateSendLogo} alt="" />
             <span className={style.title}>Private Send</span>
             <div className={style.subtitle}>
               Send to any Layer 1 address or internally to any Aztec alias with full privacy.
             </div>
           </div>
           <div className={style.info}>
-            <img className={style.logo} src={privateShieldLogo} />
+            <img className={style.logo} src={privateShieldLogo} alt="" />
             <span className={style.title}>Private Shield</span>
             <div className={style.subtitle}>
               Shield funds from Layer 1 to gain access to private DeFi opportunities.

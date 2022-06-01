@@ -519,7 +519,7 @@ export class UserSession extends EventEmitter {
     };
 
     try {
-      const { mode, alias } = this.loginState;
+      const { mode } = this.loginState;
       const isNewAlias = [LoginMode.SIGNUP, LoginMode.NEW_ALIAS].includes(mode);
       const { accountPublicKey } = this.keyVault;
 

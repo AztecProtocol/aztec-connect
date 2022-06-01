@@ -8,7 +8,12 @@ import { useState } from 'react';
 import { Hyperlink, HyperlinkIcon, Tooltip } from 'ui-components';
 import { useExplorerTxLink } from 'alt-model/explorer_link_hooks';
 import { useRollupProviderStatus } from 'alt-model';
-import { getTicksIcon, getTimeUntilNextRollup, getTimeUntilTransactionEstimation } from './helpers';
+import {
+  getTicksIcon,
+  getTicksIconAltText,
+  getTimeUntilNextRollup,
+  getTimeUntilTransactionEstimation,
+} from './helpers';
 import { TxId, UserDefiInteractionResultState, UserDefiTx } from '@aztec/sdk';
 import { useAsset } from 'alt-model/asset_hooks';
 import style from './defi_investment_interaction_fields.module.scss';
@@ -49,12 +54,19 @@ function TicksAndTooltip(props: { txId: TxId; tooltip: string; filledTicks: 1 | 
 
   const explorerLink = useExplorerTxLink(props.txId);
   const icon = getTicksIcon(props.filledTicks, props.totalTicks);
+  const iconAlt = getTicksIconAltText(props.filledTicks, props.totalTicks);
 
   return (
     <div className={style.statusColumn}>
       <div className={style.statusLabel}>{props.label}</div>
       <Hyperlink icon={HyperlinkIcon.Open} label={''} href={explorerLink} />
-      <img onMouseEnter={handleMouseOver} onMouseLeave={handleMouseLeave} className={style.ticks} src={icon} />
+      <img
+        onMouseEnter={handleMouseOver}
+        onMouseLeave={handleMouseLeave}
+        className={style.ticks}
+        src={icon}
+        alt={iconAlt}
+      />
       {showTooltip && <Tooltip className={style.tooltip} content={props.tooltip} />}
     </div>
   );
@@ -105,7 +117,7 @@ function renderAsyncField(position: DefiPosition_NonInteractable) {
 /**
  * Sync Entering
  */
-function SyncEntering_AwaitingDeposit(props: { tx: UserDefiTx }) {
+function SyncEnteringAwaitingDeposit(props: { tx: UserDefiTx }) {
   const estimate = getTimeUntilTransactionEstimation(props.tx.txId.toString());
   const inputAsset = useAsset(props.tx.bridgeId.inputAssetIdA);
   const tooltip = estimate
@@ -114,7 +126,7 @@ function SyncEntering_AwaitingDeposit(props: { tx: UserDefiTx }) {
   return <TicksAndTooltip txId={props.tx.txId} tooltip={tooltip} filledTicks={1} totalTicks={3} label="Entering" />;
 }
 
-function SyncEntering_AwaitingClaim(props: { tx: UserDefiTx }) {
+function SyncEnteringAwaitingClaim(props: { tx: UserDefiTx }) {
   const { nextPublishTime } = useRollupProviderStatus();
   const estimate = getTimeUntilNextRollup(nextPublishTime);
   const outputAsset = useAsset(props.tx.bridgeId.outputAssetIdA);
@@ -127,10 +139,10 @@ function SyncEntering_AwaitingClaim(props: { tx: UserDefiTx }) {
 function renderSyncEnteringField(position: DefiPosition_NonInteractable) {
   switch (position.tx.interactionResult.state) {
     case UserDefiInteractionResultState.PENDING:
-      return <SyncEntering_AwaitingDeposit tx={position.tx} />;
+      return <SyncEnteringAwaitingDeposit tx={position.tx} />;
     case UserDefiInteractionResultState.AWAITING_FINALISATION:
     case UserDefiInteractionResultState.AWAITING_SETTLEMENT:
-      return <SyncEntering_AwaitingClaim tx={position.tx} />;
+      return <SyncEnteringAwaitingClaim tx={position.tx} />;
     case UserDefiInteractionResultState.SETTLED:
       // (technically unlisted - we refer to the wstETH balance instead)
       return <div />;
@@ -141,7 +153,7 @@ function renderSyncEnteringField(position: DefiPosition_NonInteractable) {
  * Sync Exiting
  */
 
-function SyncExiting_AwaitingDeposit(props: { tx: UserDefiTx }) {
+function SyncExitingAwaitingDeposit(props: { tx: UserDefiTx }) {
   const estimate = getTimeUntilTransactionEstimation(props.tx.txId.toString());
   const asset = useAsset(props.tx.bridgeId.inputAssetIdA);
   const tooltip = estimate
@@ -150,7 +162,7 @@ function SyncExiting_AwaitingDeposit(props: { tx: UserDefiTx }) {
   return <TicksAndTooltip txId={props.tx.txId} tooltip={tooltip} filledTicks={1} totalTicks={3} label="Exiting" />;
 }
 
-function SyncExiting_AwaitingClaim(props: { tx: UserDefiTx }) {
+function SyncExitingAwaitingClaim(props: { tx: UserDefiTx }) {
   const { nextPublishTime } = useRollupProviderStatus();
   const estimate = getTimeUntilNextRollup(nextPublishTime);
   const outputAsset = useAsset(props.tx.bridgeId.inputAssetIdA);
@@ -163,10 +175,10 @@ function SyncExiting_AwaitingClaim(props: { tx: UserDefiTx }) {
 function renderSyncExitingField(position: DefiPosition_NonInteractable) {
   switch (position.tx.interactionResult.state) {
     case UserDefiInteractionResultState.PENDING:
-      return <SyncExiting_AwaitingDeposit tx={position.tx} />;
+      return <SyncExitingAwaitingDeposit tx={position.tx} />;
     case UserDefiInteractionResultState.AWAITING_FINALISATION:
     case UserDefiInteractionResultState.AWAITING_SETTLEMENT:
-      return <SyncExiting_AwaitingClaim tx={position.tx} />;
+      return <SyncExitingAwaitingClaim tx={position.tx} />;
     case UserDefiInteractionResultState.SETTLED:
       return <div />;
   }

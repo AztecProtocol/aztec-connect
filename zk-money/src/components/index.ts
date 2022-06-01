@@ -1,4 +1,3 @@
-export * from './block_title';
 export * from './button';
 export * from './border_box';
 export * from './card_tags';

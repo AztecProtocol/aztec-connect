@@ -6,7 +6,6 @@ import { DefiSettlementTime } from '@aztec/sdk';
 import { SplitSection } from '../../sections/split_section';
 import { RecipeSettlementTimeInformationSection } from '../../sections/settlement_time_information_section';
 import { PrivacyInformationSection } from '../../sections/privacy_information_section';
-import defiBridgeImage from 'images/defi_bridge.svg';
 import style from './defi_enter_page1.module.scss';
 import { DefiGasSection } from './../defi_gas_section';
 import { DefiWebLinks } from './../defi_web_links';

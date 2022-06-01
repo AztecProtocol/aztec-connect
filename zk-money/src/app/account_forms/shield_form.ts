@@ -37,7 +37,7 @@ import { KeyVault } from '../key_vault';
 import { Network } from '../networks';
 import { Provider, ProviderStatus } from '../provider';
 import { RollupService, RollupServiceEvent, RollupStatus, TxFee } from '../rollup_service';
-import { formatBaseUnits, fromBaseUnits, max, min, toBaseUnits } from '../units';
+import { formatBaseUnits, max, min, toBaseUnits } from '../units';
 import { AccountForm, AccountFormEvent } from './account_form';
 import { getAssetPreferredFractionalDigits } from 'alt-model/known_assets/known_asset_display_data';
 

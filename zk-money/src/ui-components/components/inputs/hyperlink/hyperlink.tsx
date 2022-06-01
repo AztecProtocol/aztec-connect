@@ -46,7 +46,7 @@ export function Hyperlink(props: HyperlinkProps) {
       rel="noreferrer"
     >
       {props.label}
-      {icon && <img className={style.icon} src={icon} />}
+      {icon && <img className={style.icon} src={icon} alt="Link button" />}
     </a>
   );
 }

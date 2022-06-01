@@ -64,26 +64,30 @@ export const ModalHeader: React.FunctionComponent<ModalHeaderProps> = ({ theme, 
 );
 
 export const Modal: React.FunctionComponent<ModalProps> = props => {
-  const handleKeyDown = (keyboardEvent: KeyboardEvent) => {
-    if (keyboardEvent.key === 'Escape') {
-      props.onClose && props.onClose();
-    }
-  };
-
   useEffect(() => {
     const prevPosition = document.body.style.position;
     const scrollY = window.scrollY;
     document.body.style.position = 'fixed';
     document.body.style.top = '0px';
-    document.addEventListener('keydown', handleKeyDown);
-
     return () => {
       document.body.style.position = prevPosition;
       document.body.style.top = '';
       window.scrollTo(0, scrollY);
-      document.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
+
+  const { onClose } = props;
+  useEffect(() => {
+    const handleKeyDown = (keyboardEvent: KeyboardEvent) => {
+      if (keyboardEvent.key === 'Escape') {
+        onClose?.();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
 
   return (
     <Overlay>

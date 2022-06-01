@@ -6,7 +6,7 @@ export const DefiCardHeader = ({ recipe }: { recipe: DefiRecipe }) => {
   const { investmentType, logo, flow } = recipe;
   return (
     <div className={style.cardHeader}>
-      <img className={style.cardHeaderLogo} src={logo} />
+      <img className={style.cardHeaderLogo} src={logo} alt="logo" />
       <div className={style.cardHeaderButtonsWrapper}>
         <CardInvestmentTypeTag investmentType={investmentType} />
         <CardAssetTag asset={flow.enter.inA} />
