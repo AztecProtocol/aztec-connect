@@ -1,14 +1,14 @@
 const initConfig = {
   '1': {
     initRoots: {
-      initDataRoot: '08b8089346ce9612be7cf12fcacf49f4bfba619958245ad25cad60507505b654',
-      initNullRoot: '0e1168117178772a4063fb7b00645b050ac7d06e683a255d7af95894632a1010',
-      initRootsRoot: '27eea2d2b8b24fa2e18fb276396ebdbcd2f18e57caf610fe079589c182b53ad2',
+      initDataRoot: '06e00f331c68d8109607a35e1bc247b149864ecee6568697f4a77e3c8ff35472',
+      initNullRoot: '20d5cc81a50d8e54f691566148510eaa8ba66d3ffe3ffbd770188990e45c6cce',
+      initRootsRoot: '2157ebc03adae85518c931f7efe94ef29de35b9a1f1a7a6b6bc9f1a119641628',
     },
-    initDataSize: 128078,
+    initDataSize: 147624,
     accountsData: './data/mainnet/accounts',
     firstRollup: 0,
-    lastRollup: 2735,
+    lastRollup: 3120,
   },
   default: {
     initRoots: {
@@ -23,7 +23,8 @@ const initConfig = {
       aliases: ['account1', 'account2', 'account3', 'account4'],
     },
   },
-  /*   default: {
+  /* Empty defaults.
+  default: {
     initRoots: {
       initDataRoot: '18ceb5cd201e1cee669a5c3ad96d3c4e933a365b37046fc3178264bede32c68d',
       initNullRoot: '298329c7d0936453f354e4a5eef4897296cc0bf5a66f2a528318508d2088dafa',

@@ -6,6 +6,7 @@ import { JsonRpcProvider } from '@aztec/blockchain';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { OffchainAccountData } from '@aztec/barretenberg/offchain_tx_data';
 import { Account, Accounts } from './account';
+import { AccountAliasId } from '@aztec/barretenberg/account_id';
 
 export async function getAccountsConnect(options: any) {
   const blockTimer = new Timer();
@@ -44,7 +45,7 @@ export async function getAccountsConnect(options: any) {
     })
     .map(x => {
       return {
-        aliasId: x.accountAliasId,
+        aliasId: new AccountAliasId(x.aliasHash, 0),
         accountKey: x.accountPublicKey,
         spendingKeys: [x.spendingPublicKey1, x.spendingPublicKey2],
       } as Account;

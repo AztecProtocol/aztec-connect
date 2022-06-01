@@ -9,6 +9,7 @@ import { getAccountsLegacy } from './legacy_aztec';
 import { getAccountsConnect } from './aztec_connect';
 import { Command, InvalidArgumentError } from 'commander';
 import * as filePath from 'path';
+import { mkdirSync } from 'fs';
 
 function parseAndCheckNumber(value: any, dummy: any): number {
   const parsedValue = parseInt(value, 10);
@@ -20,7 +21,7 @@ function parseAndCheckNumber(value: any, dummy: any): number {
 
 const program = new Command();
 program
-  .requiredOption('-d, --directory <dir>', 'Directory to output files')
+  .requiredOption('-d, --directory <dir>', 'Directory to output files', './data')
   .requiredOption('-a, --address <address>', 'Address of rollup processor contract')
   .requiredOption('-u, --url <url>', 'Infura URL')
   .requiredOption('-f, --from <rollupIdFrom>', 'Id of first required rollup', parseAndCheckNumber, 0)
@@ -105,7 +106,8 @@ function buildSigningKeyStrings(address: GrumpkinAddress, nonce: number, singing
 async function main() {
   console.log(`Started!!`);
   console.log('Args: ', options);
-  const path = filePath.resolve(__dirname, options.directory);
+  const path = options.directory;
+  mkdirSync(path);
   const accountsFile = path + '/accounts';
   const merkleDbPath = path + '/world_state.db';
 
