@@ -637,7 +637,12 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
         if ([ProofId.DEPOSIT, ProofId.SEND].includes(proof.tx.proofId)) {
           const recipient = proof.outputNotes[0].owner;
           if (!recipient.equals(userId)) {
-            const recipientTx = createCorePaymentTxForRecipient(proof.tx as CorePaymentTx, recipient);
+            const recipientAccountRequired = proof.outputNotes[0].ownerAccountRequired;
+            const recipientTx = createCorePaymentTxForRecipient(
+              proof.tx as CorePaymentTx,
+              recipient,
+              recipientAccountRequired,
+            );
             try {
               await this.getUserState(recipient).addProof({ ...proof, tx: recipientTx });
             } catch (e) {

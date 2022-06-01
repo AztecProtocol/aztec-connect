@@ -6,7 +6,7 @@ import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { OffchainJoinSplitData } from '@aztec/barretenberg/offchain_tx_data';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { WorldState } from '@aztec/barretenberg/world_state';
-import { CorePaymentTx as PaymentTx } from '../core_tx';
+import { CorePaymentTx } from '../core_tx';
 import { Database } from '../database';
 import { Note } from '../note';
 import { UserData } from '../user';
@@ -102,13 +102,31 @@ export class PaymentProofCreator {
     const proofData = new ProofData(proof);
     const txId = new TxId(proofData.txId);
 
-    const { inputNotes, outputNotes, proofId, publicValue, publicOwner } = tx;
+    const {
+      inputNotes,
+      outputNotes: [valueNote, changeNote],
+      proofId,
+      publicValue,
+      publicOwner,
+    } = tx;
     const privateInput = inputNotes.reduce((sum, n) => sum + n.value, BigInt(0));
-    const { value: recipientPrivateOutput } = outputNotes[0];
-    const { assetId, value: senderPrivateOutput } = outputNotes[1];
-    const newNoteOwner = outputNotes[0].ownerPubKey;
-    const userId = outputNotes[1].ownerPubKey;
-    const coreTx = new PaymentTx(
+    const { value: recipientPrivateOutput } = valueNote;
+    const { assetId, value: senderPrivateOutput } = changeNote;
+    const newNoteOwner = valueNote.ownerPubKey;
+    const userId = changeNote.ownerPubKey;
+    let isRecipient = newNoteOwner.equals(userId);
+    let isSender = true;
+    let accountRequired = changeNote.accountRequired;
+    if (
+      valueNote.ownerPubKey.equals(changeNote.ownerPubKey) &&
+      valueNote.accountRequired !== changeNote.accountRequired
+    ) {
+      // Tx should be owned by the registered user if sent from/to their own unregistered account.
+      isRecipient = valueNote.accountRequired;
+      isSender = changeNote.accountRequired;
+      accountRequired = true;
+    }
+    const coreTx = new CorePaymentTx(
       txId,
       userId,
       proofId,
@@ -118,8 +136,9 @@ export class PaymentProofCreator {
       privateInput,
       recipientPrivateOutput,
       senderPrivateOutput,
-      newNoteOwner?.equals(userId),
-      true, // isSender
+      isRecipient,
+      isSender,
+      accountRequired,
       txRefNo,
       new Date(),
     );
@@ -130,10 +149,10 @@ export class PaymentProofCreator {
       proofData,
       offchainTxData,
       outputNotes: [
-        this.txFactory.generateNewNote(outputNotes[0], user.accountPrivateKey, {
+        this.txFactory.generateNewNote(valueNote, user.accountPrivateKey, {
           allowChain: proofData.allowChainFromNote1,
         }),
-        this.txFactory.generateNewNote(outputNotes[1], user.accountPrivateKey, {
+        this.txFactory.generateNewNote(changeNote, user.accountPrivateKey, {
           allowChain: proofData.allowChainFromNote2,
         }),
       ],

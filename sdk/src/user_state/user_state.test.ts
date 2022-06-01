@@ -39,6 +39,7 @@ describe('user state', () => {
   let userState: UserState;
   let user: UserData;
   let generatedHashPaths: { [key: number]: HashPath } = {};
+  let inputNotes: Note[] = [];
   const pedersen = {} as any;
 
   const createEphemeralPrivKey = () => grumpkin.getRandomFr();
@@ -79,6 +80,25 @@ describe('user state', () => {
     } as any;
   };
 
+  const addInputNote = (
+    owner: GrumpkinAddress,
+    ownerAccountRequired: boolean,
+    assetId: number,
+    value: bigint,
+    nullifier: Buffer,
+  ) => {
+    const treeNote1 = new TreeNote(
+      owner,
+      value,
+      assetId,
+      ownerAccountRequired,
+      randomBytes(32),
+      Buffer.alloc(32),
+      randomBytes(32),
+    );
+    inputNotes.push(new Note(treeNote1, randomBytes(32), nullifier, true, false));
+  };
+
   beforeAll(async () => {
     const barretenberg = await BarretenbergWasm.new();
     grumpkin = new Grumpkin(barretenberg);
@@ -104,7 +124,9 @@ describe('user state', () => {
       removeUserTx: jest.fn(),
       addNote: jest.fn(),
       nullifyNote: jest.fn(),
-      getNoteByNullifier: jest.fn().mockResolvedValue({ owner: user.id }),
+      getNoteByNullifier: jest
+        .fn()
+        .mockImplementation((nullifier: Buffer) => inputNotes.find(n => n.nullifier.equals(nullifier))),
       getPendingNotes: jest.fn().mockResolvedValue([]),
       removeNote: jest.fn(),
       addClaimTx: jest.fn(),
@@ -113,7 +135,6 @@ describe('user state', () => {
       getUser: jest.fn().mockResolvedValue(user),
       updateUser: jest.fn(),
       addSpendingKey: jest.fn(),
-      getSpendingKeys: jest.fn().mockResolvedValue([]),
       getDefiTxsByNonce: jest.fn(),
     } as any;
 
@@ -122,6 +143,7 @@ describe('user state', () => {
       getPendingTxs: jest.fn().mockResolvedValue([]),
     } as any;
 
+    inputNotes = [];
     generatedHashPaths = {};
 
     userState = new UserState(user, grumpkin, noteAlgos, db as any, rollupProvider as any, pedersen);
@@ -129,9 +151,23 @@ describe('user state', () => {
     await userState.startSync([]);
   });
 
-  const createNote = (assetId: number, value: bigint, userId: GrumpkinAddress, inputNullifier: Buffer) => {
+  const createNote = (
+    assetId: number,
+    value: bigint,
+    userId: GrumpkinAddress,
+    userAccountRequired: boolean,
+    inputNullifier: Buffer,
+  ) => {
     const ephPrivKey = createEphemeralPrivKey();
-    const treeNote = TreeNote.createFromEphPriv(userId, value, assetId, true, inputNullifier, ephPrivKey, grumpkin);
+    const treeNote = TreeNote.createFromEphPriv(
+      userId,
+      value,
+      assetId,
+      userAccountRequired,
+      inputNullifier,
+      ephPrivKey,
+      grumpkin,
+    );
     const commitment = noteAlgos.valueNoteCommitment(treeNote);
     const nullifier = Buffer.alloc(0);
     const note = new Note(treeNote, commitment, nullifier, false, false);
@@ -165,28 +201,44 @@ describe('user state', () => {
   const generatePaymentProof = ({
     proofId = ProofId.SEND as PaymentProofId,
     proofSender = user,
+    proofSenderAccountRequired = true,
     newNoteOwner = createUser(),
+    newNoteOwnerAccountRequired = true,
     assetId = 1,
-    publicValue = 0n,
+    inputNoteValue1 = 0n,
+    inputNoteValue2 = 0n,
     outputNoteValue1 = 0n,
     outputNoteValue2 = 0n,
-    txFee = 0n,
+    publicValue = 0n,
     publicOwner = EthAddress.ZERO,
+    txFee = 0n,
     isPadding = false,
     createValidNoteCommitments = true,
     txRefNo = 0,
   } = {}) => {
+    // Input notes
     const nullifier1 = isPadding
       ? Buffer.alloc(32)
       : noteAlgos.valueNoteNullifier(randomBytes(32), proofSender.accountPrivateKey);
-    const nullifier2 = noteAlgos.valueNoteNullifier(randomBytes(32), proofSender.accountPrivateKey);
+    const nullifier2 = isPadding
+      ? Buffer.alloc(32)
+      : noteAlgos.valueNoteNullifier(randomBytes(32), proofSender.accountPrivateKey);
+    if (inputNoteValue1) {
+      addInputNote(proofSender.id, proofSenderAccountRequired, assetId, inputNoteValue1, nullifier1);
+    }
+    if (inputNoteValue2) {
+      addInputNote(proofSender.id, proofSenderAccountRequired, assetId, inputNoteValue2, nullifier2);
+    }
+
+    // Output notes
     const notes = [
-      createNote(assetId, outputNoteValue1, newNoteOwner.accountPublicKey, nullifier1),
-      createNote(assetId, outputNoteValue2, proofSender.accountPublicKey, nullifier2),
+      createNote(assetId, outputNoteValue1, newNoteOwner.accountPublicKey, newNoteOwnerAccountRequired, nullifier1),
+      createNote(assetId, outputNoteValue2, proofSender.accountPublicKey, proofSenderAccountRequired, nullifier2),
     ];
     const note1Commitment = createValidNoteCommitments ? notes[0].note.commitment : randomBytes(32);
     const note2Commitment = createValidNoteCommitments ? notes[1].note.commitment : randomBytes(32);
     const viewingKeys = isPadding ? [] : notes.map(n => n.viewingKey);
+
     const proofData = new InnerProofData(
       proofId,
       note1Commitment,
@@ -197,7 +249,9 @@ describe('user state', () => {
       publicOwner.toBuffer32(),
       numToUInt32BE(assetId, 32),
     );
+
     const offchainTxData = new OffchainJoinSplitData(viewingKeys, txRefNo);
+
     const tx = new CorePaymentTx(
       new TxId(proofData.txId),
       proofSender.id,
@@ -210,11 +264,96 @@ describe('user state', () => {
       outputNoteValue2,
       newNoteOwner.id.equals(user.id),
       proofSender.id.equals(user.id),
+      newNoteOwnerAccountRequired,
       txRefNo,
       new Date(),
     );
+
     return { proofData, offchainTxData, tx, outputNotes: notes.map(n => n.note) };
   };
+
+  const generateDepositProof = ({
+    recipient = user,
+    newNoteOwnerAccountRequired = true,
+    assetId = 1,
+    depositValue = 100n,
+    ethAddress = EthAddress.random(),
+    txFee = 8n,
+    txRefNo = 0,
+    createValidNoteCommitments = true,
+  } = {}) =>
+    generatePaymentProof({
+      proofId: ProofId.DEPOSIT,
+      newNoteOwner: recipient,
+      newNoteOwnerAccountRequired,
+      assetId,
+      outputNoteValue1: depositValue,
+      publicValue: depositValue + txFee,
+      publicOwner: ethAddress,
+      txFee,
+      createValidNoteCommitments,
+      txRefNo,
+    });
+
+  const generateWithdrawProof = ({
+    proofSender = user,
+    proofSenderAccountRequired = true,
+    recipient = EthAddress.random(),
+    assetId = 1,
+    inputNoteValue1 = 60n,
+    inputNoteValue2 = 40n,
+    withdrawValue = 100n,
+    txFee = 8n,
+    txRefNo = 0,
+    createValidNoteCommitments = true,
+  } = {}) =>
+    generatePaymentProof({
+      proofId: ProofId.WITHDRAW,
+      proofSender,
+      proofSenderAccountRequired,
+      newNoteOwner: proofSender,
+      newNoteOwnerAccountRequired: proofSenderAccountRequired,
+      assetId,
+      inputNoteValue1,
+      inputNoteValue2,
+      outputNoteValue1: 0n,
+      outputNoteValue2: inputNoteValue1 + inputNoteValue2 - withdrawValue - txFee,
+      publicValue: withdrawValue + txFee,
+      publicOwner: recipient,
+      txFee,
+      createValidNoteCommitments,
+      txRefNo,
+    });
+
+  const generateTransferProof = ({
+    proofSender = user,
+    proofSenderAccountRequired = true,
+    newNoteOwner = createUser(),
+    newNoteOwnerAccountRequired = true,
+    assetId = 1,
+    inputNoteValue1 = 80n,
+    inputNoteValue2 = 40n,
+    outputNoteValue1 = 64n,
+    outputNoteValue2 = 36n,
+    txFee = 8n,
+    createValidNoteCommitments = true,
+    txRefNo = 0,
+  } = {}) =>
+    generatePaymentProof({
+      proofId: ProofId.SEND,
+      proofSender,
+      proofSenderAccountRequired,
+      newNoteOwner,
+      newNoteOwnerAccountRequired,
+      assetId,
+      inputNoteValue1,
+      inputNoteValue2,
+      outputNoteValue1,
+      outputNoteValue2,
+      txFee,
+      createValidNoteCommitments,
+      txRefNo,
+    });
 
   const generateAccountProof = ({
     userId = user.id,
@@ -255,24 +394,29 @@ describe('user state', () => {
 
   const generateDefiDepositProof = ({
     bridgeId = BridgeId.random(),
+    inputNoteValue1 = 0n,
+    inputNoteValue2 = 0n,
     outputNoteValue = 0n,
     depositValue = 0n,
     txFee = 0n,
     proofSender = user,
     claimNoteRecipient = user.id,
-    recipientAccountRequired = false,
     txRefNo = 0,
   } = {}) => {
     const assetId = bridgeId.inputAssetIdA;
     const nullifier1 = noteAlgos.valueNoteNullifier(randomBytes(32), proofSender.accountPrivateKey);
     const nullifier2 = noteAlgos.valueNoteNullifier(randomBytes(32), proofSender.accountPrivateKey);
-    const dummyNote = createNote(assetId, 0n, proofSender.id, randomBytes(32));
-    const changeNote = createNote(assetId, outputNoteValue, proofSender.id, nullifier2);
+    addInputNote(proofSender.id, true, assetId, inputNoteValue1, nullifier1);
+    addInputNote(proofSender.id, true, assetId, inputNoteValue2, nullifier2);
+
+    const accountRequired = true; // accountRequired is always true for defi deposit.
+    const dummyNote = createNote(assetId, 0n, proofSender.id, accountRequired, randomBytes(32));
+    const changeNote = createNote(assetId, outputNoteValue, proofSender.id, accountRequired, nullifier2);
     const { partialClaimNote, partialStateSecretEphPubKey, partialStateSecret } = createClaimNote(
       bridgeId,
       depositValue,
       claimNoteRecipient,
-      recipientAccountRequired,
+      accountRequired,
       nullifier1,
     );
     const partialClaimNoteCommitment = noteAlgos.claimNotePartialCommitment(partialClaimNote);
@@ -324,9 +468,10 @@ describe('user state', () => {
     nullifier2 = randomBytes(32),
   } = {}) => {
     const assetId = bridgeId.inputAssetIdA;
+    const accountRequired = true;
     const notes = [
-      createNote(assetId, outputValueA, noteRecipient.id, nullifier1),
-      createNote(assetId, outputValueB, noteRecipient.id, nullifier2),
+      createNote(assetId, outputValueA, noteRecipient.id, accountRequired, nullifier1),
+      createNote(assetId, outputValueB, noteRecipient.id, accountRequired, nullifier2),
     ];
     const proofData = new InnerProofData(
       ProofId.DEFI_CLAIM,
@@ -395,10 +540,7 @@ describe('user state', () => {
   };
 
   it('settle existing join split tx, add new note to db and nullify old note', async () => {
-    const outputNoteValue1 = 36n;
-    const outputNoteValue2 = 64n;
-
-    const jsProof = generatePaymentProof({ outputNoteValue1, outputNoteValue2 });
+    const jsProof = generateTransferProof();
     const block = createRollupBlock([jsProof]);
 
     db.getPaymentTx.mockResolvedValue({ settled: undefined });
@@ -409,7 +551,7 @@ describe('user state', () => {
     expect(db.addNote).toHaveBeenCalledTimes(1);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
       commitment: jsProof.proofData.noteCommitment2,
-      value: outputNoteValue2,
+      value: jsProof.tx.senderPrivateOutput,
       hashPath: generatedHashPaths[1].toBuffer(),
     });
     expect(db.nullifyNote).toHaveBeenCalledTimes(2);
@@ -425,13 +567,8 @@ describe('user state', () => {
   });
 
   it('add proof with pending notes, update the note status after settling the tx', async () => {
-    const outputNoteValue1 = 36n;
-    const outputNoteValue2 = 64n;
-
-    const jsProof = generatePaymentProof({ outputNoteValue1, outputNoteValue2 });
+    const jsProof = generateTransferProof();
     const block = createRollupBlock([jsProof]);
-
-    db.getPaymentTx.mockResolvedValue({ settled: undefined });
 
     const tx = { proofId: ProofId.SEND } as CorePaymentTx;
     const clientProofData = Buffer.concat([
@@ -449,7 +586,7 @@ describe('user state', () => {
     expect(db.addNote).toHaveBeenCalledTimes(1);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
       commitment: jsProof.proofData.noteCommitment2,
-      value: outputNoteValue2,
+      value: jsProof.tx.senderPrivateOutput,
       allowChain: false,
       pending: true,
       hashPath: undefined,
@@ -459,13 +596,15 @@ describe('user state', () => {
     db.addNote.mockClear();
     db.addPaymentTx.mockClear();
 
+    db.getPaymentTx.mockResolvedValue({ settled: undefined });
+
     userState.processBlock(createBlockContext(block));
     await userState.stopSync(true);
 
     expect(db.addNote).toHaveBeenCalledTimes(1);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
       commitment: jsProof.proofData.noteCommitment2,
-      value: outputNoteValue2,
+      value: jsProof.tx.senderPrivateOutput,
       allowChain: false,
       pending: false,
       hashPath: generatedHashPaths[1].toBuffer(),
@@ -476,13 +615,20 @@ describe('user state', () => {
   });
 
   it('should correctly process multiple blocks', async () => {
-    const jsProof1 = generatePaymentProof({ outputNoteValue1: 1n, outputNoteValue2: 2n });
+    const jsProof1 = generateTransferProof({
+      inputNoteValue1: 3n,
+      inputNoteValue2: 4n,
+      outputNoteValue1: 1n,
+      outputNoteValue2: 2n,
+    });
     const block1 = createRollupBlock([jsProof1], { rollupId: 0, rollupSize: 2, dataStartIndex: 0 });
 
     const accountProof = generateAccountProof();
-    const jsProof2 = generatePaymentProof({
-      outputNoteValue1: 3n,
-      outputNoteValue2: 4n,
+    const jsProof2 = generateTransferProof({
+      inputNoteValue1: 30n,
+      inputNoteValue2: 40n,
+      outputNoteValue1: 10n,
+      outputNoteValue2: 20n,
     });
     const block2 = createRollupBlock([accountProof, jsProof2], { rollupId: 1, rollupSize: 2, dataStartIndex: 4 });
 
@@ -498,7 +644,7 @@ describe('user state', () => {
     });
     expect(db.addNote.mock.calls[1][0]).toMatchObject({
       commitment: jsProof2.proofData.noteCommitment2,
-      value: 4n,
+      value: 20n,
       hashPath: generatedHashPaths[7].toBuffer(),
     });
     expect(db.nullifyNote).toHaveBeenCalledTimes(4);
@@ -552,31 +698,16 @@ describe('user state', () => {
   });
 
   it('restore a deposit tx and save to db', async () => {
-    const assetId = 1;
-    const outputNoteValue1 = 36n;
-    const outputNoteValue2 = 64n;
-    const inputNoteValue = 70n;
-    const publicValue = 60n;
-    const publicOwner = EthAddress.random();
+    const depositValue = 100n;
+    const txFee = 8n;
+    const ethAddress = EthAddress.random();
 
-    const jsProof = generatePaymentProof({
-      proofId: ProofId.DEPOSIT,
-      assetId,
-      outputNoteValue1,
-      outputNoteValue2,
-      publicValue,
-      publicOwner,
+    const jsProof = generateDepositProof({
+      depositValue,
+      txFee,
+      ethAddress,
     });
     const block = createRollupBlock([jsProof]);
-
-    db.getNoteByNullifier.mockResolvedValueOnce({
-      owner: user.id,
-      value: inputNoteValue,
-    });
-    db.getNoteByNullifier.mockResolvedValueOnce({
-      owner: user.id,
-      value: 0n,
-    });
 
     userState.processBlock(createBlockContext(block));
     await userState.stopSync(true);
@@ -584,66 +715,52 @@ describe('user state', () => {
     const txId = new TxId(jsProof.proofData.txId);
     expect(db.addNote).toHaveBeenCalledTimes(1);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
-      commitment: jsProof.proofData.noteCommitment2,
-      value: outputNoteValue2,
-      hashPath: generatedHashPaths[1].toBuffer(),
+      commitment: jsProof.proofData.noteCommitment1,
+      value: depositValue,
+      hashPath: generatedHashPaths[0].toBuffer(),
     });
-    expect(db.nullifyNote).toHaveBeenCalledTimes(2);
-    expect(db.nullifyNote).toHaveBeenCalledWith(jsProof.proofData.nullifier1);
-    expect(db.nullifyNote).toHaveBeenCalledWith(jsProof.proofData.nullifier2);
+    expect(db.nullifyNote).toHaveBeenCalledTimes(0);
     expect(db.settlePaymentTx).toHaveBeenCalledTimes(0);
     expect(db.addPaymentTx).toHaveBeenCalledTimes(1);
     expect(db.addPaymentTx.mock.calls[0][0]).toMatchObject({
       txId,
       userId: user.id,
-      assetId,
-      publicValue,
-      publicOwner,
-      privateInput: inputNoteValue,
-      recipientPrivateOutput: 0n,
-      senderPrivateOutput: outputNoteValue2,
-      isSender: true,
+      publicValue: depositValue + txFee,
+      publicOwner: ethAddress,
+      privateInput: 0n,
+      recipientPrivateOutput: depositValue,
+      senderPrivateOutput: 0n,
+      isRecipient: true,
+      accountRequired: true,
       settled: block.created,
     });
   });
 
   it('restore a withdraw tx and save to db', async () => {
-    const proofId = ProofId.WITHDRAW;
-    const assetId = 1;
-    const outputNoteValue1 = 0n;
-    const outputNoteValue2 = 10n;
-    const inputNoteValue = 70n;
-    const publicValue = 60n;
-    const publicOwner = EthAddress.random();
+    const inputNoteValue1 = 70n;
+    const inputNoteValue2 = 40n;
+    const withdrawValue = 100n;
+    const txFee = 8n;
+    const recipient = EthAddress.random();
 
-    const jsProof = generatePaymentProof({
-      proofId,
-      assetId,
-      outputNoteValue1,
-      outputNoteValue2,
-      publicValue,
-      publicOwner,
-      newNoteOwner: user,
+    const jsProof = generateWithdrawProof({
+      inputNoteValue1,
+      inputNoteValue2,
+      withdrawValue,
+      txFee,
+      recipient,
     });
     const block = createRollupBlock([jsProof]);
-
-    db.getNoteByNullifier.mockResolvedValueOnce({
-      owner: user.id,
-      value: inputNoteValue,
-    });
-    db.getNoteByNullifier.mockResolvedValueOnce({
-      owner: user.id,
-      value: 0n,
-    });
 
     userState.processBlock(createBlockContext(block));
     await userState.stopSync(true);
 
     const txId = new TxId(jsProof.proofData.txId);
+    const changeValue = inputNoteValue1 + inputNoteValue2 - withdrawValue - txFee;
     expect(db.addNote).toHaveBeenCalledTimes(1);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
       commitment: jsProof.proofData.noteCommitment2,
-      value: outputNoteValue2,
+      value: changeValue,
       hashPath: generatedHashPaths[1].toBuffer(),
     });
     expect(db.nullifyNote).toHaveBeenCalledTimes(2);
@@ -654,30 +771,23 @@ describe('user state', () => {
     expect(db.addPaymentTx.mock.calls[0][0]).toMatchObject({
       txId,
       userId: user.id,
-      assetId,
-      publicValue,
-      publicOwner,
-      privateInput: inputNoteValue,
+      publicValue: withdrawValue + txFee,
+      publicOwner: recipient,
+      privateInput: inputNoteValue1 + inputNoteValue2,
       recipientPrivateOutput: 0n,
-      senderPrivateOutput: outputNoteValue2,
+      senderPrivateOutput: changeValue,
       isSender: true,
       settled: block.created,
     });
   });
 
   it('restore a transfer tx sent from another user to us', async () => {
-    const proofId = ProofId.SEND;
     const proofSender = createUser();
-    const outputNoteValue1 = 56n;
-    const outputNoteValue2 = 78n;
-    const jsProof = generatePaymentProof({
-      proofId,
+    const proof = generateTransferProof({
       proofSender,
       newNoteOwner: user,
-      outputNoteValue1,
-      outputNoteValue2,
     });
-    const block = createRollupBlock([jsProof]);
+    const block = createRollupBlock([proof]);
 
     db.getNoteByNullifier.mockResolvedValue(undefined);
 
@@ -686,8 +796,8 @@ describe('user state', () => {
 
     expect(db.addNote).toHaveBeenCalledTimes(1);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
-      commitment: jsProof.proofData.noteCommitment1,
-      value: outputNoteValue1,
+      commitment: proof.proofData.noteCommitment1,
+      value: proof.tx.recipientPrivateOutput,
       hashPath: generatedHashPaths[0].toBuffer(),
     });
     expect(db.nullifyNote).toHaveBeenCalledTimes(0);
@@ -695,78 +805,131 @@ describe('user state', () => {
     expect(db.addPaymentTx.mock.calls[0][0]).toMatchObject({
       userId: user.id,
       privateInput: 0n,
-      recipientPrivateOutput: outputNoteValue1,
+      recipientPrivateOutput: proof.tx.recipientPrivateOutput,
       senderPrivateOutput: 0n,
       isSender: false,
+      isRecipient: true,
       settled: block.created,
     });
   });
 
   it('restore a transfer tx sent from another local user to us', async () => {
-    const proofId = ProofId.SEND;
     const proofSender = createUser();
-    const outputNoteValue1 = 56n;
-    const outputNoteValue2 = 78n;
-    const jsProof = generatePaymentProof({
-      proofId,
+    const proof = generateTransferProof({
       proofSender,
       newNoteOwner: user,
-      outputNoteValue1,
-      outputNoteValue2,
     });
-    const block = createRollupBlock([jsProof]);
-
-    db.getNoteByNullifier.mockResolvedValue({ owner: proofSender.id });
+    const block = createRollupBlock([proof]);
 
     userState.processBlock(createBlockContext(block));
     await userState.stopSync(true);
 
     expect(db.addNote).toHaveBeenCalledTimes(1);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
-      commitment: jsProof.proofData.noteCommitment1,
-      value: outputNoteValue1,
+      commitment: proof.proofData.noteCommitment1,
+      value: proof.tx.recipientPrivateOutput,
       hashPath: generatedHashPaths[0].toBuffer(),
     });
+
+    // Will not nullify the notes even when they are in db.
+    expect(db.getNoteByNullifier(proof.proofData.nullifier1)).not.toBeUndefined();
+    expect(db.getNoteByNullifier(proof.proofData.nullifier2)).not.toBeUndefined();
     expect(db.nullifyNote).toHaveBeenCalledTimes(0);
+
     expect(db.addPaymentTx).toHaveBeenCalledTimes(1);
     expect(db.addPaymentTx.mock.calls[0][0]).toMatchObject({
       userId: user.id,
       privateInput: 0n,
-      recipientPrivateOutput: outputNoteValue1,
+      recipientPrivateOutput: proof.tx.recipientPrivateOutput,
       senderPrivateOutput: 0n,
       isSender: false,
+      isRecipient: true,
       settled: block.created,
     });
   });
 
   it('restore a transfer tx sent to another user', async () => {
-    const proofId = ProofId.SEND;
-    const outputNoteValue1 = 56n;
-    const outputNoteValue2 = 78n;
-    const jsProof = generatePaymentProof({
-      proofId,
-      newNoteOwner: createUser(),
-      outputNoteValue1,
-      outputNoteValue2,
-    });
-    const block = createRollupBlock([jsProof]);
+    const proof = generateTransferProof();
+    const block = createRollupBlock([proof]);
 
     userState.processBlock(createBlockContext(block));
     await userState.stopSync(true);
 
     expect(db.addNote).toHaveBeenCalledTimes(1);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
-      commitment: jsProof.proofData.noteCommitment2,
-      value: outputNoteValue2,
+      commitment: proof.proofData.noteCommitment2,
+      value: proof.tx.senderPrivateOutput,
       hashPath: generatedHashPaths[1].toBuffer(),
     });
+    expect(db.nullifyNote).toHaveBeenCalledTimes(2);
     expect(db.addPaymentTx).toHaveBeenCalledTimes(1);
     expect(db.addPaymentTx.mock.calls[0][0]).toMatchObject({
       userId: user.id,
       recipientPrivateOutput: 0n,
-      senderPrivateOutput: 78n,
+      senderPrivateOutput: proof.tx.senderPrivateOutput,
       isSender: true,
+      isRecipient: false,
       settled: block.created,
+    });
+  });
+
+  it('restore a transfer tx sent from unregistered to registered account', async () => {
+    const proof = generateTransferProof({
+      proofSender: user,
+      proofSenderAccountRequired: false,
+      newNoteOwner: user,
+      newNoteOwnerAccountRequired: true,
+    });
+    const block = createRollupBlock([proof]);
+
+    userState.processBlock(createBlockContext(block));
+    await userState.stopSync(true);
+
+    expect(db.addPaymentTx.mock.calls[0][0]).toMatchObject({
+      userId: user.id,
+      isRecipient: true,
+      isSender: false,
+      accountRequired: true,
+    });
+  });
+
+  it('restore a transfer tx sent from registered to unregistered account', async () => {
+    const proof = generateTransferProof({
+      proofSender: user,
+      proofSenderAccountRequired: true,
+      newNoteOwner: user,
+      newNoteOwnerAccountRequired: false,
+    });
+    const block = createRollupBlock([proof]);
+
+    userState.processBlock(createBlockContext(block));
+    await userState.stopSync(true);
+
+    expect(db.addPaymentTx.mock.calls[0][0]).toMatchObject({
+      userId: user.id,
+      isRecipient: false,
+      isSender: true,
+      accountRequired: true,
+    });
+  });
+
+  it('restore a transfer tx sent to unregistered account from someone else', async () => {
+    const proofSender = createUser();
+    const proof = generateTransferProof({
+      proofSender,
+      newNoteOwner: user,
+      newNoteOwnerAccountRequired: false,
+    });
+    const block = createRollupBlock([proof]);
+
+    userState.processBlock(createBlockContext(block));
+    await userState.stopSync(true);
+
+    expect(db.addPaymentTx.mock.calls[0][0]).toMatchObject({
+      userId: user.id,
+      isRecipient: true,
+      isSender: false,
+      accountRequired: false,
     });
   });
 
@@ -1022,11 +1185,7 @@ describe('user state', () => {
 
     // create some other transaction to put into a rollup
     // the defi interaction result will go in this block
-    const jsProof = generatePaymentProof({
-      newNoteOwner: createUser(),
-      outputNoteValue1: 56n,
-      outputNoteValue2: 78n,
-    });
+    const jsProof = generateTransferProof();
     const block2 = createRollupBlock([jsProof], {
       rollupId: rollupId + 1,
       interactionResult: [
@@ -1131,15 +1290,6 @@ describe('user state', () => {
       dataStartIndex: 64,
     });
 
-    db.getNoteByNullifier.mockResolvedValueOnce({
-      owner: user.id,
-      value: inputNoteValues[0],
-    });
-    db.getNoteByNullifier.mockResolvedValueOnce({
-      owner: user.id,
-      value: inputNoteValues[1],
-    });
-
     const randomDefitX = { txId: TxId.random(), depositValue: 0n };
     db.getDefiTxsByNonce.mockImplementation((_, nonce) => (nonce === defiProofInteractionNonce ? [] : [randomDefitX]));
 
@@ -1187,7 +1337,6 @@ describe('user state', () => {
     const jsTxFee = 2n;
     const outputNoteValue1 = 36n;
     const outputNoteValue2 = 64n;
-    const inputNoteValue = outputNoteValue1 + outputNoteValue2 + jsTxFee;
     const defiTxFee = 6n;
     const depositValue = outputNoteValue1 - defiTxFee;
     const outputValueA = 10n;
@@ -1233,19 +1382,6 @@ describe('user state', () => {
     db.addDefiTx.mockClear();
 
     db.getDefiTx.mockResolvedValue({ settled: undefined });
-
-    db.getNoteByNullifier.mockResolvedValueOnce({
-      owner: user.id,
-      value: inputNoteValue,
-    });
-    db.getNoteByNullifier.mockResolvedValueOnce({
-      owner: user.id,
-      value: 0n,
-    });
-    db.getNoteByNullifier.mockResolvedValueOnce({
-      owner: user.id,
-      value: outputNoteValue1,
-    });
 
     const rollupId = 4;
     const defiProofInteractionNonce = rollupId * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK;

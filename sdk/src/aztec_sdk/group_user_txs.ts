@@ -212,7 +212,7 @@ const getPrimaryTx = (txs: CoreUserTx[]) =>
   txs.find(tx => tx.proofId === ProofId.SEND && !tx.isSender) ||
   txs.find(tx => !getFee(tx).value);
 
-const toUserTx = (txs: CoreUserTx[]) => {
+const toUserTx = (txs: CoreUserTx[], accountRequired: boolean) => {
   const primaryTx = getPrimaryTx(txs);
   if (!primaryTx) {
     return;
@@ -236,6 +236,9 @@ const toUserTx = (txs: CoreUserTx[]) => {
       return [userDefiTx];
     }
     default: {
+      if (primaryTx.accountRequired !== accountRequired) {
+        return;
+      }
       const value = getPaymentValue(primaryTx);
       return [toUserPaymentTx(primaryTx, value, fee)];
     }
@@ -272,9 +275,9 @@ const bySettledThenCreated = (tx1: UserTx, tx2: UserTx) => {
   return 0;
 };
 
-export const groupUserTxs = (txs: CoreUserTx[]) => {
+export const groupUserTxs = (txs: CoreUserTx[], accountRequired = true) => {
   const txGroups = groupTxsByTxRefNo(txs);
-  return filterUndefined(txGroups.map(txs => toUserTx(txs)))
+  return filterUndefined(txGroups.map(txs => toUserTx(txs, accountRequired)))
     .flat()
     .sort(bySettledThenCreated);
 };

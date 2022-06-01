@@ -7,7 +7,7 @@ import { serializeBufferArrayToVector } from '@aztec/barretenberg/serialize';
 import { WorldStateConstants } from '@aztec/barretenberg/world_state';
 import { Connection, In, IsNull, LessThan, MoreThanOrEqual, Not, Repository } from 'typeorm';
 import { AccountDao, AssetMetricsDao, ClaimDao, RollupDao, RollupProofDao, TxDao } from '../entity';
-import { txDaoToAccountDao } from './tx_dao_to_account_dao';
+import { getNewAccountDaos } from './tx_dao_to_account_dao';
 
 export type RollupDb = {
   [P in keyof TypeOrmRollupDb]: TypeOrmRollupDb[P];
@@ -33,15 +33,16 @@ export class TypeOrmRollupDb implements RollupDb {
   public async addTx(txDao: TxDao) {
     await this.connection.transaction(async transactionalEntityManager => {
       await transactionalEntityManager.save(txDao);
-      if (txDao.txType === TxType.ACCOUNT) {
-        await transactionalEntityManager.save(txDaoToAccountDao(txDao));
+      const [newAccountDao] = getNewAccountDaos([txDao]);
+      if (newAccountDao) {
+        await transactionalEntityManager.save(newAccountDao);
       }
     });
   }
 
   public async addTxs(txs: TxDao[]) {
     await this.connection.transaction(async transactionalEntityManager => {
-      const accountDaos = txs.filter(tx => tx.txType === TxType.ACCOUNT).map(txDaoToAccountDao);
+      const accountDaos = getNewAccountDaos(txs);
       await transactionalEntityManager.save(accountDaos);
       await transactionalEntityManager.save(txs);
     });
@@ -137,7 +138,7 @@ export class TypeOrmRollupDb implements RollupDb {
       where: { txType: TxType.ACCOUNT, mined: null },
       order: { created: 'DESC' },
     });
-    return unsettledAccountTxs.map(txDaoToAccountDao);
+    return getNewAccountDaos(unsettledAccountTxs);
   }
 
   public async getPendingTxs(take?: number) {
@@ -263,7 +264,7 @@ export class TypeOrmRollupDb implements RollupDb {
       }
       await transactionalEntityManager.delete(this.rollupRep.target, { id: rollup.id });
       await transactionalEntityManager.save(rollup);
-      const accountDaos = rollup.rollupProof.txs.filter(tx => tx.txType === TxType.ACCOUNT).map(txDaoToAccountDao);
+      const accountDaos = getNewAccountDaos(rollup.rollupProof.txs);
       await transactionalEntityManager.save(accountDaos);
     });
   }

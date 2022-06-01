@@ -587,6 +587,20 @@ export class UserState extends EventEmitter {
     const privateInput = noteValue(destroyedNote1) + noteValue(destroyedNote2);
     const recipientPrivateOutput = noteValue(valueNote);
     const senderPrivateOutput = noteValue(changeNote);
+    let isRecipient = !!valueNote;
+    let isSender = !!changeNote;
+    let accountRequired = (valueNote || changeNote)!.ownerAccountRequired;
+    if (
+      valueNote &&
+      changeNote &&
+      valueNote.owner.equals(changeNote.owner) &&
+      valueNote.ownerAccountRequired !== changeNote.ownerAccountRequired
+    ) {
+      // Tx should be owned by the registered user if sent from/to their own unregistered account.
+      isRecipient = valueNote.ownerAccountRequired;
+      isSender = changeNote.ownerAccountRequired;
+      accountRequired = true;
+    }
 
     const { txRefNo } = offchainTxData;
 
@@ -600,8 +614,9 @@ export class UserState extends EventEmitter {
       privateInput,
       recipientPrivateOutput,
       senderPrivateOutput,
-      !!valueNote,
-      !!changeNote,
+      isRecipient,
+      isSender,
+      accountRequired,
       txRefNo,
       new Date(),
       blockCreated,

@@ -55,6 +55,7 @@ const toCorePaymentTx = (tx: PaymentTxDao) =>
     tx.senderPrivateOutput,
     tx.isRecipient,
     tx.isSender,
+    tx.accountRequired,
     tx.txRefNo,
     tx.created,
     tx.settled,

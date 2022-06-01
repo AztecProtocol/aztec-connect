@@ -45,25 +45,33 @@ describe('rollup_db', () => {
   });
 
   it('should count accounts that have unique account public key', async () => {
-    const aliasHash0 = AliasHash.random();
-    const aliasHash1 = AliasHash.random();
-    const aliasHash2 = AliasHash.random();
-    const accountPublicKey = GrumpkinAddress.random();
+    const createAccountTxs = () => {
+      const aliasHash = AliasHash.random();
+      const accountPublicKey0 = GrumpkinAddress.random();
+      const accountPublicKey1 = GrumpkinAddress.random();
+      return {
+        registerTx: randomAccountTx({ aliasHash, accountPublicKey: accountPublicKey0 }),
+        addKeyTx: randomAccountTx({ aliasHash, accountPublicKey: accountPublicKey0, addKey: true }),
+        migrateTx: randomAccountTx({ aliasHash, accountPublicKey: accountPublicKey1, migrate: true }),
+      };
+    };
+    const accounts = [...Array(4)].map(() => createAccountTxs());
     const txs = [
-      randomAccountTx({ aliasHash: aliasHash0 }),
-      randomAccountTx({ aliasHash: aliasHash0, accountPublicKey }),
-      randomAccountTx({ aliasHash: aliasHash1 }),
-      randomAccountTx({ aliasHash: aliasHash0, accountPublicKey }),
-      randomAccountTx({ aliasHash: aliasHash2 }),
-      randomAccountTx({ aliasHash: aliasHash2 }),
-      randomAccountTx({ aliasHash: aliasHash1 }),
+      accounts[0].registerTx,
+      accounts[0].migrateTx,
+      accounts[0].addKeyTx,
+      accounts[1].registerTx,
+      accounts[2].registerTx,
+      accounts[2].addKeyTx,
+      accounts[3].migrateTx,
     ];
     for (const tx of txs) {
       await rollupDb.addTx(tx);
     }
 
     expect(await rollupDb.getAccountTxCount()).toBe(7);
-    expect(await rollupDb.getAccountCount()).toBe(6);
+    // New accounts are added with register tx and migrate tx.
+    expect(await rollupDb.getAccountCount()).toBe(5);
   });
 
   it('should delete an account when its tx is deleted', async () => {
@@ -72,9 +80,9 @@ describe('rollup_db', () => {
     const aliasHash1 = AliasHash.random();
     const txs = [
       randomAccountTx({ accountPublicKey: accountPublicKeys[0], aliasHash: aliasHash0 }),
-      randomAccountTx({ accountPublicKey: accountPublicKeys[1], aliasHash: aliasHash0 }),
+      randomAccountTx({ accountPublicKey: accountPublicKeys[1], aliasHash: aliasHash0, migrate: true }),
       randomAccountTx({ accountPublicKey: accountPublicKeys[2], aliasHash: aliasHash1 }),
-      randomAccountTx({ accountPublicKey: accountPublicKeys[3], aliasHash: aliasHash1 }),
+      randomAccountTx({ accountPublicKey: accountPublicKeys[3], aliasHash: aliasHash1, migrate: true }),
     ];
     for (const tx of txs) {
       await rollupDb.addTx(tx);
@@ -595,23 +603,27 @@ describe('rollup_db', () => {
   });
 
   it('should get unsettled accounts', async () => {
+    const accountKeys = [...Array(4)].map(() => GrumpkinAddress.random());
+    const aliasHashes = [...Array(2)].map(() => AliasHash.random());
     const txs = [
-      TxType.ACCOUNT,
-      TxType.DEPOSIT,
-      TxType.ACCOUNT, // settled
-      TxType.DEPOSIT, // settled
-      TxType.TRANSFER,
-      TxType.ACCOUNT, // rollup created
-      TxType.DEFI_CLAIM,
-      TxType.ACCOUNT,
-    ].map(txType => randomTx({ txType }));
-
+      randomAccountTx({ accountPublicKey: accountKeys[0], aliasHash: aliasHashes[0] }),
+      randomTx({ txType: TxType.DEPOSIT }),
+      randomAccountTx({ accountPublicKey: accountKeys[0], aliasHash: aliasHashes[0], addKey: true }),
+      randomAccountTx({ accountPublicKey: accountKeys[1], aliasHash: aliasHashes[0], migrate: true }), // settled
+      randomTx({ txType: TxType.DEPOSIT }), // settled
+      randomAccountTx({ accountPublicKey: accountKeys[2], aliasHash: aliasHashes[1] }), // rollup created
+      randomTx({ txType: TxType.DEPOSIT }), // rollup created
+      randomTx({ txType: TxType.TRANSFER }),
+      randomAccountTx({ accountPublicKey: accountKeys[3], aliasHash: aliasHashes[1], migrate: true }),
+      randomAccountTx({ accountPublicKey: accountKeys[3], aliasHash: aliasHashes[1], addKey: true }),
+      randomTx({ txType: TxType.DEFI_CLAIM }),
+    ];
     await rollupDb.addTxs(txs);
 
-    const rollupProof0 = randomRollupProof([txs[2], txs[3]], 0);
+    const rollupProof0 = randomRollupProof([txs[3], txs[4]], 0);
     await rollupDb.addRollupProof(rollupProof0);
 
-    const rollupProof1 = randomRollupProof([txs[5]], 0);
+    const rollupProof1 = randomRollupProof([txs[5], txs[6]], 0);
     await rollupDb.addRollupProof(rollupProof1);
 
     const rollup = randomRollup(0, rollupProof0);
@@ -619,7 +631,7 @@ describe('rollup_db', () => {
     const settledTxIds = rollupProof0.txs.map(tx => tx.id);
     await rollupDb.confirmMined(rollup.id, 0, 0n, new Date(), TxHash.random(), [], settledTxIds, [], randomBytes(32));
 
-    const expectedAccounts = [txs[7], txs[5], txs[0]].map(txDaoToAccountDao);
+    const expectedAccounts = [txs[8], txs[5], txs[0]].map(txDaoToAccountDao);
     expect(await rollupDb.getUnsettledAccounts()).toEqual(expectedAccounts);
   });
 

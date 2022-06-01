@@ -17,13 +17,22 @@ const txTypeToProofId = (txType: TxType) => (txType < TxType.WITHDRAW_TO_CONTRAC
 
 export const randomTx = ({
   txType = TxType.TRANSFER,
+  nullifier1 = randomBytes(32),
+  nullifier2 = randomBytes(32),
   signature = Buffer.alloc(0),
   accountPublicKey = GrumpkinAddress.random(),
   aliasHash = AliasHash.random(),
 } = {}) => {
   const proofId = txTypeToProofId(txType);
   const proofData = new ProofData(
-    Buffer.concat([numToUInt32BE(proofId, 32), randomBytes(32 * (ProofData.NUM_PUBLIC_INPUTS - 1))]),
+    Buffer.concat([
+      numToUInt32BE(proofId, 32),
+      randomBytes(32),
+      randomBytes(32),
+      nullifier1,
+      nullifier2,
+      randomBytes(32 * (ProofData.NUM_PUBLIC_INPUTS - 5)),
+    ]),
   );
   const offchainTxData =
     txType === TxType.ACCOUNT ? new OffchainAccountData(accountPublicKey, aliasHash).toBuffer() : randomBytes(160);
@@ -41,11 +50,18 @@ export const randomTx = ({
   });
 };
 
-export const randomAccountTx = ({ accountPublicKey = GrumpkinAddress.random(), aliasHash = AliasHash.random() } = {}) =>
+export const randomAccountTx = ({
+  accountPublicKey = GrumpkinAddress.random(),
+  aliasHash = AliasHash.random(),
+  migrate = false,
+  addKey = false,
+} = {}) =>
   randomTx({
     txType: TxType.ACCOUNT,
     accountPublicKey,
     aliasHash,
+    nullifier1: !migrate && !addKey ? Buffer.concat([Buffer.alloc(4).fill(1), aliasHash.toBuffer()]) : Buffer.alloc(32),
+    nullifier2: !addKey ? accountPublicKey.y() : Buffer.alloc(32),
   });
 
 export const randomRollupProof = (txs: TxDao[], dataStartIndex = 0, rollupSize = txs.length) =>
