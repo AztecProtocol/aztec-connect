@@ -259,14 +259,11 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
     // Array of supported bridge contract addresses (similar to assetIds)
     address[] internal supportedBridges;
 
-    // asyncDefiInteractionHashes and defiInteractionHashes are custom implementations of an array type!!
-    // we store the length fields for each array inside the `rollupState` storage slot
-    // we access array elements in the traditional manner: array.slot[i] = keccak256(array.slot) + i
-    // however we do NOT use slot to recover the length of the array (e.g. normally this would be `length := sload(array.slot)`
-    // this reduces the number of storage slots we write to when processing a rollup
-    // (each slot costs 5,000 gas to update, saves us 10k gas per rollup tx)
-    bytes32 internal asyncDefiInteractionHashes; // defi interaction hashes to be transferred into pending defi interaction hashes
-    bytes32 internal defiInteractionHashes;
+    // Mapping from index to async interaction hash (emulates an array), next index stored in the RollupState
+    mapping(uint256 => bytes32) public asyncDefiInteractionHashes;
+
+    // Mapping from index to sync interaction hash (emulates an array), next index stored in the RollupState
+    mapping(uint256 => bytes32) public defiInteractionHashes;
 
     // Mapping from assetId to mapping of userAddress to public userBalance stored on this contract
     mapping(uint256 => mapping(address => uint256)) public userPendingDeposits;
@@ -832,9 +829,12 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
         // compute defiInteractionHash and push it onto the asyncDefiInteractionHashes array
         bool result;
         assembly {
+            // Load values from `input` (to get around stack too deep)
             let inputValue := mload(inputs)
             let nonce := mload(add(inputs, 0x20))
             result := iszero(and(eq(outputValueA, 0), eq(outputValueB, 0)))
+
+            // Compute defi interaction hash
             let mPtr := mload(0x40)
             mstore(mPtr, bridgeId)
             mstore(add(mPtr, 0x20), nonce)
@@ -845,12 +845,11 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
             pop(staticcall(gas(), 0x2, mPtr, 0xc0, 0x00, 0x20))
             let defiInteractionHash := mod(mload(0x00), CIRCUIT_MODULUS)
 
-            // push async defi interaction hash
-            mstore(0x00, asyncDefiInteractionHashes.slot)
-            let slotBase := keccak256(0x00, 0x20)
-
+            // Load sync and async array lengths from rollup state
             let state := sload(rollupState.slot)
+            // asyncArrayLen = rollupState.numAsyncDefiInteractionHashes
             let asyncArrayLen := and(ARRAY_LENGTH_MASK, shr(ASYNCDEFIINTERACTIONHASHES_BIT_OFFSET, state))
+            // defiArrayLen = rollupState.numDefiInteractionHashes
             let defiArrayLen := and(ARRAY_LENGTH_MASK, shr(DEFIINTERACTIONHASHES_BIT_OFFSET, state))
 
             // check that size of asyncDefiInteractionHashes isn't such that
@@ -862,10 +861,12 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
                 revert(mPtr, 0x04)
             }
 
-            // asyncDefiInteractionHashes.push(defiInteractionHash)
-            sstore(add(slotBase, asyncArrayLen), defiInteractionHash)
+            // asyncDefiInteractionHashes[asyncArrayLen] = defiInteractionHash
+            mstore(0x00, asyncArrayLen)
+            mstore(0x20, asyncDefiInteractionHashes.slot)
+            sstore(keccak256(0x00, 0x40), defiInteractionHash)
 
-            // update asyncDefiInteractionHashes.length by 1
+            // increase asyncDefiInteractionHashes.length by 1
             let oldState := and(not(shl(ASYNCDEFIINTERACTIONHASHES_BIT_OFFSET, ARRAY_LENGTH_MASK)), state)
             let newState := or(oldState, shl(ASYNCDEFIINTERACTIONHASHES_BIT_OFFSET, add(asyncArrayLen, 0x01)))
 
@@ -1341,8 +1342,8 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
 
     /**
      * @dev Get number of pending defi interactions that have resolved but have not yet added into the Defi Tree
-     * This value can never exceed 512. This is to prevent griefing attacks; `processRollup` iterates through `asyncDefiInteractionHashes[]` and
-     * copies their values into `defiInteractionHashes[]`. Loop is bounded to < 512 so that tx does not exceed block gas limit
+     * This value can never exceed 512. This is to prevent griefing attacks; `processRollup` iterates through `asyncDefiInteractionHashes` and
+     * copies their values into `defiInteractionHashes`. Loop is bounded to < 512 so that tx does not exceed block gas limit
      * @return res the number of pending interactions
      */
     function getPendingDefiInteractionHashesLength() public view override(IRollupProcessor) returns (uint256 res) {
@@ -1465,18 +1466,23 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
     function getDefiInteractionHashes() external view override(IRollupProcessor) returns (bytes32[] memory res) {
         uint256 len = getDefiInteractionHashesLength();
         assembly {
-            mstore(0x00, defiInteractionHashes.slot)
-            let slot := keccak256(0x00, 0x20)
+            // Allocate memory for return value
             res := mload(0x40)
-            mstore(0x40, add(res, add(0x20, mul(len, 0x20))))
             mstore(res, len)
+            // Update 0x40 (the free memory pointer)
+            mstore(0x40, add(res, add(0x20, mul(len, 0x20))))
+
+            // Prepare slot computation
+            mstore(0x20, defiInteractionHashes.slot)
             let ptr := add(res, 0x20)
             for {
                 let i := 0
             } lt(i, len) {
                 i := add(i, 0x01)
             } {
-                mstore(ptr, sload(add(slot, i)))
+                // Fetch defiInteractionHashes[i] and add it to the return value
+                mstore(0x00, i)
+                mstore(ptr, sload(keccak256(0x00, 0x40)))
                 ptr := add(ptr, 0x20)
             }
         }
@@ -1504,18 +1510,23 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
     function getAsyncDefiInteractionHashes() external view override(IRollupProcessor) returns (bytes32[] memory res) {
         uint256 len = getAsyncDefiInteractionHashesLength();
         assembly {
-            mstore(0x00, asyncDefiInteractionHashes.slot)
-            let slot := keccak256(0x00, 0x20)
+            // Allocate memory for return value
             res := mload(0x40)
-            mstore(0x40, add(res, add(0x20, mul(len, 0x20))))
             mstore(res, len)
+            // Update 0x40 (the free memory pointer)
+            mstore(0x40, add(res, add(0x20, mul(len, 0x20))))
+
+            // Prepare slot computation
+            mstore(0x20, asyncDefiInteractionHashes.slot)
             let ptr := add(res, 0x20)
             for {
                 let i := 0
             } lt(i, len) {
                 i := add(i, 0x01)
             } {
-                mstore(ptr, sload(add(slot, i)))
+                // Fetch asyncDefiInteractionHashes[i] and add it to the return value
+                mstore(0x00, i)
+                mstore(ptr, sload(keccak256(0x00, 0x40)))
                 ptr := add(ptr, 0x20)
             }
         }
@@ -1784,7 +1795,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
          * Compute nextExpectedHash
          *-----------------------------------------
          *
-         * The storage slot `defiInteractionHashes` points to an array that represents the
+         * The `defiInteractionHashes` mapping emulates an array that represents the
          * set of defi interactions from previous blocks that have been resolved.
          *
          * We need to take the interaction result data from each of the above defi interactions,
@@ -1814,11 +1825,11 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
          *
          * This contract will call `DefiBridgeProxy.convert` (via delegatecall) on every new defi interaction present in the block.
          * The return values from the bridge proxy contract are used to construct a defi interaction result. Its hash is then computed
-         * and stored in `defiInteractionHashes[]`.
+         * and stored in `defiInteractionHashes`.
          *
          * N.B. It's very important that DefiBridgeProxy does not call selfdestruct, or makes a delegatecall out to a contract that can selfdestruct :o
          *
-         * Similarly, when async defi interactions resolve, the interaction result is stored in `asyncDefiInteractionHashes[]`. At the end of the processDefiBridges function,
+         * Similarly, when async defi interactions resolve, the interaction result is stored in `asyncDefiInteractionHashes`. At the end of the processDefiBridges function,
          * the contents of the async array is copied into `defiInteractionHashes` (i.e. async interaction results are delayed by 1 rollup block. This is to prevent griefing attacks where
          * the rollup state changes between the time taken for a rollup tx to be constructed and the rollup tx to be mined)
          *
@@ -1840,9 +1851,8 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
             // although this function will write all of the hashes into our allocated memory, we only want to return the non-zero hashes
             mstore(hashes, numPendingInteractions)
 
-            // Start by getting the defi interaction hashes array slot value
-            mstore(0x00, defiInteractionHashes.slot)
-            let sloadOffset := keccak256(0x00, 0x20)
+            // Prepare the reusable part of the defi interaction hashes slot computation
+            mstore(0x20, defiInteractionHashes.slot)
             let i := 0
 
             // Iterate over numPendingInteractions (will be between 0 and NUMBER_OF_BRIDGE_CALLS)
@@ -1853,7 +1863,9 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
             } lt(i, numPendingInteractions) {
                 i := add(i, 0x01)
             } {
-                mstore(add(hashData, mul(i, 0x20)), sload(add(sloadOffset, add(offset, i))))
+                // hashData[i] = defiInteractionHashes[offset + i]
+                mstore(0x00, add(offset, i))
+                mstore(add(hashData, mul(i, 0x20)), sload(keccak256(0x00, 0x40)))
             }
 
             // If numPendingInteractions < NUMBER_OF_BRIDGE_CALLS, continue iterating up to NUMBER_OF_BRIDGE_CALLS, this time
@@ -1863,6 +1875,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
             } lt(i, NUMBER_OF_BRIDGE_CALLS) {
                 i := add(i, 0x01)
             } {
+                // hashData[i] = DEFI_RESULT_ZERO_HASH
                 mstore(add(hashData, mul(i, 0x20)), DEFI_RESULT_ZERO_HASH)
             }
             pop(staticcall(gas(), 0x2, hashData, NUMBER_OF_BRIDGE_BYTES, 0x00, 0x20))
@@ -1974,11 +1987,9 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
                 // first 4 bytes is the function signature
                 mstore(mPtr, DEFI_BRIDGE_PROXY_CONVERT_SELECTOR)
                 mPtr := add(mPtr, 0x04)
-                {
-                    let bridgeAddress := mload(add(bridgeData, 0x20))
-                    mstore(mPtr, bridgeAddress)
-                }
 
+                let bridgeAddress := mload(add(bridgeData, 0x20))
+                mstore(mPtr, bridgeAddress)
                 mstore(add(mPtr, 0x20), mload(inputAssetA))
                 mstore(add(mPtr, 0x40), mload(add(inputAssetA, 0x20)))
                 mstore(add(mPtr, 0x60), mload(add(inputAssetA, 0x40)))
@@ -1994,10 +2005,8 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
                 mstore(add(mPtr, 0x1a0), totalInputValue)
                 mstore(add(mPtr, 0x1c0), interactionNonce)
 
-                {
-                    let auxData := mload(add(bridgeData, 0xc0))
-                    mstore(add(mPtr, 0x1e0), auxData)
-                }
+                let auxData := mload(add(bridgeData, 0xc0))
+                mstore(add(mPtr, 0x1e0), auxData)
                 mstore(add(mPtr, 0x200), ethPayments.slot)
                 mstore(add(mPtr, 0x220), rollupBeneficiary)
 
@@ -2048,7 +2057,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
                         mstore(mPtr, totalInputValue)
                         log3(mPtr, 0x20, ASYNC_BRIDGE_PROCESSED_SIGHASH, bridgeId, interactionNonce)
                     }
-                    // pendingDefiInteractions[interactionNonce] = PendingDefiBridgeInteraction(bridgeId, totalInputValue, 0)
+                    // pendingDefiInteractions[interactionNonce] = PendingDefiBridgeInteraction(bridgeId, totalInputValue)
                     mstore(0x00, interactionNonce)
                     mstore(0x20, pendingDefiInteractions.slot)
                     let pendingDefiInteractionsSlotBase := keccak256(0x00, 0x40)
@@ -2097,9 +2106,13 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
                     mstore(add(mPtr, 0xa0), mload(add(bridgeResult, 0x60))) // success
                     pop(staticcall(gas(), 0x2, mPtr, 0xc0, 0x00, 0x20))
                     let defiInteractionHash := mod(mload(0x00), CIRCUIT_MODULUS)
-                    // // defiInteractionHashes.push(defiInteractionHash) (don't update length, will do this outside of loop)
-                    mstore(0x00, defiInteractionHashes.slot)
-                    sstore(add(keccak256(0x00, 0x20), defiInteractionHashesLength), defiInteractionHash)
+
+                    // defiInteractionHashes[defiInteractionHashesLength] = defiInteractionHash;
+                    mstore(0x00, defiInteractionHashesLength)
+                    mstore(0x20, defiInteractionHashes.slot)
+                    sstore(keccak256(0x00, 0x40), defiInteractionHash)
+
+                    // Increase the length of defiInteractionHashes by 1
                     defiInteractionHashesLength := add(defiInteractionHashesLength, 0x01)
                 }
 
@@ -2146,18 +2159,26 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
                 revert(0x00, 0x04)
             }
 
-            // copy async hashes into defiInteractionHashes
-            mstore(0x00, defiInteractionHashes.slot)
-            let defiSlotBase := add(keccak256(0x00, 0x20), defiInteractionHashesLength)
-            mstore(0x00, asyncDefiInteractionHashes.slot)
-            let asyncDefiSlotBase := keccak256(0x00, 0x20)
+            // Now, copy async hashes into defiInteractionHashes
+
+            // Cache the free memory pointer
+            let freePtr := mload(0x40)
+
+            // Prepare the reusable parts of slot computation
+            mstore(0x20, defiInteractionHashes.slot)
+            mstore(0x60, asyncDefiInteractionHashes.slot)
             for {
                 let i := 0
             } lt(i, asyncDefiInteractionHashesLength) {
-                i := add(i, 0x01)
+                i := add(i, 1)
             } {
-                sstore(add(defiSlotBase, i), sload(add(asyncDefiSlotBase, i)))
+                // defiInteractionHashesLength[defiInteractionHashesLength + i] = asyncDefiInteractionHashes[i]
+                mstore(0x00, add(defiInteractionHashesLength, i))
+                mstore(0x40, i)
+                sstore(keccak256(0x00, 0x40), sload(keccak256(0x40, 0x40)))
             }
+            // Restore the free memory pointer
+            mstore(0x40, freePtr)
 
             // clear defiInteractionHashesLength in state
             state := and(not(shl(DEFIINTERACTIONHASHES_BIT_OFFSET, ARRAY_LENGTH_MASK)), state)

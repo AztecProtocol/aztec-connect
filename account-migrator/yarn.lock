@@ -26,6 +26,7 @@
   dependencies:
     "@types/detect-node" "^2.0.0"
     "@types/levelup" "^4.3.0"
+    buffer-browserify "^0.2.5"
     debug "^4.1.1"
     detect-node "^2.0.4"
     fs-extra "10.0.0"
@@ -41,13 +42,13 @@
 "@aztec/blockchain@file:../blockchain/dest":
   version "2.0.0"
   dependencies:
-    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-@aztec-blockchain-2.0.0-25f2066b-2332-46a2-811a-013fccca7e33-1653500515083/node_modules/barretenberg.js/dest"
-    "@aztec/bridge-clients" "0.1.38"
+    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-@aztec-blockchain-2.0.0-65445919-a4c6-4bbd-a560-318c1d70d4bc-1654014746284/node_modules/barretenberg.js/dest"
+    "@aztec/bridge-clients" "0.1.41"
     "@ethersproject/experimental" "5.5.0"
     "@nomiclabs/hardhat-ethers" "^2.0.2"
     "@nomiclabs/hardhat-etherscan" "^2.1.8"
     "@nomiclabs/hardhat-waffle" "^2.0.1"
-    "@openzeppelin/contracts-upgradeable" "^4.4.2"
+    "@openzeppelin/contracts-upgradeable" "4.6.0"
     "@types/detect-node" "^2.0.0"
     "@uniswap/v2-core" "^1.0.1"
     "@uniswap/v2-periphery" "^1.1.0-beta.0"
@@ -56,17 +57,23 @@
     dotenv "^8.2.0"
     ethers "5.5.1"
     hardhat "^2.9.5"
+    hardhat-contract-sizer "^2.5.1"
     typescript "^4.4.4"
 
-"@aztec/bridge-clients@0.1.38":
-  version "0.1.38"
-  resolved "https://registry.yarnpkg.com/@aztec/bridge-clients/-/bridge-clients-0.1.38.tgz#358abff8ccf77700399b92ebd96c12c840be57cb"
-  integrity sha512-Tf1kVntwezY+8pNR53yqWQGqouuAHswxJjM9v3pdq/C2ZCLbhX0dwRICXpV599vZevDKA4D8aqDA+keeAg/lhw==
+"@aztec/bridge-clients@0.1.41":
+  version "0.1.41"
+  resolved "https://registry.yarnpkg.com/@aztec/bridge-clients/-/bridge-clients-0.1.41.tgz#c68557bebc538662ae4aa0a2ce1b13a7f0900f1c"
+  integrity sha512-eRANZW3q42/9FpktLs8ClUOvQz+kcGXzZN2yUOyXr99vXVPMo5/9sxcygg93tyi4+PN/gVbnuv7om9xpIQOZQQ==
   dependencies:
     "@aztec/barretenberg" "2.1.0-testnet.29"
     "@ethersproject/providers" "^5.6.5"
     detect-node "^2.1.0"
     sha3 "^2.1.4"
+
+"@colors/colors@1.5.0":
+  version "1.5.0"
+  resolved "https://registry.yarnpkg.com/@colors/colors/-/colors-1.5.0.tgz#bb504579c1cae923e6576a4f5da43d25f97bdbd9"
+  integrity sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ==
 
 "@cspotcode/source-map-consumer@0.8.0":
   version "0.8.0"
@@ -794,10 +801,10 @@
     "@types/sinon-chai" "^3.2.3"
     "@types/web3" "1.0.19"
 
-"@openzeppelin/contracts-upgradeable@^4.4.2":
-  version "4.5.1"
-  resolved "https://registry.yarnpkg.com/@openzeppelin/contracts-upgradeable/-/contracts-upgradeable-4.5.1.tgz#dc354082460eb34f5833afdecfab46538b208c4f"
-  integrity sha512-xcKycsSyFauIGMhSeeTJW/Jzz9jZUJdiFNP9Wo/9VhMhw8t5X0M92RY6x176VfcIWsxURMHFWOJVTlFA78HI/w==
+"@openzeppelin/contracts-upgradeable@4.6.0":
+  version "4.6.0"
+  resolved "https://registry.yarnpkg.com/@openzeppelin/contracts-upgradeable/-/contracts-upgradeable-4.6.0.tgz#1bf55f230f008554d4c6fe25eb165b85112108b0"
+  integrity sha512-5OnVuO4HlkjSCJO165a4i2Pu1zQGzMs//o54LPrwUgxvEO2P3ax1QuaSI0cEHHTveA77guS0PnNugpR2JMsPfA==
 
 "@sentry/core@5.30.0":
   version "5.30.0"
@@ -1263,6 +1270,11 @@ base-x@^3.0.2:
   dependencies:
     safe-buffer "^5.0.1"
 
+base64-js@0.0.8:
+  version "0.0.8"
+  resolved "https://registry.yarnpkg.com/base64-js/-/base64-js-0.0.8.tgz#1101e9544f4a76b1bc3b26d452ca96d7a35e7978"
+  integrity sha512-3XSA2cR/h/73EzlXXdU6YNycmYI7+kicTxks4eJg2g39biHR84slg2+des+p7iHYhbRg/udIS4TD53WabcOUkw==
+
 base64-js@^1.3.1:
   version "1.5.1"
   resolved "https://registry.yarnpkg.com/base64-js/-/base64-js-1.5.1.tgz#1b1b440160a5bf7ad40b650f095963481903930a"
@@ -1356,6 +1368,13 @@ bs58check@^2.1.2:
     create-hash "^1.1.0"
     safe-buffer "^5.1.2"
 
+buffer-browserify@^0.2.5:
+  version "0.2.5"
+  resolved "https://registry.yarnpkg.com/buffer-browserify/-/buffer-browserify-0.2.5.tgz#29c739d6a4e247b539abc0ada073612002163a21"
+  integrity sha512-3ko6TTBwXb15w2OgZuyAzLJwUFClBMvcKcmhF+iQ79G71K8Fc3RqKzroCN0a0DbZw2GM3q9lNoqfYYCTq6w7QA==
+  dependencies:
+    base64-js "0.0.8"
+
 buffer-from@^1.0.0:
   version "1.1.2"
   resolved "https://registry.yarnpkg.com/buffer-from/-/buffer-from-1.1.2.tgz#2b146a6fd72e80b4f55d255f35ed59a3a9a41bd5"
@@ -1436,7 +1455,7 @@ chalk@^2.4.2:
     escape-string-regexp "^1.0.5"
     supports-color "^5.3.0"
 
-chalk@^4.1.0:
+chalk@^4.0.0, chalk@^4.1.0:
   version "4.1.2"
   resolved "https://registry.yarnpkg.com/chalk/-/chalk-4.1.2.tgz#aac4e2b7734a740867aeb16bf02aad556a1e7a01"
   integrity sha512-oKnbhFyRIXpUuez8iBMmyEa4nbj4IOQyuhc/wy9kY7/WVPcwIO9VA668Pu8RkO7+0G76SLROeyw9CpQ061i4mA==
@@ -1476,6 +1495,15 @@ clean-stack@^2.0.0:
   version "2.2.0"
   resolved "https://registry.yarnpkg.com/clean-stack/-/clean-stack-2.2.0.tgz#ee8472dbb129e727b31e8a10a427dee9dfe4008b"
   integrity sha512-4diC9HaTE+KRAMWhDhrGOECgWZxoevMc5TlkObMqNSsVU62PYzXZ/SMTjzyGAFF1YusgxGcSWTEXBhp0CPwQ1A==
+
+cli-table3@^0.6.0:
+  version "0.6.2"
+  resolved "https://registry.yarnpkg.com/cli-table3/-/cli-table3-0.6.2.tgz#aaf5df9d8b5bf12634dc8b3040806a0c07120d2a"
+  integrity sha512-QyavHCaIC80cMivimWu4aWHilIpiDpfm3hGmqAmXVL1UsnbLuBSMd21hTX6VY4ZSDSM73ESLeF8TOYId3rBTbw==
+  dependencies:
+    string-width "^4.2.0"
+  optionalDependencies:
+    "@colors/colors" "1.5.0"
 
 cliui@^7.0.2:
   version "7.0.4"
@@ -2040,6 +2068,14 @@ growl@1.10.5:
   version "1.10.5"
   resolved "https://registry.yarnpkg.com/growl/-/growl-1.10.5.tgz#f2735dc2283674fa67478b10181059355c369e5e"
   integrity sha512-qBr4OuELkhPenW6goKVXiv47US3clb3/IbuWF9KNKEijAy9oeHxU9IgzjvJhHkUzhaj7rOUD7+YGWqUjLp5oSA==
+
+hardhat-contract-sizer@^2.5.1:
+  version "2.5.1"
+  resolved "https://registry.yarnpkg.com/hardhat-contract-sizer/-/hardhat-contract-sizer-2.5.1.tgz#cb0b8dd32593b7a28c8d96ecde04841292bbd603"
+  integrity sha512-28yRb73e30aBVaZOOHTlHZFIdIasA/iFunIehrUviIJTubvdQjtSiQUo2wexHFtt71mQeMPP8qjw2sdbgatDnQ==
+  dependencies:
+    chalk "^4.0.0"
+    cli-table3 "^0.6.0"
 
 hardhat@^2.9.5:
   version "2.9.6"
