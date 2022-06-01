@@ -15,6 +15,7 @@
   dependencies:
     "@types/detect-node" "^2.0.0"
     "@types/levelup" "^4.3.0"
+    buffer-browserify "^0.2.5"
     debug "^4.1.1"
     detect-node "^2.0.4"
     fs-extra "10.0.0"
@@ -46,10 +47,10 @@
     threads "1.7.0"
     tslib "^2.0.0"
 
-"@aztec/bridge-clients@0.1.41":
-  version "0.1.41"
-  resolved "https://registry.yarnpkg.com/@aztec/bridge-clients/-/bridge-clients-0.1.41.tgz#c68557bebc538662ae4aa0a2ce1b13a7f0900f1c"
-  integrity sha512-eRANZW3q42/9FpktLs8ClUOvQz+kcGXzZN2yUOyXr99vXVPMo5/9sxcygg93tyi4+PN/gVbnuv7om9xpIQOZQQ==
+"@aztec/bridge-clients@0.1.42":
+  version "0.1.42"
+  resolved "https://registry.yarnpkg.com/@aztec/bridge-clients/-/bridge-clients-0.1.42.tgz#3c8373cbaec05802729bc8c4e5a10d0f39f1b561"
+  integrity sha512-qYCsNBXlqDbqf/imKV61Z3hO94wj9XWocrMSzjCqrDhHvMFpD+Dg7yquBVD3HBaqzM/BPzfA1dQACkkWynzanw==
   dependencies:
     "@aztec/barretenberg" "2.1.0-testnet.29"
     "@ethersproject/providers" "^5.6.5"
@@ -2065,6 +2066,11 @@ base-x@^3.0.2:
   dependencies:
     safe-buffer "^5.0.1"
 
+base64-js@0.0.8:
+  version "0.0.8"
+  resolved "https://registry.yarnpkg.com/base64-js/-/base64-js-0.0.8.tgz#1101e9544f4a76b1bc3b26d452ca96d7a35e7978"
+  integrity sha512-3XSA2cR/h/73EzlXXdU6YNycmYI7+kicTxks4eJg2g39biHR84slg2+des+p7iHYhbRg/udIS4TD53WabcOUkw==
+
 base64-js@^1.3.1:
   version "1.5.1"
   resolved "https://registry.yarnpkg.com/base64-js/-/base64-js-1.5.1.tgz#1b1b440160a5bf7ad40b650f095963481903930a"
@@ -2182,6 +2188,13 @@ bser@2.1.1:
   integrity sha512-gQxTNE/GAfIIrmHLUE3oJyp5FO6HRBfhjnw4/wMmA63ZGDJnWBmgY/lyQBpnDUkGmAhbSe39tx2d/iTOAfglwQ==
   dependencies:
     node-int64 "^0.4.0"
+
+buffer-browserify@^0.2.5:
+  version "0.2.5"
+  resolved "https://registry.yarnpkg.com/buffer-browserify/-/buffer-browserify-0.2.5.tgz#29c739d6a4e247b539abc0ada073612002163a21"
+  integrity sha512-3ko6TTBwXb15w2OgZuyAzLJwUFClBMvcKcmhF+iQ79G71K8Fc3RqKzroCN0a0DbZw2GM3q9lNoqfYYCTq6w7QA==
+  dependencies:
+    base64-js "0.0.8"
 
 buffer-from@^1.0.0:
   version "1.1.2"

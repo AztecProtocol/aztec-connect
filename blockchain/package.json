@@ -33,7 +33,7 @@
   },
   "dependencies": {
     "@aztec/barretenberg": "../barretenberg.js/dest",
-    "@aztec/bridge-clients": "0.1.41",
+    "@aztec/bridge-clients": "0.1.42",
     "@ethersproject/experimental": "5.5.0",
     "@nomiclabs/hardhat-ethers": "^2.0.2",
     "@nomiclabs/hardhat-etherscan": "^2.1.8",

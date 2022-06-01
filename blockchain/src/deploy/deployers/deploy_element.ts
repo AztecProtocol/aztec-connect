@@ -58,7 +58,7 @@ export async function deployElementBridge(
           expiry: tranche.expiration,
           poolAddress: tranche.ptPool.address,
         },
-        elementBridge,
+        new Contract(elementBridge.address, elementBridge.interface, signer),
       );
     }
   }
