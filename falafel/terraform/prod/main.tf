@@ -171,11 +171,11 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "ROLLUP_CONTRACT_ADDRESS",
-        "value": "0xFf6bEd1E4D28491B89a02Dc56b34a4b273eb9e0D"
+        "value": "0x3e062e842a195eb162c73b7391517853c0025c4f"
       },
       {
         "name": "FEE_DISTRIBUTOR_ADDRESS",
-        "value": "0x6F643D77793b08A0425da0D74F7f52b0c2991045"
+        "value": "0x1a791De750295dBC2702c3b358A066793Aa605A4"
       },
       {
         "name": "PRICE_FEED_CONTRACT_ADDRESSES",
