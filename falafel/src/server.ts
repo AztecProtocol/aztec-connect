@@ -175,13 +175,13 @@ export class Server {
     return this.rollupDb.getUnsettledNullifiers();
   }
 
-  public async getBlocks(from: number): Promise<Block[]> {
+  public async getBlocks(from: number, take?: number): Promise<Block[]> {
     const { nextRollupId } = await this.blockchain.getBlockchainStatus();
     if (from >= nextRollupId) {
       return [];
     }
 
-    const rollups = await this.rollupDb.getSettledRollups(from);
+    const rollups = await this.rollupDb.getSettledRollups(from, take);
     return rollups.map(dao => {
       return {
         txHash: new TxHash(dao.ethTxHash!),

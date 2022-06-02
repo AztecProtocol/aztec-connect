@@ -147,8 +147,8 @@ export class SyncRollupDb {
     return this.synchronise(() => this.rollupDb.confirmMined(id, gasUsed, gasPrice, mined, ethTxHash, txIds));
   }
 
-  public getSettledRollups(from = 0) {
-    return this.synchronise(() => this.rollupDb.getSettledRollups(from));
+  public getSettledRollups(from = 0, take?: number) {
+    return this.synchronise(() => this.rollupDb.getSettledRollups(from, take));
   }
 
   public async getLastSettledRollup() {

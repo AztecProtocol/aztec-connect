@@ -157,6 +157,8 @@ export class WorldStateDb {
       this.proc = undefined;
       if (code) {
         console.log(`db_cli exited with unexpected code ${code}.`);
+        // Should never happen, so process termination is the only sensible response.
+        process.exit(1);
       }
     });
 

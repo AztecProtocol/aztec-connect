@@ -251,11 +251,12 @@ export class TypeOrmRollupDb implements RollupDb {
     return (await this.getRollup(id))!;
   }
 
-  public getSettledRollups(from = 0) {
+  public getSettledRollups(from = 0, take?: number) {
     return this.rollupRep.find({
       where: { id: MoreThanOrEqual(from), mined: Not(IsNull()) },
       order: { id: 'ASC' },
       relations: ['rollupProof'],
+      take
     });
   }
 

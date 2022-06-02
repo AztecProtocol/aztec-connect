@@ -421,7 +421,16 @@ export class CoreSdk extends EventEmitter {
 
   private async sync() {
     const syncedToRollup = +(await this.leveldb.get('syncedToRollup').catch(() => -1));
-    const blocks = await this.rollupProvider.getBlocks(syncedToRollup + 1);
+    const blocks: Block[] = [];
+    let from = syncedToRollup + 1;
+    do {
+      const fetchedBlocks = await this.rollupProvider.getBlocks(from);
+      if (!fetchedBlocks.length) {
+        break;
+      }
+      blocks.push(...fetchedBlocks);
+      from = blocks[blocks.length - 1].rollupId + 1;
+    } while (from <= this.rollupProvider.getLatestRollupId());
 
     // For debugging.
     const oldRoot = this.worldState.getRoot();
