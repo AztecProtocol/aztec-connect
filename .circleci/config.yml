@@ -278,12 +278,12 @@ jobs:
           command: |
             deploy_ecr hummus
             deploy_s3 hummus
-      - run:
-          name: 'block-explorer'
-          working_directory: block-explorer
-          command: |
-            deploy_ecr block-explorer
-            deploy_s3 block-explorer
+      # - run:
+      #     name: 'block-explorer'
+      #     working_directory: block-explorer
+      #     command: |
+      #       deploy_ecr block-explorer
+      #       deploy_s3 block-explorer
       - run:
           name: 'documentation'
           working_directory: documentation
@@ -405,9 +405,9 @@ workflows:
       - wasabi:
           requires:
             - sdk
-      - block-explorer:
-          requires:
-            - sdk
+      # - block-explorer:
+      #     requires:
+      #       - sdk
       - zk-money:
           requires:
             - sdk
@@ -427,7 +427,7 @@ workflows:
             - end-to-end
             - hummus
             - wasabi
-            - block-explorer
+            # - block-explorer
             - documentation
             - website
             - zk-money
