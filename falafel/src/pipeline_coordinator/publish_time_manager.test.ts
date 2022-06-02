@@ -1,4 +1,4 @@
-import { BridgeConfig } from '@aztec/barretenberg/bridge_id';
+import { BridgeConfig } from '@aztec/barretenberg/rollup_provider';
 import { BridgeResolver } from '../bridge';
 import { PublishTimeManager } from './publish_time_manager';
 
@@ -17,37 +17,37 @@ const bridgeConfigs: BridgeConfig[] = [
   {
     bridgeId: 1n,
     numTxs: 1,
-    fee: 500000n,
+    gas: 500000,
     rollupFrequency: 2,
   },
   {
     bridgeId: 2n,
     numTxs: 1,
-    fee: 500000n,
+    gas: 500000,
     rollupFrequency: 3,
   },
   {
     bridgeId: 3n,
     numTxs: 1,
-    fee: 500000n,
+    gas: 500000,
     rollupFrequency: 4,
   },
   {
     bridgeId: 4n,
     numTxs: 1,
-    fee: 500000n,
+    gas: 500000,
     rollupFrequency: 1,
   },
   {
     bridgeId: 5n,
     numTxs: 1,
-    fee: 500000n,
+    gas: 500000,
     rollupFrequency: 0,
   },
   {
     bridgeId: 6n,
     numTxs: 1,
-    fee: 500000n,
+    gas: 500000,
     rollupFrequency: -1,
   },
 ];

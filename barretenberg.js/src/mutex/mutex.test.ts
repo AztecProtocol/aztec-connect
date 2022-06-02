@@ -1,4 +1,5 @@
 import { Mutex } from '.';
+import { sleep } from '../sleep';
 import { MutexDatabase } from './mutex_database';
 
 type Mockify<T> = {
@@ -12,8 +13,6 @@ describe('mutex', () => {
   const timeout = 500;
   const tryLockInterval = 100;
   const pingInterval = 200;
-
-  const sleep = async (time: number) => new Promise(resolve => setTimeout(resolve, time));
 
   beforeEach(() => {
     db = {

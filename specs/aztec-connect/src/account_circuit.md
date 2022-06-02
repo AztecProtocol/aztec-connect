@@ -33,17 +33,18 @@ In all, the account circuit can be used to:
 - Add spending keys to an account.
   - I.e. link a `spending_public_key` to an `(account_nonce, alias, acount_public_key)` trio.
 
-
 ## More on Nullifiers
 
 It's possible for `nullifier_1` to be `0` (when not migrating):
-- `nullifier_1` = `migrate ? pedersen::compress(account_alias_id) : 0;`
+
+- `nullifier_1` = `migrate ? pedersen::compress(account_alias_hash) : 0;`
 
 `nullifier_2` is always `0`.
 
 **Both of these nullifier derivations differ from the already-deployed mainnet code (Aztec 1.0).** In Aztec 1.0, both nullifiers are always nonzero (the nullifier_2 is a gibberish nullifier with a unique (random) nonce being input into the circuit).
 
 The rollup circuit for Aztec 2.0 permits unlimited `0` nullifiers to be added to the nullifier tree, because:
+
 - Each nullifier is added to the nullifier tree at the leafIndex which is equal to the nullifier value.
 - So the rollup circuit will try to add `nullifier = 0` to `leafIndex = 0`.
 - First it checks whether the leaf is empty. Well `0` implies "empty", so this check will pass, and the value `0` will be once-again added to the 0th leaf.
@@ -58,17 +59,19 @@ The rollup circuit for Aztec 2.0 permits unlimited `0` nullifiers to be added to
 
 _There's a little diagram at the diagrams link too._
 
+TODO: FIX FIX FIX FIX
+
 1. Alice generates a grumpkin key pair `(account_private_key, account_public_key)`.
 1. Alice can receive funds prior to registering an `alias` at `(account_public_key, account_nonce = 0)`
    - I.e. a sender can send Alice funds by creating a value note with preimage values:
      - `owner = account_public_key`
      - `account_nonce = account_nonce = 0`
 1. Alice can register the alias `alice` against her `account_public_key` using the account circuit.
-   - The `account_alias_id = (alice, 0)` gets nullified, effectively 'reserving' the alias `alice` to prevent anyone else using it.
-   - Alice's `account_public_key`, her new 'account alias id' `(alice, 1)`, and two new spending keys, are all linked together via two new account notes which get added to the data tree.
+   - The `account_alias_hash = alice` gets nullified, effectively 'reserving' the alias `alice` to prevent anyone else using it.
+   - Alice's `new_account_public_key`, her 'account alias id' `alice`, and two new spending keys, are all linked together via two new account notes which get added to the data tree.
 1. Alice must then transfer any previously-received funds that were sent to `(account_public_key, 0)` (i.e. value notes containing that (owner, account_nonce) info in their preimages), to `(account_public_key, 1)`.
 1. Alice can register unlimited additional spending keys to `(alice, 1)`, via additional calls to the account circuit.
-1. If a spending key becomes compromised, Alice can nullify `account_alias_id = (alice, 1)` using the account circuit, and can associate new spending keys with `(alice, 2)`.
+1. If a spending key becomes compromised, Alice can nullify `account_alias_hash = (alice, 1)` using the account circuit, and can associate new spending keys with `(alice, 2)`.
 1. Alice must then transfers funds at `(account_public_key, 1)`, to `(account_public_key, 2)`.
 1. Similarly, if Alice's `account_private_key` becomes compromised, she can use the account circuit to migrate to a new `account_public_key`.
 
@@ -119,18 +122,18 @@ Recall that all inner circuits must have the **same number of public inputs** as
 
 Computed vars:
 
-- `account_alias_id = concat(account_nonce, alias_hash)`
+- `account_alias_hash = concat(account_nonce, alias_hash)`
 - `output_account_nonce` = `migrate + nonce`
-- `output_account_alias_id` = `concat(output_account_nonce, alias_hash)`
+- `output_account_alias_hash` = `concat(output_account_nonce, alias_hash)`
 - `signer` = `account_nonce == 0 ? account_public_key : signing_public_key`
-- `message` = `pedersen::compress(account_alias_id, account_public_key.x, new_account_public_key.x, spending_public_key_1.x, spending_public_key_2.x)`
-- `account_note_commitment` = `pedersen::compress(account_alias_id, account_public_key.x, signer.x)`
+- `message` = `pedersen::compress(account_alias_hash, account_public_key.x, new_account_public_key.x, spending_public_key_1.x, spending_public_key_2.x)`
+- `account_note_commitment` = `pedersen::compress(account_alias_hash, account_public_key.x, signer.x)`
 
 Computed public inputs:
 
-- `output_note_commitment_1` = `pedersen::compress(output_account_alias_id, new_account_public_key.x, spending_public_key_1.x)`
-- `output_note_commitment_2` = `pedersen::compress(output_account_alias_id, new_account_public_key.x, spending_public_key_2.x)`
-- `nullifier_1` = `migrate ? pedersen::compress(account_alias_id) : 0;`
+- `output_note_commitment_1` = `pedersen::compress(output_account_alias_hash, new_account_public_key.x, spending_public_key_1.x)`
+- `output_note_commitment_2` = `pedersen::compress(output_account_alias_hash, new_account_public_key.x, spending_public_key_2.x)`
+- `nullifier_1` = `migrate ? pedersen::compress(account_alias_hash) : 0;`
 
 Circuit constraints:
 

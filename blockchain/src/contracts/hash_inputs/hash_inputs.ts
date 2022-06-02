@@ -28,8 +28,6 @@ export class HashInputs {
     const { signingAddress } = defaults;
     const signer = new Web3Provider(provider).getSigner(signingAddress ? signingAddress.toString() : 0);
 
-
-
     const hashInputsFactory = new ContractFactory(HashInputsContract.abi, HashInputsContract.bytecode, signer);
     const hashInputs = await hashInputsFactory.deploy().catch(fixEthersStackTrace);
     return new HashInputs(EthAddress.fromString(hashInputs.address), provider, defaults);

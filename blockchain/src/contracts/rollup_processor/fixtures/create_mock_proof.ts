@@ -1,8 +1,7 @@
-import { AccountAliasId } from '@aztec/barretenberg/account_id';
+import { AliasHash } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
-import { TxId } from '@aztec/barretenberg/tx_id';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
 import {
   OffchainAccountData,
@@ -12,6 +11,7 @@ import {
 } from '@aztec/barretenberg/offchain_tx_data';
 import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { numToUInt32BE } from '@aztec/barretenberg/serialize';
+import { TxId } from '@aztec/barretenberg/tx_id';
 import { ViewingKey } from '@aztec/barretenberg/viewing_key';
 import { WorldStateConstants } from '@aztec/barretenberg/world_state';
 import { randomBytes } from 'crypto';
@@ -38,7 +38,7 @@ const nullifierRoots = extendRoots([WorldStateConstants.EMPTY_NULL_ROOT]);
 const dataRootRoots = extendRoots([WorldStateConstants.EMPTY_ROOT_ROOT]);
 const defiRoots = extendRoots([WorldStateConstants.EMPTY_DEFI_ROOT]);
 
-class InnerProofOutput {
+export class InnerProofOutput {
   constructor(
     public innerProofs: InnerProofData[],
     public signatures: Buffer[],
@@ -126,7 +126,7 @@ export const createAccountProof = () => {
     Buffer.alloc(32),
   );
 
-  const offchainTxData = new OffchainAccountData(GrumpkinAddress.randomAddress(), AccountAliasId.random());
+  const offchainTxData = new OffchainAccountData(GrumpkinAddress.random(), AliasHash.random());
 
   return new InnerProofOutput([innerProof], [], [], [offchainTxData.toBuffer()]);
 };
@@ -226,7 +226,7 @@ export const createSigData = (
   return new Keccak(256).update(message).digest();
 };
 
-export const createRollupProof = async (
+export const createRollupProof = (
   rollupProvider: Signer,
   innerProofOutput: InnerProofOutput,
   {
@@ -238,7 +238,7 @@ export const createRollupProof = async (
     previousDefiInteractionHash,
     defiInteractionData = [],
     prevInteractionResult = [],
-    feeDistributorAddress = EthAddress.randomAddress(),
+    feeDistributorAddress = EthAddress.random(),
   }: RollupProofOptions = {},
 ) => {
   const { innerProofs, totalTxFees, offchainTxData } = innerProofOutput;

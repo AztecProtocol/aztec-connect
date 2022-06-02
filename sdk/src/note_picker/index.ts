@@ -6,47 +6,76 @@ const noteSum = (notes: Note[]) => notes.reduce((sum, { value }) => sum + value,
 
 export class NotePicker {
   private readonly spendableNotes: SortedNotes;
-  private readonly settledNotes: Note[];
+  private readonly settledNotes: SortedNotes;
+  private readonly unsafeSpendableNotes: SortedNotes;
+  private readonly unsafeSettledNotes: SortedNotes;
 
   constructor(readonly notes: Note[] = []) {
-    this.spendableNotes = new SortedNotes(notes.filter(n => !n.pending || n.allowChain));
-    this.settledNotes = notes.filter(n => !n.pending);
+    const safeNotes = notes.filter(n => n.ownerAccountRequired);
+    this.spendableNotes = new SortedNotes(safeNotes.filter(n => !n.pending || n.allowChain));
+    this.settledNotes = new SortedNotes(safeNotes.filter(n => !n.pending));
+
+    const unsafeNotes = notes.filter(n => !n.ownerAccountRequired);
+    this.unsafeSpendableNotes = new SortedNotes(unsafeNotes.filter(n => !n.pending || n.allowChain));
+    this.unsafeSettledNotes = new SortedNotes(unsafeNotes.filter(n => !n.pending));
   }
 
-  getSpendableNotes(excludeNullifiers?: Buffer[]) {
-    return excludeNullifiers?.length
-      ? this.spendableNotes.filter(({ nullifier }) => !excludeNullifiers.some(n => n.equals(nullifier)))
-      : this.spendableNotes;
-  }
-
-  pick(value: bigint, excludeNullifiers?: Buffer[]) {
-    const spendableNotes = this.getSpendableNotes(excludeNullifiers);
+  pick(value: bigint, excludeNullifiers?: Buffer[], excludePendingNotes = false, unsafe = false) {
+    const spendableNotes = this.getSortedNotes(excludeNullifiers, excludePendingNotes, unsafe);
     const notes = pick(spendableNotes, value) || [];
     const sum = noteSum(notes);
     if (sum === value) {
       return notes;
     }
-    const note = spendableNotes.find(n => n.value === value);
+    const note = spendableNotes.findLast(n => n.value === value);
     return note ? [note] : notes;
   }
 
-  pickOne(value: bigint, excludeNullifiers?: Buffer[]) {
-    const spendableNotes = this.getSpendableNotes(excludeNullifiers);
-    return spendableNotes.find(n => n.value >= value);
+  pickOne(value: bigint, excludeNullifiers?: Buffer[], excludePendingNotes = false, unsafe = false) {
+    const settledNote = this.getSortedNotes(excludeNullifiers, true, unsafe).find(n => n.value >= value);
+    if (excludePendingNotes) {
+      return settledNote;
+    }
+
+    const pendingNote = this.getSortedNotes(excludeNullifiers, false, unsafe).find(n => n.value >= value);
+    if (!settledNote || !pendingNote) {
+      return settledNote || pendingNote;
+    }
+    return settledNote.value <= pendingNote.value ? settledNote : pendingNote;
   }
 
-  getSum() {
-    return noteSum(this.settledNotes);
+  getSum(unsafe = false) {
+    return noteSum(unsafe ? this.unsafeSettledNotes.notes : this.settledNotes.notes);
   }
 
-  getSpendableSum(excludeNullifiers?: Buffer[]) {
-    const spendableNotes = this.getSpendableNotes(excludeNullifiers);
+  getSpendableSum(excludeNullifiers?: Buffer[], excludePendingNotes = false, unsafe = false) {
+    const spendableNotes = this.getSortedNotes(excludeNullifiers, excludePendingNotes, unsafe);
     return noteSum(spendableNotes.notes);
   }
 
-  getMaxSpendableValue(excludeNullifiers?: Buffer[], numNotes = 2) {
-    const spendableNotes = this.getSpendableNotes(excludeNullifiers);
-    const notes = spendableNotes.last(numNotes);
+  getMaxSpendableValue(excludeNullifiers?: Buffer[], numNotes = 2, excludePendingNotes = false, unsafe = false) {
+    if (numNotes <= 0 || numNotes > 2) {
+      throw new Error('`numNotes` can only be 1 or 2.');
+    }
+
+    const spendableNotes = this.getSortedNotes(excludeNullifiers, excludePendingNotes, unsafe);
+    const notes: Note[] = [];
+    let hasPendingNote = false;
+    spendableNotes.findLast(note => {
+      if (!note.pending || !hasPendingNote) {
+        notes.push(note);
+      }
+      hasPendingNote = hasPendingNote || note.pending;
+      return notes.length === numNotes;
+    });
     return noteSum(notes);
+  }
+
+  private getSortedNotes(excludeNullifiers: Buffer[] = [], excludePendingNotes: boolean, unsafe: boolean) {
+    const [settledNotes, spendableNotes] = unsafe
+      ? [this.unsafeSettledNotes, this.unsafeSpendableNotes]
+      : [this.settledNotes, this.spendableNotes];
+    const notes = excludePendingNotes ? settledNotes : spendableNotes;
+    return notes.filter(({ nullifier }) => !excludeNullifiers.some(n => n.equals(nullifier)));
   }
 }

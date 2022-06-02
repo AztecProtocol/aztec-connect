@@ -24,10 +24,10 @@ describe('tree_note', () => {
 
   it('should convert to and from buffer', () => {
     const note = new TreeNote(
-      GrumpkinAddress.randomAddress(),
+      GrumpkinAddress.random(),
       BigInt(123),
       456,
-      789,
+      true,
       randomBytes(32),
       randomBytes(32),
       randomBytes(32),
@@ -51,7 +51,7 @@ describe('tree_note', () => {
         receiver.pubKey,
         BigInt(100 + i),
         0,
-        1,
+        i % 2 > 0,
         inputNullifier,
         ephPrivKey,
         grumpkin,
@@ -90,7 +90,15 @@ describe('tree_note', () => {
       const ephPrivKey = grumpkin.getRandomFr();
       const inputNullifier = numToUInt32BE(i, 32);
       inputNullifiers.push(inputNullifier);
-      const note = TreeNote.createFromEphPriv(owner.pubKey, BigInt(200), 0, 1, inputNullifier, ephPrivKey, grumpkin);
+      const note = TreeNote.createFromEphPriv(
+        owner.pubKey,
+        BigInt(200),
+        0,
+        i % 2 > 0,
+        inputNullifier,
+        ephPrivKey,
+        grumpkin,
+      );
       notes.push(note);
       encryptedNotes.push(note.createViewingKey(ephPrivKey, grumpkin));
       noteCommitments.push(noteAlgos.valueNoteCommitment(note));
@@ -128,7 +136,15 @@ describe('tree_note', () => {
       const ephPrivKey = grumpkin.getRandomFr();
       const inputNullifier = numToUInt32BE(i, 32);
       inputNullifiers.push(inputNullifier);
-      const note = TreeNote.createFromEphPriv(receiver.pubKey, BigInt(200), 0, 1, inputNullifier, ephPrivKey, grumpkin);
+      const note = TreeNote.createFromEphPriv(
+        receiver.pubKey,
+        BigInt(200),
+        0,
+        i % 2 > 0,
+        inputNullifier,
+        ephPrivKey,
+        grumpkin,
+      );
       notes.push(note);
       encryptedNotes.push(note.createViewingKey(ephPrivKey, grumpkin));
       noteCommitments.push(noteAlgos.valueNoteCommitment(note));
@@ -165,7 +181,7 @@ describe('tree_note', () => {
         receiver.pubKey,
         BigInt(100 + i),
         0,
-        1,
+        i % 2 > 0,
         inputNullifier,
         ephPrivKey,
         grumpkin,

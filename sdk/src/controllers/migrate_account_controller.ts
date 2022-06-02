@@ -1,4 +1,3 @@
-import { AccountId } from '@aztec/barretenberg/account_id';
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetValue } from '@aztec/barretenberg/asset';
 import { TxId } from '@aztec/barretenberg/tx_id';
@@ -11,35 +10,29 @@ import { filterUndefined } from './filter_undefined';
 export class MigrateAccountController {
   private proofOutput!: ProofOutput;
   private feeProofOutput?: ProofOutput;
-  private txIds!: TxId[];
+  private txId!: TxId;
 
   constructor(
-    public readonly userId: AccountId,
+    public readonly userId: GrumpkinAddress,
     private readonly userSigner: Signer,
-    public readonly newSigningPublicKey: GrumpkinAddress,
+    private readonly alias: string,
+    public readonly newAccountPrivateKey: Buffer,
+    public readonly newSpendingPublicKey: GrumpkinAddress,
     public readonly recoveryPublicKey: GrumpkinAddress | undefined,
-    public readonly newAccountPrivateKey: Buffer | undefined,
     public readonly fee: AssetValue,
     private readonly core: CoreSdkInterface,
   ) {}
 
   public async createProof() {
-    const user = await this.core.getUserData(this.userId);
-    if (!user.aliasHash) {
-      throw new Error('User not registered or not fully synced.');
-    }
-
     const requireFeePayingTx = this.fee.value;
     const txRefNo = requireFeePayingTx ? createTxRefNo() : 0;
-
-    const signingPublicKey = this.userSigner.getPublicKey();
-
+    const spendingPublicKey = this.userSigner.getPublicKey();
     const proofInput = await this.core.createAccountProofInput(
       this.userId,
-      user.aliasHash,
-      false,
-      signingPublicKey,
-      this.newSigningPublicKey,
+      this.alias,
+      true,
+      spendingPublicKey,
+      this.newSpendingPublicKey,
       this.recoveryPublicKey,
       this.newAccountPrivateKey,
     );
@@ -47,6 +40,7 @@ export class MigrateAccountController {
     this.proofOutput = await this.core.createAccountProof(proofInput, txRefNo);
 
     if (requireFeePayingTx) {
+      const accountRequired = !spendingPublicKey.equals(this.userId);
       const feeProofInput = await this.core.createPaymentProofInput(
         this.userId,
         this.fee.assetId,
@@ -55,9 +49,10 @@ export class MigrateAccountController {
         this.fee.value,
         BigInt(0),
         BigInt(0),
+        this.userId,
+        accountRequired,
         undefined,
-        undefined,
-        signingPublicKey,
+        spendingPublicKey,
         2,
       );
       feeProofInput.signature = await this.userSigner.signMessage(feeProofInput.signingData);
@@ -65,12 +60,18 @@ export class MigrateAccountController {
     }
   }
 
-  async send() {
-    this.txIds = await this.core.sendProofs(filterUndefined([this.proofOutput, this.feeProofOutput]));
-    return this.txIds[0];
+  public async send() {
+    if (!this.proofOutput) {
+      throw new Error('Call createProof() first.');
+    }
+    [this.txId] = await this.core.sendProofs(filterUndefined([this.proofOutput, this.feeProofOutput]));
+    return this.txId;
   }
 
-  async awaitSettlement(timeout?: number) {
-    await Promise.all(this.txIds.map(txId => this.core.awaitSettlement(txId, timeout)));
+  public async awaitSettlement(timeout?: number) {
+    if (!this.txId) {
+      throw new Error(`Call ${!this.proofOutput ? 'createProof()' : 'send()'} first.`);
+    }
+    await this.core.awaitSettlement(this.txId, timeout);
   }
 }

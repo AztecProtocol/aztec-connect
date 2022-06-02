@@ -45,7 +45,7 @@ export class HttpJobServer implements ProofGenerator {
     router.get('/get-job', async (ctx: Koa.Context) => {
       ctx.body = await this.serialExecute(() => this.getWork());
       ctx.status = 200;
-      this.log('sent work');
+      this.log('get-job returned');
     });
 
     router.post('/job-complete', async (ctx: Koa.Context) => {

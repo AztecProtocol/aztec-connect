@@ -1,4 +1,4 @@
-import { AccountAliasId, AliasHash } from '@aztec/barretenberg/account_id';
+import { AliasHash } from '@aztec/barretenberg/account_id';
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { TxType } from '@aztec/barretenberg/blockchain';
@@ -17,19 +17,25 @@ const txTypeToProofId = (txType: TxType) => (txType < TxType.WITHDRAW_TO_CONTRAC
 
 export const randomTx = ({
   txType = TxType.TRANSFER,
+  nullifier1 = randomBytes(32),
+  nullifier2 = randomBytes(32),
   signature = Buffer.alloc(0),
-  accountPublicKey = GrumpkinAddress.randomAddress(),
+  accountPublicKey = GrumpkinAddress.random(),
   aliasHash = AliasHash.random(),
-  nonce = 1,
 } = {}) => {
   const proofId = txTypeToProofId(txType);
   const proofData = new ProofData(
-    Buffer.concat([numToUInt32BE(proofId, 32), randomBytes(32 * (ProofData.NUM_PUBLIC_INPUTS - 1))]),
+    Buffer.concat([
+      numToUInt32BE(proofId, 32),
+      randomBytes(32),
+      randomBytes(32),
+      nullifier1,
+      nullifier2,
+      randomBytes(32 * (ProofData.NUM_PUBLIC_INPUTS - 5)),
+    ]),
   );
   const offchainTxData =
-    txType === TxType.ACCOUNT
-      ? new OffchainAccountData(accountPublicKey, new AccountAliasId(aliasHash, nonce)).toBuffer()
-      : randomBytes(160);
+    txType === TxType.ACCOUNT ? new OffchainAccountData(accountPublicKey, aliasHash).toBuffer() : randomBytes(160);
   return new TxDao({
     id: proofData.txId,
     proofData: proofData.rawProofData,
@@ -40,20 +46,22 @@ export const randomTx = ({
     created: now.add(1, 's').toDate(),
     signature: signature.length ? signature : undefined,
     txType,
-    excessGas: 50000n,
+    excessGas: 50000,
   });
 };
 
 export const randomAccountTx = ({
-  accountPublicKey = GrumpkinAddress.randomAddress(),
+  accountPublicKey = GrumpkinAddress.random(),
   aliasHash = AliasHash.random(),
-  nonce = 1,
+  migrate = false,
+  addKey = false,
 } = {}) =>
   randomTx({
     txType: TxType.ACCOUNT,
     accountPublicKey,
     aliasHash,
-    nonce,
+    nullifier1: !migrate && !addKey ? Buffer.concat([Buffer.alloc(4).fill(1), aliasHash.toBuffer()]) : Buffer.alloc(32),
+    nullifier2: !addKey ? accountPublicKey.y() : Buffer.alloc(32),
   });
 
 export const randomRollupProof = (txs: TxDao[], dataStartIndex = 0, rollupSize = txs.length) =>

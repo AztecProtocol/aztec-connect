@@ -1,4 +1,5 @@
 import { Blockchain, PriceFeed } from '@aztec/barretenberg/blockchain';
+import { InterruptableSleep } from '@aztec/barretenberg/sleep';
 
 export class PriceTracker {
   private readonly gasPriceFeed: PriceFeed;
@@ -7,6 +8,7 @@ export class PriceTracker {
   private running = false;
   private runningPromise!: Promise<void>;
   private readonly numHistoricalPrices: number;
+  private interruptableSleep = new InterruptableSleep();
 
   constructor(
     blockchain: Blockchain,
@@ -26,22 +28,22 @@ export class PriceTracker {
 
     this.runningPromise = (async () => {
       while (this.running) {
-        await new Promise<void>(resolve =>
-          setTimeout(async () => {
-            try {
-              await this.recordPrices();
-            } catch (e) {
-              console.log(e.message);
-            }
-            resolve();
-          }, this.refreshInterval * +this.running),
-        );
+        await this.interruptableSleep.sleep(this.refreshInterval);
+        if (!this.running) {
+          return;
+        }
+        try {
+          await this.recordPrices();
+        } catch (e) {
+          console.log(e.message);
+        }
       }
     })();
   }
 
   async stop() {
     this.running = false;
+    this.interruptableSleep.interrupt();
     await this.runningPromise;
   }
 

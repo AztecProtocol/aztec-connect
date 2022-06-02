@@ -1,6 +1,11 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { Asset, TxHash } from '@aztec/barretenberg/blockchain';
-import { AUX_DATA_SELECTOR, BridgeId, virtualAssetIdFlag } from '@aztec/barretenberg/bridge_id';
+import {
+  AUX_DATA_SELECTOR,
+  BridgeId,
+  virtualAssetIdFlag,
+  virtualAssetIdPlaceholder,
+} from '@aztec/barretenberg/bridge_id';
 import {
   computeInteractionHashes,
   DefiInteractionNote,
@@ -11,11 +16,12 @@ import { WorldStateConstants } from '@aztec/barretenberg/world_state';
 import { Signer } from 'ethers';
 import { LogDescription } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
+import { evmSnapshot, evmRevert, setEthBalance } from '../../ganache/hardhat_chain_manipulation';
 import { EthersAdapter } from '../../provider';
 import { DefiBridge } from '../defi_bridge';
 import { createRollupProof, createSendProof, DefiInteractionData } from './fixtures/create_mock_proof';
 import { deployMockBridge, MockBridgeParams } from './fixtures/setup_defi_bridges';
-import { setupTestRollupProcessor } from './fixtures/setup_test_rollup_processor';
+import { setupTestRollupProcessor } from './fixtures/setup_upgradeable_test_rollup_processor';
 import { TestRollupProcessor } from './fixtures/test_rollup_processor';
 
 const numberOfBridgeCalls = RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK;
@@ -42,11 +48,21 @@ describe('rollup_processor: defi bridge with loans', () => {
   let rollupProvider: Signer;
   let assetAddresses: EthAddress[];
 
-  const topupToken = async (assetId: number, amount: bigint) =>
+  let snapshot: string;
+
+  const topupToken = (assetId: number, amount: bigint) =>
     assets[assetId].mint(amount, rollupProcessor.address, { signingAddress: addresses[0] });
 
-  const topupEth = async (amount: bigint) =>
-    signers[0].sendTransaction({ to: rollupProcessor.address.toString(), value: Number(amount) });
+  const topupEth = async (amount: bigint) => {
+    if (rollupProvider.provider) {
+      await setEthBalance(
+        rollupProcessor.address,
+        amount + (await rollupProvider.provider.getBalance(rollupProcessor.address.toString())).toBigInt(),
+      );
+    } else {
+      await setEthBalance(rollupProcessor.address, amount);
+    }
+  };
 
   const dummyProof = () => createSendProof(0);
 
@@ -95,6 +111,14 @@ describe('rollup_processor: defi bridge with loans', () => {
     ({ rollupProcessor, assets, assetAddresses } = await setupTestRollupProcessor(signers));
   });
 
+  beforeEach(async () => {
+    snapshot = await evmSnapshot();
+  });
+
+  afterEach(async () => {
+    await evmRevert(snapshot);
+  });
+
   // TODO ADD A TEST THAT ENSURES BRIDGE THROWS IF NON-VIRTUAL ASSETS ARE PROVIDED
   it('process defi interaction data that draws and repays a loan', async () => {
     const inputValue = 20n;
@@ -103,7 +127,7 @@ describe('rollup_processor: defi bridge with loans', () => {
     const { bridgeId } = await mockBridge({
       inputAssetIdA: 1,
       outputAssetIdA: 0,
-      outputAssetIdB: 2 + virtualAssetIdFlag,
+      outputAssetIdB: virtualAssetIdPlaceholder,
       outputValueA,
       outputValueB,
     });
@@ -185,7 +209,7 @@ describe('rollup_processor: defi bridge with loans', () => {
     const { bridgeId: bridgeId1 } = await mockBridge({
       inputAssetIdA: 1,
       outputAssetIdA: 0,
-      outputAssetIdB: virtualAssetIdFlag,
+      outputAssetIdB: virtualAssetIdPlaceholder,
       outputValueA: loanValue1,
     });
 
@@ -194,7 +218,7 @@ describe('rollup_processor: defi bridge with loans', () => {
     const { bridgeId: bridgeId2 } = await mockBridge({
       inputAssetIdA: 0,
       outputAssetIdA: 2,
-      outputAssetIdB: virtualAssetIdFlag,
+      outputAssetIdB: virtualAssetIdPlaceholder,
       outputValueA: loanValue2,
     });
 

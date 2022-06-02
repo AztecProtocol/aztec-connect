@@ -3,7 +3,7 @@ import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import levelup from 'levelup';
 import memdown from 'memdown';
-import { AccountAliasId, AliasHash } from '../../account_id';
+import { AliasHash } from '../../account_id';
 import { GrumpkinAddress } from '../../address';
 import { Crs } from '../../crs';
 import { Blake2s, Pedersen, Schnorr, SinglePedersen } from '../../crypto';
@@ -90,14 +90,13 @@ describe('account proof', () => {
 
     const merkleRoot = tree.getRoot();
 
-    const signingKey0 = createKeyPair();
-    const signingKey1 = createKeyPair();
+    const spendingKey0 = createKeyPair();
+    const spendingKey1 = createKeyPair();
 
     const aliasHash = AliasHash.fromAlias('user_zero', blake2s);
-    const nonce = 0;
-    const accountAliasId = new AccountAliasId(aliasHash, nonce);
 
-    const migrate = true;
+    const create = true;
+    const migrate = false;
 
     const accountIndex = 0;
     const accountPath = await tree.getHashPath(0);
@@ -106,9 +105,10 @@ describe('account proof', () => {
       merkleRoot,
       user.publicKey,
       newAccountPublicKey,
-      signingKey0.publicKey,
-      signingKey1.publicKey,
-      accountAliasId,
+      spendingKey0.publicKey,
+      spendingKey1.publicKey,
+      aliasHash,
+      create,
       migrate,
       accountIndex,
       accountPath,
@@ -128,23 +128,15 @@ describe('account proof', () => {
 
     // Check public inputs
     const accountProof = new ProofData(proof);
-    const newAccountAliasId = new AccountAliasId(aliasHash, nonce + 1);
-    const noteCommitment1 = noteAlgos.accountNoteCommitment(
-      newAccountAliasId,
-      user.publicKey,
-      signingKey0.publicKey.x(),
-    );
-    const noteCommitment2 = noteAlgos.accountNoteCommitment(
-      newAccountAliasId,
-      user.publicKey,
-      signingKey1.publicKey.x(),
-    );
-    const accountAliasIdNullifier = noteAlgos.accountAliasIdNullifier(accountAliasId);
+    const noteCommitment1 = noteAlgos.accountNoteCommitment(aliasHash, user.publicKey, spendingKey0.publicKey.x());
+    const noteCommitment2 = noteAlgos.accountNoteCommitment(aliasHash, user.publicKey, spendingKey1.publicKey.x());
+    const nullifier1 = noteAlgos.accountAliasHashNullifier(aliasHash);
+    const nullifier2 = noteAlgos.accountPublicKeyNullifier(newAccountPublicKey);
     expect(accountProof.proofId).toBe(ProofId.ACCOUNT);
     expect(accountProof.noteCommitment1).toEqual(noteCommitment1);
     expect(accountProof.noteCommitment2).toEqual(noteCommitment2);
-    expect(accountProof.nullifier1).toEqual(accountAliasIdNullifier);
-    expect(accountProof.nullifier2).toEqual(Buffer.alloc(32));
+    expect(accountProof.nullifier1).toEqual(nullifier1);
+    expect(accountProof.nullifier2).toEqual(nullifier2);
     expect(accountProof.publicValue).toEqual(Buffer.alloc(32));
     expect(accountProof.publicOwner).toEqual(Buffer.alloc(32));
     expect(accountProof.publicAssetId).toEqual(Buffer.alloc(32));

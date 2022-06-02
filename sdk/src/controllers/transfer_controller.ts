@@ -1,4 +1,4 @@
-import { AccountId } from '@aztec/barretenberg/account_id';
+import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetValue } from '@aztec/barretenberg/asset';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { CoreSdkInterface } from '../core_sdk';
@@ -10,16 +10,21 @@ import { filterUndefined } from './filter_undefined';
 export class TransferController {
   private proofOutput!: ProofOutput;
   private feeProofOutput?: ProofOutput;
-  private txIds!: TxId[];
+  private txId!: TxId;
 
   constructor(
-    public readonly userId: AccountId,
+    public readonly userId: GrumpkinAddress,
     private readonly userSigner: Signer,
     public readonly assetValue: AssetValue,
     public readonly fee: AssetValue,
-    public readonly to: AccountId,
+    public readonly recipient: GrumpkinAddress,
+    public readonly recipientAccountRequired: boolean,
     private readonly core: CoreSdkInterface,
-  ) {}
+  ) {
+    if (!assetValue.value) {
+      throw new Error('Value must be greater than 0.');
+    }
+  }
 
   public async createProof() {
     const { assetId, value } = this.assetValue;
@@ -36,7 +41,8 @@ export class TransferController {
       privateInput,
       value,
       BigInt(0),
-      this.to,
+      this.recipient,
+      this.recipientAccountRequired,
       undefined,
       spendingPublicKey,
       2,
@@ -45,6 +51,7 @@ export class TransferController {
     this.proofOutput = await this.core.createPaymentProof(proofInput, txRefNo);
 
     if (requireFeePayingTx) {
+      const accountRequired = !spendingPublicKey.equals(this.userId);
       const feeProofInput = await this.core.createPaymentProofInput(
         this.userId,
         this.fee.assetId,
@@ -53,7 +60,8 @@ export class TransferController {
         this.fee.value,
         BigInt(0),
         BigInt(0),
-        undefined,
+        this.userId,
+        accountRequired,
         undefined,
         spendingPublicKey,
         2,
@@ -63,12 +71,18 @@ export class TransferController {
     }
   }
 
-  async send() {
-    this.txIds = await this.core.sendProofs(filterUndefined([this.proofOutput, this.feeProofOutput]));
-    return this.txIds[0];
+  public async send() {
+    if (!this.proofOutput) {
+      throw new Error('Call createProof() first.');
+    }
+    [this.txId] = await this.core.sendProofs(filterUndefined([this.proofOutput, this.feeProofOutput]));
+    return this.txId;
   }
 
-  async awaitSettlement(timeout?: number) {
-    await Promise.all(this.txIds.map(txId => this.core.awaitSettlement(txId, timeout)));
+  public async awaitSettlement(timeout?: number) {
+    if (!this.txId) {
+      throw new Error(`Call ${!this.proofOutput ? 'createProof()' : 'send()'} first.`);
+    }
+    await this.core.awaitSettlement(this.txId, timeout);
   }
 }

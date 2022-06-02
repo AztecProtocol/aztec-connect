@@ -15,7 +15,7 @@ export const randomDepositProofData = () =>
     randomNullifier(),
     randomNullifier(),
     randomInt(),
-    EthAddress.randomAddress().toBuffer32(),
+    EthAddress.random().toBuffer32(),
     Buffer.alloc(32),
   );
 
@@ -39,7 +39,7 @@ export const randomWithdrawProofData = () =>
     randomNullifier(),
     randomNullifier(),
     randomInt(),
-    EthAddress.randomAddress().toBuffer32(),
+    EthAddress.random().toBuffer32(),
     randomInt(),
   );
 
@@ -57,7 +57,7 @@ export const randomInnerProofData = (proofId = ProofId.SEND) => {
         randomCommitment(),
         randomCommitment(),
         randomNullifier(),
-        proofId === ProofId.DEFI_DEPOSIT ? randomNullifier() : Buffer.alloc(32),
+        [ProofId.ACCOUNT, ProofId.DEFI_DEPOSIT].includes(proofId) ? randomNullifier() : Buffer.alloc(32),
         Buffer.alloc(32),
         Buffer.alloc(32),
         Buffer.alloc(32),

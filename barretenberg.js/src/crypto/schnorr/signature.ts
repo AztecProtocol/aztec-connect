@@ -1,8 +1,10 @@
 import { randomBytes } from '../random';
 
 export class SchnorrSignature {
+  public static SIZE = 64;
+
   constructor(private buffer: Buffer) {
-    if (buffer.length !== 64) {
+    if (buffer.length !== SchnorrSignature.SIZE) {
       throw new Error('Invalid signature buffer.');
     }
   }

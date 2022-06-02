@@ -10,6 +10,9 @@ import { createConnection } from 'typeorm';
 import { CoreSdk, CoreSdkOptions } from '../../core_sdk';
 import { DexieDatabase, getOrmConfig, SQLDatabase } from '../../database';
 import { getNumWorkers } from '../get_num_workers';
+import { createLogger } from '@aztec/barretenberg/debug';
+
+const debug = createLogger('bb:create_vanilla_core_sdk');
 
 export function getLevelDb(memoryDb = false, identifier?: string): LevelUp {
   if (isNode) {
@@ -53,6 +56,7 @@ export interface VanillaCoreSdkOptions extends CoreSdkOptions {
  * Dapps should use either strawberry or chocolate.
  */
 export async function createVanillaCoreSdk(options: VanillaCoreSdkOptions) {
+  debug('creating vanilla core sdk...');
   const { numWorkers = getNumWorkers() } = options;
   const wasm = await BarretenbergWasm.new();
   const workerPool = await WorkerPool.new(wasm, numWorkers);

@@ -1,8 +1,8 @@
-import { AccountId } from '@aztec/barretenberg/account_id';
+import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { TxId } from '@aztec/barretenberg/tx_id';
-import { Column, Entity, PrimaryColumn } from 'typeorm';
+import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
 import { CoreClaimTx } from '../../core_tx';
-import { accountIdTransformer, txIdTransformer } from './transformer';
+import { grumpkinAddressTransformer, txIdTransformer } from './transformer';
 
 @Entity({ name: 'claimTx' })
 export class ClaimTxDao implements CoreClaimTx {
@@ -12,8 +12,9 @@ export class ClaimTxDao implements CoreClaimTx {
   @Column('blob', { transformer: [txIdTransformer] })
   public defiTxId!: TxId;
 
-  @Column('blob', { transformer: [accountIdTransformer] })
-  public userId!: AccountId;
+  @Index({ unique: false })
+  @Column('blob', { transformer: [grumpkinAddressTransformer] })
+  public userId!: GrumpkinAddress;
 
   @Column()
   public secret!: Buffer;

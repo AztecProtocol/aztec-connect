@@ -1,14 +1,14 @@
 import '@nomiclabs/hardhat-waffle';
 import '@nomiclabs/hardhat-ethers';
 import '@nomiclabs/hardhat-etherscan';
-import '@openzeppelin/hardhat-upgrades';
+import 'hardhat-contract-sizer'
 
 const config = {
   solidity: {
     version: '0.8.10',
     settings: {
-      evmVersion: 'berlin',
-      optimizer: { enabled: true, runs: 200 },
+      evmVersion: 'london',
+      optimizer: { enabled: true, runs: 2000 },
     },
   },
   networks: {
@@ -20,8 +20,7 @@ const config = {
     },
     hardhat: {
       blockGasLimit: 15000000,
-      gasPrice: 10,
-      hardfork: 'berlin',
+      hardfork: 'london',
     },
   },
   paths: {

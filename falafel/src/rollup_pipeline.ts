@@ -83,8 +83,8 @@ export class RollupPipeline {
     return this.pipelineCoordinator.getNextPublishTime();
   }
 
-  public getProccessedTxs() {
-    return this.pipelineCoordinator.getProccessedTxs();
+  public getProcessedTxs() {
+    return this.pipelineCoordinator.getProcessedTxs();
   }
 
   public async start() {
@@ -119,11 +119,24 @@ export class RollupPipelineFactory {
     private bridgeResolver: BridgeResolver,
   ) {}
 
-  public setConf(publishInterval: number, flushAfterIdle: number, maxProviderGasPrice: bigint, gasLimit: number) {
+  public setConf(
+    txFeeResolver: TxFeeResolver,
+    publishInterval: number,
+    flushAfterIdle: number,
+    maxProviderGasPrice: bigint,
+    gasLimit: number,
+  ) {
+    this.txFeeResolver = txFeeResolver;
     this.publishInterval = publishInterval;
     this.flushAfterIdle = flushAfterIdle;
     this.maxProviderGasPrice = maxProviderGasPrice;
     this.gasLimit = gasLimit;
+  }
+
+  public getRollupSize() {
+    const innerRollupSize = 1 << Math.ceil(Math.log2(this.numInnerRollupTxs));
+    const outerRollupSize = 1 << Math.ceil(Math.log2(innerRollupSize * this.numOuterRollupProofs));
+    return outerRollupSize;
   }
 
   public async create() {

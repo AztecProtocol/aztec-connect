@@ -1,18 +1,15 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { Asset, TxHash } from '@aztec/barretenberg/blockchain';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
-import {
-  computeInteractionHashes,
-  DefiInteractionNote,
-  packInteractionNotes,
-} from '@aztec/barretenberg/note_algorithms';
+import { computeInteractionHashes, DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { Signer } from 'ethers';
 import { LogDescription } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
+import { evmSnapshot, evmRevert, setEthBalance } from '../../ganache/hardhat_chain_manipulation';
 import { createRollupProof, createSendProof, DefiInteractionData } from './fixtures/create_mock_proof';
 import { mockAsyncBridge } from './fixtures/setup_defi_bridges';
-import { setupTestRollupProcessor } from './fixtures/setup_test_rollup_processor';
+import { setupTestRollupProcessor } from './fixtures/setup_upgradeable_test_rollup_processor';
 import { TestRollupProcessor } from './fixtures/test_rollup_processor';
 
 const parseInteractionResultFromLog = (log: LogDescription) => {
@@ -37,13 +34,23 @@ describe('rollup_processor: async defi bridge', () => {
   let rollupProvider: Signer;
   let assetAddresses: EthAddress[];
 
+  let snapshot: string;
+
   const numberOfBridgeCalls = RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK;
 
-  const topupToken = async (assetId: number, amount: bigint) =>
+  const topupToken = (assetId: number, amount: bigint) =>
     assets[assetId].mint(amount, rollupProcessor.address, { signingAddress: addresses[0] });
 
-  const topupEth = async (amount: bigint) =>
-    signers[0].sendTransaction({ to: rollupProcessor.address.toString(), value: Number(amount) });
+  const topupEth = async (amount: bigint) => {
+    if (rollupProvider.provider) {
+      await setEthBalance(
+        rollupProcessor.address,
+        amount + (await rollupProvider.provider.getBalance(rollupProcessor.address.toString())).toBigInt(),
+      );
+    } else {
+      await setEthBalance(rollupProcessor.address, amount);
+    }
+  };
 
   const dummyProof = () => createSendProof();
 
@@ -73,11 +80,19 @@ describe('rollup_processor: async defi bridge', () => {
   const expectBalance = async (assetId: number, balance: bigint) =>
     expect(await assets[assetId].balanceOf(rollupProcessor.address)).toBe(balance);
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     signers = await ethers.getSigners();
     rollupProvider = signers[0];
     addresses = await Promise.all(signers.map(async u => EthAddress.fromString(await u.getAddress())));
     ({ rollupProcessor, assets, assetAddresses } = await setupTestRollupProcessor(signers));
+  });
+
+  beforeEach(async () => {
+    snapshot = await evmSnapshot();
+  });
+
+  afterEach(async () => {
+    await evmRevert(snapshot);
   });
 
   it('process defi interaction data that has two output assets', async () => {
@@ -137,105 +152,6 @@ describe('rollup_processor: async defi bridge', () => {
 
       await expectResult(txHash, []);
       await expectHashes([new DefiInteractionNote(bridgeId, 0, inputValue, outputValueA, outputValueB, true)]);
-      await expectAsyncHashes([]);
-    }
-  });
-
-  it('process multiple async defi interactions', async () => {
-    const outputValueA = 12n;
-    const outputValueB = 7n;
-    const { bridgeId } = await mockAsyncBridge(rollupProvider, rollupProcessor, assetAddresses, {
-      inputAssetIdA: 1,
-      outputAssetIdA: 0,
-      outputAssetIdB: 2,
-      outputValueA,
-      outputValueB,
-    });
-
-    const initialBalance = 5000n;
-    await topupToken(1, initialBalance);
-
-    await expectBalance(0, 0n);
-    await expectBalance(1, initialBalance);
-    await expectBalance(2, 0n);
-
-    const numAsyncInteractions = numberOfBridgeCalls + 3; // Plus 3, because we want to test the system can handle an async queue larger than numberOfBridgeCalls.
-    let rollupId = 0;
-
-    // convert
-    let totalInputValue = 0n;
-    for (let i = 0; i < numAsyncInteractions; ++i) {
-      const inputValue = BigInt(i + 1);
-      totalInputValue += inputValue;
-      const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
-        rollupId,
-        defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
-      });
-      const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
-      const txHash = await rollupProcessor.sendTx(tx);
-      rollupId++;
-
-      await expectResult(txHash, []);
-      await expectHashes([]);
-      await expectAsyncHashes([]);
-    }
-
-    await expectBalance(0, 0n);
-    await expectBalance(1, initialBalance - totalInputValue);
-    await expectBalance(2, 0n);
-
-    // finalise
-    const expectedAsyncResult: DefiInteractionNote[] = [];
-    for (let i = 0; i < numAsyncInteractions; ++i) {
-      const inputValue = BigInt(i + 1);
-      const interactionNonce = i * numberOfBridgeCalls;
-      const txHash = await rollupProcessor.processAsyncDefiInteraction(interactionNonce);
-      const asyncResult = new DefiInteractionNote(
-        bridgeId,
-        interactionNonce,
-        inputValue,
-        outputValueA,
-        outputValueB,
-        true,
-      );
-      expectedAsyncResult.push(asyncResult);
-      await expectResult(txHash, [asyncResult]);
-      await expectHashes([]);
-      await expectAsyncHashes(expectedAsyncResult);
-    }
-
-    await expectBalance(0, outputValueA * BigInt(numAsyncInteractions));
-    await expectBalance(1, initialBalance - totalInputValue);
-    await expectBalance(2, outputValueB * BigInt(numAsyncInteractions));
-
-    // populate hashes with asyncHashes
-    {
-      const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
-        rollupId,
-      });
-      const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
-      const txHash = await rollupProcessor.sendTx(tx);
-      rollupId++;
-
-      await expectResult(txHash, []);
-      await expectHashes(expectedAsyncResult);
-      await expectAsyncHashes([]);
-    }
-
-    // process the last `numberOfBridgeCalls` interaction hashes
-    {
-      const defiInteractionData = expectedAsyncResult.slice(-numberOfBridgeCalls);
-      const previousDefiInteractionHash = packInteractionNotes(defiInteractionData);
-      const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
-        rollupId,
-        previousDefiInteractionHash,
-      });
-      const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
-      const txHash = await rollupProcessor.sendTx(tx);
-      rollupId++;
-
-      await expectResult(txHash, []);
-      await expectHashes(expectedAsyncResult.slice(0, expectedAsyncResult.length - numberOfBridgeCalls));
       await expectAsyncHashes([]);
     }
   });

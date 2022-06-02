@@ -33,6 +33,10 @@ export class OffchainDefiDepositData {
   }
 
   static fromBuffer(buf: Buffer) {
+    if (buf.length !== OffchainDefiDepositData.SIZE) {
+      throw new Error('Invalid buffer size.');
+    }
+
     let dataStart = 0;
     const bridgeId = BridgeId.fromBuffer(buf.slice(dataStart, dataStart + 32));
     dataStart += 32;

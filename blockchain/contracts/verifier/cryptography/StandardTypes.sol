@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2022 Aztec
-
-pragma solidity >=0.6.0 <0.8.11;
-pragma experimental ABIEncoderV2;
+pragma solidity >=0.8.4;
 
 /**
  * @title Bn254Crypto library used for the fr, g1 and g2 point types
@@ -15,15 +13,15 @@ pragma experimental ABIEncoderV2;
  * inside the contract and not supplied by the user
  */
 library StandardTypes {
-    uint256 constant PROGRAM_WIDTH = 3;
-    uint256 constant NUM_NU_CHALLENGES = 6;
+    uint256 internal constant PROGRAM_WIDTH = 3;
+    uint256 internal constant NUM_NU_CHALLENGES = 6;
 
-    uint256 constant coset_generator0 = 0x0000000000000000000000000000000000000000000000000000000000000005;
-    uint256 constant coset_generator1 = 0x0000000000000000000000000000000000000000000000000000000000000006;
-    uint256 constant coset_generator2 = 0x0000000000000000000000000000000000000000000000000000000000000007;
+    uint256 internal constant coset_generator0 = 0x0000000000000000000000000000000000000000000000000000000000000005;
+    uint256 internal constant coset_generator1 = 0x0000000000000000000000000000000000000000000000000000000000000006;
+    uint256 internal constant coset_generator2 = 0x0000000000000000000000000000000000000000000000000000000000000007;
 
     // TODO: add external_coset_generator() method to compute this
-    uint256 constant coset_generator7 = 0x000000000000000000000000000000000000000000000000000000000000000c;
+    uint256 internal constant coset_generator7 = 0x000000000000000000000000000000000000000000000000000000000000000c;
 
     struct G1Point {
         uint256 x;
@@ -53,13 +51,13 @@ library StandardTypes {
         uint256 w3;
         uint256 sigma1;
         uint256 sigma2;
-    //    uint256 linearization_polynomial;
+        //    uint256 linearization_polynomial;
         uint256 grand_product_at_z_omega;
         G1Point PI_Z;
         G1Point PI_Z_OMEGA;
         G1Point recursive_P1;
         G1Point recursive_P2;
-        uint256 r_0;  // Changes owing to the simplified Plonk
+        uint256 r_0; // Changes owing to the simplified Plonk
     }
 
     struct ChallengeTranscript {

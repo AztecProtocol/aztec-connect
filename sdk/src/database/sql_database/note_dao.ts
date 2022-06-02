@@ -1,8 +1,8 @@
-import { AccountId } from '@aztec/barretenberg/account_id';
+import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { TreeNote } from '@aztec/barretenberg/note_algorithms';
 import { AfterInsert, AfterLoad, AfterUpdate, Column, Entity, Index, PrimaryColumn } from 'typeorm';
 import { Note } from '../../note';
-import { accountIdTransformer, bigintTransformer } from './transformer';
+import { bigintTransformer, grumpkinAddressTransformer } from './transformer';
 
 @Entity({ name: 'note' })
 export class NoteDao {
@@ -16,8 +16,11 @@ export class NoteDao {
   @Column()
   public noteSecret!: Buffer;
 
-  @Column('blob', { transformer: [accountIdTransformer] })
-  public owner!: AccountId;
+  @Column('blob', { transformer: [grumpkinAddressTransformer] })
+  public owner!: GrumpkinAddress;
+
+  @Column()
+  public accountRequired!: boolean;
 
   @Column()
   public creatorPubKey!: Buffer;
@@ -42,10 +45,16 @@ export class NoteDao {
   @Column()
   public nullified!: boolean;
 
+  @Column({ nullable: true })
+  public hashPath?: Buffer;
+
   @AfterLoad()
   @AfterInsert()
   @AfterUpdate()
   afterLoad() {
+    if (!this.hashPath) {
+      delete this.hashPath;
+    }
     if (this.index === null) {
       delete this.index;
     }
@@ -53,18 +62,20 @@ export class NoteDao {
 }
 
 export const noteToNoteDao = ({
-  treeNote: { noteSecret, ownerPubKey, nonce, creatorPubKey, inputNullifier, assetId },
+  treeNote: { noteSecret, ownerPubKey, accountRequired, creatorPubKey, inputNullifier, assetId },
   commitment,
   nullifier,
   value,
   allowChain,
   index,
   nullified,
+  hashPath,
 }: Note) => ({
   commitment,
   nullifier,
   noteSecret,
-  owner: new AccountId(ownerPubKey, nonce),
+  owner: ownerPubKey,
+  accountRequired,
   creatorPubKey,
   inputNullifier,
   assetId,
@@ -72,6 +83,7 @@ export const noteToNoteDao = ({
   allowChain,
   nullified,
   index,
+  hashPath,
 });
 
 export const noteDaoToNote = ({
@@ -79,6 +91,7 @@ export const noteDaoToNote = ({
   nullifier,
   noteSecret,
   owner,
+  accountRequired,
   creatorPubKey,
   inputNullifier,
   assetId,
@@ -86,12 +99,14 @@ export const noteDaoToNote = ({
   allowChain,
   index,
   nullified,
+  hashPath,
 }: NoteDao) =>
   new Note(
-    new TreeNote(owner.publicKey, value, assetId, owner.accountNonce, noteSecret, creatorPubKey, inputNullifier),
+    new TreeNote(owner, value, assetId, accountRequired, noteSecret, creatorPubKey, inputNullifier),
     commitment,
     nullifier,
     allowChain,
     nullified,
     index,
+    hashPath,
   );

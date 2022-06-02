@@ -1,19 +1,21 @@
 import { EthAddress } from '@aztec/barretenberg/address';
+import { isVirtualAsset } from '@aztec/barretenberg/asset';
+import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { Asset, TxHash } from '@aztec/barretenberg/blockchain';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { DefiInteractionEvent } from '@aztec/barretenberg/block_source/defi_interaction_event';
+import { BridgeId, virtualAssetIdFlag } from '@aztec/barretenberg/bridge_id';
 import { computeInteractionHashes } from '@aztec/barretenberg/note_algorithms';
-import { WorldStateConstants } from '@aztec/barretenberg/world_state';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof/rollup_proof_data';
+import { WorldStateConstants } from '@aztec/barretenberg/world_state';
 import { randomBytes } from 'crypto';
-import { Signer } from 'ethers';
-import { LogDescription } from 'ethers/lib/utils';
+import { Contract, Signer } from 'ethers';
+import { keccak256, LogDescription, toUtf8Bytes } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
+import { evmSnapshot, evmRevert, setEthBalance } from '../../ganache/hardhat_chain_manipulation';
 import { createRollupProof, createSendProof, DefiInteractionData } from './fixtures/create_mock_proof';
 import { deployMockBridge, MockBridgeParams } from './fixtures/setup_defi_bridges';
-import { setupTestRollupProcessor } from './fixtures/setup_test_rollup_processor';
+import { setupTestRollupProcessor } from './fixtures/setup_upgradeable_test_rollup_processor';
 import { TestRollupProcessor } from './fixtures/test_rollup_processor';
-import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
-import { DefiInteractionEvent } from '@aztec/barretenberg/block_source/defi_interaction_event';
 
 const parseInteractionResultFromLog = (log: LogDescription) => {
   const {
@@ -38,17 +40,27 @@ describe('rollup_processor: defi bridge failures', () => {
   let rollupProvider: Signer;
   let assetAddresses: EthAddress[];
 
+  let snapshot: string;
+
   const numberOfBridgeCalls = RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK;
 
-  const topupToken = async (assetId: number, amount: bigint) =>
+  const topupToken = (assetId: number, amount: bigint) =>
     assets[assetId].mint(amount, rollupProcessor.address, { signingAddress: addresses[0] });
 
-  const topupEth = async (amount: bigint) =>
-    signers[0].sendTransaction({ to: rollupProcessor.address.toString(), value: Number(amount) });
+  const topupEth = async (amount: bigint) => {
+    if (rollupProvider.provider) {
+      await setEthBalance(
+        rollupProcessor.address,
+        amount + (await rollupProvider.provider.getBalance(rollupProcessor.address.toString())).toBigInt(),
+      );
+    } else {
+      await setEthBalance(rollupProcessor.address, amount);
+    }
+  };
 
   const dummyProof = () => createSendProof(0);
 
-  const mockBridge = async (params: MockBridgeParams = {}) =>
+  const mockBridge = (params: MockBridgeParams = {}) =>
     deployMockBridge(rollupProvider, rollupProcessor, assetAddresses, params);
 
   const expectResult = async (expectedResult: DefiInteractionEvent[], txHash: TxHash) => {
@@ -76,16 +88,14 @@ describe('rollup_processor: defi bridge failures', () => {
     expect(expectedHashes).toEqual(resultHashes);
   };
 
-  const expectBalance = async (assetId: number, balance: bigint) =>
-    expect(await assets[assetId].balanceOf(rollupProcessor.address)).toBe(balance);
-
-  const expectRefund = async (bridgeId: BridgeId, inputValue: bigint, txHash: TxHash, reason: Buffer) => {
-    await expectBalance(bridgeId.inputAssetIdA, inputValue);
-    await expectBalance(bridgeId.outputAssetIdA, 0n);
-    if (bridgeId.bitConfig.secondOutputReal) {
-      await expectBalance(bridgeId.outputAssetIdB!, 0n);
-    }
+  const expectFailedResult = async (bridgeId: BridgeId, inputValue: bigint, txHash: TxHash, reason: Buffer) => {
     await expectResult([new DefiInteractionEvent(bridgeId, 0, inputValue, 0n, 0n, false, reason)], txHash);
+  };
+
+  const expectBalance = async (assetId: number, balance: bigint) => {
+    if (!isVirtualAsset(assetId)) {
+      expect(await assets[assetId].balanceOf(rollupProcessor.address)).toBe(balance);
+    }
   };
 
   const formatErrorMsg = (reason: string) => {
@@ -103,12 +113,21 @@ describe('rollup_processor: defi bridge failures', () => {
     return Buffer.concat([signature, offset, byteLength, reasonBytes]);
   };
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     signers = await ethers.getSigners();
     rollupProvider = signers[0];
     addresses = await Promise.all(signers.map(async u => EthAddress.fromString(await u.getAddress())));
     ({ rollupProcessor, assets, assetAddresses } = await setupTestRollupProcessor(signers));
   });
+
+  beforeEach(async () => {
+    snapshot = await evmSnapshot();
+  });
+
+  afterEach(async () => {
+    await evmRevert(snapshot);
+  });
+
   it('process failed defi interaction that converts token to eth', async () => {
     const bridgeId = await mockBridge({
       inputAssetIdA: 1,
@@ -121,13 +140,16 @@ describe('rollup_processor: defi bridge failures', () => {
 
     await expectBalance(1, inputValue);
     await expectBalance(0, 0n);
+
     const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
     });
     const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
     const txHash = await rollupProcessor.sendTx(tx);
 
-    await expectRefund(bridgeId, inputValue, txHash, formatErrorMsg('MockDefiBridge: canConvert = false'));
+    await expectBalance(1, inputValue);
+    await expectBalance(0, 0n);
+    await expectFailedResult(bridgeId, inputValue, txHash, formatErrorMsg('MockDefiBridge: canConvert = false'));
   });
 
   it('process failed defi interaction that converts eth to token', async () => {
@@ -149,7 +171,92 @@ describe('rollup_processor: defi bridge failures', () => {
     const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
     const txHash = await rollupProcessor.sendTx(tx);
 
-    await expectRefund(bridgeId, inputValue, txHash, formatErrorMsg('MockDefiBridge: canConvert = false'));
+    await expectBalance(0, inputValue);
+    await expectBalance(1, 0n);
+    await expectFailedResult(bridgeId, inputValue, txHash, formatErrorMsg('MockDefiBridge: canConvert = false'));
+  });
+
+  it('process failed defi interaction that converts eth and token to another token', async () => {
+    const bridgeId = await mockBridge({
+      inputAssetIdA: 0,
+      inputAssetIdB: 2,
+      outputAssetIdA: 1,
+      canConvert: false,
+    });
+
+    const inputValue = 10n;
+    await topupEth(inputValue);
+    await topupToken(2, inputValue);
+
+    await expectBalance(0, inputValue);
+    await expectBalance(1, 0n);
+    await expectBalance(2, inputValue);
+
+    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+      defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
+    });
+    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+    const txHash = await rollupProcessor.sendTx(tx);
+
+    await expectBalance(0, inputValue);
+    await expectBalance(1, 0n);
+    await expectBalance(2, inputValue);
+    await expectFailedResult(bridgeId, inputValue, txHash, formatErrorMsg('MockDefiBridge: canConvert = false'));
+  });
+
+  it('process failed defi interaction that converts two tokens to eth', async () => {
+    const bridgeId = await mockBridge({
+      inputAssetIdA: 1,
+      inputAssetIdB: 2,
+      outputAssetIdA: 0,
+      canConvert: false,
+    });
+
+    const inputValue = 10n;
+    await topupToken(1, inputValue);
+    await topupToken(2, inputValue);
+
+    await expectBalance(0, 0n);
+    await expectBalance(1, inputValue);
+    await expectBalance(2, inputValue);
+
+    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+      defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
+    });
+    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+    const txHash = await rollupProcessor.sendTx(tx);
+
+    await expectBalance(0, 0n);
+    await expectBalance(1, inputValue);
+    await expectBalance(2, inputValue);
+    await expectFailedResult(bridgeId, inputValue, txHash, formatErrorMsg('MockDefiBridge: canConvert = false'));
+  });
+
+  it('process failed defi interaction that converts token and a virtual asset to eth', async () => {
+    const bridgeId = await mockBridge({
+      inputAssetIdA: 1,
+      inputAssetIdB: 2 + virtualAssetIdFlag,
+      outputAssetIdA: 0,
+      canConvert: false,
+    });
+
+    const inputValue = 10n;
+    await topupToken(1, inputValue);
+
+    await expectBalance(0, 0n);
+    await expectBalance(1, inputValue);
+    await expectBalance(2, 0n);
+
+    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+      defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
+    });
+    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+    const txHash = await rollupProcessor.sendTx(tx);
+
+    await expectBalance(0, 0n);
+    await expectBalance(1, inputValue);
+    await expectBalance(2, 0n);
+    await expectFailedResult(bridgeId, inputValue, txHash, formatErrorMsg('MockDefiBridge: canConvert = false'));
   });
 
   it('process failed defi interaction and emit the error as the last param of the event', async () => {
@@ -171,7 +278,9 @@ describe('rollup_processor: defi bridge failures', () => {
     const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
     const txHash = await rollupProcessor.sendTx(tx);
 
-    await expectRefund(bridgeId, inputValue, txHash, formatErrorMsg('MockDefiBridge: canConvert = false'));
+    await expectBalance(0, inputValue);
+    await expectBalance(1, 0n);
+    await expectFailedResult(bridgeId, inputValue, txHash, formatErrorMsg('MockDefiBridge: canConvert = false'));
   });
 
   it('revert if prev defiInteraction hash is wrong', async () => {
@@ -217,5 +326,148 @@ describe('rollup_processor: defi bridge failures', () => {
     await rollupProcessor.stubAsyncTransactionHashes(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK);
     const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
     await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('ARRAY_OVERFLOW');
+  });
+
+  describe('Cases using additional bridge implementations', () => {
+    let reentryBridge: Contract;
+    let failingAsyncBridge: Contract;
+    let reentryBridgeAddressId: number;
+    let failingAsyncBridgeAddressId: number;
+
+    const formatCustomErrorMsg = (reason: string) => {
+      return Buffer.from(keccak256(toUtf8Bytes(reason)).substring(2), 'hex').subarray(0, 4);
+    };
+
+    beforeAll(async () => {
+      reentryBridge = await (
+        await ethers.getContractFactory('ReentryBridge', rollupProvider)
+      ).deploy(rollupProcessor.address.toString());
+      expect(await rollupProcessor.setSupportedBridge(EthAddress.fromString(reentryBridge.address), 1000000));
+      reentryBridgeAddressId = (await rollupProcessor.getSupportedBridges()).length;
+
+      failingAsyncBridge = await (
+        await ethers.getContractFactory('FailingAsyncBridge', rollupProvider)
+      ).deploy(rollupProcessor.address.toString());
+      expect(await rollupProcessor.setSupportedBridge(EthAddress.fromString(failingAsyncBridge.address), 1000000));
+      failingAsyncBridgeAddressId = await rollupProcessor.getSupportedBridgesLength();
+
+      await topupEth(10n * 10n ** 18n);
+      await setEthBalance(EthAddress.fromString(reentryBridge.address), 10n * 10n ** 18n);
+      await setEthBalance(EthAddress.fromString(failingAsyncBridge.address), 10n * 10n ** 18n);
+    });
+
+    it('process defi interaction that fails because it transfer insufficient eth', async () => {
+      const bridgeId = new BridgeId(reentryBridgeAddressId, 0, 0);
+      const inputValue = 1n;
+
+      await reentryBridge.addAction(0, false, true, true, '0x', 2, 0);
+
+      const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+        defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
+      });
+
+      const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+      const txHash = await rollupProcessor.sendTx(tx);
+
+      await expectFailedResult(bridgeId, inputValue, txHash, formatCustomErrorMsg('INSUFFICIENT_ETH_PAYMENT()'));
+    });
+
+    it('process defi interaction that fails because finalize outputvalue > eth', async () => {
+      const bridgeId = new BridgeId(failingAsyncBridgeAddressId, 0, 0);
+      const inputValue = 1n;
+
+      const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+        defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
+      });
+
+      const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+      await rollupProcessor.sendTx(tx);
+
+      await failingAsyncBridge.setReturnValues(1, 0);
+
+      await expect(rollupProcessor.processAsyncDefiInteraction(0)).rejects.toThrow('INSUFFICIENT_ETH_PAYMENT()');
+    });
+
+    it('process defi interaction that fails because async but `outputValueA > 0`', async () => {
+      const bridgeId = new BridgeId(failingAsyncBridgeAddressId, 0, 0);
+      const inputValue = 1n;
+
+      await failingAsyncBridge.setReturnValues(1, 0);
+
+      const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+        defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
+      });
+
+      const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+      const txHash = await rollupProcessor.sendTx(tx);
+
+      const errorBuffer = Buffer.alloc(4 + 32 + 32);
+      formatCustomErrorMsg('ASYNC_NONZERO_OUTPUT_VALUES(uint256,uint256)').copy(errorBuffer, 0, 0, 4);
+      errorBuffer[32 + 4 - 1] = 1;
+
+      await expectFailedResult(bridgeId, inputValue, txHash, errorBuffer);
+    });
+
+    it('process defi interaction that fails because async but `outputValueB > 0`', async () => {
+      const bridgeId = new BridgeId(failingAsyncBridgeAddressId, 0, 0);
+      const inputValue = 1n;
+
+      await failingAsyncBridge.setReturnValues(0, 1);
+
+      const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+        defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
+      });
+
+      const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+      const txHash = await rollupProcessor.sendTx(tx);
+
+      const errorBuffer = Buffer.alloc(4 + 32 + 32);
+      formatCustomErrorMsg('ASYNC_NONZERO_OUTPUT_VALUES(uint256,uint256)').copy(errorBuffer, 0, 0, 4);
+      errorBuffer[32 + 32 + 4 - 1] = 1;
+
+      await expectFailedResult(bridgeId, inputValue, txHash, errorBuffer);
+    });
+
+    it('process defi interaction that fails because returns with `outputValueA` cannot be in 252 bits', async () => {
+      const bridgeId = new BridgeId(reentryBridgeAddressId, 0, 0);
+      const inputValue = 1n;
+      const outputValueA = 2n ** 252n;
+
+      await reentryBridge.addAction(0, false, true, true, '0x', outputValueA, 0);
+
+      const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+        defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
+      });
+
+      const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+      const txHash = await rollupProcessor.sendTx(tx);
+
+      const errorBuffer = Buffer.alloc(4 + 32);
+      formatCustomErrorMsg('OUTPUT_A_EXCEEDS_252_BITS(uint256)').copy(errorBuffer, 0, 0, 4);
+      toBufferBE(outputValueA, 32).copy(errorBuffer, 4, 0, 32);
+
+      await expectFailedResult(bridgeId, inputValue, txHash, errorBuffer);
+    });
+
+    it('process defi interaction that fails because returns with `outputValueB` cannot be in 252 bits', async () => {
+      const bridgeId = new BridgeId(reentryBridgeAddressId, 0, 0);
+      const inputValue = 1n;
+      const outputValueB = 2n ** 252n;
+
+      await reentryBridge.addAction(0, false, true, true, '0x', 0, outputValueB);
+
+      const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+        defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
+      });
+
+      const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+      const txHash = await rollupProcessor.sendTx(tx);
+
+      const errorBuffer = Buffer.alloc(4 + 32);
+      formatCustomErrorMsg('OUTPUT_B_EXCEEDS_252_BITS(uint256)').copy(errorBuffer, 0, 0, 4);
+      toBufferBE(outputValueB, 32).copy(errorBuffer, 4, 0, 32);
+
+      await expectFailedResult(bridgeId, inputValue, txHash, errorBuffer);
+    });
   });
 });

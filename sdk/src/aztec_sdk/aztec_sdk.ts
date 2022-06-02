@@ -1,4 +1,3 @@
-import { AccountId } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetValue, isVirtualAsset } from '@aztec/barretenberg/asset';
 import { EthereumProvider, Receipt, SendTxOptions, TxHash, TxType } from '@aztec/barretenberg/blockchain';
@@ -6,13 +5,15 @@ import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { randomBytes } from '@aztec/barretenberg/crypto';
 import { TxSettlementTime } from '@aztec/barretenberg/rollup_provider';
+import { sleep } from '@aztec/barretenberg/sleep';
 import { TxId } from '@aztec/barretenberg/tx_id';
-import { ClientEthereumBlockchain, validateSignature } from '@aztec/blockchain';
+import { ClientEthereumBlockchain, validateSignature, Web3Signer } from '@aztec/blockchain';
 import { EventEmitter } from 'events';
 import {
-  AddSigningKeyController,
+  AddSpendingKeyController,
   DefiController,
   DepositController,
+  FeePayer,
   MigrateAccountController,
   RecoverAccountController,
   RegisterController,
@@ -26,14 +27,9 @@ import { UserAccountTx, UserDefiTx, UserPaymentTx } from '../user_tx';
 import { AztecSdkUser } from './aztec_sdk_user';
 import { groupUserTxs } from './group_user_txs';
 
-export interface AztecSdkOptions {
-  debug?: string;
-  minConfirmation?: number;
-}
-
 export interface AztecSdk {
   on(event: SdkEvent.UPDATED_USERS, listener: () => void): this;
-  on(event: SdkEvent.UPDATED_USER_STATE, listener: (userId: AccountId) => void): this;
+  on(event: SdkEvent.UPDATED_USER_STATE, listener: (userId: GrumpkinAddress) => void): this;
   on(event: SdkEvent.UPDATED_WORLD_STATE, listener: (rollupId: number, latestRollupId: number) => void): this;
   on(event: SdkEvent.DESTROYED, listener: () => void): this;
 }
@@ -43,7 +39,6 @@ export class AztecSdk extends EventEmitter {
     private core: CoreSdkInterface,
     private blockchain: ClientEthereumBlockchain,
     private provider: EthereumProvider,
-    private sdkOptions: AztecSdkOptions = {},
   ) {
     super();
 
@@ -67,11 +62,11 @@ export class AztecSdk extends EventEmitter {
     return this.core.awaitSynchronised();
   }
 
-  public async isUserSynching(userId: AccountId) {
+  public async isUserSynching(userId: GrumpkinAddress) {
     return this.core.isUserSynching(userId);
   }
 
-  public async awaitUserSynchronised(userId: AccountId) {
+  public async awaitUserSynchronised(userId: GrumpkinAddress) {
     return this.core.awaitUserSynchronised(userId);
   }
 
@@ -91,7 +86,29 @@ export class AztecSdk extends EventEmitter {
     return this.core.awaitDefiSettlement(txId, timeout);
   }
 
-  public getLocalStatus() {
+  public async awaitAllUserTxsSettled() {
+    const users = await this.core.getUsersData();
+    while (true) {
+      const txs = (await Promise.all(users.map(u => this.core.getUserTxs(u.id)))).flat();
+      if (txs.every(tx => tx.settled)) {
+        break;
+      }
+      await sleep(1000);
+    }
+  }
+
+  public async awaitAllUserTxsClaimed() {
+    const users = await this.core.getUsersData();
+    while (true) {
+      const txs = (await Promise.all(users.map(u => this.getDefiTxs(u.id)))).flat();
+      if (txs.every(tx => tx.interactionResult.claimSettled)) {
+        break;
+      }
+      await sleep(1000);
+    }
+  }
+
+  public async getLocalStatus() {
     return this.core.getLocalStatus();
   }
 
@@ -99,69 +116,99 @@ export class AztecSdk extends EventEmitter {
     return this.core.getRemoteStatus();
   }
 
+  public async isAccountRegistered(accountPublicKey: GrumpkinAddress) {
+    return this.core.isAccountRegistered(accountPublicKey);
+  }
+
+  public async isRemoteAccountRegistered(accountPublicKey: GrumpkinAddress) {
+    return this.core.isRemoteAccountRegistered(accountPublicKey);
+  }
+
+  public async isAliasRegistered(alias: string) {
+    return this.core.isAliasRegistered(alias);
+  }
+
+  public async isRemoteAliasRegistered(alias: string) {
+    return this.core.isRemoteAliasRegistered(alias);
+  }
+
+  public async accountExists(accountPublicKey: GrumpkinAddress, alias: string) {
+    return this.core.accountExists(accountPublicKey, alias);
+  }
+
+  public async remoteAccountExists(accountPublicKey: GrumpkinAddress, alias: string) {
+    return this.core.remoteAccountExists(accountPublicKey, alias);
+  }
+
+  public async getAccountPublicKey(alias: string) {
+    return this.core.getAccountPublicKey(alias);
+  }
+
+  public async getRemoteUnsettledAccountPublicKey(alias: string) {
+    return this.core.getRemoteUnsettledAccountPublicKey(alias);
+  }
+
   public async getTxFees(assetId: number) {
     return this.core.getTxFees(assetId);
   }
 
-  public async getLatestAccountNonce(publicKey: GrumpkinAddress) {
-    return this.core.getLatestAccountNonce(publicKey);
+  public async userExists(accountPublicKey: GrumpkinAddress) {
+    return this.core.userExists(accountPublicKey);
   }
 
-  public async getRemoteLatestAccountNonce(publicKey: GrumpkinAddress) {
-    return this.core.getRemoteLatestAccountNonce(publicKey);
-  }
-
-  public async getLatestAliasNonce(alias: string) {
-    return this.core.getLatestAliasNonce(alias);
-  }
-
-  public async getRemoteLatestAliasNonce(alias: string) {
-    return this.core.getRemoteLatestAliasNonce(alias);
-  }
-
-  public async getAccountId(alias: string, nonce?: number) {
-    return this.core.getAccountId(alias, nonce);
-  }
-
-  public async getRemoteAccountId(alias: string, nonce?: number) {
-    return this.core.getRemoteAccountId(alias, nonce);
-  }
-
-  public async isAliasAvailable(alias: string) {
-    return this.core.isAliasAvailable(alias);
-  }
-
-  public async isRemoteAliasAvailable(alias: string) {
-    return this.core.isRemoteAliasAvailable(alias);
-  }
-
-  public async userExists(userId: AccountId) {
-    return this.core.userExists(userId);
-  }
-
-  public async addUser(privateKey: Buffer, nonce?: number, noSync = false) {
-    const userData = await this.core.addUser(privateKey, nonce, noSync);
+  public async addUser(accountPrivateKey: Buffer, noSync = false) {
+    const userData = await this.core.addUser(accountPrivateKey, noSync);
     return new AztecSdkUser(userData.id, this);
   }
 
-  public async removeUser(userId: AccountId) {
+  public async removeUser(userId: GrumpkinAddress) {
     return this.core.removeUser(userId);
   }
 
   /**
    * Returns a AztecSdkUser for a locally resolved user.
    */
-  public async getUser(userId: AccountId) {
+  public async getUser(userId: GrumpkinAddress) {
     const userData = await this.getUserData(userId); // Check that the user's been added to the sdk.
     return new AztecSdkUser(userData.id, this);
   }
 
-  public async getUserData(userId: AccountId) {
+  public async getUserData(userId: GrumpkinAddress) {
     return this.core.getUserData(userId);
   }
 
-  public getUsersData() {
+  public async getUsersData() {
     return this.core.getUsersData();
+  }
+
+  public getAccountKeySigningData() {
+    return Buffer.from(
+      'Sign this message to generate your Aztec Privacy Key. This key lets the application decrypt your balance on Aztec.\n\nIMPORTANT: Only sign this message if you trust the application.',
+    );
+  }
+
+  public getSpendingKeySigningData() {
+    return Buffer.from(
+      'Sign this message to generate your Aztec Spending Key. This key lets the application spend your funds on Aztec.\n\nIMPORTANT: Only sign this message if you trust the application.',
+    );
+  }
+
+  public async generateAccountKeyPair(account: EthAddress, provider = this.provider) {
+    const ethSigner = new Web3Signer(provider);
+    const signingData = this.getAccountKeySigningData();
+    const signature = await ethSigner.signPersonalMessage(signingData, account);
+    const privateKey = signature.slice(0, 32);
+    const publicKey = await this.derivePublicKey(privateKey);
+    return { publicKey, privateKey };
+  }
+
+  public async generateSpendingKeyPair(account: EthAddress, provider = this.provider) {
+    const ethSigner = new Web3Signer(provider);
+    const signingData = this.getSpendingKeySigningData();
+    const signature = await ethSigner.signPersonalMessage(signingData, account);
+    const privateKey = signature.slice(0, 32);
+    const publicKey = await this.derivePublicKey(privateKey);
+    return { publicKey, privateKey };
   }
 
   public async createSchnorrSigner(privateKey: Buffer) {
@@ -169,7 +216,7 @@ export class AztecSdk extends EventEmitter {
     return new SchnorrSigner(this.core, publicKey, privateKey);
   }
 
-  public derivePublicKey(privateKey: Buffer) {
+  public async derivePublicKey(privateKey: Buffer) {
     return this.core.derivePublicKey(privateKey);
   }
 
@@ -202,16 +249,18 @@ export class AztecSdk extends EventEmitter {
     return this.blockchain.getAsset(assetId).getStaticInfo();
   }
 
-  public isFeePayingAsset(assetId: number) {
-    const feePayingAssetIds = this.blockchain.getFeePayingAssetIds();
-    return feePayingAssetIds.includes(assetId);
+  public async isFeePayingAsset(assetId: number) {
+    if (isVirtualAsset(assetId)) {
+      return false;
+    }
+    return (await this.core.getLocalStatus()).feePayingAssetIds.includes(assetId);
   }
 
   public isVirtualAsset(assetId: number) {
     return isVirtualAsset(assetId);
   }
 
-  public async mint(assetId: number, value: bigint, account: EthAddress, provider?: EthereumProvider) {
+  public async mint({ assetId, value }: AssetValue, account: EthAddress, provider?: EthereumProvider) {
     return this.blockchain.getAsset(assetId).mint(value, account, { provider });
   }
 
@@ -223,33 +272,22 @@ export class AztecSdk extends EventEmitter {
     return this.blockchain.getBridgeAddressId(address, gasLimit);
   }
 
-  public constructBridgeId(
-    addressId: number,
-    inputAssetIdA: number,
-    outputAssetIdA: number,
-    inputAssetIdB?: number,
-    outputAssetIdB?: number,
-    auxData = 0,
-  ) {
-    return new BridgeId(addressId, inputAssetIdA, outputAssetIdA, inputAssetIdB, outputAssetIdB, auxData);
-  }
-
   public async setSupportedBridge(bridgeAddress: EthAddress, bridgeGasLimit?: number, options?: SendTxOptions) {
     return this.blockchain.setSupportedBridge(bridgeAddress, bridgeGasLimit, options);
   }
 
-  public async processAsyncDefiInteraction(interactionNonce: number) {
-    return this.blockchain.processAsyncDefiInteraction(interactionNonce);
+  public async processAsyncDefiInteraction(interactionNonce: number, options?: SendTxOptions) {
+    return this.blockchain.processAsyncDefiInteraction(interactionNonce, options);
   }
 
   private async getTransactionFees(assetId: number, txType: TxType) {
     const fees = await this.core.getTxFees(assetId);
-    const transactionFee = fees[txType];
-    if (this.isFeePayingAsset(assetId)) {
-      return transactionFee;
+    const txSettlementFees = fees[txType];
+    if (await this.isFeePayingAsset(assetId)) {
+      return txSettlementFees;
     }
-    const [minTransferFee] = fees[TxType.TRANSFER];
-    return transactionFee.map(({ value, ...rest }) => ({ value: value + minTransferFee.value, ...rest }));
+    const [feeTxTransferFee] = fees[TxType.TRANSFER];
+    return txSettlementFees.map(({ value, ...rest }) => ({ value: value + feeTxTransferFee.value, ...rest }));
   }
 
   public async getDepositFees(assetId: number) {
@@ -257,15 +295,25 @@ export class AztecSdk extends EventEmitter {
   }
 
   public createDepositController(
-    userId: AccountId,
-    userSigner: Signer,
+    depositor: EthAddress,
     value: AssetValue,
     fee: AssetValue,
-    from: EthAddress,
-    to = userId,
+    recipient: GrumpkinAddress,
+    recipientAccountRequired = true,
+    feePayer?: FeePayer,
     provider = this.provider,
   ) {
-    return new DepositController(userId, userSigner, value, fee, from, to, this.core, this.blockchain, provider);
+    return new DepositController(
+      value,
+      fee,
+      depositor,
+      recipient,
+      recipientAccountRequired,
+      feePayer,
+      this.core,
+      this.blockchain,
+      provider,
+    );
   }
 
   public async getWithdrawFees(assetId: number, recipient?: EthAddress) {
@@ -275,7 +323,7 @@ export class AztecSdk extends EventEmitter {
   }
 
   public createWithdrawController(
-    userId: AccountId,
+    userId: GrumpkinAddress,
     userSigner: Signer,
     value: AssetValue,
     fee: AssetValue,
@@ -289,16 +337,21 @@ export class AztecSdk extends EventEmitter {
   }
 
   public createTransferController(
-    userId: AccountId,
+    userId: GrumpkinAddress,
     userSigner: Signer,
     value: AssetValue,
     fee: AssetValue,
-    to: AccountId,
+    recipient: GrumpkinAddress,
+    recipientAccountRequired = true,
   ) {
-    return new TransferController(userId, userSigner, value, fee, to, this.core);
+    return new TransferController(userId, userSigner, value, fee, recipient, recipientAccountRequired, this.core);
   }
 
-  public async getDefiFees(bridgeId: BridgeId, userId?: AccountId, depositValue?: bigint) {
+  public async getDefiFees(bridgeId: BridgeId, userId?: GrumpkinAddress, depositValue?: AssetValue) {
+    if (depositValue && depositValue.assetId !== bridgeId.inputAssetIdA) {
+      throw new Error('Inconsistent asset ids.');
+    }
+
     const defiFees = await this.core.getDefiFees(bridgeId);
     const { assetId: feeAssetId, value: minDefiFee } = defiFees[0];
     const requireFeePayingTx = feeAssetId !== bridgeId.inputAssetIdA;
@@ -307,57 +360,36 @@ export class AztecSdk extends EventEmitter {
         return true;
       }
 
+      const { value } = depositValue;
+      const privateInput = value + (!requireFeePayingTx ? minDefiFee : BigInt(0));
+
       if (bridgeId.inputAssetIdB === undefined) {
-        const privateInput = depositValue + (!requireFeePayingTx ? minDefiFee : BigInt(0));
         const notes = await this.core.pickNotes(userId, bridgeId.inputAssetIdA, privateInput);
         return notes.reduce((sum, n) => sum + n.value, BigInt(0)) !== privateInput;
       }
 
-      if (!requireFeePayingTx) {
-        return true;
-      }
-
       return (
-        (await this.core.pickNote(userId, bridgeId.inputAssetIdA, depositValue))?.value !== depositValue ||
-        (await this.core.pickNote(userId, bridgeId.inputAssetIdB, depositValue))?.value !== depositValue
+        (await this.core.pickNote(userId, bridgeId.inputAssetIdA, privateInput))?.value !== privateInput ||
+        (await this.core.pickNote(userId, bridgeId.inputAssetIdB, value))?.value !== value
       );
     })();
 
-    let additionalFee = BigInt(0);
-    const additionalTxs = +requireFeePayingTx + +requireJoinSplitTx;
-    if (additionalTxs) {
-      const [minTransferFee] = (await this.core.getTxFees(feeAssetId))[TxType.TRANSFER];
-      additionalFee += minTransferFee.value * BigInt(additionalTxs);
-    }
+    const [minTransferFee] = (await this.core.getTxFees(feeAssetId))[TxType.TRANSFER];
+    // Always include the fee for an extra join split tx if the user is willing to pay higher fee.
+    const additionalFees = [
+      minTransferFee.value * BigInt(+requireFeePayingTx + +requireJoinSplitTx),
+      minTransferFee.value * BigInt(+requireFeePayingTx + 1),
+      minTransferFee.value * BigInt(+requireFeePayingTx + 1),
+    ];
 
-    return defiFees.map(defiFee => ({
+    return defiFees.map((defiFee, i) => ({
       ...defiFee,
-      value: defiFee.value + additionalFee,
+      value: defiFee.value + additionalFees[i],
     }));
   }
 
-  public async getMaxDefiDepositValue(bridgeId: BridgeId, userId: AccountId) {
-    const { assetId: feeAssetId, value: defiFee } = (await this.core.getDefiFees(bridgeId))[0];
-    const assetId = bridgeId.inputAssetIdA;
-    const requireFeePayingTx = feeAssetId !== assetId;
-    const numNotes = bridgeId.inputAssetIdB === undefined ? 2 : 1;
-    const maxSpendableValueA = await this.core.getMaxSpendableValue(bridgeId.inputAssetIdA, userId, numNotes);
-    let fee = !requireFeePayingTx ? defiFee : BigInt(0);
-    if (bridgeId.inputAssetIdB === undefined) {
-      return { assetId, value: maxSpendableValueA > fee ? maxSpendableValueA - fee : BigInt(0) };
-    } else {
-      if (!requireFeePayingTx) {
-        const { value: transferFee } = (await this.core.getTxFees(feeAssetId))[TxType.TRANSFER][0];
-        fee += transferFee;
-      }
-      const maxDepositValueA = maxSpendableValueA > fee ? maxSpendableValueA - fee : BigInt(0);
-      const maxDepositValueB = await this.core.getMaxSpendableValue(bridgeId.inputAssetIdB, userId, numNotes);
-      return { assetId, value: maxDepositValueA <= maxDepositValueB ? maxDepositValueA : maxDepositValueB };
-    }
-  }
-
   public createDefiController(
-    userId: AccountId,
+    userId: GrumpkinAddress,
     userSigner: Signer,
     bridgeId: BridgeId,
     value: AssetValue,
@@ -367,29 +399,25 @@ export class AztecSdk extends EventEmitter {
   }
 
   public async generateAccountRecoveryData(
+    accountPublicKey: GrumpkinAddress,
     alias: string,
-    publicKey: GrumpkinAddress,
     trustedThirdPartyPublicKeys: GrumpkinAddress[],
-    nonce?: number,
   ) {
-    const accountNonce = nonce !== undefined ? nonce : (await this.core.getLatestAccountNonce(publicKey)) + 1;
-    const accountId = new AccountId(publicKey, accountNonce);
     const socialRecoverySigner = await this.createSchnorrSigner(randomBytes(32));
     const recoveryPublicKey = socialRecoverySigner.getPublicKey();
 
     return Promise.all(
       trustedThirdPartyPublicKeys.map(async trustedThirdPartyPublicKey => {
         const signingData = await this.core.createAccountProofSigningData(
-          recoveryPublicKey,
+          accountPublicKey,
           alias,
-          accountNonce,
           false,
-          publicKey,
+          recoveryPublicKey,
           undefined,
           trustedThirdPartyPublicKey,
         );
         const signature = await socialRecoverySigner.signMessage(signingData);
-        const recoveryData = new RecoveryData(accountId, signature);
+        const recoveryData = new RecoveryData(accountPublicKey, signature);
         return new RecoveryPayload(trustedThirdPartyPublicKey, recoveryPublicKey, recoveryData);
       }),
     );
@@ -405,25 +433,27 @@ export class AztecSdk extends EventEmitter {
   }
 
   public createRegisterController(
-    userId: AccountId,
-    userSigner: Signer,
+    userId: GrumpkinAddress,
     alias: string,
-    signingPublicKey: GrumpkinAddress,
+    accountPrivateKey: Buffer,
+    spendingPublicKey: GrumpkinAddress,
     recoveryPublicKey: GrumpkinAddress | undefined,
     deposit: AssetValue,
     fee: AssetValue,
     depositor: EthAddress,
+    feePayer?: FeePayer,
     provider = this.provider,
   ) {
     return new RegisterController(
       userId,
-      userSigner,
       alias,
-      signingPublicKey,
+      accountPrivateKey,
+      spendingPublicKey,
       recoveryPublicKey,
       deposit,
       fee,
       depositor,
+      feePayer,
       this.core,
       this.blockchain,
       provider,
@@ -434,22 +464,47 @@ export class AztecSdk extends EventEmitter {
     return this.getAccountFee(assetId);
   }
 
-  public createRecoverAccountController(recoveryPayload: RecoveryPayload, fee: AssetValue) {
-    return new RecoverAccountController(recoveryPayload, fee, this.core);
+  public createRecoverAccountController(
+    alias: string,
+    recoveryPayload: RecoveryPayload,
+    deposit: AssetValue,
+    fee: AssetValue,
+    depositor: EthAddress,
+    provider = this.provider,
+  ) {
+    return new RecoverAccountController(
+      alias,
+      recoveryPayload,
+      deposit,
+      fee,
+      depositor,
+      this.core,
+      this.blockchain,
+      provider,
+    );
   }
 
-  public async getAddSigningKeyFees(assetId: number) {
+  public async getAddSpendingKeyFees(assetId: number) {
     return this.getAccountFee(assetId);
   }
 
-  public createAddSigningKeyController(
-    userId: AccountId,
+  public createAddSpendingKeyController(
+    userId: GrumpkinAddress,
     userSigner: Signer,
-    signingPublicKey1: GrumpkinAddress,
-    signingPublicKey2: GrumpkinAddress | undefined,
+    alias: string,
+    spendingPublicKey1: GrumpkinAddress,
+    spendingPublicKey2: GrumpkinAddress | undefined,
     fee: AssetValue,
   ) {
-    return new AddSigningKeyController(userId, userSigner, signingPublicKey1, signingPublicKey2, fee, this.core);
+    return new AddSpendingKeyController(
+      userId,
+      userSigner,
+      alias,
+      spendingPublicKey1,
+      spendingPublicKey2,
+      fee,
+      this.core,
+    );
   }
 
   public async getMigrateAccountFees(assetId: number) {
@@ -457,19 +512,21 @@ export class AztecSdk extends EventEmitter {
   }
 
   public createMigrateAccountController(
-    userId: AccountId,
+    userId: GrumpkinAddress,
     userSigner: Signer,
-    newSigningPublicKey: GrumpkinAddress,
+    alias: string,
+    newAccountPrivateKey: Buffer,
+    newSpendingPublicKey: GrumpkinAddress,
     recoveryPublicKey: GrumpkinAddress | undefined,
-    newAccountPrivateKey: Buffer | undefined,
     fee: AssetValue,
   ) {
     return new MigrateAccountController(
       userId,
       userSigner,
-      newSigningPublicKey,
-      recoveryPublicKey,
+      alias,
       newAccountPrivateKey,
+      newSpendingPublicKey,
+      recoveryPublicKey,
       fee,
       this.core,
     );
@@ -508,97 +565,121 @@ export class AztecSdk extends EventEmitter {
     return validateSignature(publicOwner, signature, signingData);
   }
 
-  public async getTransactionReceipt(txHash: TxHash, interval = 1, timeout?: number): Promise<Receipt> {
-    return this.blockchain.getTransactionReceipt(txHash, interval, timeout);
+  public async getTransactionReceipt(txHash: TxHash, timeout?: number, interval = 1): Promise<Receipt> {
+    return this.blockchain.getTransactionReceipt(txHash, timeout, interval);
   }
 
-  public async flushRollup(userId: AccountId, userSigner: Signer) {
+  public async flushRollup(userId: GrumpkinAddress, userSigner: Signer) {
     const fee = (await this.getTransferFees(0))[TxSettlementTime.INSTANT];
-    const controller = this.createTransferController(
+    const feeProofInput = await this.core.createPaymentProofInput(
       userId,
-      userSigner,
-      { assetId: fee.assetId, value: BigInt(0) },
-      fee,
-      userId,
+      fee.assetId,
+      BigInt(0),
+      BigInt(0),
+      fee.value,
+      BigInt(0),
+      BigInt(0),
+      undefined,
+      true,
+      undefined,
+      userSigner.getPublicKey(),
+      2,
     );
-    await controller.createProof();
-    await controller.send();
-    await controller.awaitSettlement();
+    feeProofInput.signature = await userSigner.signMessage(feeProofInput.signingData);
+    const feeProofOutput = await this.core.createPaymentProof(feeProofInput, 0);
+    const [txId] = await this.core.sendProofs([feeProofOutput]);
+    await this.core.awaitSettlement(txId);
   }
 
-  public async getSigningKeys(userId: AccountId) {
-    return this.core.getSigningKeys(userId);
+  public async getSpendingKeys(userId: GrumpkinAddress) {
+    return this.core.getSpendingKeys(userId);
   }
 
-  // Deprecated.
-  public async getPublicBalance(assetId: number, ethAddress: EthAddress) {
-    return this.blockchain.getAsset(assetId).balanceOf(ethAddress);
-  }
-
-  // Rename to getPublicBalance().
-  public async getPublicBalanceAv(assetId: number, ethAddress: EthAddress) {
+  public async getPublicBalance(ethAddress: EthAddress, assetId: number) {
     return { assetId, value: await this.blockchain.getAsset(assetId).balanceOf(ethAddress) };
   }
 
-  public async getBalances(userId: AccountId) {
+  public async getBalances(userId: GrumpkinAddress) {
     return this.core.getBalances(userId);
   }
 
-  // Deprecated.
-  public async getBalance(assetId: number, userId: AccountId) {
-    return this.core.getBalance(assetId, userId);
+  public async getBalancesUnsafe(accountPublicKey: GrumpkinAddress) {
+    return this.core.getBalances(accountPublicKey, true);
   }
 
-  // Rename to getBalance().
-  public async getBalanceAv(assetId: number, userId: AccountId) {
-    return { assetId, value: await this.core.getBalance(assetId, userId) };
+  public async getBalance(userId: GrumpkinAddress, assetId: number) {
+    return { assetId, value: await this.core.getBalance(userId, assetId) };
   }
 
-  public async getMaxSpendableValue(assetId: number, userId: AccountId, numNotes?: number) {
+  public async getBalanceUnsafe(accountPublicKey: GrumpkinAddress, assetId: number) {
+    return { assetId, value: await this.core.getBalance(accountPublicKey, assetId, true) };
+  }
+
+  public async getFormattedBalance(userId: GrumpkinAddress, assetId: number, symbol = true, precision?: number) {
+    return this.fromBaseUnits(await this.getBalance(userId, assetId), symbol, precision);
+  }
+
+  public async getSpendableSum(userId: GrumpkinAddress, assetId: number, excludePendingNotes?: boolean) {
+    return this.core.getSpendableSum(userId, assetId, excludePendingNotes);
+  }
+
+  public async getSpendableSumUnsafe(
+    accountPublicKey: GrumpkinAddress,
+    assetId: number,
+    excludePendingNotes?: boolean,
+  ) {
+    return this.core.getSpendableSum(accountPublicKey, assetId, excludePendingNotes, true);
+  }
+
+  public async getSpendableSums(userId: GrumpkinAddress, excludePendingNotes?: boolean) {
+    return this.core.getSpendableSums(userId, excludePendingNotes);
+  }
+
+  public async getSpendableSumsUnsafe(accountPublicKey: GrumpkinAddress, excludePendingNotes?: boolean) {
+    return this.core.getSpendableSums(accountPublicKey, excludePendingNotes, true);
+  }
+
+  public async getMaxSpendableValue(
+    userId: GrumpkinAddress,
+    assetId: number,
+    numNotes?: number,
+    excludePendingNotes?: boolean,
+  ) {
     if (numNotes !== undefined && (numNotes > 2 || numNotes < 1)) {
       throw new Error(`numNotes can only be 1 or 2. Got ${numNotes}.`);
     }
-    return this.core.getMaxSpendableValue(assetId, userId, numNotes);
+    return this.core.getMaxSpendableValue(userId, assetId, numNotes, excludePendingNotes);
   }
 
-  public async getSpendableNotes(assetId: number, userId: AccountId) {
-    return this.core.getSpendableNotes(assetId, userId);
+  public async getMaxSpendableValueUnsafe(
+    accountPublicKey: GrumpkinAddress,
+    assetId: number,
+    numNotes?: number,
+    excludePendingNotes?: boolean,
+  ) {
+    if (numNotes !== undefined && (numNotes > 2 || numNotes < 1)) {
+      throw new Error(`numNotes can only be 1 or 2. Got ${numNotes}.`);
+    }
+    return this.core.getMaxSpendableValue(accountPublicKey, assetId, numNotes, excludePendingNotes, true);
   }
 
-  public async getSpendableSum(assetId: number, userId: AccountId) {
-    return this.core.getSpendableSum(assetId, userId);
-  }
-
-  public async getSpendableSums(userId: AccountId) {
-    return this.core.getSpendableSums(userId);
-  }
-
-  public async getNotes(userId: AccountId) {
-    return this.core.getNotes(userId);
-  }
-
-  public async getUserTxs(userId: AccountId) {
+  public async getUserTxs(userId: GrumpkinAddress) {
     const txs = await this.core.getUserTxs(userId);
-    const feePayingAssetIds = this.blockchain.getFeePayingAssetIds();
-    return groupUserTxs(txs, feePayingAssetIds);
+    return groupUserTxs(txs);
   }
 
-  public async getPaymentTxs(userId: AccountId) {
+  public async getPaymentTxs(userId: GrumpkinAddress) {
     return (await this.getUserTxs(userId)).filter(tx =>
       [ProofId.DEPOSIT, ProofId.WITHDRAW, ProofId.SEND].includes(tx.proofId),
     ) as UserPaymentTx[];
   }
 
-  public async getAccountTxs(userId: AccountId) {
+  public async getAccountTxs(userId: GrumpkinAddress) {
     return (await this.getUserTxs(userId)).filter(tx => tx.proofId === ProofId.ACCOUNT) as UserAccountTx[];
   }
 
-  public async getDefiTxs(userId: AccountId) {
+  public async getDefiTxs(userId: GrumpkinAddress) {
     return (await this.getUserTxs(userId)).filter(tx => tx.proofId === ProofId.DEFI_DEPOSIT) as UserDefiTx[];
-  }
-
-  public async getRemoteUnsettledAccountTxs() {
-    return this.core.getRemoteUnsettledAccountTxs();
   }
 
   public async getRemoteUnsettledPaymentTxs() {

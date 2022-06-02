@@ -27,7 +27,7 @@ export class DefiBridge {
     options: SendTxOptions = {},
   ) {
     const contract = new ContractWithSigner(this.contract, { ...this.defaultOptions, ...options });
-    return contract.sendTx(
+    return await contract.sendTx(
       'finalise',
       inputAsset.toString(),
       outputAssetA.toString(),

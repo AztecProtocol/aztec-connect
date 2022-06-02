@@ -12,7 +12,7 @@ export class MemoryFifo<T> {
    * If given a timeout, the promise will reject if no item is received after `timeout` seconds.
    * If the queue is flushing, `null` is returned.
    */
-  public async get(timeout?: number): Promise<T | null> {
+  public get(timeout?: number): Promise<T | null> {
     if (this.items.length) {
       return Promise.resolve(this.items.shift()!);
     }

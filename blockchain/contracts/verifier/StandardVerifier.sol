@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2022 Aztec
-
+pragma solidity >=0.8.4;
 // gas count: 299,341 (includes 21,000 tx base cost, includes cost of 3 pub inputs. Cost of circuit without pub inputs is 298,312)
-pragma solidity >=0.6.0 <0.8.11;
-pragma experimental ABIEncoderV2;
 
 import {IVerifier} from '../interfaces/IVerifier.sol';
 import {VerificationKey} from './keys/VerificationKey.sol';
@@ -28,133 +26,118 @@ import {StandardTypes} from './cryptography/StandardTypes.sol';
  */
 contract StandardVerifier is IVerifier {
     // VERIFICATION KEY MEMORY LOCATIONS
-    uint256 constant N_LOC =                                    0x200 + 0x00;
-    uint256 constant NUM_INPUTS_LOC =                           0x200 + 0x20;
-    uint256 constant OMEGA_LOC =                                0x200 + 0x40;
-    uint256 constant DOMAIN_INVERSE_LOC =                       0x200 + 0x60;
-    uint256 constant Q1_X_LOC =                                 0x200 + 0x80;
-    uint256 constant Q1_Y_LOC =                                 0x200 + 0xa0;
-    uint256 constant Q2_X_LOC =                                 0x200 + 0xc0;
-    uint256 constant Q2_Y_LOC =                                 0x200 + 0xe0;
-    uint256 constant Q3_X_LOC =                                 0x200 + 0x100;
-    uint256 constant Q3_Y_LOC =                                 0x200 + 0x120;
-    uint256 constant QM_X_LOC =                                 0x200 + 0x140;
-    uint256 constant QM_Y_LOC =                                 0x200 + 0x160;
-    uint256 constant QC_X_LOC =                                 0x200 + 0x180;
-    uint256 constant QC_Y_LOC =                                 0x200 + 0x1a0;
-    uint256 constant SIGMA1_X_LOC =                             0x200 + 0x1c0;
-    uint256 constant SIGMA1_Y_LOC =                             0x200 + 0x1e0;
-    uint256 constant SIGMA2_X_LOC =                             0x200 + 0x200;
-    uint256 constant SIGMA2_Y_LOC =                             0x200 + 0x220;
-    uint256 constant SIGMA3_X_LOC =                             0x200 + 0x240;
-    uint256 constant SIGMA3_Y_LOC =                             0x200 + 0x260;
-    uint256 constant CONTAINS_RECURSIVE_PROOF_LOC =             0x200 + 0x280;
-    uint256 constant RECURSIVE_PROOF_PUBLIC_INPUT_INDICES_LOC = 0x200 + 0x2a0;
-    uint256 constant G2X_X0_LOC =                               0x200 + 0x2c0;
-    uint256 constant G2X_X1_LOC =                               0x200 + 0x2e0;
-    uint256 constant G2X_Y0_LOC =                               0x200 + 0x300;
-    uint256 constant G2X_Y1_LOC =                               0x200 + 0x320;
+    uint256 internal constant N_LOC =                                    0x200 + 0x00;
+    uint256 internal constant NUM_INPUTS_LOC =                           0x200 + 0x20;
+    uint256 internal constant OMEGA_LOC =                                0x200 + 0x40;
+    uint256 internal constant DOMAIN_INVERSE_LOC =                       0x200 + 0x60;
+    uint256 internal constant Q1_X_LOC =                                 0x200 + 0x80;
+    uint256 internal constant Q1_Y_LOC =                                 0x200 + 0xa0;
+    uint256 internal constant Q2_X_LOC =                                 0x200 + 0xc0;
+    uint256 internal constant Q2_Y_LOC =                                 0x200 + 0xe0;
+    uint256 internal constant Q3_X_LOC =                                 0x200 + 0x100;
+    uint256 internal constant Q3_Y_LOC =                                 0x200 + 0x120;
+    uint256 internal constant QM_X_LOC =                                 0x200 + 0x140;
+    uint256 internal constant QM_Y_LOC =                                 0x200 + 0x160;
+    uint256 internal constant QC_X_LOC =                                 0x200 + 0x180;
+    uint256 internal constant QC_Y_LOC =                                 0x200 + 0x1a0;
+    uint256 internal constant SIGMA1_X_LOC =                             0x200 + 0x1c0;
+    uint256 internal constant SIGMA1_Y_LOC =                             0x200 + 0x1e0;
+    uint256 internal constant SIGMA2_X_LOC =                             0x200 + 0x200;
+    uint256 internal constant SIGMA2_Y_LOC =                             0x200 + 0x220;
+    uint256 internal constant SIGMA3_X_LOC =                             0x200 + 0x240;
+    uint256 internal constant SIGMA3_Y_LOC =                             0x200 + 0x260;
+    uint256 internal constant CONTAINS_RECURSIVE_PROOF_LOC =             0x200 + 0x280;
+    uint256 internal constant RECURSIVE_PROOF_PUBLIC_INPUT_INDICES_LOC = 0x200 + 0x2a0;
+    uint256 internal constant G2X_X0_LOC =                               0x200 + 0x2c0;
+    uint256 internal constant G2X_X1_LOC =                               0x200 + 0x2e0;
+    uint256 internal constant G2X_Y0_LOC =                               0x200 + 0x300;
+    uint256 internal constant G2X_Y1_LOC =                               0x200 + 0x320;
     // 26
 
     // ### PROOF DATA MEMORY LOCATIONS
-    uint256 constant W1_X_LOC =                                 0x200 + 0x340 + 0x00;
-    uint256 constant W1_Y_LOC =                                 0x200 + 0x340 + 0x20;
-    uint256 constant W2_X_LOC =                                 0x200 + 0x340 + 0x40;
-    uint256 constant W2_Y_LOC =                                 0x200 + 0x340 + 0x60;
-    uint256 constant W3_X_LOC =                                 0x200 + 0x340 + 0x80;
-    uint256 constant W3_Y_LOC =                                 0x200 + 0x340 + 0xa0;
-    uint256 constant Z_X_LOC =                                  0x200 + 0x340 + 0xc0;
-    uint256 constant Z_Y_LOC =                                  0x200 + 0x340 + 0xe0;
-    uint256 constant T1_X_LOC =                                 0x200 + 0x340 + 0x100;
-    uint256 constant T1_Y_LOC =                                 0x200 + 0x340 + 0x120;
-    uint256 constant T2_X_LOC =                                 0x200 + 0x340 + 0x140;
-    uint256 constant T2_Y_LOC =                                 0x200 + 0x340 + 0x160;
-    uint256 constant T3_X_LOC =                                 0x200 + 0x340 + 0x180;
-    uint256 constant T3_Y_LOC =                                 0x200 + 0x340 + 0x1a0;
-    uint256 constant W1_EVAL_LOC =                              0x200 + 0x340 + 0x1c0;
-    uint256 constant W2_EVAL_LOC =                              0x200 + 0x340 + 0x1e0;
-    uint256 constant W3_EVAL_LOC =                              0x200 + 0x340 + 0x200;
-    uint256 constant SIGMA1_EVAL_LOC =                          0x200 + 0x340 + 0x220;
-    uint256 constant SIGMA2_EVAL_LOC =                          0x200 + 0x340 + 0x240;
-    uint256 constant Z_OMEGA_EVAL_LOC =                         0x200 + 0x340 + 0x260;
-    uint256 constant PI_Z_X_LOC =                               0x200 + 0x340 + 0x280;
-    uint256 constant PI_Z_Y_LOC =                               0x200 + 0x340 + 0x2a0;
-    uint256 constant PI_Z_OMEGA_X_LOC =                         0x200 + 0x340 + 0x2c0;
-    uint256 constant PI_Z_OMEGA_Y_LOC =                         0x200 + 0x340 + 0x2e0;
+    uint256 internal constant W1_X_LOC =                                 0x200 + 0x340 + 0x00;
+    uint256 internal constant W1_Y_LOC =                                 0x200 + 0x340 + 0x20;
+    uint256 internal constant W2_X_LOC =                                 0x200 + 0x340 + 0x40;
+    uint256 internal constant W2_Y_LOC =                                 0x200 + 0x340 + 0x60;
+    uint256 internal constant W3_X_LOC =                                 0x200 + 0x340 + 0x80;
+    uint256 internal constant W3_Y_LOC =                                 0x200 + 0x340 + 0xa0;
+    uint256 internal constant Z_X_LOC =                                  0x200 + 0x340 + 0xc0;
+    uint256 internal constant Z_Y_LOC =                                  0x200 + 0x340 + 0xe0;
+    uint256 internal constant T1_X_LOC =                                 0x200 + 0x340 + 0x100;
+    uint256 internal constant T1_Y_LOC =                                 0x200 + 0x340 + 0x120;
+    uint256 internal constant T2_X_LOC =                                 0x200 + 0x340 + 0x140;
+    uint256 internal constant T2_Y_LOC =                                 0x200 + 0x340 + 0x160;
+    uint256 internal constant T3_X_LOC =                                 0x200 + 0x340 + 0x180;
+    uint256 internal constant T3_Y_LOC =                                 0x200 + 0x340 + 0x1a0;
+    uint256 internal constant W1_EVAL_LOC =                              0x200 + 0x340 + 0x1c0;
+    uint256 internal constant W2_EVAL_LOC =                              0x200 + 0x340 + 0x1e0;
+    uint256 internal constant W3_EVAL_LOC =                              0x200 + 0x340 + 0x200;
+    uint256 internal constant SIGMA1_EVAL_LOC =                          0x200 + 0x340 + 0x220;
+    uint256 internal constant SIGMA2_EVAL_LOC =                          0x200 + 0x340 + 0x240;
+    uint256 internal constant Z_OMEGA_EVAL_LOC =                         0x200 + 0x340 + 0x260;
+    uint256 internal constant PI_Z_X_LOC =                               0x200 + 0x340 + 0x280;
+    uint256 internal constant PI_Z_Y_LOC =                               0x200 + 0x340 + 0x2a0;
+    uint256 internal constant PI_Z_OMEGA_X_LOC =                         0x200 + 0x340 + 0x2c0;
+    uint256 internal constant PI_Z_OMEGA_Y_LOC =                         0x200 + 0x340 + 0x2e0;
     // 25
 
     // ### CHALLENGES MEMORY OFFSETS
-    uint256 constant C_BETA_LOC =                               0x200 + 0x340 + 0x300 + 0x00;
-    uint256 constant C_GAMMA_LOC =                              0x200 + 0x340 + 0x300 + 0x20;
-    uint256 constant C_ALPHA_LOC =                              0x200 + 0x340 + 0x300 + 0x40;
-    uint256 constant C_ARITHMETIC_ALPHA_LOC =                   0x200 + 0x340 + 0x300 + 0x60;
-    uint256 constant C_ZETA_LOC =                               0x200 + 0x340 + 0x300 + 0x80;
-    uint256 constant C_CURRENT_LOC =                            0x200 + 0x340 + 0x300 + 0xa0;
-    uint256 constant C_V0_LOC =                                 0x200 + 0x340 + 0x300 + 0xc0;
-    uint256 constant C_V1_LOC =                                 0x200 + 0x340 + 0x300 + 0xe0;
-    uint256 constant C_V2_LOC =                                 0x200 + 0x340 + 0x300 + 0x100;
-    uint256 constant C_V3_LOC =                                 0x200 + 0x340 + 0x300 + 0x120;
-    uint256 constant C_V4_LOC =                                 0x200 + 0x340 + 0x300 + 0x140;
-    uint256 constant C_V5_LOC =                                 0x200 + 0x340 + 0x300 + 0x160;
-    uint256 constant C_U_LOC =                                  0x200 + 0x340 + 0x300 + 0x180;
+    uint256 internal constant C_BETA_LOC =                               0x200 + 0x340 + 0x300 + 0x00;
+    uint256 internal constant C_GAMMA_LOC =                              0x200 + 0x340 + 0x300 + 0x20;
+    uint256 internal constant C_ALPHA_LOC =                              0x200 + 0x340 + 0x300 + 0x40;
+    uint256 internal constant C_ARITHMETIC_ALPHA_LOC =                   0x200 + 0x340 + 0x300 + 0x60;
+    uint256 internal constant C_ZETA_LOC =                               0x200 + 0x340 + 0x300 + 0x80;
+    uint256 internal constant C_CURRENT_LOC =                            0x200 + 0x340 + 0x300 + 0xa0;
+    uint256 internal constant C_V0_LOC =                                 0x200 + 0x340 + 0x300 + 0xc0;
+    uint256 internal constant C_V1_LOC =                                 0x200 + 0x340 + 0x300 + 0xe0;
+    uint256 internal constant C_V2_LOC =                                 0x200 + 0x340 + 0x300 + 0x100;
+    uint256 internal constant C_V3_LOC =                                 0x200 + 0x340 + 0x300 + 0x120;
+    uint256 internal constant C_V4_LOC =                                 0x200 + 0x340 + 0x300 + 0x140;
+    uint256 internal constant C_V5_LOC =                                 0x200 + 0x340 + 0x300 + 0x160;
+    uint256 internal constant C_U_LOC =                                  0x200 + 0x340 + 0x300 + 0x180;
     // 13
 
     // ### LOCAL VARIABLES MEMORY OFFSETS
-    uint256 constant DELTA_NUMERATOR_LOC =                      0x200 + 0x340 + 0x300 + 0x1a0 + 0x00;
-    uint256 constant DELTA_DENOMINATOR_LOC =                    0x200 + 0x340 + 0x300 + 0x1a0 + 0x20;
-    uint256 constant ZETA_POW_N_LOC =                           0x200 + 0x340 + 0x300 + 0x1a0 + 0x40;
-    uint256 constant PUBLIC_INPUT_DELTA_LOC =                   0x200 + 0x340 + 0x300 + 0x1a0 + 0x60;
-    uint256 constant ZERO_POLY_LOC =                            0x200 + 0x340 + 0x300 + 0x1a0 + 0x80;
-    uint256 constant L_START_LOC =                              0x200 + 0x340 + 0x300 + 0x1a0 + 0xa0;
-    uint256 constant L_END_LOC =                                0x200 + 0x340 + 0x300 + 0x1a0 + 0xc0;
-    uint256 constant R_ZERO_EVAL_LOC =                          0x200 + 0x340 + 0x300 + 0x1a0 + 0xe0;
-    uint256 constant ACCUMULATOR_X_LOC =                        0x200 + 0x340 + 0x300 + 0x1a0 + 0x100;
-    uint256 constant ACCUMULATOR_Y_LOC =                        0x200 + 0x340 + 0x300 + 0x1a0 + 0x120;
-    uint256 constant ACCUMULATOR2_X_LOC =                       0x200 + 0x340 + 0x300 + 0x1a0 + 0x140;
-    uint256 constant ACCUMULATOR2_Y_LOC =                       0x200 + 0x340 + 0x300 + 0x1a0 + 0x160;
-    uint256 constant PAIRING_LHS_X_LOC =                        0x200 + 0x340 + 0x300 + 0x1a0 + 0x180;
-    uint256 constant PAIRING_LHS_Y_LOC =                        0x200 + 0x340 + 0x300 + 0x1a0 + 0x1a0;
-    uint256 constant PAIRING_RHS_X_LOC =                        0x200 + 0x340 + 0x300 + 0x1a0 + 0x1c0;
-    uint256 constant PAIRING_RHS_Y_LOC =                        0x200 + 0x340 + 0x300 + 0x1a0 + 0x1e0;
+    uint256 internal constant DELTA_NUMERATOR_LOC =                      0x200 + 0x340 + 0x300 + 0x1a0 + 0x00;
+    uint256 internal constant DELTA_DENOMINATOR_LOC =                    0x200 + 0x340 + 0x300 + 0x1a0 + 0x20;
+    uint256 internal constant ZETA_POW_N_LOC =                           0x200 + 0x340 + 0x300 + 0x1a0 + 0x40;
+    uint256 internal constant PUBLIC_INPUT_DELTA_LOC =                   0x200 + 0x340 + 0x300 + 0x1a0 + 0x60;
+    uint256 internal constant ZERO_POLY_LOC =                            0x200 + 0x340 + 0x300 + 0x1a0 + 0x80;
+    uint256 internal constant L_START_LOC =                              0x200 + 0x340 + 0x300 + 0x1a0 + 0xa0;
+    uint256 internal constant L_END_LOC =                                0x200 + 0x340 + 0x300 + 0x1a0 + 0xc0;
+    uint256 internal constant R_ZERO_EVAL_LOC =                          0x200 + 0x340 + 0x300 + 0x1a0 + 0xe0;
+    uint256 internal constant ACCUMULATOR_X_LOC =                        0x200 + 0x340 + 0x300 + 0x1a0 + 0x100;
+    uint256 internal constant ACCUMULATOR_Y_LOC =                        0x200 + 0x340 + 0x300 + 0x1a0 + 0x120;
+    uint256 internal constant ACCUMULATOR2_X_LOC =                       0x200 + 0x340 + 0x300 + 0x1a0 + 0x140;
+    uint256 internal constant ACCUMULATOR2_Y_LOC =                       0x200 + 0x340 + 0x300 + 0x1a0 + 0x160;
+    uint256 internal constant PAIRING_LHS_X_LOC =                        0x200 + 0x340 + 0x300 + 0x1a0 + 0x180;
+    uint256 internal constant PAIRING_LHS_Y_LOC =                        0x200 + 0x340 + 0x300 + 0x1a0 + 0x1a0;
+    uint256 internal constant PAIRING_RHS_X_LOC =                        0x200 + 0x340 + 0x300 + 0x1a0 + 0x1c0;
+    uint256 internal constant PAIRING_RHS_Y_LOC =                        0x200 + 0x340 + 0x300 + 0x1a0 + 0x1e0;
     // 21
 
     // ### SUCCESS FLAG MEMORY LOCATIONS
-    uint256 constant GRAND_PRODUCT_SUCCESS_FLAG =               0x200 + 0x340 + 0x300 + 0x1a0 + 0x200 + 0x00;
-    uint256 constant ARITHMETIC_TERM_SUCCESS_FLAG =             0x200 + 0x340 + 0x300 + 0x1a0 + 0x200 + 0x20;
-    uint256 constant BATCH_OPENING_SUCCESS_FLAG =               0x200 + 0x340 + 0x300 + 0x1a0 + 0x200 + 0x40;
-    uint256 constant OPENING_COMMITMENT_SUCCESS_FLAG =          0x200 + 0x340 + 0x300 + 0x1a0 + 0x200 + 0x60;
-    uint256 constant PAIRING_PREAMBLE_SUCCESS_FLAG =            0x200 + 0x340 + 0x300 + 0x1a0 + 0x200 + 0x80;
-    uint256 constant PAIRING_SUCCESS_FLAG =                     0x200 + 0x340 + 0x300 + 0x1a0 + 0x200 + 0xa0;
-    uint256 constant RESULT_FLAG =                              0x200 + 0x340 + 0x300 + 0x1a0 + 0x200 + 0xc0;
+    uint256 internal constant GRAND_PRODUCT_SUCCESS_FLAG =               0x200 + 0x340 + 0x300 + 0x1a0 + 0x200 + 0x00;
+    uint256 internal constant ARITHMETIC_TERM_SUCCESS_FLAG =             0x200 + 0x340 + 0x300 + 0x1a0 + 0x200 + 0x20;
+    uint256 internal constant BATCH_OPENING_SUCCESS_FLAG =               0x200 + 0x340 + 0x300 + 0x1a0 + 0x200 + 0x40;
+    uint256 internal constant OPENING_COMMITMENT_SUCCESS_FLAG =          0x200 + 0x340 + 0x300 + 0x1a0 + 0x200 + 0x60;
+    uint256 internal constant PAIRING_PREAMBLE_SUCCESS_FLAG =            0x200 + 0x340 + 0x300 + 0x1a0 + 0x200 + 0x80;
+    uint256 internal constant PAIRING_SUCCESS_FLAG =                     0x200 + 0x340 + 0x300 + 0x1a0 + 0x200 + 0xa0;
+    uint256 internal constant RESULT_FLAG =                              0x200 + 0x340 + 0x300 + 0x1a0 + 0x200 + 0xc0;
     // 7
 
     // misc stuff
-    uint256 constant OMEGA_INVERSE_LOC = 0x200 + 0x340 + 0x300 + 0x1a0 + 0x200 + 0xe0;
-    uint256 constant C_ALPHA_SQR_LOC = 0x200 + 0x340 + 0x300 + 0x1a0 + 0x200 + 0xe0 + 0x20;
+    uint256 internal constant OMEGA_INVERSE_LOC = 0x200 + 0x340 + 0x300 + 0x1a0 + 0x200 + 0xe0;
+    uint256 internal constant C_ALPHA_SQR_LOC = 0x200 + 0x340 + 0x300 + 0x1a0 + 0x200 + 0xe0 + 0x20;
     // 3
 
     // ### RECURSION VARIABLE MEMORY LOCATIONS
-    uint256 constant RECURSIVE_P1_X_LOC = 0x200 + 0x340 + 0x300 + 0x1a0 + 0x200 + 0xe0 + 0x40;
-    uint256 constant RECURSIVE_P1_Y_LOC = 0x200 + 0x340 + 0x300 + 0x1a0 + 0x200 + 0xe0 + 0x60;
-    uint256 constant RECURSIVE_P2_X_LOC = 0x200 + 0x340 + 0x300 + 0x1a0 + 0x200 + 0xe0 + 0x80;
-    uint256 constant RECURSIVE_P2_Y_LOC = 0x200 + 0x340 + 0x300 + 0x1a0 + 0x200 + 0xe0 + 0xa0;
+    uint256 internal constant RECURSIVE_P1_X_LOC = 0x200 + 0x340 + 0x300 + 0x1a0 + 0x200 + 0xe0 + 0x40;
+    uint256 internal constant RECURSIVE_P1_Y_LOC = 0x200 + 0x340 + 0x300 + 0x1a0 + 0x200 + 0xe0 + 0x60;
+    uint256 internal constant RECURSIVE_P2_X_LOC = 0x200 + 0x340 + 0x300 + 0x1a0 + 0x200 + 0xe0 + 0x80;
+    uint256 internal constant RECURSIVE_P2_Y_LOC = 0x200 + 0x340 + 0x300 + 0x1a0 + 0x200 + 0xe0 + 0xa0;
 
-    uint256 constant PUBLIC_INPUTS_HASH_LOCATION = 0x200 + 0x340 + 0x300 + 0x1a0 + 0x200 + 0xe0 + 0xc0;
-
-    // location of lookup table values when computing a modular inverse via the `invert` method
-    uint256 constant II_POS = 0x00;
-    uint256 constant IOI_POS = 0x20;
-    uint256 constant III_POS = 0x40;
-    uint256 constant IOOI_POS = 0x60;
-    uint256 constant IIOI_POS = 0x80;
-    uint256 constant IIII_POS = 0xa0;
-    uint256 constant IOOOI_POS = 0xc0;
-    uint256 constant IOOII_POS = 0xe0;
-    uint256 constant IIOOI_POS = 0x100;
-    uint256 constant IIIOI_POS = 0x120;
-    uint256 constant IIOII_POS = 0x140;
-    uint256 constant IIIII_POS = 0x160;
-
+    uint256 internal constant PUBLIC_INPUTS_HASH_LOCATION = 0x200 + 0x340 + 0x300 + 0x1a0 + 0x200 + 0xe0 + 0xc0;
 
     error PUBLIC_INPUTS_HASH_VERIFICATION_FAILED(uint256, uint256);
     /**

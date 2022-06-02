@@ -1,3 +1,3 @@
-import { BananaCoreSdkOptions } from '../banana_core_sdk';
+import { CaramelCoreSdkOptions } from '../caramel_core_sdk';
 
-export type StrawberryCoreSdkOptions = BananaCoreSdkOptions;
+export type StrawberryCoreSdkOptions = CaramelCoreSdkOptions;

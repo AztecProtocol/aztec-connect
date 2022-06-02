@@ -103,7 +103,13 @@ export class BarretenbergWasm extends EventEmitter {
     if (!this.exports()[name]) {
       throw new Error(`WASM function ${name} not found.`);
     }
-    return this.exports()[name](...args) >>> 0;
+    try {
+      return this.exports()[name](...args) >>> 0;
+    } catch (err) {
+      const message = `WASM function ${name} aborted, error: ${err}`;
+      this.emit('log', message);
+      throw new Error(message);
+    }
   }
 
   public getMemory() {
@@ -134,7 +140,7 @@ export class BarretenbergWasm extends EventEmitter {
     await this.mutexQ.get();
   }
 
-  async release() {
+  release() {
     if (this.mutexQ.length() !== 0) {
       throw new Error('Release called but not acquired.');
     }

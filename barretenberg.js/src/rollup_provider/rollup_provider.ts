@@ -1,12 +1,12 @@
-import { AccountId } from '../account_id';
+import { AliasHash } from '../account_id';
 import { GrumpkinAddress } from '../address';
 import { AssetValue } from '../asset';
-import { BlockchainStatus, blockchainStatusFromJson, blockchainStatusToJson } from '../blockchain';
 import { BlockSource } from '../block_source';
-import { BridgeId, BridgeStatus, bridgeStatusFromJson, bridgeStatusToJson } from '../bridge_id';
-import { AccountProofData, JoinSplitProofData } from '../client_proofs';
-import { OffchainAccountData, OffchainJoinSplitData } from '../offchain_tx_data';
+import { BridgeId } from '../bridge_id';
+import { JoinSplitProofData } from '../client_proofs';
+import { OffchainJoinSplitData } from '../offchain_tx_data';
 import { TxId } from '../tx_id';
+import { RollupProviderStatus } from './rollup_provider_status';
 
 export enum TxSettlementTime {
   NEXT_ROLLUP,
@@ -43,69 +43,6 @@ export const txFromJson = ({ proofData, offchainTxData, depositSignature }: TxJs
   depositSignature: depositSignature ? Buffer.from(depositSignature, 'hex') : undefined,
 });
 
-export interface RuntimeConfig {
-  acceptingTxs: boolean;
-  useKeyCache: boolean;
-  publishInterval: number;
-  flushAfterIdle: number;
-  gasLimit: number;
-  baseTxGas: number;
-  verificationGas: number;
-  maxFeeGasPrice: bigint;
-  feeGasPriceMultiplier: number;
-  feeRoundUpSignificantFigures: number;
-  maxProviderGasPrice: bigint;
-  maxUnsettledTxs: number;
-  defaultDeFiBatchSize: number;
-}
-
-export function runtimeConfigToJson(runtimeConfig: RuntimeConfig) {
-  return {
-    ...runtimeConfig,
-    maxFeeGasPrice: runtimeConfig.maxFeeGasPrice.toString(),
-    maxProviderGasPrice: runtimeConfig.maxProviderGasPrice.toString(),
-  };
-}
-
-export function runtimeConfigFromJson(runtimeConfig: any) {
-  const { maxFeeGasPrice, maxProviderGasPrice } = runtimeConfig;
-  return {
-    ...runtimeConfig,
-    ...(maxFeeGasPrice !== undefined ? { maxFeeGasPrice: BigInt(maxFeeGasPrice) } : {}),
-    ...(maxProviderGasPrice !== undefined ? { maxProviderGasPrice: BigInt(maxProviderGasPrice) } : {}),
-  };
-}
-
-export interface RollupProviderStatus {
-  blockchainStatus: BlockchainStatus;
-  nextPublishTime: Date;
-  nextPublishNumber: number;
-  pendingTxCount: number;
-  runtimeConfig: RuntimeConfig;
-  bridgeStatus: BridgeStatus[];
-  proverless: boolean;
-}
-
-export function rollupProviderStatusToJson(status: RollupProviderStatus) {
-  return {
-    ...status,
-    blockchainStatus: blockchainStatusToJson(status.blockchainStatus),
-    bridgeStatus: status.bridgeStatus.map(bridgeStatusToJson),
-    runtimeConfig: runtimeConfigToJson(status.runtimeConfig),
-  };
-}
-
-export function rollupProviderStatusFromJson(status: any): RollupProviderStatus {
-  const { blockchainStatus, nextPublishTime, runtimeConfig, bridgeStatus, ...rest } = status;
-  return {
-    ...rest,
-    blockchainStatus: blockchainStatusFromJson(blockchainStatus),
-    nextPublishTime: new Date(nextPublishTime),
-    runtimeConfig: runtimeConfigFromJson(runtimeConfig),
-    bridgeStatus: bridgeStatus.map(bridgeStatusFromJson),
-  };
-}
-
 export interface PendingTx {
   txId: TxId;
   noteCommitment1: Buffer;
@@ -134,24 +71,24 @@ export interface InitialWorldState {
   initialAccounts: Buffer;
 }
 
-export interface AccountTx {
-  proofData: AccountProofData;
-  offchainTxData: OffchainAccountData;
+export interface Account {
+  accountPublicKey: GrumpkinAddress;
+  aliasHash: AliasHash;
 }
 
-export interface AccountTxJson {
-  proofData: string;
-  offchainTxData: string;
+export interface AccountJson {
+  accountPublicKey: string;
+  aliasHash: string;
 }
 
-export const accountTxToJson = ({ proofData, offchainTxData }: AccountTx): AccountTxJson => ({
-  proofData: proofData.proofData.rawProofData.toString('hex'),
-  offchainTxData: offchainTxData.toBuffer().toString('hex'),
+export const accountToJson = ({ accountPublicKey, aliasHash }: Account): AccountJson => ({
+  accountPublicKey: accountPublicKey.toString(),
+  aliasHash: aliasHash.toString(),
 });
 
-export const accountTxFromJson = ({ proofData, offchainTxData }: AccountTxJson): AccountTx => ({
-  proofData: AccountProofData.fromBuffer(Buffer.from(proofData, 'hex')),
-  offchainTxData: OffchainAccountData.fromBuffer(Buffer.from(offchainTxData, 'hex')),
+export const accountFromJson = ({ accountPublicKey, aliasHash }: AccountJson): Account => ({
+  accountPublicKey: GrumpkinAddress.fromString(accountPublicKey),
+  aliasHash: AliasHash.fromString(aliasHash),
 });
 
 export interface JoinSplitTx {
@@ -179,13 +116,13 @@ export interface RollupProvider extends BlockSource {
   getStatus(): Promise<RollupProviderStatus>;
   getTxFees(assetId: number): Promise<AssetValue[][]>;
   getDefiFees(bridgeId: BridgeId): Promise<AssetValue[]>;
-  getPendingTxs: () => Promise<PendingTx[]>;
-  getPendingNoteNullifiers: () => Promise<Buffer[]>;
-  clientLog: (msg: any) => Promise<void>;
+  getPendingTxs(): Promise<PendingTx[]>;
+  getPendingNoteNullifiers(): Promise<Buffer[]>;
+  clientLog(msg: any): Promise<void>;
   getInitialWorldState(): Promise<InitialWorldState>;
-  getLatestAccountNonce(accountPubKey: GrumpkinAddress): Promise<number>;
-  getLatestAliasNonce(alias: string): Promise<number>;
-  getAccountId(alias: string, nonce?: number): Promise<AccountId | undefined>;
-  getUnsettledAccountTxs: () => Promise<AccountTx[]>;
-  getUnsettledPaymentTxs: () => Promise<JoinSplitTx[]>;
+  isAccountRegistered(accountPublicKey: GrumpkinAddress): Promise<boolean>;
+  isAliasRegistered(alias: string): Promise<boolean>;
+  accountExists(accountPublicKey: GrumpkinAddress, alias: string): Promise<boolean>;
+  getUnsettledAccounts(): Promise<Account[]>;
+  getUnsettledPaymentTxs(): Promise<JoinSplitTx[]>;
 }

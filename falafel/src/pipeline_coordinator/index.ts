@@ -19,7 +19,7 @@ export class PipelineCoordinator {
   private running = false;
   private runningPromise!: Promise<void>;
   private publishTimeManager!: PublishTimeManager;
-  private rollupCoordinator!: RollupCoordinator;
+  private rollupCoordinator?: RollupCoordinator;
   private log = debug('pipeline_coordinator');
   private nextRollupProfile: RollupProfile;
 
@@ -46,8 +46,8 @@ export class PipelineCoordinator {
     return this.publishTimeManager.calculateNextTimeouts();
   }
 
-  public getProccessedTxs() {
-    return this.rollupCoordinator.getProccessedTxs();
+  public getProcessedTxs() {
+    return this.rollupCoordinator?.getProcessedTxs();
   }
 
   /**
@@ -73,7 +73,7 @@ export class PipelineCoordinator {
         this.flush = this.flush || this.minTxWaitTimeExceeded(pendingTxs);
 
         this.log('Processing pending txs...');
-        this.nextRollupProfile = await this.rollupCoordinator.processPendingTxs(pendingTxs, this.flush);
+        this.nextRollupProfile = await this.rollupCoordinator!.processPendingTxs(pendingTxs, this.flush);
 
         // we are in a flush state and this iteration produced no rollup-able txs, so we exit
         if (this.nextRollupProfile.published) {

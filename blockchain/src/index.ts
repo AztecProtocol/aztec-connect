@@ -7,4 +7,4 @@ export * from './signer';
 export * from './validate_signature';
 export * from './units';
 export * from './tokens';
-export * from './manipulate_blocks';
+export * from './ganache/manipulate_blocks';

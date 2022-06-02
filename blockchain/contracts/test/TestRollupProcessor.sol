@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2022 Aztec
-
-pragma solidity >=0.6.0 <0.8.11;
-pragma experimental ABIEncoderV2;
+pragma solidity >=0.8.4;
 
 import {RollupProcessor} from '../RollupProcessor.sol';
 
@@ -12,6 +10,10 @@ import {RollupProcessor} from '../RollupProcessor.sol';
  * Adds some methods to fiddle around with storage vars
  */
 contract TestRollupProcessor is RollupProcessor {
+    constructor(uint256 _escapeBlockLowerBound, uint256 _escapeBlockUpperBound)
+        RollupProcessor(_escapeBlockLowerBound, _escapeBlockUpperBound)
+    {}
+
     // Used to pre-fund the rollup with some Eth (to mimic deposited Eth for defi interactions)
     receive() external payable {}
 
@@ -40,23 +42,24 @@ contract TestRollupProcessor is RollupProcessor {
             }
         }
     }
+}
 
-    // Used to test that methods correctly revert if mutext is true
-    function stubReentrancyGuard(bool value) public {
-        if (value) {
-            setReentrancyMutex();
-        } else {
-            clearReentrancyMutex();
-        }
-    }
+contract UpgradedTestRollupProcessorV0 is TestRollupProcessor {
+    constructor(uint256 _escapeBlockLowerBound, uint256 _escapeBlockUpperBound)
+        TestRollupProcessor(_escapeBlockLowerBound, _escapeBlockUpperBound)
+    {}
 
-    function foo() public pure virtual returns (uint256 bar) {
-        bar = 1;
+    function getImplementationVersion() public pure override returns (uint8) {
+        return 0;
     }
 }
 
-contract UpgradedTestRollupProcessor is TestRollupProcessor {
-    function foo() public pure override returns (uint256 bar) {
-        bar = 2;
+contract UpgradedTestRollupProcessorV2 is TestRollupProcessor {
+    constructor(uint256 _escapeBlockLowerBound, uint256 _escapeBlockUpperBound)
+        TestRollupProcessor(_escapeBlockLowerBound, _escapeBlockUpperBound)
+    {}
+
+    function getImplementationVersion() public pure override returns (uint8) {
+        return 2;
     }
 }

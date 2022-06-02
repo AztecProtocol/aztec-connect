@@ -51,14 +51,6 @@ export class SyncRollupDb {
     return this.synchronise(() => this.rollupDb.getDefiTxCount());
   }
 
-  public async getAccountTx(aliasHash: Buffer) {
-    return this.synchronise(() => this.rollupDb.getAccountTx(aliasHash));
-  }
-
-  public async getLatestAccountTx(accountPubKey: Buffer) {
-    return this.synchronise(() => this.rollupDb.getLatestAccountTx(accountPubKey));
-  }
-
   public async getAccountTxCount() {
     return this.synchronise(() => this.rollupDb.getAccountTxCount());
   }
@@ -67,16 +59,16 @@ export class SyncRollupDb {
     return this.synchronise(() => this.rollupDb.getAccountCount());
   }
 
-  public async getLatestAccountNonce(accountPubKey: GrumpkinAddress) {
-    return this.synchronise(() => this.rollupDb.getLatestAccountNonce(accountPubKey));
+  public async isAccountRegistered(accountPublicKey: GrumpkinAddress) {
+    return this.synchronise(() => this.rollupDb.isAccountRegistered(accountPublicKey));
   }
 
-  public async getLatestAliasNonce(aliasHash: AliasHash) {
-    return this.synchronise(() => this.rollupDb.getLatestAliasNonce(aliasHash));
+  public async isAliasRegistered(aliasHash: AliasHash) {
+    return this.synchronise(() => this.rollupDb.isAliasRegistered(aliasHash));
   }
 
-  public async getAccountId(aliasHash: AliasHash, nonce?: number) {
-    return this.synchronise(() => this.rollupDb.getAccountId(aliasHash, nonce));
+  public async accountExists(accountPublicKey: GrumpkinAddress, aliasHash: AliasHash) {
+    return this.synchronise(() => this.rollupDb.accountExists(accountPublicKey, aliasHash));
   }
 
   public async getTotalRollupsOfSize(rollupSize: number) {
@@ -95,8 +87,8 @@ export class SyncRollupDb {
     return this.synchronise(() => this.rollupDb.getUnsettledPaymentTxs());
   }
 
-  public async getUnsettledAccountTxs() {
-    return this.synchronise(() => this.rollupDb.getUnsettledAccountTxs());
+  public async getUnsettledAccounts() {
+    return this.synchronise(() => this.rollupDb.getUnsettledAccounts());
   }
 
   public async getPendingTxs(take?: number) {
@@ -184,9 +176,20 @@ export class SyncRollupDb {
     interactionResult: DefiInteractionNote[],
     txIds: Buffer[],
     assetMetrics: AssetMetricsDao[],
+    subtreeRoot: Buffer,
   ) {
     return this.synchronise(() =>
-      this.rollupDb.confirmMined(id, gasUsed, gasPrice, mined, ethTxHash, interactionResult, txIds, assetMetrics),
+      this.rollupDb.confirmMined(
+        id,
+        gasUsed,
+        gasPrice,
+        mined,
+        ethTxHash,
+        interactionResult,
+        txIds,
+        assetMetrics,
+        subtreeRoot,
+      ),
     );
   }
 

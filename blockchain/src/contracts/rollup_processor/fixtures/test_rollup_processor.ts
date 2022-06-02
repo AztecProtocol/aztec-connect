@@ -27,14 +27,4 @@ export class TestRollupProcessor extends RollupProcessor {
     const contract = this.getContractWithSigner({});
     await contract.stubTransactionHashesLength(size);
   }
-
-  async stubReentrancyGuard(size: boolean) {
-    const contract = this.getContractWithSigner({});
-    await contract.stubReentrancyGuard(size);
-  }
-
-  async foo() {
-    const result = +(await this.rollupProcessor.foo());
-    return result;
-  }
 }

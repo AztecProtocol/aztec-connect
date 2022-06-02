@@ -1,4 +1,4 @@
-import { AccountId, AliasHash } from '@aztec/barretenberg/account_id';
+import { AliasHash } from '@aztec/barretenberg/account_id';
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { TxHash, TxType } from '@aztec/barretenberg/blockchain';
@@ -6,8 +6,8 @@ import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { serializeBufferArrayToVector } from '@aztec/barretenberg/serialize';
 import { WorldStateConstants } from '@aztec/barretenberg/world_state';
 import { Connection, In, IsNull, LessThan, MoreThanOrEqual, Not, Repository } from 'typeorm';
-import { AssetMetricsDao, ClaimDao, AccountDao, RollupDao, RollupProofDao, TxDao } from '../entity';
-import { txDaoToAccountDao } from './tx_dao_to_account_dao';
+import { AccountDao, AssetMetricsDao, ClaimDao, RollupDao, RollupProofDao, TxDao } from '../entity';
+import { getNewAccountDaos } from './tx_dao_to_account_dao';
 
 export type RollupDb = {
   [P in keyof TypeOrmRollupDb]: TypeOrmRollupDb[P];
@@ -33,15 +33,16 @@ export class TypeOrmRollupDb implements RollupDb {
   public async addTx(txDao: TxDao) {
     await this.connection.transaction(async transactionalEntityManager => {
       await transactionalEntityManager.save(txDao);
-      if (txDao.txType === TxType.ACCOUNT) {
-        await transactionalEntityManager.save(txDaoToAccountDao(txDao));
+      const [newAccountDao] = getNewAccountDaos([txDao]);
+      if (newAccountDao) {
+        await transactionalEntityManager.save(newAccountDao);
       }
     });
   }
 
   public async addTxs(txs: TxDao[]) {
     await this.connection.transaction(async transactionalEntityManager => {
-      const accountDaos = txs.filter(tx => tx.txType === TxType.ACCOUNT).map(txDaoToAccountDao);
+      const accountDaos = getNewAccountDaos(txs);
       await transactionalEntityManager.save(accountDaos);
       await transactionalEntityManager.save(txs);
     });
@@ -85,54 +86,29 @@ export class TypeOrmRollupDb implements RollupDb {
     return this.txRep.count({ where: { txType: TxType.DEFI_DEPOSIT } });
   }
 
-  public async getAccountTx(aliasHash: Buffer) {
-    return this.accountRep.findOne(
-      { aliasHash },
-      {
-        order: { nonce: 'DESC' },
-      },
-    );
-  }
-
-  public async getLatestAccountTx(accountPubKey: Buffer) {
-    return this.accountRep.findOne(
-      { accountPubKey },
-      {
-        order: { nonce: 'DESC' },
-      },
-    );
-  }
-
   public async getAccountTxCount() {
     return this.txRep.count({ where: { txType: TxType.ACCOUNT } });
   }
 
   public async getAccountCount() {
-    return this.accountRep.count({ where: { nonce: 1 } });
+    return this.accountRep.count();
   }
 
-  public async getLatestAccountNonce(accountPubKey: GrumpkinAddress) {
-    const account = await this.accountRep.findOne(
-      { accountPubKey: accountPubKey.toBuffer() },
-      { order: { nonce: 'DESC' } },
-    );
-    return account?.nonce || 0;
+  public async isAccountRegistered(accountPublicKey: GrumpkinAddress) {
+    const account = await this.accountRep.findOne({ accountPublicKey: accountPublicKey.toBuffer() });
+    return !!account;
   }
 
-  public async getLatestAliasNonce(aliasHash: AliasHash) {
-    const account = await this.accountRep.findOne({ aliasHash: aliasHash.toBuffer() }, { order: { nonce: 'DESC' } });
-    return account?.nonce || 0;
+  public async isAliasRegistered(aliasHash: AliasHash) {
+    const account = await this.accountRep.findOne({ aliasHash: aliasHash.toBuffer() });
+    return !!account;
   }
 
-  public async getAccountId(aliasHash: AliasHash, nonce?: number) {
+  public async accountExists(accountPublicKey: GrumpkinAddress, aliasHash: AliasHash) {
     const account = await this.accountRep.findOne({
-      where: { aliasHash: aliasHash.toBuffer(), nonce: MoreThanOrEqual(nonce || 0) },
-      order: { nonce: nonce !== undefined ? 'ASC' : 'DESC' },
+      where: { accountPublicKey: accountPublicKey.toBuffer(), aliasHash: aliasHash.toBuffer() },
     });
-    if (!account) {
-      return;
-    }
-    return new AccountId(new GrumpkinAddress(account.accountPubKey), nonce === undefined ? account.nonce : nonce);
+    return !!account;
   }
 
   public async getTotalRollupsOfSize(rollupSize: number) {
@@ -157,10 +133,12 @@ export class TypeOrmRollupDb implements RollupDb {
     });
   }
 
-  public async getUnsettledAccountTxs() {
-    return await this.txRep.find({
+  public async getUnsettledAccounts() {
+    const unsettledAccountTxs = await this.txRep.find({
       where: { txType: TxType.ACCOUNT, mined: null },
+      order: { created: 'DESC' },
     });
+    return getNewAccountDaos(unsettledAccountTxs);
   }
 
   public async getPendingTxs(take?: number) {
@@ -286,7 +264,7 @@ export class TypeOrmRollupDb implements RollupDb {
       }
       await transactionalEntityManager.delete(this.rollupRep.target, { id: rollup.id });
       await transactionalEntityManager.save(rollup);
-      const accountDaos = rollup.rollupProof.txs.filter(tx => tx.txType === TxType.ACCOUNT).map(txDaoToAccountDao);
+      const accountDaos = getNewAccountDaos(rollup.rollupProof.txs);
       await transactionalEntityManager.save(accountDaos);
     });
   }
@@ -308,6 +286,7 @@ export class TypeOrmRollupDb implements RollupDb {
     interactionResult: DefiInteractionNote[],
     txIds: Buffer[],
     assetMetrics: AssetMetricsDao[],
+    subtreeRoot: Buffer,
   ) {
     await this.connection.transaction(async transactionalEntityManager => {
       await transactionalEntityManager.update<TxDao>(this.txRep.target, { id: In(txIds) }, { mined });
@@ -317,6 +296,7 @@ export class TypeOrmRollupDb implements RollupDb {
         gasPrice: toBufferBE(gasPrice, 32),
         ethTxHash,
         interactionResult: serializeBufferArrayToVector(interactionResult.map(r => r.toBuffer())),
+        subtreeRoot,
       };
       await transactionalEntityManager.update<RollupDao>(this.rollupRep.target, { id }, dao);
       await transactionalEntityManager.insert<AssetMetricsDao>(this.assetMetricsRep.target, assetMetrics);
@@ -403,10 +383,11 @@ export class TypeOrmRollupDb implements RollupDb {
   }
 
   public async eraseDb() {
-    await this.accountRep.clear();
-    await this.assetMetricsRep.clear();
-    await this.claimRep.clear();
-    await this.rollupRep.clear();
-    await this.rollupProofRep.clear();
+    await this.accountRep.delete({});
+    await this.assetMetricsRep.delete({});
+    await this.claimRep.delete({});
+    await this.rollupRep.delete({});
+    await this.rollupProofRep.delete({});
+    await this.txRep.delete({});
   }
 }

@@ -15,9 +15,20 @@ import {
 const emptyAssetValue = { assetId: 0, value: BigInt(0) };
 
 const toUserAccountTx = (
-  { txId, userId, aliasHash, newSigningPubKey1, newSigningPubKey2, migrated, created, settled }: CoreAccountTx,
+  { txId, userId, aliasHash, newSpendingPublicKey1, newSpendingPublicKey2, migrated, created, settled }: CoreAccountTx,
   fee: AssetValue,
-) => new UserAccountTx(txId, userId, aliasHash, newSigningPubKey1, newSigningPubKey2, migrated, fee, created, settled);
+) =>
+  new UserAccountTx(
+    txId,
+    userId,
+    aliasHash,
+    newSpendingPublicKey1,
+    newSpendingPublicKey2,
+    migrated,
+    fee,
+    created,
+    settled,
+  );
 
 const toUserPaymentTx = (
   { txId, userId, proofId, publicOwner, isSender, created, settled }: CorePaymentTx,
@@ -91,15 +102,27 @@ const toUserDefiTx = (tx: CoreDefiTx, fee: AssetValue) => {
 };
 
 const toUserDefiClaimTx = (
-  claimTxId: TxId,
+  claimTxId: TxId | undefined,
   {
+    txId,
     userId,
     bridgeId,
     depositValue,
-    interactionResult: { success, outputValueA, outputValueB, claimSettled },
+    interactionResult: { success, outputValueA, outputValueB, claimSettled, finalised },
   }: UserDefiTx,
 ) =>
-  new UserDefiClaimTx(claimTxId!, userId, bridgeId, depositValue, success!, outputValueA!, outputValueB, claimSettled!);
+  new UserDefiClaimTx(
+    claimTxId,
+    txId,
+    userId,
+    bridgeId,
+    depositValue,
+    success!,
+    outputValueA!,
+    outputValueB,
+    finalised!,
+    claimSettled,
+  );
 
 const getPaymentValue = ({
   proofId,
@@ -183,15 +206,14 @@ const getTotalFee = (txs: CoreUserTx[]) => {
   return { assetId, value: fees.reduce((sum, fee) => sum + fee.value, BigInt(0)) };
 };
 
-const getPrimaryTx = (txs: CoreUserTx[], feePayingAssetIds: number[]) =>
+const getPrimaryTx = (txs: CoreUserTx[]) =>
   txs.find(tx => !tx.txRefNo) ||
-  txs.find(tx => [ProofId.ACCOUNT, ProofId.DEFI_DEPOSIT].includes(tx.proofId)) ||
+  txs.find(tx => [ProofId.ACCOUNT, ProofId.DEFI_DEPOSIT, ProofId.DEPOSIT, ProofId.WITHDRAW].includes(tx.proofId)) ||
   txs.find(tx => tx.proofId === ProofId.SEND && !tx.isSender) ||
-  txs.find(tx => [ProofId.DEPOSIT, ProofId.WITHDRAW].includes(tx.proofId)) ||
-  txs.find(tx => !feePayingAssetIds.includes((tx as CorePaymentTx).assetId));
+  txs.find(tx => !getFee(tx).value);
 
-const toUserTx = (txs: CoreUserTx[], feePayingAssetIds: number[]) => {
-  const primaryTx = getPrimaryTx(txs, feePayingAssetIds);
+const toUserTx = (txs: CoreUserTx[], accountRequired: boolean) => {
+  const primaryTx = getPrimaryTx(txs);
   if (!primaryTx) {
     return;
   }
@@ -208,12 +230,15 @@ const toUserTx = (txs: CoreUserTx[], feePayingAssetIds: number[]) => {
     }
     case ProofId.DEFI_DEPOSIT: {
       const userDefiTx = toUserDefiTx(primaryTx, fee);
-      if (userDefiTx.interactionResult.claimSettled) {
-        return [userDefiTx, toUserDefiClaimTx(primaryTx.claimTxId!, userDefiTx)];
+      if (userDefiTx.interactionResult.finalised) {
+        return [userDefiTx, toUserDefiClaimTx(primaryTx.claimTxId, userDefiTx)];
       }
       return [userDefiTx];
     }
     default: {
+      if (primaryTx.accountRequired !== accountRequired) {
+        return;
+      }
       const value = getPaymentValue(primaryTx);
       return [toUserPaymentTx(primaryTx, value, fee)];
     }
@@ -237,18 +262,22 @@ const groupTxsByTxRefNo = (txs: CoreUserTx[]) => {
 
 const filterUndefined = <T>(ts: (T | undefined)[]): T[] => ts.filter((t: T | undefined): t is T => !!t);
 
-const bySettled = (tx1: UserTx, tx2: UserTx) => {
-  if (tx1.settled && tx2.settled) return tx2.settled.getTime() - tx1.settled.getTime();
-  if (!tx1.settled && !tx2.settled) return 0;
-  if (!tx1.settled) return -1;
-  if (!tx2.settled) return 1;
-
+const bySettledThenCreated = (tx1: UserTx, tx2: UserTx) => {
+  const createdSort = tx2.created.getTime() - tx1.created.getTime();
+  if (tx1.settled && tx2.settled) {
+    // sort based on settled time, if they are the same sort based on created
+    const sort = tx2.settled.getTime() - tx1.settled.getTime();
+    return sort === 0 ? createdSort : sort;
+  }
+  if (!tx1.settled && tx2.settled) return -1; // tx1 ahead of tx2 as it is not settled
+  if (!tx2.settled && tx1.settled) return 1; //  tx2 ahead of tx1 as it is not settled
+  if (!tx2.settled && !tx1.settled) return createdSort; // sort based on created time
   return 0;
 };
 
-export const groupUserTxs = (txs: CoreUserTx[], feePayingAssetIds: number[]) => {
+export const groupUserTxs = (txs: CoreUserTx[], accountRequired = true) => {
   const txGroups = groupTxsByTxRefNo(txs);
-  return filterUndefined(txGroups.map(txs => toUserTx(txs, feePayingAssetIds)))
+  return filterUndefined(txGroups.map(txs => toUserTx(txs, accountRequired)))
     .flat()
-    .sort(bySettled);
+    .sort(bySettledThenCreated);
 };

@@ -38,6 +38,38 @@ export class CoreSdkDispatch extends EventEmitter implements CoreSdkSerializedIn
     return this.request('getRemoteStatus');
   }
 
+  public async isAccountRegistered(accountPublicKey: string) {
+    return this.request('isAccountRegistered', [accountPublicKey]);
+  }
+
+  public async isRemoteAccountRegistered(accountPublicKey: string) {
+    return this.request('isRemoteAccountRegistered', [accountPublicKey]);
+  }
+
+  public async isAliasRegistered(alias: string) {
+    return this.request('isAliasRegistered', [alias]);
+  }
+
+  public async isRemoteAliasRegistered(alias: string) {
+    return this.request('isRemoteAliasRegistered', [alias]);
+  }
+
+  public async accountExists(accountPublicKey: string, alias: string) {
+    return this.request('accountExists', [accountPublicKey, alias]);
+  }
+
+  public async remoteAccountExists(accountPublicKey: string, alias: string) {
+    return this.request('remoteAccountExists', [accountPublicKey, alias]);
+  }
+
+  public async getAccountPublicKey(alias: string) {
+    return this.request('getAccountPublicKey', [alias]);
+  }
+
+  public async getRemoteUnsettledAccountPublicKey(alias: string) {
+    return this.request('getRemoteUnsettledAccountPublicKey', [alias]);
+  }
+
   public async getTxFees(assetId: number) {
     return this.request('getTxFees', [assetId]);
   }
@@ -46,40 +78,24 @@ export class CoreSdkDispatch extends EventEmitter implements CoreSdkSerializedIn
     return this.request('getDefiFees', [bridgeId]);
   }
 
-  public async getLatestAccountNonce(publicKey: string) {
-    return this.request('getLatestAccountNonce', [publicKey]);
-  }
-
-  public async getRemoteLatestAccountNonce(publicKey: string) {
-    return this.request('getRemoteLatestAccountNonce', [publicKey]);
-  }
-
-  public async getLatestAliasNonce(alias: string) {
-    return this.request('getLatestAliasNonce', [alias]);
-  }
-
-  public async getRemoteLatestAliasNonce(alias: string) {
-    return this.request('getRemoteLatestAliasNonce', [alias]);
-  }
-
-  public async getAccountId(alias: string, nonce?: number) {
-    return await this.request('getAccountId', [alias, nonce]);
-  }
-
-  public async getRemoteAccountId(alias: string, nonce?: number) {
-    return await this.request('getRemoteAccountId', [alias, nonce]);
-  }
-
-  public async isAliasAvailable(alias: string) {
-    return this.request('isAliasAvailable', [alias]);
-  }
-
-  public async isRemoteAliasAvailable(alias: string) {
-    return this.request('isRemoteAliasAvailable', [alias]);
-  }
-
-  public async computeAliasHash(alias: string) {
-    return this.request('computeAliasHash', [alias]);
+  public async createDepositProof(
+    assetId: number,
+    publicInput: string,
+    privateOutput: string,
+    depositor: string,
+    recipient: string,
+    recipientAccountRequired: boolean,
+    txRefNo: number,
+  ) {
+    return this.request('createDepositProof', [
+      assetId,
+      publicInput,
+      privateOutput,
+      depositor,
+      recipient,
+      recipientAccountRequired,
+      txRefNo,
+    ]);
   }
 
   public async createPaymentProofInput(
@@ -91,6 +107,7 @@ export class CoreSdkDispatch extends EventEmitter implements CoreSdkSerializedIn
     recipientPrivateOutput: string,
     senderPrivateOutput: string,
     noteRecipient: string | undefined,
+    recipientAccountRequired: boolean,
     publicOwner: string | undefined,
     spendingPublicKey: string,
     allowChain: number,
@@ -104,6 +121,7 @@ export class CoreSdkDispatch extends EventEmitter implements CoreSdkSerializedIn
       recipientPrivateOutput,
       senderPrivateOutput,
       noteRecipient,
+      recipientAccountRequired,
       publicOwner,
       spendingPublicKey,
       allowChain,
@@ -115,43 +133,41 @@ export class CoreSdkDispatch extends EventEmitter implements CoreSdkSerializedIn
   }
 
   public async createAccountProofSigningData(
-    signingPubKey: string,
-    alias: string,
-    nonce: number,
-    migrate: boolean,
     accountPublicKey: string,
+    alias: string,
+    migrate: boolean,
+    spendingPublicKey: string,
     newAccountPublicKey?: string,
-    newSigningPubKey1?: string,
-    newSigningPubKey2?: string,
+    newSpendingPublicKey1?: string,
+    newSpendingPublicKey2?: string,
   ) {
     return this.request('createAccountProofSigningData', [
-      signingPubKey,
-      alias,
-      nonce,
-      migrate,
       accountPublicKey,
+      alias,
+      migrate,
+      spendingPublicKey,
       newAccountPublicKey,
-      newSigningPubKey1,
-      newSigningPubKey2,
+      newSpendingPublicKey1,
+      newSpendingPublicKey2,
     ]);
   }
 
   public async createAccountProofInput(
     userId: string,
-    aliasHash: string,
+    alias: string,
     migrate: boolean,
-    signingPublicKey: string,
-    newSigningPublicKey1: string | undefined,
-    newSigningPublicKey2: string | undefined,
+    spendingPublicKey: string,
+    newSpendingPublicKey1: string | undefined,
+    newSpendingPublicKey2: string | undefined,
     newAccountPrivateKey: Uint8Array | undefined,
   ) {
     return this.request('createAccountProofInput', [
       userId,
-      aliasHash,
+      alias,
       migrate,
-      signingPublicKey,
-      newSigningPublicKey1,
-      newSigningPublicKey2,
+      spendingPublicKey,
+      newSpendingPublicKey1,
+      newSpendingPublicKey2,
       newAccountPrivateKey,
     ]);
   }
@@ -167,7 +183,7 @@ export class CoreSdkDispatch extends EventEmitter implements CoreSdkSerializedIn
     inputNotes: NoteJson[],
     spendingPublicKey: string,
   ) {
-    return this.request('createDefiProof', [userId, bridgeId, depositValue, inputNotes, spendingPublicKey]);
+    return this.request('createDefiProofInput', [userId, bridgeId, depositValue, inputNotes, spendingPublicKey]);
   }
 
   public async createDefiProof(input: JoinSplitProofInputJson, txRefNo: number) {
@@ -182,7 +198,7 @@ export class CoreSdkDispatch extends EventEmitter implements CoreSdkSerializedIn
     return this.request('awaitSynchronised');
   }
 
-  public isUserSynching(userId: string) {
+  public async isUserSynching(userId: string) {
     return this.request('isUserSynching', [userId]);
   }
 
@@ -230,60 +246,66 @@ export class CoreSdkDispatch extends EventEmitter implements CoreSdkSerializedIn
     return this.request('constructSignature', [message, privateKey]);
   }
 
-  public async addUser(privateKey: Uint8Array, nonce?: number, noSync?: boolean) {
-    return this.request('addUser', [privateKey, nonce, noSync]);
+  public async addUser(privateKey: Uint8Array, noSync?: boolean) {
+    return this.request('addUser', [privateKey, noSync]);
   }
 
   public async removeUser(userId: string) {
     return this.request('removeUser', [userId]);
   }
 
-  public async getSigningKeys(accountId: string) {
-    return this.request('getSigningKeys', [accountId]);
+  public async getSpendingKeys(userId: string) {
+    return this.request('getSpendingKeys', [userId]);
   }
 
-  public getBalances(userId: string) {
-    return this.request('getBalances', [userId]);
+  public getBalances(userId: string, unsafe?: boolean) {
+    return this.request('getBalances', [userId, unsafe]);
   }
 
-  public getBalance(assetId: number, userId: string) {
-    return this.request('getBalance', [assetId, userId]);
+  public getBalance(userId: string, assetId: number, unsafe?: boolean) {
+    return this.request('getBalance', [userId, assetId, unsafe]);
   }
 
-  public async getMaxSpendableValue(assetId: number, userId: string, numNotes?: number) {
-    return this.request('getMaxSpendableValue', [assetId, userId, numNotes]);
+  public async getSpendableSum(userId: string, assetId: number, excludePendingNotes?: boolean, unsafe?: boolean) {
+    return this.request('getSpendableSum', [userId, assetId, excludePendingNotes, unsafe]);
   }
 
-  public async getSpendableNotes(assetId: number, userId: string) {
-    return this.request('getSpendableNotes', [assetId, userId]);
+  public async getSpendableSums(userId: string, excludePendingNotes?: boolean, unsafe?: boolean) {
+    return this.request('getSpendableSums', [userId, excludePendingNotes, unsafe]);
   }
 
-  public async getSpendableSum(assetId: number, userId: string) {
-    return this.request('getSpendableSum', [assetId, userId]);
+  public async getMaxSpendableValue(
+    userId: string,
+    assetId: number,
+    numNotes?: number,
+    excludePendingNotes?: boolean,
+    unsafe?: boolean,
+  ) {
+    return this.request('getMaxSpendableValue', [userId, assetId, numNotes, excludePendingNotes, unsafe]);
   }
 
-  public async getSpendableSums(userId: string) {
-    return this.request('getSpendableSums', [userId]);
+  public async pickNotes(
+    userId: string,
+    assetId: number,
+    value: string,
+    excludePendingNotes?: boolean,
+    unsafe?: boolean,
+  ) {
+    return this.request('pickNotes', [userId, assetId, value, excludePendingNotes, unsafe]);
   }
 
-  public async getNotes(userId: string) {
-    return this.request('getNotes', [userId]);
-  }
-
-  public async pickNotes(userId: string, assetId: number, value: string) {
-    return this.request('pickNotes', [userId, assetId, value]);
-  }
-
-  public async pickNote(userId: string, assetId: number, value: string) {
-    return this.request('pickNote', [userId, assetId, value]);
+  public async pickNote(
+    userId: string,
+    assetId: number,
+    value: string,
+    excludePendingNotes?: boolean,
+    unsafe?: boolean,
+  ) {
+    return this.request('pickNote', [userId, assetId, value, excludePendingNotes, unsafe]);
   }
 
   public async getUserTxs(userId: string) {
     return this.request('getUserTxs', [userId]);
-  }
-
-  public async getRemoteUnsettledAccountTxs() {
-    return this.request('getRemoteUnsettledAccountTxs');
   }
 
   public async getRemoteUnsettledPaymentTxs() {

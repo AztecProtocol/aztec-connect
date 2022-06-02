@@ -1,4 +1,3 @@
-import { AccountId } from '@aztec/barretenberg/account_id';
 import { TreeNote } from '@aztec/barretenberg/note_algorithms';
 
 export class Note {
@@ -9,6 +8,7 @@ export class Note {
     public allowChain: boolean,
     public nullified: boolean,
     public index?: number,
+    public hashPath?: Buffer,
   ) {}
 
   get assetId() {
@@ -20,7 +20,11 @@ export class Note {
   }
 
   get owner() {
-    return new AccountId(this.treeNote.ownerPubKey, this.treeNote.nonce);
+    return this.treeNote.ownerPubKey;
+  }
+
+  get ownerAccountRequired() {
+    return this.treeNote.accountRequired;
   }
 
   get pending() {
@@ -35,18 +39,28 @@ export interface NoteJson {
   allowChain: boolean;
   nullified: boolean;
   index?: number;
+  hashPath?: string;
 }
 
-export const noteToJson = ({ treeNote, commitment, nullifier, allowChain, nullified, index }: Note): NoteJson => ({
+export const noteToJson = ({
+  treeNote,
+  commitment,
+  nullifier,
+  allowChain,
+  nullified,
+  index,
+  hashPath,
+}: Note): NoteJson => ({
   treeNote: new Uint8Array(treeNote.toBuffer()),
   commitment: commitment.toString('hex'),
   nullifier: nullifier.toString('hex'),
   allowChain,
   nullified,
   index,
+  hashPath: hashPath?.toString('hex'),
 });
 
-export const noteFromJson = ({ treeNote, commitment, nullifier, allowChain, nullified, index }: NoteJson) =>
+export const noteFromJson = ({ treeNote, commitment, nullifier, allowChain, nullified, index, hashPath }: NoteJson) =>
   new Note(
     TreeNote.fromBuffer(Buffer.from(treeNote)),
     Buffer.from(commitment, 'hex'),
@@ -54,4 +68,5 @@ export const noteFromJson = ({ treeNote, commitment, nullifier, allowChain, null
     allowChain,
     nullified,
     index,
+    hashPath ? Buffer.from(hashPath, 'hex') : undefined,
   );

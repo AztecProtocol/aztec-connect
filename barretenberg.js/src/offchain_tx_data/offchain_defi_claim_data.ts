@@ -4,8 +4,11 @@ export class OffchainDefiClaimData {
 
   constructor() {}
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   static fromBuffer(buf: Buffer) {
+    if (buf.length !== OffchainDefiClaimData.SIZE) {
+      throw new Error('Invalid buffer size.');
+    }
+
     return new OffchainDefiClaimData();
   }
 

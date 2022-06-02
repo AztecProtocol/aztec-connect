@@ -1,5 +1,5 @@
 import { Blockchain } from '@aztec/barretenberg/blockchain';
-import { BridgeConfig } from '@aztec/barretenberg/bridge_id';
+import { BridgeConfig } from '@aztec/barretenberg/rollup_provider';
 
 export class BridgeResolver {
   constructor(
@@ -13,12 +13,8 @@ export class BridgeResolver {
   }
 
   public getBridgeBatchSize(bridgeId: bigint) {
-    const bc = this.bridgeConfigs.find(bc => bc.bridgeId == bridgeId);
-    return bc ? bc.numTxs : this.defaultDeFiBatchSize;
-  }
-
-  public getConfiguredBridgeIds() {
-    return this.bridgeConfigs.map(bc => bc.bridgeId);
+    const bridgeConfig = this.bridgeConfigs.find(bc => bc.bridgeId == bridgeId);
+    return bridgeConfig?.numTxs ?? this.defaultDeFiBatchSize;
   }
 
   public getBridgeConfigs() {
@@ -26,15 +22,13 @@ export class BridgeResolver {
   }
 
   public getFullBridgeGas(bridgeId: bigint) {
-    const config = this.getBridgeConfig(bridgeId);
-    if (config?.fee) {
-      return config.fee;
-    }
-    return BigInt(this.blockchain.getBridgeGas(bridgeId));
+    const bridgeConfig = this.getBridgeConfig(bridgeId);
+    return bridgeConfig?.gas ?? this.blockchain.getBridgeGas(bridgeId);
   }
 
-  public setConf(defaultDeFiBatchSize: number) {
+  public setConf(defaultDeFiBatchSize: number, bridgeConfigs: BridgeConfig[]) {
     this.defaultDeFiBatchSize = defaultDeFiBatchSize;
+    this.bridgeConfigs = bridgeConfigs;
   }
 
   public getMinBridgeTxGas(bridgeId: bigint) {
@@ -42,9 +36,9 @@ export class BridgeResolver {
     const blockchainStatus = this.blockchain.getBlockchainStatus();
     if (blockchainStatus.allowThirdPartyContracts || bridgeConfig) {
       const bridgeGas = this.getFullBridgeGas(bridgeId);
-      const numBridgeTxs = bridgeConfig ? BigInt(bridgeConfig.numTxs) : BigInt(this.defaultDeFiBatchSize);
+      const numBridgeTxs = bridgeConfig ? bridgeConfig.numTxs : this.defaultDeFiBatchSize;
       const requiredGas = bridgeGas / numBridgeTxs;
-      return bridgeGas % numBridgeTxs > 0n ? requiredGas + 1n : requiredGas;
+      return bridgeGas % numBridgeTxs ? requiredGas + 1 : requiredGas;
     } else {
       throw new Error('Cannot get gas. Unrecognised DeFi-bridge');
     }

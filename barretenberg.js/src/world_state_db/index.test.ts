@@ -23,7 +23,7 @@ describe.skip('world_state_db', () => {
     worldStateDb.destroy();
   });
 
-  it('should be initialized with correct metadata', async () => {
+  it('should be initialized with correct metadata', () => {
     expect(worldStateDb.getRoot(0)).toEqual(WorldStateConstants.EMPTY_DATA_ROOT);
     expect(worldStateDb.getRoot(1)).toEqual(WorldStateConstants.EMPTY_NULL_ROOT);
     expect(worldStateDb.getRoot(2)).toEqual(WorldStateConstants.EMPTY_ROOT_ROOT);
@@ -124,7 +124,7 @@ describe.skip('world_state_db', () => {
       }),
     );
 
-    const buffers = await Promise.all(values.map(async (_, i) => worldStateDb.get(0, BigInt(i))));
+    const buffers = await Promise.all(values.map((_, i) => worldStateDb.get(0, BigInt(i))));
     for (let i = 0; i < num; ++i) {
       expect(buffers[i]).toEqual(values[i]);
     }

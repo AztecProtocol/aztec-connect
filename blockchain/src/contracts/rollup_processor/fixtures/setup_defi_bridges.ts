@@ -74,16 +74,16 @@ export const deployMockBridge = async (
       await erc20.mint(bridge.address, amount);
     }
   };
-  if (!bridgeId.firstInputVirtual) {
+  if (assetAddresses[inputAssetIdA]) {
     await mint(assetAddresses[inputAssetIdA], returnInputValue * BigInt(maxTxs));
   }
-  if (!bridgeId.firstOutputVirtual) {
+  if (assetAddresses[outputAssetIdA]) {
     await mint(assetAddresses[outputAssetIdA], returnValueA * BigInt(maxTxs));
   }
-  if (bridgeId.secondInputReal) {
+  if (assetAddresses[inputAssetIdB!]) {
     await mint(assetAddresses[inputAssetIdB!], returnInputValue * BigInt(maxTxs));
   }
-  if (bridgeId.secondOutputReal) {
+  if (assetAddresses[outputAssetIdB!]) {
     await mint(assetAddresses[outputAssetIdB!], returnValueB * BigInt(maxTxs));
   }
 

@@ -18,6 +18,10 @@ export class OffchainJoinSplitData {
   }
 
   static fromBuffer(buf: Buffer) {
+    if (buf.length !== OffchainJoinSplitData.SIZE) {
+      throw new Error('Invalid buffer size.');
+    }
+
     let dataStart = 0;
     const viewingKey0 = new ViewingKey(buf.slice(dataStart, dataStart + ViewingKey.SIZE));
     dataStart += ViewingKey.SIZE;

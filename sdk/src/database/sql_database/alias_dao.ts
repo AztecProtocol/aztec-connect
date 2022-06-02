@@ -5,19 +5,18 @@ import { Alias } from '../database';
 import { aliasHashTransformer, grumpkinAddressTransformer } from './transformer';
 
 @Entity({ name: 'alias' })
-@Index(['aliasHash', 'address'], { unique: true })
 export class AliasDao implements Alias {
   constructor(init?: Alias) {
     Object.assign(this, init);
   }
 
-  @PrimaryColumn('blob', { transformer: [aliasHashTransformer] })
-  public aliasHash!: AliasHash;
-
   @PrimaryColumn('blob', { transformer: [grumpkinAddressTransformer] })
-  public address!: GrumpkinAddress;
+  public accountPublicKey!: GrumpkinAddress;
 
   @Index({ unique: false })
+  @Column('blob', { transformer: [aliasHashTransformer] })
+  public aliasHash!: AliasHash;
+
   @Column()
-  public latestNonce!: number;
+  public index!: number;
 }

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2022 Aztec
-pragma solidity >=0.8.4 <0.8.11;
+pragma solidity >=0.8.4;
 
 library RollupProcessorLibrary {
     error SIGNATURE_ADDRESS_IS_ZERO();
@@ -363,7 +363,7 @@ library RollupProcessorLibrary {
         }
     }
 
-    function getSignedMessageForTxId(bytes32 txId) internal view returns (bytes32 hashedMessage) {
+    function getSignedMessageForTxId(bytes32 txId) internal pure returns (bytes32 hashedMessage) {
         // we know this string length is 64 bytes
         string memory txIdHexString = toHexString(txId);
 

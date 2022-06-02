@@ -25,7 +25,7 @@ export class PooledFft implements Fft {
     const start = new Date().getTime();
     debug(`initializing fft of size: ${circuitSize}`);
     await Promise.all(this.ffts.map(f => f.init(circuitSize)));
-    this.ffts.forEach(async w => this.processJobs(w));
+    this.ffts.forEach(w => this.processJobs(w));
     debug(`initialization took: ${new Date().getTime() - start}ms`);
   }
 

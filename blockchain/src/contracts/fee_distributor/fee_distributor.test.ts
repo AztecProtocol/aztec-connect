@@ -6,6 +6,7 @@ import { setupAssets } from '../asset/fixtures/setup_assets';
 import { setupFeeDistributor } from './fixtures/setup_fee_distributor';
 import { setupUniswap } from './fixtures/setup_uniswap';
 import { FeeDistributor } from './fee_distributor';
+import { evmRevert, evmSnapshot } from '../../ganache/hardhat_chain_manipulation';
 
 describe('fee_distributor', () => {
   let feeDistributor: FeeDistributor;
@@ -18,9 +19,10 @@ describe('fee_distributor', () => {
 
   const initialUserTokenBalance = 10n ** 18n;
   const initialTotalSupply = 10n * 10n ** 18n;
-  const gasPrice = 10n;
 
-  beforeEach(async () => {
+  let snapshot: string;
+
+  beforeAll(async () => {
     signers = await ethers.getSigners();
     addresses = await Promise.all(signers.map(async u => EthAddress.fromString(await u.getAddress())));
     fakeRollupProccessor = addresses[3];
@@ -35,70 +37,26 @@ describe('fee_distributor', () => {
     await Promise.all(assets.slice(1).map(a => createPair(a, initialTotalSupply)));
   });
 
-  it('deposit eth to fee distributor', async () => {
-    await feeDistributor.deposit(EthAddress.ZERO, 100n);
-    expect(BigInt(await feeDistributor.txFeeBalance(EthAddress.ZERO))).toBe(100n);
+  beforeEach(async () => {
+    snapshot = await evmSnapshot();
   });
 
-  it('revert if eth value is different to deposit amount', async () => {
-    await expect(
-      feeDistributor.contract.connect(signers[0]).deposit(EthAddress.ZERO.toString(), 100n, { value: 99n }),
-    ).rejects.toThrow('WRONG_AMOUNT');
-    await expect(
-      feeDistributor.contract.connect(signers[0]).deposit(EthAddress.ZERO.toString(), 99n, { value: 100n }),
-    ).rejects.toThrow('WRONG_AMOUNT');
+  afterEach(async () => {
+    await evmRevert(snapshot);
+  });
+
+  it('deposit eth to fee distributor', async () => {
+    await assets[0].transfer(100n, addresses[0], feeDistributor.address);
+    expect(BigInt(await feeDistributor.txFeeBalance(EthAddress.ZERO))).toBe(100n);
   });
 
   it('deposit token asset to fee distributor', async () => {
     const asset = assets[1];
     const assetAddress = asset.getStaticInfo().address;
     const amount = 100n;
-    await expect(feeDistributor.deposit(asset.getStaticInfo().address, amount)).rejects.toThrow(
-      'ERC20: transfer amount exceeds allowance',
-    );
 
-    await asset.approve(amount, addresses[0], feeDistributor.address);
-    await feeDistributor.deposit(assetAddress, amount);
+    await asset.transfer(amount, addresses[0], feeDistributor.address);
     expect(await feeDistributor.txFeeBalance(assetAddress)).toBe(amount);
-  });
-
-  it('revert if deposit to token asset with non empty value', async () => {
-    const asset = assets[1];
-    const amount = 100n;
-    await asset.approve(amount, addresses[0], feeDistributor.address);
-    await expect(
-      feeDistributor.contract
-        .connect(signers[0])
-        .deposit(asset.getStaticInfo().address.toString(), amount, { value: amount }),
-    ).rejects.toThrow('WRONG_PAYMENT_TYPE');
-  });
-
-  it('convert on deposit if balance exceeds threshold', async () => {
-    const asset = assets[1];
-    const assetAddr = asset.getStaticInfo().address;
-    const weth = await feeDistributor.WETH();
-    const minOutputEth = (await feeDistributor.convertConstant()) * gasPrice;
-    const amountsIn = await uniswapRouter.getAmountsIn(minOutputEth, [assetAddr.toString(), weth.toString()]);
-    const convertThreshold = BigInt(amountsIn[0]);
-
-    {
-      const amount = convertThreshold - 1n;
-      await asset.approve(amount, addresses[0], feeDistributor.address);
-      await feeDistributor.deposit(assetAddr, amount);
-
-      expect(await feeDistributor.txFeeBalance(assetAddr)).toBe(amount);
-
-      expect(await feeDistributor.txFeeBalance(EthAddress.ZERO)).toBe(0n);
-    }
-
-    {
-      const amount = 1n;
-      await asset.approve(amount, addresses[0], feeDistributor.address);
-
-      await feeDistributor.deposit(assetAddr, amount);
-      expect(await feeDistributor.txFeeBalance(assetAddr)).toBe(0n);
-      expect(await feeDistributor.txFeeBalance(EthAddress.ZERO)).toBe(minOutputEth);
-    }
   });
 
   it('only owner can change convertConstant', async () => {
@@ -118,16 +76,17 @@ describe('fee_distributor', () => {
       'Ownable: caller is not the owner',
     );
     await feeDistributor.setFeeClaimer(userAddress);
-    expect(await (await feeDistributor.aztecFeeClaimer()).toString()).toBe(userAddress.toString());
+    expect((await feeDistributor.aztecFeeClaimer()).toString()).toBe(userAddress.toString());
   });
 
   it('reimburse eth to fee claimer if fee claimer is below threshold', async () => {
     const ethAsset = assets[0];
-    const assetAddr = EthAddress.ZERO;
     const userAddress = addresses[1];
     const initialFeeDistributorBalance = 10n ** 18n;
     const toSend = 1000n;
     const feeLimit = await feeDistributor.feeLimit();
+    const { maxFeePerGas } = await signers[0].getFeeData();
+    const gasPrice = maxFeePerGas!.toBigInt();
 
     const initialUserBalance = await ethAsset.balanceOf(userAddress);
 
@@ -138,13 +97,12 @@ describe('fee_distributor', () => {
     // drain the fee claimer address
     await ethAsset.transfer(initialUserBalance - 25000n * gasPrice, userAddress, EthAddress.ZERO);
     const drainedUserBalance = await ethAsset.balanceOf(userAddress);
-
     expect(drainedUserBalance).toBeLessThan(await feeDistributor.feeLimit());
 
     await feeDistributor.setFeeClaimer(userAddress);
-    expect(await (await feeDistributor.aztecFeeClaimer()).toString()).toBe(userAddress.toString());
+    expect((await feeDistributor.aztecFeeClaimer()).toString()).toBe(userAddress.toString());
 
-    await feeDistributor.deposit(assetAddr, initialFeeDistributorBalance);
+    await ethAsset.transfer(initialFeeDistributorBalance, addresses[0], feeDistributor.address);
 
     // simulate a rollup, paying the feeDistributor
     await ethAsset.transfer(toSend, fakeRollupProccessor, feeDistributor.address);
@@ -168,8 +126,7 @@ describe('fee_distributor', () => {
 
     const balance = 10n;
 
-    await asset.approve(balance, addresses[0], feeDistributor.address);
-    await feeDistributor.deposit(assetAddr, balance);
+    await asset.transfer(balance, addresses[0], feeDistributor.address);
 
     const fee = 1n;
     const minOutputValue = 9n;
@@ -181,13 +138,55 @@ describe('fee_distributor', () => {
     expect(await feeDistributor.txFeeBalance(EthAddress.ZERO)).toBe(balance - fee);
   });
 
+  it('convert weth balance to eth', async () => {
+    const weth = await ethers.getContractAt('IWETH', (await feeDistributor.WETH()).toString(), signers[0]);
+
+    const balance = 10n;
+    await weth.deposit({ value: balance.toString() });
+
+    expect(await feeDistributor.txFeeBalance(EthAddress.fromString(weth.address))).toBe(0n);
+    expect(await feeDistributor.txFeeBalance(EthAddress.ZERO)).toBe(0n);
+
+    await weth.transfer(feeDistributor.address.toString(), balance);
+
+    const minOutputValue = 9n;
+    expect(await feeDistributor.txFeeBalance(EthAddress.fromString(weth.address))).toBe(balance);
+    expect(await feeDistributor.txFeeBalance(EthAddress.ZERO)).toBe(0n);
+
+    await feeDistributor.convert(EthAddress.fromString(weth.address), minOutputValue);
+
+    expect(await feeDistributor.txFeeBalance(EthAddress.fromString(weth.address))).toBe(0n);
+    expect(await feeDistributor.txFeeBalance(EthAddress.ZERO)).toBe(balance);
+  });
+
+  it('revert if non-owner tries to convert asset balance to eth', async () => {
+    const asset = assets[1];
+    const assetAddr = asset.getStaticInfo().address;
+
+    expect(await feeDistributor.txFeeBalance(assetAddr)).toBe(0n);
+    expect(await feeDistributor.txFeeBalance(EthAddress.ZERO)).toBe(0n);
+
+    const balance = 10n;
+
+    await asset.transfer(balance, addresses[0], feeDistributor.address);
+
+    const minOutputValue = 9n;
+    expect(await feeDistributor.txFeeBalance(assetAddr)).toBe(balance);
+    expect(await feeDistributor.txFeeBalance(EthAddress.ZERO)).toBe(0n);
+    await expect(feeDistributor.convert(assetAddr, minOutputValue, { signingAddress: addresses[1] })).rejects.toThrow(
+      'Ownable: caller is not the owner',
+    );
+
+    expect(await feeDistributor.txFeeBalance(assetAddr)).toBe(balance);
+    expect(await feeDistributor.txFeeBalance(EthAddress.ZERO)).toBe(0n);
+  });
+
   it('revert if output will be less than minOutputValue', async () => {
     const asset = assets[1];
     const assetAddr = assets[1].getStaticInfo().address;
     const balance = 10n;
 
-    await asset.approve(balance, addresses[0], feeDistributor.address);
-    await feeDistributor.deposit(assetAddr, balance);
+    await asset.transfer(balance, addresses[0], feeDistributor.address);
 
     const minOutputValue = balance;
     await expect(feeDistributor.convert(assetAddr, minOutputValue)).rejects.toThrow('INSUFFICIENT_OUTPUT_AMOUNT');
@@ -197,7 +196,7 @@ describe('fee_distributor', () => {
     await expect(feeDistributor.convert(EthAddress.ZERO, 0n)).rejects.toThrow('NOT_A_TOKEN_ASSET');
   });
 
-  it('revert if asset balance is empty', async () => {
+  it('revert convert if asset balance is empty', async () => {
     const assetAddr = assets[1].getStaticInfo().address;
     await expect(feeDistributor.convert(assetAddr, 1n)).rejects.toThrow('EMPTY_BALANCE');
   });

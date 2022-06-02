@@ -1,8 +1,8 @@
-import { AccountId } from '@aztec/barretenberg/account_id';
+import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AztecSdk } from './aztec_sdk';
 
 export class AztecSdkUser {
-  constructor(public id: AccountId, private sdk: AztecSdk) {}
+  constructor(public id: GrumpkinAddress, private sdk: AztecSdk) {}
 
   public async isSynching() {
     return this.sdk.isUserSynching(this.id);
@@ -12,8 +12,8 @@ export class AztecSdkUser {
     return this.sdk.awaitUserSynchronised(this.id);
   }
 
-  public async getSigningKeys() {
-    return this.sdk.getSigningKeys(this.id);
+  public async getSpendingKeys() {
+    return this.sdk.getSpendingKeys(this.id);
   }
 
   public async getUserData() {
@@ -21,23 +21,19 @@ export class AztecSdkUser {
   }
 
   public async getBalance(assetId: number) {
-    return this.sdk.getBalance(assetId, this.id);
+    return this.sdk.getBalance(this.id, assetId);
   }
 
-  public async getMaxSpendableValue(assetId: number) {
-    return this.sdk.getMaxSpendableValue(assetId, this.id);
+  public async getSpendableSum(assetId: number, excludePendingNotes?: boolean) {
+    return this.sdk.getSpendableSum(this.id, assetId, excludePendingNotes);
   }
 
-  public async getSpendableNotes(assetId: number) {
-    return this.sdk.getSpendableNotes(assetId, this.id);
+  public async getSpendableSums(excludePendingNotes?: boolean) {
+    return this.sdk.getSpendableSums(this.id, excludePendingNotes);
   }
 
-  public async getSpendableSum(assetId: number) {
-    return this.sdk.getSpendableSum(assetId, this.id);
-  }
-
-  public async getNotes() {
-    return this.sdk.getNotes(this.id);
+  public async getMaxSpendableValue(assetId: number, numNotes?: number, excludePendingNotes?: boolean) {
+    return this.sdk.getMaxSpendableValue(this.id, assetId, numNotes, excludePendingNotes);
   }
 
   public async getTxs() {

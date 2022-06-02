@@ -46,7 +46,7 @@ export class Prover {
   }
 
   private async proverCall(name: string, ...args: any[]) {
-    return this.wasm.call(this.callPrefix + name, ...args);
+    return await this.wasm.call(this.callPrefix + name, ...args);
   }
 
   public async createProof(proverPtr: number) {

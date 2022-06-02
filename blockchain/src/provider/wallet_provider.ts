@@ -27,6 +27,10 @@ export class WalletProvider implements EthereumProvider {
     return this.addEthersWallet(new Wallet(privateKey, new Web3Provider(this.provider)));
   }
 
+  public addAccountFromSeed(mnemonic: string, path: string) {
+    return this.addEthersWallet(Wallet.fromMnemonic(mnemonic, path).connect(new Web3Provider(this.provider)));
+  }
+
   private addEthersWallet(wallet: Wallet) {
     this.accounts.push(wallet);
     return EthAddress.fromString(wallet.address);
@@ -71,7 +75,7 @@ export class WalletProvider implements EthereumProvider {
 
   private async personalSign(args: RequestArguments) {
     const [message, from] = args.params!;
-    const account = this.accounts.find(a => a.address.toLowerCase() === from);
+    const account = this.accounts.find(a => a.address.toLowerCase() === from.toLowerCase());
     if (account) {
       return await account.signMessage(Buffer.from(message.slice(2), 'hex'));
     }
@@ -80,7 +84,7 @@ export class WalletProvider implements EthereumProvider {
 
   private async sign(args: RequestArguments) {
     const [from, message] = args.params!;
-    const account = this.accounts.find(a => a.address.toLowerCase() === from);
+    const account = this.accounts.find(a => a.address.toLowerCase() === from.toLowerCase());
     if (account) {
       return await account.signMessage(Buffer.from(message.slice(2), 'hex'));
     }
@@ -90,7 +94,7 @@ export class WalletProvider implements EthereumProvider {
   private async signTypedData(args: RequestArguments) {
     const [from, data] = args.params!;
     const { types, domain, message } = JSON.parse(data);
-    const account = this.accounts.find(a => a.address.toLowerCase() === from);
+    const account = this.accounts.find(a => a.address.toLowerCase() === from.toLowerCase());
     if (account) {
       delete types.EIP712Domain;
       return await account._signTypedData(domain, types, message);
@@ -124,7 +128,7 @@ export class WalletProvider implements EthereumProvider {
     if (account) {
       return this.signTxLocally(tx, account);
     }
-    return this.provider.request(args);
+    return await this.provider.request(args);
   }
 
   private async sendTransaction(args: RequestArguments) {

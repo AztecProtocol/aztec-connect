@@ -33,8 +33,6 @@ const blockchainAssets: BlockchainAsset[] = [
     decimals: 18,
     symbol: 'A',
     name: 'Asset A',
-    isFeePaying: true,
-    gasConstants: [],
     gasLimit: 123,
   },
   {
@@ -42,8 +40,6 @@ const blockchainAssets: BlockchainAsset[] = [
     decimals: 6,
     symbol: 'B',
     name: 'Asset B',
-    isFeePaying: false,
-    gasConstants: [],
     gasLimit: 456,
   },
 ];
@@ -69,9 +65,9 @@ describe('ethereum_blockchain', () => {
   beforeAll(() => {
     const getInitRootsMock = jest.fn(() => {
       return {
-        initDataRoot: Buffer.alloc(32),
-        initNullRoot: Buffer.alloc(32),
-        initRootsRoot: Buffer.alloc(32),
+        dataRoot: Buffer.alloc(32),
+        nullRoot: Buffer.alloc(32),
+        rootsRoot: Buffer.alloc(32),
       };
     });
     const MockInitHelpers = InitHelpers as jest.Mocked<typeof InitHelpers>;
@@ -91,10 +87,10 @@ describe('ethereum_blockchain', () => {
       }),
       getRollupBlocksFrom: jest.fn().mockResolvedValue(blocks),
       getRollupBlock: jest.fn().mockResolvedValue(blocks[blocks.length - 1]),
-      getRollupContractAddress: jest.fn().mockReturnValue(EthAddress.randomAddress()),
-      getFeeDistributorContractAddress: jest.fn().mockReturnValue(EthAddress.randomAddress()),
-      getVerifierContractAddress: jest.fn().mockReturnValue(EthAddress.randomAddress()),
-      getBlockNumber: jest.fn().mockImplementation(async () => blocks.length),
+      getRollupContractAddress: jest.fn().mockReturnValue(EthAddress.random()),
+      getFeeDistributorContractAddress: jest.fn().mockReturnValue(EthAddress.random()),
+      getVerifierContractAddress: jest.fn().mockReturnValue(EthAddress.random()),
+      getBlockNumber: jest.fn().mockImplementation(() => Promise.resolve(blocks.length)),
       getChainId: jest.fn().mockResolvedValue(999),
       getTransactionReceipt: jest.fn(),
       getTransactionByHash: jest.fn().mockReturnValue({}),

@@ -5,12 +5,14 @@ import {
   BlockchainBridge,
   EthereumProvider,
   EthereumSignature,
+  Receipt,
   SendTxOptions,
   TxHash,
 } from '@aztec/barretenberg/blockchain';
+import { sleep } from '@aztec/barretenberg/sleep';
+import { Timer } from '@aztec/barretenberg/timer';
 import { Web3Provider } from '@ethersproject/providers';
-import { EthAsset, TokenAsset } from './contracts';
-import { RollupProcessor } from './contracts/rollup_processor';
+import { EthAsset, RollupProcessor, TokenAsset } from './contracts';
 
 export class ClientEthereumBlockchain {
   private readonly rollupProcessor: RollupProcessor;
@@ -23,6 +25,7 @@ export class ClientEthereumBlockchain {
     private readonly bridges: BlockchainBridge[],
     private readonly ethereumProvider: EthereumProvider,
     private readonly minConfirmations: number,
+    private readonly permitSupportAssetIds: number[] = [],
   ) {
     this.rollupProcessor = new RollupProcessor(rollupContractAddress, ethereumProvider);
     this.provider = new Web3Provider(this.ethereumProvider);
@@ -67,10 +70,6 @@ export class ClientEthereumBlockchain {
     return assetId;
   }
 
-  public getFeePayingAssetIds() {
-    return this.assets.flatMap((asset, id) => (asset.getStaticInfo().isFeePaying ? [id] : []));
-  }
-
   public getBridgeAddressId(address: EthAddress, gasLimit?: number) {
     const index = this.bridges.findIndex(
       b => b.address.equals(address) && (gasLimit === undefined || b.gasLimit === gasLimit),
@@ -81,16 +80,20 @@ export class ClientEthereumBlockchain {
     return index + 1;
   }
 
+  public async hasPermitSupport(assetId: number) {
+    return await this.permitSupportAssetIds.includes(assetId);
+  }
+
   public async getUserPendingDeposit(assetId: number, account: EthAddress) {
-    return this.rollupProcessor.getUserPendingDeposit(assetId, account);
+    return await this.rollupProcessor.getUserPendingDeposit(assetId, account);
   }
 
   public async getUserProofApprovalStatus(account: EthAddress, txId: Buffer) {
-    return this.rollupProcessor.getProofApprovalStatus(account, txId);
+    return await this.rollupProcessor.getProofApprovalStatus(account, txId);
   }
 
   public async depositPendingFunds(assetId: number, amount: bigint, proofHash?: Buffer, options?: SendTxOptions) {
-    return this.rollupProcessor.depositPendingFunds(assetId, amount, proofHash, options);
+    return await this.rollupProcessor.depositPendingFunds(assetId, amount, proofHash, options);
   }
 
   public async depositPendingFundsPermit(
@@ -101,7 +104,14 @@ export class ClientEthereumBlockchain {
     proofHash?: Buffer,
     options?: SendTxOptions,
   ) {
-    return this.rollupProcessor.depositPendingFundsPermit(assetId, amount, deadline, signature, proofHash, options);
+    return await this.rollupProcessor.depositPendingFundsPermit(
+      assetId,
+      amount,
+      deadline,
+      signature,
+      proofHash,
+      options,
+    );
   }
 
   public async depositPendingFundsPermitNonStandard(
@@ -113,7 +123,7 @@ export class ClientEthereumBlockchain {
     proofHash?: Buffer,
     options?: SendTxOptions,
   ) {
-    return this.rollupProcessor.depositPendingFundsPermitNonStandard(
+    return await this.rollupProcessor.depositPendingFundsPermitNonStandard(
       assetId,
       amount,
       nonce,
@@ -125,11 +135,11 @@ export class ClientEthereumBlockchain {
   }
 
   public async approveProof(txId: Buffer, options?: SendTxOptions) {
-    return this.rollupProcessor.approveProof(txId, options);
+    return await this.rollupProcessor.approveProof(txId, options);
   }
 
   public async processAsyncDefiInteraction(interactionNonce: number, options?: SendTxOptions) {
-    return this.rollupProcessor.processAsyncDefiInteraction(interactionNonce, options);
+    return await this.rollupProcessor.processAsyncDefiInteraction(interactionNonce, options);
   }
 
   public async isContract(address: EthAddress) {
@@ -151,16 +161,12 @@ export class ClientEthereumBlockchain {
    */
   public async getTransactionReceipt(
     txHash: TxHash,
-    interval = 1,
     timeout = 300,
+    interval = 1,
     minConfirmations = this.minConfirmations,
-  ) {
-    const started = Date.now();
+  ): Promise<Receipt> {
+    const timer = new Timer();
     while (true) {
-      if (timeout && Date.now() - started > timeout * 1000) {
-        throw new Error(`Timeout awaiting tx confirmation: ${txHash}`);
-      }
-
       const txReceipt = await this.provider.getTransactionReceipt(txHash.toString());
       if (!minConfirmations || (txReceipt && txReceipt.confirmations >= minConfirmations)) {
         return txReceipt
@@ -168,7 +174,11 @@ export class ClientEthereumBlockchain {
           : { status: false, blockNum: 0 };
       }
 
-      await new Promise(resolve => setTimeout(resolve, interval * 1000));
+      await sleep(interval * 1000);
+
+      if (timeout && timer.s() > timeout) {
+        throw new Error(`Timeout awaiting tx confirmation: ${txHash}`);
+      }
     }
   }
 }

@@ -15,6 +15,7 @@ export interface SdkStatus {
   serverUrl: string;
   chainId: number;
   rollupContractAddress: EthAddress;
+  feePayingAssetIds: number[];
   syncedToRollup: number;
   latestRollupId: number;
   dataSize: number;
@@ -25,6 +26,7 @@ export interface SdkStatusJson {
   serverUrl: string;
   chainId: number;
   rollupContractAddress: string;
+  feePayingAssetIds: number[];
   syncedToRollup: number;
   latestRollupId: number;
   dataSize: number;

@@ -23,8 +23,6 @@ export interface BlockchainAsset {
   decimals: number;
   symbol: string;
   name: string;
-  isFeePaying: boolean;
-  gasConstants: number[];
   gasLimit: number;
 }
 
@@ -33,8 +31,6 @@ export interface BlockchainAssetJson {
   decimals: number;
   symbol: string;
   name: string;
-  isFeePaying: boolean;
-  gasConstants: number[];
   gasLimit: number;
 }
 

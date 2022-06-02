@@ -25,7 +25,7 @@ export class AccountId {
 
   public static random() {
     const randomNonce = Math.floor(Math.random() * 2 ** 32);
-    return new AccountId(GrumpkinAddress.randomAddress(), randomNonce);
+    return new AccountId(GrumpkinAddress.random(), randomNonce);
   }
 
   equals(rhs: AccountId) {

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2022 Aztec
-pragma solidity >=0.8.4 <0.8.11;
+pragma solidity >=0.8.4;
 
 /**
  * @dev Warning: do not deploy in real environments, for testing only
