@@ -12,8 +12,8 @@ export const createPair = async (
   owner: Signer,
   router: Contract,
   asset: Contract,
-  initialTokenSupply = 1000n * 10n ** 18n,
-  initialEthSupply = 10n ** 18n,
+  initialTokenSupply = 10n * 10n ** 18n,
+  initialEthSupply = 10n ** 16n,
 ) => {
   const factory = new Contract(await router.factory(), UniswapV2FactoryJson.abi, owner);
   const weth = new Contract(await router.WETH(), IWETH.abi, owner);
