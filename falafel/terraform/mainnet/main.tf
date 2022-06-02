@@ -193,7 +193,7 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "GAS_LIMIT",
-        "value": "4000000"
+        "value": "6000000"
       },
       {
         "name": "PRIVATE_KEY",
