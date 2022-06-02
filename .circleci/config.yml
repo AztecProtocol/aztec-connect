@@ -11,7 +11,7 @@ parameters:
 jobs:
   x86_64-linux-gcc:
     machine:
-      image: ubuntu-1604:201903-01
+      image: ubuntu-1604:202104-01
     resource_class: large
     steps:
       - checkout
@@ -23,7 +23,7 @@ jobs:
 
   x86_64-linux-clang:
     machine:
-      image: ubuntu-1604:201903-01
+      image: ubuntu-1604:202104-01
     resource_class: large
     steps:
       - checkout
@@ -35,7 +35,7 @@ jobs:
 
   wasm-linux-clang:
     machine:
-      image: ubuntu-1604:201903-01
+      image: ubuntu-1604:202104-01
     resource_class: large
     steps:
       - checkout
@@ -47,7 +47,7 @@ jobs:
 
   barretenberg-js:
     machine:
-      image: ubuntu-1604:201903-01
+      image: ubuntu-1604:202104-01
     resource_class: xlarge
     steps:
       - checkout
@@ -72,7 +72,7 @@ jobs:
 
   halloumi:
     machine:
-      image: ubuntu-1604:201903-01
+      image: ubuntu-1604:202104-01
     resource_class: large
     steps:
       - checkout
@@ -84,7 +84,7 @@ jobs:
 
   falafel:
     machine:
-      image: ubuntu-1604:201903-01
+      image: ubuntu-1604:202104-01
     resource_class: large
     steps:
       - checkout
@@ -96,7 +96,7 @@ jobs:
 
   sriracha:
     machine:
-      image: ubuntu-1604:201903-01
+      image: ubuntu-1604:202104-01
     resource_class: large
     steps:
       - checkout
@@ -108,7 +108,7 @@ jobs:
 
   wasabi:
     machine:
-      image: ubuntu-1604:201903-01
+      image: ubuntu-1604:202104-01
     resource_class: large
     steps:
       - checkout
@@ -172,7 +172,7 @@ jobs:
 
   end-to-end:
     machine:
-      image: ubuntu-1604:201903-01
+      image: ubuntu-1604:202104-01
     resource_class: xlarge
     steps:
       - checkout
