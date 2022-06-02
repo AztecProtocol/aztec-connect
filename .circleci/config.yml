@@ -10,8 +10,7 @@ parameters:
     default: false
 jobs:
   x86_64-linux-gcc:
-    machine:
-      image: ubuntu-1604:202104-01
+    machine: true
     resource_class: large
     steps:
       - checkout
@@ -22,8 +21,7 @@ jobs:
           command: build barretenberg-x86_64-linux-gcc ./dockerfiles/Dockerfile.x86_64-linux-gcc
 
   x86_64-linux-clang:
-    machine:
-      image: ubuntu-1604:202104-01
+    machine: true
     resource_class: large
     steps:
       - checkout
@@ -34,8 +32,7 @@ jobs:
           command: build barretenberg-x86_64-linux-clang ./dockerfiles/Dockerfile.x86_64-linux-clang
 
   wasm-linux-clang:
-    machine:
-      image: ubuntu-1604:202104-01
+    machine: true
     resource_class: large
     steps:
       - checkout
@@ -46,8 +43,7 @@ jobs:
           command: build barretenberg-wasm-linux-clang ./dockerfiles/Dockerfile.wasm-linux-clang
 
   barretenberg-js:
-    machine:
-      image: ubuntu-1604:202104-01
+    machine: true
     resource_class: xlarge
     steps:
       - checkout
@@ -71,8 +67,7 @@ jobs:
           command: build blockchain
 
   halloumi:
-    machine:
-      image: ubuntu-1604:202104-01
+    machine: true
     resource_class: large
     steps:
       - checkout
@@ -83,8 +78,7 @@ jobs:
           command: build halloumi
 
   falafel:
-    machine:
-      image: ubuntu-1604:202104-01
+    machine: true
     resource_class: large
     steps:
       - checkout
@@ -95,8 +89,7 @@ jobs:
           command: build falafel
 
   sriracha:
-    machine:
-      image: ubuntu-1604:202104-01
+    machine: true
     resource_class: large
     steps:
       - checkout
@@ -107,8 +100,7 @@ jobs:
           command: build sriracha
 
   wasabi:
-    machine:
-      image: ubuntu-1604:202104-01
+    machine: true
     resource_class: large
     steps:
       - checkout
@@ -171,8 +163,7 @@ jobs:
           command: build documentation
 
   end-to-end:
-    machine:
-      image: ubuntu-1604:202104-01
+    machine: true
     resource_class: xlarge
     steps:
       - checkout
