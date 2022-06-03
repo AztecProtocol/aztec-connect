@@ -979,8 +979,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   }
 
   private async genesisSync() {
-    const syncedToRollup = await this.getSyncedToRollup();
-    if (syncedToRollup >= 0) {
+    if (this.worldState.getSize() > 0) {
       return;
     }
 

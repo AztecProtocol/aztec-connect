@@ -211,6 +211,7 @@ export class WorldState {
       numNotesPerRollup,
     );
     const newNullRoot = await InitHelpers.populateNullifierTree(accounts, this.worldStateDb, RollupTreeId.NULL);
+    await this.worldStateDb.commit();
 
     this.printState();
 
@@ -251,9 +252,8 @@ export class WorldState {
   private async syncState() {
     this.printState();
     const nextRollupId = await this.rollupDb.getNextRollupId();
-    console.log(`Syncing state, next rollup id: ${nextRollupId}`);
     const updateDbsStart = new Timer();
-    if (nextRollupId === 0) {
+    if (this.worldStateDb.getSize(RollupTreeId.DATA) == 0n) {
       await this.syncStateFromInitFiles();
     }
     await this.syncStateFromBlockchain(nextRollupId);

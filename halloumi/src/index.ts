@@ -1,7 +1,9 @@
 import 'source-map-support/register';
+import 'log-timestamp';
 import { Server, ServerConfig } from './server';
 import { HttpJobWorker } from './proof_generator/http_job_worker';
-import 'log-timestamp';
+import { appFactory } from './app';
+import http from 'http';
 
 const {
   MAX_CIRCUIT_SIZE = '8388608',
@@ -12,6 +14,8 @@ const {
   PERSIST,
   DATA_DIR = './data',
   JOB_SERVER_URL = 'http://localhost:8082',
+  API_PREFIX = '',
+  PORT = '8083',
 } = process.env;
 
 async function main() {
@@ -34,6 +38,12 @@ async function main() {
   };
   process.once('SIGINT', shutdown);
   process.once('SIGTERM', shutdown);
+
+  const app = appFactory(server, API_PREFIX);
+
+  const httpServer = http.createServer(app.callback());
+  httpServer.listen(PORT);
+  console.log(`Server listening on port ${PORT}.`);
 
   await server.start();
   await worker.start();

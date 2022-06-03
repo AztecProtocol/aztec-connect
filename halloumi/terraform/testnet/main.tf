@@ -90,6 +90,10 @@ resource "aws_ecs_task_definition" "halloumi_inner" {
         "value": "production"
       },
       {
+        "name": "API_PREFIX",
+        "value": "/${var.DEPLOY_TAG}/halloumi"
+      },
+      {
         "name": "PORT",
         "value": "80"
       },
@@ -155,7 +159,7 @@ DEFINITIONS
 resource "aws_ecs_service" "halloumi" {
   name                               = "${var.DEPLOY_TAG}-halloumi-inner"
   cluster                            = data.terraform_remote_state.setup_iac.outputs.ecs_cluster_id
-  desired_count                      = 8
+  desired_count                      = 4
   deployment_maximum_percent         = 100
   deployment_minimum_healthy_percent = 0
   platform_version                   = "1.4.0"
@@ -212,6 +216,10 @@ resource "aws_ecs_task_definition" "halloumi_outer" {
       {
         "name": "NODE_ENV",
         "value": "production"
+      },
+      {
+        "name": "API_PREFIX",
+        "value": "/${var.DEPLOY_TAG}/halloumi"
       },
       {
         "name": "PORT",

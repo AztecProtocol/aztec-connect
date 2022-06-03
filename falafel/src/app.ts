@@ -1,6 +1,7 @@
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { assetValueToJson } from '@aztec/barretenberg/asset';
 import { ProofData } from '@aztec/barretenberg/client_proofs';
+import { fetch } from '@aztec/barretenberg/iso_fetch';
 import {
   AccountJson,
   JoinSplitTxJson,
@@ -241,6 +242,14 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
 
   router.get('/metrics', recordMetric, async (ctx: Koa.Context) => {
     ctx.body = await metrics.getMetrics();
+
+    // Fetch and forward metrics from sidecar.
+    // Means we can easily use prometheus dns_sd_configs to make SRV queries to scrape metrics.
+    const sidecarResp = await fetch('http://localhost:9545/metrics').catch(() => undefined);
+    if (sidecarResp) {
+      ctx.body += await sidecarResp.text();
+    }
+
     ctx.status = 200;
   });
 

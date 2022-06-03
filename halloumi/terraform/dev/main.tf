@@ -121,6 +121,10 @@ resource "aws_ecs_task_definition" "halloumi" {
         "value": "production"
       },
       {
+        "name": "API_PREFIX",
+        "value": "/${var.DEPLOY_TAG}/halloumi"
+      },
+      {
         "name": "PORT",
         "value": "80"
       },
