@@ -324,11 +324,10 @@ export class TerminalHandler {
     if (await this.sdk.isAliasRegistered(alias)) {
       throw new Error('alias already registered.');
     }
-    const deposit = { assetId: 0, value: BigInt(valueStr) };
+    const deposit = this.sdk.toBaseUnits(0, valueStr);
     const [, fee] = await this.sdk.getRegisterFees(deposit);
     const spendingKey = await this.sdk.generateSpendingKeyPair(this.ethAddress);
     const { id, accountPrivateKey } = await this.user.getUserData();
-    console.log(id);
     const controller = this.sdk.createRegisterController(
       id,
       alias,

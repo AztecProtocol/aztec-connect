@@ -189,11 +189,14 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     } else {
       // No rollups yet.
       const chainId = await this.contracts.getChainId();
-      const { dataRoot, nullRoot, rootsRoot } = InitHelpers.getInitRoots(chainId);
+      const {
+        dataTreeSize,
+        roots: { dataRoot, nullRoot, rootsRoot },
+      } = InitHelpers.getInitData(chainId);
       return {
         ...state,
         nextRollupId: 0,
-        dataSize: 0,
+        dataSize: dataTreeSize,
         dataRoot,
         nullRoot,
         rootRoot: rootsRoot,

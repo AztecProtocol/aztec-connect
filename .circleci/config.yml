@@ -7,7 +7,7 @@ version: 2.1
 parameters:
   workflow:
     type: string
-    default: ''
+    default: 'system'
 
 jobs:
   wasm-linux-clang:
@@ -646,7 +646,9 @@ tag_filter: &tag_filter
     only: *tag_regex
 
 workflows:
-  build:
+  system:
+    when:
+      equal: [system, << pipeline.parameters.workflow >>]
     jobs:
       - x86_64-linux-gcc:
           filters: *tag_filter
