@@ -10,7 +10,7 @@ if [ "$CIRCLE_BRANCH" == "master" ]; then
   OFFSET=0
   while [ "$LAST_SUCCESSFUL_COMMIT" == "null" ]; do
     OFFSET=$[OFFSET+100]
-    if [ "$OFFSET" -gt "1000" ]; then
+    if [ "$OFFSET" -gt "2000" ]; then
       echo "Failed to find last successful commit. Perhaps it was too long ago? Find better solution."
       exit 1
     fi
