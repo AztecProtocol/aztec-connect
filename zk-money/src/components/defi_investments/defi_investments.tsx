@@ -2,7 +2,7 @@ import type { DefiRecipe } from 'alt-model/defi/types';
 import { useState } from 'react';
 import { Pagination } from '..';
 import { DefiInvestmentRow } from './defi_investment_row';
-import { DefiPosition, useOpenPositions } from 'alt-model/defi/open_position_hooks';
+import { DefiPosition } from 'alt-model/defi/open_position_hooks';
 
 const INVESTMENTS_PER_PAGE = 5;
 
@@ -13,11 +13,12 @@ function getKey(position: DefiPosition) {
 
 interface DefiInvestmentsProps {
   onOpenDefiExitModal: (recipe: DefiRecipe) => void;
+  positions: DefiPosition[] | undefined;
 }
 
 export function DefiInvestments(props: DefiInvestmentsProps) {
   const [page, setPage] = useState(1);
-  const positions = useOpenPositions();
+  const { positions } = props;
 
   if (!positions) return <></>;
   if (!positions.length) return <div>You haven't made any investments yet</div>;

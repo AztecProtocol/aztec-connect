@@ -1,4 +1,4 @@
-import { useBalances } from 'alt-model';
+import { AssetValue } from '@aztec/sdk';
 import { recipeFiltersToSearchStr } from 'alt-model/defi/recipe_filters';
 import { RemoteAsset } from 'alt-model/types';
 import { Pagination } from 'components/pagination';
@@ -9,12 +9,15 @@ import { ShieldModal } from 'views/account/dashboard/modals/shield_modal';
 import { HOLDINGS_PER_PAGE, slicePage } from './helpers';
 import { Holding } from './holding';
 
-export function TokenList() {
+interface TokenListProps {
+  balances: AssetValue[] | undefined;
+}
+
+export function TokenList({ balances }: TokenListProps) {
   const navigate = useNavigate();
   const [sendModalAsset, setSendModalAsset] = useState<RemoteAsset | undefined>(undefined);
   const [shieldModalAsset, setShieldModalAsset] = useState<RemoteAsset | undefined>(undefined);
   const [page, setPage] = useState(1);
-  const balances = useBalances();
 
   const handleGoToEarn = (asset: RemoteAsset) => {
     const searchStr = recipeFiltersToSearchStr({ assetSymbol: asset.symbol });
