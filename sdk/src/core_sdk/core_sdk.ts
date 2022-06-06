@@ -560,9 +560,9 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     alias: string,
     migrate: boolean,
     spendingPublicKey: GrumpkinAddress,
-    newSpendingPublicKey1: GrumpkinAddress | undefined,
-    newSpendingPublicKey2: GrumpkinAddress | undefined,
-    newAccountPrivateKey: Buffer | undefined,
+    newSpendingPublicKey1?: GrumpkinAddress,
+    newSpendingPublicKey2?: GrumpkinAddress,
+    newAccountPrivateKey?: Buffer,
   ) {
     return this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);

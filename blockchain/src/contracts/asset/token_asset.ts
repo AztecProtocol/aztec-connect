@@ -23,8 +23,6 @@ const fixEthersStackTrace = (err: Error) => {
 };
 
 export class TokenAsset implements Asset {
-  private readonly precision = 2;
-
   constructor(
     private readonly info: BlockchainAsset,
     private readonly erc20: Contract,

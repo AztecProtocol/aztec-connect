@@ -42,26 +42,26 @@ export class TokenStore {
     return store;
   }
 
-  private async logAllStablePools() {
-    const poolCount = (await this.registryContract!.pool_count()).toNumber();
-    const mappings = new Map<string, string>();
-    for (let i = 0; i < poolCount; i++) {
-      const poolAddress = (await this.registryContract!.pool_list(i)).toString();
-      const tokenAddress = await this.registryContract!.get_lp_token(poolAddress);
-      mappings.set(poolAddress, tokenAddress);
-    }
-    console.log('Token mappings ', mappings);
-  }
+  // private async logAllStablePools() {
+  //   const poolCount = (await this.registryContract!.pool_count()).toNumber();
+  //   const mappings = new Map<string, string>();
+  //   for (let i = 0; i < poolCount; i++) {
+  //     const poolAddress = (await this.registryContract!.pool_list(i)).toString();
+  //     const tokenAddress = await this.registryContract!.get_lp_token(poolAddress);
+  //     mappings.set(poolAddress, tokenAddress);
+  //   }
+  //   console.log('Token mappings ', mappings);
+  // }
 
-  private async logAllMetaPools() {
-    const poolCount = (await this.factoryContract!.pool_count()).toNumber();
-    const tokens = [];
-    for (let i = 0; i < poolCount; i++) {
-      const poolAddress = (await this.factoryContract!.pool_list(i)).toString();
-      tokens.push(poolAddress);
-    }
-    console.log('Tokens ', tokens);
-  }
+  // private async logAllMetaPools() {
+  //   const poolCount = (await this.factoryContract!.pool_count()).toNumber();
+  //   const tokens = [];
+  //   for (let i = 0; i < poolCount; i++) {
+  //     const poolAddress = (await this.factoryContract!.pool_list(i)).toString();
+  //     tokens.push(poolAddress);
+  //   }
+  //   console.log('Tokens ', tokens);
+  // }
 
   private async depositToStablePool(
     spender: EthAddress,

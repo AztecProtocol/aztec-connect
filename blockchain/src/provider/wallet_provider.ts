@@ -9,6 +9,7 @@ import { Wallet } from 'ethers';
 import { EthAddress } from '@aztec/barretenberg/address';
 import { EthersAdapter } from './ethers_adapter';
 import { JsonRpcProvider, Web3Provider, TransactionRequest } from '@ethersproject/providers';
+import { readFileSync } from 'fs';
 
 /**
  * Given an EIP1193 provider, wraps it, and provides the ability to add local accounts.
@@ -27,8 +28,19 @@ export class WalletProvider implements EthereumProvider {
     return this.addEthersWallet(new Wallet(privateKey, new Web3Provider(this.provider)));
   }
 
-  public addAccountFromSeed(mnemonic: string, path: string) {
+  public addAccountsFromMnemonic(mnemonic: string, num: number) {
+    for (let i = 0; i < num; ++i) {
+      this.addAccountFromMnemonicAndPath(mnemonic, `m/44'/60'/0'/0/${i}`);
+    }
+  }
+
+  public addAccountFromMnemonicAndPath(mnemonic: string, path: string) {
     return this.addEthersWallet(Wallet.fromMnemonic(mnemonic, path).connect(new Web3Provider(this.provider)));
+  }
+
+  public addAccountFromKeystore(file: string, password = '') {
+    const json = readFileSync(file, { encoding: 'ascii' });
+    this.addEthersWallet(Wallet.fromEncryptedJsonSync(json, password));
   }
 
   private addEthersWallet(wallet: Wallet) {

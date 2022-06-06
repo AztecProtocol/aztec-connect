@@ -1,10 +1,10 @@
+#!/usr/bin/env node
 import { Web3Provider } from '@ethersproject/providers';
 import { Contract } from 'ethers';
 import { EthAddress } from '@aztec/barretenberg/address';
 import { EthereumRpc, TxHash } from '@aztec/barretenberg/blockchain';
 import { Command } from 'commander';
 import { MainnetAddresses, purchaseTokens } from '../tokens';
-import { JsonRpcProvider } from '../provider';
 import { setBlockchainTime, getCurrentBlockTime } from '../ganache/manipulate_blocks';
 import { decodeErrorFromContractByTxHash, decodeSelector, retrieveContractSelectors } from '../contracts/decode_error';
 import { EthereumProvider } from '@aztec/barretenberg/blockchain';
@@ -23,14 +23,14 @@ export const abis: { [key: string]: any } = {
   Element: Element.ElementBridge__factory,
 };
 
-const getProvider = (url: string) => {
+const getProvider = (url = 'http://localhost:8545') => {
+  const provider = WalletProvider.fromHost(url);
   if (PRIVATE_KEY) {
-    const provider = WalletProvider.fromHost(url);
     const address = provider.addAccount(Buffer.from(PRIVATE_KEY, 'hex'));
     console.log(`Added account ${address.toString()} from provided private key`);
     return provider;
   }
-  return new JsonRpcProvider(url);
+  return provider;
 };
 
 export async function retrieveEvents(
@@ -210,6 +210,28 @@ export async function profileElement(
 const program = new Command();
 
 async function main() {
+  program
+    .command('pkFromStore')
+    .description('print a private key from an encrypted keystore file')
+    .argument('<file>', 'path to the keystore file')
+    .argument('[password]', 'password if keystore file is encrypted')
+    .action((file: string, password?: string) => {
+      const provider = getProvider();
+      provider.addAccountFromKeystore(file, password);
+      console.log(`${provider.getPrivateKey(0).toString('hex')}`);
+    });
+
+  program
+    .command('pkFromMnemonic')
+    .description('print a private key derived from a mnemonic')
+    .argument('<mnemonic>', 'mnemonic')
+    .argument('[derivation path]', 'derivation path', "m/44'/60'/0'/0/0'")
+    .action((mnemonic: string, path: string) => {
+      const provider = getProvider();
+      provider.addAccountFromMnemonicAndPath(mnemonic, path);
+      console.log(`${provider.getPrivateKey(0).toString('hex')}`);
+    });
+
   program
     .command('setTime')
     .description('advance the blockchain time')

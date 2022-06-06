@@ -59,14 +59,13 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     provider: EthereumProvider,
   ) {
     const confirmations = config.minConfirmation || EthereumBlockchain.DEFAULT_MIN_CONFIRMATIONS;
-    const contracts = Contracts.fromAddresses(
+    const contracts = await Contracts.fromAddresses(
       rollupContractAddress,
       feeDistributorAddress,
       priceFeedContractAddresses,
       provider,
       confirmations,
     );
-    await contracts.init();
     const eb = new EthereumBlockchain(config, contracts);
     await eb.init();
     return eb;

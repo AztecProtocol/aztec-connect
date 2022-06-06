@@ -1,5 +1,10 @@
 import { EthAddress } from '../address';
 
+type Jsonify<T> = {
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  [P in keyof T]: T[P] extends EthAddress | bigint | Buffer ? string : T[P] extends Object ? Jsonify<T[P]> : T[P];
+};
+
 export enum TxType {
   DEPOSIT,
   TRANSFER,
@@ -26,13 +31,7 @@ export interface BlockchainAsset {
   gasLimit: number;
 }
 
-export interface BlockchainAssetJson {
-  address: string;
-  decimals: number;
-  symbol: string;
-  name: string;
-  gasLimit: number;
-}
+export type BlockchainAssetJson = Jsonify<BlockchainAsset>;
 
 export const blockchainAssetToJson = ({ address, ...asset }: BlockchainAsset): BlockchainAssetJson => ({
   ...asset,
@@ -50,11 +49,7 @@ export interface BlockchainBridge {
   gasLimit: number;
 }
 
-export interface BlockchainBridgeJson {
-  id: number;
-  address: string;
-  gasLimit: number;
-}
+export type BlockchainBridgeJson = Jsonify<BlockchainBridge>;
 
 export const blockchainBridgeToJson = ({ address, ...bridge }: BlockchainBridge): BlockchainBridgeJson => ({
   ...bridge,
@@ -85,24 +80,7 @@ export interface BlockchainStatus {
   bridges: BlockchainBridge[];
 }
 
-export interface BlockchainStatusJson {
-  chainId: number;
-  rollupContractAddress: string;
-  feeDistributorContractAddress: string;
-  verifierContractAddress: string;
-  nextRollupId: number;
-  dataSize: number;
-  dataRoot: string;
-  nullRoot: string;
-  rootRoot: string;
-  defiRoot: string;
-  defiInteractionHashes: string[];
-  escapeOpen: boolean;
-  allowThirdPartyContracts: boolean;
-  numEscapeBlocksRemaining: number;
-  assets: BlockchainAssetJson[];
-  bridges: BlockchainBridgeJson[];
-}
+export type BlockchainStatusJson = Jsonify<BlockchainStatus>;
 
 export function blockchainStatusToJson(status: BlockchainStatus): BlockchainStatusJson {
   return {

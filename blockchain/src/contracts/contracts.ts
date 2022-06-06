@@ -38,7 +38,7 @@ export class Contracts {
     this.ethereumRpc = new EthereumRpc(ethereumProvider);
   }
 
-  static fromAddresses(
+  static async fromAddresses(
     rollupContractAddress: EthAddress,
     feeDistributorAddress: EthAddress,
     priceFeedContractAddresses: EthAddress[],
@@ -58,7 +58,7 @@ export class Contracts {
       ...tokenPriceFeedAddresses.map(a => new TokenPriceFeed(a, ethereumProvider)),
     ];
 
-    return new Contracts(
+    const contracts = new Contracts(
       rollupProcessor,
       feeDistributor,
       assets,
@@ -67,10 +67,9 @@ export class Contracts {
       ethereumProvider,
       confirmations,
     );
-  }
 
-  public async init() {
-    await this.updateAssets();
+    await contracts.updateAssets();
+    return contracts;
   }
 
   public getProvider() {
