@@ -420,76 +420,47 @@ export class CoreSdk extends EventEmitter {
   }
 
   private async sync() {
-    const syncedToRollup = +(await this.leveldb.get('syncedToRollup').catch(() => -1));
-    const blocks: Block[] = [];
-    let from = syncedToRollup + 1;
-    do {
-      const fetchedBlocks = await this.rollupProvider.getBlocks(from);
-      if (!fetchedBlocks.length) {
+    debug('synchronising data...');
+    while (true) {
+      // For debugging.
+      const oldRoot = this.worldState.getRoot();
+
+      const syncedToRollup = +(await this.leveldb.get('syncedToRollup').catch(() => -1));
+      const from = syncedToRollup + 1;
+      const blocks = await this.rollupProvider.getBlocks(from);
+      if (!blocks.length) {
         break;
       }
-      blocks.push(...fetchedBlocks);
-      from = blocks[blocks.length - 1].rollupId + 1;
-    } while (from <= this.rollupProvider.getLatestRollupId());
 
-    // For debugging.
-    const oldRoot = this.worldState.getRoot();
-    const oldSize = this.worldState.getSize();
+      const rollups = blocks.map(b => RollupProofData.fromBuffer(b.rollupProofData));
 
-    if (!blocks.length) {
+      await this.worldState.processRollups(rollups);
+      await this.processAliases(rollups);
+      await this.updateStatusRollupInfo(rollups[rollups.length - 1]);
+
       // TODO: Ugly hotfix. Find root cause.
-      // If no new blocks, we expect our local data root to be equal to that on falafel.
-      const { dataRoot: expectedDataRoot, dataSize: expectedDataSize } = (await this.getRemoteStatus())
-        .blockchainStatus;
-      if (!oldRoot.equals(expectedDataRoot)) {
+      // We expect our data root to be equal to the new data root in the last block we processed.
+      const expectedDataRoot = rollups[rollups.length - 1].newDataRoot;
+      if (!this.worldState.getRoot().equals(expectedDataRoot)) {
         await this.eraseAndRebuildDataTree();
-        await this.rollupProvider.clientLog({
+        this.rollupProvider.clientLog({
           message: 'Invalid dataRoot.',
           synchingFromRollup: syncedToRollup,
           blocksReceived: blocks.length,
-          currentRoot: oldRoot.toString('hex'),
-          currentSize: oldSize,
+          oldRoot: oldRoot.toString('hex'),
+          newRoot: this.worldState.getRoot().toString('hex'),
+          newSize: this.worldState.getSize(),
           expectedDataRoot: expectedDataRoot.toString('hex'),
-          expectedDataSize,
         });
+        return;
       }
-      return;
+
+      // Forward the block on to each UserState for processing.
+      for (const block of blocks) {
+        this.userStates.forEach(us => us.processBlock(block));
+      }
     }
-
-    const rollups = blocks.map(b => RollupProofData.fromBuffer(b.rollupProofData));
-
-    // For debugging.
-    const expectedDataRoot = rollups[rollups.length - 1].newDataRoot;
-    const expectedDataSize = rollups[0].dataStartIndex + rollups.reduce((a, r) => a + r.rollupSize * 2, 0);
-
-    debug('synchronising data...');
-    await this.worldState.processRollups(rollups);
-    await this.processAliases(rollups);
-    await this.updateStatusRollupInfo(rollups[rollups.length - 1]);
     debug('done.');
-
-    // TODO: Ugly hotfix. Find root cause.
-    // We expect our data root to be equal to the new data root in the last block we processed.
-    if (!this.worldState.getRoot().equals(expectedDataRoot)) {
-      await this.eraseAndRebuildDataTree();
-      this.rollupProvider.clientLog({
-        message: 'Invalid dataRoot.',
-        synchingFromRollup: syncedToRollup,
-        blocksReceived: blocks.length,
-        oldRoot: oldRoot.toString('hex'),
-        oldSize,
-        newRoot: this.worldState.getRoot().toString('hex'),
-        newSize: this.worldState.getSize(),
-        expectedDataRoot: expectedDataRoot.toString('hex'),
-        expectedDataSize,
-      });
-      return;
-    }
-
-    // Forward the block on to each UserState for processing.
-    for (const block of blocks) {
-      this.userStates.forEach(us => us.processBlock(block));
-    }
   }
 
   private async updateStatusRollupInfo(rollup: RollupProofData) {

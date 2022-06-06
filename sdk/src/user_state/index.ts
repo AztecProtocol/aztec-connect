@@ -70,17 +70,14 @@ export class UserState extends EventEmitter {
     const start = new Date().getTime();
     debug(`starting sync for ${this.user.id} from rollup block ${this.user.syncedToRollup + 1}...`);
     this.syncState = SyncState.SYNCHING;
-    const blocks: Block[] = [];
-    let from = this.user.syncedToRollup + 1;
-    do {
-      const fetchedBlocks = await this.rollupProvider.getBlocks(from);
-      if (!fetchedBlocks.length) {
+    while (true) {
+      const from = this.user.syncedToRollup + 1;
+      const blocks = await this.rollupProvider.getBlocks(from);
+      if (!blocks.length) {
         break;
       }
-      blocks.push(...fetchedBlocks);
-      from = blocks[blocks.length - 1].rollupId + 1;
-    } while (from <= this.rollupProvider.getLatestRollupId());
-    await this.handleBlocks(blocks);
+      await this.handleBlocks(blocks);
+    }
     debug(`sync complete in ${new Date().getTime() - start}ms.`);
     this.syncingPromise = this.blockQueue.process(async block => this.handleBlocks([block]));
     this.syncState = SyncState.MONITORING;
