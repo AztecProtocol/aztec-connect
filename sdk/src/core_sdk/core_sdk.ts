@@ -37,6 +37,7 @@ import { AliasHash } from 'barretenberg/client_proofs/alias_hash';
 import { ProofData } from 'barretenberg/client_proofs/proof_data';
 import { TxType } from 'barretenberg/blockchain';
 import { TxHash } from 'barretenberg/tx_hash';
+import { Timer } from 'barretenberg/timer';
 import { AccountProofOutput, JoinSplitProofOutput, ProofOutput } from '../proofs/proof_output';
 
 const debug = createDebug('bb:core_sdk');
@@ -420,6 +421,7 @@ export class CoreSdk extends EventEmitter {
   }
 
   private async sync() {
+    const timer = new Timer();
     debug('synchronising data...');
     while (true) {
       // For debugging.
@@ -460,7 +462,7 @@ export class CoreSdk extends EventEmitter {
         this.userStates.forEach(us => us.processBlock(block));
       }
     }
-    debug('done.');
+    debug(`done in ${timer.s()}s.`);
   }
 
   private async updateStatusRollupInfo(rollup: RollupProofData) {

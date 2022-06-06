@@ -52,7 +52,7 @@ export class WorldState {
   }
 
   public getNextPublishTime() {
-    return this.pipeline.getNextPublishTime();
+    return this.pipeline?.getNextPublishTime();
   }
 
   public async stop() {
