@@ -22,8 +22,8 @@ export function RegistrationClosed() {
     );
   return (
     <CenteredText>
-      Account creation is disabled. Registration will reopen will the launch of the new DeFi-enabled zk.money on the 9th
-      June. <TextLink text="Login" color="white" href="/signin" underline inline /> to instead migrate your funds.
+      Account creation is disabled. Registration will reopen with the launch of the new DeFi-enabled zk.money on the 9th
+      June. <TextLink text="Login" color="white" href="/signin" underline inline /> to migrate your funds.
     </CenteredText>
   );
 }
