@@ -80,6 +80,7 @@
   .cardsGraphic {
     width: 420px;
     transform: translatey(0px);
+    will-change: transform;
     animation: float 6s ease-in-out infinite;
   }
 
@@ -105,7 +106,7 @@
 
   .shieldButton {
     border: 2px solid white;
-    width: 160px;
+    width: 180px;
   }
 }
 

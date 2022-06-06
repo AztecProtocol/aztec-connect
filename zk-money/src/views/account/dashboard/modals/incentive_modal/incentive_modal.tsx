@@ -39,6 +39,10 @@ interface SelfDismissingIncentiveModalProps {
   onShieldNow: () => void;
 }
 
+// TODO: Only show incentive modals once we have gone live
+// (similar change required in home.tsx & src/index.tsx)
+const hasGoneLive = false;
+
 export function SelfDismissingIncentiveModal(props: SelfDismissingIncentiveModalProps) {
   const storageKey = `incentive_modal_was_closed:${props.instanceName}`;
   const [isShowing, setIsShowing] = useState(!localStorage.getItem(storageKey));
@@ -51,6 +55,6 @@ export function SelfDismissingIncentiveModal(props: SelfDismissingIncentiveModal
     props.onShieldNow();
   };
 
-  if (!isShowing) return <></>;
+  if (!isShowing || !hasGoneLive) return <></>;
   return <IncentiveModal onClose={handleClose} onShieldNow={handleShieldNow} />;
 }

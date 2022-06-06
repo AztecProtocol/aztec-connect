@@ -15,7 +15,10 @@ const FALAFEL_UNREACHABLE_MSG = {
   message: 'Cannot reach rollup provider. Please try again later.',
 };
 
-type FailureReason = { type: 'unsupported'; supportStatus: SupportStatus } | { type: 'falafel-down' };
+type FailureReason =
+  | { type: 'unlaunched' }
+  | { type: 'unsupported'; supportStatus: SupportStatus }
+  | { type: 'falafel-down' };
 
 interface AppInitFailedProps {
   reason: FailureReason;

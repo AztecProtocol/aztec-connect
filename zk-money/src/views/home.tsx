@@ -116,6 +116,10 @@ export function Home({ onSignup }: HomeProps) {
   );
 }
 
+// TODO: remove this check as part of launch
+// (similar change required in incentive_modal.tsx & src/index.tsx)
+const isProdSite = window.location.hostname === 'zk.money';
+
 function Banner({ onShieldNow }: { onShieldNow: () => void }) {
   return (
     <div className={style.banner}>
@@ -130,7 +134,13 @@ function Banner({ onShieldNow }: { onShieldNow: () => void }) {
           zk.money is your portal to using Ethereum DeFi services with full privacy and up to 100x cost savings. Shield
           funds to start accessing!
         </div>
-        <Button onClick={onShieldNow} className={style.shieldButton} text="Shield Now" theme="gradient" />
+        <Button
+          text={isProdSite ? 'Coming soon' : 'Shield Now'}
+          onClick={onShieldNow}
+          className={style.shieldButton}
+          theme="gradient"
+          disabled={isProdSite}
+        />
         <div className={style.links}>
           <Hyperlink
             theme="white"

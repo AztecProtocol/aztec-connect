@@ -17,6 +17,16 @@ declare global {
 
 async function rootRender() {
   try {
+    // TODO: remove this check for launch
+    // (similar change required in home.tsx & incentive_modal.tsx)
+    const isProdSite = window.location.hostname === 'zk.money';
+    if (isProdSite) {
+      return (
+        <BrowserRouter>
+          <AppInitFailed reason={{ type: 'unlaunched' }} />
+        </BrowserRouter>
+      );
+    }
     const supportStatusProm = getSupportStatus();
     const { config, initialRollupProviderStatus } = await getEnvironment();
     const supportStatus = await supportStatusProm;
