@@ -14,9 +14,9 @@ jobs:
     - name: Install mdbook
       run: |
         mkdir mdbook
-        curl -sSL https://github.com/rust-lang/mdBook/releases/download/v0.4.14/mdbook-v0.4.14-x86_64-unknown-linux-gnu.tar.gz | tar -xz --directory=./mdbook
+        curl -sSL https://github.com/rust-lang/mdBook/releases/download/v0.4.18/mdbook-v0.4.18-x86_64-unknown-linux-gnu.tar.gz | tar -xz --directory=./mdbook
         echo `pwd`/mdbook >> $GITHUB_PATH
-        cargo install mdbook-katex
+        cargo install mdbook-katex --version 0.2.10
     - name: Deploy GitHub Pages
       run: |
         # This assumes your book is in the root of your repository.
