@@ -11,7 +11,6 @@ const loginLink = { text: 'Log in', url: getUrlFromLoginMode(LoginMode.LOGIN) };
 const footerLinks = {
   [LoginMode.SIGNUP]: [loginLink],
   [LoginMode.LOGIN]: [signupLink],
-  [LoginMode.NEW_ALIAS]: [signupLink, loginLink],
 };
 
 const Root = styled.div`

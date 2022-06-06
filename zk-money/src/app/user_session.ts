@@ -16,7 +16,6 @@ import { EthAccount } from './eth_account';
 import { MessageType, SystemMessage, ValueAvailability } from './form';
 import { createSigningKeys, KeyVault } from './key_vault';
 import { Network } from './networks';
-import { PriceFeedService } from './price_feed_service';
 import { Provider, ProviderEvent, ProviderState, ProviderStatus } from './provider';
 import { RollupService } from './rollup_service';
 import { UserAccount } from './user_account';
@@ -29,7 +28,6 @@ const debug = createDebug('zm:user_session');
 export enum LoginMode {
   SIGNUP,
   LOGIN,
-  NEW_ALIAS,
 }
 
 export enum LoginStep {
@@ -60,7 +58,6 @@ export interface LoginState {
   walletId?: WalletId;
   alias: string;
   aliasAvailability: ValueAvailability;
-  rememberMe: boolean;
   allowToProceed: boolean; // Depreciated: this is never set to false
 }
 
@@ -70,7 +67,6 @@ export const initialLoginState: LoginState = {
   walletId: undefined,
   alias: '',
   aliasAvailability: ValueAvailability.INVALID,
-  rememberMe: true,
   allowToProceed: true,
 };
 
@@ -112,12 +108,9 @@ export class UserSession extends EventEmitter {
   private loginState: LoginState;
   private worldState = initialWorldState;
   private keyVault!: KeyVault;
-  private keyVaultV0!: KeyVault;
-  private spendingPrivateKey?: Buffer;
   private shieldForAliasForm?: ShieldForm;
   private accountUtils!: AccountUtils;
   private account!: UserAccount;
-  private activeAsset: number;
   private debounceCheckAlias: DebouncedFunc<() => void>;
   private createSdkMutex = new Mutex('create-sdk-mutex');
   private destroyed = false;
@@ -127,18 +120,14 @@ export class UserSession extends EventEmitter {
   private readonly accountProofMinDeposit: bigint;
 
   private readonly debounceCheckAliasWait = 600;
-  private readonly MAX_ACCOUNT_TXS_PER_ROLLUP = 112; // TODO - fetch from server
-  private readonly TXS_PER_ROLLUP = 112;
 
   constructor(
     private readonly assets: CutdownAsset[],
     private readonly config: Config,
     private readonly sdkObs: SdkObs,
     private readonly requiredNetwork: Network,
-    initialActiveAsset: number,
     initialLoginMode: LoginMode,
     private readonly db: Database,
-    private readonly priceFeedService: PriceFeedService,
     private readonly sessionCookieName: string,
     private readonly walletCacheName: string,
     private readonly shieldForAliasAmountPreselection?: bigint,
@@ -149,7 +138,6 @@ export class UserSession extends EventEmitter {
       ...initialLoginState,
       mode: initialLoginMode,
     };
-    this.activeAsset = initialActiveAsset;
     this.accountProofMinDeposit = toBaseUnits('0.01', assets[this.accountProofDepositAssetId].decimals);
   }
 
@@ -392,14 +380,9 @@ export class UserSession extends EventEmitter {
     this.handleProviderStateChange();
   }
 
-  forgotAlias() {
-    this.updateLoginState({ mode: LoginMode.NEW_ALIAS });
-    this.setAlias('');
-  }
-
   setAlias(aliasInput: string) {
     const { mode } = this.loginState;
-    const isNewAlias = [LoginMode.SIGNUP, LoginMode.NEW_ALIAS].includes(mode);
+    const isNewAlias = LoginMode.SIGNUP === mode;
     if (!isNewAlias) {
       this.clearSystemMessage();
       return this.updateLoginState({ alias: aliasInput, aliasAvailability: ValueAvailability.PENDING });
@@ -430,13 +413,9 @@ export class UserSession extends EventEmitter {
     this.debounceCheckAlias();
   }
 
-  setRememberMe(rememberMe: boolean) {
-    this.updateLoginState({ rememberMe });
-  }
-
   async confirmAlias(aliasInput: string) {
     const { mode } = this.loginState;
-    const isNewAlias = [LoginMode.SIGNUP, LoginMode.NEW_ALIAS].includes(mode);
+    const isNewAlias = LoginMode.SIGNUP === mode;
 
     const error = getAliasError(aliasInput);
     if (error) {
@@ -520,7 +499,7 @@ export class UserSession extends EventEmitter {
 
     try {
       const { mode } = this.loginState;
-      const isNewAlias = [LoginMode.SIGNUP, LoginMode.NEW_ALIAS].includes(mode);
+      const isNewAlias = LoginMode.SIGNUP === mode;
       const { accountPublicKey } = this.keyVault;
 
       if (isNewAlias) {
@@ -797,8 +776,7 @@ export class UserSession extends EventEmitter {
       'Please sign the message in your wallet to create your Aztec Spending Key...',
       MessageType.WARNING,
     );
-    const { publicKey, privateKey } = await createSigningKeys(this.provider!, this.sdk);
-    this.spendingPrivateKey = privateKey;
+    const { publicKey } = await createSigningKeys(this.provider!, this.sdk);
     this.clearSystemMessage();
     return publicKey;
   }
@@ -818,7 +796,7 @@ export class UserSession extends EventEmitter {
 
   private async updateSession() {
     const { accountPublicKey, signerAddress, version } = this.keyVault;
-    const { alias, rememberMe } = this.loginState;
+    const { alias } = this.loginState;
     await this.db.addAccount({
       accountPublicKey,
       signerAddress,
@@ -826,9 +804,7 @@ export class UserSession extends EventEmitter {
       version,
       timestamp: new Date(),
     });
-    if (rememberMe) {
       await this.setLinkedAccountToSession(accountPublicKey);
-    }
   }
 
   private async getLinkedAccountFromSession() {

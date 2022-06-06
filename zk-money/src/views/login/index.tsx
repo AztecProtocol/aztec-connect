@@ -70,10 +70,8 @@ interface LoginProps {
   explorerUrl: string;
   systemMessage: SystemMessage;
   setAlias: (alias: string) => void;
-  setRememberMe: (rememberMe: boolean) => void;
   onSelectWallet: (walletId: WalletId) => void;
   onRestart?: () => void;
-  onForgotAlias: () => void;
   onSelectAlias: (alias: string) => void;
   onShieldForAliasFormInputsChange(inputs: Partial<ShieldFormValues>): void;
   onSubmitShieldForAliasForm(isRetry?: boolean): void;
@@ -149,20 +147,20 @@ const getStepInfo = ({ loginState: { step, mode, allowToProceed }, explorerUrl }
       }
       return {
         stepNo: 2,
-        title:
-          mode === LoginMode.SIGNUP ? (
-            <>
-              {'Pick an '}
-              <Text text="alias" weight="bold" inline />
-            </>
-          ) : (
-            <>
-              {'Pick an '}
-              <Text text="new" weight="bold" inline />
-              {' alias'}
-            </>
-          ),
-        description: `Your alias makes it simple for your friends to send you crypto. It lets them look up your end-to-end encryption keys, so the rest of the world can’t snoop on your data 👀`,
+        title: (
+          <>
+            {'Pick a memorable '}
+            <Text text="alias" weight="bold" inline />
+          </>
+        ),
+        description: (
+          <>
+            Your alias makes it simple for your friends to send you crypto.
+            <br />
+            <br />
+            ⚠️ If you forget your alias, your account cannot be recovered ⚠️
+          </>
+        ),
       };
     }
     case LoginStep.RECOVER_ACCOUNT_PROOF:
@@ -214,16 +212,14 @@ export const Login: React.FunctionComponent<LoginProps> = props => {
     availableWallets,
     systemMessage,
     setAlias,
-    setRememberMe,
     onSelectWallet,
     onRestart,
-    onForgotAlias,
     onSelectAlias,
     onShieldForAliasFormInputsChange,
     onSubmitShieldForAliasForm,
     onChangeWallet,
   } = props;
-  const { step, mode, walletId, alias, aliasAvailability, rememberMe, allowToProceed } = loginState;
+  const { step, mode, walletId, alias, aliasAvailability, allowToProceed } = loginState;
   const { stepNo, title, description, footnote } = getStepInfo(props);
   const { message, type: messageType } = systemMessage;
 
@@ -253,15 +249,12 @@ export const Login: React.FunctionComponent<LoginProps> = props => {
               <AliasForm
                 alias={alias}
                 aliasAvailability={aliasAvailability}
-                rememberMe={rememberMe}
                 allowToProceed={allowToProceed}
                 setAlias={setAlias}
-                setRememberMe={setRememberMe}
                 onSubmit={onSelectAlias}
                 onRestart={onRestart!}
-                onForgotAlias={onForgotAlias}
                 isNewAccount={mode === LoginMode.SIGNUP}
-                isNewAlias={[LoginMode.SIGNUP, LoginMode.NEW_ALIAS].includes(mode)}
+                isNewAlias={mode === LoginMode.SIGNUP}
               />
             );
           case LoginStep.CLAIM_USERNAME:

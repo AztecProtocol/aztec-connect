@@ -41,13 +41,10 @@ const Description = styled.div`
 interface AliasFormProps {
   alias: string;
   aliasAvailability: ValueAvailability;
-  rememberMe: boolean;
   allowToProceed: boolean;
   setAlias: (alias: string) => void;
-  setRememberMe: (rememberMe: boolean) => void;
   onSubmit: (alias: string) => void;
   onRestart(): void;
-  onForgotAlias(): void;
   isNewAccount: boolean;
   isNewAlias: boolean;
 }
@@ -59,7 +56,6 @@ export const AliasForm: React.FunctionComponent<AliasFormProps> = ({
   setAlias,
   onSubmit,
   onRestart,
-  onForgotAlias,
   isNewAccount,
   isNewAlias,
 }) => {
@@ -107,11 +103,6 @@ export const AliasForm: React.FunctionComponent<AliasFormProps> = ({
           disabled={isNewAlias && aliasAvailability !== ValueAvailability.VALID}
         />
       </PaddedBlock>
-      {!isNewAccount && !isNewAlias && (
-        <PaddedBlock>
-          <TextLink text="(Forgot Alias)" onClick={onForgotAlias} color="white" size="xxs" italic />
-        </PaddedBlock>
-      )}
       {isNewAccount && !!alias && aliasAvailability === ValueAvailability.INVALID && (
         <Description>
           <Text size="xs" inline>

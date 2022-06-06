@@ -1,5 +1,4 @@
 import type { CutdownAsset } from './types';
-import { JsonRpcProvider } from '@ethersproject/providers';
 import { SdkObs } from 'alt-model/top_level_context/sdk_obs';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
@@ -9,8 +8,6 @@ import { ShieldFormValues } from './account_forms';
 import { Database } from './database';
 import { SystemMessage } from './form';
 import { chainIdToNetwork, Network } from './networks';
-import { PriceFeedService } from './price_feed_service';
-import { KNOWN_MAINNET_ASSET_ADDRESS_STRS as S } from 'alt-model/known_assets/known_asset_addresses';
 import {
   initialLoginState,
   initialWorldState,
@@ -47,9 +44,7 @@ export interface App {
 
 export class App extends EventEmitter {
   readonly db: Database;
-  readonly priceFeedService: PriceFeedService;
   private session?: UserSession;
-  private activeAsset: number;
   private loginMode = LoginMode.SIGNUP;
   private shieldForAliasAmountPreselection?: bigint;
   public readonly requiredNetwork: Network;
@@ -60,7 +55,6 @@ export class App extends EventEmitter {
     private readonly config: Config,
     private readonly assets: CutdownAsset[],
     private readonly sdkObs: SdkObs,
-    initialAsset: number,
     initialLoginMode: LoginMode,
   ) {
     super();
@@ -70,15 +64,7 @@ export class App extends EventEmitter {
       throw new Error(`Unknown network for chainId ${config.chainId}.`);
     }
     this.db = new Database();
-    this.activeAsset = initialAsset;
     this.loginMode = initialLoginMode;
-    const provider = new JsonRpcProvider(config.mainnetEthereumHost);
-    this.priceFeedService = new PriceFeedService(
-      { [S.ETH]: '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419' },
-      provider,
-      assets,
-    );
-    this.priceFeedService.init();
   }
 
   async destroy() {
@@ -87,7 +73,6 @@ export class App extends EventEmitter {
     if (this.db.isOpen) {
       await this.db.close();
     }
-    this.priceFeedService.destroy();
   }
 
   hasSession() {
@@ -181,10 +166,8 @@ export class App extends EventEmitter {
       this.config,
       this.sdkObs,
       this.requiredNetwork,
-      this.activeAsset,
       this.loginMode,
       this.db,
-      this.priceFeedService,
       this.sessionCookieName,
       this.walletCacheName,
       this.shieldForAliasAmountPreselection,
@@ -230,16 +213,8 @@ export class App extends EventEmitter {
     this.session!.setAlias(aliasInput);
   };
 
-  setRememberMe = (rememberMe: boolean) => {
-    this.session!.setRememberMe(rememberMe);
-  };
-
   confirmAlias = async (aliasInput: string) => {
     await this.session!.confirmAlias(aliasInput);
-  };
-
-  forgotAlias = () => {
-    this.session!.forgotAlias();
   };
 
   initAccount = async () => {

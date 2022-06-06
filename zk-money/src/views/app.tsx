@@ -79,8 +79,6 @@ export class AppView extends PureComponent<AppProps, AppState> {
   private app: App;
   private channel = new BroadcastChannel('zk-money');
 
-  private readonly defaultAsset = 0;
-
   constructor(props: AppProps) {
     super(props);
 
@@ -89,7 +87,7 @@ export class AppView extends PureComponent<AppProps, AppState> {
 
     const loginMode = getLoginModeFromUrl(path);
 
-    this.app = new App(config, LEGACY_APP_ASSETS, props.sdkObs, this.defaultAsset, loginMode);
+    this.app = new App(config, LEGACY_APP_ASSETS, props.sdkObs, loginMode);
 
     this.state = {
       action: initialAction,
@@ -243,14 +241,6 @@ export class AppView extends PureComponent<AppProps, AppState> {
   };
 
   private handleRestart = () => {
-    const prevMode = this.state.loginState.mode;
-    switch (prevMode) {
-      case LoginMode.NEW_ALIAS: {
-        const url = getUrlFromLoginMode(LoginMode.SIGNUP);
-        this.props.navigate(url);
-        break;
-      }
-    }
     this.setState({ systemMessage: { message: '', type: MessageType.TEXT } }, () => this.app.logout());
   };
 
@@ -352,11 +342,9 @@ export class AppView extends PureComponent<AppProps, AppState> {
                         explorerUrl={config.explorerUrl}
                         systemMessage={systemMessage}
                         setAlias={this.app.setAlias}
-                        setRememberMe={this.app.setRememberMe}
                         onSelectWallet={this.handleConnectWallet}
                         onSelectAlias={this.app.confirmAlias}
                         onRestart={allowReset && step !== LoginStep.CONNECT_WALLET ? this.handleRestart : undefined}
-                        onForgotAlias={this.app.forgotAlias}
                         onShieldForAliasFormInputsChange={this.app.changeShieldForAliasForm}
                         onSubmitShieldForAliasForm={this.app.claimUserName}
                         onChangeWallet={this.app.changeWallet}
