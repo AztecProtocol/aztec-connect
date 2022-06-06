@@ -261,12 +261,12 @@ jobs:
           name: 'falafel'
           working_directory: falafel
           command: deploy falafel
-      # - run:
-      #     name: 'sriracha'
-      #     working_directory: sriracha
-      #     command: |
-      #       deploy sriracha
-      #       deploy_dockerhub sriracha
+      - run:
+          name: 'sriracha'
+          working_directory: sriracha
+          command: |
+            deploy sriracha
+            deploy_dockerhub sriracha
       # - run:
       #     name: 'wasabi'
       #     working_directory: wasabi
@@ -325,12 +325,12 @@ jobs:
           name: 'falafel'
           working_directory: falafel
           command: deploy falafel falafel-mainnet ./terraform/mainnet
-      # - run:
-      #     name: 'sriracha'
-      #     working_directory: sriracha
-      #     command: |
-      #       deploy sriracha
-      #       deploy_dockerhub sriracha
+      - run:
+          name: 'sriracha'
+          working_directory: sriracha
+          command: |
+            deploy sriracha
+            deploy_dockerhub sriracha
       # - run:
       #     name: 'block-explorer'
       #     working_directory: block-explorer
@@ -381,14 +381,14 @@ workflows:
             - blockchain
             - halloumi
           filters: *tag_filter
-      # - sriracha:
-      #     requires:
-      #       - blockchain
-      #     filters: *tag_filter
+      - sriracha:
+          requires:
+            - blockchain
+          filters: *tag_filter
       - sdk:
           requires:
             - falafel
-            # - sriracha
+            - sriracha
           filters: *tag_filter
       # - hummus:
       #     requires:
