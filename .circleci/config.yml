@@ -388,7 +388,7 @@ workflows:
       - sdk:
           requires:
             - falafel
-            - sriracha
+            # - sriracha
           filters: *tag_filter
       # - hummus:
       #     requires:
