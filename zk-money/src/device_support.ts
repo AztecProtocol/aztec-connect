@@ -2,6 +2,8 @@ export const isIOS = () =>
   ['iPad Simulator', 'iPhone Simulator', 'iPod Simulator', 'iPad', 'iPhone', 'iPod'].includes(navigator.platform) ||
   (navigator.userAgent.includes('Mac') && 'ontouchend' in document);
 
+const isAndroid = () => navigator.userAgent.toLowerCase().includes('android');
+
 const isFirefox = () => navigator.userAgent.includes('Firefox');
 
 export const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
@@ -13,10 +15,11 @@ const hasIndexedDbSupport = () =>
     db.onsuccess = () => resolve(true);
   });
 
-export type SupportStatus = 'supported' | 'ios-unsupported' | 'firefox-private-unsupported';
+export type SupportStatus = 'supported' | 'ios-unsupported' | 'android-unsupported' | 'firefox-private-unsupported';
 
 export const getSupportStatus = async (): Promise<SupportStatus> => {
   if (isIOS()) return 'ios-unsupported';
+  if (isAndroid()) return 'android-unsupported';
   if (isFirefox()) {
     if (!(await hasIndexedDbSupport())) return 'firefox-private-unsupported';
   }

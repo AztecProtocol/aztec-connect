@@ -1,8 +1,4 @@
-import React, { useState } from 'react';
-import styled from 'styled-components/macro';
-import { Button, ContentWrapper, Text } from '../components';
-import { SupportStatus } from '../device_support';
-import { borderRadiuses, spacings } from '../styles';
+import { Button } from '../components';
 import cardStack from 'images/card_stack.svg';
 import stakingLogo from 'images/staking_logo.svg';
 import yieldLogo from 'images/yield_logo.svg';
@@ -36,81 +32,14 @@ import style from './home.module.scss';
 
 const cx = bindStyle(style);
 
-const UnsupportedRoot = styled.div`
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9;
-`;
-
-const UnsupportedContentWrapper = styled(ContentWrapper)`
-  display: flex;
-  justify-content: center;
-`;
-
-const UnsupportedPopup = styled.div`
-  padding: ${spacings.l};
-  background: rgba(0, 0, 0, 0.85);
-  border-radius: ${borderRadiuses.m};
-`;
-
-const UnsupportedMessage = styled(Text)`
-  padding-top: ${spacings.xs};
-  padding-bottom: ${spacings.m};
-`;
-
-const getUnsupportedHeading = (status: SupportStatus) => {
-  switch (status) {
-    case 'firefox-private-unsupported':
-      return 'Firefox private windows unsupported.';
-    default:
-      return 'Browser not supported.';
-  }
-};
-
-const getUnsupportedText = (status: SupportStatus) => {
-  switch (status) {
-    case 'firefox-private-unsupported':
-      return (
-        "We recommend either exiting Firefox's private mode, or using a different browser.\n\n" +
-        'Unfortunately in private mode Firefox disables IndexedDB interactions, which are necessary for zk.money to function.'
-      );
-    default:
-      return 'We recommend using the latest browser on desktop or Android devices.';
-  }
-};
-
-export interface HomeState {
-  supportStatus: SupportStatus;
-  ethUnitPrice?: bigint;
-}
-
 interface HomeProps {
-  onLogin: () => void;
   onSignup: () => void;
-  isLoggedIn: boolean;
-  homeState: HomeState;
 }
 
-export const Home: React.FunctionComponent<HomeProps> = ({ onLogin, onSignup, homeState: { supportStatus } }) => {
-  const [showUnsupported, setShowUnsupported] = useState(false);
-
-  const handleSignupAndShield = () => {
-    if (supportStatus !== 'supported') {
-      setShowUnsupported(true);
-    } else {
-      onSignup();
-    }
-  };
-
+export function Home({ onSignup }: HomeProps) {
   return (
-    <>
-      <Banner onShieldNow={handleSignupAndShield} />
+    <div>
+      <Banner onShieldNow={onSignup} />
       <FavoriteApps />
       <div className={style.bottomContent}>
         <div className={style.sectionTitle}>How do I use zk.money?</div>
@@ -183,20 +112,9 @@ export const Home: React.FunctionComponent<HomeProps> = ({ onLogin, onSignup, ho
           </div>
         </div>
       </div>
-      {showUnsupported && (
-        <UnsupportedRoot>
-          <UnsupportedContentWrapper>
-            <UnsupportedPopup>
-              <Text text={getUnsupportedHeading(supportStatus)} size="m" weight="semibold" />
-              <UnsupportedMessage text={getUnsupportedText(supportStatus)} size="s" />
-              <Button theme="white" size="m" text="Close" outlined onClick={() => setShowUnsupported(false)} />
-            </UnsupportedPopup>
-          </UnsupportedContentWrapper>
-        </UnsupportedRoot>
-      )}
-    </>
+    </div>
   );
-};
+}
 
 function Banner({ onShieldNow }: { onShieldNow: () => void }) {
   return (
@@ -214,8 +132,18 @@ function Banner({ onShieldNow }: { onShieldNow: () => void }) {
         </div>
         <Button onClick={onShieldNow} className={style.shieldButton} text="Shield Now" theme="gradient" />
         <div className={style.links}>
-          <Hyperlink theme="white" icon={HyperlinkIcon.Open} label="Looking for old zk.money?" />
-          <Hyperlink theme="white" icon={HyperlinkIcon.Open} label="What is Shielding? Read our FAQ" />
+          <Hyperlink
+            theme="white"
+            icon={HyperlinkIcon.Open}
+            href="https://old.zk.money"
+            label="Looking for old zk.money?"
+          />
+          <Hyperlink
+            theme="white"
+            icon={HyperlinkIcon.Open}
+            href="https://aztec-protocol.gitbook.io/zk-money/faq"
+            label="What is Shielding? Read our FAQ"
+          />
         </div>
       </div>
     </div>

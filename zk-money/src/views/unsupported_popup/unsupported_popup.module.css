@@ -1,0 +1,27 @@
+.root {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9;
+}
+
+.wrapper {
+  display: flex;
+  justify-content: center;
+}
+
+.content {
+  padding: 32px;
+  background: rgba(0, 0, 0, 0.85);
+  border-radius: 20px;
+}
+
+.message {
+  padding-top: 8px;
+  padding-bottom: 24px;
+}

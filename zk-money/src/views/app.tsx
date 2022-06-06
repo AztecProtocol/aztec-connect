@@ -22,9 +22,8 @@ import {
 import { ProviderState } from '../app/provider';
 import { Template } from '../components';
 import { Config } from '../config';
-import { getSupportStatus } from '../device_support';
 import { Theme } from '../styles';
-import { Home, HomeState } from '../views/home';
+import { Home } from '../views/home';
 import { Login } from '../views/login';
 import { getActionFromUrl, getLoginModeFromUrl, getUrlFromAction, getUrlFromLoginMode, Pages } from './views';
 import { UserAccount } from '../components/template/user_account';
@@ -57,7 +56,6 @@ interface AppState {
   shieldForAliasForm?: ShieldFormValues;
   systemMessage: SystemMessage;
   isLoading: boolean;
-  homeState: HomeState;
   sdk?: AztecSdk | undefined;
   provider?: Provider | undefined;
   path: string;
@@ -108,7 +106,6 @@ export class AppView extends PureComponent<AppProps, AppState> {
         type: MessageType.TEXT,
       },
       isLoading: true,
-      homeState: { supportStatus: 'supported' },
     };
   }
 
@@ -131,12 +128,6 @@ export class AppView extends PureComponent<AppProps, AppState> {
           break;
       }
     };
-    const ethUnitPrice = this.app.priceFeedService.getPrice(0);
-    if (ethUnitPrice !== 0n) this.setState({ homeState: { ...this.state.homeState, ethUnitPrice } });
-    this.app.priceFeedService.subscribe(0, this.handleEthUnitPriceChange);
-    getSupportStatus().then(supportStatus => {
-      this.setState({ homeState: { ...this.state.homeState, supportStatus } });
-    });
     await this.handleActionChange(this.state.action);
     this.setState({ isLoading: false });
   }
@@ -155,7 +146,6 @@ export class AppView extends PureComponent<AppProps, AppState> {
   }
 
   componentWillUnmount() {
-    this.app.priceFeedService.unsubscribe(0, this.handleEthUnitPriceChange);
     this.app.destroy();
     this.channel.close();
   }
@@ -240,15 +230,6 @@ export class AppView extends PureComponent<AppProps, AppState> {
     this.onUserSessionDataChange();
   };
 
-  private handleEthUnitPriceChange = (_: number, ethUnitPrice: bigint) => {
-    this.setState({ homeState: { ...this.state.homeState, ethUnitPrice } });
-  };
-
-  private handleLogin = () => {
-    const url = getUrlFromLoginMode(LoginMode.LOGIN);
-    this.props.navigate(url);
-  };
-
   private handleSignup = () => {
     const url = getUrlFromLoginMode(LoginMode.SIGNUP);
     this.props.navigate(url);
@@ -310,7 +291,6 @@ export class AppView extends PureComponent<AppProps, AppState> {
       shieldForAliasForm,
       systemMessage,
       isLoading,
-      homeState,
       activeDefiModal,
     } = this.state;
     const { config } = this.props;
@@ -400,12 +380,7 @@ export class AppView extends PureComponent<AppProps, AppState> {
                   path={Pages.HOME}
                   element={
                     <>
-                      <Home
-                        isLoggedIn={isLoggedIn}
-                        onLogin={this.handleLogin}
-                        onSignup={this.handleSignup}
-                        homeState={homeState}
-                      />
+                      <Home onSignup={this.handleSignup} />
                       {!isLoggedIn && (
                         <SelfDismissingIncentiveModal instanceName="home" onShieldNow={this.handleSignup} />
                       )}
