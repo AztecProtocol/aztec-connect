@@ -31,6 +31,7 @@ import { Theme } from '../styles';
 import { Account } from '../views/account';
 import { Home, HomeState } from '../views/home';
 import { Login } from '../views/login';
+import { SelfDismissingIncentiveModal } from './incentive_modal/incentive_modal';
 import { RegistrationClosed } from './login/registration_closed';
 import { getAccountUrl, getActionFromUrl, getLoginModeFromUrl, getUrlFromAction, getUrlFromLoginMode } from './views';
 
@@ -433,6 +434,7 @@ class AppComponent extends PureComponent<AppPropsWithApollo, AppState> {
               );
           }
         })()}
+        <SelfDismissingIncentiveModal instanceName="app" />
       </Template>
     );
   }
