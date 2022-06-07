@@ -362,7 +362,10 @@ export class DepositController {
   ) {
     const timer = new Timer();
     while (true) {
+      // If we want confidence the tx will be accepted, we'll wait 30s to ensure chain state propagation.
       if (await checkOnchainData()) {
+        const secondsTillConfirmed = (this.blockchain.minConfirmations - 1) * 15;
+        await sleep(secondsTillConfirmed);
         return true;
       }
 

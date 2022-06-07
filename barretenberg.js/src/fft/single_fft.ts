@@ -50,4 +50,6 @@ export class SingleFftFactory implements FftFactory {
     }
     return this.ffts[circuitSize];
   }
+
+  public async destroy() {}
 }

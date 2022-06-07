@@ -1,4 +1,11 @@
-import { AztecSdk, createAztecSdk, EthAddress, GrumpkinAddress, JsonRpcProvider } from '@aztec/sdk';
+import {
+  AztecSdk,
+  createAztecSdk,
+  EthAddress,
+  getRollupProviderStatus,
+  GrumpkinAddress,
+  JsonRpcProvider,
+} from '@aztec/sdk';
 import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
 
@@ -14,6 +21,34 @@ function log(str: string) {
 
 interface MinFormProps {
   grumpkinPrivKey: Buffer;
+}
+
+function getRollupProviderUrl(deployTag: string) {
+  if (deployTag) return `https://api.aztec.network/${deployTag}/falafel`;
+  return `${window.location.protocol}//${window.location.hostname}:8081`;
+}
+
+function getEthereumHost(chainId: number) {
+  switch (chainId) {
+    case 5:
+      return 'https://goerli.infura.io/v3/6a04b7c89c5b421faefde663f787aa35';
+    case 1337:
+      return 'http://localhost:8545';
+    case 0xa57ec:
+      return 'https://mainnet-fork.aztec.network:8545';
+    default:
+      return 'https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35';
+  }
+}
+
+async function getDeployTag() {
+  // If we haven't overridden our deploy tag, we discover it at runtime. All s3 deployments have a file
+  // called DEPLOY_TAG in their root containing the deploy tag.
+  if (process.env.NODE_ENV === 'production') {
+    return await fetch('/DEPLOY_TAG').then(resp => (resp.ok ? resp.text() : ''));
+  } else {
+    return '';
+  }
 }
 
 function MinForm({ grumpkinPrivKey }: MinFormProps) {
@@ -32,9 +67,13 @@ function MinForm({ grumpkinPrivKey }: MinFormProps) {
           onClick={async () => {
             setBusy(true);
             log('initing');
-            const provider = new JsonRpcProvider('https://goerli.infura.io/v3/6a04b7c89c5b421faefde663f787aa35');
+            const deployTag = await getDeployTag();
+            const rollupProviderUrl = getRollupProviderUrl(deployTag);
+            const initialRollupProviderStatus = await getRollupProviderStatus(rollupProviderUrl);
+            const provider = new JsonRpcProvider(getEthereumHost(initialRollupProviderStatus.blockchainStatus.chainId));
+            const serverUrl = deployTag ? `https://${deployTag}-sdk.aztec.network/` : 'http://localhost:1234';
             const sdk = await createAztecSdk(provider, {
-              serverUrl: 'https://api.aztec.network/falafel',
+              serverUrl,
               debug: 'bb:*',
             });
             await sdk.run();
@@ -54,12 +93,10 @@ function MinForm({ grumpkinPrivKey }: MinFormProps) {
           disabled={!sdk || busy}
           onClick={async () => {
             setBusy(true);
-            const signer = await sdk!.createSchnorrSigner(grumpkinPrivKey);
             const start = new Date().getTime();
             log(`creating js proof...`);
-            const controller = sdk!.createTransferController(
-              userId,
-              signer,
+            const controller = sdk!.createDepositController(
+              EthAddress.random(),
               { assetId: 0, value: BigInt(0) },
               { assetId: 0, value: BigInt(0) },
               userId,

@@ -22,6 +22,8 @@ export class JobQueueFftFactory implements FftFactory {
   async createFft(circuitSize: number) {
     return new JobQueueFft(this.queue, circuitSize);
   }
+
+  async destroy(): Promise<void> {}
 }
 
 class JobQueueFftClient {
