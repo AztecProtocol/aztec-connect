@@ -62,13 +62,13 @@ export async function deployMainnet(signer: Signer, { dataTreeSize, roots }: Tre
   const priceFeeds = [FAST_GAS_PRICE_FEED_ADDRESS, DAI_PRICE_FEED_ADDRESS];
 
   // Grant roles to multisig wallets
-  await rollup.grantRole(DEFAULT_ADMIN_ROLE, MULTI_SIG_ADDRESS);
-  await rollup.grantRole(OWNER_ROLE, MULTI_SIG_ADDRESS);
-  await rollup.grantRole(EMERGENCY_ROLE, EMERGENCY_MULTI_SIG_ADDRESS);
+  await rollup.grantRole(DEFAULT_ADMIN_ROLE, MULTI_SIG_ADDRESS, { gasLimit });
+  await rollup.grantRole(OWNER_ROLE, MULTI_SIG_ADDRESS, { gasLimit });
+  await rollup.grantRole(EMERGENCY_ROLE, EMERGENCY_MULTI_SIG_ADDRESS, { gasLimit });
 
   // Revoke roles from the deployer
-  await rollup.revokeRole(EMERGENCY_ROLE, await signer.getAddress());
-  await rollup.revokeRole(OWNER_ROLE, await signer.getAddress());
+  await rollup.revokeRole(EMERGENCY_ROLE, await signer.getAddress(), { gasLimit });
+  await rollup.revokeRole(OWNER_ROLE, await signer.getAddress(), { gasLimit });
 
   // TODO: Revoking of the default admin role should be done manually with the multi-sig to ensure correct setup
 
