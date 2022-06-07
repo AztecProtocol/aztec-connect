@@ -23,6 +23,7 @@ const LIDO_WSTETH_ADDRESS = '0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0';
 const UNISWAP_ROUTER_ADDRESS = '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D';
 const DAI_PRICE_FEED_ADDRESS = '0x773616E4d11A78F511299002da57A0a94577F1f4';
 const FAST_GAS_PRICE_FEED_ADDRESS = '0x169e633a2d1e6c10dd91238ba11c4a708dfef37c';
+const LIDO_REFERRAL_ADDRESS = '0xA57EC00BdbA2904DA1244Db6fd770e0874f22E42';
 
 const DEFAULT_ADMIN_ROLE = '0x0000000000000000000000000000000000000000000000000000000000000000';
 const EMERGENCY_ROLE = keccak256(toUtf8Bytes('EMERGENCY_ROLE'));
@@ -53,7 +54,7 @@ export async function deployMainnet(signer: Signer, { dataTreeSize, roots }: Tre
 
   const expiryCutOff = new Date('01 Sept 2022 00:00:00 GMT');
   await deployElementBridge(signer, rollup, ['dai'], expiryCutOff);
-  await deployLidoBridge(signer, rollup);
+  await deployLidoBridge(signer, rollup, LIDO_REFERRAL_ADDRESS);
 
   // Transfers ownership of the proxyadmin to the multisig
   await proxyAdmin.transferProxyAdminOwnership(EthAddress.fromString(MULTI_SIG_ADDRESS));
