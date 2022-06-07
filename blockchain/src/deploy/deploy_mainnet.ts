@@ -11,6 +11,7 @@ import {
   deployRollupProcessor,
   deployVerifier,
 } from './deployers';
+import { deployAceOfZk } from './deployers/deploy_ace_of_zk';
 
 const gasLimit = 5000000;
 const escapeBlockLower = 2160;
@@ -55,6 +56,7 @@ export async function deployMainnet(signer: Signer, { dataTreeSize, roots }: Tre
   const expiryCutOff = new Date('01 Sept 2022 00:00:00 GMT');
   await deployElementBridge(signer, rollup, ['dai'], expiryCutOff);
   await deployLidoBridge(signer, rollup, LIDO_REFERRAL_ADDRESS);
+  await deployAceOfZk(signer, rollup);
 
   // Transfers ownership of the proxyadmin to the multisig
   await proxyAdmin.transferProxyAdminOwnership(EthAddress.fromString(MULTI_SIG_ADDRESS));

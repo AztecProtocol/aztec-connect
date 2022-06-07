@@ -47,10 +47,10 @@
     threads "1.7.0"
     tslib "^2.0.0"
 
-"@aztec/bridge-clients@0.1.42":
-  version "0.1.42"
-  resolved "https://registry.yarnpkg.com/@aztec/bridge-clients/-/bridge-clients-0.1.42.tgz#3c8373cbaec05802729bc8c4e5a10d0f39f1b561"
-  integrity sha512-qYCsNBXlqDbqf/imKV61Z3hO94wj9XWocrMSzjCqrDhHvMFpD+Dg7yquBVD3HBaqzM/BPzfA1dQACkkWynzanw==
+"@aztec/bridge-clients@0.1.43":
+  version "0.1.43"
+  resolved "https://registry.yarnpkg.com/@aztec/bridge-clients/-/bridge-clients-0.1.43.tgz#52fd5ef6dba184bf73ca64afde809aee3958a30a"
+  integrity sha512-hUOXWZbczlHY0yFJPAzu/pQc9R9pb55rmBAekBx3O+IhzzubmjpyE7vI0QHhDRMH6fqtsRWGuuxaLN3FrdwmHw==
   dependencies:
     "@aztec/barretenberg" "2.1.0-testnet.29"
     "@ethersproject/providers" "^5.6.5"
