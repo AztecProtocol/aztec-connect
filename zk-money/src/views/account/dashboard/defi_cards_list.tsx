@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Select, Section, SectionTitle, SearchInput } from 'ui-components';
+import { Select, Section, SectionTitle, SearchInput, CardWrapper } from 'ui-components';
 import { Obs, useMaybeObs } from 'app/util';
 import { DefiCard } from '../../../components';
 import { DefiInvestmentType, DefiRecipe } from '../../../alt-model/defi/types';
@@ -12,6 +12,9 @@ import {
   recipeFiltersToSearchStr,
   searchStrToRecipeFilters,
 } from 'alt-model/defi/recipe_filters';
+import { bindStyle } from 'ui-components/util/classnames';
+
+const cx = bindStyle(style);
 
 interface DefiCardsListProps {
   isLoggedIn: boolean;
@@ -139,6 +142,9 @@ export const DefiCardsList = ({ onSelect, isLoggedIn }: DefiCardsListProps) => {
             isLoggedIn={isLoggedIn}
           />
         ))}
+        <CardWrapper className={cx(style.defiCard, style.hideMinWidth)}>
+          <div className={style.dummyDefiCard} />
+        </CardWrapper>
       </div>
     </Section>
   );

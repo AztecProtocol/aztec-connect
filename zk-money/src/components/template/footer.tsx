@@ -62,7 +62,7 @@ const FooterContent = styled.div`
   justify-content: space-between;
   padding: ${spacings.xl} 0;
   z-index: 1;
-
+  color: black;
   @media (max-width: ${breakpoints.s}) {
     flex-direction: column;
     padding: ${spacings.s} 0;
