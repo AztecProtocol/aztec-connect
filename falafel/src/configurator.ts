@@ -1,6 +1,13 @@
 import { mkdirpSync, pathExistsSync, readJsonSync, writeJsonSync } from 'fs-extra';
 import { dirname } from 'path';
-import { RuntimeConfig, bridgeConfigFromJson, bridgeConfigToJson } from '@aztec/barretenberg/rollup_provider';
+import {
+  RuntimeConfig,
+  bridgeConfigFromJson,
+  bridgeConfigToJson,
+  privacySetsFromJson,
+  privacySetsToJson,
+  getDefaultPrivacySets,
+} from '@aztec/barretenberg/rollup_provider';
 import { EthAddress } from '@aztec/barretenberg/address';
 
 interface StartupConfig {
@@ -62,6 +69,7 @@ const defaultRuntimeConfig: RuntimeConfig = {
   defaultDeFiBatchSize: 5,
   bridgeConfigs: [],
   feePayingAssetIds: [0],
+  privacySets: getDefaultPrivacySets(),
 };
 
 function getStartupConfigEnvVars(): Partial<StartupConfig> {
@@ -226,6 +234,7 @@ export class Configurator {
         maxFeeGasPrice: BigInt(conf.runtimeConfig.maxFeeGasPrice),
         maxProviderGasPrice: BigInt(conf.runtimeConfig.maxProviderGasPrice),
         bridgeConfigs: conf.runtimeConfig.bridgeConfigs.map(bridgeConfigFromJson),
+        privacySets: privacySetsFromJson(conf.runtimeConfig.privacySets),
       },
     };
   }
@@ -247,6 +256,7 @@ export class Configurator {
         maxFeeGasPrice: conf.runtimeConfig.maxFeeGasPrice.toString(),
         maxProviderGasPrice: conf.runtimeConfig.maxProviderGasPrice.toString(),
         bridgeConfigs: conf.runtimeConfig.bridgeConfigs.map(bridgeConfigToJson),
+        privacySets: privacySetsToJson(conf.runtimeConfig.privacySets),
       },
     });
   }

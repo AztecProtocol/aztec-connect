@@ -6,9 +6,11 @@ import {
 } from '../blockchain';
 import { BridgeConfig, bridgeConfigFromJson, BridgeConfigJson, bridgeConfigToJson } from './bridge_config';
 import { BridgeStatus, bridgeStatusFromJson, BridgeStatusJson, bridgeStatusToJson } from './bridge_status';
+import { privacySetsFromJson, privacySetsToJson, PrivacySet, PrivacySetJson } from './privacy_set';
 
 export * from './bridge_config';
 export * from './bridge_status';
+export * from './privacy_set';
 
 export interface RuntimeConfig {
   acceptingTxs: boolean;
@@ -25,6 +27,7 @@ export interface RuntimeConfig {
   defaultDeFiBatchSize: number;
   bridgeConfigs: BridgeConfig[];
   feePayingAssetIds: number[];
+  privacySets: { [key: number]: PrivacySet[] };
 }
 
 export interface RuntimeConfigJson {
@@ -42,42 +45,49 @@ export interface RuntimeConfigJson {
   defaultDeFiBatchSize: number;
   bridgeConfigs: BridgeConfigJson[];
   feePayingAssetIds: number[];
+  privacySets: { [key: string]: PrivacySetJson[] };
 }
 
 export const runtimeConfigToJson = ({
   maxFeeGasPrice,
   maxProviderGasPrice,
   bridgeConfigs,
+  privacySets,
   ...rest
 }: RuntimeConfig): RuntimeConfigJson => ({
   ...rest,
   maxFeeGasPrice: maxFeeGasPrice.toString(),
   maxProviderGasPrice: maxProviderGasPrice.toString(),
   bridgeConfigs: bridgeConfigs.map(bridgeConfigToJson),
+  privacySets: privacySetsToJson(privacySets),
 });
 
 export const runtimeConfigFromJson = ({
   maxFeeGasPrice,
   maxProviderGasPrice,
   bridgeConfigs,
+  privacySets,
   ...rest
 }: RuntimeConfigJson): RuntimeConfig => ({
   ...rest,
   maxFeeGasPrice: BigInt(maxFeeGasPrice),
   maxProviderGasPrice: BigInt(maxProviderGasPrice),
   bridgeConfigs: bridgeConfigs.map(bridgeConfigFromJson),
+  privacySets: privacySetsFromJson(privacySets),
 });
 
 export const partialRuntimeConfigFromJson = ({
   maxFeeGasPrice,
   maxProviderGasPrice,
   bridgeConfigs,
+  privacySets,
   ...rest
 }: Partial<RuntimeConfigJson>): Partial<RuntimeConfig> => ({
   ...rest,
   ...(maxFeeGasPrice !== undefined ? { maxFeeGasPrice: BigInt(maxFeeGasPrice) } : {}),
   ...(maxProviderGasPrice !== undefined ? { maxProviderGasPrice: BigInt(maxProviderGasPrice) } : {}),
   ...(bridgeConfigs ? { bridgeConfigs: bridgeConfigs.map(bridgeConfigFromJson) } : {}),
+  ...(privacySets ? { privacySets: privacySetsFromJson(privacySets) } : {}),
 });
 
 export interface RollupProviderStatus {
