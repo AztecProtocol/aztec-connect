@@ -316,7 +316,6 @@ jobs:
           working_directory: sdk
           command: |
             deploy_ecr sdk
-            deploy_npm sdk
       - run:
           name: 'halloumi'
           working_directory: halloumi
