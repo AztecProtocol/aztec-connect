@@ -7,6 +7,9 @@ import { ShieldedAssetIcon } from 'components';
 import { AmountInput } from 'ui-components';
 import downArrow from '../../../images/down_arrow.svg';
 import style from './amount_selection.module.scss';
+import { bindStyle } from 'ui-components/util/classnames';
+
+const cx = bindStyle(style);
 
 interface AmountSelectionProps {
   asset: RemoteAsset;
@@ -50,6 +53,17 @@ export function AmountSelection(props: AmountSelectionProps) {
           />
         </div>
       )}
+      {!props.allowAssetSelection && (
+        <div className={style.assetSelectorWrapper}>
+          <div className={cx(style.assetSelector, style.noSelect)}>
+            <div className={style.assetDisplay}>
+              <ShieldedAssetIcon address={props.asset.address} />
+              <div className={style.assetName}>{props.asset.symbol}</div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <AmountInput
         maxAmount={props.maxAmount}
         asset={props.asset}

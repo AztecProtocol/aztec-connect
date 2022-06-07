@@ -24,7 +24,7 @@ function getAmountInputFeedback(result: SendFormValidationResult, touched: boole
     }
     const requiredStr = `Transaction requires ${requiredAmount?.format()}. You have ${balanceAmount?.format()} available.`;
     if (assetIsSupportedForShielding(asset?.address)) {
-      return requiredStr + ` Please first shield more ${asset?.symbol}.`;
+      return requiredStr + ` Please shield more ${asset?.symbol}.`;
     } else {
       return requiredStr;
     }
@@ -42,9 +42,7 @@ function getRecipientFeedback(result: SendFormValidationResult) {
 function getFooterFeedback(result: SendFormValidationResult) {
   if (result.issues?.insufficientFeePayingAssetBalance) {
     const fee = result.state.feeAmount;
-    return `You do not have enough zk${
-      fee?.info.symbol
-    } to pay the fee for this transaction. Please first shield at least ${fee?.format({
+    return `You do not have enough zk${fee?.info.symbol} to pay the fee. Please shield at least ${fee?.format({
       layer: 'L1',
     })}.`;
   }

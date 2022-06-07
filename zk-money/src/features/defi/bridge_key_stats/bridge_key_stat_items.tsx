@@ -1,3 +1,4 @@
+import moment from 'moment';
 import { useRollupProviderStatus } from 'alt-model';
 import {
   useDefaultAuxDataOption,
@@ -5,6 +6,8 @@ import {
   useDefaultExpectedAssetYield,
   useDefaultLiquidity,
 } from 'alt-model/defi/defi_info_hooks';
+import { useDefaultCountDownData } from '../bridge_count_down/bridge_count_down_hooks';
+
 import { DefiRecipe, KeyBridgeStat } from 'alt-model/defi/types';
 import { baseUnitsToFloat, PRICE_DECIMALS } from 'app';
 import { SkeletonRect } from './skeleton_rect';
@@ -47,6 +50,17 @@ function MaturityValue(props: { recipe: DefiRecipe }) {
   return <>{dateFormatter.format(ms)}</>;
 }
 
+function NextBatchValue(props: { recipe: DefiRecipe }) {
+  // Assume aux data is unix datetime for now
+  const data = useDefaultCountDownData(props.recipe);
+
+  if (data === undefined) return <SkeletonRect sizingContent="16 Sept 2022" />;
+
+  const timeStr = data?.nextBatch ? `~${moment(data.nextBatch).fromNow(true)}` : '';
+
+  return <>{timeStr}</>;
+}
+
 export function getKeyStatItemProps(stat: KeyBridgeStat, recipe: DefiRecipe) {
   switch (stat) {
     case KeyBridgeStat.LIQUIDITY:
@@ -58,5 +72,7 @@ export function getKeyStatItemProps(stat: KeyBridgeStat, recipe: DefiRecipe) {
       return { label: recipe.roiType, value: <YieldValue recipe={recipe} /> };
     case KeyBridgeStat.MATURITY:
       return { label: 'Maturity', value: <MaturityValue recipe={recipe} /> };
+    case KeyBridgeStat.NEXT_BATCH:
+      return { label: 'Next Batch', value: <NextBatchValue recipe={recipe} /> };
   }
 }

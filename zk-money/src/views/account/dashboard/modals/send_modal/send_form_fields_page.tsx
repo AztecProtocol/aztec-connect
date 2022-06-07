@@ -34,9 +34,9 @@ const MODES = [
 function getDescription(sendMode: SendMode) {
   switch (sendMode) {
     case SendMode.SEND:
-      return `Send funds within Layer 2 zk Money. This includes anyone who has an account, and therefore an Alias. Privacy risks are negligable!`;
+      return `Send funds to another user on zk.money via their alias. Transactions are end to end encrypted and fully private.`;
     case SendMode.WIDTHDRAW:
-      return `Withdraw funds from zk Money to Layer 1 Ethereum. This includes your own external wallet or any other Ethereum address. Be careful! Depending on your initial deposit, certain withdrawls can carry privacy risks! The crowd below shows how hidden you are based on the values you input.`;
+      return `Withdraw funds from zk.money to Ethereum to an Ethereum address. Depending on your initial deposit, large withdrawals can carry privacy risks.`;
     default:
       return '';
   }

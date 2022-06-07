@@ -26,6 +26,10 @@
   align-items: center;
   justify-content: space-between;
   flex-shrink: 0;
+
+  &.noSelect {
+    cursor: inherit;
+  }
 }
 
 .assetDisplay {

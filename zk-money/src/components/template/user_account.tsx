@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import styled from 'styled-components/macro';
+import { useNavigate } from 'react-router-dom';
+import { Pages } from 'views/views';
 import { AccountState, WorldState } from '../../app';
 import closeIcon from '../../images/close.svg';
 import personIcon from '../../images/snowman.svg';
@@ -203,6 +205,7 @@ interface UserAccountProps {
 
 export const UserAccount: React.FunctionComponent<UserAccountProps> = ({ account, worldState, onLogout }) => {
   const [showDropdown, setShowDropdown] = useState(false);
+  let navigate = useNavigate();
   const isSynced = worldState.accountSyncedToRollup === worldState.latestRollup;
   const { alias } = account;
 
@@ -232,6 +235,23 @@ export const UserAccount: React.FunctionComponent<UserAccountProps> = ({ account
               </UserNameTitleRoot>
               <Divider />
             </DropdownTitle>
+            {window.location.pathname !== Pages.BALANCE && (
+              <DropdownItemRoot>
+                <DropdownItem>
+                  <TextLink
+                    onClick={() => {
+                      setShowDropdown(false);
+                      navigate(Pages.BALANCE);
+                    }}
+                    text="Go to wallet page"
+                    color="indigo"
+                    weight="semibold"
+                    nowrap
+                  />
+                </DropdownItem>
+              </DropdownItemRoot>
+            )}
+
             <DropdownItemRoot>
               <DropdownItem>
                 <TextLink text="Switch user" onClick={onLogout} color="indigo" weight="semibold" nowrap />

@@ -77,7 +77,7 @@ const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
     roiType: 'APR',
     keyStat1: KeyBridgeStat.FIXED_YIELD,
     keyStat2: KeyBridgeStat.MATURITY,
-    keyStat3: KeyBridgeStat.BATCH_SIZE,
+    keyStat3: KeyBridgeStat.NEXT_BATCH,
   },
   {
     id: 'lido-finance.ETH-to-wStETH',
@@ -102,7 +102,7 @@ const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
     roiType: 'APR',
     keyStat1: KeyBridgeStat.YIELD,
     keyStat2: KeyBridgeStat.LIQUIDITY,
-    keyStat3: KeyBridgeStat.BATCH_SIZE,
+    keyStat3: KeyBridgeStat.NEXT_BATCH,
   },
 ];
 

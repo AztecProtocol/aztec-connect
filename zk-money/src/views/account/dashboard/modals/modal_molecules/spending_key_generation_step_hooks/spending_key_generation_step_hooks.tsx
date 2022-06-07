@@ -1,7 +1,7 @@
 import { useApp, useProviderState } from 'alt-model';
-import { WalletId } from 'app';
+import { WalletId, wallets } from 'app';
+import { useState } from 'react';
 import { StepStatus, WalletAccountIndicator } from 'ui-components';
-import { WalletDropdownSelect } from '../../defi_modal/wallet_dropdown_select';
 import { SubmissionItemPrompt } from '../submission_item_prompt';
 
 function ConnectWalletPrompt() {
@@ -24,7 +24,18 @@ function SwitchWalletPrompt() {
 
 export function useSpendingKeyGenerationStep() {
   const providerState = useProviderState();
-  const { keyVault } = useApp();
+  const { keyVault, userSession, provider } = useApp();
+
+  const [isWalletSelectorOpen, setWalletSelectorOpen] = useState(false);
+
+  const toggleWalletDropdown = () => {
+    setWalletSelectorOpen(prevValue => !prevValue);
+  };
+
+  const options = (window.ethereum ? wallets : wallets.filter(w => w.id !== WalletId.METAMASK)).map(wallet => ({
+    value: wallet.id,
+    label: wallet.nameShort,
+  }));
   const address = providerState?.account;
   const walletId = providerState?.walletId;
   const isCorrectAccount = !!(keyVault && address?.equals(keyVault.signerAddress));
@@ -34,7 +45,15 @@ export function useSpendingKeyGenerationStep() {
       fieldContent: (
         <WalletAccountIndicator
           address={address?.toString() ?? ''}
-          wallet={walletId === WalletId.METAMASK ? 'metamask' : 'wallet-connect'}
+          walletId={walletId}
+          options={options}
+          onChange={async id => {
+            await provider?.disconnect();
+            userSession?.changeWallet(id, true);
+          }}
+          onClose={toggleWalletDropdown}
+          onClick={toggleWalletDropdown}
+          isOpen={isWalletSelectorOpen}
         />
       ),
       expandedContent: <ConnectWalletPrompt />,
@@ -42,7 +61,17 @@ export function useSpendingKeyGenerationStep() {
   } else {
     return {
       status: StepStatus.ERROR,
-      fieldContent: <WalletDropdownSelect />,
+      fieldContent: (
+        <WalletAccountIndicator
+          address={address?.toString() ?? ''}
+          walletId={walletId}
+          options={options}
+          onChange={id => userSession?.changeWallet(id)}
+          onClose={toggleWalletDropdown}
+          onClick={toggleWalletDropdown}
+          isOpen={isWalletSelectorOpen}
+        />
+      ),
       expandedContent: <SwitchWalletPrompt />,
     };
   }

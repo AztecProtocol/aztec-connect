@@ -17,6 +17,7 @@ import {
 import { TxId, UserDefiInteractionResultState, UserDefiTx } from '@aztec/sdk';
 import { useAsset } from 'alt-model/asset_hooks';
 import style from './defi_investment_interaction_fields.module.scss';
+import { Button } from 'components';
 
 const dateFormatter = new Intl.DateTimeFormat('default', { day: 'numeric', month: 'short', year: '2-digit' });
 
@@ -33,10 +34,11 @@ function ClosableInteractionField({
   onOpenDefiExitModal: (recipe: DefiRecipe) => void;
 }) {
   return (
-    <Hyperlink
+    <Button
+      size="s"
       className={style.claimButton}
       onClick={() => onOpenDefiExitModal(position.recipe)}
-      label={'Claim & Exit'}
+      text={'Claim & Exit'}
     />
   );
 }

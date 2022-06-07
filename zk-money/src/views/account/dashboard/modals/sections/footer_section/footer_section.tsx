@@ -12,7 +12,7 @@ export function FooterSection(props: FooterSectionProps) {
   return (
     <div className={style.root}>
       <FaqHint />
-      <div className={style.feedback}>{props.feedback}</div>
+      {props.feedback && <div className={style.feedback}>{props.feedback}</div>}
       <div className={style.nextWrapper}>
         <Button
           className={style.nextButton}

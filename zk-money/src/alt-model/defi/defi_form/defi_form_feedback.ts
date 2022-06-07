@@ -25,7 +25,7 @@ function getAmountInputFeedback(result: DefiFormValidationResult, touched: boole
     }
     const requiredStr = `Transaction requires ${requiredAmount?.format()}. You have ${balanceAmount?.format()} available.`;
     if (assetIsSupportedForShielding(asset?.address)) {
-      return requiredStr + ` Please first shield more ${asset?.symbol}.`;
+      return requiredStr + ` Please shield more ${asset?.symbol}.`;
     } else {
       return requiredStr;
     }
@@ -39,9 +39,7 @@ function getAmountInputFeedback(result: DefiFormValidationResult, touched: boole
 function getFooterFeedback(result: DefiFormValidationResult) {
   if (result.insufficientFeePayingAssetBalance) {
     const fee = result.input.feeAmount;
-    return `You do not have enough zk${
-      fee?.info.symbol
-    } to pay the fee for this transaction. Please first shield at least ${fee?.format({
+    return `You do not have enough zk${fee?.info.symbol} to pay the fee. Please shield at least ${fee?.format({
       layer: 'L1',
     })}.`;
   }

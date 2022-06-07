@@ -67,9 +67,7 @@ function getWalletAccountFeedback(result: ShieldFormValidationResult) {
 function getFooterFeedback(result: ShieldFormValidationResult) {
   if (result.insufficientFeePayingAssetBalance) {
     const fee = result.input.feeAmount;
-    return `You do not have enough zk${
-      fee?.info.symbol
-    } to pay the fee for this transaction. Please first shield at least ${fee?.toFloat()} ${
+    return `You do not have enough zk${fee?.info.symbol} to pay the fee. Please shield at least ${fee?.toFloat()} ${
       fee?.info.symbol
     } in a seperate transaction.`;
   }

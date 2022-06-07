@@ -1,0 +1,31 @@
+@use '../../../styles/mixins.scss';
+
+.root {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  height: 32px;
+  @include mixins.shadow_border;
+  border-radius: 10px;
+  padding: 20px;
+  cursor: pointer;
+  width: 240px;
+  font-size: 15px;
+  margin-left: auto;
+}
+
+.address {
+  text-overflow: ellipsis;
+  width: 120px;
+  font-size: 15px;
+  overflow: hidden;
+}
+.wallet {
+  font-size: 12px;
+  opacity: 0.3;
+}
+
+.walletDropdown {
+  top: 80px;
+  right: 30px;
+}

@@ -12,22 +12,19 @@ interface BridgeCountDownProps {
   compact?: boolean;
 }
 
-export function BridgeCountDown({ recipe, compact }: BridgeCountDownProps) {
+export function BridgeCountDown({ recipe }: BridgeCountDownProps) {
   const data = useDefaultCountDownData(recipe);
   const progress = (data?.takenSlots ?? 0) / (data?.totalSlots ?? 1);
-  const remainingSlots = (data?.totalSlots ?? 0) - (data?.takenSlots ?? 0);
-  const timeStr = data?.nextBatch ? `~${moment(data.nextBatch).fromNow(true)}` : '';
+  const remainingSlots = data?.takenSlots ?? 0;
+  const isFastTrack = progress >= 1;
   return (
     <div>
-      <div className={cx(style.info, { compact })}>
+      <div className={cx(style.info)}>
+        {!isFastTrack && <> Users in batch</>}
+        {isFastTrack && <>🚀🎉 Fast Track Enabled 🚀🎉 </>}
         <div>
-          {compact && <br />} {timeStr} until batch
+          {remainingSlots}/{data?.totalSlots ?? 1}
         </div>
-        {!compact && (
-          <div>
-            {remainingSlots}/{data?.totalSlots ?? 1}
-          </div>
-        )}
       </div>
       <ProgressBar progress={progress} />
     </div>

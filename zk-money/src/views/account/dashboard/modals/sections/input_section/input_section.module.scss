@@ -1,7 +1,10 @@
 .title {
   font-weight: 450;
-  font-size: 18.66px;
-  margin: 20px 0;
+  font-size: 18px;
+  margin: 20px 0px 10px 0px;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
 }
 
 .content {
@@ -19,5 +22,5 @@
   bottom: 10px;
   line-height: 16px;
   margin: 10px 0 10px 0;
-  color: red;
+  color: #ff004b;
 }

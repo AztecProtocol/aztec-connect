@@ -15,6 +15,7 @@ export enum KeyBridgeStat {
   BATCH_SIZE,
   MATURITY,
   LIQUIDITY,
+  NEXT_BATCH,
 }
 
 export type FlowDirection = 'enter' | 'exit';

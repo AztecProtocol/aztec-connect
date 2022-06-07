@@ -2,7 +2,7 @@ import type { AssetValue } from '@aztec/sdk';
 import { formatBulkPrice } from '../../app';
 import { useAmountBulkPrice, useSpendableBalance } from '../../alt-model';
 import { RemoteAsset } from 'alt-model/types';
-import { ShieldedAssetIcon } from '..';
+import { Button, ShieldedAssetIcon } from '..';
 import { SHIELDABLE_ASSET_ADDRESSES } from 'alt-model/known_assets/known_asset_addresses';
 import { useAmount } from 'alt-model/asset_hooks';
 import { Hyperlink, HyperlinkIcon } from 'ui-components';
@@ -34,23 +34,26 @@ export function Holding({ assetValue, onSend, onShield, onGoToEarn }: HoldingPro
 
   return (
     <div className={style.holdingWrapper}>
+      <ShieldedAssetIcon address={asset.address} />
       <div className={style.assetWrapper}>
-        <ShieldedAssetIcon address={asset.address} />
         <div className={style.holdingUnits}>{amount.format({ uniform: true })}</div>
-        <div className={style.spendable}>({spendableAmount?.format({ uniform: true })})</div>
+        <div className={style.spendable}>
+          {spendableAmount && spendableAmount?.toFloat() > 0
+            ? spendableAmount?.format({ hideSymbol: true, uniform: true })
+            : '0'}{' '}
+          {'  (Spendable)'}
+        </div>
       </div>
       <div className={style.holdingAmount}>{bulkPriceStr}</div>
+
       <div className={style.buttonsWrapper}>
-        {shieldSupported && <Hyperlink className={style.button} onClick={() => onShield?.(asset)} label={'Shield'} />}
-        {!spendableBalanceIsDust && (
-          <Hyperlink className={style.button} onClick={() => onSend?.(asset)} label={'Send'} />
+        {shieldSupported && (
+          <Button size={'s'} className={style.button} onClick={() => onShield?.(asset)} text={'Shield'} />
         )}
-        <Hyperlink
-          className={style.button}
-          onClick={() => onGoToEarn?.(asset)}
-          label={'Earn'}
-          icon={HyperlinkIcon.Open}
-        />
+        {!spendableBalanceIsDust && (
+          <Button size={'s'} className={style.button} onClick={() => onSend?.(asset)} text={'Send'} />
+        )}
+        <Button size={'s'} className={style.button} onClick={() => onGoToEarn?.(asset)} text={'Earn'} />
       </div>
     </div>
   );

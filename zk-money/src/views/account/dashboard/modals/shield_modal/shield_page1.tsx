@@ -1,15 +1,14 @@
 import type { ShieldFormFeedback, ShieldFormFields, ShieldFormValidationResult } from 'alt-model/shield';
 import type { StrOrMax } from 'alt-model/forms/constants';
 import { TxSettlementTime } from '@aztec/sdk';
-import { ProviderStatus, WalletId } from 'app';
+import { useState } from 'react';
+import { WalletId, wallets } from 'app';
 import { InputTheme } from 'components';
 import { AmountSection, TxGasSection, RecipientSection } from 'views/account/dashboard/modals/sections';
 import { RemoteAsset } from 'alt-model/types';
 import { TransactionSettlementTimeInformationSection } from '../sections/settlement_time_information_section';
 import { SplitSection } from '../sections/split_section';
-import { useProviderState } from 'alt-model';
-import { useLegacyEthAccountState } from 'alt-model/assets/l1_balance_hooks';
-import { WalletDropdownSelect } from '../defi_modal/wallet_dropdown_select';
+import { useProviderState, useApp } from 'alt-model';
 import { WalletAccountIndicator } from 'ui-components';
 import style from './shield.module.scss';
 import { ShieldPrivacySection } from './shield_privacy_section';
@@ -38,42 +37,41 @@ export function ShieldPage1({
   onChangeSpeed,
   onChangeAsset,
 }: ShieldPage1Props) {
+  const { userSession, provider } = useApp();
+
   const providerState = useProviderState();
   const asset = validationResult.input.targetAsset;
-  const ethAccount = useLegacyEthAccountState(asset);
   const address = providerState?.account;
   const walletId = providerState?.walletId;
+  const [isWalletSelectorOpen, setWalletSelectorOpen] = useState(false);
 
   if (!asset) {
     return <>Loading...</>;
   }
-  const isWalletInitialising =
-    providerState &&
-    [ProviderStatus.DESTROYED, ProviderStatus.INITIALIZING, ProviderStatus.UNINITIALIZED].indexOf(
-      providerState.status,
-    ) >= 0;
-  const isProviderSwitching =
-    !ethAccount?.ethAddress || ethAccount.ethAddress.toString() !== providerState?.account?.toString();
-  const isWalletDisconnected = feedback.walletAccount || isWalletInitialising || isProviderSwitching;
 
-  if (isWalletDisconnected) {
-    return (
-      <div className={style.errorAlert}>
-        <WalletDropdownSelect />
-        <div className={style.connectLabel}>
-          {feedback.walletAccount ??
-            (isProviderSwitching ? 'Swiching provider, please wait...' : 'Please connect a wallet to shield')}
-        </div>
-      </div>
-    );
-  }
+  const toggleWalletDropdown = () => {
+    setWalletSelectorOpen(prevValue => !prevValue);
+  };
+
+  const options = (window.ethereum ? wallets : wallets.filter(w => w.id !== WalletId.METAMASK)).map(wallet => ({
+    value: wallet.id,
+    label: wallet.nameShort,
+  }));
 
   return (
     <div className={style.contentWrapper}>
       <WalletAccountIndicator
         className={style.walletAccountIndicator}
         address={address?.toString() ?? ''}
-        wallet={walletId === WalletId.METAMASK ? 'metamask' : 'wallet-connect'}
+        walletId={walletId as WalletId}
+        options={options}
+        onClick={toggleWalletDropdown}
+        onChange={async id => {
+          await provider?.disconnect();
+          userSession?.changeWallet(id, true);
+        }}
+        onClose={toggleWalletDropdown}
+        isOpen={isWalletSelectorOpen}
       />
       <SplitSection
         leftPanel={

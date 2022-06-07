@@ -1,4 +1,5 @@
 import { ComponentStory, ComponentMeta } from '@storybook/react';
+import { WalletId } from 'app';
 
 import { WalletAccountIndicator } from './wallet_account_indicator';
 
@@ -10,4 +11,4 @@ export default {
 const Template: ComponentStory<typeof WalletAccountIndicator> = args => <WalletAccountIndicator {...args} />;
 
 export const Example = Template.bind({});
-Example.args = { wallet: 'metamask', address: '0x12345678901234567890' };
+Example.args = { walletId: WalletId.METAMASK, address: '0x12345678901234567890' };
