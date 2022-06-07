@@ -300,8 +300,8 @@ export class Server {
     return this.rollupDb.getUnsettledPaymentTxs();
   }
 
-  public getBlockBuffers(from: number) {
-    return this.worldState.getBlockBuffers(from);
+  public getBlockBuffers(from: number, take?: number) {
+    return this.worldState.getBlockBuffers(from, take);
   }
 
   public async getLatestRollupId() {

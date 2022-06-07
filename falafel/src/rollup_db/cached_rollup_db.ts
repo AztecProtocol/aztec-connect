@@ -83,8 +83,8 @@ export class CachedRollupDb extends SyncRollupDb {
     );
   }
 
-  public async getSettledRollups(from = 0) {
-    return this.settledRollups.slice(from);
+  public async getSettledRollups(from = 0, take?: number) {
+    return this.settledRollups.slice(from, take ? from + take : undefined);
   }
 
   public async getLastSettledRollup() {

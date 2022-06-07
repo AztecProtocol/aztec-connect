@@ -304,11 +304,12 @@ export class TypeOrmRollupDb implements RollupDb {
     return (await this.getRollup(id))!;
   }
 
-  public async getSettledRollups(from = 0) {
+  public async getSettledRollups(from = 0, take?: number) {
     const rollups = await this.rollupRep.find({
       where: { id: MoreThanOrEqual(from), mined: Not(IsNull()) },
       order: { id: 'ASC' },
       relations: ['rollupProof'],
+      take,
     });
     for (const rollup of rollups) {
       rollup.rollupProof.txs = await this.txRep.find({ where: { rollupProof: rollup.rollupProof } });

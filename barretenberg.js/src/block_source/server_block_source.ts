@@ -65,7 +65,7 @@ export class ServerBlockSource extends EventEmitter implements BlockSource {
         return response;
       } catch (err: any) {
         console.log(err.message);
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 10000));
       }
     }
   }

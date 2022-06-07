@@ -111,8 +111,8 @@ export class WorldState {
     return this.pipelineFactory.getRollupSize();
   }
 
-  public getBlockBuffers(from: number) {
-    return this.blockBufferCache.slice(from);
+  public getBlockBuffers(from: number, take?: number) {
+    return this.blockBufferCache.slice(from, take ? from + take : undefined);
   }
 
   public getNextPublishTime() {

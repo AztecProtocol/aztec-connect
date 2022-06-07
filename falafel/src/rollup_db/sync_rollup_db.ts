@@ -193,8 +193,8 @@ export class SyncRollupDb {
     );
   }
 
-  public getSettledRollups(from = 0) {
-    return this.synchronise(() => this.rollupDb.getSettledRollups(from));
+  public getSettledRollups(from = 0, take?: number) {
+    return this.synchronise(() => this.rollupDb.getSettledRollups(from, take));
   }
 
   public async getLastSettledRollup() {
