@@ -11,7 +11,7 @@
 #   278380418400.dkr.ecr.us-east-2.amazonaws.com/barretenberg-x86_64-linux-clang:cache-cl_feature
 #   278380418400.dkr.ecr.us-east-2.amazonaws.com/barretenberg-x86_64-linux-clang:cache-deadbeefcafebabe1337c0d3
 
-set -e
+set -ex
 
 REPOSITORY=$1
 BRANCH=${CIRCLE_BRANCH//\//_}
