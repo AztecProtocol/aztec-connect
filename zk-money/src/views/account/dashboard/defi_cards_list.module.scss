@@ -4,12 +4,42 @@
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
+  justify-items: center;
   // using 'gap' breaks the grid
-  column-gap: 5%;
+  column-gap: 20px;
+  margin: 0 auto;
 }
 
 .defiCard {
   margin-bottom: 50px;
+  position: relative;
+  width: 100%;
+  height: calc(100% - 50px);
+  min-width: 300px;
+  max-width: 346px;
+  overflow: hidden;
+}
+
+.dummyDefiCard {
+  margin-bottom: 50px;
+  background-image: url('../../../images/dummyDefiCardImg.svg');
+  width: 100%;
+  background-size: cover;
+  background-repeat: no-repeat;
+  height: 100%;
+  position: absolute;
+  top: 0px;
+  left: 0px;
+}
+
+@media screen and (max-width: 1240px) {
+  .hideMinWidth {
+    display: none;
+  }
+  .defiCardsListWrapper {
+    justify-content: center;
+    grid: auto/repeat(2, 1fr);
+  }
 }
 
 .investmentFilterInputs {
