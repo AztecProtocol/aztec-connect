@@ -5,7 +5,6 @@ import { RemoteAsset } from 'alt-model/types';
 import { Button, ShieldedAssetIcon } from '..';
 import { SHIELDABLE_ASSET_ADDRESSES } from 'alt-model/known_assets/known_asset_addresses';
 import { useAmount } from 'alt-model/asset_hooks';
-import { Hyperlink, HyperlinkIcon } from 'ui-components';
 import style from './holding.module.scss';
 import { Amount } from 'alt-model/assets';
 import { getIsDust } from 'alt-model/assets/asset_helpers';
