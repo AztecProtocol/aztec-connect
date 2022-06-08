@@ -57,12 +57,7 @@ export function SendConfirmationPage({
       />
       <BorderBox>
         {showingDeclaration ? (
-          <Disclaimer
-            accepted={riskChecked}
-            onChangeAccepted={setRiskChecked}
-            asset={asset}
-            transactionLimit={txAmountLimit}
-          />
+          <Disclaimer accepted={riskChecked} onChangeAccepted={setRiskChecked} />
         ) : showingComplete ? (
           <TransactionComplete onClose={onClose} />
         ) : (
