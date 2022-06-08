@@ -87,8 +87,8 @@ export function Home({ onSignup }: HomeProps) {
             <div className={style.content}>
               <div className={style.title}>How does shielding work?</div>
               <div className={style.description}>
-                Shielding funds to Aztec creates a private note on Layer 2. Private notes can traded, staked, and used
-                to earn yield just like normal Ethereum assets–but with full privacy protection.
+                Shielding funds to Aztec creates a private note on Layer 2. Private notes can be traded, staked, and
+                used to earn yield just like normal Ethereum assets–but with full privacy protection.
               </div>
             </div>
           </div>
