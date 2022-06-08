@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import styled from 'styled-components/macro';
 import { useNavigate } from 'react-router-dom';
 import { Pages } from 'views/views';
-import { AccountState, WorldState } from '../../app';
+import { AccountState } from '../../app';
 import closeIcon from '../../images/close.svg';
 import personIcon from '../../images/snowman.svg';
 import { borderRadiuses, breakpoints, colours, fontSizes, spacings, Theme, themeColours } from '../../styles';
@@ -11,6 +11,7 @@ import { Loader } from '../loader';
 import { Overlay } from '../overlay';
 import { Text } from '../text';
 import { TextLink } from '../text_link';
+import { useUserIsSyncing } from 'alt-model/syncing_hooks';
 
 const Root = styled.div`
   position: relative;
@@ -199,14 +200,13 @@ const DropdownItem = styled.div`
 
 interface UserAccountProps {
   account: AccountState;
-  worldState: WorldState;
   onLogout(): void;
 }
 
-export const UserAccount: React.FunctionComponent<UserAccountProps> = ({ account, worldState, onLogout }) => {
+export const UserAccount: React.FunctionComponent<UserAccountProps> = ({ account, onLogout }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   let navigate = useNavigate();
-  const isSynced = worldState.accountSyncedToRollup === worldState.latestRollup;
+  const isSynced = !useUserIsSyncing(account.userId);
   const { alias } = account;
 
   return (
