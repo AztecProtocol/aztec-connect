@@ -9,6 +9,7 @@ import style from './settlement_time_information_section.module.scss';
 interface SettlementTimeInformationSectionProps {
   remainingSlots: number;
   progress: number;
+  speed: DefiSettlementTime;
 }
 
 interface RecipeSettlementTimeInformationSectionProps {
@@ -23,13 +24,20 @@ interface TransactionSettlementTimeInformationSectionProps {
 interface SettlementProgressBarProps {
   remainingSlots: number;
   progress: number;
+  speed: DefiSettlementTime;
 }
 
 function SettlementProgressBar(props: SettlementProgressBarProps) {
+  const fastTrackEnabled = props.speed === DefiSettlementTime.DEADLINE && props.remainingSlots === 0;
+  const batched = props.speed === DefiSettlementTime.DEADLINE && props.remainingSlots > 0;
+  const instant = props.speed === DefiSettlementTime.INSTANT && props.remainingSlots >= 0;
+  const fastTrack = props.speed === DefiSettlementTime.NEXT_ROLLUP && props.remainingSlots >= 0;
   return (
     <div className={style.settlementWrapper}>
-      {props.progress === 1 && <div className={style.title}>Congrats, you're paying for the full batch. 🎉</div>}
-      {props.progress !== 1 && <div className={style.title}>{props.remainingSlots} slots remaining until batch</div>}
+      {instant && <div className={style.title}>Congrats, you're paying for the entire rollup 🐳 🎉</div>}
+      {fastTrack && <div className={style.title}>Congrats, you're paying for the full batch. 🐳 🎉</div>}
+      {batched && <div className={style.title}>{props.remainingSlots} slots remaining until batch</div>}
+      {fastTrackEnabled && <div className={style.title}>🚀 🎉 Fast Track enabled! 🚀 🎉</div>}
       <ProgressBar className={style.bar} progress={props.progress} />
       {props.progress === 1 && <div className={style.text}>You're getting faster settlement as a result.</div>}
       {props.progress !== 1 && (
@@ -43,7 +51,9 @@ export function SettlementTimeInformationSection(props: SettlementTimeInformatio
   return (
     <InformationSection
       title="Batch"
-      content={<SettlementProgressBar remainingSlots={props.remainingSlots} progress={props.progress} />}
+      content={
+        <SettlementProgressBar speed={props.speed} remainingSlots={props.remainingSlots} progress={props.progress} />
+      }
       buttonLabel="Learn more"
       // TODO: Update FAQ with more useful info about settlement times
       helpLink="https://aztec-protocol.gitbook.io/zk-money/faq/faq-rollup"
@@ -58,15 +68,25 @@ export function RecipeSettlementTimeInformationSection(props: RecipeSettlementTi
   const takenSlots = props.selectedSpeed === DefiSettlementTime.DEADLINE ? data.takenSlots : totalSlots;
   const progress = takenSlots / totalSlots;
   const remainingSlots = totalSlots - takenSlots;
-  return <SettlementTimeInformationSection remainingSlots={remainingSlots} progress={progress} />;
+  return (
+    <SettlementTimeInformationSection speed={props.selectedSpeed} remainingSlots={remainingSlots} progress={progress} />
+  );
 }
 
 export function TransactionSettlementTimeInformationSection(props: TransactionSettlementTimeInformationSectionProps) {
   const rpStatus = useRollupProviderStatus();
   if (!rpStatus) return <></>;
   const totalSlots = rpStatus.numTxsPerRollup;
-  const takenSlots = props.selectedSpeed === TxSettlementTime.INSTANT ? totalSlots : rpStatus.numTxsInNextRollup;
+  const takenSlots = props.selectedSpeed === TxSettlementTime.INSTANT ? totalSlots : rpStatus.pendingTxCount;
   const progress = takenSlots / totalSlots;
   const remainingSlots = totalSlots - takenSlots;
-  return <SettlementTimeInformationSection remainingSlots={remainingSlots} progress={progress} />;
+  const transformedSpeed =
+    props.selectedSpeed === TxSettlementTime.INSTANT ? DefiSettlementTime.INSTANT : DefiSettlementTime.DEADLINE;
+  return (
+    <SettlementTimeInformationSection
+      speed={transformedSpeed as unknown as DefiSettlementTime}
+      remainingSlots={remainingSlots}
+      progress={progress}
+    />
+  );
 }
