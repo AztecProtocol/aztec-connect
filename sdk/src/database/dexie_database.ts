@@ -407,15 +407,19 @@ export class DexieDatabase implements Database {
   private user!: Dexie.Table<DexieUser, Uint8Array>;
   private userTx!: Dexie.Table<DexieUserTx, Uint8Array>;
 
-  constructor(private dbName = 'hummus', private version = 6) {}
+  constructor(private dbName = 'hummus', private version = 7) {}
 
   async init() {
-    this.createTables();
-
     try {
+      this.createTables();
       // Try to do something with indexedDB.
       // If it fails (with UpgradeError), then the schema has changed significantly that we need to recreate the entire db.
+      await this.getAliases(AliasHash.random());
+      await this.getClaimTx(Buffer.alloc(32));
+      await this.getNotes(GrumpkinAddress.random());
+      await this.getSpendingKeys(GrumpkinAddress.random());
       await this.getUsers();
+      await this.getUserTxs(GrumpkinAddress.random());
     } catch (e) {
       await this.dexie.delete();
       this.createTables();
@@ -447,13 +451,12 @@ export class DexieDatabase implements Database {
   }
 
   async close() {
-    await this.dexie.close();
+    this.dexie.close();
   }
 
   async clear() {
-    for (const table of this.dexie.tables) {
-      await table.clear();
-    }
+    await this.dexie.delete();
+    this.createTables();
   }
 
   async addNote(note: Note) {
