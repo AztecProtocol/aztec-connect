@@ -1,6 +1,7 @@
 FROM 278380418400.dkr.ecr.eu-west-2.amazonaws.com/sdk:latest
 
-FROM node:16-alpine3.15
+FROM node:16-alpine
+RUN apk update && apk add build-base python3
 COPY --from=0 /usr/src /usr/src
 WORKDIR /usr/src/explorer
 COPY . .
