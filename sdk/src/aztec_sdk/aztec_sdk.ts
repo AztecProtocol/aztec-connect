@@ -607,12 +607,20 @@ export class AztecSdk extends EventEmitter {
     return this.core.getBalances(accountPublicKey, true);
   }
 
+  public async getTotalBalances(userId: GrumpkinAddress) {
+    return this.core.getTotalBalances(userId);
+  }
+
   public async getBalance(userId: GrumpkinAddress, assetId: number) {
     return { assetId, value: await this.core.getBalance(userId, assetId) };
   }
 
   public async getBalanceUnsafe(accountPublicKey: GrumpkinAddress, assetId: number) {
     return { assetId, value: await this.core.getBalance(accountPublicKey, assetId, true) };
+  }
+
+  public async getTotalBalance(userId: GrumpkinAddress, assetId: number) {
+    return { assetId, value: await this.core.getTotalBalance(userId, assetId) };
   }
 
   public async getFormattedBalance(userId: GrumpkinAddress, assetId: number, symbol = true, precision?: number) {

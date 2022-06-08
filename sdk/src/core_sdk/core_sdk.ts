@@ -336,6 +336,15 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     return userState.getBalance(assetId, unsafe);
   }
 
+  public async getTotalBalances(userId: GrumpkinAddress, unsafe?: boolean) {
+    return this.getUserState(userId).getTotalBalances(unsafe);
+  }
+
+  public async getTotalBalance(userId: GrumpkinAddress, assetId: number, unsafe?: boolean) {
+    const userState = this.getUserState(userId);
+    return userState.getTotalBalance(assetId, unsafe);
+  }
+
   public async getSpendableSum(
     userId: GrumpkinAddress,
     assetId: number,
