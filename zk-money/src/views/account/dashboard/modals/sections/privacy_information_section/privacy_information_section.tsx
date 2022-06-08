@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import { ProgressBar } from 'ui-components';
 import { RemoteAsset } from 'alt-model/types';
 import { InformationSection } from '../information_section';
-import { useDepositorBuckets } from './helpers';
 import fullPrivacy from 'images/full_privacy.svg';
 import style from './privacy_information_section.module.scss';
+import { useRollupProviderStatus } from 'alt-model';
+import { PrivacySet } from '@aztec/sdk';
 
 const approxCrowdFormatter = new Intl.NumberFormat('en-GB', { maximumSignificantDigits: 1, notation: 'compact' });
 interface PrivacyInformationSectionProps {
@@ -21,8 +22,9 @@ interface PrivacyContentProps {
 }
 
 export function PrivacyInformationSection(props: PrivacyInformationSectionProps) {
+  const rpStatus = useRollupProviderStatus();
   const [debouncedProps, setDebouncedProps] = useState(props);
-  const { amount, txToAlias, hasMajorPrivacyIssue } = debouncedProps;
+  const { amount, hasMajorPrivacyIssue } = debouncedProps;
 
   useEffect(() => {
     const task = setTimeout(() => setDebouncedProps(props), 500);
@@ -30,12 +32,11 @@ export function PrivacyInformationSection(props: PrivacyInformationSectionProps)
   }, [props]);
 
   const { asset } = debouncedProps;
-  const buckets = useDepositorBuckets(asset.address);
+  const privacySets: PrivacySet[] | undefined = rpStatus.runtimeConfig.privacySets[asset.id];
 
-  const countFromPrivacySet = buckets?.find(b => b.lowerBound >= amount)?.count ?? 1;
+  const countFromPrivacySet = privacySets?.find(b => b.value >= amount)?.users;
   const crowd = hasMajorPrivacyIssue ? 1 : countFromPrivacySet;
-  const approxCrowd = approxCrowdFormatter.format(crowd);
-  const { text, progress, subtitle } = getPrivacyValues(crowd, approxCrowd, amount);
+  const { text, progress, subtitle } = getPrivacyValues(crowd, amount);
 
   return (
     <InformationSection
@@ -43,8 +44,8 @@ export function PrivacyInformationSection(props: PrivacyInformationSectionProps)
       buttonLabel={'Why is this important?'}
       // TODO: Update privacy FAQ with more useful info
       helpLink="https://aztec-protocol.gitbook.io/zk-money/faq/faq-privacy"
-      subtitle={!txToAlias ? subtitle : 'Max'}
-      content={<PrivacyContent txToAlias={txToAlias} progress={progress} text={text} />}
+      subtitle={!props.txToAlias ? subtitle : 'Max'}
+      content={<PrivacyContent txToAlias={props.txToAlias} progress={progress} text={text} />}
     />
   );
 }
@@ -69,10 +70,18 @@ function PrivacyContent(props: PrivacyContentProps) {
   );
 }
 
-const getPrivacyValues = (crowd: number, approxCrowd: string, amount: bigint) => {
+const getPrivacyValues = (crowd: number | undefined, amount: bigint) => {
   if (amount === 0n) {
     return { progress: 0, subtitle: '', text: 'Please enter an amount to see the privacy level' };
   }
+  if (crowd === undefined) {
+    return {
+      progress: 0,
+      subtitle: 'Unknown',
+      text: "Privacy information isn't yet available for this asset",
+    };
+  }
+  const approxCrowd = approxCrowdFormatter.format(crowd);
   if (crowd < 2) {
     return {
       progress: 0,

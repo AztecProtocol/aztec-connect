@@ -285,6 +285,15 @@ export class WorldState {
     await this.startNewPipeline();
   }
 
+  /**
+   * Called to restart the pipeline. e.g. If configuration changes and we want a new pipeline immediately.
+   */
+  public async restartPipeline() {
+    await this.pipeline?.stop();
+    await this.worldStateDb.rollback();
+    await this.startNewPipeline();
+  }
+
   private async startNewPipeline() {
     this.pipeline = await this.pipelineFactory.create();
     this.pipeline.start().catch(async err => {
@@ -525,7 +534,7 @@ export class WorldState {
         this.metrics.txSettlementDuration(block.created.getTime() - tx.created.getTime());
       }
 
-      this.metrics.rollupReceived(rollupDao!);
+      this.metrics.rollupReceived(rollupDao);
     } else {
       // Not a rollup we created. Add or replace rollup.
       const txs = rollup.innerProofData
@@ -555,7 +564,7 @@ export class WorldState {
       });
 
       await this.rollupDb.addRollup(rollupDao);
-      this.metrics.rollupReceived(rollupDao!);
+      this.metrics.rollupReceived(rollupDao);
     }
 
     const rollupDao = (await this.rollupDb.getRollup(rollup.rollupId))!;

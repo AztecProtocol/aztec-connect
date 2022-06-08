@@ -67,4 +67,8 @@ export class PooledFftFactory implements FftFactory {
     }
     return this.ffts[circuitSize];
   }
+
+  public async destroy() {
+    await Promise.all(Object.values(this.ffts).map(fft => fft.destroy()));
+  }
 }

@@ -28,12 +28,15 @@ function estimateDefiBatchSettlementTime(
   nextSettlementTime?: Date,
 ) {
   if (!rollupProviderStatus || !bridgeStatus) return;
-  const { nextPublishTime, rollupFrequency } = bridgeStatus;
-  if (nextPublishTime) return new Date(nextPublishTime.getTime() + APPROX_ROLLUP_PROOF_DURATION_MS);
+  const fastTrack = bridgeStatus.gasAccrued >= bridgeStatus.gasThreshold;
+  const { rollupFrequency } = bridgeStatus;
   const publishIntervalSeconds = rollupProviderStatus.runtimeConfig.publishInterval;
-  if (rollupFrequency > 0 && publishIntervalSeconds > 0 && nextSettlementTime) {
+
+  if (rollupFrequency > 0 && publishIntervalSeconds > 0 && nextSettlementTime && !fastTrack) {
     const defiBatchInterval = rollupFrequency * (publishIntervalSeconds * 1000);
     return new Date(nextSettlementTime.getTime() + defiBatchInterval + APPROX_ROLLUP_PROOF_DURATION_MS);
+  } else if (nextSettlementTime) {
+    return new Date(nextSettlementTime.getTime());
   }
 }
 

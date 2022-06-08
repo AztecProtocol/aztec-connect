@@ -2,7 +2,6 @@ import { EthAddress } from '@aztec/barretenberg/address';
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { virtualAssetIdFlag } from '@aztec/barretenberg/bridge_id';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
-import { Pedersen } from '@aztec/barretenberg/crypto';
 import { createLogger } from '@aztec/barretenberg/debug';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
 import { MemoryFifo } from '@aztec/barretenberg/fifo';
@@ -37,31 +36,23 @@ export enum UserStateEvent {
   UPDATED_USER_STATE = 'UPDATED_USER_STATE',
 }
 
-enum SyncState {
-  OFF,
-  SYNCHING,
-  MONITORING,
-}
-
 export class UserState extends EventEmitter {
   private notePickers: { assetId: number; notePicker: NotePicker }[] = [];
-  private blockQueue = new MemoryFifo<BlockContext>();
-  private syncState = SyncState.OFF;
-  private syncingPromise!: Promise<void>;
+  private blockQueue = new MemoryFifo<BlockContext[]>();
+  private runningPromise!: Promise<void>;
 
   constructor(
-    private user: UserData,
+    private userData: UserData,
     private grumpkin: Grumpkin,
     private noteAlgos: NoteAlgorithms,
     private db: Database,
     private rollupProvider: RollupProvider,
-    private pedersen: Pedersen,
   ) {
     super();
   }
 
   private debug(...args: any[]) {
-    debug(`${this.user.id.toShortString()}:`, ...args);
+    debug(`${this.userData.id.toShortString()}:`, ...args);
   }
 
   /**
@@ -72,84 +63,46 @@ export class UserState extends EventEmitter {
     await this.refreshNotePicker();
   }
 
-  /**
-   * First handles all historical blocks.
-   * Then starts processing blocks added to queue via `processBlock()`.
-   * Blocks may already be being added to the queue before we start synching. This means we may try to
-   * process the same block twice, but will never miss a block. The block handler will filter duplicates.
-   * New blocks are wrapped into a block context by the given factory
-   * Where possible, required blocks should be taken from the provided shared block contexts
-   * as this will utilise shared resources with other user states
-   */
-  public async startSync(sharedBlockContexts: BlockContext[]) {
-    if (this.syncState !== SyncState.OFF) {
-      return;
-    }
-    const start = new Date().getTime();
-    this.debug(`starting sync from rollup block ${this.user.syncedToRollup + 1}...`);
-    this.syncState = SyncState.SYNCHING;
-    // only request blocks that we haven't been given, make maximum use of the provided shared blocks
-    const firstBlockRequiredByUs = this.user.syncedToRollup + 1;
-    if (
-      !sharedBlockContexts.length ||
-      firstBlockRequiredByUs > sharedBlockContexts[sharedBlockContexts.length - 1].block.rollupId
-    ) {
-      // no shared blocks provided that we can use, just request the blocks we need from the rollup provider
-      const blocks = await this.rollupProvider.getBlocks(firstBlockRequiredByUs);
-      await this.handleBlocks(blocks.map(x => new BlockContext(x, this.pedersen)));
-    } else {
-      // request the blocks that we specifically need, then filter out the overlapping blocks
-      const blocks = await this.rollupProvider.getBlocks(firstBlockRequiredByUs);
-      const blocksBeforeShared = blocks.filter(b => b.rollupId < sharedBlockContexts[0].block.rollupId);
-      const blocksAfterShared = blocks.filter(
-        b => b.rollupId > sharedBlockContexts[sharedBlockContexts.length - 1].block.rollupId,
-      );
-      const allBlocks = [
-        ...blocksBeforeShared.map(x => new BlockContext(x, this.pedersen)),
-        ...sharedBlockContexts,
-        ...blocksAfterShared.map(x => new BlockContext(x, this.pedersen)),
-      ];
-      await this.handleBlocks(allBlocks);
-    }
-    this.debug(`sync complete in ${new Date().getTime() - start}ms.`);
-    this.syncingPromise = this.blockQueue.process(async block => this.handleBlocks([block]));
-    this.syncState = SyncState.MONITORING;
+  public async start() {
+    this.debug(`starting from rollup block ${this.userData.syncedToRollup + 1}...`);
+    this.runningPromise = this.blockQueue.process(async blocks => this.handleBlocks(blocks));
   }
 
   /**
    * Stops processing queued blocks. Blocks until any processing is complete.
    */
-  public stopSync(flush = false) {
-    if (this.syncState === SyncState.OFF) {
-      return;
-    }
-    this.debug(`stopping sync.`);
+  public async stop(flush = false) {
+    this.debug(`stopping...`);
     flush ? this.blockQueue.end() : this.blockQueue.cancel();
-    this.syncState = SyncState.OFF;
-    return this.syncingPromise;
+    await this.runningPromise;
+    this.debug('stopped.');
   }
 
   public isSyncing() {
-    return this.syncState === SyncState.SYNCHING;
+    return this.blockQueue.length() > 1;
   }
 
   public async awaitSynchronised() {
-    while (this.syncState === SyncState.SYNCHING) {
+    while (this.isSyncing()) {
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
   }
 
-  public getUser() {
-    return this.user;
+  public getUserData() {
+    return this.userData;
   }
 
   public processBlock(block: BlockContext) {
-    this.blockQueue.put(block);
+    this.blockQueue.put([block]);
   }
 
-  // will have 1 or multiple blocks when syncing user state
+  public processBlocks(blocks: BlockContext[]) {
+    this.blockQueue.put(blocks);
+  }
+
+  // TODO: This should not be public! Tests should enqueue blocks, and call stop() with flush=true.
   public async handleBlocks(blockContexts: BlockContext[]) {
-    blockContexts = blockContexts.filter(b => b.block.rollupId > this.user.syncedToRollup);
+    blockContexts = blockContexts.filter(b => b.block.rollupId > this.userData.syncedToRollup);
     if (blockContexts.length == 0) {
       return;
     }
@@ -203,7 +156,7 @@ export class UserState extends EventEmitter {
     const viewingKeysBuf = Buffer.concat(viewingKeys.flat().map(vk => vk.toBuffer()));
     const decryptedTreeNotes = await batchDecryptNotes(
       viewingKeysBuf,
-      this.user.accountPrivateKey,
+      this.userData.accountPrivateKey,
       this.noteAlgos,
       this.grumpkin,
     );
@@ -212,7 +165,7 @@ export class UserState extends EventEmitter {
       decryptedTreeNotes,
       inputNullifiers,
       noteCommitments,
-      this.user.accountPrivateKey,
+      this.userData.accountPrivateKey,
       this.grumpkin,
       this.noteAlgos,
     );
@@ -264,27 +217,27 @@ export class UserState extends EventEmitter {
         }
       }
 
-      this.user = { ...this.user, syncedToRollup: proofData.rollupId };
+      this.userData = { ...this.userData, syncedToRollup: proofData.rollupId };
 
       await this.processDefiInteractionResults(blockContext);
     }
 
-    await this.db.updateUser(this.user);
+    await this.db.updateUser(this.userData);
 
-    this.emit(UserStateEvent.UPDATED_USER_STATE, this.user.id);
+    this.emit(UserStateEvent.UPDATED_USER_STATE, this.userData.id);
   }
 
   private async resetData() {
     const pendingTxs = await this.rollupProvider.getPendingTxs();
 
-    const pendingUserTxIds = await this.db.getPendingUserTxs(this.user.id);
+    const pendingUserTxIds = await this.db.getPendingUserTxs(this.userData.id);
     for (const userTxId of pendingUserTxIds) {
       if (!pendingTxs.some(tx => tx.txId.equals(userTxId))) {
-        await this.db.removeUserTx(this.user.id, userTxId);
+        await this.db.removeUserTx(this.userData.id, userTxId);
       }
     }
 
-    const pendingNotes = await this.db.getPendingNotes(this.user.id);
+    const pendingNotes = await this.db.getPendingNotes(this.userData.id);
     for (const note of pendingNotes) {
       if (
         !pendingTxs.some(tx => tx.noteCommitment1.equals(note.commitment) || tx.noteCommitment2.equals(note.commitment))
@@ -302,7 +255,7 @@ export class UserState extends EventEmitter {
   ) {
     const { created } = blockContext.block;
     const tx = this.recoverAccountTx(proof, offchainTxData, created);
-    if (!tx.userId.equals(this.user.id)) {
+    if (!tx.userId.equals(this.userData.id)) {
       return;
     }
 
@@ -367,10 +320,10 @@ export class UserState extends EventEmitter {
     await this.refreshNotePicker();
 
     const txId = new TxId(proof.txId);
-    const savedTx = await this.db.getPaymentTx(this.user.id, txId);
+    const savedTx = await this.db.getPaymentTx(this.userData.id, txId);
     if (savedTx) {
       this.debug(`settling payment tx: ${txId}`);
-      await this.db.settlePaymentTx(this.user.id, txId, created);
+      await this.db.settlePaymentTx(this.userData.id, txId, created);
     } else {
       const tx = this.recoverPaymentTx(
         proof,
@@ -404,7 +357,7 @@ export class UserState extends EventEmitter {
     const { bridgeId, partialStateSecretEphPubKey } = offchainTxData;
     const partialStateSecret = deriveNoteSecret(
       partialStateSecretEphPubKey,
-      this.user.accountPrivateKey,
+      this.userData.accountPrivateKey,
       this.grumpkin,
     );
     const txId = new TxId(proof.txId);
@@ -436,7 +389,7 @@ export class UserState extends EventEmitter {
   private async processDefiInteractionResults(blockContext: BlockContext) {
     const { interactionResult, created } = blockContext.block;
     for (const event of interactionResult) {
-      const defiTxs = await this.db.getDefiTxsByNonce(this.user.id, event.nonce);
+      const defiTxs = await this.db.getDefiTxsByNonce(this.userData.id, event.nonce);
       for (const tx of defiTxs) {
         const outputValueA = !event.result
           ? BigInt(0)
@@ -455,7 +408,7 @@ export class UserState extends EventEmitter {
     this.debug(`found claim tx: ${claimTxId}`);
 
     const claim = await this.db.getClaimTx(nullifier1);
-    if (!claim?.userId.equals(this.user.id)) {
+    if (!claim?.userId.equals(this.userData.id)) {
       return;
     }
 
@@ -527,7 +480,7 @@ export class UserState extends EventEmitter {
   private async processSettledNote(index: number, treeNote: TreeNote, commitment: Buffer, blockContext: BlockContext) {
     const { value } = treeNote;
     const hashPath = await blockContext.getBlockSubtreeHashPath(index);
-    const nullifier = this.noteAlgos.valueNoteNullifier(commitment, this.user.accountPrivateKey);
+    const nullifier = this.noteAlgos.valueNoteNullifier(commitment, this.userData.accountPrivateKey);
     const note = new Note(
       treeNote,
       commitment,
@@ -548,7 +501,7 @@ export class UserState extends EventEmitter {
 
   private async nullifyNote(nullifier: Buffer) {
     const note = await this.db.getNoteByNullifier(nullifier);
-    if (!note || !note.owner.equals(this.user.id)) {
+    if (!note || !note.owner.equals(this.userData.id)) {
       return;
     }
 
@@ -561,7 +514,7 @@ export class UserState extends EventEmitter {
     const nullifier = this.noteAlgos.claimNoteNullifier(commitment);
     await this.db.addClaimTx({
       defiTxId,
-      userId: this.user.id,
+      userId: this.userData.id,
       secret: noteSecret,
       nullifier,
       interactionNonce,
@@ -606,7 +559,7 @@ export class UserState extends EventEmitter {
 
     return new CorePaymentTx(
       new TxId(proof.txId),
-      this.user.id,
+      this.userData.id,
       proofId,
       assetId,
       publicValue,
@@ -654,13 +607,13 @@ export class UserState extends EventEmitter {
     const txId = new TxId(proof.txId);
     const partialStateSecret = deriveNoteSecret(
       partialStateSecretEphPubKey,
-      this.user.accountPrivateKey,
+      this.userData.accountPrivateKey,
       this.grumpkin,
     );
 
     return new CoreDefiTx(
       txId,
-      this.user.id,
+      this.userData.id,
       bridgeId,
       depositValue,
       txFee,
@@ -675,7 +628,7 @@ export class UserState extends EventEmitter {
 
   private async refreshNotePicker() {
     const notesMap: Map<number, Note[]> = new Map();
-    const notes = await this.db.getNotes(this.user.id);
+    const notes = await this.db.getNotes(this.userData.id);
     notes.forEach(note => {
       const assetNotes = notesMap.get(note.assetId) || [];
       notesMap.set(note.assetId, [...assetNotes, note]);
@@ -768,18 +721,18 @@ export class UserState extends EventEmitter {
     // No need to do anything with proof.backwardLink (i.e., mark a note as chained).
     // Rollup provider will return the nullifiers of pending notes, which will be excluded when the sdk is picking notes.
 
-    this.emit(UserStateEvent.UPDATED_USER_STATE, this.user.id);
+    this.emit(UserStateEvent.UPDATED_USER_STATE, this.userData.id);
   }
 
   private async processPendingNote(note: Note) {
     const { ownerPubKey, value } = note.treeNote;
-    if (!ownerPubKey.equals(this.user.id)) {
+    if (!ownerPubKey.equals(this.userData.id)) {
       return;
     }
 
     if (value) {
       await this.db.addNote(note);
-      debug(`user ${this.user.id} adding pending note with value ${value}, allowChain = ${note.allowChain}.`);
+      debug(`user ${this.userData.id} adding pending note with value ${value}, allowChain = ${note.allowChain}.`);
     }
 
     return note;
@@ -792,10 +745,11 @@ export class UserStateFactory {
     private noteAlgos: NoteAlgorithms,
     private db: Database,
     private rollupProvider: RollupProvider,
-    private pedersen: Pedersen,
   ) {}
 
-  createUserState(user: UserData) {
-    return new UserState(user, this.grumpkin, this.noteAlgos, this.db, this.rollupProvider, this.pedersen);
+  async createUserState(user: UserData) {
+    const userState = new UserState(user, this.grumpkin, this.noteAlgos, this.db, this.rollupProvider);
+    await userState.init();
+    return userState;
   }
 }

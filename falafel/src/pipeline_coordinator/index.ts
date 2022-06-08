@@ -64,6 +64,8 @@ export class PipelineCoordinator {
     const fn = async () => {
       await this.init();
 
+      console.log(`Pipeline starting with ${await this.rollupDb.getPendingTxCount()} pending txs.`);
+
       await this.claimProofCreator.create(this.numInnerRollupTxs * this.numOuterRollupProofs);
 
       while (this.running) {
@@ -75,14 +77,14 @@ export class PipelineCoordinator {
         this.log('Processing pending txs...');
         this.nextRollupProfile = await this.rollupCoordinator!.processPendingTxs(pendingTxs, this.flush);
 
-        // we are in a flush state and this iteration produced no rollup-able txs, so we exit
         if (this.nextRollupProfile.published) {
-          console.log('Rollup published or we are in a flush state, exiting.');
           this.running = false;
           break;
         }
         await new Promise(resolve => setTimeout(resolve, 1000 * +this.running));
       }
+
+      console.log('Pipeline exited.');
     };
 
     return (this.runningPromise = fn());

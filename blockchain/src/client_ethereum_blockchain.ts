@@ -24,7 +24,7 @@ export class ClientEthereumBlockchain {
     assets: BlockchainAsset[],
     private readonly bridges: BlockchainBridge[],
     private readonly ethereumProvider: EthereumProvider,
-    private readonly minConfirmations: number,
+    public readonly minConfirmations: number,
     private readonly permitSupportAssetIds: number[] = [],
   ) {
     this.rollupProcessor = new RollupProcessor(rollupContractAddress, ethereumProvider);

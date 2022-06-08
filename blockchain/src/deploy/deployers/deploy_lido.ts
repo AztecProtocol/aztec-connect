@@ -31,13 +31,13 @@ export const deployLidoBridge = async (
   // eslint-disable-next-line camelcase
   const wstEth = IWstETH__factory.connect('0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0', owner);
 
-  await stEth.submit(EthAddress.ZERO.toString(), { value: 100 });
-  await stEth.approve(wstEth.address, 50);
-  await wstEth.wrap(50);
+  await stEth.submit(EthAddress.ZERO.toString(), { value: 100, gasLimit });
+  await stEth.approve(wstEth.address, 50, { gasLimit });
+  await wstEth.wrap(50, { gasLimit });
 
-  await stEth.transfer(bridge.address, 10);
-  await wstEth.transfer(bridge.address, 10);
-  await wstEth.transfer(rollup.address, 10);
+  await stEth.transfer(bridge.address, 10, { gasLimit });
+  await wstEth.transfer(bridge.address, 10, { gasLimit });
+  await wstEth.transfer(rollup.address, 10, { gasLimit });
 
   await rollup.setSupportedBridge(bridge.address, 175000n, { gasLimit });
   await rollup.setSupportedBridge(bridge.address, 250000n, { gasLimit });

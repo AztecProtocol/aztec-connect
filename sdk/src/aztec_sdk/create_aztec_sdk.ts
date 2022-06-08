@@ -13,7 +13,7 @@ import {
 } from '../core_sdk_flavours';
 import { AztecSdk } from './aztec_sdk';
 
-async function createBlockchain(ethereumProvider: EthereumProvider, coreSdk: CoreSdkInterface, confs = 1) {
+async function createBlockchain(ethereumProvider: EthereumProvider, coreSdk: CoreSdkInterface, confs = 3) {
   const { chainId, rollupContractAddress } = await coreSdk.getLocalStatus();
   const {
     blockchainStatus: { assets, bridges },

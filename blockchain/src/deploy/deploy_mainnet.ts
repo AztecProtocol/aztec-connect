@@ -11,6 +11,7 @@ import {
   deployRollupProcessor,
   deployVerifier,
 } from './deployers';
+import { deployAceOfZk } from './deployers/deploy_ace_of_zk';
 
 const gasLimit = 5000000;
 const escapeBlockLower = 2160;
@@ -55,6 +56,7 @@ export async function deployMainnet(signer: Signer, { dataTreeSize, roots }: Tre
   const expiryCutOff = new Date('01 Sept 2022 00:00:00 GMT');
   await deployElementBridge(signer, rollup, ['dai'], expiryCutOff);
   await deployLidoBridge(signer, rollup, LIDO_REFERRAL_ADDRESS);
+  await deployAceOfZk(signer, rollup);
 
   // Transfers ownership of the proxyadmin to the multisig
   await proxyAdmin.transferProxyAdminOwnership(EthAddress.fromString(MULTI_SIG_ADDRESS));
@@ -62,13 +64,13 @@ export async function deployMainnet(signer: Signer, { dataTreeSize, roots }: Tre
   const priceFeeds = [FAST_GAS_PRICE_FEED_ADDRESS, DAI_PRICE_FEED_ADDRESS];
 
   // Grant roles to multisig wallets
-  await rollup.grantRole(DEFAULT_ADMIN_ROLE, MULTI_SIG_ADDRESS);
-  await rollup.grantRole(OWNER_ROLE, MULTI_SIG_ADDRESS);
-  await rollup.grantRole(EMERGENCY_ROLE, EMERGENCY_MULTI_SIG_ADDRESS);
+  await rollup.grantRole(DEFAULT_ADMIN_ROLE, MULTI_SIG_ADDRESS, { gasLimit });
+  await rollup.grantRole(OWNER_ROLE, MULTI_SIG_ADDRESS, { gasLimit });
+  await rollup.grantRole(EMERGENCY_ROLE, EMERGENCY_MULTI_SIG_ADDRESS, { gasLimit });
 
   // Revoke roles from the deployer
-  await rollup.revokeRole(EMERGENCY_ROLE, await signer.getAddress());
-  await rollup.revokeRole(OWNER_ROLE, await signer.getAddress());
+  await rollup.revokeRole(EMERGENCY_ROLE, await signer.getAddress(), { gasLimit });
+  await rollup.revokeRole(OWNER_ROLE, await signer.getAddress(), { gasLimit });
 
   // TODO: Revoking of the default admin role should be done manually with the multi-sig to ensure correct setup
 
