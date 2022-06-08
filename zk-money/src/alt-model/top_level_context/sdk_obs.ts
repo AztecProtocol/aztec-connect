@@ -1,4 +1,4 @@
-import { AztecSdk, createAztecSdk, JsonRpcProvider, SdkEvent } from '@aztec/sdk';
+import { AztecSdk, createAztecSdk, JsonRpcProvider, SdkEvent, SdkFlavour } from '@aztec/sdk';
 import { Obs } from 'app/util';
 import createDebug from 'debug';
 import { Config } from '../../config';
@@ -14,8 +14,9 @@ export function createSdkObs(config: Config): SdkObs {
 
   const sdkObs = Obs.input<SdkObsValue>(undefined);
   createAztecSdk(aztecJsonRpcProvider, {
-    serverUrl: config.hostedSdkUrl,
+    serverUrl: config.rollupProviderUrl,
     debug: config.debugFilter,
+    flavour: SdkFlavour.PLAIN, // todo put this back when the hosted sdk works
     minConfirmation,
   })
     .then(sdk => {
