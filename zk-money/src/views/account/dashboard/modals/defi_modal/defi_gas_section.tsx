@@ -53,7 +53,7 @@ export function DefiGasSection(props: DefiGasSectionProps) {
       content: (
         <FeeOptionContent
           label="Batched"
-          expectedTimeOfSettlement={nextSettlementTime}
+          expectedTimeOfSettlement={batchSettlementTime}
           feeAmount={feeAmounts?.[DefiSettlementTime.DEADLINE]}
         />
       ),
