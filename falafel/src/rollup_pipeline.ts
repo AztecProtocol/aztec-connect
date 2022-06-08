@@ -44,7 +44,7 @@ export class RollupPipeline {
         publishInterval,
         flushAfterIdle,
         gasLimit,
-        maxProviderGasPrice,
+        maxProviderGasPrice: maxProviderGasPrice.toString(),
       })}`,
     );
 
