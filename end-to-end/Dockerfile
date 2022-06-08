@@ -5,7 +5,7 @@ FROM 278380418400.dkr.ecr.eu-west-2.amazonaws.com/falafel:latest
 FROM 278380418400.dkr.ecr.eu-west-2.amazonaws.com/halloumi:latest
 FROM 278380418400.dkr.ecr.eu-west-2.amazonaws.com/hummus:latest
 
-FROM node:16-alpine
+FROM node:16-alpine3.15
 COPY --from=0 /usr/src /usr/src
 ENV CHROME_BIN="/usr/bin/chromium-browser" PUPPETEER_SKIP_CHROMIUM_DOWNLOAD="true"
 RUN apk update && apk add --no-cache udev ttf-freefont chromium
