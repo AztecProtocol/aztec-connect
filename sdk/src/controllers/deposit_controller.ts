@@ -1,6 +1,7 @@
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetValue } from '@aztec/barretenberg/asset';
 import { EthereumProvider } from '@aztec/barretenberg/blockchain';
+import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { sleep } from '@aztec/barretenberg/sleep';
 import { Timer } from '@aztec/barretenberg/timer';
 import { TxId } from '@aztec/barretenberg/tx_id';
@@ -21,7 +22,7 @@ export class DepositController {
   private proofOutput?: ProofOutput;
   private feeProofOutput?: ProofOutput;
   private txId?: TxId;
-  private pendingDeposit?: bigint;
+  private pendingFunds?: bigint;
 
   constructor(
     public readonly assetValue: AssetValue,
@@ -50,10 +51,20 @@ export class DepositController {
   }
 
   public async getPendingFunds() {
-    if (this.pendingDeposit === undefined) {
-      this.pendingDeposit = await this.blockchain.getUserPendingDeposit(this.publicInput.assetId, this.depositor);
+    if (this.pendingFunds === undefined) {
+      const pendingDeposit = await this.blockchain.getUserPendingDeposit(this.publicInput.assetId, this.depositor);
+      const txs = await this.core.getRemoteUnsettledPaymentTxs();
+      const unsettledDeposit = txs
+        .filter(
+          tx =>
+            tx.proofData.proofData.proofId === ProofId.DEPOSIT &&
+            tx.proofData.publicAssetId === this.publicInput.assetId &&
+            tx.proofData.publicOwner.equals(this.depositor),
+        )
+        .reduce((sum, tx) => sum + BigInt(tx.proofData.publicValue), BigInt(0));
+      this.pendingFunds = pendingDeposit - unsettledDeposit;
     }
-    return this.pendingDeposit;
+    return this.pendingFunds;
   }
 
   public async getRequiredFunds() {
@@ -362,10 +373,10 @@ export class DepositController {
   ) {
     const timer = new Timer();
     while (true) {
-      // If we want confidence the tx will be accepted, we'll wait 30s to ensure chain state propagation.
+      // We want confidence the tx will be accepted, so simulate waiting for confirmations.
       if (await checkOnchainData()) {
         const secondsTillConfirmed = (this.blockchain.minConfirmations - 1) * 15;
-        await sleep(secondsTillConfirmed);
+        await sleep(secondsTillConfirmed * 1000);
         return true;
       }
 
