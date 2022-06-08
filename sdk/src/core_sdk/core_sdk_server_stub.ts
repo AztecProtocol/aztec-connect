@@ -330,16 +330,6 @@ export class CoreSdkServerStub {
     return balance.toString();
   }
 
-  public async getTotalBalances(userId: string, unsafe?: boolean) {
-    const balances = await this.core.getTotalBalances(GrumpkinAddress.fromString(userId), unsafe);
-    return balances.map(assetValueToJson);
-  }
-
-  public async getTotalBalance(userId: string, assetId: number, unsafe?: boolean) {
-    const balance = await this.core.getTotalBalance(GrumpkinAddress.fromString(userId), assetId, unsafe);
-    return balance.toString();
-  }
-
   public async getSpendableSum(userId: string, assetId: number, excludePendingNotes?: boolean, unsafe?: boolean) {
     const sum = await this.core.getSpendableSum(
       GrumpkinAddress.fromString(userId),

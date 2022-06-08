@@ -328,16 +328,6 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
     return BigInt(balanceStr);
   }
 
-  public async getTotalBalances(userId: GrumpkinAddress, unsafe?: boolean) {
-    const balances = await this.backend.getTotalBalances(userId.toString(), unsafe);
-    return balances.map(assetValueFromJson);
-  }
-
-  public async getTotalBalance(userId: GrumpkinAddress, assetId: number, unsafe?: boolean) {
-    const balanceStr = await this.backend.getTotalBalance(userId.toString(), assetId, unsafe);
-    return BigInt(balanceStr);
-  }
-
   public async getSpendableSum(
     userId: GrumpkinAddress,
     assetId: number,

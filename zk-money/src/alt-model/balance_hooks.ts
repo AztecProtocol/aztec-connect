@@ -23,7 +23,7 @@ export function useBalance(assetId?: number) {
   });
   useEffect(() => {
     if (sdk && userId && assetId !== undefined) {
-      const updateBalance = async () => setBalance((await sdk.getTotalBalance(userId, assetId)).value);
+      const updateBalance = async () => setBalance((await sdk.getBalance(userId, assetId)).value);
       updateBalance();
       return listenAccountUpdated(sdk, userId, updateBalance);
     } else {
@@ -39,7 +39,7 @@ export function useBalances() {
   const [balances, setBalances] = useState<AssetValue[]>();
   useEffect(() => {
     if (userId && sdk) {
-      const updateBalances = async () => setBalances(await sdk.getTotalBalances(userId));
+      const updateBalances = async () => setBalances(await sdk.getBalances(userId));
       updateBalances();
       return listenAccountUpdated(sdk, userId, updateBalances);
     }

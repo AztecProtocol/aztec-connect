@@ -266,14 +266,6 @@ export class CoreSdkDispatch extends EventEmitter implements CoreSdkSerializedIn
     return this.request('getBalance', [userId, assetId, unsafe]);
   }
 
-  public getTotalBalances(userId: string, unsafe?: boolean) {
-    return this.request('getTotalBalances', [userId, unsafe]);
-  }
-
-  public getTotalBalance(userId: string, assetId: number, unsafe?: boolean) {
-    return this.request('getTotalBalance', [userId, assetId, unsafe]);
-  }
-
   public async getSpendableSum(userId: string, assetId: number, excludePendingNotes?: boolean, unsafe?: boolean) {
     return this.request('getSpendableSum', [userId, assetId, excludePendingNotes, unsafe]);
   }

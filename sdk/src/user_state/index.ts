@@ -671,17 +671,6 @@ export class UserState extends EventEmitter {
       .filter(assetValue => assetValue.value > BigInt(0));
   }
 
-  public getTotalBalance(assetId: number, unsafe = false) {
-    const { notePicker } = this.notePickers.find(np => np.assetId === assetId) || {};
-    return notePicker ? notePicker.getTotalSum(unsafe) : BigInt(0);
-  }
-
-  public getTotalBalances(unsafe = false) {
-    return this.notePickers
-      .map(({ assetId, notePicker }) => ({ assetId, value: notePicker.getTotalSum(unsafe) }))
-      .filter(assetValue => assetValue.value > BigInt(0));
-  }
-
   public async addProof({ tx, outputNotes }: ProofOutput) {
     switch (tx.proofId) {
       case ProofId.DEPOSIT:

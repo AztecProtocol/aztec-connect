@@ -5,22 +5,19 @@ import { Note } from '../note';
 const noteSum = (notes: Note[]) => notes.reduce((sum, { value }) => sum + value, BigInt(0));
 
 export class NotePicker {
-  private readonly safeNotes: SortedNotes;
-  private readonly unsafeNotes: SortedNotes;
   private readonly spendableNotes: SortedNotes;
   private readonly settledNotes: SortedNotes;
   private readonly unsafeSpendableNotes: SortedNotes;
   private readonly unsafeSettledNotes: SortedNotes;
 
-  constructor(notes: Note[] = []) {
-    const sortedNotes = new SortedNotes(notes);
-    this.safeNotes = sortedNotes.filter(n => n.ownerAccountRequired);
-    this.spendableNotes = this.safeNotes.filter(n => !n.pending || n.allowChain);
-    this.settledNotes = this.safeNotes.filter(n => !n.pending);
+  constructor(readonly notes: Note[] = []) {
+    const safeNotes = notes.filter(n => n.ownerAccountRequired);
+    this.spendableNotes = new SortedNotes(safeNotes.filter(n => !n.pending || n.allowChain));
+    this.settledNotes = new SortedNotes(safeNotes.filter(n => !n.pending));
 
-    this.unsafeNotes = sortedNotes.filter(n => !n.ownerAccountRequired);
-    this.unsafeSpendableNotes = this.unsafeNotes.filter(n => !n.pending || n.allowChain);
-    this.unsafeSettledNotes = this.unsafeNotes.filter(n => !n.pending);
+    const unsafeNotes = notes.filter(n => !n.ownerAccountRequired);
+    this.unsafeSpendableNotes = new SortedNotes(unsafeNotes.filter(n => !n.pending || n.allowChain));
+    this.unsafeSettledNotes = new SortedNotes(unsafeNotes.filter(n => !n.pending));
   }
 
   pick(value: bigint, excludeNullifiers?: Buffer[], excludePendingNotes = false, unsafe = false) {
@@ -49,10 +46,6 @@ export class NotePicker {
 
   getSum(unsafe = false) {
     return noteSum(unsafe ? this.unsafeSettledNotes.notes : this.settledNotes.notes);
-  }
-
-  getTotalSum(unsafe = false) {
-    return noteSum(unsafe ? this.unsafeNotes.notes : this.safeNotes.notes);
   }
 
   getSpendableSum(excludeNullifiers?: Buffer[], excludePendingNotes = false, unsafe = false) {
