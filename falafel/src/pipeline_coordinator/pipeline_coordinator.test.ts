@@ -89,6 +89,7 @@ describe('pipeline_coordinator', () => {
     } as any;
 
     rollupDb = {
+      getPendingTxCount: jest.fn().mockResolvedValue(0),
       deleteUnsettledRollups: jest.fn(),
       deleteOrphanedRollupProofs: jest.fn(),
       deleteUnsettledClaimTxs: jest.fn(),
