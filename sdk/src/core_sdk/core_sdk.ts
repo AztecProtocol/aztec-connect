@@ -185,13 +185,8 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     // that once the await to push() returns, nothing else is on, or can be added to the queue.
     await this.serialQueue.push(async () => this.serialQueue.cancel());
 
-    // Stop listening to account state updates, and stop account syncing.
-    await Promise.all(
-      this.userStates.map(us => {
-        us.removeAllListeners();
-        return us.stop();
-      }),
-    );
+    // Stop listening to account state updates.
+    this.userStates.forEach(us => us.removeAllListeners());
 
     // Destroy injected components.
     await this.fftFactory.destroy();
@@ -310,7 +305,6 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       const userState = await this.userStateFactory.createUserState(user);
       this.userStates.push(userState);
 
-      userState.start();
       this.emit(SdkEvent.UPDATED_USERS);
 
       return userState.getUserData();
@@ -322,7 +316,6 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       const userState = this.getUserState(userId);
       this.userStates = this.userStates.filter(us => us !== userState);
       userState.removeAllListeners();
-      await userState.stop();
       await this.db.removeUser(userId);
 
       this.emit(SdkEvent.UPDATED_USERS);
@@ -1079,9 +1072,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       const blockContexts = blocks.map(block => new BlockContext(block, this.pedersen));
 
       // Forward the block contexts on to each UserState for processing.
-      this.userStates.forEach(us =>
-        us.processBlocks(blockContexts.filter(b => b.block.rollupId > us.getUserData().syncedToRollup)),
-      );
+      await Promise.all(this.userStates.map(us => us.processBlocks(blockContexts)));
 
       from = blocks[blocks.length - 1].rollupId + 1;
     }
