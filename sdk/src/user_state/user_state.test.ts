@@ -21,7 +21,6 @@ import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
 import { randomBytes } from 'crypto';
-import { BlockContext } from '../block_context/block_context';
 import { CoreDefiTx, CorePaymentTx, PaymentProofId } from '../core_tx';
 import { Database } from '../database';
 import { Note } from '../note';
@@ -41,7 +40,6 @@ describe('user state', () => {
   let user: UserData;
   let generatedHashPaths: { [key: number]: HashPath } = {};
   let inputNotes: Note[] = [];
-  const pedersen = {} as any;
 
   const createEphemeralPrivKey = () => grumpkin.getRandomFr();
 
@@ -149,7 +147,6 @@ describe('user state', () => {
 
     userState = new UserState(user, grumpkin, noteAlgos, db as any, rollupProvider as any);
     await userState.init();
-    await userState.start();
   });
 
   const createNote = (
@@ -546,8 +543,7 @@ describe('user state', () => {
 
     db.getPaymentTx.mockResolvedValue({ settled: undefined });
 
-    userState.processBlock(createBlockContext(block));
-    await userState.stop(true);
+    await userState.processBlock(createBlockContext(block));
 
     expect(db.addNote).toHaveBeenCalledTimes(1);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
@@ -599,8 +595,7 @@ describe('user state', () => {
 
     db.getPaymentTx.mockResolvedValue({ settled: undefined });
 
-    userState.processBlock(createBlockContext(block));
-    await userState.stop(true);
+    await userState.processBlock(createBlockContext(block));
 
     expect(db.addNote).toHaveBeenCalledTimes(1);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
@@ -635,7 +630,7 @@ describe('user state', () => {
 
     db.getPaymentTx.mockResolvedValue({ settled: undefined });
 
-    await userState.handleBlocks([block1, block2].map(x => createBlockContext(x)));
+    await userState.processBlocks([block1, block2].map(x => createBlockContext(x)));
 
     expect(db.addNote).toHaveBeenCalledTimes(2);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
@@ -671,7 +666,7 @@ describe('user state', () => {
     const blocks = Array(5)
       .fill(0)
       .map((_, i) => createRollupBlock([generatePaymentProof()], { rollupId: i }));
-    await userState.handleBlocks(blocks.map(x => createBlockContext(x)));
+    await userState.processBlocks(blocks.map(x => createBlockContext(x)));
 
     const user = userState.getUserData();
     expect(user.syncedToRollup).toBe(4);
@@ -680,7 +675,7 @@ describe('user state', () => {
     const paddingBlocks = Array(3)
       .fill(0)
       .map((_, i) => createRollupBlock([], { rollupId: 5 + i, rollupSize: 1 }));
-    await userState.handleBlocks(paddingBlocks.map(x => createBlockContext(x)));
+    await userState.processBlocks(paddingBlocks.map(x => createBlockContext(x)));
 
     expect(userState.getUserData().syncedToRollup).toBe(7);
   });
@@ -690,7 +685,6 @@ describe('user state', () => {
     const block = createRollupBlock([generatePaymentProof({ proofSender: stranger, newNoteOwner: stranger })]);
 
     userState.processBlock(createBlockContext(block));
-    await userState.stop(true);
 
     expect(db.addNote).toHaveBeenCalledTimes(0);
     expect(db.nullifyNote).toHaveBeenCalledTimes(0);
@@ -710,8 +704,7 @@ describe('user state', () => {
     });
     const block = createRollupBlock([jsProof]);
 
-    userState.processBlock(createBlockContext(block));
-    await userState.stop(true);
+    await userState.processBlock(createBlockContext(block));
 
     const txId = new TxId(jsProof.proofData.txId);
     expect(db.addNote).toHaveBeenCalledTimes(1);
@@ -753,8 +746,7 @@ describe('user state', () => {
     });
     const block = createRollupBlock([jsProof]);
 
-    userState.processBlock(createBlockContext(block));
-    await userState.stop(true);
+    await userState.processBlock(createBlockContext(block));
 
     const txId = new TxId(jsProof.proofData.txId);
     const changeValue = inputNoteValue1 + inputNoteValue2 - withdrawValue - txFee;
@@ -792,8 +784,7 @@ describe('user state', () => {
 
     db.getNoteByNullifier.mockResolvedValue(undefined);
 
-    userState.processBlock(createBlockContext(block));
-    await userState.stop(true);
+    await userState.processBlock(createBlockContext(block));
 
     expect(db.addNote).toHaveBeenCalledTimes(1);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
@@ -822,8 +813,7 @@ describe('user state', () => {
     });
     const block = createRollupBlock([proof]);
 
-    userState.processBlock(createBlockContext(block));
-    await userState.stop(true);
+    await userState.processBlock(createBlockContext(block));
 
     expect(db.addNote).toHaveBeenCalledTimes(1);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
@@ -853,8 +843,7 @@ describe('user state', () => {
     const proof = generateTransferProof();
     const block = createRollupBlock([proof]);
 
-    userState.processBlock(createBlockContext(block));
-    await userState.stop(true);
+    await userState.processBlock(createBlockContext(block));
 
     expect(db.addNote).toHaveBeenCalledTimes(1);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
@@ -883,8 +872,7 @@ describe('user state', () => {
     });
     const block = createRollupBlock([proof]);
 
-    userState.processBlock(createBlockContext(block));
-    await userState.stop(true);
+    await userState.processBlock(createBlockContext(block));
 
     expect(db.addPaymentTx.mock.calls[0][0]).toMatchObject({
       userId: user.id,
@@ -903,8 +891,7 @@ describe('user state', () => {
     });
     const block = createRollupBlock([proof]);
 
-    userState.processBlock(createBlockContext(block));
-    await userState.stop(true);
+    await userState.processBlock(createBlockContext(block));
 
     expect(db.addPaymentTx.mock.calls[0][0]).toMatchObject({
       userId: user.id,
@@ -923,8 +910,7 @@ describe('user state', () => {
     });
     const block = createRollupBlock([proof]);
 
-    userState.processBlock(createBlockContext(block));
-    await userState.stop(true);
+    await userState.processBlock(createBlockContext(block));
 
     expect(db.addPaymentTx.mock.calls[0][0]).toMatchObject({
       userId: user.id,
@@ -944,8 +930,7 @@ describe('user state', () => {
       settled: undefined,
     });
 
-    userState.processBlock(createBlockContext(block));
-    await userState.stop(true);
+    await userState.processBlock(createBlockContext(block));
 
     const txId = new TxId(accountProof.proofData.txId);
 
@@ -974,8 +959,7 @@ describe('user state', () => {
     const accountProof = generateAccountProof({ aliasHash, newSpendingPublicKey1, newSpendingPublicKey2 });
     const block = createRollupBlock([accountProof]);
 
-    userState.processBlock(createBlockContext(block));
-    await userState.stop(true);
+    await userState.processBlock(createBlockContext(block));
 
     const txId = new TxId(accountProof.proofData.txId);
 
@@ -1018,8 +1002,7 @@ describe('user state', () => {
     });
     const block = createRollupBlock([accountProof]);
 
-    userState.processBlock(createBlockContext(block));
-    await userState.stop(true);
+    await userState.processBlock(createBlockContext(block));
 
     expect(db.addSpendingKey).toHaveBeenCalledTimes(0);
     expect(db.settleAccountTx).toHaveBeenCalledTimes(0);
@@ -1040,8 +1023,7 @@ describe('user state', () => {
     });
     const block = createRollupBlock([accountProof]);
 
-    userState.processBlock(createBlockContext(block));
-    await userState.stop(true);
+    await userState.processBlock(createBlockContext(block));
 
     const txId = new TxId(accountProof.proofData.txId);
 
@@ -1076,8 +1058,7 @@ describe('user state', () => {
     const accountProof = generateAccountProof({ userId: randomUser.id });
     const block = createRollupBlock([accountProof]);
 
-    userState.processBlock(createBlockContext(block));
-    await userState.stop(true);
+    await userState.processBlock(createBlockContext(block));
 
     expect(db.addSpendingKey).toHaveBeenCalledTimes(0);
     expect(db.settleAccountTx).toHaveBeenCalledTimes(0);
@@ -1120,8 +1101,7 @@ describe('user state', () => {
     db.getDefiTx.mockResolvedValue({ settled: undefined });
     db.getDefiTxsByNonce.mockResolvedValue([]).mockResolvedValueOnce([{ txId, depositValue: depositValue }]);
 
-    userState.processBlock(createBlockContext(block));
-    await userState.stop(true);
+    await userState.processBlock(createBlockContext(block));
 
     const { partialStateSecretEphPubKey } = defiProof.offchainTxData;
     const partialStateSecret = deriveNoteSecret(partialStateSecretEphPubKey, user.accountPrivateKey, grumpkin);
@@ -1206,9 +1186,8 @@ describe('user state', () => {
       nonce === defiProofInteractionNonce ? [{ txId, depositValue: depositValue }] : [],
     );
 
-    userState.processBlock(createBlockContext(block1));
-    userState.processBlock(createBlockContext(block2));
-    await userState.stop(true);
+    await userState.processBlock(createBlockContext(block1));
+    await userState.processBlock(createBlockContext(block2));
 
     const { partialStateSecretEphPubKey } = defiProof.offchainTxData;
     const partialStateSecret = deriveNoteSecret(partialStateSecretEphPubKey, user.accountPrivateKey, grumpkin);
@@ -1294,8 +1273,7 @@ describe('user state', () => {
     const randomDefitX = { txId: TxId.random(), depositValue: 0n };
     db.getDefiTxsByNonce.mockImplementation((_, nonce) => (nonce === defiProofInteractionNonce ? [] : [randomDefitX]));
 
-    userState.processBlock(createBlockContext(block));
-    await userState.stop(true);
+    await userState.processBlock(createBlockContext(block));
 
     const txId = new TxId(defiProof.proofData.txId);
     expect(db.addClaimTx.mock.calls[0][0]).toMatchObject({
@@ -1406,8 +1384,7 @@ describe('user state', () => {
       .mockResolvedValue([])
       .mockResolvedValueOnce([{ txId: defiProof.tx.txId, depositValue: depositValue }]);
 
-    userState.processBlock(createBlockContext(block));
-    await userState.stop(true);
+    await userState.processBlock(createBlockContext(block));
 
     expect(db.addNote).toHaveBeenCalledTimes(2);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
@@ -1459,8 +1436,7 @@ describe('user state', () => {
 
     db.getPaymentTx.mockResolvedValue({ settled: undefined });
 
-    userState.processBlock(createBlockContext(block));
-    await userState.stop(true);
+    await userState.processBlock(createBlockContext(block));
 
     expect(db.addNote).toHaveBeenCalledTimes(0);
   });
@@ -1515,8 +1491,7 @@ describe('user state', () => {
       const claimProof = generateDefiClaimProof({ bridgeId, outputValueA, outputValueB, nullifier1, nullifier2 });
       const block = createRollupBlock([claimProof]);
 
-      userState.processBlock(createBlockContext(block));
-      await userState.stop(true);
+      await userState.processBlock(createBlockContext(block));
 
       expect(db.addNote).toHaveBeenCalledTimes(2);
       expect(db.addNote.mock.calls[0][0]).toMatchObject({
@@ -1558,8 +1533,7 @@ describe('user state', () => {
       const claimProof = generateDefiClaimProof({ bridgeId, outputValueA, outputValueB, nullifier1, nullifier2 });
       const block = createRollupBlock([claimProof]);
 
-      userState.processBlock(createBlockContext(block));
-      await userState.stop(true);
+      await userState.processBlock(createBlockContext(block));
 
       expect(db.addNote).toHaveBeenCalledTimes(1);
       expect(db.addNote.mock.calls[0][0]).toMatchObject({
@@ -1594,8 +1568,7 @@ describe('user state', () => {
       const claimProof = generateDefiClaimProof({ bridgeId, outputValueA, outputValueB, nullifier1, nullifier2 });
       const block = createRollupBlock([claimProof]);
 
-      userState.processBlock(createBlockContext(block));
-      await userState.stop(true);
+      await userState.processBlock(createBlockContext(block));
 
       expect(db.addNote).toHaveBeenCalledTimes(2);
       expect(db.addNote.mock.calls[0][0]).toMatchObject({
@@ -1636,8 +1609,7 @@ describe('user state', () => {
       const claimProof = generateDefiClaimProof({ bridgeId, outputValueA, outputValueB, nullifier1, nullifier2 });
       const block = createRollupBlock([claimProof]);
 
-      userState.processBlock(createBlockContext(block));
-      await userState.stop(true);
+      await userState.processBlock(createBlockContext(block));
 
       expect(db.addNote).toHaveBeenCalledTimes(1);
       expect(db.addNote.mock.calls[0][0]).toMatchObject({
@@ -1671,8 +1643,7 @@ describe('user state', () => {
       const claimProof = generateDefiClaimProof({ bridgeId, outputValueA, outputValueB, nullifier1, nullifier2 });
       const block = createRollupBlock([claimProof]);
 
-      userState.processBlock(createBlockContext(block));
-      await userState.stop(true);
+      await userState.processBlock(createBlockContext(block));
 
       expect(db.addNote).toHaveBeenCalledTimes(2);
       expect(db.addNote.mock.calls[0][0]).toMatchObject({

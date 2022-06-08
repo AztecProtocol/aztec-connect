@@ -296,7 +296,7 @@ export class AppView extends PureComponent<AppProps, AppState> {
       window.location.pathname === Pages.SIGNIN;
 
     const accountComponent = isLoggedIn ? (
-      <UserAccount account={accountState!} worldState={worldState} onLogout={this.handleLogout} />
+      <UserAccount account={accountState!} onLogout={this.handleLogout} />
     ) : undefined;
 
     return (

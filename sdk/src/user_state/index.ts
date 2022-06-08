@@ -4,7 +4,6 @@ import { virtualAssetIdFlag } from '@aztec/barretenberg/bridge_id';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { createLogger } from '@aztec/barretenberg/debug';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
-import { MemoryFifo } from '@aztec/barretenberg/fifo';
 import {
   batchDecryptNotes,
   deriveNoteSecret,
@@ -38,8 +37,6 @@ export enum UserStateEvent {
 
 export class UserState extends EventEmitter {
   private notePickers: { assetId: number; notePicker: NotePicker }[] = [];
-  private blockQueue = new MemoryFifo<BlockContext[]>();
-  private runningPromise!: Promise<void>;
 
   constructor(
     private userData: UserData,
@@ -63,23 +60,8 @@ export class UserState extends EventEmitter {
     await this.refreshNotePicker();
   }
 
-  public async start() {
-    this.debug(`starting from rollup block ${this.userData.syncedToRollup + 1}...`);
-    this.runningPromise = this.blockQueue.process(async blocks => this.handleBlocks(blocks));
-  }
-
-  /**
-   * Stops processing queued blocks. Blocks until any processing is complete.
-   */
-  public async stop(flush = false) {
-    this.debug(`stopping...`);
-    flush ? this.blockQueue.end() : this.blockQueue.cancel();
-    await this.runningPromise;
-    this.debug('stopped.');
-  }
-
   public isSyncing() {
-    return this.blockQueue.length() > 1;
+    return this.userData.syncedToRollup < this.rollupProvider.getLatestRollupId();
   }
 
   public async awaitSynchronised() {
@@ -92,16 +74,11 @@ export class UserState extends EventEmitter {
     return this.userData;
   }
 
-  public processBlock(block: BlockContext) {
-    this.blockQueue.put([block]);
+  public async processBlock(blockContext: BlockContext) {
+    await this.processBlocks([blockContext]);
   }
 
-  public processBlocks(blocks: BlockContext[]) {
-    this.blockQueue.put(blocks);
-  }
-
-  // TODO: This should not be public! Tests should enqueue blocks, and call stop() with flush=true.
-  public async handleBlocks(blockContexts: BlockContext[]) {
+  public async processBlocks(blockContexts: BlockContext[]) {
     blockContexts = blockContexts.filter(b => b.block.rollupId > this.userData.syncedToRollup);
     if (blockContexts.length == 0) {
       return;

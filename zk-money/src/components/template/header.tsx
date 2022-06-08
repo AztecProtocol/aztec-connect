@@ -65,19 +65,11 @@ interface HeaderProps {
   theme: Theme;
   rootUrl: string;
   network?: string;
-  worldState?: WorldState;
   account?: AccountState;
   onLogout?: () => void;
 }
 
-export const Header: React.FunctionComponent<HeaderProps> = ({
-  theme,
-  rootUrl,
-  network,
-  worldState,
-  account,
-  onLogout,
-}) => (
+export const Header: React.FunctionComponent<HeaderProps> = ({ theme, rootUrl, network, account, onLogout }) => (
   <HeaderRoot>
     <LogoRoot theme={theme}>
       <Link to={rootUrl}>
@@ -92,7 +84,7 @@ export const Header: React.FunctionComponent<HeaderProps> = ({
       )}
       {!!account && (
         <AccountItem>
-          <UserAccount account={account} worldState={worldState!} onLogout={onLogout!} />
+          <UserAccount account={account} onLogout={onLogout!} />
         </AccountItem>
       )}
     </AccountRoot>

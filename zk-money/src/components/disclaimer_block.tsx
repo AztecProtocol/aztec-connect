@@ -1,11 +1,9 @@
-import type { RemoteAsset } from 'alt-model/types';
 import React from 'react';
 import styled from 'styled-components/macro';
 import warningIcon from '../images/warning.svg';
 import { Text } from './text';
 import { borderRadiuses, breakpoints, spacings, Theme, themeColours } from '../styles';
-import { formatBaseUnits } from 'app';
-import { getAssetPreferredFractionalDigits } from 'alt-model/known_assets/known_asset_display_data';
+import { TextLink } from './text_link';
 
 const Root = styled.div`
   display: flex;
@@ -60,12 +58,7 @@ const WarningFootnote = styled(Text)`
   }
 `;
 
-interface DisclaimerBlockProps {
-  asset: RemoteAsset;
-  txAmountLimit: bigint;
-}
-
-export const DisclaimerBlock: React.FunctionComponent<DisclaimerBlockProps> = ({ asset, txAmountLimit }) => {
+export const DisclaimerBlock: React.FunctionComponent = () => {
   return (
     <Root>
       <ColIcon>
@@ -74,15 +67,17 @@ export const DisclaimerBlock: React.FunctionComponent<DisclaimerBlockProps> = ({
       </ColIcon>
       <ColContent>
         <Text size="s">
-          {`This is experimental software that hasn’t been externally audited yet. For security, amounts are capped at ${formatBaseUnits(
-            txAmountLimit,
-            asset.decimals,
-            {
-              precision: getAssetPreferredFractionalDigits(asset.address),
-              commaSeparated: true,
-            },
-          )} ${asset.symbol}. `}
-          <WarningFootnote text="Use at your own risk." weight="bold" inline />
+          This is experimental software. Use at your own risk. Learn more about our approach to security{' '}
+          <TextLink
+            inline
+            href="https://medium.com/aztec-protocol/layer-by-layer-a-guide-to-aztecs-security-approach-87df087093c0"
+            target="_blank"
+            underline
+            color="white"
+          >
+            here
+          </TextLink>
+          .
         </Text>
       </ColContent>
     </Root>
