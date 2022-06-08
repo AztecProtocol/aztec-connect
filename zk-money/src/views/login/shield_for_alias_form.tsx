@@ -84,6 +84,10 @@ const InputPaddedBlock = styled.div`
   padding: ${spacings.m} 0 ${spacings.l};
 `;
 
+const DisclaimerPaddedBlock = styled(PaddedBlock)`
+  width: 100%;
+`;
+
 const FieldTitleRoot = styled.div`
   display: flex;
   justify-content: space-between;
@@ -275,7 +279,7 @@ export const ShieldForAliasForm: React.FunctionComponent<DepositFormProps> = ({
           </FieldInputWrapper>
         </InputPaddedBlock>
       </Cols>
-      <PaddedBlock size="m">
+      <DisclaimerPaddedBlock size="m">
         <DisclaimerBlock />
         <ConfirmRoot>
           <Checkbox
@@ -285,7 +289,7 @@ export const ShieldForAliasForm: React.FunctionComponent<DepositFormProps> = ({
             onChangeValue={setRisksAccepted}
           />
         </ConfirmRoot>
-      </PaddedBlock>
+      </DisclaimerPaddedBlock>
       <InputRow>
         <ButtonRoot>
           <Button

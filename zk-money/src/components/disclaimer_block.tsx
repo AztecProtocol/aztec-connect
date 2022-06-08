@@ -67,20 +67,17 @@ export const DisclaimerBlock: React.FunctionComponent = () => {
       </ColIcon>
       <ColContent>
         <Text size="s">
-          This is experimental software. Use at your own risk.
-          <br />
-          <br />
-          Learn more about our approach to security{' '}
+          This is experimental software. Use at your own risk. Learn more about our approach to security{' '}
           <TextLink
             inline
             href="https://medium.com/aztec-protocol/layer-by-layer-a-guide-to-aztecs-security-approach-87df087093c0"
             target="_blank"
             underline
+            color="white"
           >
             here
           </TextLink>
           .
-          <WarningFootnote text="Use at your own risk." weight="bold" inline />
         </Text>
       </ColContent>
     </Root>
