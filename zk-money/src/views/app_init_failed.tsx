@@ -38,7 +38,6 @@ export function AppInitFailed({ reason }: AppInitFailedProps) {
     <Template theme={Theme.GRADIENT} systemMessage={systemMessage}>
       <Navbar path={window.location.pathname} appAction={AppAction.NADA} theme={Theme.GRADIENT} isLoggedIn={false} />
       <Home onSignup={handleInteraction} />
-      <Footer />
       {showingReason && reason.type === 'unsupported' && (
         <UnsupportedPopup onClose={handleClosePopup} supportStatus={reason.supportStatus} />
       )}

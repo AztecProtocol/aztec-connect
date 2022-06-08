@@ -340,6 +340,16 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
     return this.core.getBalance(userId, assetId, unsafe);
   }
 
+  public async getTotalBalances(userId: string, unsafe?: boolean) {
+    await this.checkPermission(userId);
+    return this.core.getTotalBalances(userId, unsafe);
+  }
+
+  public async getTotalBalance(userId: string, assetId: number, unsafe?: boolean) {
+    await this.checkPermission(userId);
+    return this.core.getTotalBalance(userId, assetId, unsafe);
+  }
+
   public async getSpendableSum(userId: string, assetId: number, excludePendingNotes?: boolean, unsafe?: boolean) {
     await this.checkPermission(userId);
     return this.core.getSpendableSum(userId, assetId, excludePendingNotes, unsafe);

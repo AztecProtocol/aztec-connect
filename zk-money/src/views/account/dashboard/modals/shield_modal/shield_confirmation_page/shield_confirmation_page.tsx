@@ -29,7 +29,6 @@ export function ShieldConfirmationPage({
 }: ShieldConfirmationPageProps) {
   const [riskChecked, setRiskChecked] = useState(false);
   const hasError = !!composerState?.error;
-  const asset = validationResult.input.targetAsset;
   const isIdle = composerState.phase === ShieldComposerPhase.IDLE;
   const showingComplete = composerState.phase === ShieldComposerPhase.DONE;
   const showingDeclaration = isIdle && !hasError;
@@ -47,12 +46,7 @@ export function ShieldConfirmationPage({
       />
       <BorderBox>
         {showingDeclaration ? (
-          <Disclaimer
-            accepted={riskChecked}
-            onChangeAccepted={setRiskChecked}
-            asset={asset}
-            transactionLimit={validationResult.input.transactionLimit ?? 0n}
-          />
+          <Disclaimer accepted={riskChecked} onChangeAccepted={setRiskChecked} />
         ) : showingComplete ? (
           <TransactionComplete onClose={onClose} />
         ) : (

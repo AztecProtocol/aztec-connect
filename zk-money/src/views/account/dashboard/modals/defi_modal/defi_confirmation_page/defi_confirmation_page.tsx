@@ -109,12 +109,7 @@ export function DefiConfirmationPage({
       />
       <BorderBox>
         {showingDeclaration ? (
-          <Disclaimer
-            accepted={riskChecked}
-            onChangeAccepted={setRiskChecked}
-            asset={asset}
-            transactionLimit={validationResult.input.transactionLimit ?? 0n}
-          />
+          <Disclaimer accepted={riskChecked} onChangeAccepted={setRiskChecked} />
         ) : showingComplete ? (
           <TransactionComplete onClose={onClose} />
         ) : (

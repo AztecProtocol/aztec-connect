@@ -276,7 +276,7 @@ export const ShieldForAliasForm: React.FunctionComponent<DepositFormProps> = ({
         </InputPaddedBlock>
       </Cols>
       <PaddedBlock size="m">
-        <DisclaimerBlock asset={asset} txAmountLimit={assetState.txAmountLimit} />
+        <DisclaimerBlock />
         <ConfirmRoot>
           <Checkbox
             text="I understand the risks"

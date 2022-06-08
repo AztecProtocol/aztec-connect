@@ -144,6 +144,10 @@ export interface CoreSdkInterface {
 
   getBalance(userId: GrumpkinAddress, assetId: number, unsafe?: boolean): Promise<bigint>;
 
+  getTotalBalances(userId: GrumpkinAddress, unsafe?: boolean): Promise<AssetValue[]>;
+
+  getTotalBalance(userId: GrumpkinAddress, assetId: number, unsafe?: boolean): Promise<bigint>;
+
   getSpendableSum(
     userId: GrumpkinAddress,
     assetId: number,
