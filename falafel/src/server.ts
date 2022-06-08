@@ -171,7 +171,7 @@ export class Server {
     this.bridgeResolver.setConf(defaultDeFiBatchSize, bridgeConfigs);
     this.pipelineFactory.setConf(this.txFeeResolver, publishInterval, flushAfterIdle, maxProviderGasPrice, gasLimit);
 
-    await this.worldState.resetPipeline();
+    await this.worldState.restartPipeline();
   }
 
   private createTxFeeResolver() {

@@ -37,7 +37,15 @@ export class RollupPipeline {
     const outerRollupSize = 1 << Math.ceil(Math.log2(innerRollupSize * numOuterRollupProofs));
 
     console.log(
-      `Pipeline inner_txs/outer_txs/rollup_size: ${numInnerRollupTxs}/${numOuterRollupProofs}/${outerRollupSize}`,
+      `RollupPipeline: ${JSON.stringify({
+        numInnerRollupTxs,
+        numOuterRollupProofs,
+        outerRollupSize,
+        publishInterval,
+        flushAfterIdle,
+        gasLimit,
+        maxProviderGasPrice,
+      })}`,
     );
 
     const rollupPublisher = new RollupPublisher(rollupDb, blockchain, maxProviderGasPrice, gasLimit, metrics);
