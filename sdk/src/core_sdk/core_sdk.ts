@@ -303,6 +303,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       await this.db.addUser(user);
 
       const userState = await this.userStateFactory.createUserState(user);
+      userState.on(UserStateEvent.UPDATED_USER_STATE, id => this.emit(SdkEvent.UPDATED_USER_STATE, id));
       this.userStates.push(userState);
 
       this.emit(SdkEvent.UPDATED_USERS);
