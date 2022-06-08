@@ -33,13 +33,13 @@ for E in ${PROJECTS[@]}; do
   echo
 
   resolve_symlinks
-  time docker build -f $DOCKERFILE -t $ECR_URL/$REPO:latest .
+  time docker build -f $DOCKERFILE -t $ECR_DEPLOY_URL/$REPO:latest .
 
   if [ "$PROJECT" = "$TARGET_PROJECT" ]; then
     if [ -n "$PUSH_LABEL" ]; then
       $(aws ecr get-login --region eu-west-2 --no-include-email) 2> /dev/null
-      docker tag $ECR_URL/$REPO:latest $ECR_URL/$REPO:$PUSH_LABEL
-      docker push $ECR_URL/$REPO:$PUSH_LABEL
+      docker tag $ECR_DEPLOY_URL/$REPO:latest $ECR_DEPLOY_URL/$REPO:$PUSH_LABEL
+      docker push $ECR_DEPLOY_URL/$REPO:$PUSH_LABEL
     fi
     break
   fi
