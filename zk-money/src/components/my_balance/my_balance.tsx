@@ -36,10 +36,7 @@ function TooltipContent() {
       Funds may be unavailable while the rollup settles to Ethereum mainnet.
       <br />
       <br /> Learn how we query prices and assets values{' '}
-      <Hyperlink
-        href="https://aztecnetwork.notion.site/New-zk-money-user-guide-803ea618e67b4beaa44fbe97360efa62"
-        label="here."
-      />
+      <Hyperlink href="https://docs.aztec.network/how-aztec-works/faq" label="here." />
     </p>
   );
 }

@@ -43,7 +43,7 @@ export function PrivacyInformationSection(props: PrivacyInformationSectionProps)
       title={'Privacy'}
       buttonLabel={'Why is this important?'}
       // TODO: Update privacy FAQ with more useful info
-      helpLink="https://aztec-protocol.gitbook.io/zk-money/faq/faq-privacy"
+      helpLink="https://docs.aztec.network/how-aztec-works/privacy"
       subtitle={!props.txToAlias ? subtitle : 'Max'}
       content={<PrivacyContent txToAlias={props.txToAlias} progress={progress} text={text} />}
     />

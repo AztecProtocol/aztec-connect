@@ -56,7 +56,7 @@ export function SettlementTimeInformationSection(props: SettlementTimeInformatio
       }
       buttonLabel="Learn more"
       // TODO: Update FAQ with more useful info about settlement times
-      helpLink="https://aztec-protocol.gitbook.io/zk-money/faq/faq-rollup"
+      helpLink="https://docs.aztec.network/how-aztec-works/faq#fees"
     />
   );
 }

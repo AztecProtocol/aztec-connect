@@ -152,7 +152,7 @@ function Banner({ onShieldNow }: { onShieldNow: () => void }) {
           <Hyperlink
             theme="white"
             icon={HyperlinkIcon.Open}
-            href="https://aztec-protocol.gitbook.io/zk-money/faq"
+            href="https://docs.aztec.network/how-aztec-works/faq#what-happens-when-i-shield-a-token"
             label="What is Shielding? Read our FAQ"
           />
         </div>
