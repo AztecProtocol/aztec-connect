@@ -119,6 +119,7 @@ export function Home({ onSignup }: HomeProps) {
 // TODO: remove this check as part of launch
 // (similar change required in incentive_modal.tsx & src/index.tsx)
 const isProdSite = window.location.hostname === 'zk.money';
+const shieldDisabled = isProdSite && !localStorage.getItem('unlock_prod');
 
 function Banner({ onShieldNow }: { onShieldNow: () => void }) {
   return (
@@ -135,11 +136,11 @@ function Banner({ onShieldNow }: { onShieldNow: () => void }) {
           funds to start accessing!
         </div>
         <Button
-          text={isProdSite ? 'Coming soon' : 'Shield Now'}
+          text={shieldDisabled ? 'Coming soon' : 'Shield Now'}
           onClick={onShieldNow}
           className={style.shieldButton}
           theme="gradient"
-          disabled={isProdSite}
+          disabled={shieldDisabled}
         />
         <div className={style.links}>
           <Hyperlink
