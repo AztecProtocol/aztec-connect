@@ -291,7 +291,7 @@ jobs:
           working_directory: explorer
           command: build explorer
 
-  documentation:
+  docs:
     docker:
       - image: aztecprotocol/build-image
     steps:
@@ -301,8 +301,8 @@ jobs:
           version: 20.10.14
       - run:
           name: 'Build and test'
-          working_directory: documentation
-          command: build documentation
+          working_directory: docs
+          command: build docs
 
   end-to-end:
     docker:
@@ -595,6 +595,12 @@ jobs:
           command: |
             deploy_ecr explorer
             deploy_s3 explorer
+      - run:
+          name: 'docs'
+          working_directory: docs
+          command: |
+            deploy_ecr docs
+            deploy_s3 docs
 
   deploy-website:
     docker:
@@ -725,6 +731,8 @@ workflows:
           requires:
             - sdk
           filters: *tag_filter
+      - docs:
+          filters: *tag_filter
       - wasabi:
           requires:
             - sdk
@@ -807,6 +815,7 @@ workflows:
             - zk-money
             - hummus
             - explorer
+            - docs
           filters:
             branches:
               only:
