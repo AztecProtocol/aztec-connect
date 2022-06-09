@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Navbar } from 'ui-components';
-import { AppAction, MessageType } from 'app';
+import { MessageType } from 'app';
 import { Template } from 'components';
 import { Theme } from 'styles';
 import { Home } from 'views/home';
-import { Footer } from 'components/template/footer';
 import { SupportStatus } from 'device_support';
 import { UnsupportedPopup } from './unsupported_popup';
 import { SelfDismissingIncentiveModal } from './account/dashboard/modals/incentive_modal';
@@ -36,7 +35,7 @@ export function AppInitFailed({ reason }: AppInitFailedProps) {
   const systemMessage = showingReason && reason.type === 'falafel-down' ? FALAFEL_UNREACHABLE_MSG : undefined;
   return (
     <Template theme={Theme.GRADIENT} systemMessage={systemMessage}>
-      <Navbar path={window.location.pathname} appAction={AppAction.NADA} theme={Theme.GRADIENT} isLoggedIn={false} />
+      <Navbar path={window.location.pathname} theme={Theme.GRADIENT} isLoggedIn={false} />
       <Home onSignup={handleInteraction} />
       {showingReason && reason.type === 'unsupported' && (
         <UnsupportedPopup onClose={handleClosePopup} supportStatus={reason.supportStatus} />
