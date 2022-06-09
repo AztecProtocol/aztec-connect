@@ -133,7 +133,7 @@ function SyncEnteringAwaitingClaim(props: { tx: UserDefiTx }) {
   const estimate = getTimeUntilNextRollup(nextPublishTime);
   const outputAsset = useAsset(props.tx.bridgeId.outputAssetIdA);
   const tooltip = estimate
-    ? `Investment active. zk${outputAsset.symbol} funds settle in ${estimate}.`
+    ? `Investment active. zk${outputAsset.symbol} funds settle ${estimate}.`
     : `Investment active. Awaiting settlement of zk${outputAsset.symbol} funds.`;
   return <TicksAndTooltip txId={props.tx.txId} tooltip={tooltip} filledTicks={2} totalTicks={3} label="Entering" />;
 }
