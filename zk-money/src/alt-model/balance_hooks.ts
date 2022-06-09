@@ -1,4 +1,4 @@
-import type { AssetValue, JoinSplitTx } from '@aztec/sdk';
+import type { AssetValue, JoinSplitTx, UserPaymentTx, UserTx } from '@aztec/sdk';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { useEffect, useMemo, useState } from 'react';
 import { listenAccountUpdated } from './event_utils';
@@ -15,6 +15,20 @@ function useWithoutDust(assetValues?: AssetValue[]) {
   );
 }
 
+function filterForPendingShields(txs: UserTx[]): UserPaymentTx[] {
+  return txs.filter((tx): tx is UserPaymentTx => tx.proofId === ProofId.DEPOSIT && !tx.settled);
+}
+
+function sumPendingShields(txs: UserPaymentTx[], assetId: number) {
+  let total = 0n;
+  for (const tx of txs) {
+    if (tx.value.assetId === assetId) {
+      total += tx.value.value;
+    }
+  }
+  return total;
+}
+
 export function useBalance(assetId?: number) {
   const { userId } = useApp();
   const sdk = useSdk();
@@ -23,7 +37,13 @@ export function useBalance(assetId?: number) {
   });
   useEffect(() => {
     if (sdk && userId && assetId !== undefined) {
-      const updateBalance = async () => setBalance((await sdk.getBalance(userId, assetId)).value);
+      const updateBalance = async () => {
+        const txsProm = sdk.getUserTxs(userId);
+        const settledBalance = await sdk.getBalance(userId, assetId);
+        const txs = await txsProm;
+        const pendingShields = filterForPendingShields(txs);
+        setBalance(settledBalance.value + sumPendingShields(pendingShields, assetId));
+      };
       updateBalance();
       return listenAccountUpdated(sdk, userId, updateBalance);
     } else {
@@ -39,7 +59,17 @@ export function useBalances() {
   const [balances, setBalances] = useState<AssetValue[]>();
   useEffect(() => {
     if (userId && sdk) {
-      const updateBalances = async () => setBalances(await sdk.getBalances(userId));
+      const updateBalances = async () => {
+        const txsProm = sdk.getUserTxs(userId);
+        const settledBalances = await sdk.getBalances(userId);
+        const txs = await txsProm;
+        const pendingShields = filterForPendingShields(txs);
+        const balances = settledBalances.map(({ assetId, value }) => ({
+          assetId,
+          value: value + sumPendingShields(pendingShields, assetId),
+        }));
+        setBalances(balances);
+      };
       updateBalances();
       return listenAccountUpdated(sdk, userId, updateBalances);
     }
