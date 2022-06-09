@@ -178,7 +178,7 @@ const getFee = (tx: CoreUserTx) => {
         return outputValue || (isSender && isRecipient) ? publicValue - outputValue : BigInt(0);
       }
       case ProofId.WITHDRAW:
-        return privateInput - publicValue;
+        return privateInput - (publicValue + senderPrivateOutput);
       case ProofId.SEND:
         if (!isSender || (!isRecipient && !recipientPrivateOutput)) {
           return BigInt(0);

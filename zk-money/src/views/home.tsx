@@ -87,8 +87,8 @@ export function Home({ onSignup }: HomeProps) {
             <div className={style.content}>
               <div className={style.title}>How does shielding work?</div>
               <div className={style.description}>
-                Shielding funds to Aztec creates a private note on Layer 2. Private notes can traded, staked, and used
-                to earn yield just like normal Ethereum assets–but with full privacy protection.
+                Shielding funds to Aztec creates a private note on Layer 2. Private notes can be traded, staked, and
+                used to earn yield just like normal Ethereum assets–but with full privacy protection.
               </div>
             </div>
           </div>
@@ -119,6 +119,7 @@ export function Home({ onSignup }: HomeProps) {
 // TODO: remove this check as part of launch
 // (similar change required in incentive_modal.tsx & src/index.tsx)
 const isProdSite = window.location.hostname === 'zk.money';
+const shieldDisabled = isProdSite && !localStorage.getItem('unlock_prod');
 
 function Banner({ onShieldNow }: { onShieldNow: () => void }) {
   return (
@@ -135,11 +136,11 @@ function Banner({ onShieldNow }: { onShieldNow: () => void }) {
           funds to start accessing!
         </div>
         <Button
-          text={isProdSite ? 'Coming soon' : 'Shield Now'}
+          text={shieldDisabled ? 'Coming soon' : 'Shield Now'}
           onClick={onShieldNow}
           className={style.shieldButton}
           theme="gradient"
-          disabled={isProdSite}
+          disabled={shieldDisabled}
         />
         <div className={style.links}>
           <Hyperlink

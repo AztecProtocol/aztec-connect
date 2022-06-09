@@ -18,6 +18,7 @@ const Form = styled.div<FormProps>`
   display: flex;
   align-items: center;
   justify-content: space-between;
+  margin: 0 10%;
   padding: ${spacings.xs} ${spacings.m};
   ${({ theme }) => {
     switch (theme) {
@@ -29,7 +30,7 @@ const Form = styled.div<FormProps>`
         return '';
     }
   }};
-  border-radius: ${borderRadiuses.l};
+  border-radius: ${borderRadiuses.m};
 
   @media (max-width: ${breakpoints.m}) {
     flex-wrap: wrap;

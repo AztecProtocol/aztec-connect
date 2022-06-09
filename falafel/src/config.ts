@@ -74,13 +74,19 @@ function getPerChainBridgeConfig(chainId: number): BridgeConfig[] {
         {
           bridgeId: new BridgeId(2, 0, 2).toBigInt(),
           numTxs: 50,
-          gas: 200000,
+          gas: 175000,
           rollupFrequency: 3,
         },
         {
-          bridgeId: new BridgeId(2, 2, 0).toBigInt(),
+          bridgeId: new BridgeId(3, 2, 0).toBigInt(),
           numTxs: 50,
-          gas: 200000,
+          gas: 250000,
+          rollupFrequency: 3,
+        },
+        {
+          bridgeId: new BridgeId(4, 0, 0).toBigInt(),
+          numTxs: 1,
+          gas: 300000,
           rollupFrequency: 3,
         },
       ];

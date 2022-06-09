@@ -23,16 +23,16 @@ exports.main = async function (event: any) {
     status: '200',
     statusDescription: 'OK',
   };
-  let oldBody = await (await fetch('https://zk.money/index.html')).text();
+  let oldBody = await (await fetch('https://aztec-connect-prod.zk.money/index.html')).text();
 
   if (alias) {
     oldBody = oldBody.replace(
       '$IMAGE_CONTENT',
-      `https://res.cloudinary.com/df4pltas6/image/upload/c_scale,w_1459/g_south_west,l_e_colorize,co_white,l_text:lato_60:@${alias},x_165,y_115/v1615319371/Group_206_1_orgtk1.png`,
+      `https://res.cloudinary.com/df4pltas6/image/upload/c_scale,w_1459/g_south_east,l_e_colorize,co_white,l_text:lato_80:@${alias},x_90,y_220/v1615319371/Share_image_3_uo7zrx.png`,
     );
     oldBody = oldBody.replace(
       '$TEXT_CONTENT',
-      `Checkout zk.money by @aztecnetwork. You can now send me crypto privately @${alias} 🕵️.`,
+      `Checkout zk.money by @aztecnetwork. Private DeFi is here. Send me crypto privately @${alias} 🕵️.`,
     );
     return {
       ...response,
@@ -41,12 +41,9 @@ exports.main = async function (event: any) {
   } else {
     oldBody = oldBody.replace(
       '$IMAGE_CONTENT',
-      `https://res.cloudinary.com/df4pltas6/image/upload/c_scale,w_1459/v1615319371/Group_206_1_orgtk1.png`,
+      `https://res.cloudinary.com/df4pltas6/image/upload/c_scale,w_1459/v1615319371/Share_image_3_uo7zrx.png`,
     );
-    oldBody = oldBody.replace(
-      '$TEXT_CONTENT',
-      `Checkout zk.money by @aztecnetwork. You can now send crypto privately 🕵️.`,
-    );
+    oldBody = oldBody.replace('$TEXT_CONTENT', `Checkout zk.money by @aztecnetwork. Private DeFi is here. 🕵️.`);
     return {
       ...response,
       body: oldBody,

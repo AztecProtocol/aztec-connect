@@ -18,7 +18,7 @@ function IncentiveModal(props: IncentiveModalProps) {
       <div className={style.incentiveModalWrapper}>
         <img src={giftBackground} className={style.background} alt="" />
         <div className={style.text}>
-          <div className={style.title}>Use private DeFi on Aztec and win a weekly $500 prize!</div>
+          <div className={style.title}>Use private DeFi on Aztec and win a weekly 1 ETH prize!</div>
           <div className={style.body}>
             Aztec Connect is now enabled on zk.money. Deposit at least 1 ETH or 2,000 DAI to qualify.
           </div>

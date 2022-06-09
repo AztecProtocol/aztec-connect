@@ -12,7 +12,7 @@ export function Trade() {
         rollup.
         <br />
         <br />
-        Stay tuned for updates on when your favourite dex's will be available on zk.money.
+        Stay tuned for updates on when your favourite dexes will be available on zk.money.
       </div>
       <Button
         href="https://medium.com/aztec-protocol/dollars-and-sense-cheap-privacy-with-aztec-connect-f35db037a04"
