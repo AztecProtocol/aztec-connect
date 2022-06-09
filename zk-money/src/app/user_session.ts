@@ -267,12 +267,6 @@ export class UserSession extends EventEmitter {
     }
   }
 
-  private async registrationExists(accountPublicKey: GrumpkinAddress) {
-    const isRegistered = await this.sdk.isAccountRegistered(accountPublicKey);
-    if (isRegistered) return true;
-    return this.sdk.isRemoteAccountRegistered(accountPublicKey);
-  }
-
   private async signupWithWallet() {
     this.emitSystemMessage('Please sign the message in your wallet to create a new account...', MessageType.WARNING);
 
@@ -284,7 +278,7 @@ export class UserSession extends EventEmitter {
     }
 
     const { accountPublicKey } = this.keyVault;
-    const isRegistered = await this.registrationExists(accountPublicKey);
+    const isRegistered = await this.sdk.isAccountRegistered(accountPublicKey, true);
 
     if (!isRegistered) {
       this.toStep(LoginStep.SET_ALIAS);
@@ -313,7 +307,7 @@ export class UserSession extends EventEmitter {
     }
 
     const { accountPublicKey } = this.keyVault;
-    const isRegistered = await this.registrationExists(accountPublicKey);
+    const isRegistered = await this.sdk.isAccountRegistered(accountPublicKey, true);
 
     // Attempt to log in with unknown pubKey.
     if (!isRegistered) {
@@ -422,13 +416,14 @@ export class UserSession extends EventEmitter {
       return this.emitSystemMessage(!isNewAlias ? 'Incorrect alias.' : error, MessageType.ERROR);
     }
 
+    const alias = formatAliasInput(aliasInput);
     if (isNewAlias) {
-      if (!(await this.accountUtils.isAliasAvailable(aliasInput))) {
+      if (await this.sdk.isAliasRegistered(alias, true)) {
         return this.emitSystemMessage('This alias has been taken.', MessageType.ERROR);
       }
     } else {
-      const address = await this.accountUtils.getAliasPublicKey(aliasInput);
-      if (!address?.equals(this.keyVault.accountPublicKey)) {
+      const { accountPublicKey } = this.keyVault;
+      if (!(await this.sdk.isAliasRegisteredToAccount(accountPublicKey, alias, true))) {
         return this.emitSystemMessage('Incorrect alias.', MessageType.ERROR);
       }
     }
@@ -552,7 +547,7 @@ export class UserSession extends EventEmitter {
 
       const { accountPublicKey, signerAddress, alias, version } = linkedAccount;
 
-      const isRegistered = await this.registrationExists(accountPublicKey);
+      const isRegistered = await this.sdk.isAccountRegistered(accountPublicKey, true);
       if (!isRegistered) {
         await this.db.deleteAccount(accountPublicKey);
         throw new Error('Account not registered.');
@@ -713,7 +708,7 @@ export class UserSession extends EventEmitter {
 
   private updateAliasAvailability = async () => {
     const aliasInput = this.loginState.alias;
-    const available = await this.accountUtils.isAliasAvailable(aliasInput);
+    const available = !(await this.sdk.isAliasRegistered(formatAliasInput(aliasInput), true));
     if (aliasInput !== this.loginState.alias) return;
 
     this.updateLoginState({
@@ -804,7 +799,7 @@ export class UserSession extends EventEmitter {
       version,
       timestamp: new Date(),
     });
-      await this.setLinkedAccountToSession(accountPublicKey);
+    await this.setLinkedAccountToSession(accountPublicKey);
   }
 
   private async getLinkedAccountFromSession() {

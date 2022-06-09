@@ -30,26 +30,14 @@ export class AccountUtils {
     return true;
   }
 
-  async getAliasPublicKey(aliasInput: string) {
-    const alias = formatAliasInput(aliasInput);
-    const publicKey = await this.sdk.getAccountPublicKey(alias);
-    if (publicKey) return publicKey;
-    return this.sdk.getRemoteUnsettledAccountPublicKey(aliasInput);
-  }
-
-  async isAliasAvailable(aliasInput: string) {
-    const alias = formatAliasInput(aliasInput);
-    const isRegistered = await this.sdk.isAliasRegistered(alias);
-    return !isRegistered;
-  }
-
   async isValidRecipient(aliasInput: string) {
     if (!isValidAliasInput(aliasInput)) {
       return false;
     }
 
     const alias = formatAliasInput(aliasInput);
-    return this.sdk.isAliasRegistered(alias);
+    const includePending = false;
+    return this.sdk.isAliasRegistered(alias, includePending);
   }
 
   async getAccountId(aliasInput: string) {

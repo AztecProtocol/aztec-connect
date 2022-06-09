@@ -5,7 +5,7 @@ import { BridgeId } from '../bridge_id';
 import { fetch } from '../iso_fetch';
 import { Tx } from '../rollup_provider';
 import { TxId } from '../tx_id';
-import { accountFromJson, joinSplitTxFromJson, pendingTxFromJson, RollupProvider, txToJson } from './rollup_provider';
+import { joinSplitTxFromJson, pendingTxFromJson, RollupProvider, txToJson } from './rollup_provider';
 import { rollupProviderStatusFromJson } from './rollup_provider_status';
 
 export class ServerRollupProvider extends ServerBlockSource implements RollupProvider {
@@ -77,15 +77,12 @@ export class ServerRollupProvider extends ServerBlockSource implements RollupPro
     return +(await response.text()) === 1;
   }
 
-  async accountExists(accountPublicKey: GrumpkinAddress, alias: string) {
-    const response = await this.fetch('/account-exists', { accountPublicKey: accountPublicKey.toString(), alias });
+  async isAliasRegisteredToAccount(accountPublicKey: GrumpkinAddress, alias: string) {
+    const response = await this.fetch('/is-alias-registered-to-account', {
+      accountPublicKey: accountPublicKey.toString(),
+      alias,
+    });
     return +(await response.text()) === 1;
-  }
-
-  async getUnsettledAccounts() {
-    const response = await this.fetch('/get-unsettled-accounts');
-    const accounts = await response.json();
-    return accounts.map(accountFromJson);
   }
 
   async getUnsettledPaymentTxs() {

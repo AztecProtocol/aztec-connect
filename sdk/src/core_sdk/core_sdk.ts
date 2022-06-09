@@ -209,43 +209,34 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     return await this.rollupProvider.getStatus();
   }
 
-  public async isAccountRegistered(accountPublicKey: GrumpkinAddress) {
-    return !!(await this.db.getAlias(accountPublicKey));
+  public async isAccountRegistered(accountPublicKey: GrumpkinAddress, includePending: boolean) {
+    return (
+      !!(await this.db.getAlias(accountPublicKey)) ||
+      (includePending && (await this.rollupProvider.isAccountRegistered(accountPublicKey)))
+    );
   }
 
-  public async isRemoteAccountRegistered(accountPublicKey: GrumpkinAddress) {
-    return this.rollupProvider.isAccountRegistered(accountPublicKey);
-  }
-
-  public async isAliasRegistered(alias: string) {
+  public async isAliasRegistered(alias: string, includePending: boolean) {
     const aliasHash = await this.computeAliasHash(alias);
-    return (await this.db.getAliases(aliasHash)).length > 0;
+    return (
+      (await this.db.getAliases(aliasHash)).length > 0 ||
+      (includePending && (await this.rollupProvider.isAliasRegistered(alias)))
+    );
   }
 
-  public async isRemoteAliasRegistered(alias: string) {
-    return this.rollupProvider.isAliasRegistered(alias);
-  }
-
-  public async accountExists(accountPublicKey: GrumpkinAddress, alias: string) {
+  public async isAliasRegisteredToAccount(accountPublicKey: GrumpkinAddress, alias: string, includePending: boolean) {
     const aliasHash = await this.computeAliasHash(alias);
     const savedAlias = await this.db.getAlias(accountPublicKey);
-    return !!savedAlias && savedAlias.aliasHash.equals(aliasHash);
-  }
-
-  public async remoteAccountExists(accountPublicKey: GrumpkinAddress, alias: string) {
-    return this.rollupProvider.accountExists(accountPublicKey, alias);
+    return (
+      (!!savedAlias && savedAlias.aliasHash.equals(aliasHash)) ||
+      (includePending && (await this.rollupProvider.isAliasRegisteredToAccount(accountPublicKey, alias)))
+    );
   }
 
   public async getAccountPublicKey(alias: string) {
     const aliasHash = await this.computeAliasHash(alias);
     const aliases = await this.db.getAliases(aliasHash);
     return aliases[0]?.accountPublicKey;
-  }
-
-  public async getRemoteUnsettledAccountPublicKey(alias: string) {
-    const aliasHash = await this.computeAliasHash(alias);
-    const accounts = await this.rollupProvider.getUnsettledAccounts();
-    return accounts.find(a => a.aliasHash.equals(aliasHash))?.accountPublicKey;
   }
 
   public async getTxFees(assetId: number) {
