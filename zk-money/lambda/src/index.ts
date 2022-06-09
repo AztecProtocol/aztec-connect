@@ -19,25 +19,42 @@ exports.main = async function (event: any) {
   const queryParamsObj = paramsToObject(queryParams.entries()) as ZkParams;
   const alias = queryParamsObj.alias;
 
-  const response = event.Records[0].cf.response;
-
-  let oldBody = await (await fetch('https://aztec-connect-dev.zk.money')).text();
+  const response = {
+    status: '200',
+    statusDescription: 'OK',
+  };
+  let oldBody = await (await fetch('https://zk.money/index.html')).text();
 
   if (alias) {
     oldBody = oldBody.replace(
-      'https://res.cloudinary.com/df4pltas6/image/upload/c_scale,w_1459/v1615319371/Share_image_4_d5v6xl.png',
-      `https://res.cloudinary.com/df4pltas6/image/upload/c_scale,w_1459/g_south_east,l_e_colorize,co_white,l_text:lato_80:@${alias},x_170,y_270/v1615319371/Share_image_4_d5v6xl.png`,
+      '$IMAGE_CONTENT',
+      `https://res.cloudinary.com/df4pltas6/image/upload/c_scale,w_1459/g_south_east,l_e_colorize,co_white,l_text:lato_80:@${alias},x_170,y_270/v1615319371/Share_image_3_uo7zrx.png`,
     );
-
     oldBody = oldBody.replace(
-      'Checkout zk.money by @aztecnetwork. Private DeFi is here. 🕵️.',
+      '$IMAGE_CONTENT',
+      `https://res.cloudinary.com/df4pltas6/image/upload/c_scale,w_1459/g_south_east,l_e_colorize,co_white,l_text:lato_80:@${alias},x_170,y_270/v1615319371/Share_image_3_uo7zrx.png`,
+    );
+    oldBody = oldBody.replace(
+      '$TEXT_CONTENT',
       `Checkout zk.money by @aztecnetwork. Private DeFi is here. Send me crypto privately @${alias} 🕵️.`,
     );
-    response.headers['content-type'] = 'text/html';
+    return {
+      ...response,
+      body: oldBody,
+    };
+  } else {
+    oldBody = oldBody.replace(
+      '$IMAGE_CONTENT',
+      `https://res.cloudinary.com/df4pltas6/image/upload/c_scale,w_1459/v1615319371/Share_image_3_uo7zrx.png`,
+    );
+    oldBody = oldBody.replace(
+      '$IMAGE_CONTENT',
+      `https://res.cloudinary.com/df4pltas6/image/upload/c_scale,w_1459/v1615319371/Share_image_3_uo7zrx.png`,
+    );
+    oldBody = oldBody.replace('$TEXT_CONTENT', `Checkout zk.money by @aztecnetwork. Private DeFi is here. 🕵️.`);
     return {
       ...response,
       body: oldBody,
     };
   }
-  return response;
 };
