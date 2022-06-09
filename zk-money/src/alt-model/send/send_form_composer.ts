@@ -5,6 +5,7 @@ import createDebug from 'debug';
 import { Provider } from 'app/provider';
 import { SendComposerPhase, SendComposerStateObs } from './send_composer_state_obs';
 import { SendMode } from './send_mode';
+import { createSigningRetryableGenerator } from 'alt-model/forms/composer_helpers';
 
 const debug = createDebug('zm:send_composer');
 
@@ -35,6 +36,8 @@ export class SendComposer {
 
   constructor(readonly payload: SendComposerPayload, private readonly deps: SendComposerDeps) {}
 
+  private withRetryableSigning = createSigningRetryableGenerator(this.stateObs);
+
   async compose() {
     this.stateObs.clearError();
     try {
@@ -43,7 +46,7 @@ export class SendComposer {
 
       this.stateObs.setPhase(SendComposerPhase.GENERATING_KEY);
       const provider = await awaitCorrectProvider();
-      const { privateKey } = await createSigningKeys(provider, sdk);
+      const { privateKey } = await this.withRetryableSigning(() => createSigningKeys(provider, sdk));
       const signer = await sdk.createSchnorrSigner(privateKey);
 
       this.stateObs.setPhase(SendComposerPhase.CREATING_PROOF);

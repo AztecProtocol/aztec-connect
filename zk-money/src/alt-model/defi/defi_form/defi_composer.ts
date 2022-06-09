@@ -4,6 +4,7 @@ import type { Amount } from 'alt-model/assets';
 import createDebug from 'debug';
 import { createSigningKeys } from '../../../app/key_vault';
 import { DefiComposerPhase, DefiComposerStateObs } from './defi_composer_state_obs';
+import { createSigningRetryableGenerator } from 'alt-model/forms/composer_helpers';
 
 const debug = createDebug('zm:defi_composer');
 
@@ -23,6 +24,8 @@ export class DefiComposer {
   stateObs = new DefiComposerStateObs();
   constructor(readonly payload: DefiComposerPayload, private readonly deps: DefiComposerDeps) {}
 
+  private withRetryableSigning = createSigningRetryableGenerator(this.stateObs);
+
   async compose() {
     this.stateObs.clearError();
     try {
@@ -31,7 +34,7 @@ export class DefiComposer {
 
       this.stateObs.setPhase(DefiComposerPhase.GENERATING_KEY);
       const provider = await awaitCorrectProvider();
-      const { privateKey } = await createSigningKeys(provider, sdk);
+      const { privateKey } = await this.withRetryableSigning(() => createSigningKeys(provider, sdk));
       const signer = await sdk.createSchnorrSigner(privateKey);
 
       this.stateObs.setPhase(DefiComposerPhase.CREATING_PROOF);
