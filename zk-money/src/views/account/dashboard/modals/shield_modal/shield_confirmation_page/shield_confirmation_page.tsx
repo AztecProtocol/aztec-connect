@@ -11,6 +11,7 @@ import { Disclaimer } from '../../modal_molecules/disclaimer';
 import { TransactionComplete } from '../../modal_molecules/transaction_complete';
 import { ShieldSubmissionSteps } from './shield_submission_steps';
 import style from './shield_confirmation_page.module.scss';
+import { RetrySigningButton } from '../../modal_molecules/retry_signing_button';
 
 interface ShieldConfirmationPageProps {
   composerState: ShieldComposerState;
@@ -58,11 +59,15 @@ export function ShieldConfirmationPage({
       </BorderBox>
       {!showingComplete && (
         <div className={style.footer}>
-          <Button
-            text={hasError ? 'Retry' : 'Confirm Transaction'}
-            onClick={canSubmit ? onSubmit : undefined}
-            disabled={!canSubmit}
-          />
+          {composerState.signingRetryable ? (
+            <RetrySigningButton signingRetryable={composerState.signingRetryable} />
+          ) : (
+            <Button
+              text={hasError ? 'Retry' : 'Confirm Transaction'}
+              onClick={canSubmit ? onSubmit : undefined}
+              disabled={!canSubmit}
+            />
+          )}
         </div>
       )}
     </div>

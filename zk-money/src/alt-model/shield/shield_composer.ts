@@ -8,6 +8,7 @@ import { Network } from 'app/networks';
 import { ShieldComposerPhase, ShieldComposerStateObs } from './shield_composer_state_obs';
 import { createSigningKeys, KeyVault } from '../../app/key_vault';
 import { KNOWN_MAINNET_ASSET_ADDRESSES } from 'alt-model/known_assets/known_asset_addresses';
+import { createSigningRetryableGenerator } from 'alt-model/forms/composer_helpers';
 
 const debug = createDebug('zm:shield_composer');
 
@@ -46,6 +47,8 @@ export class ShieldComposer {
     sendProof: new CachedStep<TxId>(),
   };
 
+  private withRetryableSigning = createSigningRetryableGenerator(this.stateObs);
+
   async compose() {
     this.stateObs.clearError();
     try {
@@ -75,8 +78,8 @@ export class ShieldComposer {
     const isPayingFeeWithNotes = targetOutput.id !== fee.id;
     if (isPayingFeeWithNotes) {
       this.stateObs.setPhase(ShieldComposerPhase.GENERATE_SPENDING_KEY);
-      const signerPrivateKey = (await createSigningKeys(provider, sdk)).privateKey;
-      const signer = await sdk.createSchnorrSigner(signerPrivateKey);
+      const signingKeys = this.withRetryableSigning(() => createSigningKeys(provider, sdk));
+      const signer = await sdk.createSchnorrSigner((await signingKeys).privateKey);
       feePayer = { userId, signer };
     }
 
@@ -118,7 +121,7 @@ export class ShieldComposer {
       if (!(await sufficientAllowanceHasBeenApproved())) {
         await this.walletAccountEnforcer.ensure();
         this.stateObs.setPrompt(`Please approve a deposit of ${requiredAmount.format({ layer: 'L1' })}.`);
-        await controller.approve();
+        await this.withRetryableSigning(() => controller.approve());
         this.stateObs.setPrompt('Awaiting transaction confirmation...');
         const timeout = 1000 * 60 * 30; // 30 mins
         const interval = this.deps.requiredNetwork.isFrequent ? 1000 : 10 * 1000;
@@ -136,9 +139,9 @@ export class ShieldComposer {
     const expireIn = 60n * 5n; // 5 minutes
     const deadline = BigInt(Math.floor(Date.now() / 1000)) + expireIn;
     if (this.isDai()) {
-      await controller.depositFundsToContractWithNonStandardPermit(deadline);
+      await this.withRetryableSigning(() => controller.depositFundsToContractWithNonStandardPermit(deadline));
     } else {
-      await controller.depositFundsToContract(deadline);
+      await this.withRetryableSigning(() => controller.depositFundsToContract(deadline));
     }
     this.stateObs.setPrompt('Awaiting transaction confirmation...');
     const timeout = 1000 * 60 * 30; // 30 mins
@@ -169,19 +172,17 @@ export class ShieldComposer {
         `Please sign the message in your wallet containing the following transaction ID: 0x${digest}`,
       );
       try {
-        await controller.sign();
+        await this.withRetryableSigning(() => controller.sign());
       } catch (e) {
         debug(e);
         throw new Error('Failed to sign the proof.');
       }
       this.stateObs.clearPrompt();
-    }
-
-    if (!controller.isSignatureValid() && !(await controller.isProofApproved())) {
+    } else if (!(await controller.isProofApproved())) {
       await this.walletAccountEnforcer.ensure();
       this.stateObs.setPrompt('Please approve the proof data in your wallet.');
       try {
-        await controller.approveProof();
+        await this.withRetryableSigning(() => controller.approveProof());
       } catch (e) {
         debug(e);
         throw new Error('Failed to approve the proof.');
