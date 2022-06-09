@@ -104,7 +104,7 @@ resource "aws_cloudfront_distribution" "zkmoney_distribution" {
   is_ipv6_enabled     = true
   comment             = "Managed by Terraform"
   aliases             = ["${var.DEPLOY_TAG}.zk.money"]
-  default_root_object = "/"
+  default_root_object = "index.html"
 
 
   default_cache_behavior {
