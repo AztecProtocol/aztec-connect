@@ -75,37 +75,28 @@ export class CoreSdkServerStub {
     return rollupProviderStatusToJson(status);
   }
 
-  public async isAccountRegistered(accountPublicKey: string) {
-    return this.core.isAccountRegistered(GrumpkinAddress.fromString(accountPublicKey));
+  public async isAccountRegistered(accountPublicKey: string, includePending: boolean) {
+    return this.core.isAccountRegistered(GrumpkinAddress.fromString(accountPublicKey), includePending);
   }
 
-  public async isRemoteAccountRegistered(accountPublicKey: string) {
-    return this.core.isRemoteAccountRegistered(GrumpkinAddress.fromString(accountPublicKey));
+  public async isAliasRegistered(alias: string, includePending: boolean) {
+    return this.core.isAliasRegistered(alias, includePending);
   }
 
-  public async isAliasRegistered(alias: string) {
-    return this.core.isAliasRegistered(alias);
-  }
-
-  public async isRemoteAliasRegistered(alias: string) {
-    return this.core.isRemoteAliasRegistered(alias);
-  }
-
-  public async accountExists(accountPublicKey: string, alias: string) {
-    return this.core.accountExists(GrumpkinAddress.fromString(accountPublicKey), alias);
-  }
-
-  public async remoteAccountExists(accountPublicKey: string, alias: string) {
-    return this.core.remoteAccountExists(GrumpkinAddress.fromString(accountPublicKey), alias);
+  public async isAliasRegisteredToAccount(
+    accountPublicKey: string,
+    alias: string,
+    isAliasRegisteredToAccount: boolean,
+  ) {
+    return this.core.isAliasRegisteredToAccount(
+      GrumpkinAddress.fromString(accountPublicKey),
+      alias,
+      isAliasRegisteredToAccount,
+    );
   }
 
   public async getAccountPublicKey(alias: string) {
     const key = await this.core.getAccountPublicKey(alias);
-    return key?.toString();
-  }
-
-  public async getRemoteUnsettledAccountPublicKey(alias: string) {
-    const key = await this.core.getRemoteUnsettledAccountPublicKey(alias);
     return key?.toString();
   }
 

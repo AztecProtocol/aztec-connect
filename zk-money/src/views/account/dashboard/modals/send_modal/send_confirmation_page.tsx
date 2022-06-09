@@ -13,6 +13,7 @@ import {
 } from 'alt-model/send';
 import style from './send_confirmation_page.module.scss';
 import { RemoteAsset } from 'alt-model/types';
+import { RetrySigningButton } from '../modal_molecules/retry_signing_button';
 
 interface SendConfirmationPageProps {
   composerState: SendComposerState;
@@ -46,6 +47,7 @@ export function SendConfirmationPage({
   const isIdle = composerState.phase === SendComposerPhase.IDLE;
   const showingComplete = composerState.phase === SendComposerPhase.DONE;
   const showingDeclaration = isIdle && !hasError;
+  const canSubmit = riskChecked && isIdle;
 
   return (
     <div className={style.page2Wrapper}>
@@ -61,12 +63,20 @@ export function SendConfirmationPage({
         ) : showingComplete ? (
           <TransactionComplete onClose={onClose} />
         ) : (
-          <SendSubmissionSteps composerState={composerState} /> //.currentStatus={props.currentStatus} failed={failed} />
+          <SendSubmissionSteps composerState={composerState} />
         )}
       </BorderBox>
       {!showingComplete && (
         <div className={style.footer}>
-          <Button text={hasError ? 'Retry' : 'Confirm Transaction'} onClick={onSubmit} disabled={!riskChecked} />
+          {composerState.signingRetryable ? (
+            <RetrySigningButton signingRetryable={composerState.signingRetryable} />
+          ) : (
+            <Button
+              text={hasError ? 'Retry' : 'Confirm Transaction'}
+              onClick={canSubmit ? onSubmit : undefined}
+              disabled={!canSubmit}
+            />
+          )}
         </div>
       )}
     </div>

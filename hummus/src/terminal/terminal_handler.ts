@@ -248,6 +248,7 @@ export class TerminalHandler {
     if (publicInput > pendingBalance) {
       this.printQueue.put(`depositing funds to contract...\n`);
       await controller.depositFundsToContract();
+      this.printQueue.put(`awaiting transaction confirmation...\n`);
       await controller.awaitDepositFundsToContract();
     }
     this.printQueue.put(`generating proof...\n`);
@@ -338,10 +339,11 @@ export class TerminalHandler {
       fee,
       this.ethAddress,
     );
-    const pendingDeposit = await controller.getPendingFunds();
-    if (pendingDeposit < fee.value) {
+    const requiredFunds = await controller.getRequiredFunds();
+    if (requiredFunds > 0n) {
       this.printQueue.put(`depositing funds to contract...\n`);
       await controller.depositFundsToContract();
+      this.printQueue.put(`awaiting transaction confirmation...\n`);
       await controller.awaitDepositFundsToContract();
     }
     this.printQueue.put(`generating proof...\n`);

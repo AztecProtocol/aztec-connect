@@ -1,5 +1,6 @@
 import { Obs } from 'app/util';
 import { IObs } from 'app/util/obs/types';
+import type { Retryable } from 'app/util/promises/retryable';
 
 export enum ShieldComposerPhase {
   IDLE = 'IDLE',
@@ -14,6 +15,7 @@ export interface ShieldComposerState {
   phase: ShieldComposerPhase;
   error?: { phase: ShieldComposerPhase; message: string };
   prompt?: string;
+  signingRetryable?: Retryable<unknown>;
 }
 
 export class ShieldComposerStateObs implements IObs<ShieldComposerState> {
@@ -39,6 +41,14 @@ export class ShieldComposerStateObs implements IObs<ShieldComposerState> {
 
   clearPrompt() {
     this.obs.next({ ...this.obs.value, prompt: undefined });
+  }
+
+  enableRetryableSigning(signingRetryable: Retryable<unknown>) {
+    this.obs.next({ ...this.value, signingRetryable });
+  }
+
+  disableRetryableSigning() {
+    this.obs.next({ ...this.value, signingRetryable: undefined });
   }
 
   error(message: string) {

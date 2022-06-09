@@ -38,36 +38,20 @@ export class CoreSdkDispatch extends EventEmitter implements CoreSdkSerializedIn
     return this.request('getRemoteStatus');
   }
 
-  public async isAccountRegistered(accountPublicKey: string) {
-    return this.request('isAccountRegistered', [accountPublicKey]);
+  public async isAccountRegistered(accountPublicKey: string, includePending: boolean) {
+    return this.request('isAccountRegistered', [accountPublicKey, includePending]);
   }
 
-  public async isRemoteAccountRegistered(accountPublicKey: string) {
-    return this.request('isRemoteAccountRegistered', [accountPublicKey]);
+  public async isAliasRegistered(alias: string, includePending: boolean) {
+    return this.request('isAliasRegistered', [alias, includePending]);
   }
 
-  public async isAliasRegistered(alias: string) {
-    return this.request('isAliasRegistered', [alias]);
-  }
-
-  public async isRemoteAliasRegistered(alias: string) {
-    return this.request('isRemoteAliasRegistered', [alias]);
-  }
-
-  public async accountExists(accountPublicKey: string, alias: string) {
-    return this.request('accountExists', [accountPublicKey, alias]);
-  }
-
-  public async remoteAccountExists(accountPublicKey: string, alias: string) {
-    return this.request('remoteAccountExists', [accountPublicKey, alias]);
+  public async isAliasRegisteredToAccount(accountPublicKey: string, alias: string, includePending: boolean) {
+    return this.request('isAliasRegisteredToAccount', [accountPublicKey, alias, includePending]);
   }
 
   public async getAccountPublicKey(alias: string) {
     return this.request('getAccountPublicKey', [alias]);
-  }
-
-  public async getRemoteUnsettledAccountPublicKey(alias: string) {
-    return this.request('getRemoteUnsettledAccountPublicKey', [alias]);
   }
 
   public async getTxFees(assetId: number) {

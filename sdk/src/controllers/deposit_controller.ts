@@ -2,7 +2,7 @@ import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetValue } from '@aztec/barretenberg/asset';
 import { EthereumProvider, TxHash } from '@aztec/barretenberg/blockchain';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
-import { sleep } from '@aztec/barretenberg/sleep';
+import { InterruptableSleep, sleep } from '@aztec/barretenberg/sleep';
 import { Timer } from '@aztec/barretenberg/timer';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import {
@@ -27,8 +27,11 @@ export class DepositController {
     pendingFunds: bigint;
     requiredFunds: bigint;
     approveTxHash?: TxHash;
+    approvedFromContractWallet?: boolean;
     txHash?: TxHash;
+    depositedFromContractWallet?: boolean;
     approveProofTxHash?: TxHash;
+    proofApprovedFromContractWallet?: boolean;
   } = { pendingDeposit: BigInt(0), pendingFunds: BigInt(0), requiredFunds: BigInt(0) };
 
   constructor(
@@ -92,16 +95,40 @@ export class DepositController {
 
     const { assetId } = this.publicInput;
     const { rollupContractAddress } = await this.core.getLocalStatus();
-    const approveTxHash = await this.blockchain
-      .getAsset(assetId)
-      .approve(value, this.depositor, rollupContractAddress, { provider: this.provider });
+    const approve = async () =>
+      this.blockchain
+        .getAsset(assetId)
+        .approve(value, this.depositor, rollupContractAddress, { provider: this.provider });
+    const isContract = await this.blockchain.isContract(this.depositor);
+    let approveTxHash: TxHash | undefined;
+    if (!isContract) {
+      approveTxHash = await approve();
+    } else {
+      const checkOnchainData = async () => {
+        const allowance = await this.getPublicAllowance();
+        return allowance >= value;
+      };
+      approveTxHash = await this.sendTransactionAndCheckOnchainData(
+        'approve contract wallet allowance',
+        approve,
+        checkOnchainData,
+      );
+    }
 
-    this.pendingFundsStatus = { ...pendingFundsStatus, approveTxHash };
+    this.pendingFundsStatus = {
+      ...pendingFundsStatus,
+      approvedFromContractWallet: isContract && !approveTxHash,
+      approveTxHash,
+    };
     return approveTxHash;
   }
 
   public async awaitApprove(timeout?: number, interval?: number) {
-    const { approveTxHash, requiredFunds } = this.pendingFundsStatus;
+    const { approvedFromContractWallet, approveTxHash, requiredFunds } = this.pendingFundsStatus;
+    if (approvedFromContractWallet) {
+      return true;
+    }
+
     if (!approveTxHash) {
       throw new Error('Call approve() first.');
     }
@@ -123,26 +150,48 @@ export class DepositController {
       throw new Error(`Required allowance has increased since approve() was called.`);
     }
 
-    const isContract = await this.blockchain.isContract(this.depositor);
-    const proofHash = isContract ? this.getProofHash() : undefined;
-    const permitSupport = await this.hasPermitSupport();
     const { assetId } = this.publicInput;
-    let txHash: TxHash;
-    if (!permitSupport) {
-      txHash = await this.blockchain.depositPendingFunds(assetId, value, proofHash, {
-        signingAddress: this.depositor,
-        provider: this.provider,
-      });
+    const isContract = await this.blockchain.isContract(this.depositor);
+    const depositFunds = async () => {
+      const proofHash = isContract ? this.getProofHash() : undefined;
+      const permitSupport = await this.hasPermitSupport();
+      if (!permitSupport) {
+        return this.blockchain.depositPendingFunds(assetId, value, proofHash, {
+          signingAddress: this.depositor,
+          provider: this.provider,
+        });
+      } else {
+        const deadline = permitDeadline ?? BigInt(Math.floor(Date.now() / 1000) + 5 * 60); // Default deadline is 5 mins from now.
+        const { signature } = await this.createPermitArgs(value, deadline);
+        return this.blockchain.depositPendingFundsPermit(assetId, value, deadline, signature, proofHash, {
+          signingAddress: this.depositor,
+          provider: this.provider,
+        });
+      }
+    };
+
+    let txHash: TxHash | undefined;
+    if (!isContract) {
+      txHash = await depositFunds();
     } else {
-      const deadline = permitDeadline ?? BigInt(Math.floor(Date.now() / 1000) + 5 * 60); // Default deadline is 5 mins from now.
-      const { signature } = await this.createPermitArgs(value, deadline);
-      txHash = await this.blockchain.depositPendingFundsPermit(assetId, value, deadline, signature, proofHash, {
-        signingAddress: this.depositor,
-        provider: this.provider,
-      });
+      const { pendingDeposit, requiredFunds } = pendingFundsStatus;
+      const expectedPendingDeposit = pendingDeposit + requiredFunds;
+      const checkOnchainData = async () => {
+        const value = await this.blockchain.getUserPendingDeposit(assetId, this.depositor);
+        return value === expectedPendingDeposit;
+      };
+      txHash = await this.sendTransactionAndCheckOnchainData(
+        'deposit funds from contract wallet',
+        depositFunds,
+        checkOnchainData,
+      );
     }
 
-    this.pendingFundsStatus = { ...this.pendingFundsStatus, ...pendingFundsStatus, txHash };
+    this.pendingFundsStatus = {
+      ...pendingFundsStatus,
+      depositedFromContractWallet: isContract && !txHash,
+      txHash,
+    };
     return txHash;
   }
 
@@ -158,25 +207,42 @@ export class DepositController {
     const deadline = permitDeadline ?? BigInt(Math.floor(Date.now() / 1000) + 5 * 60); // Default deadline is 5 mins from now.
     const { signature, nonce } = await this.createPermitArgsNonStandard(deadline);
     const { assetId } = this.publicInput;
-    const txHash = await this.blockchain.depositPendingFundsPermitNonStandard(
-      assetId,
-      value,
-      nonce,
-      deadline,
-      signature,
-      proofHash,
-      {
+    const depositFunds = async () =>
+      this.blockchain.depositPendingFundsPermitNonStandard(assetId, value, nonce, deadline, signature, proofHash, {
         signingAddress: this.depositor,
         provider: this.provider,
-      },
-    );
+      });
+    let txHash: TxHash | undefined;
+    if (isContract) {
+      txHash = await depositFunds();
+    } else {
+      const { pendingDeposit, requiredFunds } = pendingFundsStatus;
+      const expectedPendingDeposit = pendingDeposit + requiredFunds;
+      const checkOnchainData = async () => {
+        const value = await this.blockchain.getUserPendingDeposit(assetId, this.depositor);
+        return value === expectedPendingDeposit;
+      };
+      txHash = await this.sendTransactionAndCheckOnchainData(
+        'deposit funds with non standard permit from contract wallet',
+        depositFunds,
+        checkOnchainData,
+      );
+    }
 
-    this.pendingFundsStatus = { ...pendingFundsStatus, txHash };
+    this.pendingFundsStatus = {
+      ...pendingFundsStatus,
+      depositedFromContractWallet: isContract,
+      txHash,
+    };
     return txHash;
   }
 
   public async awaitDepositFundsToContract(timeout?: number, interval?: number) {
-    const { txHash, pendingDeposit, requiredFunds } = this.pendingFundsStatus;
+    const { depositedFromContractWallet, txHash, pendingDeposit, requiredFunds } = this.pendingFundsStatus;
+    if (depositedFromContractWallet) {
+      return true;
+    }
+
     if (!txHash) {
       throw new Error('Call depositFundsToContract() first.');
     }
@@ -246,16 +312,38 @@ export class DepositController {
 
   public async approveProof() {
     const proofHash = this.getProofHash();
-    const approveProofTxHash = await this.blockchain.approveProof(proofHash, {
-      signingAddress: this.depositor,
-      provider: this.provider,
-    });
-    this.pendingFundsStatus = { ...this.pendingFundsStatus, approveProofTxHash };
+    const isContract = await this.blockchain.isContract(this.depositor);
+    const approveProof = async () =>
+      this.blockchain.approveProof(proofHash, {
+        signingAddress: this.depositor,
+        provider: this.provider,
+      });
+    let approveProofTxHash: TxHash | undefined;
+    if (!isContract) {
+      approveProofTxHash = await approveProof();
+    } else {
+      const checkOnchainData = async () => this.isProofApproved();
+      approveProofTxHash = await this.sendTransactionAndCheckOnchainData(
+        'approve proof from contract wallet',
+        approveProof,
+        checkOnchainData,
+      );
+    }
+
+    this.pendingFundsStatus = {
+      ...this.pendingFundsStatus,
+      proofApprovedFromContractWallet: isContract && !approveProofTxHash,
+      approveProofTxHash,
+    };
     return approveProofTxHash;
   }
 
   public async awaitApproveProof(timeout?: number, interval?: number) {
-    const { approveProofTxHash } = this.pendingFundsStatus;
+    const { proofApprovedFromContractWallet, approveProofTxHash } = this.pendingFundsStatus;
+    if (proofApprovedFromContractWallet) {
+      return true;
+    }
+
     if (!approveProofTxHash) {
       throw new Error('Call approveProof() first.');
     }
@@ -336,7 +424,7 @@ export class DepositController {
     const pendingFunds = pendingDeposit - unsettledDeposit;
     const { value } = this.publicInput;
     const requiredFunds = pendingFunds < value ? value - pendingFunds : BigInt(0);
-    return { pendingDeposit, pendingFunds, requiredFunds };
+    return { ...this.pendingFundsStatus, pendingDeposit, pendingFunds, requiredFunds };
   }
 
   private async createPermitArgs(value: bigint, deadline: bigint) {
@@ -388,6 +476,48 @@ export class DepositController {
       default:
         return chainId;
     }
+  }
+
+  private async sendTransactionAndCheckOnchainData(
+    name: string,
+    sendTx: () => Promise<TxHash>,
+    checkOnchainData: () => Promise<boolean>,
+    timeout?: number,
+    interval = 1,
+  ) {
+    const interruptableSleep = new InterruptableSleep();
+    let txHash: TxHash | undefined;
+    let txError: Error | undefined;
+    (async () => {
+      try {
+        txHash = await sendTx();
+      } catch (e: any) {
+        txError = e;
+      }
+      interruptableSleep.interrupt();
+    })();
+
+    const timer = new Timer();
+    while (!txHash && !txError) {
+      // We want confidence the tx will be accepted, so simulate waiting for confirmations.
+      if (await checkOnchainData()) {
+        const secondsTillConfirmed = (this.blockchain.minConfirmations - 1) * 15;
+        await sleep(secondsTillConfirmed * 1000);
+        break;
+      }
+
+      await interruptableSleep.sleep(interval * 1000);
+
+      if (timeout && timer.s() > timeout) {
+        throw new Error(`Timeout awaiting chain state condition: ${name}`);
+      }
+    }
+
+    if (txError) {
+      throw txError;
+    }
+
+    return txHash;
   }
 
   private async awaitTransaction(

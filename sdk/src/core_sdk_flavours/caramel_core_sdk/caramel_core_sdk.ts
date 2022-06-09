@@ -7,7 +7,6 @@ import {
   AccountProofInputJson,
   joinSplitProofInputFromJson,
   JoinSplitProofInputJson,
-  proofOutputFromJson,
   ProofOutputJson,
 } from '../../proofs';
 import { MemorySerialQueue } from '../../serial_queue';
@@ -51,37 +50,20 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
     return this.core.getRemoteStatus();
   }
 
-  public async isAccountRegistered(accountPublicKey: string) {
-    return this.core.isAccountRegistered(accountPublicKey);
+  public async isAccountRegistered(accountPublicKey: string, includePending: boolean) {
+    return this.core.isAccountRegistered(accountPublicKey, includePending);
   }
 
-  public async isRemoteAccountRegistered(accountPublicKey: string) {
-    return this.core.isRemoteAccountRegistered(accountPublicKey);
+  public async isAliasRegistered(alias: string, includePending: boolean) {
+    return this.core.isAliasRegistered(alias, includePending);
   }
 
-  public async isAliasRegistered(alias: string) {
-    return this.core.isAliasRegistered(alias);
-  }
-
-  public async isRemoteAliasRegistered(alias: string) {
-    return this.core.isRemoteAliasRegistered(alias);
-  }
-
-  public async accountExists(accountPublicKey: string, alias: string) {
-    return this.core.accountExists(accountPublicKey, alias);
-  }
-
-  public async remoteAccountExists(accountPublicKey: string, alias: string) {
-    return this.core.remoteAccountExists(accountPublicKey, alias);
+  public async isAliasRegisteredToAccount(accountPublicKey: string, alias: string, includePending: boolean) {
+    return this.core.isAliasRegisteredToAccount(accountPublicKey, alias, includePending);
   }
 
   public async getAccountPublicKey(alias: string) {
     const key = await this.core.getAccountPublicKey(alias);
-    return key?.toString();
-  }
-
-  public async getRemoteUnsettledAccountPublicKey(alias: string) {
-    const key = await this.core.getRemoteUnsettledAccountPublicKey(alias);
     return key?.toString();
   }
 

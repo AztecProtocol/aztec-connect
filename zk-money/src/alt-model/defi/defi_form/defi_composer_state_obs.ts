@@ -1,5 +1,6 @@
 import { Obs } from 'app/util';
-import { IObs } from 'app/util/obs/types';
+import type { IObs } from 'app/util/obs/types';
+import type { Retryable } from 'app/util/promises/retryable';
 
 export enum DefiComposerPhase {
   IDLE = 'IDLE',
@@ -12,6 +13,7 @@ export enum DefiComposerPhase {
 export interface DefiComposerState {
   phase: DefiComposerPhase;
   error?: { phase: DefiComposerPhase; message: string };
+  signingRetryable?: Retryable<unknown>;
 }
 
 export class DefiComposerStateObs implements IObs<DefiComposerState> {
@@ -25,6 +27,14 @@ export class DefiComposerStateObs implements IObs<DefiComposerState> {
 
   setPhase(phase: DefiComposerPhase) {
     this.obs.next({ ...this.obs.value, phase });
+  }
+
+  enableRetryableSigning(signingRetryable: Retryable<unknown>) {
+    this.obs.next({ ...this.value, signingRetryable });
+  }
+
+  disableRetryableSigning() {
+    this.obs.next({ ...this.value, signingRetryable: undefined });
   }
 
   clearError() {

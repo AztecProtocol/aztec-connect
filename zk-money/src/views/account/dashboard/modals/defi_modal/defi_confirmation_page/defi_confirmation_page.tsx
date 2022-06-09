@@ -20,6 +20,7 @@ import style from './defi_confirmation_page.module.scss';
 import { useAmount } from 'alt-model/top_level_context';
 import { Amount } from 'alt-model/assets';
 import { RemoteAsset } from 'alt-model/types';
+import { RetrySigningButton } from '../../modal_molecules/retry_signing_button';
 
 interface DefiConfirmationPageProps {
   recipe: DefiRecipe;
@@ -118,11 +119,15 @@ export function DefiConfirmationPage({
       </BorderBox>
       {!showingComplete && (
         <div className={style.footer}>
-          <Button
-            text={hasError ? 'Retry' : 'Confirm Transaction'}
-            onClick={canSubmit ? onSubmit : undefined}
-            disabled={!canSubmit}
-          />
+          {composerState.signingRetryable ? (
+            <RetrySigningButton signingRetryable={composerState.signingRetryable} />
+          ) : (
+            <Button
+              text={hasError ? 'Retry' : 'Confirm Transaction'}
+              onClick={canSubmit ? onSubmit : undefined}
+              disabled={!canSubmit}
+            />
+          )}
         </div>
       )}
     </div>
