@@ -28,11 +28,11 @@ exports.main = async function (event: any) {
   if (alias) {
     oldBody = oldBody.replace(
       '$IMAGE_CONTENT',
-      `https://res.cloudinary.com/df4pltas6/image/upload/c_scale,w_1459/g_south_east,l_e_colorize,co_white,l_text:lato_80:@${alias},x_140,y_220/v1615319371/Share_image_3_uo7zrx.png`,
+      `https://res.cloudinary.com/df4pltas6/image/upload/c_scale,w_1459/g_south_east,l_e_colorize,co_white,l_text:lato_80:@${alias},x_170,y_270/v1615319371/Share_image_3_uo7zrx.png`,
     );
     oldBody = oldBody.replace(
       '$IMAGE_CONTENT',
-      `https://res.cloudinary.com/df4pltas6/image/upload/c_scale,w_1459/g_south_east,l_e_colorize,co_white,l_text:lato_80:@${alias},x_140,y_220/v1615319371/Share_image_3_uo7zrx.png`,
+      `https://res.cloudinary.com/df4pltas6/image/upload/c_scale,w_1459/g_south_east,l_e_colorize,co_white,l_text:lato_80:@${alias},x_170,y_270/v1615319371/Share_image_3_uo7zrx.png`,
     );
     oldBody = oldBody.replace(
       '$TEXT_CONTENT',
