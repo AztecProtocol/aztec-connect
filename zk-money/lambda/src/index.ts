@@ -23,12 +23,16 @@ exports.main = async function (event: any) {
     status: '200',
     statusDescription: 'OK',
   };
-  let oldBody = await (await fetch('https://aztec-connect-prod.zk.money/index.html')).text();
+  let oldBody = await (await fetch('https://zk.money/index.html')).text();
 
   if (alias) {
     oldBody = oldBody.replace(
       '$IMAGE_CONTENT',
-      `https://res.cloudinary.com/df4pltas6/image/upload/c_scale,w_1459/g_south_east,l_e_colorize,co_white,l_text:lato_80:@${alias},x_90,y_220/v1615319371/Share_image_3_uo7zrx.png`,
+      `https://res.cloudinary.com/df4pltas6/image/upload/c_scale,w_1459/g_south_east,l_e_colorize,co_white,l_text:lato_80:@${alias},x_140,y_220/v1615319371/Share_image_3_uo7zrx.png`,
+    );
+    oldBody = oldBody.replace(
+      '$IMAGE_CONTENT',
+      `https://res.cloudinary.com/df4pltas6/image/upload/c_scale,w_1459/g_south_east,l_e_colorize,co_white,l_text:lato_80:@${alias},x_140,y_220/v1615319371/Share_image_3_uo7zrx.png`,
     );
     oldBody = oldBody.replace(
       '$TEXT_CONTENT',
@@ -39,6 +43,10 @@ exports.main = async function (event: any) {
       body: oldBody,
     };
   } else {
+    oldBody = oldBody.replace(
+      '$IMAGE_CONTENT',
+      `https://res.cloudinary.com/df4pltas6/image/upload/c_scale,w_1459/v1615319371/Share_image_3_uo7zrx.png`,
+    );
     oldBody = oldBody.replace(
       '$IMAGE_CONTENT',
       `https://res.cloudinary.com/df4pltas6/image/upload/c_scale,w_1459/v1615319371/Share_image_3_uo7zrx.png`,
