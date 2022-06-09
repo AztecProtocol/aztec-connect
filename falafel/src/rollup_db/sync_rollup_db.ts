@@ -67,8 +67,8 @@ export class SyncRollupDb {
     return this.synchronise(() => this.rollupDb.isAliasRegistered(aliasHash));
   }
 
-  public async accountExists(accountPublicKey: GrumpkinAddress, aliasHash: AliasHash) {
-    return this.synchronise(() => this.rollupDb.accountExists(accountPublicKey, aliasHash));
+  public async isAliasRegisteredToAccount(accountPublicKey: GrumpkinAddress, aliasHash: AliasHash) {
+    return this.synchronise(() => this.rollupDb.isAliasRegisteredToAccount(accountPublicKey, aliasHash));
   }
 
   public async getTotalRollupsOfSize(rollupSize: number) {

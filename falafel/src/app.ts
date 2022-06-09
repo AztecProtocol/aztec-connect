@@ -3,7 +3,6 @@ import { assetValueToJson } from '@aztec/barretenberg/asset';
 import { ProofData } from '@aztec/barretenberg/client_proofs';
 import { fetch } from '@aztec/barretenberg/iso_fetch';
 import {
-  AccountJson,
   JoinSplitTxJson,
   partialRuntimeConfigFromJson,
   PendingTxJson,
@@ -21,17 +20,11 @@ import { PromiseReadable } from 'promise-readable';
 import requestIp from 'request-ip';
 import { buildSchemaSync } from 'type-graphql';
 import { Container } from 'typedi';
-import { AccountDao } from './entity';
 import { TxDao } from './entity/tx';
 import { Metrics } from './metrics';
 import { JoinSplitTxResolver, RollupResolver, ServerStatusResolver, TxResolver } from './resolver';
 import { Server } from './server';
 import { Tx } from './tx_receiver';
-
-const toAccountJson = ({ accountPublicKey, aliasHash }: AccountDao): AccountJson => ({
-  accountPublicKey: accountPublicKey.toString('hex'),
-  aliasHash: aliasHash.toString('hex'),
-});
 
 const toTxJson = ({ proofData, offchainTxData }: TxDao): JoinSplitTxJson => ({
   proofData: proofData.toString('hex'),
@@ -220,17 +213,11 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     ctx.status = 200;
   });
 
-  router.post('/account-exists', recordMetric, async (ctx: Koa.Context) => {
+  router.post('/is-alias-registered-to-account', recordMetric, async (ctx: Koa.Context) => {
     const stream = new PromiseReadable(ctx.req);
     const data = JSON.parse((await stream.readAll()) as string);
     const accountPublicKey = GrumpkinAddress.fromString(data.accountPublicKey);
-    ctx.body = (await server.accountExists(accountPublicKey, data.alias)) ? 1 : 0;
-    ctx.status = 200;
-  });
-
-  router.get('/get-unsettled-accounts', recordMetric, async (ctx: Koa.Context) => {
-    const accounts = await server.getUnsettledAccounts();
-    ctx.body = accounts.map(toAccountJson);
+    ctx.body = (await server.isAliasRegisteredToAccount(accountPublicKey, data.alias)) ? 1 : 0;
     ctx.status = 200;
   });
 

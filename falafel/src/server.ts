@@ -287,13 +287,9 @@ export class Server {
     return this.rollupDb.isAliasRegistered(aliasHash);
   }
 
-  public async accountExists(accountPublicKey: GrumpkinAddress, alias: string) {
+  public async isAliasRegisteredToAccount(accountPublicKey: GrumpkinAddress, alias: string) {
     const aliasHash = AliasHash.fromAlias(alias, this.blake);
-    return this.rollupDb.accountExists(accountPublicKey, aliasHash);
-  }
-
-  public async getUnsettledAccounts() {
-    return this.rollupDb.getUnsettledAccounts();
+    return this.rollupDb.isAliasRegisteredToAccount(accountPublicKey, aliasHash);
   }
 
   public async getUnsettledPaymentTxs() {

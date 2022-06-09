@@ -1,4 +1,3 @@
-import { AliasHash } from '../account_id';
 import { GrumpkinAddress } from '../address';
 import { AssetValue } from '../asset';
 import { BlockSource } from '../block_source';
@@ -71,26 +70,6 @@ export interface InitialWorldState {
   initialAccounts: Buffer;
 }
 
-export interface Account {
-  accountPublicKey: GrumpkinAddress;
-  aliasHash: AliasHash;
-}
-
-export interface AccountJson {
-  accountPublicKey: string;
-  aliasHash: string;
-}
-
-export const accountToJson = ({ accountPublicKey, aliasHash }: Account): AccountJson => ({
-  accountPublicKey: accountPublicKey.toString(),
-  aliasHash: aliasHash.toString(),
-});
-
-export const accountFromJson = ({ accountPublicKey, aliasHash }: AccountJson): Account => ({
-  accountPublicKey: GrumpkinAddress.fromString(accountPublicKey),
-  aliasHash: AliasHash.fromString(aliasHash),
-});
-
 export interface JoinSplitTx {
   proofData: JoinSplitProofData;
   offchainTxData: OffchainJoinSplitData;
@@ -122,7 +101,6 @@ export interface RollupProvider extends BlockSource {
   getInitialWorldState(): Promise<InitialWorldState>;
   isAccountRegistered(accountPublicKey: GrumpkinAddress): Promise<boolean>;
   isAliasRegistered(alias: string): Promise<boolean>;
-  accountExists(accountPublicKey: GrumpkinAddress, alias: string): Promise<boolean>;
-  getUnsettledAccounts(): Promise<Account[]>;
+  isAliasRegisteredToAccount(accountPublicKey: GrumpkinAddress, alias: string): Promise<boolean>;
   getUnsettledPaymentTxs(): Promise<JoinSplitTx[]>;
 }

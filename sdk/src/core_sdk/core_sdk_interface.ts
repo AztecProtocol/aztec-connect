@@ -27,21 +27,17 @@ export interface CoreSdkInterface {
 
   getRemoteStatus(): Promise<RollupProviderStatus>;
 
-  isAccountRegistered(accountPublicKey: GrumpkinAddress): Promise<boolean>;
+  isAccountRegistered(accountPublicKey: GrumpkinAddress, includePending: boolean): Promise<boolean>;
 
-  isRemoteAccountRegistered(accountPublicKey: GrumpkinAddress): Promise<boolean>;
+  isAliasRegistered(alias: string, includePending: boolean): Promise<boolean>;
 
-  isAliasRegistered(alias: string): Promise<boolean>;
-
-  isRemoteAliasRegistered(alias: string): Promise<boolean>;
-
-  accountExists(accountPublicKey: GrumpkinAddress, alias: string): Promise<boolean>;
-
-  remoteAccountExists(accountPublicKey: GrumpkinAddress, alias: string): Promise<boolean>;
+  isAliasRegisteredToAccount(
+    accountPublicKey: GrumpkinAddress,
+    alias: string,
+    includePending: boolean,
+  ): Promise<boolean>;
 
   getAccountPublicKey(alias: string): Promise<GrumpkinAddress | undefined>;
-
-  getRemoteUnsettledAccountPublicKey(alias: string): Promise<GrumpkinAddress | undefined>;
 
   getTxFees(assetId: number): Promise<AssetValue[][]>;
 

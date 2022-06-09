@@ -104,7 +104,7 @@ export class TypeOrmRollupDb implements RollupDb {
     return !!account;
   }
 
-  public async accountExists(accountPublicKey: GrumpkinAddress, aliasHash: AliasHash) {
+  public async isAliasRegisteredToAccount(accountPublicKey: GrumpkinAddress, aliasHash: AliasHash) {
     const account = await this.accountRep.findOne({
       where: { accountPublicKey: accountPublicKey.toBuffer(), aliasHash: aliasHash.toBuffer() },
     });

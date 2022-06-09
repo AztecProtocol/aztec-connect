@@ -116,36 +116,20 @@ export class AztecSdk extends EventEmitter {
     return this.core.getRemoteStatus();
   }
 
-  public async isAccountRegistered(accountPublicKey: GrumpkinAddress) {
-    return this.core.isAccountRegistered(accountPublicKey);
+  public async isAccountRegistered(accountPublicKey: GrumpkinAddress, includePending = false) {
+    return this.core.isAccountRegistered(accountPublicKey, includePending);
   }
 
-  public async isRemoteAccountRegistered(accountPublicKey: GrumpkinAddress) {
-    return this.core.isRemoteAccountRegistered(accountPublicKey);
+  public async isAliasRegistered(alias: string, includePending = false) {
+    return this.core.isAliasRegistered(alias, includePending);
   }
 
-  public async isAliasRegistered(alias: string) {
-    return this.core.isAliasRegistered(alias);
-  }
-
-  public async isRemoteAliasRegistered(alias: string) {
-    return this.core.isRemoteAliasRegistered(alias);
-  }
-
-  public async accountExists(accountPublicKey: GrumpkinAddress, alias: string) {
-    return this.core.accountExists(accountPublicKey, alias);
-  }
-
-  public async remoteAccountExists(accountPublicKey: GrumpkinAddress, alias: string) {
-    return this.core.remoteAccountExists(accountPublicKey, alias);
+  public async isAliasRegisteredToAccount(accountPublicKey: GrumpkinAddress, alias: string, includePending = false) {
+    return this.core.isAliasRegisteredToAccount(accountPublicKey, alias, includePending);
   }
 
   public async getAccountPublicKey(alias: string) {
     return this.core.getAccountPublicKey(alias);
-  }
-
-  public async getRemoteUnsettledAccountPublicKey(alias: string) {
-    return this.core.getRemoteUnsettledAccountPublicKey(alias);
   }
 
   public async getTxFees(assetId: number) {

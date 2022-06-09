@@ -90,22 +90,22 @@ describe('rollup_db', () => {
     const rollupProof = randomRollupProof([txs[0], txs[2]]);
     await rollupDb.addRollupProof(rollupProof);
 
-    expect(await rollupDb.accountExists(accountPublicKeys[0], aliasHash0)).toBe(true);
-    expect(await rollupDb.accountExists(accountPublicKeys[1], aliasHash0)).toBe(true);
-    expect(await rollupDb.accountExists(accountPublicKeys[2], aliasHash1)).toBe(true);
-    expect(await rollupDb.accountExists(accountPublicKeys[3], aliasHash1)).toBe(true);
-    expect(await rollupDb.accountExists(accountPublicKeys[0], aliasHash1)).toBe(false);
-    expect(await rollupDb.accountExists(accountPublicKeys[1], aliasHash1)).toBe(false);
-    expect(await rollupDb.accountExists(accountPublicKeys[2], aliasHash0)).toBe(false);
-    expect(await rollupDb.accountExists(accountPublicKeys[3], aliasHash0)).toBe(false);
+    expect(await rollupDb.isAliasRegisteredToAccount(accountPublicKeys[0], aliasHash0)).toBe(true);
+    expect(await rollupDb.isAliasRegisteredToAccount(accountPublicKeys[1], aliasHash0)).toBe(true);
+    expect(await rollupDb.isAliasRegisteredToAccount(accountPublicKeys[2], aliasHash1)).toBe(true);
+    expect(await rollupDb.isAliasRegisteredToAccount(accountPublicKeys[3], aliasHash1)).toBe(true);
+    expect(await rollupDb.isAliasRegisteredToAccount(accountPublicKeys[0], aliasHash1)).toBe(false);
+    expect(await rollupDb.isAliasRegisteredToAccount(accountPublicKeys[1], aliasHash1)).toBe(false);
+    expect(await rollupDb.isAliasRegisteredToAccount(accountPublicKeys[2], aliasHash0)).toBe(false);
+    expect(await rollupDb.isAliasRegisteredToAccount(accountPublicKeys[3], aliasHash0)).toBe(false);
 
     // txs[1] and txs[3] will be deleted.
     await rollupDb.deletePendingTxs();
 
-    expect(await rollupDb.accountExists(accountPublicKeys[0], aliasHash0)).toBe(true);
-    expect(await rollupDb.accountExists(accountPublicKeys[1], aliasHash0)).toBe(false);
-    expect(await rollupDb.accountExists(accountPublicKeys[2], aliasHash1)).toBe(true);
-    expect(await rollupDb.accountExists(accountPublicKeys[3], aliasHash1)).toBe(false);
+    expect(await rollupDb.isAliasRegisteredToAccount(accountPublicKeys[0], aliasHash0)).toBe(true);
+    expect(await rollupDb.isAliasRegisteredToAccount(accountPublicKeys[1], aliasHash0)).toBe(false);
+    expect(await rollupDb.isAliasRegisteredToAccount(accountPublicKeys[2], aliasHash1)).toBe(true);
+    expect(await rollupDb.isAliasRegisteredToAccount(accountPublicKeys[3], aliasHash1)).toBe(false);
   });
 
   it('should bulk add txs', async () => {
