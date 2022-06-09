@@ -106,6 +106,13 @@ resource "aws_cloudfront_distribution" "zkmoney_distribution" {
   aliases         = ["${var.DEPLOY_TAG}.zk.money"]
 
 
+  custom_error_response {
+    error_caching_min_ttl = "0"
+    error_code            = "404"
+    response_code         = "200"
+    response_page_path    = "/index.html"
+  }
+
   default_cache_behavior {
     target_origin_id = "website"
     allowed_methods  = ["GET", "HEAD"]
@@ -137,6 +144,7 @@ resource "aws_cloudfront_distribution" "zkmoney_distribution" {
     lambda_function_association {
       event_type = "origin-response"
       lambda_arn = aws_lambda_function.twitter_lambda.qualified_arn
+
     }
 
     forwarded_values {
@@ -147,6 +155,7 @@ resource "aws_cloudfront_distribution" "zkmoney_distribution" {
       }
     }
   }
+
 
   price_class = "PriceClass_100"
 
