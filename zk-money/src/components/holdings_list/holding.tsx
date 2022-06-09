@@ -22,7 +22,7 @@ export function Holding({ assetValue, onSend, onShield, onGoToEarn }: HoldingPro
   const spendableBalance = useSpendableBalance(assetValue.assetId);
   const spendableAmount = spendableBalance && asset ? new Amount(spendableBalance, asset) : undefined;
   const spendableBalanceIsDust =
-    spendableAmount && asset ? getIsDust(spendableAmount?.toAssetValue(), asset) : undefined;
+    !spendableAmount || (asset ? getIsDust(spendableAmount.toAssetValue(), asset) : undefined);
   const bulkPrice = useAmountBulkPrice(amount);
   const bulkPriceStr = bulkPrice ? `$${formatBulkPrice(bulkPrice)}` : '';
   const shieldSupported = SHIELDABLE_ASSET_ADDRESSES.some(x => asset?.address.equals(x));
@@ -50,9 +50,11 @@ export function Holding({ assetValue, onSend, onShield, onGoToEarn }: HoldingPro
           <Button size={'s'} className={style.button} onClick={() => onShield?.(asset)} text={'Shield'} />
         )}
         {!spendableBalanceIsDust && (
-          <Button size={'s'} className={style.button} onClick={() => onSend?.(asset)} text={'Send'} />
+          <>
+            <Button size={'s'} className={style.button} onClick={() => onSend?.(asset)} text={'Send'} />
+            <Button size={'s'} className={style.button} onClick={() => onGoToEarn?.(asset)} text={'Earn'} />
+          </>
         )}
-        <Button size={'s'} className={style.button} onClick={() => onGoToEarn?.(asset)} text={'Earn'} />
       </div>
     </div>
   );

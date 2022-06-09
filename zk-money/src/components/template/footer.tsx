@@ -23,10 +23,10 @@ const helpItems = [
   },
   {
     name: 'FAQ',
-    href: 'https://aztec-protocol.gitbook.io/zk-money/',
+    href: 'https://docs.aztec.network/how-aztec-works/faq',
   },
   {
-    name: 'Looking for V1?',
+    name: 'Looking for the old site?',
     href: 'https://old.zk.money/',
   },
 ];

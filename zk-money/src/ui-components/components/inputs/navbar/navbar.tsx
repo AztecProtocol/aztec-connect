@@ -3,7 +3,6 @@ import { isSafari } from 'device_support';
 import { bindStyle } from '../../../util/classnames';
 import { ReactComponent as Logo } from '../../../images/zk_money.svg';
 import { Pages } from 'views/views';
-import { AppAction } from 'app';
 import zkMoneyLogoWhite from 'images/zk_money_white.svg';
 import zkMoneyLogo from 'images/zk_money.svg';
 import style from './navbar.module.scss';
@@ -17,7 +16,6 @@ export enum Theme {
 
 interface NavbarProps {
   isLoggedIn: boolean;
-  appAction: AppAction;
   path?: string;
   theme?: Theme;
   onChange?: (path: string) => void;
@@ -46,7 +44,7 @@ function getLogo(theme: Theme | undefined) {
   return <Logo className={cx(style.logo, theme === Theme.GRADIENT ? style.gradient : style.white)} />;
 }
 
-export function Navbar({ appAction, isLoggedIn, accountComponent, theme, onChange }: NavbarProps): JSX.Element {
+export function Navbar({ isLoggedIn, accountComponent, theme, onChange }: NavbarProps): JSX.Element {
   const location = useLocation();
 
   return (
@@ -69,7 +67,7 @@ export function Navbar({ appAction, isLoggedIn, accountComponent, theme, onChang
             {link.label}
           </Link>
         ))}
-        {isLoggedIn || appAction === AppAction.ACCOUNT ? (
+        {isLoggedIn ? (
           <>
             <div className={style.accountWrapper}>
               <Link

@@ -52,12 +52,6 @@ const WarningIcon = styled.img`
   }
 `;
 
-const WarningFootnote = styled(Text)`
-  @media (max-width: ${breakpoints.s}) {
-    display: none;
-  }
-`;
-
 export const DisclaimerBlock: React.FunctionComponent = () => {
   return (
     <Root>

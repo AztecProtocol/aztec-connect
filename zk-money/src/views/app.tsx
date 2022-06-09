@@ -316,7 +316,6 @@ export class AppView extends PureComponent<AppProps, AppState> {
         >
           <Navbar
             path={window.location.pathname}
-            appAction={action}
             theme={theme}
             isLoggedIn={isLoggedIn}
             accountComponent={accountComponent}
