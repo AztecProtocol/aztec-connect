@@ -19,8 +19,8 @@ async function rootRender() {
   try {
     // TODO: remove this check for launch
     // (similar change required in home.tsx & incentive_modal.tsx)
-    const isProdSite = window.location.hostname === 'zk.money';
-    if (isProdSite && !localStorage.getItem('unlock_prod')) {
+    // const isProdSite = window.location.hostname === 'zk.money';
+    if (!localStorage.getItem('unlock_prod')) {
       return (
         <BrowserRouter>
           <AppInitFailed reason={{ type: 'unlaunched' }} />
