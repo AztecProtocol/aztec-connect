@@ -1,5 +1,6 @@
 import { AssetValue } from '@aztec/barretenberg/asset';
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
+import { TxType } from '@aztec/barretenberg/blockchain';
 import { DefiDepositProofData, ProofData } from '@aztec/barretenberg/client_proofs';
 import { TxDao } from '../entity';
 import { TxFeeResolver } from '../tx_fee_resolver';
@@ -12,12 +13,19 @@ export interface RollupTx {
   bridgeId?: bigint;
 }
 
+export interface RollupResources {
+  gasUsed: number;
+  callDataUsed: number;
+  bridgeIds: bigint[];
+  assetIds: Set<number>;
+}
+
 export function createRollupTx(rawTx: TxDao, proof: ProofData): RollupTx {
   return {
     tx: rawTx,
     excessGas: rawTx.excessGas,
     fee: {
-      assetId: proof.txFeeAssetId.readUInt32BE(28),
+      assetId: proof.feeAssetId,
       value: toBigIntBE(proof.txFee),
     },
     bridgeId: undefined,
@@ -34,6 +42,11 @@ export function createDefiRollupTx(rawTx: TxDao, proof: DefiDepositProofData): R
     },
     bridgeId: proof.bridgeId.toBigInt(),
   };
+}
+
+export interface BridgeQueueResult {
+  txsToRollup: RollupTx[];
+  resourcesConsumed: RollupResources;
 }
 
 export class BridgeTxQueue {
@@ -59,12 +72,34 @@ export class BridgeTxQueue {
 
   // we need to traverse our queue of txs and attempt to complete a defi batch
   // completing a batch means producing a set of txs that make the batch profitable whilst still keeping within bridge size and rollup size
-  public getTxsToRollup(maxRemainingTransactions: number, assetIds: Set<number>, maxAssets: number) {
+  public getTxsToRollup(
+    maxRemainingTransactions: number,
+    assetIds: Set<number>,
+    maxAssets: number,
+    gasRemainingInRollup: number,
+    callDataRemainingInRollup: number,
+  ) {
     const txsToConsider: RollupTx[] = [];
     const newAssets = new Set<number>(assetIds);
+    const callDataPerTx = this.feeResolver.getTxCallData(TxType.DEFI_DEPOSIT);
     let gasFromTxs = 0;
+    // this figure holds the total gas used by the selected txs, including the verification gas, the defi deposit gas and the bridge interaction gas
+    // start off with the bridge interaction gas and add on the gas for each tx
+    // we need to get the bridge gas usage from the contract as this is not overridden by subsidy
+    let totalGasUsedByTxs = this.feeResolver.getFullBridgeGasFromContract(this.bridgeId);
+    // this figure holds the total calldata used by the selected txs
+    let totalCallDataUsedByTxs = 0;
     for (let i = 0; i < this.txQueue.length && txsToConsider.length < maxRemainingTransactions; i++) {
       const tx = this.txQueue[i];
+      const gasUsedByTx =
+        this.feeResolver.getUnadjustedTxGas(tx.fee.assetId, TxType.DEFI_DEPOSIT) -
+        this.feeResolver.getUnadjustedBaseVerificationGas();
+      const newGasUsedValue = totalGasUsedByTxs + gasUsedByTx;
+      const newCallDataUsed = totalCallDataUsedByTxs + callDataPerTx;
+      if (newGasUsedValue > gasRemainingInRollup || newCallDataUsed > callDataRemainingInRollup) {
+        // we can no longer accept more txs at this point
+        break;
+      }
       if (tx.fee.value && this.feeResolver.isFeePayingAsset(tx.fee.assetId)) {
         if (!newAssets.has(tx.fee.assetId) && newAssets.size === maxAssets) {
           continue;
@@ -72,17 +107,36 @@ export class BridgeTxQueue {
         newAssets.add(tx.fee.assetId);
       }
       txsToConsider.push(tx);
+      // here we accumulate the amount of gas on the tx that is attributable to the bridge
+      // i.e. we are not counting the gas that would be used by the verifier etc.
+      // all we are trying to test here is 'do we have enough gas to run the bridge interaction'
       gasFromTxs += this.feeResolver.getSingleBridgeTxGas(this.bridgeId) + tx.excessGas;
+      totalGasUsedByTxs = newGasUsedValue;
+      totalCallDataUsedByTxs = newCallDataUsed;
     }
+    // this full bridge gas is used to determine profitability so we need the value that includes subsidy
     const fullBridgeGas = this.feeResolver.getFullBridgeGas(this.bridgeId);
     if (gasFromTxs >= fullBridgeGas) {
       this.txQueue.splice(0, txsToConsider.length);
-      for (const asset of newAssets) {
-        assetIds.add(asset);
-      }
-      return txsToConsider;
+      return {
+        txsToRollup: txsToConsider,
+        resourcesConsumed: {
+          gasUsed: totalGasUsedByTxs,
+          callDataUsed: totalCallDataUsedByTxs,
+          assetIds: newAssets,
+          bridgeIds: [this.bridgeId],
+        },
+      } as BridgeQueueResult;
     }
-    return [];
+    return {
+      txsToRollup: [],
+      resourcesConsumed: {
+        gasUsed: 0,
+        callDataUsed: 0,
+        assetIds: new Set<number>(),
+        bridgeIds: [],
+      },
+    } as BridgeQueueResult;
   }
 
   public transactionHasTimedOut(tx: RollupTx) {

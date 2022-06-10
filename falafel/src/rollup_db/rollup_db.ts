@@ -111,14 +111,6 @@ export class TypeOrmRollupDb implements RollupDb {
     return !!account;
   }
 
-  public async getTotalRollupsOfSize(rollupSize: number) {
-    return await this.rollupProofRep
-      .createQueryBuilder('rp')
-      .leftJoin('rp.rollup', 'r')
-      .where('rp.rollupSize = :rollupSize AND r.mined IS NOT NULL', { rollupSize })
-      .getCount();
-  }
-
   public async getUnsettledTxCount() {
     return await this.txRep.count({ where: { mined: null } });
   }
@@ -199,20 +191,6 @@ export class TypeOrmRollupDb implements RollupDb {
 
   public async deleteOrphanedRollupProofs() {
     await this.rollupProofRep.delete({ rollup: IsNull() });
-  }
-
-  public async getRollupProofsBySize(numTxs: number) {
-    return await this.rollupProofRep.find({
-      where: { rollupSize: numTxs, rollup: null },
-      relations: ['txs'],
-      order: { dataStartIndex: 'ASC' },
-    });
-  }
-
-  public async getNumRollupProofsBySize(numTxs: number) {
-    return await this.rollupProofRep.count({
-      where: { rollupSize: numTxs, rollup: null },
-    });
   }
 
   public async getNumSettledRollups() {

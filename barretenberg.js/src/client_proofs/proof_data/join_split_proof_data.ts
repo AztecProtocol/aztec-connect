@@ -30,6 +30,6 @@ export class JoinSplitProofData {
   }
 
   get txFeeAssetId() {
-    return this.proofData.txFeeAssetId.readUInt32BE(28);
+    return this.proofData.feeAssetId;
   }
 }

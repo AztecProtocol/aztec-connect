@@ -32,6 +32,7 @@ export class RollupPipeline {
     numInnerRollupTxs: number,
     numOuterRollupProofs: number,
     bridgeResolver: BridgeResolver,
+    maxCallDataPerRollup: number,
   ) {
     const innerRollupSize = 1 << Math.ceil(Math.log2(numInnerRollupTxs));
     const outerRollupSize = 1 << Math.ceil(Math.log2(innerRollupSize * numOuterRollupProofs));
@@ -44,6 +45,7 @@ export class RollupPipeline {
         publishInterval,
         flushAfterIdle,
         gasLimit,
+        maxCallDataPerRollup,
         maxProviderGasPrice: maxProviderGasPrice.toString(),
       })}`,
     );
@@ -84,6 +86,8 @@ export class RollupPipeline {
       publishInterval,
       flushAfterIdle,
       bridgeResolver,
+      maxCallDataPerRollup,
+      gasLimit,
     );
   }
 
@@ -125,6 +129,7 @@ export class RollupPipelineFactory {
     private numInnerRollupTxs: number,
     private numOuterRollupProofs: number,
     private bridgeResolver: BridgeResolver,
+    private maxCallDataPerRollup: number,
   ) {}
 
   public setConf(
@@ -164,6 +169,7 @@ export class RollupPipelineFactory {
       this.numInnerRollupTxs,
       this.numOuterRollupProofs,
       this.bridgeResolver,
+      this.maxCallDataPerRollup,
     );
   }
 }

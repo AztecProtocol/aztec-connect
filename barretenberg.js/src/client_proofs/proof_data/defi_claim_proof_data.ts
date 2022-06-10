@@ -19,7 +19,7 @@ export class DefiClaimProofData {
   }
 
   get txFeeAssetId() {
-    return this.proofData.txFeeAssetId.readUInt32BE(28);
+    return this.proofData.feeAssetId;
   }
 
   get bridgeId() {

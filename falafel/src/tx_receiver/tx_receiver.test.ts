@@ -142,8 +142,8 @@ describe('tx receiver', () => {
 
     txFeeResolver = {
       isFeePayingAsset: jest.fn().mockImplementation((assetId: number) => feePayingAssets.includes(assetId)),
-      getBridgeTxGas: jest.fn().mockReturnValue(0),
-      getTxGas: jest.fn().mockReturnValue(0),
+      getAdjustedBridgeTxGas: jest.fn().mockReturnValue(0),
+      getAdjustedTxGas: jest.fn().mockReturnValue(0),
       getGasPaidForByFee: jest.fn().mockReturnValue(0),
     } as any;
 

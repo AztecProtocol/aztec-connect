@@ -1,27 +1,23 @@
-import { isAccountCreation, isDefiDeposit, TxType } from '@aztec/barretenberg/blockchain';
+import { isAccountTx, isDefiDepositTx, TxType } from '@aztec/barretenberg/blockchain';
 import { DefiDepositProofData, ProofData } from '@aztec/barretenberg/client_proofs';
 import { HashPath } from '@aztec/barretenberg/merkle_tree';
 import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
+import { asyncMap } from '@aztec/barretenberg/async_map';
 import { BridgeResolver } from '../bridge';
-import { RollupProofDao } from '../entity/rollup_proof';
 import { TxDao } from '../entity/tx';
 import { RollupAggregator } from '../rollup_aggregator';
 import { RollupCreator } from '../rollup_creator';
 import { RollupPublisher } from '../rollup_publisher';
 import { TxFeeResolver } from '../tx_fee_resolver';
-import { BridgeTxQueue, createDefiRollupTx, createRollupTx, RollupTx } from './bridge_tx_queue';
+import { BridgeTxQueue, createDefiRollupTx, createRollupTx, RollupTx, RollupResources } from './bridge_tx_queue';
 import { PublishTimeManager, RollupTimeouts } from './publish_time_manager';
-import { emptyProfile, profileRollup, RollupProfile } from './rollup_profiler';
-import { TxRollup } from 'halloumi/proof_generator';
+import { profileRollup, RollupProfile } from './rollup_profiler';
 
 export class RollupCoordinator {
-  private innerProofs: RollupProofDao[] = [];
-  private txs: RollupTx[] = [];
-  private rollupBridgeIds: bigint[] = [];
-  private rollupAssetIds: Set<number> = new Set();
-  private published = false;
+  private processedTxs: RollupTx[] = [];
   private bridgeQueues = new Map<bigint, BridgeTxQueue>();
+  private totalSlots: number;
 
   constructor(
     private publishTimeManager: PublishTimeManager,
@@ -35,7 +31,32 @@ export class RollupCoordinator {
     private bridgeResolver: BridgeResolver,
     private feeResolver: TxFeeResolver,
     private defiInteractionNotes: DefiInteractionNote[] = [],
-  ) {}
+    private maxGasForRollup: number,
+    private maxCallDataForRollup: number,
+    private log = console.log,
+  ) {
+    this.totalSlots = this.numOuterRollupProofs * this.numInnerRollupTxs;
+  }
+
+  public getProcessedTxs() {
+    return this.processedTxs.map(rollupTx => rollupTx.tx);
+  }
+
+  public interrupt() {
+    this.processedTxs = [];
+    this.rollupCreator.interrupt();
+    this.rollupAggregator.interrupt();
+    this.rollupPublisher.interrupt();
+  }
+
+  public async processPendingTxs(pendingTxs: TxDao[], flush = false): Promise<RollupProfile> {
+    const rollupTimeouts = this.publishTimeManager.calculateLastTimeouts();
+    this.initialiseBridgeQueues(rollupTimeouts);
+
+    const { txs, bridgeIds, assetIds } = this.getNextTxsToRollup(pendingTxs, flush);
+
+    return await this.aggregateAndPublish(txs, bridgeIds, assetIds, rollupTimeouts, flush);
+  }
 
   private initialiseBridgeQueues(rollupTimeouts: RollupTimeouts) {
     this.bridgeQueues = new Map<bigint, BridgeTxQueue>();
@@ -45,119 +66,36 @@ export class RollupCoordinator {
     }
   }
 
-  getProcessedTxs() {
-    return this.txs.map(rollupTx => rollupTx.tx);
-  }
-
-  interrupt() {
-    this.txs = [];
-    this.rollupCreator.interrupt();
-    this.rollupAggregator.interrupt();
-    this.rollupPublisher.interrupt();
-  }
-
-  async processPendingTxs(pendingTxs: TxDao[], flush = false): Promise<RollupProfile> {
-    let profile = emptyProfile(this.numInnerRollupTxs * this.numOuterRollupProofs);
-    if (this.published) {
-      return profile;
-    }
-
-    const rollupTimeouts = this.publishTimeManager.calculateLastTimeouts();
-    this.initialiseBridgeQueues(rollupTimeouts);
-    const bridgeIds = [...this.rollupBridgeIds];
-    const assetIds = new Set<number>(this.rollupAssetIds);
-
-    const txs = this.getNextTxsToRollup(pendingTxs, flush, assetIds, bridgeIds);
-
-    profile = await this.aggregateAndPublish(txs, rollupTimeouts, flush);
-    this.published = profile.published;
-    return profile;
-  }
-
-  private handleNewDefiTx(
-    tx: TxDao,
-    remainingTxSlots: number,
-    txsForRollup: RollupTx[],
-    flush: boolean,
-    assetIds: Set<number>,
-    bridgeIds: bigint[],
-  ): RollupTx[] {
-    // we have a new defi interaction, we need to determine if it can be accepted and if so whether it gets queued or goes straight on chain.
-    const proof = new ProofData(tx.proofData);
-    const defiProof = new DefiDepositProofData(proof);
-    const rollupTx = createDefiRollupTx(tx, defiProof);
-
-    const addTxs = (txs: RollupTx[]) => {
-      for (const tx of txs) {
-        txsForRollup.push(tx);
-        if (tx.fee.value && this.feeResolver.isFeePayingAsset(tx.fee.assetId)) {
-          assetIds.add(tx.fee.assetId);
-        }
-        if (!tx.bridgeId) {
-          // this shouldn't be possible
-          console.log(`Adding a tx that should be DEFI but it has no bridge id!`);
-          continue;
-        }
-        if (!bridgeIds.some(id => id === tx.bridgeId)) {
-          bridgeIds.push(tx.bridgeId);
-        }
-      }
+  private getNextTxsToRollup(pendingTxs: TxDao[], flush: boolean) {
+    // Gas should be thought of as "layer 2 gas". It's a universal unit of cost for producing a rollup.
+    // The initial gasUsed, in an empty rollup, is the cost of verification.
+    // Hence total slots * verification gas per slot.
+    const resourceConsumption: RollupResources = {
+      gasUsed: this.totalSlots * this.feeResolver.getUnadjustedBaseVerificationGas(),
+      callDataUsed: 0,
+      bridgeIds: [],
+      assetIds: new Set<number>(),
     };
 
-    if (bridgeIds.some(id => id === rollupTx.bridgeId)) {
-      // we already have txs for this bridge in the rollup, add it straight in
-      addTxs([rollupTx]);
-      return txsForRollup;
-    }
-
-    if (bridgeIds.length === RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK) {
-      // this rollup doesn't have any txs for this bridge and can't take any more
-      return txsForRollup;
-    }
-
-    if (flush) {
-      // we have been told to flush, add it straight into the rollup
-      addTxs([rollupTx]);
-      return txsForRollup;
-    }
-    const bridgeId = defiProof.bridgeId.toBigInt();
-
-    let bridgeQueue = this.bridgeQueues.get(bridgeId);
-
-    if (!bridgeQueue) {
-      // We don't have a bridge config for this!!
-      this.bridgeQueues.set(bridgeId, new BridgeTxQueue(bridgeId, this.feeResolver));
-      bridgeQueue = this.bridgeQueues.get(bridgeId)!;
-    }
-
-    //if we are beyond the timeout interval for this bridge then add it straight in
-    if (bridgeQueue.transactionHasTimedOut(rollupTx)) {
-      addTxs([rollupTx]);
-      return txsForRollup;
-    }
-
-    // Add this tx to the queue for this bridge and work out if we can put any more txs into the current batch or create a new one
-    bridgeQueue.addDefiTx(rollupTx);
-    const newTxs = bridgeQueue.getTxsToRollup(remainingTxSlots, assetIds, RollupProofData.NUMBER_OF_ASSETS);
-    addTxs(newTxs);
-    return txsForRollup;
-  }
-
-  private getNextTxsToRollup(pendingTxs: TxDao[], flush: boolean, assetIds: Set<number>, bridgeIds: bigint[]) {
-    const remainingTxSlots = this.numInnerRollupTxs * (this.numOuterRollupProofs - this.innerProofs.length);
-    let txs: RollupTx[] = [];
-
+    // We want to ensure that any claim proofs are prioritised. Sort them to the front.
     const sortedTxs = [...pendingTxs].sort((a, b) =>
       a.txType === TxType.DEFI_CLAIM && a.txType !== b.txType ? -1 : 1,
     );
 
+    let txs: RollupTx[] = [];
+
+    // Reasons to discard txs:
+    // The fee on the transaction is an asset not already in the set of rollup assets, and the set is full.
+    // It's chained to a transaction that's been discarded.
+    // It's a defi deposit who's bridge is not yet profitable.
     const discardedCommitments: Buffer[] = [];
-    for (let i = 0; i < sortedTxs.length && txs.length < remainingTxSlots; ++i) {
+    for (let i = 0; i < sortedTxs.length && txs.length < this.totalSlots; ++i) {
       const tx = sortedTxs[i];
       const proofData = new ProofData(tx.proofData);
-      const assetId = proofData.txFeeAssetId.readUInt32BE(28);
+      const assetId = proofData.feeAssetId;
 
-      if (isAccountCreation(tx.txType)) {
+      // Account txs are always accepted.
+      if (isAccountTx(tx.txType)) {
         txs.push(createRollupTx(tx, proofData));
         continue;
       }
@@ -169,20 +107,22 @@ export class RollupCoordinator {
 
       const addTx = () => {
         if (this.feeResolver.isFeePayingAsset(assetId)) {
-          assetIds.add(assetId);
+          resourceConsumption.assetIds.add(assetId);
         }
         txs.push(createRollupTx(tx, proofData));
       };
 
+      // Discard tx if its fee is payed in an asset that needs to be added to the asset set, and the set is full.
       if (
         this.feeResolver.isFeePayingAsset(assetId) &&
-        !assetIds.has(assetId) &&
-        assetIds.size === RollupProofData.NUMBER_OF_ASSETS
+        !resourceConsumption.assetIds.has(assetId) &&
+        resourceConsumption.assetIds.size === RollupProofData.NUMBER_OF_ASSETS
       ) {
         discardTx();
         continue;
       }
 
+      // Discard tx if it's chaining off a discarded tx.
       if (
         !proofData.backwardLink.equals(Buffer.alloc(32)) &&
         discardedCommitments.some(c => c.equals(proofData.backwardLink))
@@ -191,128 +131,263 @@ export class RollupCoordinator {
         continue;
       }
 
-      if (!isDefiDeposit(tx.txType)) {
+      if (!isDefiDepositTx(tx.txType)) {
+        // We discard if the addition would breach resources such as calldata.
+        if (!this.validateAndUpdateRollupResources(tx.txType, assetId, resourceConsumption)) {
+          discardTx();
+          continue;
+        }
         addTx();
       } else {
-        txs = this.handleNewDefiTx(tx, remainingTxSlots - txs.length, txs, flush, assetIds, bridgeIds);
+        // Returns a set of txs to be added to the rollup. e.g. all the defi txs for a bridge, once it's profitable.
+        txs = this.handleNewDefiTx(tx, this.totalSlots - txs.length, flush, resourceConsumption, txs);
+        // txs.push(...txsToAdd);
       }
     }
-    return txs;
+
+    return {
+      txs,
+      bridgeIds: resourceConsumption.bridgeIds,
+      assetIds: resourceConsumption.assetIds,
+    };
   }
 
-  private printRollupState(rollupProfile: RollupProfile, timeout: boolean, flush: boolean) {
-    console.log(
-      `New rollup - size: ${rollupProfile.rollupSize}, numTxs: ${rollupProfile.totalTxs}, timeout/flush: ${timeout}/${flush}, gas balance: ${rollupProfile.gasBalance}, inner/outer chains: ${rollupProfile.innerChains}/${rollupProfile.outerChains}`,
-    );
-    for (const bp of rollupProfile.bridgeProfiles.values()) {
-      console.log(
-        `Defi bridge published. Id: ${bp.bridgeId.toString()}, numTxs: ${bp.numTxs}, gas balance: ${
-          bp.gasAccrued - bp.gasThreshold
-        }`,
+  // If txs are added in this function, then the provided resource consumption will be updated to include the resources
+  // consumed by those txs.
+  private handleNewDefiTx(
+    tx: TxDao,
+    remainingTxSlots: number,
+    flush: boolean,
+    currentConsumption: RollupResources,
+    txsForRollup: RollupTx[],
+  ): RollupTx[] {
+    // We have a new defi interaction, we need to determine if it can be accepted and if so whether it gets queued or
+    // goes straight on chain.
+    const proof = new ProofData(tx.proofData);
+    const defiProof = new DefiDepositProofData(proof);
+    const rollupTx = createDefiRollupTx(tx, defiProof);
+    const bridgeId = rollupTx.bridgeId!;
+    const bridgeAlreadyPresentInRollup = currentConsumption.bridgeIds.some(id => id === bridgeId);
+    // const txsForRollup: RollupTx[] = [];
+
+    const addTxs = (txs: RollupTx[]) => {
+      for (const tx of txs) {
+        txsForRollup.push(tx);
+        if (tx.fee.value && this.feeResolver.isFeePayingAsset(tx.fee.assetId)) {
+          currentConsumption.assetIds.add(tx.fee.assetId);
+        }
+        if (!currentConsumption.bridgeIds.some(id => id === bridgeId)) {
+          currentConsumption.bridgeIds.push(tx.bridgeId!);
+        }
+      }
+    };
+
+    const verifyResourceLimits = (txs: RollupTx[]) => {
+      let totalGasUsedInRollup = currentConsumption.gasUsed;
+      if (!bridgeAlreadyPresentInRollup) {
+        // we need the full bridge gas from the contract as this is the value that does not include any subsidy
+        totalGasUsedInRollup += this.feeResolver.getFullBridgeGasFromContract(bridgeId);
+      }
+      totalGasUsedInRollup += txs.reduce(
+        (sum, current) =>
+          sum +
+          (this.feeResolver.getUnadjustedTxGas(current.fee.assetId, TxType.DEFI_DEPOSIT) -
+            this.feeResolver.getUnadjustedBaseVerificationGas()),
+        0,
       );
+      const totalCallDataUsedInRollup =
+        currentConsumption.callDataUsed + txs.length * this.feeResolver.getTxCallData(TxType.DEFI_DEPOSIT);
+      const breach =
+        totalGasUsedInRollup > this.maxGasForRollup || totalCallDataUsedInRollup > this.maxCallDataForRollup;
+      return {
+        breach,
+        totalGasUsedInRollup,
+        totalCallDataUsedInRollup,
+      };
+    };
+
+    const checkAndAddTxs = (txs: RollupTx[]) => {
+      const newConsumption = verifyResourceLimits(txs);
+      if (!newConsumption.breach) {
+        addTxs([rollupTx]);
+        currentConsumption.callDataUsed = newConsumption.totalCallDataUsedInRollup;
+        currentConsumption.gasUsed = newConsumption.totalGasUsedInRollup;
+      }
+    };
+
+    if (bridgeAlreadyPresentInRollup) {
+      // we already have txs for this bridge in the rollup, add it straight in
+      checkAndAddTxs([rollupTx]);
+      return txsForRollup;
     }
+
+    if (currentConsumption.bridgeIds.length === RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK) {
+      // this rollup doesn't have any txs for this bridge and can't take any more
+      return txsForRollup;
+    }
+
+    if (flush) {
+      // we have been told to flush, add it straight into the rollup
+      checkAndAddTxs([rollupTx]);
+      return txsForRollup;
+    }
+
+    let bridgeQueue = this.bridgeQueues.get(bridgeId);
+
+    if (!bridgeQueue) {
+      // We don't have a bridge config for this!!
+      this.bridgeQueues.set(bridgeId, new BridgeTxQueue(bridgeId, this.feeResolver));
+      bridgeQueue = this.bridgeQueues.get(bridgeId)!;
+    }
+
+    //if we are beyond the timeout interval for this bridge then add it straight in
+    if (bridgeQueue.transactionHasTimedOut(rollupTx)) {
+      checkAndAddTxs([rollupTx]);
+      return txsForRollup;
+    }
+
+    // Add this tx to the queue for this bridge and work out if we can put any more txs into the current batch or create
+    // a new one.
+    bridgeQueue.addDefiTx(rollupTx);
+    const gasRemainingInRollup = this.maxGasForRollup - currentConsumption.gasUsed;
+    const callDataRemainingInRollup = this.maxCallDataForRollup - currentConsumption.callDataUsed;
+    const bridgeQueueResult = bridgeQueue.getTxsToRollup(
+      remainingTxSlots,
+      currentConsumption.assetIds,
+      RollupProofData.NUMBER_OF_ASSETS,
+      gasRemainingInRollup,
+      callDataRemainingInRollup,
+    );
+    addTxs(bridgeQueueResult.txsToRollup);
+    currentConsumption.callDataUsed += bridgeQueueResult.resourcesConsumed.callDataUsed;
+    currentConsumption.gasUsed += bridgeQueueResult.resourcesConsumed.gasUsed;
+    return txsForRollup;
   }
 
-  private async buildInnerRollup(innerTxs: RollupTx[], rollup: TxRollup) {
-    // In this case innerTsx is expected to be <= this.numInnerRollupTxs
-    if (innerTxs.length > this.numInnerRollupTxs) {
-      throw new Error(`innerTxs.length > this.numInnerRollupTxs: ${innerTxs.length} > ${this.numInnerRollupTxs}`);
+  // If the provided tx does not cause a breach of the limits, the provided consumption figures will be updated to
+  // include the values from this tx.
+  private validateAndUpdateRollupResources(
+    txType: TxType,
+    feeAssetId: number,
+    currentConsumption: { gasUsed: number; callDataUsed: number },
+  ) {
+    // We need the the unadjusted tx gas here, this is the 'real' gas consumption of this tx.
+    const gasUsedByTx =
+      this.feeResolver.getUnadjustedTxGas(feeAssetId, txType) - this.feeResolver.getUnadjustedBaseVerificationGas();
+    const callDataUsedByTx = this.feeResolver.getTxCallData(txType);
+    const newGasUsed = gasUsedByTx + currentConsumption.gasUsed;
+    const newCallDataUsed = callDataUsedByTx + currentConsumption.callDataUsed;
+    if (newGasUsed > this.maxGasForRollup || newCallDataUsed > this.maxCallDataForRollup) {
+      return false;
     }
-    const rollupProofDao = await this.rollupCreator.create(
-      innerTxs.map(rollupTx => rollupTx.tx),
-      rollup,
-    );
-
-    return rollupProofDao;
+    currentConsumption.callDataUsed = newCallDataUsed;
+    currentConsumption.gasUsed = newGasUsed;
+    return true;
   }
 
-  private async aggregateAndPublish(pendingTxs: RollupTx[], rollupTimeouts: RollupTimeouts, flush: boolean) {
-    const numRemainingSlots = (this.numOuterRollupProofs - this.innerProofs.length) * this.numInnerRollupTxs;
-    if (pendingTxs.length > numRemainingSlots) {
-      // this shouldn't happen!
-      throw new Error(`pendingTxs.length > numRemainingSlots: ${pendingTxs.length} > ${numRemainingSlots}`);
+  private async aggregateAndPublish(
+    txsToRollup: RollupTx[],
+    bridgeIds: bigint[],
+    assetIds: Set<number>,
+    rollupTimeouts: RollupTimeouts,
+    flush: boolean,
+  ) {
+    if (txsToRollup.length > this.totalSlots) {
+      // This shouldn't happen!
+      throw new Error(`txsToRollup.length > numRemainingSlots: ${txsToRollup.length} > ${this.totalSlots}`);
     }
 
-    // We wait until the shouldPublish condition is met and then farm out all inner rollups to a number of
-    // distributed halloumi instances.
-    const rollupProfile = profileRollup(
-      pendingTxs,
-      this.feeResolver,
-      this.numInnerRollupTxs,
-      this.numInnerRollupTxs * this.numOuterRollupProofs,
-    );
+    const rollupProfile = profileRollup(txsToRollup, this.feeResolver, this.numInnerRollupTxs, this.totalSlots);
 
     if (!rollupProfile.totalTxs) {
-      // no txs at all
+      // No txs at all.
       return rollupProfile;
     }
 
-    const profit = rollupProfile.gasBalance >= 0n;
+    // Profitable if gasBalance is equal or above what's needed.
+    const isProfitable = rollupProfile.gasBalance >= 0;
+
+    // If any tx in this rollup is older than the deadline, then we've timedout and should publish.
     const timedout = rollupTimeouts.baseTimeout
       ? rollupProfile.earliestTx.getTime() <= rollupTimeouts.baseTimeout.timeout.getTime()
       : false;
-    const shouldPublish = flush || profit || timedout;
 
-    if (shouldPublish) {
-      this.txs = [...pendingTxs];
-      const rollupProofPromises: Promise<RollupProofDao>[] = [];
+    // The amount of L1 gas remaining until we breach the gasLimit.
+    const gasRemainingTillGasLimit = this.maxGasForRollup - rollupProfile.totalGas;
 
-      // We have to pass the firstInner flag in as nothing is in the DB yet so the previous
-      // query to check DB size wont work.  Since we are doing all proofs in one hit now
-      // this is fine...  similarly though this.txs and the various append(s) to that are
-      // not required, all this will clean up asap.
-      let firstInner = true;
-      while (pendingTxs.length) {
-        const txs = pendingTxs.splice(0, this.numInnerRollupTxs);
+    // The amount of L1 calldata remaining until we breach the calldata limit.
+    const callDataRemaining = this.maxCallDataForRollup - rollupProfile.totalCallData;
 
-        // Moved tree updates outside of parallel loops as these were previously done
-        // inside buildInnerRollup() which was ok when that was sequential.  These updates
-        // need to be done before any calls to create() on the rollup creator or it will
-        // fail to find the linked commitments from the transaction.
-        const rollup = await this.rollupCreator.createRollup(
-          txs.map(rollupTx => rollupTx.tx),
-          this.rollupBridgeIds,
-          this.rollupAssetIds,
-          firstInner,
-        );
+    // Verify the remaining resources against the max possible values of gas and calldata to determine if it is time
+    // to publish. e.g. There are not enough resources left, to include an instant tx of any type.
+    const outOfGas = gasRemainingTillGasLimit < this.feeResolver.getMaxUnadjustedGas();
+    const outOfCallData = callDataRemaining < this.feeResolver.getMaxTxCallData();
+    const shouldPublish = flush || isProfitable || timedout || outOfGas || outOfCallData;
 
-        firstInner = false;
-        rollupProofPromises.push(this.buildInnerRollup(txs, rollup));
-      }
-
-      // This will call the proof generator (Halloumi) in parallel and populate the
-      // this.innerProofs which is used below in the aggregator.
-      const rollupProofDaos = await Promise.all(rollupProofPromises);
-
-      // Its important that the inner proofs are inserted into the DB in the same
-      // order that we called createRollup() above as the first proof and following
-      // proofs have different start indexes.
-      await this.rollupCreator.addRollupProofs(rollupProofDaos);
-      this.innerProofs.push(...rollupProofDaos);
-    }
-
-    // here we either have
-    // 1. no rollup at all
-    // 2. a partial rollup that we need to publish
-    // 3. a full rollup
-    if (!this.innerProofs.length) {
-      // nothing to publish
+    if (!shouldPublish) {
       return rollupProfile;
     }
 
+    this.printRollupState(rollupProfile, timedout, flush, outOfGas || outOfCallData);
+
+    // Track txs currently being processed. Gives clients a view into what's being processed.
+    this.processedTxs = [...txsToRollup];
+
+    // Chunk txs for each inner rollup.
+    const chunkedTx: RollupTx[][] = [];
+    while (txsToRollup.length) {
+      chunkedTx.push(txsToRollup.splice(0, this.numInnerRollupTxs));
+    }
+
+    // First create circuit input data. In sequence as it updates the merkle trees.
+    const txRollups = await asyncMap(
+      chunkedTx,
+      async (innerRollupTxs, i) =>
+        await this.rollupCreator.createRollup(
+          innerRollupTxs.map(rollupTx => rollupTx.tx),
+          bridgeIds,
+          assetIds,
+          i == 0,
+        ),
+    );
+
+    // Trigger building of inner rollups in parallel.
+    const rollupProofDaos = await Promise.all(
+      txRollups.map((txRollup, i) =>
+        this.rollupCreator.create(
+          chunkedTx[i].map(rollupTx => rollupTx.tx),
+          txRollup,
+        ),
+      ),
+    );
+
     const rollupDao = await this.rollupAggregator.aggregateRollupProofs(
-      this.innerProofs,
+      rollupProofDaos,
       this.oldDefiRoot,
       this.oldDefiPath,
       this.defiInteractionNotes,
-      this.rollupBridgeIds.concat(
-        Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK - this.rollupBridgeIds.length).fill(0n),
-      ),
-      [...this.rollupAssetIds],
+      bridgeIds.concat(Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK - bridgeIds.length).fill(0n)),
+      [...assetIds],
     );
+
     rollupProfile.published = await this.rollupPublisher.publishRollup(rollupDao);
-    this.printRollupState(rollupProfile, timedout, flush);
 
     return rollupProfile;
+  }
+
+  private printRollupState(rollupProfile: RollupProfile, timeout: boolean, flush: boolean, limit: boolean) {
+    this.log(`RollupCoordinator: Creating rollup...`);
+    this.log(`RollupCoordinator:   rollupSize: ${rollupProfile.rollupSize}`);
+    this.log(`RollupCoordinator:   numTxs: ${rollupProfile.totalTxs}`);
+    this.log(`RollupCoordinator:   timeout/flush/limit: ${timeout}/${flush}/${limit}`);
+    this.log(`RollupCoordinator:   aztecGas balance: ${rollupProfile.gasBalance}`);
+    this.log(`RollupCoordinator:   inner/outer chains: ${rollupProfile.innerChains}/${rollupProfile.outerChains}`);
+    this.log(`RollupCoordinator:   estimated L1 gas: ${rollupProfile.totalGas}`);
+    this.log(`RollupCoordinator:   calldata: ${rollupProfile.totalCallData} bytes`);
+    for (const bp of rollupProfile.bridgeProfiles.values()) {
+      this.log(`RollupCoordinator: Defi bridge published: ${bp.bridgeId.toString()}`);
+      this.log(`RollupCoordinator:   numTxs: ${bp.numTxs}`);
+      this.log(`RollupCoordinator:   gas balance: ${bp.gasAccrued - bp.gasThreshold}`);
+    }
   }
 }

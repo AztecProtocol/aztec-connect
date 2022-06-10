@@ -71,10 +71,6 @@ export class SyncRollupDb {
     return this.synchronise(() => this.rollupDb.isAliasRegisteredToAccount(accountPublicKey, aliasHash));
   }
 
-  public async getTotalRollupsOfSize(rollupSize: number) {
-    return this.synchronise(() => this.rollupDb.getTotalRollupsOfSize(rollupSize));
-  }
-
   public async getUnsettledTxCount() {
     return this.synchronise(() => this.rollupDb.getUnsettledTxCount());
   }
@@ -125,14 +121,6 @@ export class SyncRollupDb {
 
   public async deleteOrphanedRollupProofs() {
     return this.synchronise(() => this.rollupDb.deleteOrphanedRollupProofs());
-  }
-
-  public async getRollupProofsBySize(numTxs: number) {
-    return this.synchronise(() => this.rollupDb.getRollupProofsBySize(numTxs));
-  }
-
-  public async getNumRollupProofsBySize(numTxs: number) {
-    return this.synchronise(() => this.rollupDb.getNumRollupProofsBySize(numTxs));
   }
 
   public async getNextRollupId() {

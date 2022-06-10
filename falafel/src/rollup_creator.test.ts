@@ -98,7 +98,6 @@ describe('rollup_creator', () => {
     jest.spyOn(console, 'log').mockImplementation(() => {});
 
     rollupDb = {
-      getNumRollupProofsBySize: jest.fn().mockReturnValue(0),
       getNextRollupId: jest.fn().mockReturnValue(ROLLUP_ID),
       addRollupProof: jest.fn(),
     } as any;

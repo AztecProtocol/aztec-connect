@@ -45,6 +45,7 @@ services:
       - ganache
     command: >
       sh -c "
+      set -e;
       while ! nc -z ganache 8545; do sleep 1; done;
       `yarn -s deploy_rollup_processor`;
       yarn start

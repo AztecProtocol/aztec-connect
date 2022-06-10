@@ -11,6 +11,7 @@ import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proo
 import { Timer } from '@aztec/barretenberg/timer';
 import { WorldStateConstants } from '@aztec/barretenberg/world_state';
 import { RollupTreeId, WorldStateDb } from '@aztec/barretenberg/world_state_db';
+import { fromBaseUnits } from '@aztec/blockchain';
 import { AccountDao, AssetMetricsDao, ClaimDao, RollupDao, RollupProofDao, TxDao } from './entity';
 import { getTxTypeFromInnerProofData } from './get_tx_type';
 import { Metrics } from './metrics';
@@ -503,10 +504,15 @@ export class WorldState {
     // Get by rollup hash, as a competing rollup may have the same rollup number.
     const rollupProof = await this.rollupDb.getRollupProof(rollup.rollupHash, true);
 
-    // 2 notes per tx
+    // Compute the subtree root. Used client side for constructing mutable part of the data tree.
     const subtreeDepth = Math.ceil(Math.log2(rollup.rollupSize * WorldStateConstants.NUM_NEW_DATA_TREE_NOTES_PER_TX));
     const lastIndex = this.worldStateDb.getSize(RollupTreeId.DATA) - 1n;
     const subtreeRoot = await this.worldStateDb.getSubtreeRoot(RollupTreeId.DATA, lastIndex, subtreeDepth);
+
+    console.log(`Rollup gas used: ${block.gasUsed}`);
+    console.log(`Rollup gas price: ${block.gasPrice} wei`);
+    console.log(`Rollup cost: ${fromBaseUnits(block.gasPrice * BigInt(block.gasUsed), 18, 6)} ETH`);
+
     if (rollupProof) {
       // Our rollup. Confirm mined and track settlement times.
       const txIds = rollupProof.txs.map(tx => tx.id);

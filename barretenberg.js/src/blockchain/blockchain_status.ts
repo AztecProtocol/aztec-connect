@@ -15,11 +15,11 @@ export enum TxType {
   DEFI_CLAIM,
 }
 
-export function isDefiDeposit(txType: TxType) {
+export function isDefiDepositTx(txType: TxType) {
   return txType === TxType.DEFI_DEPOSIT;
 }
 
-export function isAccountCreation(txType: TxType) {
+export function isAccountTx(txType: TxType) {
   return txType === TxType.ACCOUNT;
 }
 

@@ -1,6 +1,6 @@
 import { TxFeeResolver } from '../tx_fee_resolver';
 import { RollupTx } from './bridge_tx_queue';
-import { isDefiDeposit } from '@aztec/barretenberg/blockchain';
+import { isDefiDepositTx } from '@aztec/barretenberg/blockchain';
 import { ProofData } from '@aztec/barretenberg/client_proofs';
 
 export interface BridgeProfile {
@@ -17,6 +17,8 @@ export interface RollupProfile {
   rollupSize: number;
   totalTxs: number;
   gasBalance: number;
+  totalGas: number;
+  totalCallData: number;
   earliestTx: Date;
   latestTx: Date;
   innerChains: number;
@@ -30,6 +32,8 @@ export function emptyProfile(rollupSize: number) {
     rollupSize,
     totalTxs: 0,
     gasBalance: 0,
+    totalCallData: 0,
+    totalGas: 0,
     earliestTx: new Date(0),
     latestTx: new Date(0),
     innerChains: 0,
@@ -53,6 +57,7 @@ export function profileRollup(
   for (let txIndex = 0; txIndex < allTxs.length; txIndex++) {
     const tx = allTxs[txIndex];
     const proof = new ProofData(tx.tx.proofData);
+    const assetId = proof.feeAssetId;
     const currentInner = Math.trunc(txIndex / innerRollupSize);
     const noteStrings = [proof.noteCommitment1, proof.noteCommitment2]
       .filter(n => !n.equals(emptyBuffer))
@@ -81,8 +86,16 @@ export function profileRollup(
         rollupProfile.latestTx = tx.tx.created;
       }
     }
-    if (!isDefiDeposit(tx.tx.txType)) {
-      // for non-defi txs, we add on any gas above and beyond that required for the tx (call data etc)
+    // here we use the unadjusted tx gas as we are trying to accumulate the real gas consumption of the rollup
+    rollupProfile.totalGas += feeResolver.getUnadjustedTxGas(assetId, tx.tx.txType);
+    rollupProfile.totalCallData += feeResolver.getTxCallData(tx.tx.txType);
+    // each tx can have an adjusted amunt of gas due to call data limits etc.
+    // we need to factor this in, it effectively pays for additional rollup slots
+    const txGasAdjustment =
+      feeResolver.getAdjustedTxGas(assetId, tx.tx.txType) - feeResolver.getUnadjustedTxGas(assetId, tx.tx.txType);
+    rollupProfile.gasBalance += txGasAdjustment;
+    if (!isDefiDepositTx(tx.tx.txType)) {
+      // for non-defi txs, we add on any excess
       rollupProfile.gasBalance += tx.excessGas;
     } else if (!tx.bridgeId) {
       console.log(`Invalid bridge id encountered on DEFI transaction!`);
@@ -90,6 +103,7 @@ export function profileRollup(
       const bridgeId = tx.bridgeId;
       let bridgeProfile = bridgeProfiles.get(bridgeId);
       if (!bridgeProfile) {
+        // thie bridge gas cost needs to include subsidy as it is used to determine profitability
         const bridgeGasCost = feeResolver.getFullBridgeGas(tx.bridgeId);
         bridgeProfile = {
           bridgeId,
@@ -102,6 +116,8 @@ export function profileRollup(
         bridgeProfiles.set(bridgeId, bridgeProfile);
         // we are going to incur the cost of the bridge here so reduce our gas balance
         rollupProfile.gasBalance -= bridgeGasCost;
+        // we need to add the total un-subsidised bridge gas cost to the total gas
+        rollupProfile.totalGas += feeResolver.getFullBridgeGasFromContract(tx.bridgeId);
       }
       bridgeProfile.numTxs++;
       // this is the gas provided above and beyond the gas constant for defi deposits
@@ -109,6 +125,7 @@ export function profileRollup(
       bridgeProfile.gasAccrued += gasTowardsBridge;
       // add this back onto the gas balance for the rollup
       rollupProfile.gasBalance += gasTowardsBridge;
+
       if (bridgeProfile.earliestTx > tx.tx.created) {
         bridgeProfile.earliestTx = tx.tx.created;
       }
@@ -119,8 +136,11 @@ export function profileRollup(
   }
   rollupProfile.bridgeProfiles = bridgeProfiles;
   const numEmptySlots = rollupSize - allTxs.length;
+
   // now we have accounted for all transactions in this rollup, it's just the empty slots
-  rollupProfile.gasBalance -= numEmptySlots * feeResolver.getBaseTxGas();
+  const gasForEmptySlots = numEmptySlots * feeResolver.getUnadjustedBaseVerificationGas();
+  rollupProfile.gasBalance -= gasForEmptySlots;
+  rollupProfile.totalGas += gasForEmptySlots;
   // if we define the following values:
   // B = bridge cost
   // V = verification cost

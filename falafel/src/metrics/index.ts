@@ -104,14 +104,6 @@ export class Metrics {
       },
     });
 
-    new Gauge({
-      name: 'escapes_total',
-      help: 'Total escapes',
-      async collect() {
-        this.set(await rollupDb.getTotalRollupsOfSize(0));
-      },
-    });
-
     this.rollupSize = new Gauge({
       name: 'rollup_size',
       help: 'Rollup size',

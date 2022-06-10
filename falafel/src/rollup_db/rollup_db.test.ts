@@ -294,33 +294,6 @@ describe('rollup_db', () => {
     expect(rollupDao).toBeUndefined();
   });
 
-  it('should get rollup proofs by size', async () => {
-    const tx0 = randomTx();
-    const tx1 = randomTx();
-    const tx2 = randomTx();
-
-    const rollupProof = randomRollupProof([tx0], 0);
-    await rollupDb.addRollupProof(rollupProof);
-
-    const rollupProof2 = randomRollupProof([tx1, tx2], 1);
-    await rollupDb.addRollupProof(rollupProof2);
-
-    const newRollupProofs = await rollupDb.getRollupProofsBySize(1);
-    expect(newRollupProofs!.length).toBe(1);
-    expect(newRollupProofs![0].id).toStrictEqual(rollupProof.id);
-    expect(newRollupProofs![0].txs[0]).toStrictEqual(tx0);
-
-    const newRollupProofs2 = await rollupDb.getRollupProofsBySize(2);
-    expect(newRollupProofs2!.length).toBe(1);
-    expect(newRollupProofs2![0].id).toStrictEqual(rollupProof2.id);
-    expect(newRollupProofs2![0].txs.length).toBe(2);
-    expect(newRollupProofs2![0].txs[0]).toStrictEqual(tx1);
-    expect(newRollupProofs2![0].txs[1]).toStrictEqual(tx2);
-
-    const newRollupProofs3 = await rollupDb.getRollupProofsBySize(3);
-    expect(newRollupProofs3!.length).toBe(0);
-  });
-
   it('should add and get rollup with txs', async () => {
     const txs = [
       TxType.DEPOSIT,

@@ -32,7 +32,6 @@ async function main() {
     rollupContractAddress,
     feeDistributorAddress,
     priceFeedContractAddresses,
-    // feePayingAssetAddresses,
     provider,
   );
 

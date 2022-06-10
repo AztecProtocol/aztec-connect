@@ -42,6 +42,7 @@ export class Server {
       numInnerRollupTxs,
       numOuterRollupProofs,
       proverless,
+      rollupCallDataLimit,
       runtimeConfig: {
         publishInterval,
         flushAfterIdle,
@@ -93,6 +94,7 @@ export class Server {
       numInnerRollupTxs,
       numOuterRollupProofs,
       this.bridgeResolver,
+      rollupCallDataLimit,
     );
     this.worldState = new WorldState(
       rollupDb,
@@ -178,6 +180,7 @@ export class Server {
     const {
       numInnerRollupTxs,
       numOuterRollupProofs,
+      rollupCallDataLimit,
       runtimeConfig: {
         verificationGas,
         maxFeeGasPrice,
@@ -195,6 +198,7 @@ export class Server {
       feeGasPriceMultiplier,
       numInnerRollupTxs * numOuterRollupProofs,
       feePayingAssetIds,
+      rollupCallDataLimit,
       feeRoundUpSignificantFigures,
     );
   }

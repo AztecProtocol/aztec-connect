@@ -37,6 +37,8 @@ export class PipelineCoordinator {
     private publishInterval: number,
     private flushAfterIdle: number,
     private bridgeResolver: BridgeResolver,
+    private maxCallDataPerRollup: number,
+    private maxGasPerRollup: number,
   ) {
     this.publishTimeManager = new PublishTimeManager(this.publishInterval, this.bridgeResolver);
     this.nextRollupProfile = emptyProfile(this.numInnerRollupTxs * this.numOuterRollupProofs);
@@ -155,6 +157,8 @@ export class PipelineCoordinator {
       this.bridgeResolver,
       this.feeResolver,
       defiInteractionNotes,
+      this.maxGasPerRollup,
+      this.maxCallDataPerRollup,
     );
   }
 

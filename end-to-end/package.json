@@ -6,6 +6,7 @@
   "license": "GPL-2.0",
   "scripts": {
     "test": "DEBUG=${DEBUG:-bb:e2e*} jest --runInBand",
+    "test:forked": "yarn test e2e_element.test.ts e2e_non_fee_assets.test.ts",
     "clean": "rm -rf ./data"
   },
   "jest": {

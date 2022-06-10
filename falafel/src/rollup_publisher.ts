@@ -151,6 +151,7 @@ export class RollupPublisher {
 
       // All succeeded.
       endTimer();
+      console.log('Rollup successfully published.');
       return true;
     }
 

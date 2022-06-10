@@ -116,6 +116,7 @@ export async function getComponents(configurator: Configurator) {
     typeOrmLogging,
     dbUrl,
     proverless,
+    rollupCallDataLimit,
   } = confVars;
 
   const ormConfig = getOrmConfig(dbUrl, typeOrmLogging);
@@ -128,6 +129,7 @@ export async function getComponents(configurator: Configurator) {
   console.log(`Database Url: ${dbUrl || 'none (local sqlite)'}`);
   console.log(`Ethereum host: ${ethereumHost}`);
   console.log(`Gas limit: ${gasLimit || 'default'}`);
+  console.log(`Call data limit: ${rollupCallDataLimit}`);
   console.log(`Rollup provider address: ${rollupContractAddress || 'none'}`);
   console.log(`Fee distributor address: ${feeDistributorAddress || 'none'}`);
   console.log(`Fee paying asset ids: ${feePayingAssetIds}`);

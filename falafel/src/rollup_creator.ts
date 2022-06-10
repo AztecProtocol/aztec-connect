@@ -59,15 +59,13 @@ export class RollupCreator {
       created: new Date(),
     });
 
+    await this.rollupDb.addRollupProof(rollupProofDao);
+
     return rollupProofDao;
   }
 
   public interrupt() {
     // TODO: Interrupt proof creation.
-  }
-
-  public async addRollupProofs(daos: RollupProofDao[]) {
-    await this.rollupDb.addRollupProofs(daos);
   }
 
   public async createRollup(
@@ -109,7 +107,7 @@ export class RollupCreator {
       const tx = txs[i];
 
       if (proof.proofId !== ProofId.ACCOUNT) {
-        const assetId = proof.txFeeAssetId.readUInt32BE(28);
+        const assetId = proof.feeAssetId;
         if (this.feeResolver.isFeePayingAsset(assetId)) {
           localAssetIds.add(assetId);
           rootRollupAssetIds.add(assetId);

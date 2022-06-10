@@ -19,6 +19,7 @@ describe('tx fee resolver', () => {
   const feeGasPriceMultiplier = 2.5;
   const txsPerRollup = 10;
   const numSignificantFigures = 0;
+  const callDataPerRollup = 128 * 1024;
   let dateSpy: jest.SpyInstance<number>;
   let gasPriceFeed: Mockify<PriceFeed>;
   let tokenPriceFeed: Mockify<PriceFeed>;
@@ -43,6 +44,7 @@ describe('tx fee resolver', () => {
 
   beforeEach(async () => {
     dateSpy = jest.spyOn(Date, 'now').mockImplementation(() => 1618226064000);
+    jest.spyOn(console, 'log').mockImplementation(() => {});
 
     gasPriceFeed = {
       latestRound: jest.fn().mockResolvedValue(1n),
@@ -90,6 +92,7 @@ describe('tx fee resolver', () => {
       feeGasPriceMultiplier,
       txsPerRollup,
       feePayingAssetIds,
+      callDataPerRollup,
       numSignificantFigures,
     );
 
