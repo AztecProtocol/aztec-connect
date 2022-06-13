@@ -379,6 +379,7 @@ export class RollupCoordinator {
     this.log(`RollupCoordinator: Creating rollup...`);
     this.log(`RollupCoordinator:   rollupSize: ${rollupProfile.rollupSize}`);
     this.log(`RollupCoordinator:   numTxs: ${rollupProfile.totalTxs}`);
+    rollupProfile.numTxsPerType.forEach((v, i) => this.log(`RollupCoordinator:     ${TxType[i].toLowerCase()}: ${v}`));
     this.log(`RollupCoordinator:   timeout/flush/limit: ${timeout}/${flush}/${limit}`);
     this.log(`RollupCoordinator:   aztecGas balance: ${rollupProfile.gasBalance}`);
     this.log(`RollupCoordinator:   inner/outer chains: ${rollupProfile.innerChains}/${rollupProfile.outerChains}`);

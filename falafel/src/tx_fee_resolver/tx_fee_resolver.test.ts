@@ -108,9 +108,9 @@ describe('tx fee resolver', () => {
     const bridgeId = new BridgeId(0, assetId, 0).toBigInt();
     const defiFees = txFeeResolver.getDefiFees(bridgeId);
     expect(defiFees).toEqual([
-      { assetId, value: 15299000000000000n },
-      { assetId, value: 12502799000000000000n },
-      { assetId, value: 12514049000000000000n },
+      { assetId, value: 16196000000000000n },
+      { assetId, value: 12503696000000000000n },
+      { assetId, value: 12514946000000000000n },
     ]);
   });
 

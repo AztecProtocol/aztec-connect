@@ -1,6 +1,6 @@
 import { TxFeeResolver } from '../tx_fee_resolver';
 import { RollupTx } from './bridge_tx_queue';
-import { isDefiDepositTx } from '@aztec/barretenberg/blockchain';
+import { isDefiDepositTx, numTxTypes } from '@aztec/barretenberg/blockchain';
 import { ProofData } from '@aztec/barretenberg/client_proofs';
 
 export interface BridgeProfile {
@@ -16,6 +16,7 @@ export interface RollupProfile {
   published: boolean;
   rollupSize: number;
   totalTxs: number;
+  numTxsPerType: number[];
   gasBalance: number;
   totalGas: number;
   totalCallData: number;
@@ -31,6 +32,7 @@ export function emptyProfile(rollupSize: number) {
     published: false,
     rollupSize,
     totalTxs: 0,
+    numTxsPerType: Array.from<number>({ length: numTxTypes }).fill(0),
     gasBalance: 0,
     totalCallData: 0,
     totalGas: 0,
@@ -51,6 +53,9 @@ export function profileRollup(
 ) {
   const rollupProfile: RollupProfile = emptyProfile(rollupSize);
   rollupProfile.totalTxs = allTxs.length;
+  rollupProfile.numTxsPerType = rollupProfile.numTxsPerType.map((_, i) =>
+    allTxs.reduce((a, { tx }) => a + (tx.txType === i ? 1 : 0), 0),
+  );
   const bridgeProfiles = new Map<bigint, BridgeProfile>();
   const commitmentLocations = new Map<string, number>();
   const emptyBuffer = Buffer.alloc(32);

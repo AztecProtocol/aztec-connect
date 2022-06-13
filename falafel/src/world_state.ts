@@ -5,9 +5,11 @@ import { Block } from '@aztec/barretenberg/block_source';
 import { DefiDepositProofData, JoinSplitProofData, ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
 import { InitHelpers } from '@aztec/barretenberg/environment';
 import { MemoryFifo } from '@aztec/barretenberg/fifo';
+import { createLogger } from '@aztec/barretenberg/log';
 import { DefiInteractionNote, NoteAlgorithms, TreeClaimNote } from '@aztec/barretenberg/note_algorithms';
 import { OffchainDefiDepositData } from '@aztec/barretenberg/offchain_tx_data';
 import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
+import { sleep } from '@aztec/barretenberg/sleep';
 import { Timer } from '@aztec/barretenberg/timer';
 import { WorldStateConstants } from '@aztec/barretenberg/world_state';
 import { RollupTreeId, WorldStateDb } from '@aztec/barretenberg/world_state_db';
@@ -78,6 +80,7 @@ export class WorldState {
     private metrics: Metrics,
     private txFeeResolver: TxFeeResolver,
     private expireTxPoolAfter = 60,
+    private log = createLogger('WorldState'),
   ) {
     this.txPoolProfile = {
       numTxs: 0,
@@ -180,12 +183,12 @@ export class WorldState {
   }
 
   private async syncStateFromInitFiles() {
-    console.log('Synching state from initialisation files...');
+    this.log('Synching state from initialisation files...');
     const chainId = await this.blockchain.getChainId();
-    console.log(`Chain id: ${chainId}`);
+    this.log(`Chain id: ${chainId}`);
     const accountDataFile = InitHelpers.getAccountDataFile(chainId);
     if (!accountDataFile) {
-      console.log(`No account initialisation file for chain ${chainId}.`);
+      this.log(`No account initialisation file for chain ${chainId}.`);
       return;
     }
     const accounts = await InitHelpers.readAccountTreeData(accountDataFile);
@@ -195,14 +198,14 @@ export class WorldState {
       rootsRoot: initRootsRoot,
     } = InitHelpers.getInitRoots(chainId);
     if (accounts.length === 0) {
-      console.log('No accounts read from file, continuing without syncing from file.');
+      this.log('No accounts read from file, continuing without syncing from file.');
       return;
     }
     if (!initDataRoot.length || !initNullRoot.length || !initRootsRoot.length) {
-      console.log('No roots read from file, continuing without syncing from file.');
+      this.log('No roots read from file, continuing without syncing from file.');
       return;
     }
-    console.log(`Read ${accounts.length} accounts from file.`);
+    this.log(`Read ${accounts.length} accounts from file.`);
     const numNotesPerRollup = WorldStateConstants.NUM_NEW_DATA_TREE_NOTES_PER_TX * this.getRollupSize();
     const { dataRoot, rootsRoot } = await InitHelpers.populateDataAndRootsTrees(
       accounts,
@@ -237,7 +240,7 @@ export class WorldState {
   }
 
   private async syncStateFromBlockchain(nextRollupId: number) {
-    console.log(`Syncing state from rollup ${nextRollupId}...`);
+    this.log(`Syncing state from rollup ${nextRollupId}...`);
     const blocks = await this.blockchain.getBlocks(nextRollupId);
 
     for (const block of blocks) {
@@ -263,15 +266,15 @@ export class WorldState {
     await this.rollupDb.deleteUnsettledRollups();
     await this.rollupDb.deleteOrphanedRollupProofs();
 
-    console.log(`Database synched in ${updateDbsStart.s()}s.`);
+    this.log(`Database synched in ${updateDbsStart.s()}s.`);
   }
 
   public printState() {
-    console.log(`Data size: ${this.worldStateDb.getSize(RollupTreeId.DATA)}`);
-    console.log(`Data root: ${this.worldStateDb.getRoot(RollupTreeId.DATA).toString('hex')}`);
-    console.log(`Null root: ${this.worldStateDb.getRoot(RollupTreeId.NULL).toString('hex')}`);
-    console.log(`Root root: ${this.worldStateDb.getRoot(RollupTreeId.ROOT).toString('hex')}`);
-    console.log(`Defi root: ${this.worldStateDb.getRoot(RollupTreeId.DEFI).toString('hex')}`);
+    this.log(`Data size: ${this.worldStateDb.getSize(RollupTreeId.DATA)}`);
+    this.log(`Data root: ${this.worldStateDb.getRoot(RollupTreeId.DATA).toString('hex')}`);
+    this.log(`Null root: ${this.worldStateDb.getRoot(RollupTreeId.NULL).toString('hex')}`);
+    this.log(`Root root: ${this.worldStateDb.getRoot(RollupTreeId.ROOT).toString('hex')}`);
+    this.log(`Defi root: ${this.worldStateDb.getRoot(RollupTreeId.DEFI).toString('hex')}`);
   }
 
   /**
@@ -297,11 +300,10 @@ export class WorldState {
 
   private async startNewPipeline() {
     this.pipeline = await this.pipelineFactory.create();
-    this.pipeline.start().catch(async err => {
-      await this.pipeline?.stop();
+    this.pipeline.start().catch(err => {
       this.pipeline = undefined;
-      console.log('PIPELINE PANIC!');
-      console.log(err);
+      this.log('PIPELINE PANIC! Handle the exception!');
+      this.log(err);
     });
   }
 
@@ -326,7 +328,7 @@ export class WorldState {
     const rollupProofData = RollupProofData.fromBuffer(rawRollupData);
     const { rollupId, rollupHash, newDataRoot, newNullRoot, newDataRootsRoot, newDefiRoot } = rollupProofData;
 
-    console.log(`Processing rollup ${rollupId}: ${rollupHash.toString('hex')}...`);
+    this.log(`Processing rollup ${rollupId}: ${rollupHash.toString('hex')}...`);
 
     if (
       newDataRoot.equals(this.worldStateDb.getRoot(RollupTreeId.DATA)) &&
@@ -489,7 +491,7 @@ export class WorldState {
     }
 
     for (const defiNote of interactionResult) {
-      console.log(
+      this.log(
         `Received defi note result ${defiNote.result}, input ${defiNote.totalInputValue}, outputs ${defiNote.totalOutputValueA}/${defiNote.totalOutputValueB}, for nonce ${defiNote.nonce}`,
       );
       await this.rollupDb.updateClaimsWithResultRollupId(defiNote.nonce, rollupId);
@@ -509,9 +511,9 @@ export class WorldState {
     const lastIndex = this.worldStateDb.getSize(RollupTreeId.DATA) - 1n;
     const subtreeRoot = await this.worldStateDb.getSubtreeRoot(RollupTreeId.DATA, lastIndex, subtreeDepth);
 
-    console.log(`Rollup gas used: ${block.gasUsed}`);
-    console.log(`Rollup gas price: ${block.gasPrice} wei`);
-    console.log(`Rollup cost: ${fromBaseUnits(block.gasPrice * BigInt(block.gasUsed), 18, 6)} ETH`);
+    this.log(`Rollup gas used: ${block.gasUsed}`);
+    this.log(`Rollup gas price: ${block.gasPrice} wei`);
+    this.log(`Rollup cost: ${fromBaseUnits(block.gasPrice * BigInt(block.gasUsed), 18, 6)} ETH`);
 
     if (rollupProof) {
       // Our rollup. Confirm mined and track settlement times.
@@ -534,7 +536,7 @@ export class WorldState {
         }
         const tx = rollupProof.txs.find(tx => tx.id.equals(inner.txId));
         if (!tx) {
-          console.log('Rollup tx missing. Not tracking time...');
+          this.log('Rollup tx missing. Not tracking time...');
           continue;
         }
         this.metrics.txSettlementDuration(block.created.getTime() - tx.created.getTime());

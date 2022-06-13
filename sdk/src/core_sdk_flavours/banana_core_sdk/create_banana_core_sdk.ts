@@ -3,9 +3,9 @@ import { TransportClient } from '../transport';
 import { BananaCoreSdkOptions } from './banana_core_sdk_options';
 import { SharedWorkerFrontend } from './shared_worker_frontend';
 import { SharedWorkerTransportConnect } from './shared_worker_transport_connect';
-import { createLogger } from '@aztec/barretenberg/debug';
+import { createDebugLogger } from '@aztec/barretenberg/log';
 
-const debug = createLogger('bb:create_banana_core_sdk');
+const debug = createDebugLogger('bb:create_banana_core_sdk');
 
 export async function createBananaCoreSdk(options: BananaCoreSdkOptions) {
   debug('creating shared worker frontend...');

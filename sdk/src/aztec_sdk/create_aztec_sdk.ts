@@ -1,6 +1,6 @@
 import { EthereumProvider } from '@aztec/barretenberg/blockchain';
 import { ClientEthereumBlockchain } from '@aztec/blockchain';
-import { enableLogs } from '@aztec/barretenberg/debug';
+import { enableLogs } from '@aztec/barretenberg/log';
 import isNode from 'detect-node';
 import { CoreSdkInterface } from '../core_sdk';
 import {

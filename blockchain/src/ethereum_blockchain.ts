@@ -9,6 +9,7 @@ import {
   TypedData,
 } from '@aztec/barretenberg/blockchain';
 import { Block } from '@aztec/barretenberg/block_source';
+import { createLogger } from '@aztec/barretenberg/log';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { InitHelpers } from '@aztec/barretenberg/environment';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
@@ -39,7 +40,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   private latestEthBlock = -1;
   private latestRollupId = -1;
   private status!: BlockchainStatus;
-  private log = console.log;
+  private log = createLogger('EthereumBlockchain');
 
   private static readonly DEFAULT_MIN_CONFIRMATIONS = 3;
   private static readonly DEFAULT_MIN_CONFIRMATIONS_EHW = 12;

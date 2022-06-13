@@ -1,4 +1,5 @@
 import { Blockchain, TxType } from '@aztec/barretenberg/blockchain';
+import { createLogger } from '@aztec/barretenberg/log';
 import {
   OffchainAccountData,
   OffchainDefiClaimData,
@@ -36,11 +37,13 @@ export class FeeCalculator {
     private readonly txsPerRollup: number,
     private readonly callDataPerRollup: number,
     private readonly numSignificantFigures = 0,
+    private readonly gasPerByte = 16,
+    private readonly log = createLogger('FeeCalculator'),
   ) {
     const txTypes = Object.values(TxType).filter(v => !isNaN(Number(v)));
     for (let i = 0; i < txTypes.length; i++) {
-      console.log(
-        `TxType ${TxType[i]} call data: ${this.getTxCallData(i)}, adj/base gas: ${this.getAdjustedBaseVerificationGas(
+      this.log(
+        `${TxType[i]} call data: ${this.getTxCallData(i)}, adj/base gas: ${this.getAdjustedBaseVerificationGas(
           i,
         )}/${this.getUnadjustedBaseVerificationGas()}, ETH tx gas: ${this.getGasOverheadForTxType(
           0,
@@ -186,7 +189,7 @@ export class FeeCalculator {
   }
 
   private getGasOverheadForTxType(assetId: number, txType: TxType) {
-    const gasPerByte = 4;
+    const gasPerByte = this.gasPerByte;
     switch (txType) {
       case TxType.ACCOUNT:
         return (OffchainAccountData.SIZE + this.getTxCallData(txType)) * gasPerByte;

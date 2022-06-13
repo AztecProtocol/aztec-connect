@@ -1,6 +1,6 @@
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { JoinSplitProver, ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
-import { createLogger } from '@aztec/barretenberg/debug';
+import { createDebugLogger } from '@aztec/barretenberg/log';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { OffchainJoinSplitData } from '@aztec/barretenberg/offchain_tx_data';
@@ -13,7 +13,7 @@ import { UserData } from '../user';
 import { JoinSplitTxFactory } from './join_split_tx_factory';
 import { JoinSplitProofInput } from './proof_input';
 
-const debug = createLogger('bb:payment_proof_creator');
+const debug = createDebugLogger('bb:payment_proof_creator');
 
 export class PaymentProofCreator {
   private txFactory: JoinSplitTxFactory;

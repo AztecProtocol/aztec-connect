@@ -10,9 +10,9 @@ import { createConnection } from 'typeorm';
 import { CoreSdk, CoreSdkOptions } from '../../core_sdk';
 import { DexieDatabase, getOrmConfig, SQLDatabase } from '../../database';
 import { getNumWorkers } from '../get_num_workers';
-import { createLogger } from '@aztec/barretenberg/debug';
+import { createDebugLogger } from '@aztec/barretenberg/log';
 
-const debug = createLogger('bb:create_vanilla_core_sdk');
+const debug = createDebugLogger('bb:create_vanilla_core_sdk');
 
 export function getLevelDb(memoryDb = false, identifier?: string): LevelUp {
   if (isNode) {

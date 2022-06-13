@@ -1,5 +1,5 @@
 import { Pedersen } from '@aztec/barretenberg/crypto';
-import { createLogger } from '@aztec/barretenberg/debug';
+import { createDebugLogger } from '@aztec/barretenberg/log';
 import { FftFactory } from '@aztec/barretenberg/fft';
 import { Pippenger } from '@aztec/barretenberg/pippenger';
 import { Job, JobQueueTarget } from './job';
@@ -8,7 +8,7 @@ import { JobQueueInterface } from './job_queue_interface';
 import { JobQueuePedersenClient } from './job_queue_pedersen';
 import { JobQueuePippengerClient } from './job_queue_pippenger';
 
-const debug = createLogger('aztec:sdk:job_queue_worker');
+const debug = createDebugLogger('aztec:sdk:job_queue_worker');
 
 const backgroundFetchDelay = 500;
 const pingInterval = 1000;

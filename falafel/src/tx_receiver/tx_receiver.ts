@@ -18,6 +18,7 @@ import {
   OffchainJoinSplitData,
 } from '@aztec/barretenberg/offchain_tx_data';
 import { TxId } from '@aztec/barretenberg/tx_id';
+import { createLogger } from '@aztec/barretenberg/log';
 import { BarretenbergWasm, BarretenbergWorker, createWorker, destroyWorker } from '@aztec/barretenberg/wasm';
 import { Mutex } from 'async-mutex';
 import { ProofGenerator } from 'halloumi/proof_generator';
@@ -45,7 +46,7 @@ export class TxReceiver {
     private txFeeResolver: TxFeeResolver,
     private metrics: Metrics,
     private bridgeResolver: BridgeResolver,
-    private log = console.log,
+    private log = createLogger('TxReceiver'),
   ) {}
 
   public async init() {
@@ -54,7 +55,7 @@ export class TxReceiver {
 
     this.worker = await createWorker('0', this.barretenberg.module);
 
-    this.log('TxReceiver requesting verification keys from ProofGenerator...');
+    this.log('Requesting verification keys from ProofGenerator...');
 
     const jsKey = await this.proofGenerator.getJoinSplitVk();
     await this.joinSplitVerifier.loadKey(this.worker, jsKey, crs.getG2Data());

@@ -1,6 +1,7 @@
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { TxHash, TxType } from '@aztec/barretenberg/blockchain';
 import { ProofData } from '@aztec/barretenberg/client_proofs';
+import { createLogger } from '@aztec/barretenberg/log';
 import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { AssetMetricsDao, RollupDao, RollupProofDao, TxDao } from '../entity';
 import { SyncRollupDb } from './sync_rollup_db';
@@ -14,6 +15,7 @@ export class CachedRollupDb extends SyncRollupDb {
   private unsettledTxs!: TxDao[];
   private settledNullifiers = new Set<bigint>();
   private unsettledNullifiers: Buffer[] = [];
+  private log = createLogger('CachedRollupDb');
 
   public async init() {
     this.rollups = await super.getRollups();
@@ -22,9 +24,7 @@ export class CachedRollupDb extends SyncRollupDb {
       .map(r => r.rollupProof.txs.map(tx => [tx.nullifier1, tx.nullifier2]).flat())
       .flat()
       .forEach(n => n && this.settledNullifiers.add(toBigIntBE(n)));
-    console.log(
-      `Db cache loaded ${this.rollups.length} rollups and ${this.settledNullifiers.size} nullifiers from db...`,
-    );
+    this.log(`Loaded ${this.rollups.length} rollups and ${this.settledNullifiers.size} nullifiers from db...`);
 
     await this.refresh();
   }
@@ -35,7 +35,7 @@ export class CachedRollupDb extends SyncRollupDb {
     this.pendingTxCount = await super.getPendingTxCount();
     this.unsettledTxs = await super.getUnsettledTxs();
     this.unsettledNullifiers = await super.getUnsettledNullifiers();
-    console.log(`Refreshed db cache in ${new Date().getTime() - start}ms.`);
+    this.log(`Refreshed db cache in ${new Date().getTime() - start}ms.`);
   }
 
   public async getPendingTxCount() {

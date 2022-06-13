@@ -4,9 +4,9 @@ import { createBananaCoreSdk } from '../banana_core_sdk';
 import { createVanillaCoreSdk } from '../vanilla_core_sdk';
 import { CaramelCoreSdk } from './caramel_core_sdk';
 import { CaramelCoreSdkOptions } from './caramel_core_sdk_options';
-import { createLogger } from '@aztec/barretenberg/debug';
+import { createDebugLogger } from '@aztec/barretenberg/log';
 
-const debug = createLogger('bb:create_caramel_core_sdk');
+const debug = createDebugLogger('bb:create_caramel_core_sdk');
 
 function getLevelDb(): LevelUp {
   // eslint-disable-next-line @typescript-eslint/no-var-requires

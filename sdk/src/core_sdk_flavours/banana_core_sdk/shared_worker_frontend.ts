@@ -1,6 +1,6 @@
 import { Crs } from '@aztec/barretenberg/crs';
 import { PooledPedersen } from '@aztec/barretenberg/crypto';
-import { createLogger } from '@aztec/barretenberg/debug';
+import { createDebugLogger } from '@aztec/barretenberg/log';
 import { PooledFftFactory } from '@aztec/barretenberg/fft';
 import { PooledPippenger } from '@aztec/barretenberg/pippenger';
 import { BarretenbergWasm, WorkerPool } from '@aztec/barretenberg/wasm';
@@ -11,7 +11,7 @@ import { createDispatchFn, TransportClient } from '../transport';
 import { BananaCoreSdk } from './banana_core_sdk';
 import { BananaCoreSdkOptions } from './banana_core_sdk_options';
 
-const debug = createLogger('aztec:sdk:shared_worker_frontend');
+const debug = createDebugLogger('aztec:sdk:shared_worker_frontend');
 
 export class SharedWorkerFrontend {
   private jobQueue!: JobQueueInterface;

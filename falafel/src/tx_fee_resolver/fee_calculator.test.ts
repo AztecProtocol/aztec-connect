@@ -99,6 +99,7 @@ describe('fee calculator', () => {
       txsPerRollup,
       callDataPerRollup,
       numSignificantFigures,
+      4,
     );
   });
 
@@ -148,6 +149,7 @@ describe('fee calculator', () => {
       newTxsPerRollup,
       callDataPerRollup,
       numSignificantFigures,
+      4,
     );
     // call data per rollup above is 128 * 1024
     // verification gas above is 100000

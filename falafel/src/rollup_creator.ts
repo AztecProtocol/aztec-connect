@@ -22,11 +22,7 @@ export class RollupCreator {
     private outerRollupSize: number,
     private metrics: Metrics,
     private feeResolver: TxFeeResolver,
-  ) {
-    console.log(
-      `Rollup Creator: num inner rollup txs: ${this.numInnerRollupTxs}, inner rollup size: ${this.innerRollupSize}, outer rollup size: ${this.outerRollupSize}`,
-    );
-  }
+  ) {}
 
   /**
    * Creates a rollup from the given txs and publishes it.
