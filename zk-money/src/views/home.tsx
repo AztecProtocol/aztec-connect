@@ -118,8 +118,8 @@ export function Home({ onSignup }: HomeProps) {
 
 // TODO: remove this check as part of launch
 // (similar change required in incentive_modal.tsx & src/index.tsx)
-// const isProdSite = window.location.hostname === 'zk.money';
-const shieldDisabled = !localStorage.getItem('unlock_prod');
+const isDevSite = window.location.hostname === 'aztec-connect-dev.zk.money';
+const shieldDisabled = !isDevSite && !localStorage.getItem('unlock_prod');
 
 function Banner({ onShieldNow }: { onShieldNow: () => void }) {
   return (
