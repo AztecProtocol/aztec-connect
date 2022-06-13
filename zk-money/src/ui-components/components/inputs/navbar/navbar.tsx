@@ -15,6 +15,7 @@ export enum Theme {
 }
 
 interface NavbarProps {
+  isLoggingIn: boolean;
   isLoggedIn: boolean;
   path?: string;
   theme?: Theme;
@@ -44,7 +45,7 @@ function getLogo(theme: Theme | undefined) {
   return <Logo className={cx(style.logo, theme === Theme.GRADIENT ? style.gradient : style.white)} />;
 }
 
-export function Navbar({ isLoggedIn, accountComponent, theme, onChange }: NavbarProps): JSX.Element {
+export function Navbar({ isLoggingIn, isLoggedIn, accountComponent, theme, onChange }: NavbarProps): JSX.Element {
   const location = useLocation();
 
   return (
@@ -67,7 +68,7 @@ export function Navbar({ isLoggedIn, accountComponent, theme, onChange }: Navbar
             {link.label}
           </Link>
         ))}
-        {isLoggedIn ? (
+        {isLoggingIn || isLoggedIn ? (
           <>
             <div className={style.accountWrapper}>
               <Link

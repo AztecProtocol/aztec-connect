@@ -317,6 +317,7 @@ export class AppView extends PureComponent<AppProps, AppState> {
           <Navbar
             path={window.location.pathname}
             theme={theme}
+            isLoggingIn={loginState.isPerformingBackgroundLogin}
             isLoggedIn={isLoggedIn}
             accountComponent={accountComponent}
           />

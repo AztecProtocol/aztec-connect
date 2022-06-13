@@ -55,6 +55,7 @@ const undisruptiveSteps = [
 export interface LoginState {
   step: LoginStep;
   mode: LoginMode;
+  isPerformingBackgroundLogin: boolean;
   walletId?: WalletId;
   alias: string;
   aliasAvailability: ValueAvailability;
@@ -64,6 +65,7 @@ export interface LoginState {
 export const initialLoginState: LoginState = {
   step: LoginStep.CONNECT_WALLET,
   mode: LoginMode.SIGNUP,
+  isPerformingBackgroundLogin: false,
   walletId: undefined,
   alias: '',
   aliasAvailability: ValueAvailability.INVALID,
@@ -537,6 +539,8 @@ export class UserSession extends EventEmitter {
       return;
     }
 
+    this.updateLoginState({ isPerformingBackgroundLogin: true });
+
     try {
       await this.createSdk();
 
@@ -567,6 +571,7 @@ export class UserSession extends EventEmitter {
       debug(e);
       await this.close();
     }
+    this.updateLoginState({ isPerformingBackgroundLogin: false });
   }
 
   private async reviveUserProvider() {
