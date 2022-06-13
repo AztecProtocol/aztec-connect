@@ -38,6 +38,7 @@ import { DefiModal } from 'views/account/dashboard/modals/defi_modal';
 import { SelfDismissingIncentiveModal } from 'views/account/dashboard/modals/incentive_modal';
 import { KNOWN_MAINNET_ASSET_ADDRESSES } from 'alt-model/known_assets/known_asset_addresses';
 import './app.css';
+import { AccountStateProvider } from 'alt-model/account_state';
 
 interface AppProps {
   config: Config;
@@ -314,73 +315,78 @@ export class AppView extends PureComponent<AppProps, AppState> {
             userSession: this.app.getSession(),
           }}
         >
-          <Navbar
-            path={window.location.pathname}
-            theme={theme}
-            isLoggingIn={loginState.isPerformingBackgroundLogin}
-            isLoggedIn={isLoggedIn}
-            accountComponent={accountComponent}
-          />
-          <TransitionGroup
-            style={{
-              margin: shouldCenterContent ? 'auto 0 auto 0' : 'initial',
-            }}
-          >
-            <CSSTransition key={window.location.pathname} classNames="fade" timeout={250}>
-              <Routes location={window.location.pathname}>
-                {[Pages.SIGNUP, Pages.SIGNIN].map((path: string) => (
+          <AccountStateProvider userId={this.state.accountState?.userId}>
+            <Navbar
+              path={window.location.pathname}
+              theme={theme}
+              isLoggingIn={loginState.isPerformingBackgroundLogin}
+              isLoggedIn={isLoggedIn}
+              accountComponent={accountComponent}
+            />
+            <TransitionGroup
+              style={{
+                margin: shouldCenterContent ? 'auto 0 auto 0' : 'initial',
+              }}
+            >
+              <CSSTransition key={window.location.pathname} classNames="fade" timeout={250}>
+                <Routes location={window.location.pathname}>
+                  {[Pages.SIGNUP, Pages.SIGNIN].map((path: string) => (
+                    <Route
+                      key={path}
+                      path={path}
+                      element={
+                        <Login
+                          worldState={worldState}
+                          loginState={loginState}
+                          providerState={providerState}
+                          availableWallets={this.app.availableWallets}
+                          shieldForAliasForm={shieldForAliasForm}
+                          explorerUrl={config.explorerUrl}
+                          systemMessage={systemMessage}
+                          setAlias={this.app.setAlias}
+                          onSelectWallet={this.handleConnectWallet}
+                          onSelectAlias={this.app.confirmAlias}
+                          onRestart={allowReset && step !== LoginStep.CONNECT_WALLET ? this.handleRestart : undefined}
+                          onShieldForAliasFormInputsChange={this.app.changeShieldForAliasForm}
+                          onSubmitShieldForAliasForm={this.app.claimUserName}
+                          onChangeWallet={this.app.changeWallet}
+                        />
+                      }
+                    />
+                  ))}
                   <Route
-                    key={path}
-                    path={path}
+                    path={Pages.EARN}
                     element={
-                      <Login
-                        worldState={worldState}
-                        loginState={loginState}
-                        providerState={providerState}
-                        availableWallets={this.app.availableWallets}
-                        shieldForAliasForm={shieldForAliasForm}
-                        explorerUrl={config.explorerUrl}
-                        systemMessage={systemMessage}
-                        setAlias={this.app.setAlias}
-                        onSelectWallet={this.handleConnectWallet}
-                        onSelectAlias={this.app.confirmAlias}
-                        onRestart={allowReset && step !== LoginStep.CONNECT_WALLET ? this.handleRestart : undefined}
-                        onShieldForAliasFormInputsChange={this.app.changeShieldForAliasForm}
-                        onSubmitShieldForAliasForm={this.app.claimUserName}
-                        onChangeWallet={this.app.changeWallet}
+                      <Earn
+                        isLoggedIn={isLoggedIn}
+                        onOpenDefiEnterModal={this.handleOpenDefiEnterModal}
+                        onOpenDefiExitModal={this.handleOpenDefiExitModal}
                       />
                     }
                   />
-                ))}
-                <Route
-                  path={Pages.EARN}
-                  element={
-                    <Earn
-                      isLoggedIn={isLoggedIn}
-                      onOpenDefiEnterModal={this.handleOpenDefiEnterModal}
-                      onOpenDefiExitModal={this.handleOpenDefiExitModal}
-                    />
-                  }
-                />
-                <Route path={Pages.TRADE} element={<Trade />} />
-                <Route path={Pages.BALANCE} element={<Balance onOpenDefiExitModal={this.handleOpenDefiExitModal} />} />
-                <Route
-                  path={Pages.HOME}
-                  element={
-                    <>
-                      <Home onSignup={this.handleSignup} />
-                      {!isLoggedIn && (
-                        <SelfDismissingIncentiveModal instanceName="home" onShieldNow={this.handleSignup} />
-                      )}
-                    </>
-                  }
-                />
-              </Routes>
-            </CSSTransition>
-          </TransitionGroup>
-          {activeDefiModal && (
-            <DefiModal onClose={() => this.setState({ activeDefiModal: undefined })} {...activeDefiModal} />
-          )}
+                  <Route path={Pages.TRADE} element={<Trade />} />
+                  <Route
+                    path={Pages.BALANCE}
+                    element={<Balance onOpenDefiExitModal={this.handleOpenDefiExitModal} />}
+                  />
+                  <Route
+                    path={Pages.HOME}
+                    element={
+                      <>
+                        <Home onSignup={this.handleSignup} />
+                        {!isLoggedIn && (
+                          <SelfDismissingIncentiveModal instanceName="home" onShieldNow={this.handleSignup} />
+                        )}
+                      </>
+                    }
+                  />
+                </Routes>
+              </CSSTransition>
+            </TransitionGroup>
+            {activeDefiModal && (
+              <DefiModal onClose={() => this.setState({ activeDefiModal: undefined })} {...activeDefiModal} />
+            )}
+          </AccountStateProvider>
         </AppContext.Provider>
       </Template>
     );
