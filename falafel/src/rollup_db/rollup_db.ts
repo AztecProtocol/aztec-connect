@@ -362,11 +362,13 @@ export class TypeOrmRollupDb implements RollupDb {
   }
 
   public async eraseDb() {
-    await this.accountRep.delete({});
-    await this.assetMetricsRep.delete({});
-    await this.claimRep.delete({});
-    await this.rollupRep.delete({});
-    await this.rollupProofRep.delete({});
-    await this.txRep.delete({});
+    await this.connection.transaction(async transactionalEntityManager => {
+      await transactionalEntityManager.delete(this.accountRep.target, {});
+      await transactionalEntityManager.delete(this.assetMetricsRep.target, {});
+      await transactionalEntityManager.delete(this.claimRep.target, {});
+      await transactionalEntityManager.delete(this.rollupRep.target, {});
+      await transactionalEntityManager.delete(this.rollupProofRep.target, {});
+      await transactionalEntityManager.delete(this.txRep.target, {});
+    });
   }
 }

@@ -39,8 +39,7 @@ cd ../..
 LAST_COMMIT=$(last_successful_commit blockchain $DEPLOY_TAG-deployed)
 
 if [ -z "$LAST_COMMIT" ]; then
-  echo "No successful last deploy found. Will deploy."
-  REDEPLOY=1
+  echo "No successful last deploy found. Change .redeploy to manually trigger a deployment."
 else
   if changed $LAST_COMMIT '.*\.sol$'; then
     echo "Solidity changed."
