@@ -2,7 +2,7 @@ import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { assetValueFromJson } from '@aztec/barretenberg/asset';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { SchnorrSignature } from '@aztec/barretenberg/crypto';
-import { joinSplitTxFromJson, rollupProviderStatusFromJson } from '@aztec/barretenberg/rollup_provider';
+import { depositTxFromJson, rollupProviderStatusFromJson } from '@aztec/barretenberg/rollup_provider';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import EventEmitter from 'events';
 import { coreUserTxFromJson } from '../core_tx';
@@ -98,6 +98,11 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
   public async getDefiFees(bridgeId: BridgeId) {
     const fees = await this.backend.getDefiFees(bridgeId.toString());
     return fees.map(assetValueFromJson);
+  }
+
+  public async getPendingDepositTxs() {
+    const txs = await this.backend.getPendingDepositTxs();
+    return txs.map(depositTxFromJson);
   }
 
   public async createDepositProof(
@@ -369,10 +374,5 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
   public async getUserTxs(userId: GrumpkinAddress) {
     const txs = await this.backend.getUserTxs(userId.toString());
     return txs.map(coreUserTxFromJson);
-  }
-
-  public async getRemoteUnsettledPaymentTxs() {
-    const txs = await this.backend.getRemoteUnsettledPaymentTxs();
-    return txs.map(joinSplitTxFromJson);
   }
 }

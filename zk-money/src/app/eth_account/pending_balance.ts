@@ -1,12 +1,11 @@
-import { EthAddress } from '@aztec/sdk';
-import { AccountUtils } from '../account_utils';
+import { AztecSdk, EthAddress } from '@aztec/sdk';
 import { ValueSubscriber } from './value_subscriber';
 
 export class PendingBalance extends ValueSubscriber {
   constructor(
     private assetId: number,
     private address: EthAddress | undefined,
-    private accountUtils: AccountUtils,
+    private sdk: AztecSdk,
     interval: number,
   ) {
     super(interval);
@@ -17,6 +16,6 @@ export class PendingBalance extends ValueSubscriber {
       return 0n;
     }
 
-    return this.accountUtils.getPendingBalance(this.assetId, this.address);
+    return this.sdk.getUserPendingFunds(this.assetId, this.address);
   }
 }

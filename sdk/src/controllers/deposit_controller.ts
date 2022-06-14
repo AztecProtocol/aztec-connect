@@ -1,7 +1,6 @@
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetValue } from '@aztec/barretenberg/asset';
 import { EthereumProvider, TxHash } from '@aztec/barretenberg/blockchain';
-import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { InterruptableSleep, sleep } from '@aztec/barretenberg/sleep';
 import { Timer } from '@aztec/barretenberg/timer';
 import { TxId } from '@aztec/barretenberg/tx_id';
@@ -109,7 +108,7 @@ export class DepositController {
         return allowance >= value;
       };
       approveTxHash = await this.sendTransactionAndCheckOnchainData(
-        'approve contract wallet allowance',
+        'approve allowance from contract wallet',
         approve,
         checkOnchainData,
       );
@@ -231,7 +230,7 @@ export class DepositController {
 
     this.pendingFundsStatus = {
       ...pendingFundsStatus,
-      depositedFromContractWallet: isContract,
+      depositedFromContractWallet: isContract && !txHash,
       txHash,
     };
     return txHash;
@@ -412,15 +411,10 @@ export class DepositController {
   private async getPendingFundsStatus() {
     const { assetId } = this.publicInput;
     const pendingDeposit = await this.blockchain.getUserPendingDeposit(assetId, this.depositor);
-    const txs = await this.core.getRemoteUnsettledPaymentTxs();
+    const txs = await this.core.getPendingDepositTxs();
     const unsettledDeposit = txs
-      .filter(
-        tx =>
-          tx.proofData.proofData.proofId === ProofId.DEPOSIT &&
-          tx.proofData.publicAssetId === assetId &&
-          tx.proofData.publicOwner.equals(this.depositor),
-      )
-      .reduce((sum, tx) => sum + BigInt(tx.proofData.publicValue), BigInt(0));
+      .filter(tx => tx.assetId === assetId && tx.publicOwner.equals(this.depositor))
+      .reduce((sum, tx) => sum + BigInt(tx.value), BigInt(0));
     const pendingFunds = pendingDeposit - unsettledDeposit;
     const { value } = this.publicInput;
     const requiredFunds = pendingFunds < value ? value - pendingFunds : BigInt(0);

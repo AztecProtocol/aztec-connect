@@ -1,7 +1,7 @@
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { assetValueToJson } from '@aztec/barretenberg/asset';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
-import { joinSplitTxToJson, rollupProviderStatusToJson } from '@aztec/barretenberg/rollup_provider';
+import { depositTxToJson, rollupProviderStatusToJson } from '@aztec/barretenberg/rollup_provider';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { EventEmitter } from 'events';
 import { coreUserTxToJson } from '../core_tx';
@@ -108,6 +108,11 @@ export class CoreSdkServerStub {
   public async getDefiFees(bridgeId: string) {
     const fees = await this.core.getDefiFees(BridgeId.fromString(bridgeId));
     return fees.map(assetValueToJson);
+  }
+
+  public async getPendingDepositTxs() {
+    const txs = await this.core.getPendingDepositTxs();
+    return txs.map(depositTxToJson);
   }
 
   public async createDepositProof(
@@ -385,10 +390,5 @@ export class CoreSdkServerStub {
   public async getUserTxs(userId: string) {
     const txs = await this.core.getUserTxs(GrumpkinAddress.fromString(userId));
     return txs.map(coreUserTxToJson);
-  }
-
-  public async getRemoteUnsettledPaymentTxs() {
-    const txs = await this.core.getRemoteUnsettledPaymentTxs();
-    return txs.map(joinSplitTxToJson);
   }
 }

@@ -30,7 +30,7 @@ import { groupUserTxs } from './group_user_txs';
 export interface AztecSdk {
   on(event: SdkEvent.UPDATED_USERS, listener: () => void): this;
   on(event: SdkEvent.UPDATED_USER_STATE, listener: (userId: GrumpkinAddress) => void): this;
-  on(event: SdkEvent.UPDATED_WORLD_STATE, listener: (rollupId: number, latestRollupId: number) => void): this;
+  on(event: SdkEvent.UPDATED_WORLD_STATE, listener: (syncedToRollup: number, latestRollupId: number) => void): this;
   on(event: SdkEvent.DESTROYED, listener: () => void): this;
 }
 
@@ -264,18 +264,12 @@ export class AztecSdk extends EventEmitter {
     return this.blockchain.processAsyncDefiInteraction(interactionNonce, options);
   }
 
-  private async getTransactionFees(assetId: number, txType: TxType) {
-    const fees = await this.core.getTxFees(assetId);
-    const txSettlementFees = fees[txType];
-    if (await this.isFeePayingAsset(assetId)) {
-      return txSettlementFees;
-    }
-    const [feeTxTransferFee] = fees[TxType.TRANSFER];
-    return txSettlementFees.map(({ value, ...rest }) => ({ value: value + feeTxTransferFee.value, ...rest }));
-  }
-
   public async getDepositFees(assetId: number) {
     return this.getTransactionFees(assetId, TxType.DEPOSIT);
+  }
+
+  public async getPendingDepositTxs() {
+    return this.core.getPendingDepositTxs();
   }
 
   public createDepositController(
@@ -529,15 +523,10 @@ export class AztecSdk extends EventEmitter {
 
   public async getUserPendingFunds(assetId: number, account: EthAddress) {
     const deposited = await this.getUserPendingDeposit(assetId, account);
-    const txs = await this.getRemoteUnsettledPaymentTxs();
+    const txs = await this.getPendingDepositTxs();
     const unsettledDeposit = txs
-      .filter(
-        tx =>
-          tx.proofData.proofData.proofId === ProofId.DEPOSIT &&
-          tx.proofData.publicAssetId === assetId &&
-          tx.proofData.publicOwner.equals(account),
-      )
-      .reduce((sum, tx) => sum + BigInt(tx.proofData.publicValue), BigInt(0));
+      .filter(tx => tx.assetId === assetId && tx.publicOwner.equals(account))
+      .reduce((sum, tx) => sum + tx.value, BigInt(0));
     return deposited - unsettledDeposit;
   }
 
@@ -666,8 +655,14 @@ export class AztecSdk extends EventEmitter {
     return (await this.getUserTxs(userId)).filter(tx => tx.proofId === ProofId.DEFI_DEPOSIT) as UserDefiTx[];
   }
 
-  public async getRemoteUnsettledPaymentTxs() {
-    return this.core.getRemoteUnsettledPaymentTxs();
+  private async getTransactionFees(assetId: number, txType: TxType) {
+    const fees = await this.core.getTxFees(assetId);
+    const txSettlementFees = fees[txType];
+    if (await this.isFeePayingAsset(assetId)) {
+      return txSettlementFees;
+    }
+    const [feeTxTransferFee] = fees[TxType.TRANSFER];
+    return txSettlementFees.map(({ value, ...rest }) => ({ value: value + feeTxTransferFee.value, ...rest }));
   }
 
   private async getAccountFee(assetId: number) {

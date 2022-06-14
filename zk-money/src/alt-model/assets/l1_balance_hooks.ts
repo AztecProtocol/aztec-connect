@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useApp } from 'alt-model';
 import { useSdk } from 'alt-model/top_level_context';
 import { EthAccount, EthAccountEvent } from 'app';
-import { AccountUtils } from 'app/account_utils';
 import { useProviderState } from 'alt-model/provider_hooks';
 
 export function useLegacyEthAccountState(asset?: RemoteAsset) {
@@ -14,15 +13,7 @@ export function useLegacyEthAccountState(asset?: RemoteAsset) {
   const account = providerState?.account;
   const ethAccount = useMemo(() => {
     if (provider && sdk && asset) {
-      return new EthAccount(
-        provider,
-        account,
-        network,
-        new AccountUtils(sdk, requiredNetwork),
-        asset.id,
-        asset.address,
-        requiredNetwork,
-      );
+      return new EthAccount(provider, account, network, sdk, asset.id, asset.address, requiredNetwork);
     }
   }, [provider, network, account, sdk, requiredNetwork, asset]);
   const [state, setState] = useState(ethAccount?.state);

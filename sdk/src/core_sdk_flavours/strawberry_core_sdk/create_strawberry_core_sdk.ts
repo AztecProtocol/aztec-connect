@@ -1,5 +1,6 @@
-import { createIframe } from './create_iframe';
+import { SdkEvent } from '../../core_sdk';
 import { TransportClient } from '../transport';
+import { createIframe, IframeEvent } from './create_iframe';
 import { IframeFrontend } from './iframe_frontend';
 import { IframeTransportConnect } from './iframe_transport_connect';
 import { StrawberryCoreSdkOptions } from './strawberry_core_sdk_options';
@@ -17,6 +18,10 @@ export async function createStrawberryCoreSdk(options: StrawberryCoreSdkOptions)
 
   const iframeFrontend = new IframeFrontend(transportClient);
   const { coreSdk } = await iframeFrontend.initComponents(options);
+
+  iframe.on(IframeEvent.DESTROYED, async () => {
+    coreSdk.emit(SdkEvent.DESTROYED);
+  });
 
   return coreSdk;
 }

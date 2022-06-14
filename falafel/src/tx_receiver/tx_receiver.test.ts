@@ -116,7 +116,7 @@ describe('tx receiver', () => {
 
     rollupDb = {
       nullifiersExist: jest.fn().mockResolvedValue(false),
-      getUnsettledPaymentTxs: jest.fn().mockResolvedValue([]),
+      getUnsettledDepositTxs: jest.fn().mockResolvedValue([]),
       getUnsettledTxs: jest.fn().mockResolvedValue([]),
       getDataRootsIndex: jest.fn().mockResolvedValue(0),
       addTxs: jest.fn(),
@@ -208,7 +208,7 @@ describe('tx receiver', () => {
     it('reject a deposit tx whose pending funds are spent by other unsettled txs', async () => {
       const txs = [mockTx({ proofId: ProofId.DEPOSIT, publicValue: 5n })];
       blockchain.getUserPendingDeposit.mockResolvedValue(10n);
-      rollupDb.getUnsettledPaymentTxs.mockResolvedValue([
+      rollupDb.getUnsettledDepositTxs.mockResolvedValue([
         { proofData: mockTx({ proofId: ProofId.DEPOSIT, publicValue: 7n }).proof.rawProofData },
       ]);
 
@@ -219,7 +219,7 @@ describe('tx receiver', () => {
     it('accept a deposit tx whose pending funds are not all spent by other unsettled txs', async () => {
       const txs = [mockTx({ proofId: ProofId.DEPOSIT, publicValue: 3n })];
       blockchain.getUserPendingDeposit.mockResolvedValue(10n);
-      rollupDb.getUnsettledPaymentTxs.mockResolvedValue([
+      rollupDb.getUnsettledDepositTxs.mockResolvedValue([
         { proofData: mockTx({ proofId: ProofId.DEPOSIT, publicValue: 7n }).proof.rawProofData },
       ]);
 

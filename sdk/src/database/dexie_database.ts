@@ -10,8 +10,6 @@ import { Note } from '../note';
 import { UserData } from '../user';
 import { Alias, Database, SpendingKey } from './database';
 
-const MAX_BYTE_LENGTH = 100000000;
-
 const toSubKeyName = (name: string, index: number) => `${name}__${index}`;
 
 class DexieNote {
@@ -84,10 +82,6 @@ const fromDexieNote = ({
     !pending ? index : undefined,
     hashPath ? Buffer.from(hashPath) : undefined,
   );
-
-class DexieKey {
-  constructor(public name: string, public value: Uint8Array, public size: number, public count?: number) {}
-}
 
 class DexieUser {
   constructor(public id: Uint8Array, public accountPrivateKey: Uint8Array, public syncedToRollup: number) {}
@@ -391,6 +385,10 @@ const sortUserTxs = (txs: DexieUserTx[]) => {
   return [...unsettled, ...settled];
 };
 
+class DexieKey {
+  constructor(public name: string, public value: Uint8Array, public size?: number, public count?: number) {}
+}
+
 interface DexieMutex {
   name: string;
   expiredAt: number;
@@ -681,19 +679,51 @@ export class DexieDatabase implements Database {
     await this.spendingKey.clear();
   }
 
-  async deleteKey(name: string) {
-    const key = await this.key.get(name);
-    if (!key) {
-      return;
-    }
-
-    for (let i = 0; i < key.count!; ++i) {
-      await this.key.where({ name: toSubKeyName(name, i) }).delete();
-    }
-    await this.key.where({ name }).delete();
+  async addSpendingKey(spendingKey: SpendingKey) {
+    await this.spendingKey.put(toDexieSpendingKey(spendingKey));
   }
 
-  async addKey(name: string, value: Buffer) {
+  async addSpendingKeys(spendingKeys: SpendingKey[]) {
+    await this.spendingKey.bulkPut(spendingKeys.map(toDexieSpendingKey));
+  }
+
+  async getSpendingKey(userId: GrumpkinAddress, spendingKey: GrumpkinAddress) {
+    const key = await this.spendingKey.get({
+      userId: new Uint8Array(userId.toBuffer()),
+      key: new Uint8Array(spendingKey.toBuffer().slice(0, 32)),
+    });
+    return key ? fromDexieSpendingKey(key) : undefined;
+  }
+
+  async getSpendingKeys(userId: GrumpkinAddress) {
+    const spendingKeys = await this.spendingKey.where({ userId: new Uint8Array(userId.toBuffer()) }).toArray();
+    return spendingKeys.map(fromDexieSpendingKey);
+  }
+
+  async removeSpendingKeys(userId: GrumpkinAddress) {
+    await this.spendingKey.where({ userId: new Uint8Array(userId.toBuffer()) }).delete();
+  }
+
+  async addAlias(alias: Alias) {
+    return this.addAliases([alias]);
+  }
+
+  async addAliases(aliases: Alias[]) {
+    const dbAliases = aliases.map(toDexieAlias);
+    await this.alias.bulkPut(dbAliases);
+  }
+
+  async getAlias(accountPublicKey: GrumpkinAddress) {
+    const alias = await this.alias.get({ accountPublicKey: new Uint8Array(accountPublicKey.toBuffer()) });
+    return alias ? fromDexieAlias(alias) : undefined;
+  }
+
+  async getAliases(aliasHash: AliasHash) {
+    const aliases = await this.alias.where({ aliasHash: new Uint8Array(aliasHash.toBuffer()) }).toArray();
+    return aliases.map(fromDexieAlias).sort((a, b) => (a.index < b.index ? 1 : -1));
+  }
+
+  async addKey(name: string, value: Buffer, MAX_BYTE_LENGTH = 100000000) {
     const size = value.byteLength;
     if (size <= MAX_BYTE_LENGTH) {
       await this.key.put({ name, value, size });
@@ -739,48 +769,16 @@ export class DexieDatabase implements Database {
     return value;
   }
 
-  async addSpendingKey(spendingKey: SpendingKey) {
-    await this.spendingKey.put(toDexieSpendingKey(spendingKey));
-  }
+  async deleteKey(name: string) {
+    const key = await this.key.get(name);
+    if (!key) {
+      return;
+    }
 
-  async addSpendingKeys(spendingKeys: SpendingKey[]) {
-    await this.spendingKey.bulkPut(spendingKeys.map(toDexieSpendingKey));
-  }
-
-  async getSpendingKey(userId: GrumpkinAddress, spendingKey: GrumpkinAddress) {
-    const key = await this.spendingKey.get({
-      userId: new Uint8Array(userId.toBuffer()),
-      key: new Uint8Array(spendingKey.toBuffer().slice(0, 32)),
-    });
-    return key ? fromDexieSpendingKey(key) : undefined;
-  }
-
-  async getSpendingKeys(userId: GrumpkinAddress) {
-    const spendingKeys = await this.spendingKey.where({ userId: new Uint8Array(userId.toBuffer()) }).toArray();
-    return spendingKeys.map(fromDexieSpendingKey);
-  }
-
-  async removeSpendingKeys(userId: GrumpkinAddress) {
-    await this.spendingKey.where({ userId: new Uint8Array(userId.toBuffer()) }).delete();
-  }
-
-  async addAlias(alias: Alias) {
-    return this.addAliases([alias]);
-  }
-
-  async addAliases(aliases: Alias[]) {
-    const dbAliases = aliases.map(toDexieAlias);
-    await this.alias.bulkPut(dbAliases);
-  }
-
-  async getAlias(accountPublicKey: GrumpkinAddress) {
-    const alias = await this.alias.get({ accountPublicKey: new Uint8Array(accountPublicKey.toBuffer()) });
-    return alias ? fromDexieAlias(alias) : undefined;
-  }
-
-  async getAliases(aliasHash: AliasHash) {
-    const aliases = await this.alias.where({ aliasHash: new Uint8Array(aliasHash.toBuffer()) }).toArray();
-    return aliases.map(fromDexieAlias).sort((a, b) => (a.index < b.index ? 1 : -1));
+    for (let i = 0; i < key.count!; ++i) {
+      await this.key.where({ name: toSubKeyName(name, i) }).delete();
+    }
+    await this.key.where({ name }).delete();
   }
 
   async acquireLock(name: string, timeout: number) {

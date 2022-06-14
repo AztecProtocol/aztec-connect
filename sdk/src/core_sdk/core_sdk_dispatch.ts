@@ -62,6 +62,10 @@ export class CoreSdkDispatch extends EventEmitter implements CoreSdkSerializedIn
     return this.request('getDefiFees', [bridgeId]);
   }
 
+  public async getPendingDepositTxs() {
+    return this.request('getPendingDepositTxs');
+  }
+
   public async createDepositProof(
     assetId: number,
     publicInput: string,
@@ -290,9 +294,5 @@ export class CoreSdkDispatch extends EventEmitter implements CoreSdkSerializedIn
 
   public async getUserTxs(userId: string) {
     return this.request('getUserTxs', [userId]);
-  }
-
-  public async getRemoteUnsettledPaymentTxs() {
-    return this.request('getRemoteUnsettledPaymentTxs');
   }
 }

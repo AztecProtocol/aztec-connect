@@ -119,9 +119,9 @@ export class TypeOrmRollupDb implements RollupDb {
     return await this.txRep.find({ where: { mined: null } });
   }
 
-  public async getUnsettledPaymentTxs() {
+  public async getUnsettledDepositTxs() {
     return await this.txRep.find({
-      where: { txType: LessThan(TxType.ACCOUNT), mined: null },
+      where: { txType: TxType.DEPOSIT, mined: null },
     });
   }
 

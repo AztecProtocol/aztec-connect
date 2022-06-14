@@ -595,7 +595,7 @@ export class UserSession extends EventEmitter {
       this.provider,
       this.provider?.account,
       this.provider?.network,
-      this.accountUtils,
+      this.sdk,
       this.accountProofDepositAssetId,
       this.rollupService.supportedAssets[this.accountProofDepositAssetId].address,
       this.requiredNetwork,
@@ -674,7 +674,7 @@ export class UserSession extends EventEmitter {
     this.rollupService?.destroy();
     this.rollupService = new RollupService(this.sdk);
     await this.rollupService.init();
-    this.accountUtils = new AccountUtils(this.sdk, this.requiredNetwork);
+    this.accountUtils = new AccountUtils(this.sdk);
 
     await this.sdk.run();
 
@@ -867,7 +867,7 @@ export class UserSession extends EventEmitter {
       this.provider,
       this.provider?.account,
       this.provider?.network,
-      this.accountUtils,
+      this.sdk,
       this.accountProofDepositAssetId,
       this.rollupService.supportedAssets[this.accountProofDepositAssetId].address,
       this.requiredNetwork,
