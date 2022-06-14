@@ -419,7 +419,10 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
         // Makes the saved proving keys considered valid. Hence set this after they're saved.
         await this.leveldb.put('verifierContractAddress', verifierContractAddress.toBuffer());
       })
-      .catch(debug);
+      .catch(err => {
+        debug('failed to run:', err);
+        this.destroy();
+      });
   }
 
   // -------------------------------------------------------
@@ -982,7 +985,11 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     this.synchingPromise = (async () => {
       debug('starting sync task...');
       while (this.initState !== SdkInitState.STOPPING) {
-        this.serialQueue.push(() => this.sync());
+        try {
+          await this.serialQueue.push(() => this.sync());
+        } catch (err) {
+          debug(err);
+        }
         await this.interruptableSleep.sleep(10000);
       }
       debug('stopped sync task.');

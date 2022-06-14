@@ -1,4 +1,5 @@
 import { EthAddress } from '@aztec/barretenberg/address';
+import { createLogger } from '@aztec/barretenberg/log';
 import { HashPath } from '@aztec/barretenberg/merkle_tree';
 import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
@@ -24,6 +25,7 @@ export class RollupAggregator {
     private numOuterRollupProofs: number,
     private rollupBeneficiary: EthAddress,
     private metrics: Metrics,
+    private log = createLogger('RollupAggregator'),
   ) {}
 
   public async aggregateRollupProofs(
@@ -34,7 +36,7 @@ export class RollupAggregator {
     bridgeIds: bigint[],
     assetIds: number[],
   ) {
-    console.log(`Creating root rollup proof with ${innerProofs.length} inner proofs...`);
+    this.log(`Creating root rollup proof with ${innerProofs.length} inner proofs...`);
 
     const rootRollup = await this.createRootRollup(
       innerProofs,
@@ -52,7 +54,7 @@ export class RollupAggregator {
       throw new Error('Failed to create root rollup proof. This should not happen.');
     }
 
-    console.log(`Creating root verifier proof...`);
+    this.log(`Creating root verifier proof...`);
 
     const rootVerifier = await this.createRootVerifier(rootRollupProofBuf);
     const rootVerifierRequest = new RootVerifierProofRequest(rootVerifier);
@@ -121,7 +123,7 @@ export class RollupAggregator {
       // Grows the data tree by inserting 0 at last subtree position.
       await worldStateDb.put(RollupTreeId.DATA, BigInt(endIndex), Buffer.alloc(32, 0));
     }
-    
+
     const rootRollup = new RootRollup(
       rollupId,
       rollupProofs.map(tx => tx.proofData),

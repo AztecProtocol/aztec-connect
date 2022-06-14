@@ -1,6 +1,7 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { Blockchain, EthereumRpc, RollupTxs, TxHash } from '@aztec/barretenberg/blockchain';
 import { JoinSplitProofData } from '@aztec/barretenberg/client_proofs';
+import { createLogger } from '@aztec/barretenberg/log';
 import { fromBaseUnits } from '@aztec/blockchain';
 import { RollupDao } from './entity';
 import { Metrics } from './metrics';
@@ -18,6 +19,7 @@ export class RollupPublisher {
     private maxProviderGasPrice: bigint,
     private gasLimit: number,
     private metrics: Metrics,
+    private log = createLogger('RollupPublisher'),
   ) {
     this.interruptPromise = new Promise(resolve => (this.interruptResolve = resolve));
     this.ethereumRpc = new EthereumRpc(blockchain.getProvider());
@@ -30,7 +32,7 @@ export class RollupPublisher {
       if (this.maxProviderGasPrice) {
         // Wait until gas price is below threshold.
         if (maxFeePerGas > this.maxProviderGasPrice) {
-          console.log(`Gas price too high at ${maxFeePerGas} wei. Waiting till below ${this.maxProviderGasPrice}...`);
+          this.log(`Gas price too high at ${maxFeePerGas} wei. Waiting till below ${this.maxProviderGasPrice}...`);
           await this.sleepOrInterrupted(60000);
           continue;
         }
@@ -40,7 +42,7 @@ export class RollupPublisher {
       const currentBalance = await this.ethereumRpc.getBalance(signerAddress);
       const { totalGas, estimateError } = await this.estimateTotalGas(rollupTxs);
       if (totalGas === undefined) {
-        console.log(`Unable to estimate gas: ${estimateError.message}. Will retry...`);
+        this.log(`Unable to estimate gas: ${estimateError.message}. Will retry...`);
         await this.sleepOrInterrupted(60000);
         continue;
       }
@@ -48,14 +50,14 @@ export class RollupPublisher {
       // Wait until we have enough funds to send all txs.
       const required = BigInt(totalGas) * maxFeePerGas;
       if (currentBalance < required) {
-        console.log(`Insufficient funds. Balance ${currentBalance}, required ${required} wei. Awaiting top up...`);
+        this.log(`Insufficient funds. Balance ${currentBalance}, required ${required} wei. Awaiting top up...`);
         await this.sleepOrInterrupted(60000);
         continue;
       }
 
-      console.log(`Current gas price: ${maxFeePerGas}`);
-      console.log(`Estimated total gas: ${totalGas}`);
-      console.log(`Estimated total cost: ${fromBaseUnits(required, 18, 3)} ETH`);
+      this.log(`Current gas price: ${maxFeePerGas}`);
+      this.log(`Estimated total gas: ${totalGas}`);
+      this.log(`Estimated total cost: ${fromBaseUnits(required, 18, 3)} ETH`);
       break;
     }
   }
@@ -72,7 +74,7 @@ export class RollupPublisher {
   }
 
   public async publishRollup(rollup: RollupDao) {
-    console.log(`Publishing rollup: ${rollup.id}`);
+    this.log(`Publishing rollup: ${rollup.id}`);
     const endTimer = this.metrics.publishTimer();
 
     const rollupTxs = await this.createTxData(rollup);
@@ -110,7 +112,7 @@ export class RollupPublisher {
         if (success) {
           continue;
         }
-        console.log(`Sending ${name} of size ${tx.length} with nonce ${nonce}...`);
+        this.log(`Sending ${name} of size ${tx.length} with nonce ${nonce}...`);
         txStatuses[i].txHash = await this.sendTx(tx, nonce++);
       }
       // If interrupted, one or more txHash will be undefined.
@@ -132,13 +134,13 @@ export class RollupPublisher {
         if (receipt.status) {
           txStatuses[i].success = true;
         } else {
-          console.log(`Transaction failed (${name}): ${txHash!.toString()}`);
+          this.log(`Transaction failed (${name}): ${txHash!.toString()}`);
           if (receipt.revertError) {
-            console.log(`Revert Error: ${receipt.revertError.name}(${receipt.revertError.params.join(', ')})`);
+            this.log(`Revert Error: ${receipt.revertError.name}(${receipt.revertError.params.join(', ')})`);
 
             // We no no longer continue trying to publish if contract state changed.
             if (receipt.revertError.name === 'INCORRECT_STATE_HASH') {
-              console.log('Publish failed. Contract state changed underfoot.');
+              this.log('Publish failed. Contract state changed underfoot.');
               return false;
             }
           }
@@ -151,7 +153,7 @@ export class RollupPublisher {
 
       // All succeeded.
       endTimer();
-      console.log('Rollup successfully published.');
+      this.log('Rollup successfully published.');
       return true;
     }
 
@@ -190,8 +192,8 @@ export class RollupPublisher {
       try {
         return await this.blockchain.sendTx(txData, { gasLimit: this.gasLimit, nonce });
       } catch (err: any) {
-        console.log(err.message.slice(0, 500));
-        console.log('Will retry in 60s...');
+        this.log(err.message.slice(0, 500));
+        this.log('Will retry in 60s...');
         await this.sleepOrInterrupted(60000);
       }
     }
@@ -202,7 +204,7 @@ export class RollupPublisher {
       try {
         return await this.blockchain.getTransactionReceiptSafe(txHash, 300);
       } catch (err) {
-        console.log(err);
+        this.log(err);
         await this.sleepOrInterrupted(60000);
       }
     }
