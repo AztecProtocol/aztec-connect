@@ -709,7 +709,7 @@ export class UserState extends EventEmitter {
 
     if (value) {
       await this.db.addNote(note);
-      debug(`user ${this.userData.id} adding pending note with value ${value}, allowChain = ${note.allowChain}.`);
+      this.debug(`adding pending note with value ${value}, allowChain = ${note.allowChain}.`);
     }
 
     return note;

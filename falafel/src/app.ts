@@ -184,7 +184,7 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     ctx.status = 200;
   });
 
-  router.get('/get-initial-world-state', recordMetric, checkReady, async (ctx: Koa.Context) => {
+  router.get('/get-initial-world-state', recordMetric, async (ctx: Koa.Context) => {
     const response = await server.getInitialWorldState();
     ctx.body = response.initialAccounts;
     ctx.status = 200;

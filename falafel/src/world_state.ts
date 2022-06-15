@@ -507,9 +507,13 @@ export class WorldState {
 
     // Compute the subtree root. Used client side for constructing mutable part of the data tree.
     const subtreeDepth = Math.ceil(Math.log2(rollup.rollupSize * WorldStateConstants.NUM_NEW_DATA_TREE_NOTES_PER_TX));
-    const lastIndex = this.worldStateDb.getSize(RollupTreeId.DATA) - 1n;
-    const subtreeRoot = await this.worldStateDb.getSubtreeRoot(RollupTreeId.DATA, lastIndex, subtreeDepth);
+    const subtreeRoot = await this.worldStateDb.getSubtreeRoot(
+      RollupTreeId.DATA,
+      BigInt(rollup.dataStartIndex),
+      subtreeDepth,
+    );
 
+    this.log(`Rollup subtree root: ${subtreeRoot.toString('hex')}`);
     this.log(`Rollup gas used: ${block.gasUsed}`);
     this.log(`Rollup gas price: ${fromBaseUnits(block.gasPrice, 9, 2)} gwei`);
     this.log(`Rollup cost: ${fromBaseUnits(block.gasPrice * BigInt(block.gasUsed), 18, 6)} ETH`);

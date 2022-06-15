@@ -92,7 +92,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   private blake2s!: Blake2s;
   private grumpkin!: Grumpkin;
   private schnorr!: Schnorr;
-  private interruptableSleep = new InterruptableSleep();
+  private syncSleep = new InterruptableSleep();
   private synchingPromise!: Promise<void>;
 
   constructor(
@@ -186,7 +186,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
 
     // If sync() task is running, signals it to stop, to awake for exit if it's asleep, and awaits the exit.
     this.initState = SdkInitState.STOPPING;
-    this.interruptableSleep.interrupt();
+    this.syncSleep.interrupt();
     await this.synchingPromise;
 
     // The serial queue will cancel itself. This ensures that anything currently in the queue finishes, and ensures
@@ -310,6 +310,11 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       this.userStates.push(userState);
 
       this.emit(SdkEvent.UPDATED_USERS);
+
+      if (!noSync) {
+        // If the sync microtask is sleeping, wake it up to start syncing.
+        this.syncSleep.interrupt();
+      }
 
       return userState.getUserData();
     });
@@ -1003,7 +1008,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
         } catch (err) {
           debug(err);
         }
-        await this.interruptableSleep.sleep(10000);
+        await this.syncSleep.sleep(10000);
       }
       debug('stopped sync task.');
     })();

@@ -212,19 +212,42 @@ export class TypeOrmRollupDb implements RollupDb {
     return await this.assetMetricsRep.findOne({ assetId }, { order: { rollupId: 'DESC' } });
   }
 
+  /**
+   * Warning: rollups[i].rollupProof.txs must be ordered as they exist within the proof.
+   * The rollupProof entity enforces this after load.
+   * Do not populate the tx array manually, without enforcing this order.
+   */
   public async getRollups(take?: number, skip?: number, descending = false) {
     const result = await this.rollupRep.find({
       order: { id: descending ? 'DESC' : 'ASC' },
-      relations: ['rollupProof'],
       take,
       skip,
     });
     // Loading these as part of relations above leaks GB's of memory.
     // One would think the following would be much slower, but it's not actually that bad.
     for (const rollup of result) {
-      rollup.rollupProof.txs = await this.txRep.find({ where: { rollupProof: rollup.rollupProof } });
+      rollup.rollupProof = (await this.rollupProofRep.findOne({ where: { rollup }, relations: ['tx'] }))!;
     }
     return result;
+  }
+
+  /**
+   * Warning: rollups[i].rollupProof.txs must be ordered as they exist within the proof.
+   * The rollupProof entity enforces this after load.
+   * Do not populate the tx array manually, without enforcing this order.
+   */
+  public async getSettledRollups(from = 0, take?: number) {
+    const rollups = await this.rollupRep.find({
+      where: { id: MoreThanOrEqual(from), mined: Not(IsNull()) },
+      order: { id: 'ASC' },
+      take,
+    });
+    // Loading these as part of relations above leaks GB's of memory.
+    // One would think the following would be much slower, but it's not actually that bad.
+    for (const rollup of rollups) {
+      rollup.rollupProof = (await this.rollupProofRep.findOne({ where: { rollup }, relations: ['tx'] }))!;
+    }
+    return rollups;
   }
 
   public async getRollupsByRollupIds(ids: number[]) {
@@ -280,19 +303,6 @@ export class TypeOrmRollupDb implements RollupDb {
       await transactionalEntityManager.insert<AssetMetricsDao>(this.assetMetricsRep.target, assetMetrics);
     });
     return (await this.getRollup(id))!;
-  }
-
-  public async getSettledRollups(from = 0, take?: number) {
-    const rollups = await this.rollupRep.find({
-      where: { id: MoreThanOrEqual(from), mined: Not(IsNull()) },
-      order: { id: 'ASC' },
-      relations: ['rollupProof'],
-      take,
-    });
-    for (const rollup of rollups) {
-      rollup.rollupProof.txs = await this.txRep.find({ where: { rollupProof: rollup.rollupProof } });
-    }
-    return rollups;
   }
 
   public async getLastSettledRollup() {
