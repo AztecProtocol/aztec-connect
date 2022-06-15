@@ -1,20 +1,11 @@
-import { useEffect, useState } from 'react';
-import { listenAccountUpdated } from './event_utils';
-import { useApp } from './app_context';
-import { UserDefiTx } from '@aztec/sdk';
-import { useSdk } from './top_level_context';
+import { useMemo } from 'react';
+import { ProofId, UserDefiTx } from '@aztec/sdk';
+import { useAccountState } from './account_state';
 
 export function useDefiTxs() {
-  const { userId } = useApp();
-  const sdk = useSdk();
-  const [txs, setTxs] = useState<UserDefiTx[]>();
-  useEffect(() => {
-    setTxs(undefined);
-    if (sdk && userId) {
-      const updateTxs = () => sdk.getDefiTxs(userId).then(setTxs);
-      updateTxs();
-      return listenAccountUpdated(sdk, userId, updateTxs);
-    }
-  }, [sdk, userId]);
-  return txs;
+  const accountState = useAccountState();
+  return useMemo(
+    () => accountState?.txs.filter((tx): tx is UserDefiTx => tx.proofId === ProofId.DEFI_DEPOSIT),
+    [accountState],
+  );
 }

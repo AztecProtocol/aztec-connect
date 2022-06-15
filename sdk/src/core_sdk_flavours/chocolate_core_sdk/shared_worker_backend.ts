@@ -1,4 +1,4 @@
-import { createLogger, enableLogs } from '@aztec/barretenberg/debug';
+import { createDebugLogger, enableLogs } from '@aztec/barretenberg/log';
 import EventEmitter from 'events';
 import { CoreSdkSerializedInterface, SdkEvent } from '../../core_sdk';
 import { JobQueue } from '../job_queue';
@@ -6,7 +6,7 @@ import { createDispatchFn, DispatchMsg } from '../transport';
 import { ChocolateCoreSdkOptions } from './chocolate_core_sdk_options';
 import { createChocolateCoreSdk } from './create_chocolate_core_sdk';
 
-const debug = createLogger('aztec:sdk:shared_worker_backend');
+const debug = createDebugLogger('aztec:sdk:shared_worker_backend');
 
 export interface SharedWorkerBackend extends EventEmitter {
   on(name: 'dispatch_msg', handler: (msg: DispatchMsg) => void): this;

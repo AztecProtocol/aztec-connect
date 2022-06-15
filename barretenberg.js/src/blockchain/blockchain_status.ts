@@ -5,6 +5,7 @@ type Jsonify<T> = {
   [P in keyof T]: T[P] extends EthAddress | bigint | Buffer ? string : T[P] extends Object ? Jsonify<T[P]> : T[P];
 };
 
+// TODO: Move to TxType module.
 export enum TxType {
   DEPOSIT,
   TRANSFER,
@@ -14,12 +15,13 @@ export enum TxType {
   DEFI_DEPOSIT,
   DEFI_CLAIM,
 }
+export const numTxTypes = 7;
 
-export function isDefiDeposit(txType: TxType) {
+export function isDefiDepositTx(txType: TxType) {
   return txType === TxType.DEFI_DEPOSIT;
 }
 
-export function isAccountCreation(txType: TxType) {
+export function isAccountTx(txType: TxType) {
   return txType === TxType.ACCOUNT;
 }
 

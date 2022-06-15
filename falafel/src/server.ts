@@ -4,6 +4,7 @@ import { Blockchain } from '@aztec/barretenberg/blockchain';
 import { AccountVerifier, JoinSplitVerifier } from '@aztec/barretenberg/client_proofs';
 import { Blake2s } from '@aztec/barretenberg/crypto';
 import { InitHelpers } from '@aztec/barretenberg/environment';
+import { createLogger } from '@aztec/barretenberg/log';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { InitialWorldState, RollupProviderStatus, RuntimeConfig } from '@aztec/barretenberg/rollup_provider';
 import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
@@ -36,12 +37,14 @@ export class Server {
     worldStateDb: WorldStateDb,
     private metrics: Metrics,
     barretenberg: BarretenbergWasm,
+    private log = createLogger('Server'),
   ) {
     const {
       proofGeneratorMode,
       numInnerRollupTxs,
       numOuterRollupProofs,
       proverless,
+      rollupCallDataLimit,
       runtimeConfig: {
         publishInterval,
         flushAfterIdle,
@@ -93,6 +96,7 @@ export class Server {
       numInnerRollupTxs,
       numOuterRollupProofs,
       this.bridgeResolver,
+      rollupCallDataLimit,
     );
     this.worldState = new WorldState(
       rollupDb,
@@ -118,7 +122,7 @@ export class Server {
   }
 
   public async start() {
-    console.log('Server initializing...');
+    this.log('Initializing...');
 
     await this.proofGenerator.start();
     await this.txFeeResolver.start();
@@ -126,11 +130,11 @@ export class Server {
     await this.txReceiver.init();
 
     this.ready = true;
-    console.log('Server ready to receive txs.');
+    this.log('Ready to receive txs.');
   }
 
   public async stop() {
-    console.log('Server stop...');
+    this.log('Stop...');
     this.ready = false;
 
     this.proofGenerator.stop();
@@ -138,7 +142,7 @@ export class Server {
     await this.worldState.stop();
     await this.txFeeResolver.stop();
 
-    console.log('Server stopped.');
+    this.log('Stopped.');
   }
 
   public isReady() {
@@ -178,6 +182,7 @@ export class Server {
     const {
       numInnerRollupTxs,
       numOuterRollupProofs,
+      rollupCallDataLimit,
       runtimeConfig: {
         verificationGas,
         maxFeeGasPrice,
@@ -195,17 +200,18 @@ export class Server {
       feeGasPriceMultiplier,
       numInnerRollupTxs * numOuterRollupProofs,
       feePayingAssetIds,
+      rollupCallDataLimit,
       feeRoundUpSignificantFigures,
     );
   }
 
   public async removeData() {
-    console.log('Removing data dir and signal to shutdown...');
+    this.log('Removing data dir and signal to shutdown...');
     process.kill(process.pid, 'SIGUSR1');
   }
 
   public async resetPipline() {
-    console.log('Resetting pipeline...');
+    this.log('Resetting pipeline...');
     await this.worldState.resetPipeline();
   }
 
@@ -292,8 +298,8 @@ export class Server {
     return this.rollupDb.isAliasRegisteredToAccount(accountPublicKey, aliasHash);
   }
 
-  public async getUnsettledPaymentTxs() {
-    return this.rollupDb.getUnsettledPaymentTxs();
+  public async getUnsettledDepositTxs() {
+    return this.rollupDb.getUnsettledDepositTxs();
   }
 
   public getBlockBuffers(from: number, take?: number) {
@@ -315,12 +321,12 @@ export class Server {
     const end = this.metrics.receiveTxTimer();
     const result = await this.txReceiver.receiveTxs(txs);
     end();
-    console.log(`Received tx in ${new Date().getTime() - start}ms.`);
+    this.log(`Received tx in ${new Date().getTime() - start}ms.`);
     return result;
   }
 
   public flushTxs() {
-    console.log('Flushing queued transactions...');
+    this.log('Flushing queued transactions...');
     this.worldState.flushTxs();
   }
 }

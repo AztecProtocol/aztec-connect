@@ -6,6 +6,8 @@ import { InitHelpers, TreeInitData } from '@aztec/barretenberg/environment';
 import { deployMainnet } from './deploy_mainnet';
 import { deployMainnetE2e } from './deploy_mainnet_e2e';
 
+// Assume these env vars could be set to ''.
+// Default values will not be picked up as '' !== undefined.
 const { ETHEREUM_HOST, PRIVATE_KEY, VK } = process.env;
 
 function getSigner() {
@@ -18,7 +20,7 @@ function getSigner() {
   return new NonceManager(signer);
 }
 
-function deploy(chainId: number, signer: Signer, treeInitData: TreeInitData, vk?: string) {
+function deploy(chainId: number, signer: Signer, treeInitData: TreeInitData, vk: string) {
   switch (chainId) {
     case 1:
     case 0xa57ec:
@@ -54,7 +56,8 @@ async function main() {
   console.error(`Initial null root: ${roots.nullRoot.toString('hex')}`);
   console.error(`Initial root root: ${roots.rootsRoot.toString('hex')}`);
 
-  const { rollup, priceFeeds, feeDistributor } = await deploy(chainId, signer, treeInitData, VK);
+  const vk = VK ? VK : 'MockVerificationKey';
+  const { rollup, priceFeeds, feeDistributor } = await deploy(chainId, signer, treeInitData, vk);
 
   const envVars = {
     ROLLUP_CONTRACT_ADDRESS: rollup.address,

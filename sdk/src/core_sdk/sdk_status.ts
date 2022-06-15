@@ -20,6 +20,7 @@ export interface SdkStatus {
   latestRollupId: number;
   dataSize: number;
   dataRoot: Buffer;
+  version: string;
 }
 
 export interface SdkStatusJson {
@@ -31,6 +32,7 @@ export interface SdkStatusJson {
   latestRollupId: number;
   dataSize: number;
   dataRoot: string;
+  version: string;
 }
 
 export const sdkStatusToJson = (status: SdkStatus): SdkStatusJson => ({

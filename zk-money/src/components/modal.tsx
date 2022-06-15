@@ -64,15 +64,13 @@ export const ModalHeader: React.FunctionComponent<ModalHeaderProps> = ({ theme, 
 
 export const Modal: React.FunctionComponent<ModalProps> = props => {
   useEffect(() => {
-    const prevPosition = document.body.style.position;
-    const scrollY = window.scrollY;
-    document.body.style.position = 'fixed';
-    document.body.style.top = '0px';
-    return () => {
-      document.body.style.position = prevPosition;
-      document.body.style.top = '';
-      window.scrollTo(0, scrollY);
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+    const scrollBlocker = () => {
+      window.scrollTo(scrollLeft, scrollTop);
     };
+    window.addEventListener('scroll', scrollBlocker);
+    return () => window.removeEventListener('scroll', scrollBlocker);
   }, []);
 
   const { onClose } = props;

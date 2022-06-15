@@ -6,7 +6,6 @@ import {
   deployDummyBridge,
   deployFeeDistributor,
   deployMockPriceFeed,
-  deployMockVerifier,
   deployRollupProcessor,
   deployUniswap,
   deployUniswapBridge,
@@ -17,9 +16,9 @@ import { deployErc20 } from './deployers/deploy_erc20';
 const escapeBlockLower = 2160;
 const escapeBlockUpper = 2400;
 
-export async function deployDev(signer: Signer, { dataTreeSize, roots }: TreeInitData, vk?: string) {
+export async function deployDev(signer: Signer, { dataTreeSize, roots }: TreeInitData, vk: string) {
   const uniswapRouter = await deployUniswap(signer);
-  const verifier = vk ? await deployVerifier(signer, vk) : await deployMockVerifier(signer);
+  const verifier = await deployVerifier(signer, vk);
   const defiProxy = await deployDefiBridgeProxy(signer);
   const { rollup } = await deployRollupProcessor(
     signer,

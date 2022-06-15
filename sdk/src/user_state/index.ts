@@ -2,7 +2,7 @@ import { EthAddress } from '@aztec/barretenberg/address';
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { virtualAssetIdFlag } from '@aztec/barretenberg/bridge_id';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
-import { createLogger } from '@aztec/barretenberg/debug';
+import { createDebugLogger } from '@aztec/barretenberg/log';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
 import {
   batchDecryptNotes,
@@ -29,7 +29,7 @@ import { NotePicker } from '../note_picker';
 import { ProofOutput } from '../proofs';
 import { UserData } from '../user';
 
-const debug = createLogger('bb:user_state');
+const debug = createDebugLogger('bb:user_state');
 
 export enum UserStateEvent {
   UPDATED_USER_STATE = 'UPDATED_USER_STATE',
@@ -709,7 +709,7 @@ export class UserState extends EventEmitter {
 
     if (value) {
       await this.db.addNote(note);
-      debug(`user ${this.userData.id} adding pending note with value ${value}, allowChain = ${note.allowChain}.`);
+      this.debug(`adding pending note with value ${value}, allowChain = ${note.allowChain}.`);
     }
 
     return note;

@@ -7,7 +7,6 @@ import {
   deployElementBridge,
   deployFeeDistributor,
   deployLidoBridge,
-  deployMockVerifier,
   deployRollupProcessor,
   deployVerifier,
 } from './deployers';
@@ -30,8 +29,8 @@ const DEFAULT_ADMIN_ROLE = '0x00000000000000000000000000000000000000000000000000
 const EMERGENCY_ROLE = keccak256(toUtf8Bytes('EMERGENCY_ROLE'));
 const OWNER_ROLE = keccak256(toUtf8Bytes('OWNER_ROLE'));
 
-export async function deployMainnet(signer: Signer, { dataTreeSize, roots }: TreeInitData, vk?: string) {
-  const verifier = vk ? await deployVerifier(signer, vk) : await deployMockVerifier(signer);
+export async function deployMainnet(signer: Signer, { dataTreeSize, roots }: TreeInitData, vk: string) {
+  const verifier = await deployVerifier(signer, vk);
   const defiProxy = await deployDefiBridgeProxy(signer);
   const { rollup, proxyAdmin } = await deployRollupProcessor(
     signer,

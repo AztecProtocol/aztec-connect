@@ -1,9 +1,9 @@
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { assetValueToJson } from '@aztec/barretenberg/asset';
-import { ProofData } from '@aztec/barretenberg/client_proofs';
+import { JoinSplitProofData, ProofData } from '@aztec/barretenberg/client_proofs';
 import { fetch } from '@aztec/barretenberg/iso_fetch';
 import {
-  JoinSplitTxJson,
+  DepositTxJson,
   partialRuntimeConfigFromJson,
   PendingTxJson,
   rollupProviderStatusToJson,
@@ -22,14 +22,18 @@ import { buildSchemaSync } from 'type-graphql';
 import { Container } from 'typedi';
 import { TxDao } from './entity/tx';
 import { Metrics } from './metrics';
-import { JoinSplitTxResolver, RollupResolver, ServerStatusResolver, TxResolver } from './resolver';
+import { RollupResolver, ServerStatusResolver, TxResolver } from './resolver';
 import { Server } from './server';
 import { Tx } from './tx_receiver';
 
-const toTxJson = ({ proofData, offchainTxData }: TxDao): JoinSplitTxJson => ({
-  proofData: proofData.toString('hex'),
-  offchainTxData: offchainTxData.toString('hex'),
-});
+const toDepositTxJson = ({ proofData }: TxDao): DepositTxJson => {
+  const proof = JoinSplitProofData.fromBuffer(proofData);
+  return {
+    assetId: proof.publicAssetId,
+    value: proof.publicValue.toString(),
+    publicOwner: proof.publicOwner.toString(),
+  };
+};
 
 const toPendingTxJson = (proof: ProofData): PendingTxJson => ({
   txId: proof.txId.toString('hex'),
@@ -180,7 +184,7 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     ctx.status = 200;
   });
 
-  router.get('/get-initial-world-state', recordMetric, checkReady, async (ctx: Koa.Context) => {
+  router.get('/get-initial-world-state', recordMetric, async (ctx: Koa.Context) => {
     const response = await server.getInitialWorldState();
     ctx.body = response.initialAccounts;
     ctx.status = 200;
@@ -221,9 +225,9 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     ctx.status = 200;
   });
 
-  router.get('/get-unsettled-payment-txs', recordMetric, async (ctx: Koa.Context) => {
-    const txs = await server.getUnsettledPaymentTxs();
-    ctx.body = txs.map(toTxJson);
+  router.get('/get-pending-deposit-txs', recordMetric, async (ctx: Koa.Context) => {
+    const txs = await server.getUnsettledDepositTxs();
+    ctx.body = txs.map(toDepositTxJson);
     ctx.status = 200;
   });
 
@@ -251,7 +255,7 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
   app.use(router.allowedMethods());
 
   const schema = buildSchemaSync({
-    resolvers: [JoinSplitTxResolver, RollupResolver, TxResolver, ServerStatusResolver],
+    resolvers: [RollupResolver, TxResolver, ServerStatusResolver],
     container: Container,
   });
   const appServer = new ApolloServer({ schema, introspection: true });

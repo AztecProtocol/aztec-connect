@@ -1,7 +1,6 @@
-import { EthAddress } from '@aztec/sdk';
+import { AztecSdk, EthAddress } from '@aztec/sdk';
 import { Web3Provider } from '@ethersproject/providers';
 import createDebug from 'debug';
-import { AccountUtils } from '../account_utils';
 import { Network } from '../networks';
 import { Provider, ProviderStatus } from '../provider';
 import { PendingBalance } from './pending_balance';
@@ -55,7 +54,7 @@ export class EthAccount {
     public readonly provider: Provider | undefined,
     private readonly address: EthAddress | undefined,
     private readonly network: Network | undefined,
-    accountUtils: AccountUtils,
+    sdk: AztecSdk,
     assetId: number,
     assetAddress: EthAddress | undefined,
     private requiredNetwork: Network,
@@ -72,7 +71,7 @@ export class EthAccount {
       [EthAccountEvent.UPDATED_PENDING_BALANCE]: new PendingBalance(
         assetId,
         enableSubscribe ? this.address : undefined,
-        accountUtils,
+        sdk,
         this.pendingBalanceInterval,
       ),
     };

@@ -86,7 +86,7 @@ export interface Database extends MutexDatabase {
   getAlias(accountPublicKey: GrumpkinAddress): Promise<Alias | undefined>;
   getAliases(aliasHash: AliasHash): Promise<Alias[]>;
 
-  deleteKey(name: string): Promise<void>;
   addKey(name: string, value: Buffer): Promise<void>;
   getKey(name: string): Promise<Buffer | undefined>;
+  deleteKey(name: string): Promise<void>;
 }

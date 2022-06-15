@@ -73,6 +73,35 @@ resource "aws_service_discovery_service" "falafel" {
   }
 }
 
+# Configure a Postgres db.
+resource "aws_db_subnet_group" "default" {
+  name = "${var.DEPLOY_TAG}-falafel-db-subnet"
+  subnet_ids = [
+    data.terraform_remote_state.setup_iac.outputs.subnet_az1_private_id,
+    data.terraform_remote_state.setup_iac.outputs.subnet_az2_private_id,
+  ]
+
+  tags = {
+    Name = "${var.DEPLOY_TAG}-falafel-db-subnet"
+  }
+}
+
+resource "aws_db_instance" "postgres" {
+  allocated_storage      = 8
+  db_subnet_group_name   = aws_db_subnet_group.default.name
+  engine                 = "postgres"
+  engine_version         = "13.4"
+  identifier             = "${var.DEPLOY_TAG}-falafel-db"
+  instance_class         = "db.t4g.large"
+  name                   = "falafel"
+  password               = "password"
+  port                   = 5432
+  storage_type           = "gp2"
+  username               = "username"
+  vpc_security_group_ids = [data.terraform_remote_state.setup_iac.outputs.security_group_private_id]
+  skip_final_snapshot    = true
+}
+
 # Configure an EFS filesystem.
 resource "aws_efs_file_system" "falafel_data_store" {
   creation_token                  = "${var.DEPLOY_TAG}-falafel-data"
@@ -136,6 +165,10 @@ resource "aws_ecs_task_definition" "falafel" {
       {
         "name": "PORT",
         "value": "80"
+      },
+      {
+        "name": "DB_URL",
+        "value": "postgres://username:password@${aws_db_instance.postgres.endpoint}"
       },
       {
         "name": "ETHEREUM_HOST",

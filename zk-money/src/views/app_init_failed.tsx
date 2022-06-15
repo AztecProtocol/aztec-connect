@@ -35,7 +35,7 @@ export function AppInitFailed({ reason }: AppInitFailedProps) {
   const systemMessage = showingReason && reason.type === 'falafel-down' ? FALAFEL_UNREACHABLE_MSG : undefined;
   return (
     <Template theme={Theme.GRADIENT} systemMessage={systemMessage}>
-      <Navbar path={window.location.pathname} theme={Theme.GRADIENT} isLoggedIn={false} />
+      <Navbar path={window.location.pathname} theme={Theme.GRADIENT} isLoggingIn={false} isLoggedIn={false} />
       <Home onSignup={handleInteraction} />
       {showingReason && reason.type === 'unsupported' && (
         <UnsupportedPopup onClose={handleClosePopup} supportStatus={reason.supportStatus} />

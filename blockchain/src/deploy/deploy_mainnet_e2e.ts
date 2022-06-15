@@ -5,7 +5,6 @@ import {
   deployElementBridge,
   deployFeeDistributor,
   deployLidoBridge,
-  deployMockVerifier,
   deployRollupProcessor,
   deployVerifier,
   elementTokenAddresses,
@@ -21,8 +20,8 @@ const UNISWAP_ROUTER_ADDRESS = '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D';
 const DAI_PRICE_FEED_ADDRESS = '0x773616E4d11A78F511299002da57A0a94577F1f4';
 const FAST_GAS_PRICE_FEED_ADDRESS = '0x169e633a2d1e6c10dd91238ba11c4a708dfef37c';
 
-export async function deployMainnetE2e(signer: Signer, { dataTreeSize, roots }: TreeInitData, vk?: string) {
-  const verifier = vk ? await deployVerifier(signer, vk) : await deployMockVerifier(signer);
+export async function deployMainnetE2e(signer: Signer, { dataTreeSize, roots }: TreeInitData, vk: string) {
+  const verifier = await deployVerifier(signer, vk);
   const defiProxy = await deployDefiBridgeProxy(signer);
   const { rollup } = await deployRollupProcessor(
     signer,

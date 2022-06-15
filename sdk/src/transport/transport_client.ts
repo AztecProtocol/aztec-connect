@@ -2,9 +2,9 @@ import EventEmitter from 'events';
 import { EventMessage, isEventMessage, ResponseMessage } from './messages';
 import { TransportConnect } from './transport_connect';
 import { TransportSocket } from './transport_socket';
-import { createLogger } from '@aztec/barretenberg/debug';
+import { createDebugLogger } from '@aztec/barretenberg/log';
 
-const debug = createLogger('aztec:transport_client');
+const debug = createDebugLogger('aztec:transport_client');
 
 interface PendingRequest {
   msgId: number;

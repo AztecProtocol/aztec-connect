@@ -1,9 +1,9 @@
 import { LevelUp, LevelUpChain } from 'levelup';
 import { HashPath } from './hash_path';
 import { Hasher } from './hasher';
-import { createLogger } from '../debug';
+import { createDebugLogger } from '../log/debug';
 
-const debug = createLogger('bb:merkle_tree');
+const debug = createDebugLogger('bb:merkle_tree');
 
 const MAX_DEPTH = 32;
 

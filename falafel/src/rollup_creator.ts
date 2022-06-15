@@ -1,5 +1,6 @@
 import { toBigIntBE, toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
+import { createLogger } from '@aztec/barretenberg/log';
 import { HashPath } from '@aztec/barretenberg/merkle_tree';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
@@ -22,11 +23,8 @@ export class RollupCreator {
     private outerRollupSize: number,
     private metrics: Metrics,
     private feeResolver: TxFeeResolver,
-  ) {
-    console.log(
-      `Rollup Creator: num inner rollup txs: ${this.numInnerRollupTxs}, inner rollup size: ${this.innerRollupSize}, outer rollup size: ${this.outerRollupSize}`,
-    );
-  }
+    private log = createLogger('RollupCreator'),
+  ) {}
 
   /**
    * Creates a rollup from the given txs and publishes it.
@@ -38,11 +36,11 @@ export class RollupCreator {
       throw new Error('Txs empty.');
     }
 
-    console.log(`Creating proof for tx rollup ${rollup.rollupHash.toString('hex')} with ${txs.length} txs...`);
+    this.log(`Creating proof for tx rollup ${rollup.rollupHash.toString('hex')} with ${txs.length} txs...`);
     const end = this.metrics.txRollupTimer();
     const txRollupRequest = new TxRollupProofRequest(rollup);
     const proof = await this.proofGenerator.createProof(txRollupRequest.toBuffer());
-    console.log(`Tx rollup proof received: ${proof.length} bytes`);
+    this.log(`Tx rollup proof received: ${proof.length} bytes`);
     end();
 
     if (!proof) {
@@ -59,15 +57,13 @@ export class RollupCreator {
       created: new Date(),
     });
 
+    await this.rollupDb.addRollupProof(rollupProofDao);
+
     return rollupProofDao;
   }
 
   public interrupt() {
     // TODO: Interrupt proof creation.
-  }
-
-  public async addRollupProofs(daos: RollupProofDao[]) {
-    await this.rollupDb.addRollupProofs(daos);
   }
 
   public async createRollup(
@@ -109,7 +105,7 @@ export class RollupCreator {
       const tx = txs[i];
 
       if (proof.proofId !== ProofId.ACCOUNT) {
-        const assetId = proof.txFeeAssetId.readUInt32BE(28);
+        const assetId = proof.feeAssetId;
         if (this.feeResolver.isFeePayingAsset(assetId)) {
           localAssetIds.add(assetId);
           rootRollupAssetIds.add(assetId);
@@ -239,7 +235,7 @@ export class RollupCreator {
           }
           if (indexIntoTree < 0) {
             //we couldn't find the commitment. shouldn't get here, use the empty path but this will likely be rejected
-            console.log(`Could not find commitment that we are linked from: ${backwardLink.toString('hex')}`);
+            this.log(`Could not find commitment that we are linked from: ${backwardLink.toString('hex')}`);
             linkedCommitmentPaths.push(emptyPath);
             linkedCommitmentIndices.push(0);
           }

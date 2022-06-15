@@ -21,7 +21,7 @@ export class TxFeeAllocator {
     // determine the fee paying asset type for this block of txs
     for (let i = 0; i < txs.length; i++) {
       const tx = txs[i];
-      const txFeeAssetId = tx.proof.txFeeAssetId.readUInt32BE(28);
+      const txFeeAssetId = tx.proof.feeAssetId;
       const isFeePayingAsset = this.txFeeResolver.isFeePayingAsset(txFeeAssetId);
       const txFee = toBigIntBE(tx.proof.txFee);
       if (isFeePayingAsset && txFee) {
@@ -42,19 +42,19 @@ export class TxFeeAllocator {
     // calculate the gas required and that provided
     for (let i = 0; i < txs.length; i++) {
       const tx = txs[i];
+      const txAssetId = tx.proof.feeAssetId;
       if (txTypes[i] === TxType.DEFI_DEPOSIT) {
         const { bridgeId } = new DefiDepositProofData(tx.proof);
         // this call return BASE_TX_GAS + constants[DEFI_DEPOSIT] + BRIDGE_TX_GAS
-        gasRequired += this.txFeeResolver.getBridgeTxGas(feePayingAsset, bridgeId.toBigInt());
+        gasRequired += this.txFeeResolver.getAdjustedBridgeTxGas(txAssetId, bridgeId.toBigInt());
         // this call return BASE_TX_GAS + constants[DEFI_CLAIM]
-        gasRequired += this.txFeeResolver.getTxGas(feePayingAsset, TxType.DEFI_CLAIM);
+        gasRequired += this.txFeeResolver.getAdjustedTxGas(txAssetId, TxType.DEFI_CLAIM);
       } else {
-        gasRequired += this.txFeeResolver.getTxGas(feePayingAsset, txTypes[i]);
+        gasRequired += this.txFeeResolver.getAdjustedTxGas(txAssetId, txTypes[i]);
       }
 
-      const txFeeAssetId = tx.proof.txFeeAssetId.readUInt32BE(28);
-      if (txFeeAssetId === feePayingAsset) {
-        gasProvided += this.txFeeResolver.getGasPaidForByFee(txFeeAssetId, toBigIntBE(tx.proof.txFee));
+      if (txAssetId === feePayingAsset) {
+        gasProvided += this.txFeeResolver.getGasPaidForByFee(feePayingAsset, toBigIntBE(tx.proof.txFee));
       }
     }
 
@@ -76,19 +76,20 @@ export class TxFeeAllocator {
       // No feeless txs. We simply calculate any excess gas for each tx and apply it to the DAO.
       for (let i = 0; i < txs.length; i++) {
         const tx = txs[i];
+        const txFeeAssetId = tx.proof.feeAssetId;
         const fee = toBigIntBE(tx.proof.txFee);
-        const gasProvidedThisTx = this.txFeeResolver.getGasPaidForByFee(validation.feePayingAsset, fee);
+        const gasProvidedThisTx = this.txFeeResolver.getGasPaidForByFee(txFeeAssetId, fee);
         if (txTypes[i] === TxType.DEFI_DEPOSIT) {
           // discount the gas required for the Deposit base cost, call data and bridge tx. also discount the claim base cost and call data
           const { bridgeId } = new DefiDepositProofData(tx.proof);
           // this call return BASE_TX_GAS + constants[DEFI_DEPOSIT] + BRIDGE_TX_GAS
-          const gasCostDeposit = this.txFeeResolver.getBridgeTxGas(validation.feePayingAsset, bridgeId.toBigInt());
+          const gasCostDeposit = this.txFeeResolver.getAdjustedBridgeTxGas(txFeeAssetId, bridgeId.toBigInt());
           // this call return BASE_TX_GAS + constants[DEFI_CLAIM]
-          const gasCostClaim = this.txFeeResolver.getTxGas(validation.feePayingAsset, TxType.DEFI_CLAIM);
+          const gasCostClaim = this.txFeeResolver.getAdjustedTxGas(txFeeAssetId, TxType.DEFI_CLAIM);
           // this gives us the excess to apply first to the bridge and then to the verification
           txDaos[i].excessGas = gasProvidedThisTx - (gasCostClaim + gasCostDeposit);
         } else {
-          const gasCost = this.txFeeResolver.getTxGas(validation.feePayingAsset, txTypes[i]);
+          const gasCost = this.txFeeResolver.getAdjustedTxGas(txFeeAssetId, txTypes[i]);
           txDaos[i].excessGas = gasProvidedThisTx - gasCost;
         }
       }
@@ -104,13 +105,15 @@ export class TxFeeAllocator {
       if (txType === TxType.DEFI_DEPOSIT) {
         // discount the gas required for the Deposit base cost, call data and bridge tx. also discount the claim base cost and call data
         const { bridgeId } = new DefiDepositProofData(tx.proof);
+        const { inputAssetIdA: inputAssetId } = bridgeId;
         // this call return BASE_TX_GAS + constants[DEFI_DEPOSIT] + BRIDGE_TX_GAS
-        const gasCostDeposit = this.txFeeResolver.getBridgeTxGas(validation.feePayingAsset, bridgeId.toBigInt());
+        const gasCostDeposit = this.txFeeResolver.getAdjustedBridgeTxGas(inputAssetId, bridgeId.toBigInt());
         // this call return BASE_TX_GAS + constants[DEFI_CLAIM]
-        const gasCostClaim = this.txFeeResolver.getTxGas(validation.feePayingAsset, TxType.DEFI_CLAIM);
+        const gasCostClaim = this.txFeeResolver.getAdjustedTxGas(inputAssetId, TxType.DEFI_CLAIM);
         providedGas -= gasCostDeposit + gasCostClaim;
       } else {
-        providedGas -= this.txFeeResolver.getTxGas(validation.feePayingAsset, txType);
+        const txAssetId = tx.proof.feeAssetId;
+        providedGas -= this.txFeeResolver.getAdjustedTxGas(txAssetId, txType);
       }
     }
     if (!providedGas) {
@@ -127,9 +130,8 @@ export class TxFeeAllocator {
 
     // We have excess gas and no defi, find the first feeless tx and allocate the excess to it.
     const nonFeeIndex = txs.findIndex(tx => {
-      const txFeeAssetId = tx.proof.txFeeAssetId.readUInt32BE(28);
       const txFee = toBigIntBE(tx.proof.txFee);
-      return !this.txFeeResolver.isFeePayingAsset(txFeeAssetId) || !txFee;
+      return !this.txFeeResolver.isFeePayingAsset(tx.proof.feeAssetId) || !txFee;
     });
     if (nonFeeIndex === -1) {
       throw new Error(`Failed to allocate fee to tx`);

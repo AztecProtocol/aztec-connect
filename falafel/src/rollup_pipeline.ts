@@ -12,6 +12,8 @@ import { RollupCreator } from './rollup_creator';
 import { RollupDb } from './rollup_db';
 import { RollupPublisher } from './rollup_publisher';
 import { TxFeeResolver } from './tx_fee_resolver';
+import { fromBaseUnits } from '@aztec/blockchain';
+import { createLogger } from '@aztec/barretenberg/log';
 
 export class RollupPipeline {
   private pipelineCoordinator: PipelineCoordinator;
@@ -32,21 +34,21 @@ export class RollupPipeline {
     numInnerRollupTxs: number,
     numOuterRollupProofs: number,
     bridgeResolver: BridgeResolver,
+    maxCallDataPerRollup: number,
+    private log = createLogger('RollupPipeline'),
   ) {
     const innerRollupSize = 1 << Math.ceil(Math.log2(numInnerRollupTxs));
     const outerRollupSize = 1 << Math.ceil(Math.log2(innerRollupSize * numOuterRollupProofs));
 
-    console.log(
-      `RollupPipeline: ${JSON.stringify({
-        numInnerRollupTxs,
-        numOuterRollupProofs,
-        outerRollupSize,
-        publishInterval,
-        flushAfterIdle,
-        gasLimit,
-        maxProviderGasPrice: maxProviderGasPrice.toString(),
-      })}`,
-    );
+    this.log('New pipeline...');
+    this.log(`  numInnerRollupTxs: ${numInnerRollupTxs}`);
+    this.log(`  numOuterRollupProofs: ${numOuterRollupProofs}`);
+    this.log(`  rollupSize: ${outerRollupSize}`);
+    this.log(`  publishInterval: ${publishInterval}s`);
+    this.log(`  flushAfterIdle: ${flushAfterIdle}s`);
+    this.log(`  gasLimit: ${gasLimit}`);
+    this.log(`  maxCallDataPerRollup: ${maxCallDataPerRollup}`);
+    this.log(`  maxProviderGasPrice: ${fromBaseUnits(maxProviderGasPrice, 9, 2)} gwei`);
 
     const rollupPublisher = new RollupPublisher(rollupDb, blockchain, maxProviderGasPrice, gasLimit, metrics);
     const rollupAggregator = new RollupAggregator(
@@ -84,6 +86,8 @@ export class RollupPipeline {
       publishInterval,
       flushAfterIdle,
       bridgeResolver,
+      maxCallDataPerRollup,
+      gasLimit,
     );
   }
 
@@ -125,6 +129,7 @@ export class RollupPipelineFactory {
     private numInnerRollupTxs: number,
     private numOuterRollupProofs: number,
     private bridgeResolver: BridgeResolver,
+    private maxCallDataPerRollup: number,
   ) {}
 
   public setConf(
@@ -164,6 +169,7 @@ export class RollupPipelineFactory {
       this.numInnerRollupTxs,
       this.numOuterRollupProofs,
       this.bridgeResolver,
+      this.maxCallDataPerRollup,
     );
   }
 }

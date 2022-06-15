@@ -115,4 +115,8 @@ export class ProofData {
     const allowChain = this.allowChain.readUInt32BE(28);
     return [2, 3].includes(allowChain);
   }
+
+  get feeAssetId() {
+    return this.txFeeAssetId.readUInt32BE(28);
+  }
 }

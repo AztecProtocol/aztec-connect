@@ -11,7 +11,7 @@ import { BridgeResolver } from '../bridge';
 import { PublishTimeManager } from './publish_time_manager';
 import { RollupCoordinator } from './rollup_coordinator';
 import { TxDao } from '../entity';
-import debug from 'debug';
+import { createDebugLogger, createLogger } from '@aztec/barretenberg/log';
 import { RollupProfile, emptyProfile } from './rollup_profiler';
 
 export class PipelineCoordinator {
@@ -20,7 +20,8 @@ export class PipelineCoordinator {
   private runningPromise!: Promise<void>;
   private publishTimeManager!: PublishTimeManager;
   private rollupCoordinator?: RollupCoordinator;
-  private log = debug('pipeline_coordinator');
+  private debug = createDebugLogger('pipeline_coordinator');
+  private log = createLogger('PipelineCoordinator');
   private nextRollupProfile: RollupProfile;
 
   constructor(
@@ -37,6 +38,8 @@ export class PipelineCoordinator {
     private publishInterval: number,
     private flushAfterIdle: number,
     private bridgeResolver: BridgeResolver,
+    private maxCallDataPerRollup: number,
+    private maxGasPerRollup: number,
   ) {
     this.publishTimeManager = new PublishTimeManager(this.publishInterval, this.bridgeResolver);
     this.nextRollupProfile = emptyProfile(this.numInnerRollupTxs * this.numOuterRollupProofs);
@@ -56,7 +59,7 @@ export class PipelineCoordinator {
    */
   public start() {
     if (this.running) {
-      throw new Error('Pipeline coordinator has started running.');
+      throw new Error('Pipeline coordinator is already running.');
     }
 
     this.running = true;
@@ -64,17 +67,17 @@ export class PipelineCoordinator {
     const fn = async () => {
       await this.init();
 
-      console.log(`Pipeline starting with ${await this.rollupDb.getPendingTxCount()} pending txs.`);
+      this.log(`Starting with ${await this.rollupDb.getPendingTxCount()} pending txs.`);
 
       await this.claimProofCreator.create(this.numInnerRollupTxs * this.numOuterRollupProofs);
 
       while (this.running) {
-        this.log('Getting pending txs...');
+        this.debug('Getting pending txs...');
         const pendingTxs = await this.rollupDb.getPendingTxs();
 
         this.flush = this.flush || this.minTxWaitTimeExceeded(pendingTxs);
 
-        this.log('Processing pending txs...');
+        this.debug('Processing pending txs...');
         this.nextRollupProfile = await this.rollupCoordinator!.processPendingTxs(pendingTxs, this.flush);
 
         if (this.nextRollupProfile.published) {
@@ -84,7 +87,7 @@ export class PipelineCoordinator {
         await new Promise(resolve => setTimeout(resolve, 1000 * +this.running));
       }
 
-      console.log('Pipeline exited.');
+      this.log('Pipeline exited.');
     };
 
     return (this.runningPromise = fn());
@@ -155,6 +158,8 @@ export class PipelineCoordinator {
       this.bridgeResolver,
       this.feeResolver,
       defiInteractionNotes,
+      this.maxGasPerRollup,
+      this.maxCallDataPerRollup,
     );
   }
 

@@ -557,14 +557,16 @@ export class RollupProcessor {
             event.getTransaction(),
             event.getBlock(),
             event.getTransactionReceipt(),
-            ...chunkedOcdEvents[i].map(e => e.getTransaction()),
+            Promise.all(chunkedOcdEvents[i].map(e => e.getTransaction())),
+            Promise.all(chunkedOcdEvents[i].map(e => e.getTransactionReceipt())),
           ]);
           return {
             event,
             tx: meta[0],
             block: meta[1],
             receipt: meta[2],
-            offchainDataTxs: meta.slice(3) as TransactionResponse[],
+            offchainDataTxs: meta[3],
+            offchainDataReceipts: meta[4],
           };
         }),
       );
@@ -588,6 +590,7 @@ export class RollupProcessor {
             meta.receipt,
             defiNotesForThisRollup,
             meta.offchainDataTxs,
+            meta.offchainDataReceipts,
           );
         });
       blocks.push(...newBlocks);
@@ -713,6 +716,7 @@ export class RollupProcessor {
     receipt: TransactionReceipt,
     interactionResult: DefiInteractionEvent[],
     offchainDataTxs: TransactionResponse[],
+    offchainDataReceipts: TransactionReceipt[],
   ): Block {
     const rollupAbi = new utils.Interface(abi);
     const parsedRollupTx = rollupAbi.parseTransaction({ data: rollupTx.data });
@@ -734,7 +738,7 @@ export class RollupProcessor {
       rollupProofData.toBuffer(),
       offchainTxData,
       interactionResult,
-      receipt.gasUsed.toNumber(),
+      receipt.gasUsed.toNumber() + offchainDataReceipts.reduce((a, r) => a + r.gasUsed.toNumber(), 0),
       BigInt(rollupTx.gasPrice!.toString()),
     );
   }

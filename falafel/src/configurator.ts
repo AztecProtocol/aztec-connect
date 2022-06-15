@@ -28,6 +28,7 @@ interface StartupConfig {
   minConfirmationEHW: number;
   typeOrmLogging: boolean;
   proverless: boolean;
+  rollupCallDataLimit: number;
 }
 
 export interface ConfVars extends StartupConfig {
@@ -52,6 +53,7 @@ const defaultStartupConfig: StartupConfig = {
   serverAuthToken: '!changeme#',
   typeOrmLogging: false,
   proverless: false,
+  rollupCallDataLimit: 120 * 1024,
 };
 
 const defaultRuntimeConfig: RuntimeConfig = {
@@ -91,6 +93,7 @@ function getStartupConfigEnvVars(): Partial<StartupConfig> {
     PROVERLESS,
     TYPEORM_LOGGING,
     SERVER_AUTH_TOKEN,
+    CALL_DATA_LIMIT_KB,
   } = process.env;
 
   const envVars: Partial<StartupConfig> = {
@@ -113,13 +116,13 @@ function getStartupConfigEnvVars(): Partial<StartupConfig> {
     typeOrmLogging: TYPEORM_LOGGING ? TYPEORM_LOGGING === 'true' : undefined,
     proverless: PROVERLESS ? PROVERLESS === 'true' : undefined,
     serverAuthToken: SERVER_AUTH_TOKEN,
+    rollupCallDataLimit: CALL_DATA_LIMIT_KB ? +CALL_DATA_LIMIT_KB * 1024 : undefined,
   };
   return Object.fromEntries(Object.entries(envVars).filter(e => e[1] !== undefined));
 }
 
 function getRuntimeConfigEnvVars(): Partial<RuntimeConfig> {
   const {
-    BASE_TX_GAS,
     FEE_GAS_PRICE_MULTIPLIER,
     PUBLISH_INTERVAL,
     FLUSH_AFTER_IDLE,
@@ -130,7 +133,6 @@ function getRuntimeConfigEnvVars(): Partial<RuntimeConfig> {
   const envVars = {
     publishInterval: PUBLISH_INTERVAL ? +PUBLISH_INTERVAL : undefined,
     flushAfterIdle: FLUSH_AFTER_IDLE ? +FLUSH_AFTER_IDLE : undefined,
-    baseTxGas: BASE_TX_GAS ? +BASE_TX_GAS : undefined,
     feeGasPriceMultiplier: FEE_GAS_PRICE_MULTIPLIER ? +FEE_GAS_PRICE_MULTIPLIER : undefined,
     defaultDeFiBatchSize: DEFAULT_DEFI_BATCH_SIZE ? +DEFAULT_DEFI_BATCH_SIZE : undefined,
     feePayingAssetIds: FEE_PAYING_ASSET_IDS ? FEE_PAYING_ASSET_IDS.split(',').map(id => +id) : undefined,
