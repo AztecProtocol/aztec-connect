@@ -214,38 +214,44 @@ export class TypeOrmRollupDb implements RollupDb {
 
   /**
    * Warning: rollups[i].rollupProof.txs must be ordered as they exist within the proof.
-   * The rollupProof entity enforces this after load.
+   * The rollupProof entity enforces this after load, but we're sidestepping it here due to join memory issues.
    * Do not populate the tx array manually, without enforcing this order.
    */
   public async getRollups(take?: number, skip?: number, descending = false) {
     const result = await this.rollupRep.find({
       order: { id: descending ? 'DESC' : 'ASC' },
+      relations: ['rollupProof'],
       take,
       skip,
     });
     // Loading these as part of relations above leaks GB's of memory.
     // One would think the following would be much slower, but it's not actually that bad.
     for (const rollup of result) {
-      rollup.rollupProof = (await this.rollupProofRep.findOne({ where: { rollup }, relations: ['tx'] }))!;
+      rollup.rollupProof.txs = await this.txRep.find({ where: { rollupProof: rollup.rollupProof } });
+      // Enforce tx ordering.
+      rollup.rollupProof.afterLoad();
     }
     return result;
   }
 
   /**
    * Warning: rollups[i].rollupProof.txs must be ordered as they exist within the proof.
-   * The rollupProof entity enforces this after load.
+   * The rollupProof entity enforces this after load, but we're sidestepping it here due to join memory issues.
    * Do not populate the tx array manually, without enforcing this order.
    */
   public async getSettledRollups(from = 0, take?: number) {
     const rollups = await this.rollupRep.find({
       where: { id: MoreThanOrEqual(from), mined: Not(IsNull()) },
       order: { id: 'ASC' },
+      relations: ['rollupProof'],
       take,
     });
     // Loading these as part of relations above leaks GB's of memory.
     // One would think the following would be much slower, but it's not actually that bad.
     for (const rollup of rollups) {
-      rollup.rollupProof = (await this.rollupProofRep.findOne({ where: { rollup }, relations: ['tx'] }))!;
+      rollup.rollupProof.txs = await this.txRep.find({ where: { rollupProof: rollup.rollupProof } });
+      // Enforce tx ordering.
+      rollup.rollupProof.afterLoad();
     }
     return rollups;
   }
