@@ -1,9 +1,7 @@
-import { GrumpkinAddress } from '../address';
+import { EthAddress, GrumpkinAddress } from '../address';
 import { AssetValue } from '../asset';
 import { BlockSource } from '../block_source';
 import { BridgeId } from '../bridge_id';
-import { JoinSplitProofData } from '../client_proofs';
-import { OffchainJoinSplitData } from '../offchain_tx_data';
 import { TxId } from '../tx_id';
 import { RollupProviderStatus } from './rollup_provider_status';
 
@@ -66,29 +64,33 @@ export const pendingTxFromJson = ({ txId, noteCommitment1, noteCommitment2 }: Pe
   noteCommitment2: Buffer.from(noteCommitment2, 'hex'),
 });
 
+export interface DepositTx {
+  assetId: number;
+  value: bigint;
+  publicOwner: EthAddress;
+}
+
+export interface DepositTxJson {
+  assetId: number;
+  value: string;
+  publicOwner: string;
+}
+
+export const depositTxToJson = ({ assetId, value, publicOwner }: DepositTx): DepositTxJson => ({
+  assetId,
+  value: value.toString(),
+  publicOwner: publicOwner.toString(),
+});
+
+export const depositTxFromJson = ({ assetId, value, publicOwner }: DepositTxJson): DepositTx => ({
+  assetId,
+  value: BigInt(value),
+  publicOwner: EthAddress.fromString(publicOwner),
+});
+
 export interface InitialWorldState {
   initialAccounts: Buffer;
 }
-
-export interface JoinSplitTx {
-  proofData: JoinSplitProofData;
-  offchainTxData: OffchainJoinSplitData;
-}
-
-export interface JoinSplitTxJson {
-  proofData: string;
-  offchainTxData: string;
-}
-
-export const joinSplitTxToJson = ({ proofData, offchainTxData }: JoinSplitTx): JoinSplitTxJson => ({
-  proofData: proofData.proofData.rawProofData.toString('hex'),
-  offchainTxData: offchainTxData.toBuffer().toString('hex'),
-});
-
-export const joinSplitTxFromJson = ({ proofData, offchainTxData }: JoinSplitTxJson): JoinSplitTx => ({
-  proofData: JoinSplitProofData.fromBuffer(Buffer.from(proofData, 'hex')),
-  offchainTxData: OffchainJoinSplitData.fromBuffer(Buffer.from(offchainTxData, 'hex')),
-});
 
 export interface RollupProvider extends BlockSource {
   sendTxs(txs: Tx[]): Promise<TxId[]>;
@@ -97,10 +99,10 @@ export interface RollupProvider extends BlockSource {
   getDefiFees(bridgeId: BridgeId): Promise<AssetValue[]>;
   getPendingTxs(): Promise<PendingTx[]>;
   getPendingNoteNullifiers(): Promise<Buffer[]>;
+  getPendingDepositTxs(): Promise<DepositTx[]>;
   clientLog(msg: any): Promise<void>;
   getInitialWorldState(): Promise<InitialWorldState>;
   isAccountRegistered(accountPublicKey: GrumpkinAddress): Promise<boolean>;
   isAliasRegistered(alias: string): Promise<boolean>;
   isAliasRegisteredToAccount(accountPublicKey: GrumpkinAddress, alias: string): Promise<boolean>;
-  getUnsettledPaymentTxs(): Promise<JoinSplitTx[]>;
 }

@@ -298,8 +298,8 @@ export class Server {
     return this.rollupDb.isAliasRegisteredToAccount(accountPublicKey, aliasHash);
   }
 
-  public async getUnsettledPaymentTxs() {
-    return this.rollupDb.getUnsettledPaymentTxs();
+  public async getUnsettledDepositTxs() {
+    return this.rollupDb.getUnsettledDepositTxs();
   }
 
   public getBlockBuffers(from: number, take?: number) {

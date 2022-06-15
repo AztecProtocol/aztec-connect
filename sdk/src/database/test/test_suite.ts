@@ -782,6 +782,30 @@ export const databaseTestSuite = (
         const key2 = await db.getSpendingKey(GrumpkinAddress.random(), fullKey);
         expect(key2).toBeUndefined();
       });
+
+      it('bulk saves spendingKeys', async () => {
+        const keys = Array<SpendingKey>();
+        const numKeys = 1000;
+        for (let i = 0; i < numKeys; i++) {
+          keys.push(randomSpendingKey());
+        }
+        await db.addSpendingKeys(keys);
+
+        let [dbKey] = await db.getSpendingKeys(keys[0].userId);
+        expect(dbKey).toEqual(keys[0]);
+
+        [dbKey] = await db.getSpendingKeys(keys[1].userId);
+        expect(dbKey).toEqual(keys[1]);
+
+        [dbKey] = await db.getSpendingKeys(keys[100].userId);
+        expect(dbKey).toEqual(keys[100]);
+
+        [dbKey] = await db.getSpendingKeys(keys[101].userId);
+        expect(dbKey).toEqual(keys[101]);
+
+        [dbKey] = await db.getSpendingKeys(keys[999].userId);
+        expect(dbKey).toEqual(keys[999]);
+      });
     });
 
     describe('Alias', () => {
@@ -861,30 +885,6 @@ export const databaseTestSuite = (
 
         expect(await db.getKey(name)).toBeUndefined();
       });
-    });
-
-    it('bulk saves spendingKeys', async () => {
-      const keys = Array<SpendingKey>();
-      const numKeys = 1000;
-      for (let i = 0; i < numKeys; i++) {
-        keys.push(randomSpendingKey());
-      }
-      await db.addSpendingKeys(keys);
-
-      let [dbKey] = await db.getSpendingKeys(keys[0].userId);
-      expect(dbKey).toEqual(keys[0]);
-
-      [dbKey] = await db.getSpendingKeys(keys[1].userId);
-      expect(dbKey).toEqual(keys[1]);
-
-      [dbKey] = await db.getSpendingKeys(keys[100].userId);
-      expect(dbKey).toEqual(keys[100]);
-
-      [dbKey] = await db.getSpendingKeys(keys[101].userId);
-      expect(dbKey).toEqual(keys[101]);
-
-      [dbKey] = await db.getSpendingKeys(keys[999].userId);
-      expect(dbKey).toEqual(keys[999]);
     });
 
     describe('Mutex', () => {

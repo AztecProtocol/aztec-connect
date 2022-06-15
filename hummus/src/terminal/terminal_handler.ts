@@ -207,8 +207,6 @@ export class TerminalHandler {
     // Expose sdk for use in tests.
     window.aztecSdk = this.sdk;
 
-    await this.sdk.run();
-
     const ethereumRpc = new EthereumRpc(this.provider);
     [this.ethAddress] = await ethereumRpc.getAccounts();
     this.printQueue.put(`check provider to create account key...\n`);
@@ -226,6 +224,8 @@ export class TerminalHandler {
     }
 
     this.user = await this.sdk.addUser(privateKey);
+
+    await this.sdk.run();
 
     this.printQueue.put(`syncing user: ${publicKey.toString().slice(0, 12)}...\n`);
     await this.sdk.awaitUserSynchronised(this.user.id);

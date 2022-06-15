@@ -461,13 +461,14 @@ describe('rollup_db', () => {
     expect(unsettledTxs.map(tx => tx.id)).toEqual(expect.arrayContaining([tx1.id, tx2.id]));
   });
 
-  it('should get unsettled js txs', async () => {
+  it('should get unsettled deposit txs', async () => {
     const txs = [
       TxType.DEFI_CLAIM,
       TxType.WITHDRAW_TO_WALLET,
       TxType.DEPOSIT,
       TxType.ACCOUNT,
       TxType.WITHDRAW_TO_CONTRACT,
+      TxType.DEPOSIT,
       TxType.DEFI_DEPOSIT,
       TxType.TRANSFER,
     ].map(txType => randomTx({ txType }));
@@ -475,11 +476,9 @@ describe('rollup_db', () => {
       await rollupDb.addTx(tx);
     }
 
-    const result = await rollupDb.getUnsettledPaymentTxs();
-    expect(result.length).toBe(4);
-    expect(result.map(r => r.txType)).toEqual(
-      expect.arrayContaining([TxType.DEPOSIT, TxType.TRANSFER, TxType.WITHDRAW_TO_CONTRACT, TxType.WITHDRAW_TO_WALLET]),
-    );
+    const result = await rollupDb.getUnsettledDepositTxs();
+    expect(result.length).toBe(2);
+    expect(result).toEqual(expect.arrayContaining([txs[2], txs[5]]));
   });
 
   it('should delete unsettled rollups', async () => {

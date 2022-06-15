@@ -277,7 +277,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     confs = this.config.minConfirmation || EthereumBlockchain.DEFAULT_MIN_CONFIRMATIONS,
   ): Promise<Receipt> {
     const timer = new Timer();
-    this.log(`Getting tx receipt for ${txHash}... (${confs} confirmations)`);
+    this.log(`Getting tx receipt for ${txHash}... (${confs} confs)`);
 
     let tx = await this.contracts.getTransactionByHash(txHash);
     while (!tx) {

@@ -2,7 +2,7 @@ import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetValue } from '@aztec/barretenberg/asset';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { SchnorrSignature } from '@aztec/barretenberg/crypto';
-import { JoinSplitTx, RollupProviderStatus } from '@aztec/barretenberg/rollup_provider';
+import { DepositTx, RollupProviderStatus } from '@aztec/barretenberg/rollup_provider';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { CoreUserTx } from '../core_tx';
 import { Note } from '../note';
@@ -14,7 +14,7 @@ import { SdkEvent, SdkStatus } from './sdk_status';
 export interface CoreSdkInterface {
   on(event: SdkEvent.UPDATED_USERS, listener: () => void): this;
   on(event: SdkEvent.UPDATED_USER_STATE, listener: (userId: GrumpkinAddress) => void): this;
-  on(event: SdkEvent.UPDATED_WORLD_STATE, listener: (rollupId: number, latestRollupId: number) => void): this;
+  on(event: SdkEvent.UPDATED_WORLD_STATE, listener: (syncedToRollup: number, latestRollupId: number) => void): this;
   on(event: SdkEvent.DESTROYED, listener: () => void): this;
 
   init(options: CoreSdkOptions): Promise<void>;
@@ -42,6 +42,8 @@ export interface CoreSdkInterface {
   getTxFees(assetId: number): Promise<AssetValue[][]>;
 
   getDefiFees(bridgeId: BridgeId): Promise<AssetValue[]>;
+
+  getPendingDepositTxs(): Promise<DepositTx[]>;
 
   createDepositProof(
     assetId: number,
@@ -174,6 +176,4 @@ export interface CoreSdkInterface {
   ): Promise<Note | undefined>;
 
   getUserTxs(userId: GrumpkinAddress): Promise<CoreUserTx[]>;
-
-  getRemoteUnsettledPaymentTxs(): Promise<JoinSplitTx[]>;
 }

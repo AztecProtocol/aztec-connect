@@ -1,6 +1,6 @@
-import { WorkerPool } from '@aztec/barretenberg/wasm';
 import { createDebugLogger } from '@aztec/barretenberg/log';
-import { CoreSdkDispatch, SdkEvent } from '../../core_sdk';
+import { WorkerPool } from '@aztec/barretenberg/wasm';
+import { CoreSdkDispatch } from '../../core_sdk';
 import { JobQueueWorker } from '../job_queue';
 import { DispatchMsg } from '../transport';
 
@@ -16,11 +16,10 @@ export class BananaCoreSdk extends CoreSdkDispatch {
   }
 
   public async destroy() {
-    // We don't actually destroy a remote sdk. Just emit the destroy event to perform any cleanup.
     debug('Destroying banana core sdk...');
     await this.jobQueueWorker?.stop();
     await this.workerPool.destroy();
-    this.emit(SdkEvent.DESTROYED);
+    await super.destroy();
     debug('Banana core sdk destroyed.');
   }
 }

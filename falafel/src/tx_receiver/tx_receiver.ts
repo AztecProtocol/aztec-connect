@@ -321,7 +321,7 @@ export class TxReceiver {
       }
     });
 
-    const unsettledTxs = (await this.rollupDb.getUnsettledPaymentTxs()).map(tx =>
+    const unsettledTxs = (await this.rollupDb.getUnsettledDepositTxs()).map(tx =>
       JoinSplitProofData.fromBuffer(tx.proofData),
     );
 

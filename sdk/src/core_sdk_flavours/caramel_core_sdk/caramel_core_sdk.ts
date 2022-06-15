@@ -75,6 +75,10 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
     return this.core.getDefiFees(bridgeId);
   }
 
+  public async getPendingDepositTxs() {
+    return this.core.getPendingDepositTxs();
+  }
+
   public async createDepositProof(
     assetId: number,
     publicInput: string,
@@ -164,8 +168,7 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
     newSpendingPublicKey2: string | undefined,
     newAccountPrivateKey: Uint8Array | undefined,
   ) {
-    // TODO: Uncomment after new accounting system.
-    // await this.checkPermission(userId);
+    await this.checkPermission(userId);
     return this.core.createAccountProofInput(
       userId,
       alias,
@@ -206,11 +209,6 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
   }
 
   public async sendProofs(proofs: ProofOutputJson[]) {
-    // TODO: Add back once new accounting system.
-    // const {
-    //   tx: { userId },
-    // } = proofOutputFromJson(proofs[0]);
-    // await this.checkPermission(userId.toString());
     return this.core.sendProofs(proofs);
   }
 
@@ -368,10 +366,6 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
   public async getUserTxs(userId: string) {
     await this.checkPermission(userId);
     return this.core.getUserTxs(userId);
-  }
-
-  public async getRemoteUnsettledPaymentTxs() {
-    return this.core.getRemoteUnsettledPaymentTxs();
   }
 
   private async checkPermission(userId: string) {

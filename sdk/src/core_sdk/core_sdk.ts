@@ -15,6 +15,7 @@ import { OffchainAccountData } from '@aztec/barretenberg/offchain_tx_data';
 import { Pippenger } from '@aztec/barretenberg/pippenger';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { RollupProvider } from '@aztec/barretenberg/rollup_provider';
+import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { InterruptableSleep } from '@aztec/barretenberg/sleep';
 import { Timer } from '@aztec/barretenberg/timer';
 import { TxId } from '@aztec/barretenberg/tx_id';
@@ -40,6 +41,7 @@ import { UserState, UserStateEvent, UserStateFactory } from '../user_state';
 import { CoreSdkInterface } from './core_sdk_interface';
 import { CoreSdkOptions } from './core_sdk_options';
 import { SdkEvent, SdkStatus } from './sdk_status';
+import { sdkVersion } from './sdk_version';
 
 const debug = createDebugLogger('bb:core_sdk');
 
@@ -83,13 +85,14 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     latestRollupId: -1,
     dataRoot: Buffer.alloc(0),
     dataSize: 0,
+    version: sdkVersion,
   };
   private initState = SdkInitState.UNINITIALIZED;
   private noteAlgos!: NoteAlgorithms;
   private blake2s!: Blake2s;
   private grumpkin!: Grumpkin;
   private schnorr!: Schnorr;
-  private interruptableSleep = new InterruptableSleep();
+  private syncSleep = new InterruptableSleep();
   private synchingPromise!: Promise<void>;
 
   constructor(
@@ -117,6 +120,8 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     }
 
     try {
+      debug(`initializing...${sdkVersion ? ` (version: ${sdkVersion})` : ''}`);
+
       this.options = options;
       this.serialQueue = new MutexSerialQueue(this.db, 'aztec_core_sdk');
       this.noteAlgos = new NoteAlgorithms(this.barretenberg);
@@ -140,11 +145,14 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
         await this.db.clear();
       }
 
-      // TODO: Refactor all leveldb saved config into a little PersistentConfig class with getters/setters.
-      await this.leveldb.put('rollupContractAddress', rollupContractAddress.toBuffer());
+      await this.db.addKey('rollupContractAddress', rollupContractAddress.toBuffer());
 
       // Ensures we can get the list of users and access current known balances.
       await this.initUserStates();
+
+      // Must fetch `syncedToRollup` before initialising worldState.
+      // Getting this value first ensures that it will be syncing from latest or older block.
+      const syncedToRollup = await this.getSyncedToRollup();
 
       // Initialize the "mutable" merkle tree. This is the tree that represents all layers about each rollup subtree.
       const subtreeDepth = Math.ceil(Math.log2(rollupSize * WorldStateConstants.NUM_NEW_DATA_TREE_NOTES_PER_TX));
@@ -158,8 +166,8 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
         feePayingAssetIds,
         dataSize: this.worldState.getSize(),
         dataRoot: this.worldState.getRoot(),
-        syncedToRollup: await this.getSyncedToRollup(),
-        latestRollupId: +(await this.leveldb.get('latestRollupId').catch(() => -1)),
+        syncedToRollup,
+        latestRollupId: await this.getLatestRollupId(),
       };
 
       this.initState = SdkInitState.INITIALIZED;
@@ -178,7 +186,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
 
     // If sync() task is running, signals it to stop, to awake for exit if it's asleep, and awaits the exit.
     this.initState = SdkInitState.STOPPING;
-    this.interruptableSleep.interrupt();
+    this.syncSleep.interrupt();
     await this.synchingPromise;
 
     // The serial queue will cancel itself. This ensures that anything currently in the queue finishes, and ensures
@@ -247,6 +255,10 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     return this.rollupProvider.getDefiFees(bridgeId);
   }
 
+  public async getPendingDepositTxs() {
+    return this.rollupProvider.getPendingDepositTxs();
+  }
+
   public async getDefiInteractionNonce(txId: TxId) {
     const tx = await this.db.getDefiTx(txId);
     if (!tx) {
@@ -298,6 +310,11 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       this.userStates.push(userState);
 
       this.emit(SdkEvent.UPDATED_USERS);
+
+      if (!noSync) {
+        // If the sync microtask is sleeping, wake it up to start syncing.
+        this.syncSleep.interrupt();
+      }
 
       return userState.getUserData();
     });
@@ -378,10 +395,6 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     return this.db.getUserTxs(userId);
   }
 
-  public async getRemoteUnsettledPaymentTxs() {
-    return this.rollupProvider.getUnsettledPaymentTxs();
-  }
-
   /**
    * Moves the sdk into RUNNING state.
    * Kicks off data tree updates, user note decryptions, alias table updates, proving key construction.
@@ -417,9 +430,12 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
         await this.createAccountProofCreator(forceCreateProvingKeys, proverless);
 
         // Makes the saved proving keys considered valid. Hence set this after they're saved.
-        await this.leveldb.put('verifierContractAddress', verifierContractAddress.toBuffer());
+        await this.db.addKey('verifierContractAddress', verifierContractAddress.toBuffer());
       })
-      .catch(debug);
+      .catch(err => {
+        debug('failed to run:', err);
+        this.destroy();
+      });
   }
 
   // -------------------------------------------------------
@@ -786,17 +802,22 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   }
 
   private async getLocalRollupContractAddress() {
-    const result: Buffer | undefined = await this.leveldb.get('rollupContractAddress').catch(() => undefined);
+    const result = await this.db.getKey('rollupContractAddress');
     return result ? new EthAddress(result) : undefined;
   }
 
   private async getLocalVerifierContractAddress() {
-    const result: Buffer | undefined = await this.leveldb.get('verifierContractAddress').catch(() => undefined);
+    const result = await this.db.getKey('verifierContractAddress');
     return result ? new EthAddress(result) : undefined;
   }
 
   private async getSyncedToRollup() {
     return +(await this.leveldb.get('syncedToRollup').catch(() => -1));
+  }
+
+  private async getLatestRollupId() {
+    const latestRollupId = await this.db.getKey('latestRollupId');
+    return latestRollupId ? latestRollupId.readUInt32BE(0) : -1;
   }
 
   private async getCrsData(circuitSize: number) {
@@ -982,27 +1003,24 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     this.synchingPromise = (async () => {
       debug('starting sync task...');
       while (this.initState !== SdkInitState.STOPPING) {
-        this.serialQueue.push(() => this.sync());
-        await this.interruptableSleep.sleep(10000);
+        try {
+          await this.serialQueue.push(() => this.sync());
+        } catch (err) {
+          debug(err);
+        }
+        await this.syncSleep.sleep(10000);
       }
       debug('stopped sync task.');
     })();
   }
 
   /**
-   * Called when data root is not as expected. We need to save parts of leveldb we don't want to lose, erase the db,
-   * and rebuild the merkle tree.
+   * Called when data root is not as expected. We need to erase the db and rebuild the merkle tree.
    */
   private async reinitDataTree() {
     debug('re-initialising data tree...');
 
-    const rca = await this.getLocalRollupContractAddress();
-    const vca = await this.getLocalVerifierContractAddress();
     await this.leveldb.clear();
-    await this.leveldb.put('rollupContractAddress', rca!.toBuffer());
-    if (vca) {
-      await this.leveldb.put('verifierContractAddress', vca.toBuffer());
-    }
 
     const { rollupSize } = await this.getRemoteStatus();
 
@@ -1017,7 +1035,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
    * This is always called on the serial queue.
    */
   private async sync() {
-    const coreSyncedToRollup = await this.getSyncedToRollup();
+    let coreSyncedToRollup = await this.syncRollupInfoFromDb();
     let from = Math.min(coreSyncedToRollup, ...this.userStates.map(us => us.getUserData().syncedToRollup)) + 1;
 
     // Server will return blocks in chunks. We will break out of this loop when it stops returning blocks.
@@ -1027,7 +1045,6 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
         break;
       }
 
-      const coreSyncedToRollup = await this.getSyncedToRollup();
       const coreBlocks = blocks.filter(b => b.rollupId > coreSyncedToRollup);
 
       if (coreBlocks.length) {
@@ -1045,17 +1062,22 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
         // We expect our data root to be equal to the new data root in the last block we processed.
         // UPDATE: Possibly solved. But leaving in for now. Can monitor for clientLogs.
         const expectedDataRoot = rollups[rollups.length - 1].newDataRoot;
-        if (!this.worldState.getRoot().equals(expectedDataRoot)) {
+        const newRoot = this.worldState.getRoot();
+        if (!newRoot.equals(expectedDataRoot)) {
+          const newSize = this.worldState.getSize();
           await this.reinitDataTree();
+          await this.updateStatusRollupInfo();
           this.rollupProvider.clientLog({
             message: 'Invalid dataRoot.',
             synchingFromRollup: coreSyncedToRollup,
             blocksReceived: coreBlocks.length,
             oldRoot: oldRoot.toString('hex'),
-            newRoot: this.worldState.getRoot().toString('hex'),
-            newSize: this.worldState.getSize(),
+            newRoot: newRoot.toString('hex'),
+            newSize,
             expectedDataRoot: expectedDataRoot.toString('hex'),
           });
+          coreSyncedToRollup = -1;
+          from = coreSyncedToRollup + 1;
           continue;
         }
       }
@@ -1070,18 +1092,35 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     }
   }
 
-  private async updateStatusRollupInfo(rollup: RollupProofData) {
-    const rollupId = rollup.rollupId;
-    const latestRollupId = this.rollupProvider.getLatestRollupId();
-    await this.leveldb.put('syncedToRollup', rollupId.toString());
-    await this.leveldb.put('latestRollupId', latestRollupId.toString());
+  private async syncRollupInfoFromDb() {
+    const syncedToRollup = await this.getSyncedToRollup();
+    if (this.sdkStatus.syncedToRollup < syncedToRollup) {
+      await this.worldState.syncFromDb();
+      const latestRollupId = await this.getLatestRollupId();
 
-    this.sdkStatus.syncedToRollup = rollupId;
+      this.sdkStatus.syncedToRollup = syncedToRollup;
+      this.sdkStatus.latestRollupId = latestRollupId;
+      this.sdkStatus.dataRoot = this.worldState.getRoot();
+      this.sdkStatus.dataSize = this.worldState.getSize();
+
+      this.emit(SdkEvent.UPDATED_WORLD_STATE, syncedToRollup, latestRollupId);
+    }
+
+    return syncedToRollup;
+  }
+
+  private async updateStatusRollupInfo(rollup?: RollupProofData) {
+    const syncedToRollup = rollup ? rollup.rollupId : -1;
+    const latestRollupId = this.rollupProvider.getLatestRollupId();
+    await this.leveldb.put('syncedToRollup', syncedToRollup.toString());
+    await this.db.addKey('latestRollupId', numToUInt32BE(latestRollupId));
+
+    this.sdkStatus.syncedToRollup = syncedToRollup;
     this.sdkStatus.latestRollupId = latestRollupId;
     this.sdkStatus.dataRoot = this.worldState.getRoot();
     this.sdkStatus.dataSize = this.worldState.getSize();
 
-    this.emit(SdkEvent.UPDATED_WORLD_STATE, rollupId, latestRollupId);
+    this.emit(SdkEvent.UPDATED_WORLD_STATE, syncedToRollup, latestRollupId);
   }
 
   private async processAliases(rollups: RollupProofData[], offchainTxData: Buffer[][]) {

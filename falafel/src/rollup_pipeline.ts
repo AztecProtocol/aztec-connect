@@ -40,7 +40,7 @@ export class RollupPipeline {
     const innerRollupSize = 1 << Math.ceil(Math.log2(numInnerRollupTxs));
     const outerRollupSize = 1 << Math.ceil(Math.log2(innerRollupSize * numOuterRollupProofs));
 
-    this.log('Creating...');
+    this.log('New pipeline...');
     this.log(`  numInnerRollupTxs: ${numInnerRollupTxs}`);
     this.log(`  numOuterRollupProofs: ${numOuterRollupProofs}`);
     this.log(`  rollupSize: ${outerRollupSize}`);
@@ -48,7 +48,7 @@ export class RollupPipeline {
     this.log(`  flushAfterIdle: ${flushAfterIdle}s`);
     this.log(`  gasLimit: ${gasLimit}`);
     this.log(`  maxCallDataPerRollup: ${maxCallDataPerRollup}`);
-    this.log(`  maxProviderGasPrice: ${fromBaseUnits(maxProviderGasPrice, 9, 2)}gwei`);
+    this.log(`  maxProviderGasPrice: ${fromBaseUnits(maxProviderGasPrice, 9, 2)} gwei`);
 
     const rollupPublisher = new RollupPublisher(rollupDb, blockchain, maxProviderGasPrice, gasLimit, metrics);
     const rollupAggregator = new RollupAggregator(

@@ -63,8 +63,8 @@ export class CachedRollupDb extends SyncRollupDb {
     return this.unsettledTxs;
   }
 
-  public async getUnsettledPaymentTxs() {
-    return this.unsettledTxs.filter(tx => tx.txType < TxType.ACCOUNT);
+  public async getUnsettledDepositTxs() {
+    return this.unsettledTxs.filter(tx => tx.txType === TxType.DEPOSIT);
   }
 
   public async getUnsettledAccounts() {
@@ -208,5 +208,10 @@ export class CachedRollupDb extends SyncRollupDb {
   public async deleteUnsettledRollups() {
     await super.deleteUnsettledRollups();
     this.rollups = this.settledRollups.slice();
+  }
+
+  public async eraseDb() {
+    await super.eraseDb();
+    await this.refresh();
   }
 }

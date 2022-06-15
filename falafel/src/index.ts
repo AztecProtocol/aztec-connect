@@ -43,8 +43,9 @@ async function main() {
   const worldStateDb = new WorldStateDb();
 
   if (configurator.getRollupContractChanged()) {
-    console.log('Erasing databases...');
+    console.log('Erasing sql database...');
     await rollupDb.eraseDb();
+    console.log('Erasing world state database...');
     worldStateDb.destroy();
   }
 

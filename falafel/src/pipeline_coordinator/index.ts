@@ -59,7 +59,7 @@ export class PipelineCoordinator {
    */
   public start() {
     if (this.running) {
-      throw new Error('Pipeline coordinator has started running.');
+      throw new Error('Pipeline coordinator is already running.');
     }
 
     this.running = true;
