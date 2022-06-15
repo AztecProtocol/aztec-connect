@@ -4,7 +4,6 @@ import { SdkObs } from 'alt-model/top_level_context/sdk_obs';
 import { createHash } from 'crypto';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
-import Mutex from 'idb-mutex';
 import Cookie from 'js-cookie';
 import { debounce, DebouncedFunc } from 'lodash';
 import { Config } from '../config';
@@ -103,7 +102,7 @@ export interface UserSession {
 }
 
 export class UserSession extends EventEmitter {
-  private stableEthereumProvider!: EthereumProvider;
+  private readonly stableEthereumProvider: EthereumProvider;
   private provider?: Provider;
   private sdk!: AztecSdk;
   private rollupService!: RollupService;
@@ -114,7 +113,6 @@ export class UserSession extends EventEmitter {
   private accountUtils!: AccountUtils;
   private account!: UserAccount;
   private debounceCheckAlias: DebouncedFunc<() => void>;
-  private createSdkMutex = new Mutex('create-sdk-mutex');
   private destroyed = false;
   private claimUserNameProm?: Promise<void>;
 
@@ -141,6 +139,7 @@ export class UserSession extends EventEmitter {
       mode: initialLoginMode,
     };
     this.accountProofMinDeposit = toBaseUnits('0.01', assets[this.accountProofDepositAssetId].decimals);
+    this.stableEthereumProvider = new JsonRpcProvider(config.ethereumHost);
   }
 
   getSdk(): AztecSdk | undefined {
@@ -235,7 +234,7 @@ export class UserSession extends EventEmitter {
     this.emitSystemMessage('Connecting to rollup provider...');
 
     try {
-      await this.createSdk(true);
+      await this.setupSession(false);
     } catch (e) {
       return this.abort(`Something went wrong. This shouldn't happen.`);
     }
@@ -464,8 +463,8 @@ export class UserSession extends EventEmitter {
     const { accountPublicKey, accountPrivateKey } = this.keyVault;
 
     // Add the user to the sdk so that the accountTx could be added for it.
-    // Need to sync from the beginning when "migrating" account to a new alias.
-    const noSync = this.loginState.mode === LoginMode.SIGNUP;
+    // claimUserName can now only be called for new registrations, hence there is nothing to sync
+    const noSync = true;
     await this.accountUtils.addUser(accountPrivateKey, noSync);
 
     try {
@@ -542,7 +541,7 @@ export class UserSession extends EventEmitter {
     this.updateLoginState({ isPerformingBackgroundLogin: true });
 
     try {
-      await this.createSdk();
+      await this.setupSession(true);
 
       const linkedAccount = await this.getLinkedAccountFromSession();
       if (!linkedAccount) {
@@ -585,11 +584,6 @@ export class UserSession extends EventEmitter {
     }
   }
 
-  private async createStableEthereumProvider() {
-    const { ethereumHost } = this.config;
-    this.stableEthereumProvider = new JsonRpcProvider(ethereumHost);
-  }
-
   private async createShieldForAliasForm(userId: GrumpkinAddress, alias: string, spendingPublicKey: GrumpkinAddress) {
     const ethAccount = new EthAccount(
       this.provider,
@@ -630,13 +624,13 @@ export class UserSession extends EventEmitter {
   }
 
   private awaitSdkCreated() {
-    return new Promise<void>(resolve => {
+    return new Promise<AztecSdk>(resolve => {
       if (this.sdkObs.value) {
-        resolve();
+        resolve(this.sdkObs.value);
       } else {
         const unlisten = this.sdkObs.listen(sdk => {
           if (sdk) {
-            resolve();
+            resolve(sdk);
             unlisten?.();
           }
         });
@@ -644,29 +638,16 @@ export class UserSession extends EventEmitter {
     });
   }
 
-  private async createSdk(autoReset = false) {
-    await this.createSdkMutex.lock();
-
-    if (this.sdk) {
-      return;
-    }
-
-    if (!this.stableEthereumProvider) {
-      await this.createStableEthereumProvider();
-    }
-
+  private async setupSession(isBackgroundLogin: boolean) {
     if (!this.db.isOpen) {
       await this.db.open();
     }
 
-    await this.awaitSdkCreated();
-    this.sdk = this.sdkObs.value!;
+    this.sdk = await this.awaitSdkCreated();
 
     // If local rollupContractAddress is empty, it is a new device or the data just got wiped out.
     if (await this.rollupContractAddressChanged()) {
-      if (autoReset) {
-        await this.db.clear();
-      } else {
+      if (isBackgroundLogin) {
         throw new Error('Require data reset.');
       }
     }
@@ -675,10 +656,6 @@ export class UserSession extends EventEmitter {
     this.rollupService = new RollupService(this.sdk);
     await this.rollupService.init();
     this.accountUtils = new AccountUtils(this.sdk);
-
-    await this.sdk.run();
-
-    await this.createSdkMutex.unlock();
   }
 
   private async initUserAccount(userId: GrumpkinAddress, awaitSynchronised = true) {
@@ -690,6 +667,8 @@ export class UserSession extends EventEmitter {
     this.account = new UserAccount(userId, alias);
 
     await this.subscribeToSyncProgress(userId);
+
+    this.sdk.run();
 
     if (awaitSynchronised) {
       await this.awaitUserSynchronised(userId);
