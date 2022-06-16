@@ -94,9 +94,17 @@ export class RollupCoordinator {
       const proofData = new ProofData(tx.proofData);
       const assetId = proofData.feeAssetId;
 
-      // Account txs are always accepted.
+      // Account txs don't have fees and are not part of chains
+      // so only need to be checked against gas and call data limits
+      // Do that here and then move on
       if (isAccountTx(tx.txType)) {
-        txs.push(createRollupTx(tx, proofData));
+        // calling this with TxType.ACCOUNT will mean the given assetId is not used
+        // as accounts txs have no dependency on asset
+        // so we can simply pass ETH
+        if (this.validateAndUpdateRollupResources(TxType.ACCOUNT, 0, resourceConsumption)) {
+          // the tx can be included in the rollup
+          txs.push(createRollupTx(tx, proofData));
+        }
         continue;
       }
 

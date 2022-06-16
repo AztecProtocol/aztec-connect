@@ -48,7 +48,7 @@ export class FeeCalculator {
         )}/${this.getUnadjustedBaseVerificationGas()}, ETH tx gas: ${this.getGasOverheadForTxType(
           0,
           i,
-        )}, max txs per rollup: ${this.getNumAdjustedTxsPerRollup(i)}`,
+        )}, max/quoted txs per rollup: ${this.getMaxAdjustedTxsPerRollup(i)}/${this.getNumAdjustedTxsPerRollup(i)}`,
       );
     }
   }
@@ -141,9 +141,20 @@ export class FeeCalculator {
   // this is because we will inevitably need to publish rollups that are not quite 'full' of calldata
   // as soon as there is not enough calldata available for all of our tx types then we need to publish
   // otherwise we could encounter a situation where a user pays for an instant tx that won't fit
+  // subtracting 1 from the ideal total number of txs should ensure that where we need to publish a rollup
+  // limited by calldata, it will always be profitable
   private getNumAdjustedTxsPerRollup(txType: TxType) {
     const callDataForTx = this.getTxCallData(txType);
     const numTxsAccountingForCallData = Math.floor(this.callDataPerRollup / callDataForTx) - 1;
+    return Math.min(numTxsAccountingForCallData, this.txsPerRollup);
+  }
+
+  // this calculates the same as above but does not reduce the number by 1 for tx types that have call data restrictions
+  // this should not be used to compute the fee quoted to users as it could result in unprofitable rollups.
+  // effectively this is the max number of txs that will ideally fit into a rollup
+  private getMaxAdjustedTxsPerRollup(txType: TxType) {
+    const callDataForTx = this.getTxCallData(txType);
+    const numTxsAccountingForCallData = Math.floor(this.callDataPerRollup / callDataForTx);
     return Math.min(numTxsAccountingForCallData, this.txsPerRollup);
   }
 
