@@ -2,13 +2,13 @@
 title: Register Accounts
 ---
 
-Register an Aztec spending account.
+Register an Aztec spending key.
 
 Please review the [Accounts overview](../../how-aztec-works/accounts) and [Add User](./add-account) pages if you haven't already.
 
-As mentioned in the above pages, there is an important difference between the account nonce identifiers 0 and 1 in the Aztec account system. The privacy key associated with nonce 0 is used to decrypt notes, calculate balances and track transactions associated with an account. The signing keys associated with account nonce 1 are used to spend notes on behalf of a user.
+As mentioned in the above pages, there is an important difference between the account (privacy) keys and the spending keys. The account key is used to decrypt notes, calculate balances and track transactions associated with an account. The signing key associated with an account is used to spend notes associated with an account.
 
-Account with nonce 1 must be registered on the network before it can be used. The SDK makes it easy to register a new account using the `RegisterController`.
+A spending key must be registered on the network before it can be used. The SDK makes it easy to register a new spending key using the `RegisterController`.
 
 ## RegisterController Setup
 
