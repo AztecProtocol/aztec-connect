@@ -6,9 +6,6 @@ import { grumpkinAddressTransformer } from './transformer';
 @Entity({ name: 'userData' })
 export class UserDataDao implements UserData {
   @PrimaryColumn('blob', { transformer: [grumpkinAddressTransformer] })
-  public id!: GrumpkinAddress;
-
-  @Column('blob', { transformer: [grumpkinAddressTransformer] })
   public accountPublicKey!: GrumpkinAddress;
 
   @Column()

@@ -4,8 +4,8 @@ import { EthereumProvider, Receipt, SendTxOptions, TxHash, TxType } from '@aztec
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { randomBytes } from '@aztec/barretenberg/crypto';
+import { retryUntil } from '@aztec/barretenberg/retry';
 import { TxSettlementTime } from '@aztec/barretenberg/rollup_provider';
-import { sleep } from '@aztec/barretenberg/sleep';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { ClientEthereumBlockchain, validateSignature, Web3Signer } from '@aztec/blockchain';
 import { EventEmitter } from 'events';
@@ -58,16 +58,16 @@ export class AztecSdk extends EventEmitter {
     this.removeAllListeners();
   }
 
-  public async awaitSynchronised() {
-    return this.core.awaitSynchronised();
+  public async awaitSynchronised(timeout?: number) {
+    return this.core.awaitSynchronised(timeout);
   }
 
   public async isUserSynching(userId: GrumpkinAddress) {
     return this.core.isUserSynching(userId);
   }
 
-  public async awaitUserSynchronised(userId: GrumpkinAddress) {
-    return this.core.awaitUserSynchronised(userId);
+  public async awaitUserSynchronised(userId: GrumpkinAddress, timeout?: number) {
+    return this.core.awaitUserSynchronised(userId, timeout);
   }
 
   public async awaitSettlement(txId: TxId, timeout?: number) {
@@ -86,26 +86,22 @@ export class AztecSdk extends EventEmitter {
     return this.core.awaitDefiSettlement(txId, timeout);
   }
 
-  public async awaitAllUserTxsSettled() {
-    const users = await this.core.getUsersData();
-    while (true) {
-      const txs = (await Promise.all(users.map(u => this.core.getUserTxs(u.id)))).flat();
-      if (txs.every(tx => tx.settled)) {
-        break;
-      }
-      await sleep(1000);
-    }
+  public async awaitAllUserTxsSettled(timeout?: number) {
+    const accountPublicKeys = await this.core.getUsers();
+    const allUserTxsSettled = async () => {
+      const txs = (await Promise.all(accountPublicKeys.map(pk => this.core.getUserTxs(pk)))).flat();
+      return txs.every(tx => tx.settled);
+    };
+    await retryUntil(allUserTxsSettled, 'all user txs settled', timeout);
   }
 
-  public async awaitAllUserTxsClaimed() {
-    const users = await this.core.getUsersData();
-    while (true) {
-      const txs = (await Promise.all(users.map(u => this.getDefiTxs(u.id)))).flat();
-      if (txs.every(tx => tx.interactionResult.claimSettled)) {
-        break;
-      }
-      await sleep(1000);
-    }
+  public async awaitAllUserTxsClaimed(timeout?: number) {
+    const accountPublicKeys = await this.core.getUsers();
+    const allUserTxsClaimed = async () => {
+      const txs = (await Promise.all(accountPublicKeys.map(pk => this.getDefiTxs(pk)))).flat();
+      return txs.every(tx => tx.interactionResult.claimSettled);
+    };
+    await retryUntil(allUserTxsClaimed, 'all user txs claimed', timeout);
   }
 
   public async getLocalStatus() {
@@ -141,8 +137,8 @@ export class AztecSdk extends EventEmitter {
   }
 
   public async addUser(accountPrivateKey: Buffer, noSync = false) {
-    const userData = await this.core.addUser(accountPrivateKey, noSync);
-    return new AztecSdkUser(userData.id, this);
+    const userId = await this.core.addUser(accountPrivateKey, noSync);
+    return new AztecSdkUser(userId, this);
   }
 
   public async removeUser(userId: GrumpkinAddress) {
@@ -153,16 +149,18 @@ export class AztecSdk extends EventEmitter {
    * Returns a AztecSdkUser for a locally resolved user.
    */
   public async getUser(userId: GrumpkinAddress) {
-    const userData = await this.getUserData(userId); // Check that the user's been added to the sdk.
-    return new AztecSdkUser(userData.id, this);
+    if (!(await this.core.userExists(userId))) {
+      throw new Error(`User not found: ${userId}`);
+    }
+    return new AztecSdkUser(userId, this);
   }
 
-  public async getUserData(userId: GrumpkinAddress) {
-    return this.core.getUserData(userId);
+  public async getUserSyncedToRollup(userId: GrumpkinAddress) {
+    return this.core.getUserSyncedToRollup(userId);
   }
 
-  public async getUsersData() {
-    return this.core.getUsersData();
+  public async getUsers() {
+    return this.core.getUsers();
   }
 
   public getAccountKeySigningData() {
@@ -439,7 +437,12 @@ export class AztecSdk extends EventEmitter {
   }
 
   public async getRecoverAccountFees(assetId: number) {
-    return this.getAccountFee(assetId);
+    const txFees = await this.core.getTxFees(assetId);
+    const [depositFee] = txFees[TxType.DEPOSIT];
+    return txFees[TxType.ACCOUNT].map(({ value, ...rest }) => ({
+      ...rest,
+      value: value ? value + depositFee.value : value,
+    }));
   }
 
   public createRecoverAccountController(

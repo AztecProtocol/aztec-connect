@@ -1,6 +1,7 @@
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetValue } from '@aztec/barretenberg/asset';
 import { EthereumProvider, TxHash } from '@aztec/barretenberg/blockchain';
+import { retryUntil } from '@aztec/barretenberg/retry';
 import { InterruptableSleep, sleep } from '@aztec/barretenberg/sleep';
 import { Timer } from '@aztec/barretenberg/timer';
 import { TxId } from '@aztec/barretenberg/tx_id';
@@ -20,7 +21,7 @@ export class DepositController {
   private readonly publicInput: AssetValue;
   private proofOutput?: ProofOutput;
   private feeProofOutput?: ProofOutput;
-  private txId?: TxId;
+  private txIds: TxId[] = [];
   private pendingFundsStatus: {
     pendingDeposit: bigint;
     pendingFunds: bigint;
@@ -396,16 +397,15 @@ export class DepositController {
       throw new Error('Call sign() or approveProof() first.');
     }
 
-    [this.txId] = await this.core.sendProofs(this.getProofs());
-    return this.txId;
+    this.txIds = await this.core.sendProofs(this.getProofs());
+    return this.txIds[0];
   }
 
   public async awaitSettlement(timeout?: number) {
-    if (!this.txId) {
+    if (!this.txIds.length) {
       throw new Error('Call send() first.');
     }
-
-    await this.core.awaitSettlement(this.txId, timeout);
+    await Promise.all(this.txIds.map(txId => this.core.awaitSettlement(txId, timeout)));
   }
 
   private async getPendingFundsStatus() {
@@ -516,24 +516,14 @@ export class DepositController {
 
   private async awaitTransaction(
     name: string,
-    checkOnchainData: () => Promise<boolean>,
+    confirmedFromOnchainData: () => Promise<boolean>,
     timeout?: number,
     interval = 1,
   ) {
-    const timer = new Timer();
-    while (true) {
-      // We want confidence the tx will be accepted, so simulate waiting for confirmations.
-      if (await checkOnchainData()) {
-        const secondsTillConfirmed = (this.blockchain.minConfirmations - 1) * 15;
-        await sleep(secondsTillConfirmed * 1000);
-        return true;
-      }
+    await retryUntil(confirmedFromOnchainData, `chain state condition: ${name}`, timeout, interval);
 
-      await sleep(interval * 1000);
-
-      if (timeout && timer.s() > timeout) {
-        throw new Error(`Timeout awaiting chain state condition: ${name}`);
-      }
-    }
+    // We want confidence the tx will be accepted, so simulate waiting for confirmations.
+    const secondsTillConfirmed = (this.blockchain.minConfirmations - 1) * 15;
+    await sleep(secondsTillConfirmed * 1000);
   }
 }

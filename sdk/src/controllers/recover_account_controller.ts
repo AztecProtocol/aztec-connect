@@ -12,7 +12,7 @@ import { DepositController } from './deposit_controller';
 export class RecoverAccountController {
   private depositController?: DepositController;
   private proofOutput!: ProofOutput;
-  private txId!: TxId;
+  private txIds: TxId[] = [];
 
   constructor(
     public readonly alias: string,
@@ -137,18 +137,18 @@ export class RecoverAccountController {
       throw new Error('Call createProof() first.');
     }
     if (!this.depositController) {
-      [this.txId] = await this.core.sendProofs([this.proofOutput]);
+      this.txIds = await this.core.sendProofs([this.proofOutput]);
     } else {
       const [feeProofOutput] = this.depositController.getProofs();
-      [this.txId] = await this.core.sendProofs([this.proofOutput, feeProofOutput]);
+      this.txIds = await this.core.sendProofs([this.proofOutput, feeProofOutput]);
     }
-    return this.txId;
+    return this.txIds[0];
   }
 
   public async awaitSettlement(timeout?: number) {
-    if (!this.txId) {
+    if (!this.txIds.length) {
       throw new Error(`Call ${!this.proofOutput ? 'createProof()' : 'send()'} first.`);
     }
-    await this.core.awaitSettlement(this.txId, timeout);
+    await Promise.all(this.txIds.map(txId => this.core.awaitSettlement(txId, timeout)));
   }
 }

@@ -26,8 +26,8 @@ describe('caramel core sdk', () => {
       on: jest.fn(),
       addUser: jest
         .fn()
-        .mockImplementation(accountPrivateKey =>
-          users.find(u => u.accountPrivateKey.toString() === accountPrivateKey.toString()),
+        .mockImplementation(
+          accountPrivateKey => users.find(u => u.accountPrivateKey.toString() === accountPrivateKey.toString())?.id,
         ),
       removeUser: jest.fn(),
       userExists: jest.fn().mockResolvedValue(true),
@@ -35,7 +35,6 @@ describe('caramel core sdk', () => {
         const user = users.find(u => u.accountPrivateKey.toString() === privateKey.toString());
         return user?.id || GrumpkinAddress.random().toString();
       }),
-      getUserData: jest.fn().mockImplementation(userId => users.find(u => u.id === userId)),
       getBalance: jest.fn().mockResolvedValue('0'),
     } as any;
 
@@ -72,7 +71,7 @@ describe('caramel core sdk', () => {
 
   it('user will not be added when core.addUser throws and user does not exist in core sdk', async () => {
     core.addUser.mockRejectedValue(new Error('addUser error'));
-    core.getUserData.mockRejectedValue(new Error('getUserData error'));
+    core.userExists.mockResolvedValue(false);
 
     await expect(sdk.addUser(users[0].accountPrivateKey)).rejects.toThrow('addUser error');
 

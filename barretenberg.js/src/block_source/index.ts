@@ -75,8 +75,8 @@ export class Block {
 
 export interface BlockSource {
   /**
-   * Returns all blocks from rollup id `from`.
-   * In the future this will *not* guarantee *all* blocks are returned. It may return a subset, and the
+   * Returns blocks from rollup id `from`.
+   * This does not guarantee all blocks are returned. It may return a subset, and the
    * client should use `getLatestRollupId()` to determine if it needs to make further requests.
    */
   getBlocks(from: number): Promise<Block[]>;
@@ -85,15 +85,15 @@ export interface BlockSource {
    * Starts emitting rollup blocks.
    * All historical blocks must have been emitted before this function returns.
    */
-  start(fromBlock?: number);
+  start(fromBlock?: number): Promise<void>;
 
   stop(): Promise<void>;
 
-  on(event: 'block', fn: (block: Block) => void);
+  on(event: 'block', fn: (block: Block) => void): void;
 
-  removeAllListeners();
+  removeAllListeners(): void;
 
-  getLatestRollupId(): number;
+  getLatestRollupId(): Promise<number>;
 }
 
 export * from './server_block_source';

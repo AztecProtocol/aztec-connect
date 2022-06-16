@@ -182,16 +182,16 @@ export class CoreSdkDispatch extends EventEmitter implements CoreSdkSerializedIn
     return this.request('sendProofs', [proofs]);
   }
 
-  public async awaitSynchronised() {
-    return this.request('awaitSynchronised');
+  public async awaitSynchronised(timeout?: number) {
+    return this.request('awaitSynchronised', [timeout]);
   }
 
   public async isUserSynching(userId: string) {
     return this.request('isUserSynching', [userId]);
   }
 
-  public async awaitUserSynchronised(userId: string) {
-    return this.request('awaitUserSynchronised', [userId]);
+  public async awaitUserSynchronised(userId: string, timeout?: number) {
+    return this.request('awaitUserSynchronised', [userId, timeout]);
   }
 
   public async awaitSettlement(txId: string, timeout?: number) {
@@ -218,12 +218,8 @@ export class CoreSdkDispatch extends EventEmitter implements CoreSdkSerializedIn
     return this.request('userExists', [userId]);
   }
 
-  public getUserData(userId: string) {
-    return this.request('getUserData', [userId]);
-  }
-
-  public getUsersData() {
-    return this.request('getUsersData');
+  public getUsers() {
+    return this.request('getUsers');
   }
 
   public derivePublicKey(privateKey: Uint8Array) {
@@ -234,12 +230,16 @@ export class CoreSdkDispatch extends EventEmitter implements CoreSdkSerializedIn
     return this.request('constructSignature', [message, privateKey]);
   }
 
-  public async addUser(privateKey: Uint8Array, noSync?: boolean) {
-    return this.request('addUser', [privateKey, noSync]);
+  public async addUser(accountPrivateKey: Uint8Array, noSync?: boolean) {
+    return this.request('addUser', [accountPrivateKey, noSync]);
   }
 
   public async removeUser(userId: string) {
     return this.request('removeUser', [userId]);
+  }
+
+  public getUserSyncedToRollup(userId: string) {
+    return this.request('getUserSyncedToRollup', [userId]);
   }
 
   public async getSpendingKeys(userId: string) {

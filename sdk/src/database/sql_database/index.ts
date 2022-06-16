@@ -166,8 +166,8 @@ export class SQLDatabase implements Database {
     await this.noteRep.delete({ nullifier });
   }
 
-  async getUser(userId: GrumpkinAddress) {
-    return this.userDataRep.findOne({ id: userId });
+  async getUser(accountPublicKey: GrumpkinAddress) {
+    return this.userDataRep.findOne({ accountPublicKey });
   }
 
   async addUser(user: UserData) {
@@ -179,10 +179,11 @@ export class SQLDatabase implements Database {
   }
 
   async updateUser(user: UserData) {
-    await this.userDataRep.update({ id: user.id }, user);
+    await this.userDataRep.update({ accountPublicKey: user.accountPublicKey }, user);
   }
 
-  async removeUser(userId: GrumpkinAddress) {
+  async removeUser(accountPublicKey: GrumpkinAddress) {
+    const userId = accountPublicKey;
     const user = await this.getUser(userId);
     if (!user) return;
 
@@ -191,7 +192,7 @@ export class SQLDatabase implements Database {
     await this.paymentTxRep.delete({ userId });
     await this.spendingKeyRep.delete({ userId });
     await this.noteRep.delete({ owner: userId });
-    await this.userDataRep.delete({ id: userId });
+    await this.userDataRep.delete({ accountPublicKey });
   }
 
   async resetUsers() {

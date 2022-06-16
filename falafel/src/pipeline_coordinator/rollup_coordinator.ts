@@ -378,7 +378,7 @@ export class RollupCoordinator {
       [...assetIds],
     );
 
-    rollupProfile.published = await this.rollupPublisher.publishRollup(rollupDao);
+    rollupProfile.published = await this.rollupPublisher.publishRollup(rollupDao, rollupProfile.totalGas);
 
     return rollupProfile;
   }

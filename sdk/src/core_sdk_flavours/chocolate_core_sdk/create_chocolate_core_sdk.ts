@@ -1,10 +1,7 @@
 import { ServerRollupProvider } from '@aztec/barretenberg/rollup_provider';
 import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
 import { CoreSdk, CoreSdkServerStub } from '../../core_sdk';
-import { JobQueue } from '../job_queue';
-import { JobQueueFftFactory } from '../job_queue/job_queue_fft_factory';
-import { JobQueuePedersen } from '../job_queue/job_queue_pedersen';
-import { JobQueuePippenger } from '../job_queue/job_queue_pippenger';
+import { JobQueue, JobQueueFftFactory, JobQueueNoteDecryptor, JobQueuePedersen, JobQueuePippenger } from '../job_queue';
 import { getDb, getLevelDb } from '../vanilla_core_sdk';
 import { ChocolateCoreSdkOptions } from './chocolate_core_sdk_options';
 
@@ -16,6 +13,7 @@ import { ChocolateCoreSdkOptions } from './chocolate_core_sdk_options';
  */
 export async function createChocolateCoreSdk(jobQueue: JobQueue, options: ChocolateCoreSdkOptions) {
   const wasm = await BarretenbergWasm.new();
+  const noteDecryptor = new JobQueueNoteDecryptor(jobQueue);
   const pedersen = new JobQueuePedersen(wasm, jobQueue);
   const pippenger = new JobQueuePippenger(jobQueue);
   const fftFactory = new JobQueueFftFactory(jobQueue);
@@ -28,7 +26,7 @@ export async function createChocolateCoreSdk(jobQueue: JobQueue, options: Chocol
   const host = new URL(serverUrl);
   const rollupProvider = new ServerRollupProvider(host, pollInterval);
 
-  const coreSdk = new CoreSdk(leveldb, db, rollupProvider, wasm, pedersen, pippenger, fftFactory);
+  const coreSdk = new CoreSdk(leveldb, db, rollupProvider, wasm, noteDecryptor, pedersen, pippenger, fftFactory);
   await coreSdk.init(options);
   return new CoreSdkServerStub(coreSdk);
 }

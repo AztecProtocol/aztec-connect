@@ -18,6 +18,7 @@ export class CachedRollupDb extends SyncRollupDb {
   private log = createLogger('CachedRollupDb');
 
   public async init() {
+    this.log('Loading rollup cache...');
     this.rollups = await super.getRollups();
     this.settledRollups = this.rollups.filter(rollup => rollup.mined);
     this.rollups
@@ -208,6 +209,11 @@ export class CachedRollupDb extends SyncRollupDb {
   public async deleteUnsettledRollups() {
     await super.deleteUnsettledRollups();
     this.rollups = this.settledRollups.slice();
+  }
+
+  public async deleteUnsettledClaimTxs() {
+    await super.deleteUnsettledClaimTxs();
+    await this.refresh();
   }
 
   public async eraseDb() {

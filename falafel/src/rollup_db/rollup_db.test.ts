@@ -370,6 +370,12 @@ describe('rollup_db', () => {
     const rollupProof = randomRollupProof([tx0, tx1], 0);
     const rollup = randomRollup(0, rollupProof);
 
+    // Before adding to db, lets re-order the txs to ensure we get them back in "rollup order".
+    {
+      const [t0, t1] = rollup.rollupProof.txs;
+      rollup.rollupProof.txs = [t1, t0];
+    }
+
     await rollupDb.addRollup(rollup);
 
     const settledRollups1 = await rollupDb.getSettledRollups();
@@ -390,6 +396,8 @@ describe('rollup_db', () => {
     const settledRollups2 = await rollupDb.getSettledRollups();
     expect(settledRollups2.length).toBe(1);
     expect(settledRollups2[0].rollupProof).not.toBeUndefined();
+    expect(settledRollups2[0].rollupProof.txs[0].id).toEqual(tx0.id);
+    expect(settledRollups2[0].rollupProof.txs[1].id).toEqual(tx1.id);
   });
 
   it('should erase db', async () => {

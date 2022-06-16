@@ -8,16 +8,16 @@ export class AztecSdkUser {
     return this.sdk.isUserSynching(this.id);
   }
 
-  public async awaitSynchronised() {
-    return this.sdk.awaitUserSynchronised(this.id);
+  public async awaitSynchronised(timeout?: number) {
+    return this.sdk.awaitUserSynchronised(this.id, timeout);
+  }
+
+  public async getSyncedToRollup() {
+    return this.sdk.getUserSyncedToRollup(this.id);
   }
 
   public async getSpendingKeys() {
     return this.sdk.getSpendingKeys(this.id);
-  }
-
-  public async getUserData() {
-    return this.sdk.getUserData(this.id);
   }
 
   public async getBalance(assetId: number) {

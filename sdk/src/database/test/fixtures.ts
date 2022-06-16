@@ -42,15 +42,11 @@ export const randomClaimTx = (): CoreClaimTx => ({
   interactionNonce: randomInt(),
 });
 
-export const randomUser = (user: Partial<UserData> = {}): UserData => {
-  const id = user.id || GrumpkinAddress.random();
-  return {
-    id,
-    accountPublicKey: id,
-    accountPrivateKey: user.accountPrivateKey || randomBytes(32),
-    syncedToRollup: user.syncedToRollup ?? randomInt(),
-  };
-};
+export const randomUser = (user: Partial<UserData> = {}): UserData => ({
+  accountPublicKey: user.accountPublicKey || GrumpkinAddress.random(),
+  accountPrivateKey: user.accountPrivateKey || randomBytes(32),
+  syncedToRollup: user.syncedToRollup ?? randomInt(),
+});
 
 export const randomAccountTx = (tx: Partial<CoreAccountTx> = {}) =>
   new CoreAccountTx(

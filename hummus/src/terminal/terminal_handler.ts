@@ -52,6 +52,7 @@ export class TerminalHandler {
   private provider!: EthereumProvider;
   private ethAddress!: EthAddress;
   private user!: AztecSdkUser;
+  private accountPrivateKey!: Buffer;
 
   constructor(private terminal: Terminal) {}
 
@@ -224,6 +225,7 @@ export class TerminalHandler {
     }
 
     this.user = await this.sdk.addUser(privateKey);
+    this.accountPrivateKey = privateKey;
 
     await this.sdk.run();
 
@@ -328,11 +330,10 @@ export class TerminalHandler {
     const deposit = this.sdk.toBaseUnits(0, valueStr);
     const [, fee] = await this.sdk.getRegisterFees(deposit);
     const spendingKey = await this.sdk.generateSpendingKeyPair(this.ethAddress);
-    const { id, accountPrivateKey } = await this.user.getUserData();
     const controller = this.sdk.createRegisterController(
-      id,
+      this.user.id,
       alias,
-      accountPrivateKey,
+      this.accountPrivateKey,
       spendingKey.publicKey,
       undefined,
       deposit,

@@ -1,5 +1,5 @@
 import { EthAddress } from '@aztec/barretenberg/address';
-import { Blockchain, EthereumRpc, RollupTxs, TxHash } from '@aztec/barretenberg/blockchain';
+import { Blockchain, EthereumRpc, SendTxOptions, TxHash } from '@aztec/barretenberg/blockchain';
 import { JoinSplitProofData } from '@aztec/barretenberg/client_proofs';
 import { createLogger } from '@aztec/barretenberg/log';
 import { fromBaseUnits } from '@aztec/blockchain';
@@ -16,7 +16,8 @@ export class RollupPublisher {
   constructor(
     private rollupDb: RollupDb,
     private blockchain: Blockchain,
-    private maxProviderGasPrice: bigint,
+    private maxFeePerGas: bigint,
+    private maxPriorityFeePerGas: bigint,
     private gasLimit: number,
     private metrics: Metrics,
     private log = createLogger('RollupPublisher'),
@@ -25,55 +26,45 @@ export class RollupPublisher {
     this.ethereumRpc = new EthereumRpc(blockchain.getProvider());
   }
 
-  private async awaitGasPriceBelowThresholdAndSufficientBalance(rollupTxs: RollupTxs, signerAddress: EthAddress) {
+  private async awaitGasPriceBelowThresholdAndSufficientBalance(signerAddress: EthAddress, estimatedGas: number) {
     while (!this.interrupted) {
-      const { maxFeePerGas } = await this.blockchain.getFeeData();
-
-      if (this.maxProviderGasPrice) {
-        // Wait until gas price is below threshold.
-        if (maxFeePerGas > this.maxProviderGasPrice) {
-          this.log(`Gas price too high at ${maxFeePerGas} wei. Waiting till below ${this.maxProviderGasPrice}...`);
-          await this.sleepOrInterrupted(60000);
-          continue;
-        }
-      }
-
-      // Estimate the total gas for all txs.
+      // Get the previous blocks base fee.
+      const { baseFeePerGas } = await this.ethereumRpc.getBlockByNumber('latest');
+      // We expect to pay roughly the same, plus our priority fee.
+      const estimatedFeePerGas = baseFeePerGas + this.maxPriorityFeePerGas;
       const currentBalance = await this.ethereumRpc.getBalance(signerAddress);
-      const { totalGas, estimateError } = await this.estimateTotalGas(rollupTxs);
-      if (totalGas === undefined) {
-        this.log(`Unable to estimate gas: ${estimateError.message}. Will retry...`);
+      // We need to have at least this balance to service our max fee.
+      const requiredBalance = this.maxFeePerGas * BigInt(estimatedGas);
+      // Assuming we just pay the base and priority fee, this would be our cost.
+      const estimatedCost = estimatedFeePerGas * BigInt(estimatedGas);
+
+      this.log(`Signer address: ${signerAddress.toString()}`);
+      this.log(`Signer balance: ${fromBaseUnits(currentBalance, 18, 3)} ETH`);
+      this.log(`Max fee per gas: ${fromBaseUnits(this.maxFeePerGas, 9, 3)} gwei`);
+      this.log(`Estimated fee per gas: ${fromBaseUnits(estimatedFeePerGas, 9, 3)} gwei`);
+      this.log(`Estimated gas: ${estimatedGas}`);
+      this.log(`Required balance: ${fromBaseUnits(requiredBalance, 18, 3)} ETH`);
+      this.log(`Estimated cost: ${fromBaseUnits(estimatedCost, 18, 3)} ETH`);
+
+      // Wait until gas price is below threshold.
+      if (estimatedFeePerGas > this.maxFeePerGas) {
+        this.log(`Gas price too high. Waiting till below max fee per gas...`);
         await this.sleepOrInterrupted(60000);
         continue;
       }
 
       // Wait until we have enough funds to send all txs.
-      const required = BigInt(totalGas) * maxFeePerGas;
-      if (currentBalance < required) {
-        this.log(`Insufficient funds. Balance ${currentBalance}, required ${required} wei. Awaiting top up...`);
+      if (currentBalance < requiredBalance) {
+        this.log(`Insufficient funds. Awaiting top up...`);
         await this.sleepOrInterrupted(60000);
         continue;
       }
 
-      this.log(`Current gas price: ${maxFeePerGas}`);
-      this.log(`Estimated total gas: ${totalGas}`);
-      this.log(`Estimated total cost: ${fromBaseUnits(required, 18, 3)} ETH`);
       break;
     }
   }
 
-  private async estimateTotalGas(rollupTxs: RollupTxs) {
-    const { rollupProofTx, offchainDataTxs } = rollupTxs;
-    const txs = [...offchainDataTxs, rollupProofTx];
-    try {
-      const txsGas = await Promise.all(txs.map(tx => this.blockchain.estimateGas(tx)));
-      return { totalGas: txsGas.reduce((a, g) => a + g, 0) };
-    } catch (err) {
-      return { estimateError: err as Error };
-    }
-  }
-
-  public async publishRollup(rollup: RollupDao) {
+  public async publishRollup(rollup: RollupDao, estimatedGas: number) {
     this.log(`Publishing rollup: ${rollup.id}`);
     const endTimer = this.metrics.publishTimer();
 
@@ -99,7 +90,7 @@ export class RollupPublisher {
     const [defaultSignerAddress] = await this.ethereumRpc.getAccounts();
 
     mainLoop: while (!this.interrupted) {
-      await this.awaitGasPriceBelowThresholdAndSufficientBalance(rollupTxs, defaultSignerAddress);
+      await this.awaitGasPriceBelowThresholdAndSufficientBalance(defaultSignerAddress, estimatedGas);
       if (this.interrupted) {
         break;
       }
@@ -113,7 +104,12 @@ export class RollupPublisher {
           continue;
         }
         this.log(`Sending ${name} of size ${tx.length} with nonce ${nonce}...`);
-        txStatuses[i].txHash = await this.sendTx(tx, nonce++);
+        txStatuses[i].txHash = await this.sendTx(tx, {
+          nonce: nonce++,
+          gasLimit: this.gasLimit,
+          maxFeePerGas: this.maxFeePerGas,
+          maxPriorityFeePerGas: this.maxPriorityFeePerGas,
+        });
       }
       // If interrupted, one or more txHash will be undefined.
       if (txStatuses.some(s => s.txHash === undefined)) return false;
@@ -187,10 +183,10 @@ export class RollupPublisher {
     return await this.blockchain.createRollupTxs(proof, signatures, offchainTxData);
   }
 
-  private async sendTx(txData: Buffer, nonce?: number) {
+  private async sendTx(txData: Buffer, options: SendTxOptions) {
     while (!this.interrupted) {
       try {
-        return await this.blockchain.sendTx(txData, { gasLimit: this.gasLimit, nonce });
+        return await this.blockchain.sendTx(txData, options);
       } catch (err: any) {
         this.log(err.message.slice(0, 500));
         this.log('Will retry in 60s...');

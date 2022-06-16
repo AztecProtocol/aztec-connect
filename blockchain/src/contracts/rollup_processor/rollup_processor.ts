@@ -6,7 +6,7 @@ import { computeInteractionHashes } from '@aztec/barretenberg/note_algorithms';
 import { Timer } from '@aztec/barretenberg/timer';
 import { sliceOffchainTxData } from '@aztec/barretenberg/offchain_tx_data';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
-import { TransactionReceipt, TransactionResponse } from '@ethersproject/abstract-provider';
+import { TransactionReceipt, TransactionResponse, TransactionRequest } from '@ethersproject/abstract-provider';
 import { Web3Provider } from '@ethersproject/providers';
 import createDebug from 'debug';
 import { BytesLike, Contract, Event, utils } from 'ethers';
@@ -156,35 +156,35 @@ export class RollupProcessor {
   }
 
   async pause(options: SendTxOptions = {}) {
-    const { gasLimit } = { ...options };
+    const { gasLimit } = options;
     const rollupProcessor = this.getContractWithSigner(options);
     const tx = await rollupProcessor.pause({ gasLimit }).catch(fixEthersStackTrace);
     return TxHash.fromString(tx.hash);
   }
 
   async unpause(options: SendTxOptions = {}) {
-    const { gasLimit } = { ...options };
+    const { gasLimit } = options;
     const rollupProcessor = this.getContractWithSigner(options);
     const tx = await rollupProcessor.unpause({ gasLimit }).catch(fixEthersStackTrace);
     return TxHash.fromString(tx.hash);
   }
 
   async grantRole(role: BytesLike, address: EthAddress, options: SendTxOptions = {}) {
-    const { gasLimit } = { ...options };
+    const { gasLimit } = options;
     const rollupProcessor = this.getContractWithSigner(options);
     const tx = await rollupProcessor.grantRole(role, address.toString(), { gasLimit });
     return TxHash.fromString(tx.hash);
   }
 
   async revokeRole(role: BytesLike, address: EthAddress, options: SendTxOptions = {}) {
-    const { gasLimit } = { ...options };
+    const { gasLimit } = options;
     const rollupProcessor = this.getContractWithSigner(options);
     const tx = await rollupProcessor.revokeRole(role, address.toString(), { gasLimit });
     return TxHash.fromString(tx.hash);
   }
 
   async setRollupProvider(providerAddress: EthAddress, valid: boolean, options: SendTxOptions = {}) {
-    const { gasLimit } = { ...options };
+    const { gasLimit } = options;
     const rollupProcessor = this.getContractWithSigner(options);
     const tx = await rollupProcessor
       .setRollupProvider(providerAddress.toString(), valid, { gasLimit })
@@ -193,7 +193,7 @@ export class RollupProcessor {
   }
 
   async setDefiBridgeProxy(providerAddress: EthAddress, options: SendTxOptions = {}) {
-    const { gasLimit } = { ...options };
+    const { gasLimit } = options;
     const rollupProcessor = this.getContractWithSigner(options);
     const tx = await rollupProcessor
       .setDefiBridgeProxy(providerAddress.toString(), { gasLimit })
@@ -208,7 +208,7 @@ export class RollupProcessor {
     offchainTxData: BytesLike,
     options: SendTxOptions = {},
   ) {
-    const { gasLimit } = { ...options };
+    const { gasLimit } = options;
     const rollupProcessor = this.getContractWithSigner(options);
     const tx = await rollupProcessor
       .offchainData(rollupId, chunk, totalChunks, offchainTxData, { gasLimit })
@@ -217,7 +217,7 @@ export class RollupProcessor {
   }
 
   async processRollup(encodedProofData: BytesLike, signatures: BytesLike, options: SendTxOptions = {}) {
-    const { gasLimit } = { ...options };
+    const { gasLimit } = options;
     const rollupProcessor = this.getContractWithSigner(options);
     const tx = await rollupProcessor
       .processRollup(encodedProofData, signatures, { gasLimit })
@@ -225,28 +225,28 @@ export class RollupProcessor {
     return TxHash.fromString(tx.hash);
   }
   async setVerifier(address: EthAddress, options: SendTxOptions = {}) {
-    const { gasLimit } = { ...options };
+    const { gasLimit } = options;
     const rollupProcessor = this.getContractWithSigner(options);
     const tx = await rollupProcessor.setVerifier(address.toString(), { gasLimit }).catch(fixEthersStackTrace);
     return TxHash.fromString(tx.hash);
   }
 
   async setThirdPartyContractStatus(flag: boolean, options: SendTxOptions = {}) {
-    const { gasLimit } = { ...options };
+    const { gasLimit } = options;
     const rollupProcessor = this.getContractWithSigner(options);
     const tx = await rollupProcessor.setAllowThirdPartyContracts(flag, { gasLimit });
     return TxHash.fromString(tx.hash);
   }
 
   async setSupportedBridge(bridgeAddress: EthAddress, bridgeGasLimit = 0, options: SendTxOptions = {}) {
-    const { gasLimit } = { ...options };
+    const { gasLimit } = options;
     const rollupProcessor = this.getContractWithSigner(options);
     const tx = await rollupProcessor.setSupportedBridge(bridgeAddress.toString(), bridgeGasLimit, { gasLimit });
     return TxHash.fromString(tx.hash);
   }
 
   async setSupportedAsset(assetAddress: EthAddress, assetGasLimit = 0, options: SendTxOptions = {}) {
-    const { gasLimit } = { ...options };
+    const { gasLimit } = options;
     const rollupProcessor = this.getContractWithSigner(options);
     const tx = await rollupProcessor.setSupportedAsset(assetAddress.toString(), assetGasLimit, {
       gasLimit,
@@ -255,7 +255,7 @@ export class RollupProcessor {
   }
 
   async processAsyncDefiInteraction(interactionNonce: number, options: SendTxOptions = {}) {
-    const { gasLimit } = { ...options };
+    const { gasLimit } = options;
     const rollupProcessor = this.getContractWithSigner(options);
     const tx = await rollupProcessor
       .processAsyncDefiInteraction(interactionNonce, { gasLimit })
@@ -324,15 +324,17 @@ export class RollupProcessor {
   }
 
   public async sendTx(data: Buffer, options: SendTxOptions = {}) {
-    const { signingAddress, gasLimit, nonce } = { ...options };
+    const { signingAddress, gasLimit, nonce, maxFeePerGas, maxPriorityFeePerGas } = options;
     const signer = signingAddress ? this.provider.getSigner(signingAddress.toString()) : this.provider.getSigner(0);
     const from = await signer.getAddress();
-    const txRequest = {
+    const txRequest: TransactionRequest = {
       to: this.rollupContractAddress.toString(),
       from,
       gasLimit,
       data,
       nonce,
+      maxFeePerGas,
+      maxPriorityFeePerGas,
     };
     const txResponse = await signer.sendTransaction(txRequest).catch(fixEthersStackTrace);
     return TxHash.fromString(txResponse.hash);
@@ -344,7 +346,7 @@ export class RollupProcessor {
     proofHash: Buffer = Buffer.alloc(32),
     options: SendTxOptions = {},
   ) {
-    const { gasLimit } = { ...options };
+    const { gasLimit } = options;
     const rollupProcessor = this.getContractWithSigner(options);
     const depositor = await rollupProcessor.signer.getAddress();
     const tx = await rollupProcessor
@@ -364,7 +366,7 @@ export class RollupProcessor {
     proofHash: Buffer = Buffer.alloc(32),
     options: SendTxOptions = {},
   ) {
-    const { gasLimit } = { ...options };
+    const { gasLimit } = options;
     const rollupProcessor = this.getContractWithSigner(options);
     const depositor = await rollupProcessor.signer.getAddress();
     const tx = await rollupProcessor
@@ -392,7 +394,7 @@ export class RollupProcessor {
     proofHash = Buffer.alloc(32),
     options: SendTxOptions = {},
   ) {
-    const { gasLimit } = { ...options };
+    const { gasLimit } = options;
     const rollupProcessor = this.getContractWithSigner(options);
     const depositor = await rollupProcessor.signer.getAddress();
     const tx = await rollupProcessor
@@ -413,7 +415,7 @@ export class RollupProcessor {
   }
 
   async approveProof(proofHash: Buffer, options: SendTxOptions = {}) {
-    const { gasLimit } = { ...options };
+    const { gasLimit } = options;
     const rollupProcessor = this.getContractWithSigner(options);
     const tx = await rollupProcessor.approveProof(proofHash, { gasLimit }).catch(fixEthersStackTrace);
     return TxHash.fromString(tx.hash);
@@ -428,7 +430,7 @@ export class RollupProcessor {
   }
 
   async getThirdPartyContractStatus(options: SendTxOptions = {}) {
-    const { gasLimit } = { ...options };
+    const { gasLimit } = options;
     return await this.rollupProcessor.allowThirdPartyContracts({ gasLimit });
   }
 

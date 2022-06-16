@@ -1,19 +1,6 @@
 import { Blockchain, TxType } from '@aztec/barretenberg/blockchain';
 import { createLogger } from '@aztec/barretenberg/log';
-import {
-  OffchainAccountData,
-  OffchainDefiClaimData,
-  OffchainDefiDepositData,
-  OffchainJoinSplitData,
-} from '@aztec/barretenberg/offchain_tx_data';
-import {
-  RollupAccountProofData,
-  RollupDefiClaimProofData,
-  RollupDefiDepositProofData,
-  RollupDepositProofData,
-  RollupSendProofData,
-  RollupWithdrawProofData,
-} from '@aztec/barretenberg/rollup_proof';
+import { getGasOverhead, getTxCallData } from './get_gas_overhead';
 import { PriceTracker } from './price_tracker';
 import { roundUp } from './round_up';
 
@@ -37,18 +24,20 @@ export class FeeCalculator {
     private readonly txsPerRollup: number,
     private readonly callDataPerRollup: number,
     private readonly numSignificantFigures = 0,
-    private readonly gasPerByte = 16,
     private readonly log = createLogger('FeeCalculator'),
   ) {
+    this.log('Creating...');
     const txTypes = Object.values(TxType).filter(v => !isNaN(Number(v)));
     for (let i = 0; i < txTypes.length; i++) {
+      const callData = getTxCallData(i);
+      const adjBase = this.getAdjustedBaseVerificationGas(i);
+      const unadjBase = this.getUnadjustedBaseVerificationGas();
+      const gasOverhead = this.getGasOverheadForTxType(0, i);
+      const maxAdjTxs = this.getMaxAdjustedTxsPerRollup(i);
+      const numAdjTxs = this.getNumAdjustedTxsPerRollup(i);
       this.log(
-        `${TxType[i]} call data: ${this.getTxCallData(i)}, adj/base gas: ${this.getAdjustedBaseVerificationGas(
-          i,
-        )}/${this.getUnadjustedBaseVerificationGas()}, ETH tx gas: ${this.getGasOverheadForTxType(
-          0,
-          i,
-        )}, max/quoted txs per rollup: ${this.getMaxAdjustedTxsPerRollup(i)}/${this.getNumAdjustedTxsPerRollup(i)}`,
+        `  ${TxType[i]} call data: ${callData}, adj/base gas: ${adjBase}/${unadjBase}, ` +
+          `ETH tx gas: ${gasOverhead}, max/quoted txs per rollup: ${maxAdjTxs}/${numAdjTxs}`,
       );
     }
   }
@@ -144,7 +133,7 @@ export class FeeCalculator {
   // subtracting 1 from the ideal total number of txs should ensure that where we need to publish a rollup
   // limited by calldata, it will always be profitable
   private getNumAdjustedTxsPerRollup(txType: TxType) {
-    const callDataForTx = this.getTxCallData(txType);
+    const callDataForTx = getTxCallData(txType);
     const numTxsAccountingForCallData = Math.floor(this.callDataPerRollup / callDataForTx) - 1;
     return Math.min(numTxsAccountingForCallData, this.txsPerRollup);
   }
@@ -153,7 +142,7 @@ export class FeeCalculator {
   // this should not be used to compute the fee quoted to users as it could result in unprofitable rollups.
   // effectively this is the max number of txs that will ideally fit into a rollup
   private getMaxAdjustedTxsPerRollup(txType: TxType) {
-    const callDataForTx = this.getTxCallData(txType);
+    const callDataForTx = getTxCallData(txType);
     const numTxsAccountingForCallData = Math.floor(this.callDataPerRollup / callDataForTx);
     return Math.min(numTxsAccountingForCallData, this.txsPerRollup);
   }
@@ -200,52 +189,14 @@ export class FeeCalculator {
   }
 
   private getGasOverheadForTxType(assetId: number, txType: TxType) {
-    const gasPerByte = this.gasPerByte;
-    switch (txType) {
-      case TxType.ACCOUNT:
-        return (OffchainAccountData.SIZE + this.getTxCallData(txType)) * gasPerByte;
-      case TxType.DEFI_CLAIM:
-        return (OffchainDefiClaimData.SIZE + this.getTxCallData(txType)) * gasPerByte;
-      case TxType.DEFI_DEPOSIT:
-        return (OffchainDefiDepositData.SIZE + this.getTxCallData(txType)) * gasPerByte;
-      case TxType.DEPOSIT:
-        // 3500 gas for ecrecover.
-        return (OffchainJoinSplitData.SIZE + this.getTxCallData(txType)) * gasPerByte + 3500;
-      case TxType.TRANSFER:
-        return (OffchainJoinSplitData.SIZE + this.getTxCallData(txType)) * gasPerByte;
-      case TxType.WITHDRAW_TO_CONTRACT:
-      case TxType.WITHDRAW_TO_WALLET:
-        return (
-          // if the asset is not valid (i.e. it's virtual then quote the fee as if it was ETH)
-          // this type of tx is not valid and would be trjected if it were attempted
-          this.getAsset(this.isValidAsset(assetId) ? assetId : 0).gasLimit +
-          (OffchainJoinSplitData.SIZE + this.getTxCallData(txType)) * gasPerByte
-        );
-    }
-  }
-
-  public getTxCallData(txType: TxType) {
-    switch (txType) {
-      case TxType.ACCOUNT:
-        return RollupAccountProofData.ENCODED_LENGTH;
-      case TxType.DEFI_CLAIM:
-        return RollupDefiClaimProofData.ENCODED_LENGTH;
-      case TxType.DEFI_DEPOSIT:
-        return RollupDefiDepositProofData.ENCODED_LENGTH;
-      case TxType.DEPOSIT:
-        // 96 bytes for signature on top of the rollup proof data
-        return RollupDepositProofData.ENCODED_LENGTH + 96;
-      case TxType.TRANSFER:
-        return RollupSendProofData.ENCODED_LENGTH;
-      case TxType.WITHDRAW_TO_CONTRACT:
-      case TxType.WITHDRAW_TO_WALLET:
-        return RollupWithdrawProofData.ENCODED_LENGTH;
-    }
+    // if the asset is not valid (i.e. it's virtual then quote the fee as if it was ETH),
+    // this type of tx is not valid and would be rejected if it were attempted
+    return getGasOverhead(txType, this.getAsset(this.isValidAsset(assetId) ? assetId : 0).gasLimit);
   }
 
   // retrieves the highest amount of calldata that any single tx can used based on it's type
   public getMaxTxCallData() {
-    return allTxTypes.map(x => this.getTxCallData(x)).reduce((prev, currentValue) => Math.max(prev, currentValue), 0);
+    return allTxTypes.map(x => getTxCallData(x)).reduce((prev, currentValue) => Math.max(prev, currentValue), 0);
   }
 
   // retrieves the highest amount of real gas that can be used by any single tx

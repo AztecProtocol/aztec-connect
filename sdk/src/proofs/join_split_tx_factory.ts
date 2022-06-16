@@ -20,7 +20,7 @@ export class JoinSplitTxFactory {
   ) {}
 
   async createTx(
-    user: UserData,
+    { accountPrivateKey, accountPublicKey }: UserData,
     proofId: ProofId,
     assetId: number,
     inputNotes: Note[],
@@ -30,7 +30,7 @@ export class JoinSplitTxFactory {
       publicOwner = EthAddress.ZERO,
       outputNoteValue1 = BigInt(0),
       outputNoteValue2 = BigInt(0),
-      newNoteOwner = user.id,
+      newNoteOwner = accountPublicKey,
       newNoteOwnerAccountRequired = true,
       bridgeId = BridgeId.ZERO,
       defiDepositValue = BigInt(0),
@@ -41,9 +41,7 @@ export class JoinSplitTxFactory {
       throw new Error('Cannot chain from more than one pending note.');
     }
 
-    const { id: userId, accountPrivateKey, accountPublicKey } = user;
-
-    const accountRequired = !spendingPublicKey.equals(user.id);
+    const accountRequired = !spendingPublicKey.equals(accountPublicKey);
     const aliasHash = accountRequired ? (await this.db.getAlias(accountPublicKey))?.aliasHash : AliasHash.random();
     if (!aliasHash) {
       throw new Error('User not registered or not fully synced.');
@@ -91,13 +89,13 @@ export class JoinSplitTxFactory {
 
     const newNotes = [
       this.createNote(assetId, outputNoteValue1, newNoteOwner, newNoteOwnerAccountRequired, inputNoteNullifiers[0]),
-      this.createNote(assetId, outputNoteValue2, userId, accountRequired, inputNoteNullifiers[1]),
+      this.createNote(assetId, outputNoteValue2, accountPublicKey, accountRequired, inputNoteNullifiers[1]),
     ];
     const outputNotes = newNotes.map(n => n.note);
 
     const claimNote =
       proofId === ProofId.DEFI_DEPOSIT
-        ? this.createClaimNote(bridgeId, defiDepositValue, userId, inputNoteNullifiers[0])
+        ? this.createClaimNote(bridgeId, defiDepositValue, accountPublicKey, inputNoteNullifiers[0])
         : { note: ClaimNoteTxData.EMPTY, ephPubKey: undefined };
 
     const propagatedInputIndex = 1 + inputNotes.findIndex(n => n.allowChain);

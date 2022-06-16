@@ -1,21 +1,7 @@
 import { BlockchainAsset, TxType, Blockchain } from '@aztec/barretenberg/blockchain';
-
-import {
-  RollupAccountProofData,
-  RollupDefiClaimProofData,
-  RollupDefiDepositProofData,
-  RollupDepositProofData,
-  RollupSendProofData,
-  RollupWithdrawProofData,
-} from '@aztec/barretenberg/rollup_proof';
-import {
-  OffchainAccountData,
-  OffchainDefiClaimData,
-  OffchainDefiDepositData,
-  OffchainJoinSplitData,
-} from '@aztec/barretenberg/offchain_tx_data';
 import { FeeCalculator } from './fee_calculator';
 import { PriceTracker } from './price_tracker';
+import { getGasOverhead } from './get_gas_overhead';
 
 type Mockify<T> = {
   [P in keyof T]: jest.Mock;
@@ -42,28 +28,7 @@ describe('fee calculator', () => {
   let blockchain: Mockify<Blockchain>;
   let feeCalculator: FeeCalculator;
 
-  const getGasOverheadForTxType = (assetId: number, txType: TxType) => {
-    const gasPerByte = 4;
-    switch (txType) {
-      case TxType.ACCOUNT:
-        return (OffchainAccountData.SIZE + RollupAccountProofData.ENCODED_LENGTH) * gasPerByte;
-      case TxType.DEFI_CLAIM:
-        return (OffchainDefiClaimData.SIZE + RollupDefiClaimProofData.ENCODED_LENGTH) * gasPerByte;
-      case TxType.DEFI_DEPOSIT:
-        return (OffchainDefiDepositData.SIZE + RollupDefiDepositProofData.ENCODED_LENGTH) * gasPerByte;
-      case TxType.DEPOSIT:
-        // 96 bytes of signature data.
-        // 3500 gas for ecrecover.
-        return (96 + OffchainJoinSplitData.SIZE + RollupDepositProofData.ENCODED_LENGTH) * gasPerByte + 3500;
-      case TxType.TRANSFER:
-        return (OffchainJoinSplitData.SIZE + RollupSendProofData.ENCODED_LENGTH) * gasPerByte;
-      case TxType.WITHDRAW_TO_CONTRACT:
-      case TxType.WITHDRAW_TO_WALLET:
-        return (
-          assets[assetId].gasLimit + (OffchainJoinSplitData.SIZE + RollupWithdrawProofData.ENCODED_LENGTH) * gasPerByte
-        );
-    }
-  };
+  const getGasOverheadForTxType = (assetId: number, txType: TxType) => getGasOverhead(txType, assets[assetId].gasLimit);
 
   beforeEach(() => {
     jest.spyOn(console, 'log').mockImplementation(() => {});
@@ -99,13 +64,12 @@ describe('fee calculator', () => {
       txsPerRollup,
       callDataPerRollup,
       numSignificantFigures,
-      4,
     );
   });
 
   it('return correct min fees', async () => {
-    expect(feeCalculator.getMinTxFee(0, TxType.DEPOSIT, 0)).toBe(789600n);
-    expect(feeCalculator.getMinTxFee(1, TxType.DEPOSIT, 1)).toBe(394800n);
+    expect(feeCalculator.getMinTxFee(0, TxType.DEPOSIT, 0)).toBe(1483400n);
+    expect(feeCalculator.getMinTxFee(1, TxType.DEPOSIT, 1)).toBe(741700n);
   });
 
   it('returns the correct base gas values', async () => {
@@ -149,7 +113,6 @@ describe('fee calculator', () => {
       newTxsPerRollup,
       callDataPerRollup,
       numSignificantFigures,
-      4,
     );
     // call data per rollup above is 128 * 1024
     // verification gas above is 100000
@@ -215,80 +178,5 @@ describe('fee calculator', () => {
     expect(
       feeCalculator.getAdjustedTxGas(1, TxType.TRANSFER) - feeCalculator.getUnadjustedTxGas(1, TxType.TRANSFER),
     ).toBe(0);
-  });
-
-  it('returns correct tx fees for fee-paying asset', async () => {
-    const assetId = 0;
-    const result = feeCalculator.getTxFees(assetId, assetId);
-    const expected = [
-      [
-        { assetId, value: 1579200n },
-        { assetId, value: 10579200n },
-      ],
-      [
-        { assetId, value: 1168400n },
-        { assetId, value: 10168400n },
-      ],
-      [
-        { assetId, value: 4190800n },
-        { assetId, value: 13190800n },
-      ],
-      [
-        { assetId, value: 4190800n },
-        { assetId, value: 13190800n },
-      ],
-      [
-        { assetId, value: 1115600n },
-        { assetId, value: 10115600n },
-      ],
-      [
-        { assetId, value: 1187600n },
-        { assetId, value: 10187600n },
-      ],
-      [
-        { assetId, value: 1051600n },
-        { assetId, value: 10051600n },
-      ],
-    ];
-    expect(result).toEqual(expected);
-  });
-
-  it('returns correct tx fees for non fee-paying asset', async () => {
-    const feeAssetId = 0;
-    const txAssetId = 1;
-    const result = feeCalculator.getTxFees(txAssetId, feeAssetId);
-    // withdraw fees are 3000000 higher
-    // additional 30000 gaslimit value * 100 gas price
-    const expected = [
-      [
-        { assetId: feeAssetId, value: 1579200n }, // DEPOSIT
-        { assetId: feeAssetId, value: 10579200n },
-      ],
-      [
-        { assetId: feeAssetId, value: 1168400n }, // TRANSFER
-        { assetId: feeAssetId, value: 10168400n },
-      ],
-      [
-        { assetId: feeAssetId, value: 7190800n }, // WITHDRAW_TO_WALLET
-        { assetId: feeAssetId, value: 16190800n },
-      ],
-      [
-        { assetId: feeAssetId, value: 7190800n }, // WITHDRAW_TO_CONTRACT
-        { assetId: feeAssetId, value: 16190800n },
-      ],
-      [
-        { assetId: feeAssetId, value: 1115600n }, // ACCOUNT
-        { assetId: feeAssetId, value: 10115600n },
-      ],
-      [
-        { assetId: feeAssetId, value: 1187600n }, // DEFI_DEPOSIT
-        { assetId: feeAssetId, value: 10187600n },
-      ],
-      [
-        { assetId: feeAssetId, value: 1051600n }, // DEFI_CLAIM
-        { assetId: feeAssetId, value: 10051600n },
-      ],
-    ];
-    expect(result).toEqual(expected);
   });
 });

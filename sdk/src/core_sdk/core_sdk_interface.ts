@@ -7,7 +7,6 @@ import { TxId } from '@aztec/barretenberg/tx_id';
 import { CoreUserTx } from '../core_tx';
 import { Note } from '../note';
 import { AccountProofInput, JoinSplitProofInput, ProofOutput } from '../proofs';
-import { UserData } from '../user';
 import { CoreSdkOptions } from './core_sdk_options';
 import { SdkEvent, SdkStatus } from './sdk_status';
 
@@ -106,11 +105,11 @@ export interface CoreSdkInterface {
 
   sendProofs(proofs: ProofOutput[]): Promise<TxId[]>;
 
-  awaitSynchronised(): Promise<void>;
+  awaitSynchronised(timeout?: number): Promise<void>;
 
   isUserSynching(userId: GrumpkinAddress): Promise<boolean>;
 
-  awaitUserSynchronised(userId: GrumpkinAddress): Promise<void>;
+  awaitUserSynchronised(userId: GrumpkinAddress, timeout?: number): Promise<void>;
 
   awaitSettlement(txId: TxId, timeout?: number): Promise<void>;
 
@@ -124,17 +123,17 @@ export interface CoreSdkInterface {
 
   userExists(userId: GrumpkinAddress): Promise<boolean>;
 
-  getUserData(userId: GrumpkinAddress): Promise<UserData>;
-
-  getUsersData(): Promise<UserData[]>;
+  getUsers(): Promise<GrumpkinAddress[]>;
 
   derivePublicKey(privateKey: Buffer): Promise<GrumpkinAddress>;
 
   constructSignature(message: Buffer, privateKey: Buffer): Promise<SchnorrSignature>;
 
-  addUser(accountPrivateKey: Buffer, noSync?: boolean): Promise<UserData>;
+  addUser(accountPrivateKey: Buffer, noSync?: boolean): Promise<GrumpkinAddress>;
 
   removeUser(userId: GrumpkinAddress): Promise<void>;
+
+  getUserSyncedToRollup(userId: GrumpkinAddress): Promise<number>;
 
   getSpendingKeys(userId: GrumpkinAddress): Promise<Buffer[]>;
 
