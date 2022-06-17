@@ -982,12 +982,15 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     await Promise.all(this.userStates.map(us => us.syncFromDb()));
 
     const { syncedToRollup } = this.sdkStatus;
+    const from = syncedToRollup + 1;
 
     // First we focus on bringing the core in sync (mutable data tree layers and accounts).
     // Server will return a chunk of blocks.
-    const coreBlocks = await this.rollupProvider.getBlocks(syncedToRollup + 1);
+    const coreBlocks = await this.rollupProvider.getBlocks(from);
 
     if (coreBlocks.length) {
+      debug(`synching blocks ${from} to ${from + coreBlocks.length}...`);
+
       // For debugging corrupted data root.
       const oldRoot = this.worldState.getRoot();
 
@@ -1018,6 +1021,8 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
         });
         return;
       }
+
+      debug('done.');
     }
 
     const forwardBlocksToUserStates = async (blocks: Block[]) => {
@@ -1032,6 +1037,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
 
     // If it's lower than we downloaded for core, fetch blocks.
     if (userSyncedToRollup < syncedToRollup) {
+      debug(`fetching blocks from ${userSyncedToRollup + 1} for user states...`);
       const userBlocks = await this.rollupProvider.getBlocks(userSyncedToRollup + 1);
       await forwardBlocksToUserStates(userBlocks);
     }
@@ -1107,6 +1113,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       return aliases;
     };
 
+    debug(`processing aliases...`);
     const aliases = rollups.map((rollup, i) => processRollup(rollup, offchainTxData[i])).flat();
     await this.db.addAliases(aliases);
   }

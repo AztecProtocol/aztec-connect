@@ -105,6 +105,9 @@ export class UserState extends EventEmitter {
       return;
     }
 
+    const from = blockContexts[0].block.rollupId;
+    this.debug(`synching blocks ${from} to ${from + blockContexts.length}...`);
+
     const rollupProofData = blockContexts.map(b => RollupProofData.fromBuffer(b.block.rollupProofData));
     const innerProofs = rollupProofData.map(p => p.innerProofData.filter(i => !i.isPadding())).flat();
     const offchainTxDataBuffers = blockContexts.map(b => b.block.offchainTxData).flat();
@@ -223,6 +226,8 @@ export class UserState extends EventEmitter {
     await this.db.updateUser(this.userData);
 
     this.emit(UserStateEvent.UPDATED_USER_STATE, this.userData.accountPublicKey);
+
+    this.debug('done.');
   }
 
   public async pickNotes(assetId: number, value: bigint, excludePendingNotes = false, unsafe = false) {

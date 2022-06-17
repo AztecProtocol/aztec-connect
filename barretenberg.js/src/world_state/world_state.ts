@@ -57,6 +57,7 @@ export class WorldState {
   }
 
   public async insertElements(startIndex: number, elements: Buffer[]) {
+    debug(`update elements at index ${startIndex} with ${elements.length} leaves...`);
     const subRootIndex = this.convertNoteIndexToSubTreeIndex(startIndex);
     await this.tree.updateElements(subRootIndex, elements);
     this.logTreeStats();
