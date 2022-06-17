@@ -153,7 +153,7 @@ export const databaseTestSuite = (
         const user = randomUser();
         await db.addUser(user);
 
-        const savedUser = await db.getUser(user.id);
+        const savedUser = await db.getUser(user.accountPublicKey);
         expect(savedUser).toEqual(user);
       });
 
@@ -176,7 +176,7 @@ export const databaseTestSuite = (
         const newUser = { ...user, syncedToRollup: user.syncedToRollup + 1 };
         await db.updateUser(newUser);
 
-        const updatedUser = await db.getUser(user.id);
+        const updatedUser = await db.getUser(user.accountPublicKey);
         expect(updatedUser).toEqual(newUser);
       });
 
@@ -184,13 +184,13 @@ export const databaseTestSuite = (
         const user = randomUser();
         await db.addUser(user);
 
-        const newUser = { ...user, id: GrumpkinAddress.random() };
+        const newUser = { ...user, accountPublicKey: GrumpkinAddress.random() };
         await db.updateUser(newUser);
 
-        const oldUser = await db.getUser(user.id);
+        const oldUser = await db.getUser(user.accountPublicKey);
         expect(oldUser).toEqual(user);
 
-        const updatedUser = await db.getUser(newUser.id);
+        const updatedUser = await db.getUser(newUser.accountPublicKey);
         expect(updatedUser).toBeUndefined();
       });
     });
@@ -914,7 +914,8 @@ export const databaseTestSuite = (
           db.acquireLock(name, timeout),
           db.acquireLock(name, timeout),
         ]);
-        expect(result).toEqual([true, false, false, false]);
+        expect(result.length).toBe(4);
+        expect(result).toEqual(expect.arrayContaining([true, false, false, false]));
       });
 
       it('can acquire again if expired', async () => {
@@ -949,13 +950,13 @@ export const databaseTestSuite = (
         const note = randomNote(undefined, { ownerPubKey: user.accountPublicKey });
         await db.addNote(note);
 
-        const spendingKey = randomSpendingKey({ userId: user.id });
+        const spendingKey = randomSpendingKey({ userId: user.accountPublicKey });
         await db.addSpendingKey(spendingKey);
 
-        const paymentTx = randomPaymentTx({ userId: user.id });
+        const paymentTx = randomPaymentTx({ userId: user.accountPublicKey });
         await db.addPaymentTx(paymentTx);
 
-        const accountTx = randomAccountTx({ userId: user.id });
+        const accountTx = randomAccountTx({ userId: user.accountPublicKey });
         await db.addAccountTx(accountTx);
 
         return { user, note, spendingKey, paymentTx, accountTx };
@@ -967,21 +968,21 @@ export const databaseTestSuite = (
         const profile0 = await generateUserProfile(user0);
         const profile1 = await generateUserProfile(user1);
 
-        await db.removeUser(user0.id);
+        await db.removeUser(user0.accountPublicKey);
 
-        expect(await db.getUser(user0.id)).toBeUndefined();
-        expect(await db.getNotes(user0.id)).toEqual([]);
+        expect(await db.getUser(user0.accountPublicKey)).toBeUndefined();
+        expect(await db.getNotes(user0.accountPublicKey)).toEqual([]);
         expect(await db.getNote(profile0.note.commitment)).toBeUndefined();
-        expect(await db.getSpendingKeys(user0.id)).toEqual([]);
-        expect(await db.getPaymentTxs(user0.id)).toEqual([]);
-        expect(await db.getAccountTxs(user0.id)).toEqual([]);
+        expect(await db.getSpendingKeys(user0.accountPublicKey)).toEqual([]);
+        expect(await db.getPaymentTxs(user0.accountPublicKey)).toEqual([]);
+        expect(await db.getAccountTxs(user0.accountPublicKey)).toEqual([]);
 
-        expect(await db.getUser(user1.id)).toEqual(profile1.user);
-        expect(await db.getNotes(user1.id)).toEqual([profile1.note]);
+        expect(await db.getUser(user1.accountPublicKey)).toEqual(profile1.user);
+        expect(await db.getNotes(user1.accountPublicKey)).toEqual([profile1.note]);
         expect(await db.getNote(profile1.note.commitment)).toEqual(profile1.note);
-        expect(await db.getSpendingKeys(user1.id)).toEqual([profile1.spendingKey]);
-        expect(await db.getPaymentTxs(user1.id)).toEqual([profile1.paymentTx]);
-        expect(await db.getAccountTxs(user1.id)).toEqual([profile1.accountTx]);
+        expect(await db.getSpendingKeys(user1.accountPublicKey)).toEqual([profile1.spendingKey]);
+        expect(await db.getPaymentTxs(user1.accountPublicKey)).toEqual([profile1.paymentTx]);
+        expect(await db.getAccountTxs(user1.accountPublicKey)).toEqual([profile1.accountTx]);
       });
 
       it('can reset user related data', async () => {
@@ -1015,7 +1016,7 @@ export const databaseTestSuite = (
         expect(await db.getSpendingKey(spendingKey.userId, fullKey)).toBeUndefined();
         expect(await db.getPaymentTx(tx.userId, tx.txId)).toBeUndefined();
         expect(await db.getClaimTx(claim.nullifier)).toBeUndefined();
-        expect(await db.getUser(user.id)).toEqual({
+        expect(await db.getUser(user.accountPublicKey)).toEqual({
           ...user,
           syncedToRollup: -1,
         });
@@ -1047,7 +1048,7 @@ export const databaseTestSuite = (
 
         expect(await db.getAlias(alias.accountPublicKey)).toBeUndefined();
         expect(await db.getNote(note.commitment)).toBeUndefined();
-        expect(await db.getUser(user.id)).toBeUndefined();
+        expect(await db.getUser(user.accountPublicKey)).toBeUndefined();
         expect(await db.getKey(keyName)).toBeUndefined();
         expect(await db.getSpendingKey(spendingKey.userId, fullKey)).toBeUndefined();
         expect(await db.getPaymentTx(tx.userId, tx.txId)).toBeUndefined();

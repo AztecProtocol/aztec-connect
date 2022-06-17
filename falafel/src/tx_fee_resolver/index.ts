@@ -2,6 +2,7 @@ import { Blockchain, TxType } from '@aztec/barretenberg/blockchain';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { BridgeResolver } from '../bridge';
 import { FeeCalculator } from './fee_calculator';
+import { getTxCallData } from './get_gas_overhead';
 import { PriceTracker } from './price_tracker';
 
 export class TxFeeResolver {
@@ -97,7 +98,7 @@ export class TxFeeResolver {
   }
 
   getTxCallData(txType: TxType) {
-    return this.feeCalculator.getTxCallData(txType);
+    return getTxCallData(txType);
   }
 
   getMaxTxCallData() {

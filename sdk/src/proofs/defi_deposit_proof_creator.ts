@@ -36,7 +36,7 @@ export class DefiDepositProofCreator {
     inputNotes: Note[],
     spendingPublicKey: GrumpkinAddress,
   ) {
-    if (spendingPublicKey.equals(user.id)) {
+    if (spendingPublicKey.equals(user.accountPublicKey)) {
       throw new Error('Cannot spend notes for defi deposit using account key.');
     }
 
@@ -50,7 +50,7 @@ export class DefiDepositProofCreator {
       {
         bridgeId,
         defiDepositValue: depositValue,
-        newNoteOwner: user.id,
+        newNoteOwner: user.accountPublicKey,
         newNoteOwnerAccountRequired: true,
       },
     );
@@ -61,7 +61,7 @@ export class DefiDepositProofCreator {
   }
 
   public async createProof(
-    user: UserData,
+    { accountPublicKey, accountPrivateKey }: UserData,
     { tx, signature, partialStateSecretEphPubKey, viewingKeys }: JoinSplitProofInput,
     txRefNo: number,
   ) {
@@ -83,7 +83,7 @@ export class DefiDepositProofCreator {
     const txFee = privateInput - depositValue;
     const coreTx = new CoreDefiTx(
       txId,
-      user.id,
+      accountPublicKey,
       bridgeId,
       depositValue,
       txFee,
@@ -93,7 +93,7 @@ export class DefiDepositProofCreator {
     );
     const partialState = this.noteAlgos.valueNotePartialCommitment(
       partialStateSecret,
-      user.id,
+      accountPublicKey,
       true, // accountRequired
     );
     const offchainTxData = new OffchainDefiDepositData(
@@ -111,10 +111,10 @@ export class DefiDepositProofCreator {
       proofData,
       offchainTxData,
       outputNotes: [
-        this.txFactory.generateNewNote(outputNotes[0], user.accountPrivateKey, {
+        this.txFactory.generateNewNote(outputNotes[0], accountPrivateKey, {
           allowChain: proofData.allowChainFromNote1,
         }),
-        this.txFactory.generateNewNote(outputNotes[1], user.accountPrivateKey, {
+        this.txFactory.generateNewNote(outputNotes[1], accountPrivateKey, {
           allowChain: proofData.allowChainFromNote2,
         }),
       ],

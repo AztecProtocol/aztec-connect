@@ -10,7 +10,7 @@ import { filterUndefined } from './filter_undefined';
 export class AddSpendingKeyController {
   private proofOutput!: ProofOutput;
   private feeProofOutput?: ProofOutput;
-  private txId!: TxId;
+  private txIds: TxId[] = [];
 
   constructor(
     public readonly userId: GrumpkinAddress,
@@ -64,14 +64,14 @@ export class AddSpendingKeyController {
     if (!this.proofOutput) {
       throw new Error('Call createProof() first.');
     }
-    [this.txId] = await this.core.sendProofs(filterUndefined([this.proofOutput, this.feeProofOutput]));
-    return this.txId;
+    this.txIds = await this.core.sendProofs(filterUndefined([this.proofOutput, this.feeProofOutput]));
+    return this.txIds[0];
   }
 
   public async awaitSettlement(timeout?: number) {
-    if (!this.txId) {
+    if (!this.txIds.length) {
       throw new Error(`Call ${!this.proofOutput ? 'createProof()' : 'send()'} first.`);
     }
-    await this.core.awaitSettlement(this.txId, timeout);
+    await Promise.all(this.txIds.map(txId => this.core.awaitSettlement(txId, timeout)));
   }
 }

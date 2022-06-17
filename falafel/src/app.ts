@@ -122,7 +122,7 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
   });
 
   router.get('/get-blocks', recordMetric, async (ctx: Koa.Context) => {
-    const blocks = server.getBlockBuffers(+ctx.query.from, 100);
+    const blocks = ctx.query.from ? server.getBlockBuffers(+ctx.query.from, 100) : [];
     const response = Buffer.concat([
       numToInt32BE(await server.getLatestRollupId()),
       serializeBufferArrayToVector(blocks),

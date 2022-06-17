@@ -1,7 +1,8 @@
 import { Crs } from '@aztec/barretenberg/crs';
 import { PooledPedersen } from '@aztec/barretenberg/crypto';
-import { createDebugLogger } from '@aztec/barretenberg/log';
 import { PooledFftFactory } from '@aztec/barretenberg/fft';
+import { createDebugLogger } from '@aztec/barretenberg/log';
+import { PooledNoteDecryptor } from '@aztec/barretenberg/note_algorithms';
 import { PooledPippenger } from '@aztec/barretenberg/pippenger';
 import { BarretenbergWasm, WorkerPool } from '@aztec/barretenberg/wasm';
 import { CoreSdkClientStub, CoreSdkSerializedInterface, SdkEvent } from '../../core_sdk';
@@ -29,11 +30,12 @@ export class SharedWorkerFrontend {
     const { numWorkers = getNumWorkers() } = options;
     const barretenberg = await BarretenbergWasm.new();
     const workerPool = await WorkerPool.new(barretenberg, numWorkers);
+    const noteDecryptor = new PooledNoteDecryptor(workerPool);
     const pedersen = new PooledPedersen(barretenberg, workerPool);
     const pippenger = new PooledPippenger(workerPool);
     const fftFactory = new PooledFftFactory(workerPool);
 
-    const jobQueueWorker = new JobQueueWorker(this.jobQueue, pedersen, pippenger, fftFactory);
+    const jobQueueWorker = new JobQueueWorker(this.jobQueue, noteDecryptor, pedersen, pippenger, fftFactory);
     const crsData = await this.getCrsData();
     await jobQueueWorker.init(crsData);
     debug('starting job queue worker...');

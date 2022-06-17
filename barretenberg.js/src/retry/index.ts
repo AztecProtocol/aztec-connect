@@ -1,4 +1,5 @@
 import { sleep } from '../sleep';
+import { Timer } from '../timer';
 
 export function* backoffGenerator() {
   const v = [1, 1, 1, 2, 4, 8, 16, 32, 64];
@@ -21,6 +22,24 @@ export async function retry<Result>(fn: () => Promise<Result>, name = 'Operation
       console.log(err);
       await sleep(s * 1000);
       continue;
+    }
+  }
+}
+
+// Call `fn` repeatedly until it returns true or timeout.
+// Both `interval` and `timeout` are seconds.
+// Will never timeout if the value is 0.
+export async function retryUntil(fn: () => boolean | Promise<boolean>, name = '', timeout = 0, interval = 1) {
+  const timer = new Timer();
+  while (true) {
+    if (await fn()) {
+      return;
+    }
+
+    await sleep(interval * 1000);
+
+    if (timeout && timer.s() > timeout) {
+      throw new Error(name ? `Timeout awaiting ${name}` : 'Timeout');
     }
   }
 }

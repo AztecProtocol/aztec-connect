@@ -5,10 +5,12 @@ import { batchDecryptNotes, NoteAlgorithms, recoverTreeNotes, TreeNote } from '.
 import { ViewingKey } from '../viewing_key';
 import { BarretenbergWasm } from '../wasm';
 import { numToUInt32BE } from '../serialize';
+import { SingleNoteDecryptor } from './note_decryptor';
 
 describe('tree_note', () => {
   let grumpkin: Grumpkin;
   let noteAlgos!: NoteAlgorithms;
+  let noteDecryptor!: SingleNoteDecryptor;
 
   const createKeyPair = () => {
     const privKey = grumpkin.getRandomFr();
@@ -20,6 +22,7 @@ describe('tree_note', () => {
     const wasm = await BarretenbergWasm.new();
     grumpkin = new Grumpkin(wasm);
     noteAlgos = new NoteAlgorithms(wasm);
+    noteDecryptor = new SingleNoteDecryptor(wasm);
   });
 
   it('should convert to and from buffer', () => {
@@ -62,7 +65,7 @@ describe('tree_note', () => {
     }
 
     const keyBuf = Buffer.concat(encryptedNotes.map(vk => vk.toBuffer()));
-    const decryptedNotes = await batchDecryptNotes(keyBuf, receiver.privKey, noteAlgos, grumpkin);
+    const decryptedNotes = await batchDecryptNotes(keyBuf, receiver.privKey, noteDecryptor, grumpkin);
     const recovered = recoverTreeNotes(
       decryptedNotes,
       inputNullifiers,
@@ -105,7 +108,7 @@ describe('tree_note', () => {
     }
 
     const keyBuf = Buffer.concat(encryptedNotes.map(vk => vk.toBuffer()));
-    const decryptedNotes = await batchDecryptNotes(keyBuf, receiver.privKey, noteAlgos, grumpkin);
+    const decryptedNotes = await batchDecryptNotes(keyBuf, receiver.privKey, noteDecryptor, grumpkin);
     const recovered = recoverTreeNotes(
       decryptedNotes,
       inputNullifiers,
@@ -151,7 +154,7 @@ describe('tree_note', () => {
     }
 
     const keyBuf = Buffer.concat(encryptedNotes.map(vk => vk.toBuffer()));
-    const decryptedNotes = await batchDecryptNotes(keyBuf, receiver.privKey, noteAlgos, grumpkin);
+    const decryptedNotes = await batchDecryptNotes(keyBuf, receiver.privKey, noteDecryptor, grumpkin);
     const recovered = recoverTreeNotes(
       decryptedNotes,
       inputNullifiers,
@@ -192,7 +195,7 @@ describe('tree_note', () => {
     }
 
     const keyBuf = Buffer.concat(encryptedNotes.map(vk => vk.toBuffer()));
-    const decryptedNotes = await batchDecryptNotes(keyBuf, receiver.privKey, noteAlgos, grumpkin);
+    const decryptedNotes = await batchDecryptNotes(keyBuf, receiver.privKey, noteDecryptor, grumpkin);
     const fakePrivKey = randomBytes(32);
     const recovered = recoverTreeNotes(
       decryptedNotes,

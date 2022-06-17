@@ -85,6 +85,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     const latestBlock = await this.contracts.getRollupBlock(-1);
     if (latestBlock) {
       this.log(`Found latest rollup id ${latestBlock.rollupId}.`);
+      this.latestRollupId = latestBlock.rollupId;
     } else {
       this.log('No rollup found, assuming pristine state.');
     }
@@ -229,7 +230,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   }
 
   public getLatestRollupId() {
-    return this.latestRollupId;
+    return Promise.resolve(this.latestRollupId);
   }
 
   public async getUserPendingDeposit(assetId: number, account: EthAddress) {

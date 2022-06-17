@@ -63,11 +63,12 @@ const defaultRuntimeConfig: RuntimeConfig = {
   flushAfterIdle: 0,
   gasLimit: 12000000,
   verificationGas: 500000,
-  maxFeeGasPrice: 250000000000n,
+  maxFeeGasPrice: 250000000000n, // 250 gwei
   feeGasPriceMultiplier: 1,
   feeRoundUpSignificantFigures: 2,
-  maxProviderGasPrice: 250000000000n,
-  maxUnsettledTxs: 0,
+  maxFeePerGas: 250000000000n, // 250 gwei
+  maxPriorityFeePerGas: 2500000000n, // 2.5 gwei
+  maxUnsettledTxs: 10000,
   defaultDeFiBatchSize: 5,
   bridgeConfigs: [],
   feePayingAssetIds: [0],
@@ -234,7 +235,8 @@ export class Configurator {
       runtimeConfig: {
         ...conf.runtimeConfig,
         maxFeeGasPrice: BigInt(conf.runtimeConfig.maxFeeGasPrice),
-        maxProviderGasPrice: BigInt(conf.runtimeConfig.maxProviderGasPrice),
+        maxFeePerGas: BigInt(conf.runtimeConfig.maxFeePerGas),
+        maxPriorityFeePerGas: BigInt(conf.runtimeConfig.maxPriorityFeePerGas),
         bridgeConfigs: conf.runtimeConfig.bridgeConfigs.map(bridgeConfigFromJson),
         privacySets: privacySetsFromJson(conf.runtimeConfig.privacySets),
       },
@@ -256,7 +258,8 @@ export class Configurator {
         ...conf.runtimeConfig,
         acceptingTxs: true,
         maxFeeGasPrice: conf.runtimeConfig.maxFeeGasPrice.toString(),
-        maxProviderGasPrice: conf.runtimeConfig.maxProviderGasPrice.toString(),
+        maxFeePerGas: conf.runtimeConfig.maxFeePerGas.toString(),
+        maxPriorityFeePerGas: conf.runtimeConfig.maxPriorityFeePerGas.toString(),
         bridgeConfigs: conf.runtimeConfig.bridgeConfigs.map(bridgeConfigToJson),
         privacySets: privacySetsToJson(conf.runtimeConfig.privacySets),
       },

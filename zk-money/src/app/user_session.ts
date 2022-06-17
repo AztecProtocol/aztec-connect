@@ -550,13 +550,20 @@ export class UserSession extends EventEmitter {
 
       const { accountPublicKey, signerAddress, alias, version } = linkedAccount;
 
+      const isAdded = await this.sdk.userExists(accountPublicKey);
+      if (!isAdded) {
+        await this.db.deleteAccount(accountPublicKey);
+        throw new Error('Account not added.');
+      }
+
       const isRegistered = await this.sdk.isAccountRegistered(accountPublicKey, true);
       if (!isRegistered) {
         await this.db.deleteAccount(accountPublicKey);
         throw new Error('Account not registered.');
       }
 
-      const { accountPrivateKey } = await this.sdk.getUserData(accountPublicKey);
+      // accountPrivateKey won't be used in the dapp once user's been added and registered.
+      const accountPrivateKey = Buffer.alloc(0);
       this.keyVault = new KeyVault(accountPrivateKey, accountPublicKey, signerAddress, version);
 
       this.updateLoginState({
@@ -659,7 +666,9 @@ export class UserSession extends EventEmitter {
   }
 
   private async initUserAccount(userId: GrumpkinAddress, awaitSynchronised = true) {
-    await this.accountUtils.addUser(this.keyVault.accountPrivateKey);
+    if (!(await this.sdk.userExists(userId))) {
+      await this.accountUtils.addUser(this.keyVault.accountPrivateKey);
+    }
 
     await this.reviveUserProvider();
 
@@ -822,8 +831,8 @@ export class UserSession extends EventEmitter {
   private handleUserStateChange = async (userId: GrumpkinAddress) => {
     if (!this.account?.userId.equals(userId)) return;
 
-    const user = await this.sdk.getUserData(userId);
-    this.worldState = { ...this.worldState, accountSyncedToRollup: user.syncedToRollup };
+    const accountSyncedToRollup = await this.sdk.getUserSyncedToRollup(userId);
+    this.worldState = { ...this.worldState, accountSyncedToRollup };
     this.emit(UserSessionEvent.UPDATED_WORLD_STATE, this.worldState);
   };
 
@@ -890,18 +899,17 @@ export class UserSession extends EventEmitter {
   }
 
   private async awaitUserSynchronised(userId: GrumpkinAddress) {
-    const { latestRollup, accountSyncedToRollup } = this.worldState;
-    if (accountSyncedToRollup > -1 || latestRollup === -1) {
-      await this.sdk.awaitUserSynchronised(userId);
-    } else {
-      // If sync from rollup 0, sdk.awaitUserSynchronised will resolve immediately.
-      while ((await this.sdk.getUserData(userId)).syncedToRollup < latestRollup) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        if (this.destroyed) {
-          throw new Error('Session destroyed.');
-        }
+    // Timeout every second so that we can stop this loop when the session is destroyed.
+    const timeout = 1;
+    while (!this.destroyed) {
+      try {
+        await this.sdk.awaitUserSynchronised(userId, timeout);
+        return;
+      } catch (e) {
+        // timeout
       }
     }
+    throw new Error('Session destroyed.');
   }
 
   private async rollupContractAddressChanged() {

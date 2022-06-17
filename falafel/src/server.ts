@@ -48,7 +48,8 @@ export class Server {
       runtimeConfig: {
         publishInterval,
         flushAfterIdle,
-        maxProviderGasPrice,
+        maxFeePerGas,
+        maxPriorityFeePerGas,
         gasLimit,
         defaultDeFiBatchSize,
         bridgeConfigs,
@@ -91,7 +92,8 @@ export class Server {
       signingAddress,
       publishInterval,
       flushAfterIdle,
-      maxProviderGasPrice,
+      maxFeePerGas,
+      maxPriorityFeePerGas,
       gasLimit,
       numInnerRollupTxs,
       numOuterRollupProofs,
@@ -154,12 +156,14 @@ export class Server {
   }
 
   public async setRuntimeConfig(config: Partial<RuntimeConfig>) {
+    this.log('Updating runtime config...');
     this.configurator.saveRuntimeConfig(config);
     const {
       runtimeConfig: {
         publishInterval,
         flushAfterIdle,
-        maxProviderGasPrice,
+        maxFeePerGas,
+        maxPriorityFeePerGas,
         gasLimit,
         defaultDeFiBatchSize,
         bridgeConfigs,
@@ -173,7 +177,14 @@ export class Server {
     this.worldState.setTxFeeResolver(this.txFeeResolver);
     this.txReceiver.setTxFeeResolver(this.txFeeResolver);
     this.bridgeResolver.setConf(defaultDeFiBatchSize, bridgeConfigs);
-    this.pipelineFactory.setConf(this.txFeeResolver, publishInterval, flushAfterIdle, maxProviderGasPrice, gasLimit);
+    this.pipelineFactory.setConf(
+      this.txFeeResolver,
+      publishInterval,
+      flushAfterIdle,
+      maxFeePerGas,
+      maxPriorityFeePerGas,
+      gasLimit,
+    );
 
     await this.worldState.restartPipeline();
   }

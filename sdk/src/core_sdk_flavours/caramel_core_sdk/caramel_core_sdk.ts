@@ -212,8 +212,8 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
     return this.core.sendProofs(proofs);
   }
 
-  public async awaitSynchronised() {
-    await this.core.awaitSynchronised();
+  public async awaitSynchronised(timeout?: number) {
+    await this.core.awaitSynchronised(timeout);
   }
 
   public async isUserSynching(userId: string) {
@@ -221,9 +221,9 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
     return this.core.isUserSynching(userId);
   }
 
-  public async awaitUserSynchronised(userId: string) {
+  public async awaitUserSynchronised(userId: string, timeout?: number) {
     await this.checkPermission(userId);
-    await this.core.awaitUserSynchronised(userId);
+    await this.core.awaitUserSynchronised(userId, timeout);
   }
 
   public async awaitSettlement(txId: string, timeout?: number) {
@@ -250,15 +250,10 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
     return (await this.hasPermission(userId)) && (await this.core.userExists(userId));
   }
 
-  public async getUserData(userId: string) {
-    await this.checkPermission(userId);
-    return this.core.getUserData(userId);
-  }
-
-  public async getUsersData() {
-    const usersData = await this.core.getUsersData();
-    const permissions = await Promise.all(usersData.map(u => this.hasPermission(u.id)));
-    return usersData.filter((_, i) => permissions[i]);
+  public async getUsers() {
+    const accountPublicKeys = await this.core.getUsers();
+    const permissions = await Promise.all(accountPublicKeys.map(pk => this.hasPermission(pk)));
+    return accountPublicKeys.filter((_, i) => permissions[i]);
   }
 
   public async derivePublicKey(privateKey: Uint8Array) {
@@ -269,13 +264,13 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
     return this.core.constructSignature(message, privateKey);
   }
 
-  public async addUser(privateKey: Uint8Array, noSync?: boolean) {
+  public async addUser(accountPrivateKey: Uint8Array, noSync?: boolean) {
     return this.serialQueue.push(async () => {
       let addUserError: Error;
       try {
-        const userData = await this.core.addUser(privateKey, noSync);
-        await this.addPermission(userData.id);
-        return userData;
+        const accountPublicKey = await this.core.addUser(accountPrivateKey, noSync);
+        await this.addPermission(accountPublicKey);
+        return accountPublicKey;
       } catch (e: any) {
         // User probably already exists.
         addUserError = e;
@@ -283,14 +278,13 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
 
       // Get user data.
       // It will throw if the user doesn't exist, which means something went wrong while calling core.addUser().
-      const userId = await this.core.derivePublicKey(privateKey);
-      try {
-        const userData = await this.core.getUserData(userId);
-        await this.addPermission(userId);
-        return userData;
-      } catch (e) {
+      const userId = await this.core.derivePublicKey(accountPrivateKey);
+      if (!(await this.core.userExists(userId))) {
         throw addUserError;
       }
+
+      await this.addPermission(userId);
+      return userId;
     });
   }
 
@@ -303,6 +297,11 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
       }
       await this.removePermission(userId);
     });
+  }
+
+  public async getUserSyncedToRollup(userId: string) {
+    await this.checkPermission(userId);
+    return this.core.getUserSyncedToRollup(userId);
   }
 
   public async getSpendingKeys(userId: string) {
