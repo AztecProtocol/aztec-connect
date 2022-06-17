@@ -57,15 +57,13 @@ export class WorldState {
   }
 
   public async insertElements(startIndex: number, elements: Buffer[]) {
-    debug(`update elements at index ${startIndex} with ${elements.length} leaves...`);
     const subRootIndex = this.convertNoteIndexToSubTreeIndex(startIndex);
     await this.tree.updateElements(subRootIndex, elements);
     this.logTreeStats();
   }
 
   public logTreeStats() {
-    const subTreeSize = 1 << this.subTreeDepth;
-    debug(`data size: ${this.tree.getSize() * subTreeSize}`);
+    debug(`data size: ${this.tree.getSize()}`);
     debug(`data root: ${this.tree.getRoot().toString('hex')}`);
   }
 

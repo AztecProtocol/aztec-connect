@@ -42,7 +42,6 @@ import { CoreSdkInterface } from './core_sdk_interface';
 import { CoreSdkOptions } from './core_sdk_options';
 import { SdkEvent, SdkStatus } from './sdk_status';
 import { sdkVersion } from './sdk_version';
-import { Block } from '@aztec/barretenberg/block_source';
 import { UserData } from '../user';
 
 const debug = createDebugLogger('bb:core_sdk');
@@ -986,18 +985,24 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
 
     // First we focus on bringing the core in sync (mutable data tree layers and accounts).
     // Server will return a chunk of blocks.
+    const timer = new Timer();
+    debug(`fetching blocks from ${from}...`);
     const coreBlocks = await this.rollupProvider.getBlocks(from);
+    if (coreBlocks.length) {
+      debug(`creating contexts for blocks ${from} to ${from + coreBlocks.length}...`);
+    }
+    const coreBlockContexts = coreBlocks.map(b => BlockContext.fromBlock(b, this.pedersen));
 
     if (coreBlocks.length) {
-      debug(`synching blocks ${from} to ${from + coreBlocks.length}...`);
-
       // For debugging corrupted data root.
       const oldRoot = this.worldState.getRoot();
 
-      const rollups = coreBlocks.map(b => RollupProofData.fromBuffer(b.rollupProofData));
+      const rollups = coreBlockContexts.map(b => b.rollup);
       const offchainTxData = coreBlocks.map(b => b.offchainTxData);
       const subtreeRoots = coreBlocks.map(block => block.subtreeRoot!);
+      debug(`inserting ${subtreeRoots.length} rollup roots into data tree...`);
       await this.worldState.insertElements(rollups[0].dataStartIndex, subtreeRoots);
+      debug(`processing aliases...`);
       await this.processAliases(rollups, offchainTxData);
       await this.writeSyncInfo(rollups[rollups.length - 1].rollupId);
 
@@ -1022,27 +1027,27 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
         return;
       }
 
-      debug('done.');
-    }
+      debug(`forwarding blocks to user states...`);
+      await Promise.all(this.userStates.map(us => us.processBlocks(coreBlockContexts)));
 
-    const forwardBlocksToUserStates = async (blocks: Block[]) => {
-      // BlockContexts wrap a block, and are shared amongst user states. Allows reuse of subtree computations.
-      const blockContexts = blocks.map(block => new BlockContext(block, this.pedersen));
-      // Forward the block contexts on to each UserState for processing.
-      await Promise.all(this.userStates.map(us => us.processBlocks(blockContexts)));
-    };
+      debug(`finished processing blocks ${from} to ${from + coreBlocks.length} in ${timer.s()}s...`);
+    }
 
     // Secondly we want bring user states in sync. Determine the lowest block.
     const userSyncedToRollup = Math.min(...this.userStates.map(us => us.getUserData().syncedToRollup));
 
-    // If it's lower than we downloaded for core, fetch blocks.
+    // If it's lower than we downloaded for core, fetch and process blocks.
     if (userSyncedToRollup < syncedToRollup) {
-      debug(`fetching blocks from ${userSyncedToRollup + 1} for user states...`);
-      const userBlocks = await this.rollupProvider.getBlocks(userSyncedToRollup + 1);
-      await forwardBlocksToUserStates(userBlocks);
+      const timer = new Timer();
+      const from = userSyncedToRollup + 1;
+      debug(`fetching blocks from ${from} for user states...`);
+      const userBlocks = await this.rollupProvider.getBlocks(from);
+      debug(`creating contexts for blocks ${from} to ${from + userBlocks.length}...`);
+      const userBlockContexts = userBlocks.map(b => BlockContext.fromBlock(b, this.pedersen));
+      debug(`forwarding blocks to user states...`);
+      await Promise.all(this.userStates.map(us => us.processBlocks(userBlockContexts)));
+      debug(`finished processing user state blocks ${from} to ${from + coreBlocks.length} in ${timer.s()}s...`);
     }
-
-    await forwardBlocksToUserStates(coreBlocks);
   }
 
   /**
@@ -1113,7 +1118,6 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       return aliases;
     };
 
-    debug(`processing aliases...`);
     const aliases = rollups.map((rollup, i) => processRollup(rollup, offchainTxData[i])).flat();
     await this.db.addAliases(aliases);
   }

@@ -5,7 +5,11 @@ import { EventEmitter } from 'events';
 jest.setTimeout(10 * 60 * 1000);
 EventEmitter.defaultMaxListeners = 30;
 
-const { ETHEREUM_HOST = 'http://localhost:8545', ROLLUP_HOST = 'http://localhost:8081' } = process.env;
+const {
+  ETHEREUM_HOST = 'http://localhost:8545',
+  ROLLUP_HOST = 'http://localhost:8081',
+  PRIVATE_KEY = '',
+} = process.env;
 
 /**
  * Not really a test. But provides a convienient way of analysing a startup sync.
@@ -20,12 +24,21 @@ describe('end-to-end sync tests', () => {
     const ethersProvider = new JsonRpcProvider(ETHEREUM_HOST);
     const ethereumProvider = new EthersAdapter(ethersProvider);
     const walletProvider = new WalletProvider(ethereumProvider);
+    if (PRIVATE_KEY) {
+      walletProvider.addAccount(Buffer.from(PRIVATE_KEY, 'hex'));
+    }
 
     sdk = await createAztecSdk(walletProvider, {
       serverUrl: ROLLUP_HOST,
       memoryDb: true,
       minConfirmation: 1,
     });
+
+    if (PRIVATE_KEY) {
+      const keyPair = await sdk.generateAccountKeyPair(walletProvider.getAccount(0), walletProvider);
+      await sdk.addUser(keyPair.privateKey);
+    }
+
     await sdk.run();
   });
 

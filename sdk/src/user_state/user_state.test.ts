@@ -28,6 +28,7 @@ import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
 import { randomBytes } from 'crypto';
+import { BlockContext } from '../block_context/block_context';
 import { CoreDefiTx, CorePaymentTx, PaymentProofId } from '../core_tx';
 import { Database } from '../database';
 import { Note } from '../note';
@@ -77,13 +78,16 @@ describe('user state', () => {
 
   const createBlockContext = (block: Block) => {
     return {
-      block,
+      rollup: RollupProofData.fromBuffer(block.rollupProofData),
+      created: block.created,
+      offchainTxData: block.offchainTxData,
+      interactionResult: block.interactionResult,
       getBlockSubtreeHashPath: async function (index: number) {
         const path = createHashPath(11);
         generatedHashPaths[index] = path;
         return path;
       },
-    } as any;
+    } as BlockContext;
   };
 
   const addInputNote = (

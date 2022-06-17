@@ -52,7 +52,7 @@ describe('block_context', () => {
 
   it('should provide expected hash path', async () => {
     const block = buildBlock(1, 64, 32);
-    const blockContext = new BlockContext(block, pedersen);
+    const blockContext = BlockContext.fromBlock(block, pedersen);
     const noteIndex = 75;
     const indexIntoBlock = noteIndex - 64;
     expectedHashPaths[indexIntoBlock] = buildRandomHashPath(5);
@@ -72,7 +72,7 @@ describe('block_context', () => {
 
   it('should throw if index out of bounds', async () => {
     const block = buildBlock(1, 64, 32);
-    const blockContext = new BlockContext(block, pedersen);
+    const blockContext = BlockContext.fromBlock(block, pedersen);
     await expect(async () => {
       await blockContext.getBlockSubtreeHashPath(129);
     }).rejects.toThrow('Index out of bounds.');
@@ -83,7 +83,7 @@ describe('block_context', () => {
 
   it('should only build sub tree once', async () => {
     const block = buildBlock(3, 192, 32);
-    const blockContext = new BlockContext(block, pedersen);
+    const blockContext = BlockContext.fromBlock(block, pedersen);
     for (let i = 0; i < 64; i++) {
       const noteIndex = 192 + i;
       const indexIntoBlock = i;
@@ -105,13 +105,13 @@ describe('block_context', () => {
 
   it('should not build sub tree if not required', async () => {
     const block = buildBlock(3, 192, 32);
-    new BlockContext(block, pedersen);
+    BlockContext.fromBlock(block, pedersen);
     expect(mockMerkleFactory).toBeCalledTimes(0);
   });
 
   it('should only build sub tree once with concurrent calls', async () => {
     const block = buildBlock(3, 192, 32);
-    const blockContext = new BlockContext(block, pedersen);
+    const blockContext = BlockContext.fromBlock(block, pedersen);
     for (let i = 0; i < 64; i++) {
       expectedHashPaths[i] = buildRandomHashPath(5);
     }

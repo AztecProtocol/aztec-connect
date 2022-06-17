@@ -97,3 +97,4 @@ export interface BlockSource {
 }
 
 export * from './server_block_source';
+export * from './defi_interaction_event';
