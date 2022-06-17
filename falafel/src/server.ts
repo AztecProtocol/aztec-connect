@@ -284,7 +284,7 @@ export class Server {
     const chainId = await this.blockchain.getChainId();
     const accountFileName = InitHelpers.getAccountDataFile(chainId);
     const initialAccounts = accountFileName ? await InitHelpers.readData(accountFileName) : Buffer.alloc(0);
-    return { initialAccounts };
+    return { initialAccounts, initialSubtreeRoots: this.worldState.getInitialStateSubtreeRoots() };
   }
 
   public async getUnsettledTxs() {

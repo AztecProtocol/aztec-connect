@@ -64,6 +64,30 @@ export const pendingTxFromJson = ({ txId, noteCommitment1, noteCommitment2 }: Pe
   noteCommitment2: Buffer.from(noteCommitment2, 'hex'),
 });
 
+export interface InitialWorldState {
+  initialAccounts: Buffer;
+  initialSubtreeRoots: Buffer[];
+}
+
+export const initialWorldStateToBuffer = (initialWorldState: InitialWorldState): Buffer => {
+  const accountsSizeBuf = Buffer.alloc(4);
+  accountsSizeBuf.writeUInt32BE(initialWorldState.initialAccounts.length);
+  return Buffer.concat([accountsSizeBuf, initialWorldState.initialAccounts, ...initialWorldState.initialSubtreeRoots]);
+};
+
+export const initialWorldStateFromBuffer = (data: Buffer): InitialWorldState => {
+  const accountsSize = data.readUInt32BE(0);
+  const subTreeStart = 4 + accountsSize;
+  const initialWorldState = {
+    initialAccounts: data.slice(4, subTreeStart),
+    initialSubtreeRoots: [],
+  } as InitialWorldState;
+  // each sub tree root is 32 bytes
+  for (let i = subTreeStart; i < data.length; i += 32) {
+    initialWorldState.initialSubtreeRoots.push(data.slice(i, i + 32));
+  }
+  return initialWorldState;
+};
 export interface DepositTx {
   assetId: number;
   value: bigint;

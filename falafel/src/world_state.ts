@@ -69,6 +69,7 @@ export class WorldState {
   private blockBufferCache: Buffer[] = [];
   private txPoolProfile!: TxPoolProfile;
   private txPoolProfileValidUntil!: Date;
+  private initialSubtreeRootsCache: Buffer[] = [];
 
   constructor(
     public rollupDb: RollupDb,
@@ -128,6 +129,10 @@ export class WorldState {
     } as RollupTimeouts;
   }
 
+  public getInitialStateSubtreeRoots() {
+    return this.initialSubtreeRootsCache;
+  }
+
   public async getTxPoolProfile() {
     // getPendingTxs from rollup db
     // remove the tranasctions that we know are in the next rollup currently being built
@@ -179,6 +184,23 @@ export class WorldState {
 
   public flushTxs() {
     this.pipeline?.flushTxs();
+  }
+
+  private async cacheInitialStateSubtreeRoots() {
+    const chainId = await this.blockchain.getChainId();
+    const dataSize = InitHelpers.getInitDataSize(chainId);
+    const numNotesPerRollup = WorldStateConstants.NUM_NEW_DATA_TREE_NOTES_PER_TX * this.getRollupSize();
+    const numRollups = Math.floor(dataSize / numNotesPerRollup) + (dataSize % numNotesPerRollup ? 1 : 0);
+    const subtreeDepth = Math.ceil(Math.log2(numNotesPerRollup));
+    for (let i = 0; i < numRollups; i++) {
+      const subtreeRoot = await this.worldStateDb.getSubtreeRoot(
+        RollupTreeId.DATA,
+        BigInt(i * numNotesPerRollup),
+        subtreeDepth,
+      );
+      this.initialSubtreeRootsCache.push(subtreeRoot);
+    }
+    this.log(`Cached ${this.initialSubtreeRootsCache.length} initial sub-tree roots`);
   }
 
   private async syncStateFromInitFiles() {
@@ -260,6 +282,7 @@ export class WorldState {
       await this.syncStateFromInitFiles();
     }
     await this.syncStateFromBlockchain(nextRollupId);
+    await this.cacheInitialStateSubtreeRoots();
 
     // This deletes all proofs created until now. Not ideal, figure out a way to resume.
     await this.rollupDb.deleteUnsettledRollups();

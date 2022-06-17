@@ -89,4 +89,7 @@ export interface Database extends MutexDatabase {
   addKey(name: string, value: Buffer): Promise<void>;
   getKey(name: string): Promise<Buffer | undefined>;
   deleteKey(name: string): Promise<void>;
+
+  setGenesisData(data: Buffer): Promise<void>;
+  getGenesisData(): Promise<Buffer>;
 }

@@ -17,6 +17,9 @@ import {
   randomUser,
 } from './fixtures';
 
+// some of the bulk saving operations take a few seconds to complete
+jest.setTimeout(10000);
+
 export const databaseTestSuite = (
   dbName: string,
   createDb: () => Promise<Database>,
@@ -740,6 +743,19 @@ export const databaseTestSuite = (
         expect(savedKeys).toEqual(expect.arrayContaining([key2, key4]));
       });
 
+      it('writing duplicate spending keys does not error', async () => {
+        const userId = GrumpkinAddress.random();
+        const key1 = randomSpendingKey({ userId });
+        const key2 = { ...randomSpendingKey({ userId }), treeIndex: key1.treeIndex + 1 };
+
+        await db.addSpendingKeys([key1, key2]);
+        await expect(db.addSpendingKeys([key1, key2])).resolves.not.toThrow();
+
+        const savedKeys = await db.getSpendingKeys(userId);
+        expect(savedKeys.length).toBe(2);
+        expect(savedKeys).toEqual(expect.arrayContaining([key1, key2]));
+      });
+
       it('remove all spending keys of given user id', async () => {
         const generateAccountSpendingKeys = async (userId: GrumpkinAddress, numKeys = 3) => {
           const keys: SpendingKey[] = [];
@@ -785,7 +801,7 @@ export const databaseTestSuite = (
 
       it('bulk saves spendingKeys', async () => {
         const keys = Array<SpendingKey>();
-        const numKeys = 1000;
+        const numKeys = 500;
         for (let i = 0; i < numKeys; i++) {
           keys.push(randomSpendingKey());
         }
@@ -803,8 +819,13 @@ export const databaseTestSuite = (
         [dbKey] = await db.getSpendingKeys(keys[101].userId);
         expect(dbKey).toEqual(keys[101]);
 
-        [dbKey] = await db.getSpendingKeys(keys[999].userId);
-        expect(dbKey).toEqual(keys[999]);
+        [dbKey] = await db.getSpendingKeys(keys[numKeys - 1].userId);
+        expect(dbKey).toEqual(keys[numKeys - 1]);
+
+        await expect(db.addSpendingKeys(keys)).resolves.not.toThrow();
+
+        [dbKey] = await db.getSpendingKeys(keys[numKeys - 1].userId);
+        expect(dbKey).toEqual(keys[numKeys - 1]);
       });
     });
 
@@ -880,6 +901,21 @@ export const databaseTestSuite = (
         await db.addKey(name, key);
 
         expect(await db.getKey(name)).toEqual(key);
+
+        await db.deleteKey(name);
+
+        expect(await db.getKey(name)).toBeUndefined();
+      });
+
+      it('adding duplicate key overrides value', async () => {
+        const name = 'secretKey';
+        const key = randomBytes(1000);
+        const key2 = randomBytes(500);
+        await db.addKey(name, key);
+
+        await expect(db.addKey(name, key2)).resolves.not.toThrow();
+
+        expect(await db.getKey(name)).toEqual(key2);
 
         await db.deleteKey(name);
 
@@ -1052,6 +1088,30 @@ export const databaseTestSuite = (
         expect(await db.getKey(keyName)).toBeUndefined();
         expect(await db.getSpendingKey(spendingKey.userId, fullKey)).toBeUndefined();
         expect(await db.getPaymentTx(tx.userId, tx.txId)).toBeUndefined();
+      });
+    });
+
+    describe('genesis data', () => {
+      it('stores genesis data', async () => {
+        const data = randomBytes(50000);
+        await expect(db.setGenesisData(data)).resolves.not.toThrow();
+        const saved = await db.getGenesisData();
+        expect(saved.equals(data)).toBe(true);
+      });
+      it('stores large genesis data', async () => {
+        const data = randomBytes(21000000);
+        await expect(db.setGenesisData(data)).resolves.not.toThrow();
+        const saved = await db.getGenesisData();
+        expect(saved.equals(data)).toBe(true);
+      });
+      it('returns empty buffer if no genesis data present', async () => {
+        const saved = await db.getGenesisData();
+        expect(saved).not.toBeUndefined();
+        expect(saved.equals(Buffer.alloc(0))).toBe(true);
+        const data = randomBytes(50000);
+        await expect(db.setGenesisData(data)).resolves.not.toThrow();
+        const newSaved = await db.getGenesisData();
+        expect(newSaved.equals(data)).toBe(true);
       });
     });
   });

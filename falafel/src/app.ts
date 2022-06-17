@@ -8,6 +8,7 @@ import {
   PendingTxJson,
   rollupProviderStatusToJson,
   TxJson,
+  initialWorldStateToBuffer,
 } from '@aztec/barretenberg/rollup_provider';
 import { numToInt32BE, serializeBufferArrayToVector } from '@aztec/barretenberg/serialize';
 import cors from '@koa/cors';
@@ -186,7 +187,7 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
 
   router.get('/get-initial-world-state', recordMetric, async (ctx: Koa.Context) => {
     const response = await server.getInitialWorldState();
-    ctx.body = response.initialAccounts;
+    ctx.body = initialWorldStateToBuffer(response);
     ctx.status = 200;
   });
 

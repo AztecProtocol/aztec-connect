@@ -112,6 +112,7 @@ export class SQLDatabase implements Database {
   private userDataRep: Repository<UserDataDao>;
   private spendingKeyRep: Repository<SpendingKeyDao>;
   private mutex: Repository<MutexDao>;
+  private readonly genesisDataKey = 'genesisData';
 
   constructor(private connection: Connection) {
     this.accountTxRep = this.connection.getRepository(AccountTxDao);
@@ -438,5 +439,14 @@ export class SQLDatabase implements Database {
 
   async releaseLock(name: string) {
     await this.mutex.delete({ name });
+  }
+
+  public async setGenesisData(data: Buffer) {
+    await this.addKey(this.genesisDataKey, data);
+  }
+
+  public async getGenesisData() {
+    const data = await this.getKey(this.genesisDataKey);
+    return data ?? Buffer.alloc(0);
   }
 }

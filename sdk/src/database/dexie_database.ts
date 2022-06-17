@@ -404,6 +404,7 @@ export class DexieDatabase implements Database {
   private spendingKey!: Dexie.Table<DexieSpendingKey, Uint8Array>;
   private user!: Dexie.Table<DexieUser, Uint8Array>;
   private userTx!: Dexie.Table<DexieUserTx, Uint8Array>;
+  private readonly genesisDataKey = 'genesisData';
 
   constructor(private dbName = 'hummus', private version = 7) {}
 
@@ -802,5 +803,14 @@ export class DexieDatabase implements Database {
 
   async releaseLock(name: string) {
     await this.mutex.delete(name);
+  }
+
+  public async setGenesisData(data: Buffer) {
+    await this.addKey(this.genesisDataKey, data);
+  }
+
+  public async getGenesisData() {
+    const data = await this.getKey(this.genesisDataKey);
+    return data ?? Buffer.alloc(0);
   }
 }

@@ -5,7 +5,13 @@ import { BridgeId } from '../bridge_id';
 import { fetch } from '../iso_fetch';
 import { Tx } from '../rollup_provider';
 import { TxId } from '../tx_id';
-import { depositTxFromJson, pendingTxFromJson, RollupProvider, txToJson } from './rollup_provider';
+import {
+  depositTxFromJson,
+  pendingTxFromJson,
+  RollupProvider,
+  txToJson,
+  initialWorldStateFromBuffer,
+} from './rollup_provider';
 import { rollupProviderStatusFromJson } from './rollup_provider_status';
 
 export class ServerRollupProvider extends ServerBlockSource implements RollupProvider {
@@ -66,9 +72,7 @@ export class ServerRollupProvider extends ServerBlockSource implements RollupPro
   async getInitialWorldState() {
     const response = await this.fetch('/get-initial-world-state');
     const arrBuffer = await response.arrayBuffer();
-    return {
-      initialAccounts: Buffer.from(arrBuffer),
-    };
+    return initialWorldStateFromBuffer(Buffer.from(arrBuffer));
   }
 
   async isAccountRegistered(accountPublicKey: GrumpkinAddress) {

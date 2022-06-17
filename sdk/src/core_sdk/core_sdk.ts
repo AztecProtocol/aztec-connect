@@ -6,10 +6,9 @@ import { AccountProver, JoinSplitProver, ProofId, UnrolledProver } from '@aztec/
 import { Crs } from '@aztec/barretenberg/crs';
 import { Blake2s, Pedersen, randomBytes, Schnorr } from '@aztec/barretenberg/crypto';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
-import { AccountData, InitHelpers } from '@aztec/barretenberg/environment';
+import { InitHelpers } from '@aztec/barretenberg/environment';
 import { FftFactory } from '@aztec/barretenberg/fft';
 import { createDebugLogger } from '@aztec/barretenberg/log';
-import { HashPath, MemoryMerkleTree } from '@aztec/barretenberg/merkle_tree';
 import { NoteAlgorithms, NoteDecryptor } from '@aztec/barretenberg/note_algorithms';
 import { OffchainAccountData } from '@aztec/barretenberg/offchain_tx_data';
 import { Pippenger } from '@aztec/barretenberg/pippenger';
@@ -25,7 +24,8 @@ import { EventEmitter } from 'events';
 import { LevelUp } from 'levelup';
 import { BlockContext } from '../block_context/block_context';
 import { CorePaymentTx, createCorePaymentTxForRecipient } from '../core_tx';
-import { Alias, Database, SpendingKey } from '../database';
+import { Alias, Database } from '../database';
+import { parseGenesisAliasesAndKeys, getUserSpendingKeysFromGenesisData } from '../genesis_state.ts';
 import { Note } from '../note';
 import {
   AccountProofCreator,
@@ -82,11 +82,15 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     serverUrl: '',
     chainId: -1,
     rollupContractAddress: EthAddress.ZERO,
+    verifierContractAddress: EthAddress.ZERO,
     feePayingAssetIds: [0],
+    rollupSize: -1,
     syncedToRollup: -1,
     latestRollupId: -1,
     dataRoot: Buffer.alloc(0),
     dataSize: 0,
+    useKeyCache: false,
+    proverless: false,
     version: sdkVersion,
   };
   private initState = SdkInitState.UNINITIALIZED;
@@ -141,9 +145,10 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       this.worldState = new WorldState(this.leveldb, this.pedersen);
 
       const {
-        blockchainStatus: { chainId, rollupContractAddress },
-        runtimeConfig: { feePayingAssetIds },
+        blockchainStatus: { chainId, rollupContractAddress, verifierContractAddress },
+        runtimeConfig: { feePayingAssetIds, useKeyCache },
         rollupSize,
+        proverless,
       } = await this.getRemoteStatus();
 
       // Clear all data if contract changed.
@@ -172,11 +177,15 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
         serverUrl: options.serverUrl,
         chainId,
         rollupContractAddress,
+        verifierContractAddress,
         feePayingAssetIds,
-        dataSize: this.worldState.getSize(),
-        dataRoot: this.worldState.getRoot(),
+        rollupSize,
         syncedToRollup,
         latestRollupId: await this.rollupProvider.getLatestRollupId(),
+        dataSize: this.worldState.getSize(),
+        dataRoot: this.worldState.getRoot(),
+        useKeyCache,
+        proverless,
       };
 
       this.initState = SdkInitState.INITIALIZED;
@@ -302,6 +311,8 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       const user: UserData = { accountPrivateKey, accountPublicKey, syncedToRollup };
       await this.db.addUser(user);
 
+      await this.addInitialUserSpendingKeys([user.accountPublicKey]);
+
       const userState = await this.userStateFactory.createUserState(user);
       userState.on(UserStateEvent.UPDATED_USER_STATE, id => this.emit(SdkEvent.UPDATED_USER_STATE, id));
       this.userStates.push(userState);
@@ -315,6 +326,17 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
 
       return accountPublicKey;
     });
+  }
+
+  private async retrieveGenesisData() {
+    const stored = await this.db.getGenesisData();
+    if (stored.length) {
+      return stored;
+    }
+    debug('genesis data not found locally, retrieving from server...');
+    const serverData = await this.rollupProvider.getInitialWorldState();
+    await this.db.setGenesisData(serverData.initialAccounts);
+    return serverData.initialAccounts;
   }
 
   public async removeUser(userId: GrumpkinAddress) {
@@ -411,11 +433,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       .push(async () => {
         const { useKeyCache: localUseKeyCache } = this.options;
 
-        const {
-          proverless,
-          blockchainStatus: { verifierContractAddress },
-          runtimeConfig: { useKeyCache },
-        } = await this.getRemoteStatus();
+        const { proverless, verifierContractAddress, useKeyCache } = this.sdkStatus;
 
         const vca = await this.getLocalVerifierContractAddress();
         const forceCreateProvingKeys =
@@ -787,10 +805,30 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   private async initUserStates() {
     debug('initializing user states...');
     const users = await this.db.getUsers();
+    await this.addInitialUserSpendingKeys(users.map(x => x.accountPublicKey));
     this.userStates = await Promise.all(users.map(u => this.userStateFactory.createUserState(u)));
     this.userStates.forEach(us =>
       us.on(UserStateEvent.UPDATED_USER_STATE, id => this.emit(SdkEvent.UPDATED_USER_STATE, id)),
     );
+  }
+
+  private async addInitialUserSpendingKeys(userIds: GrumpkinAddress[]) {
+    if (!userIds.length) {
+      return;
+    }
+    const genesisAccountsData = await this.retrieveGenesisData();
+    if (genesisAccountsData.length) {
+      const spendingKeys = await getUserSpendingKeysFromGenesisData(
+        userIds,
+        genesisAccountsData,
+        this.pedersen,
+        this.sdkStatus.rollupSize,
+      );
+      debug(`found ${spendingKeys.length} spending keys for user${userIds.length == 1 ? '' : 's'}`);
+      if (spendingKeys.length) {
+        await this.db.addSpendingKeys(spendingKeys);
+      }
+    }
   }
 
   private computeAliasHash(alias: string) {
@@ -869,65 +907,6 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     }
     debug(`done.`);
   }
-
-  private async syncGenesisAliasesAndKeys(accounts: AccountData[], hashPathMap: { [key: number]: HashPath }) {
-    const aliases: Alias[] = [];
-    const spendingKeys: SpendingKey[] = [];
-
-    // There can be duplicate account/spending key combinations.
-    // We need to just keep the most recent one.
-    // This loop simulates upserts by keeping the most recent version before inserting into the DB.
-    let treeIndex = 0;
-    for (const account of accounts) {
-      const {
-        alias: { aliasHash, address },
-        signingKeys: { signingKey1, signingKey2 },
-      } = account;
-      const accountPublicKey = new GrumpkinAddress(address);
-
-      aliases.push({
-        accountPublicKey,
-        aliasHash: new AliasHash(aliasHash),
-        index: treeIndex,
-      });
-
-      [signingKey1, signingKey2].forEach(key => {
-        spendingKeys.push({ userId: accountPublicKey, treeIndex, key, hashPath: hashPathMap[treeIndex].toBuffer() });
-        treeIndex++;
-      });
-    }
-
-    debug(`saving ${aliases.length} aliases...`);
-    await this.db.addAliases(aliases);
-    debug(`saving ${spendingKeys.length} spending keys...`);
-    await this.db.addSpendingKeys(spendingKeys);
-  }
-
-  // Returns a mapping of tree index to hash path for all account notes
-  private async syncGenesisCommitments(accounts: AccountData[]) {
-    const { rollupSize } = await this.getRemoteStatus();
-    const commitments = accounts.flatMap(x => [x.notes.note1, x.notes.note2]);
-    const size = 1 << Math.ceil(Math.log2(rollupSize));
-    const notesInSubtree = size * WorldStateConstants.NUM_NEW_DATA_TREE_NOTES_PER_TX;
-    let noteIndex = 0;
-    const hashPathMap: { [key: number]: HashPath } = {};
-    const roots: Buffer[] = [];
-    debug(`building immutable sub-trees from commitments...`);
-    while (commitments.length > 0) {
-      const slice = commitments.splice(0, notesInSubtree);
-      const zeroNotes = Array(notesInSubtree - slice.length).fill(MemoryMerkleTree.ZERO_ELEMENT);
-      const fullTreeNotes = [...slice, ...zeroNotes];
-      const merkleSubTree = await MemoryMerkleTree.new(fullTreeNotes, this.pedersen);
-      for (let i = 0; i < notesInSubtree; i++) {
-        hashPathMap[noteIndex++] = merkleSubTree.getHashPath(i);
-      }
-      roots.push(merkleSubTree.getRoot());
-    }
-    debug(`adding ${roots.length} subtree roots to data tree...`);
-    await this.worldState.insertElements(0, roots);
-    return hashPathMap;
-  }
-
   /**
    * If the world state has no data, download the initial world state data and process it.
    */
@@ -939,10 +918,16 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     debug('initialising genesis state from server...');
     const genesisTimer = new Timer();
     const initialState = await this.rollupProvider.getInitialWorldState();
-    const accounts = InitHelpers.parseAccountTreeData(initialState.initialAccounts);
-    const hashPathMap = await this.syncGenesisCommitments(accounts);
+    debug(
+      `received genesis state with ${initialState.initialAccounts.length} bytes and ${initialState.initialSubtreeRoots.length} sub-tree roots`,
+    );
+    await this.db.setGenesisData(initialState.initialAccounts);
+    await this.worldState.insertElements(0, initialState.initialSubtreeRoots);
     if (!commitmentsOnly) {
-      await this.syncGenesisAliasesAndKeys(accounts, hashPathMap);
+      const accounts = InitHelpers.parseAccountTreeData(initialState.initialAccounts);
+      const genesisData = parseGenesisAliasesAndKeys(accounts);
+      debug(`storing aliases to db...`);
+      await this.db.addAliases(genesisData.aliases);
     }
     debug(`genesis sync complete in ${genesisTimer.s()}s`);
   }
@@ -979,9 +964,9 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
 
     await this.leveldb.clear();
 
-    const { rollupSize } = await this.getRemoteStatus();
-
-    const subtreeDepth = Math.ceil(Math.log2(rollupSize * WorldStateConstants.NUM_NEW_DATA_TREE_NOTES_PER_TX));
+    const subtreeDepth = Math.ceil(
+      Math.log2(this.sdkStatus.rollupSize * WorldStateConstants.NUM_NEW_DATA_TREE_NOTES_PER_TX),
+    );
     await this.worldState.init(subtreeDepth);
     await this.genesisSync(true);
   }

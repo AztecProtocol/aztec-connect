@@ -312,6 +312,7 @@ describe('world_state', () => {
       on: jest.fn().mockImplementation((name: string, fn: (block: Block) => Promise<void>) => {
         blockchainEventEmitter = fn;
       }),
+      getChainId: jest.fn().mockResolvedValue(1),
       getBlocks: jest.fn().mockResolvedValue([]),
       start: jest.fn(),
       getRollupBalance: jest.fn().mockResolvedValue(0n),
@@ -329,6 +330,7 @@ describe('world_state', () => {
 
     pipelineFactory = {
       create: jest.fn().mockResolvedValue(pipeline),
+      getRollupSize: jest.fn().mockReturnValue(1024),
     } as any;
 
     metrics = {
