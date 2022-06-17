@@ -460,12 +460,10 @@ export class UserSession extends EventEmitter {
       return;
     }
 
-    const { accountPublicKey, accountPrivateKey } = this.keyVault;
-
+    const { accountPublicKey } = this.keyVault;
     // Add the user to the sdk so that the accountTx could be added for it.
     // claimUserName can now only be called for new registrations, hence there is nothing to sync
-    const noSync = true;
-    await this.accountUtils.addUser(accountPrivateKey, noSync);
+    await this.initUserAccount(accountPublicKey, false, true);
 
     try {
       await this.shieldForAliasForm.submit();
@@ -478,7 +476,6 @@ export class UserSession extends EventEmitter {
       return;
     }
 
-    await this.initUserAccount(accountPublicKey, false);
     this.toStep(LoginStep.DONE);
 
     this.shieldForAliasForm = undefined;
@@ -665,9 +662,9 @@ export class UserSession extends EventEmitter {
     this.accountUtils = new AccountUtils(this.sdk);
   }
 
-  private async initUserAccount(userId: GrumpkinAddress, awaitSynchronised = true) {
+  private async initUserAccount(userId: GrumpkinAddress, awaitSynchronised = true, noSync = false) {
     if (!(await this.sdk.userExists(userId))) {
-      await this.accountUtils.addUser(this.keyVault.accountPrivateKey);
+      await this.accountUtils.addUser(this.keyVault.accountPrivateKey, noSync);
     }
 
     await this.reviveUserProvider();
