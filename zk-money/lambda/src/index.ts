@@ -24,7 +24,18 @@ exports.main = async function (event: any, ctx: any, callback: any) {
   response.status = '200';
   response.statusDescription = 'OK';
 
-  let oldBody = await (await fetch('http://zk.money-aztec-connect-dev.s3-website.eu-west-2.amazonaws.com')).text();
+  const hosts = {
+    'zk.money': 'prod',
+    'https://zk.money': 'prod',
+    'aztec-connect-prod.zk.money': 'prod',
+    'https://aztec-connect-prod.zk.money': 'prod',
+    'aztec-connect-dev.zk.money': 'dev',
+    'https://aztec-connect-dev.zk.money': 'dev',
+  };
+  const hostName = request.headers['host'][0].value as keyof typeof hosts;
+  const host = hosts[hostName] || 'prod';
+
+  let oldBody = await (await fetch(`http://zk.money-aztec-connect-${host}.s3-website.eu-west-2.amazonaws.com`)).text();
 
   if (alias && lambdaPaths.indexOf(uri) > -1) {
     response.body = oldBody.replace(
