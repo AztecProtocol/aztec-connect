@@ -183,7 +183,6 @@ export class MerkleTree {
   }
 
   public async updateElements(index: number, values: Buffer[]) {
-    debug(`update elements at index ${index} with ${values.length} leaves...`);
     const zeroBuf = Buffer.alloc(32, 0);
     return await this.updateLeafHashes(
       index,

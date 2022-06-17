@@ -213,7 +213,7 @@ export class DepositController {
         provider: this.provider,
       });
     let txHash: TxHash | undefined;
-    if (isContract) {
+    if (!isContract) {
       txHash = await depositFunds();
     } else {
       const { pendingDeposit, requiredFunds } = pendingFundsStatus;
