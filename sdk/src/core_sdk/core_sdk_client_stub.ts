@@ -73,15 +73,15 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
   }
 
   public async isAccountRegistered(accountPublicKey: GrumpkinAddress, includePending: boolean) {
-    return this.backend.isAccountRegistered(accountPublicKey.toString(), includePending);
+    return await this.backend.isAccountRegistered(accountPublicKey.toString(), includePending);
   }
 
   public async isAliasRegistered(alias: string, includePending: boolean) {
-    return this.backend.isAliasRegistered(alias, includePending);
+    return await this.backend.isAliasRegistered(alias, includePending);
   }
 
   public async isAliasRegisteredToAccount(accountPublicKey: GrumpkinAddress, alias: string, includePending: boolean) {
-    return this.backend.isAliasRegisteredToAccount(accountPublicKey.toString(), alias, includePending);
+    return await this.backend.isAliasRegisteredToAccount(accountPublicKey.toString(), alias, includePending);
   }
 
   public async getAccountPublicKey(alias: string) {
@@ -240,7 +240,7 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
   }
 
   public async isUserSynching(userId: GrumpkinAddress) {
-    return this.backend.isUserSynching(userId.toString());
+    return await this.backend.isUserSynching(userId.toString());
   }
 
   public async awaitUserSynchronised(userId: GrumpkinAddress, timeout?: number) {
@@ -264,11 +264,11 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
   }
 
   public async getDefiInteractionNonce(txId: TxId) {
-    return this.backend.getDefiInteractionNonce(txId.toString());
+    return await this.backend.getDefiInteractionNonce(txId.toString());
   }
 
   public async userExists(userId: GrumpkinAddress) {
-    return this.backend.userExists(userId.toString());
+    return await this.backend.userExists(userId.toString());
   }
 
   public async getUsers() {
@@ -296,7 +296,7 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
   }
 
   public async getUserSyncedToRollup(userId: GrumpkinAddress) {
-    return this.backend.getUserSyncedToRollup(userId.toString());
+    return await this.backend.getUserSyncedToRollup(userId.toString());
   }
 
   public async getSpendingKeys(userId: GrumpkinAddress) {

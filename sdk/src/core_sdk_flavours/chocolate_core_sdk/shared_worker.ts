@@ -19,7 +19,7 @@ function main() {
    *     }]
    *   }
    */
-  const dispatchFn = async ({ fn, args }: DispatchMsg) => sharedWorkerBackend[fn](...args);
+  const dispatchFn = ({ fn, args }: DispatchMsg) => sharedWorkerBackend[fn](...args);
   const listener = new SharedWorkerTransportListener(self);
   const transportServer = new TransportServer(listener, dispatchFn);
   sharedWorkerBackend.on('dispatch_msg', (msg: DispatchMsg) => transportServer.broadcast(msg));

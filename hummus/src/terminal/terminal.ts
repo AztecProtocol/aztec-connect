@@ -70,7 +70,7 @@ export class Terminal extends EventEmitter {
     this.inputLocked = false;
   }
 
-  public async lock() {
+  public lock() {
     this.setCursor(spinnerCursor());
     this.inputLocked = true;
   }
@@ -156,8 +156,9 @@ export class Terminal extends EventEmitter {
       if (event.key.toLowerCase() === 'c') {
         this.cmd = '';
         this.newLine();
-        this.prompt();
-        this.updated();
+        this.prompt()
+          .then(() => this.updated())
+          .catch(() => {});
       }
       return;
     }

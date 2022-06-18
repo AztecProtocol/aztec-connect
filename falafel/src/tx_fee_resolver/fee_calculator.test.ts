@@ -67,12 +67,12 @@ describe('fee calculator', () => {
     );
   });
 
-  it('return correct min fees', async () => {
+  it('return correct min fees', () => {
     expect(feeCalculator.getMinTxFee(0, TxType.DEPOSIT, 0)).toBe(1483400n);
     expect(feeCalculator.getMinTxFee(1, TxType.DEPOSIT, 1)).toBe(741700n);
   });
 
-  it('returns the correct base gas values', async () => {
+  it('returns the correct base gas values', () => {
     const adjustedBaseGas = feeCalculator.getAdjustedBaseVerificationGas(TxType.DEPOSIT);
     const unadjustedBaseGas = feeCalculator.getUnadjustedBaseVerificationGas();
     const adjustmentValue = feeCalculator.getTxGasAdjustmentValue(TxType.DEPOSIT);
@@ -82,7 +82,7 @@ describe('fee calculator', () => {
     expect(adjustedBaseGas - unadjustedBaseGas).toBe(0);
   });
 
-  it('returns correct gas for an empty rollup slot', async () => {
+  it('returns correct gas for an empty rollup slot', () => {
     const verificationGasValues = [1000000, 5000000, 2500000];
     const txsPerRollupValues = [10, 28, 112, 896];
     for (const vGas of verificationGasValues) {
@@ -102,7 +102,7 @@ describe('fee calculator', () => {
     }
   });
 
-  it('returns correct adjusted gas', async () => {
+  it('returns correct adjusted gas', () => {
     const newTxsPerRollup = 896;
     feeCalculator = new FeeCalculator(
       priceTracker as any,

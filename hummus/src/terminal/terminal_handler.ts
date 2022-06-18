@@ -57,8 +57,8 @@ export class TerminalHandler {
   constructor(private terminal: Terminal) {}
 
   public start() {
-    this.controlQueue.process(fn => fn());
-    this.processPrint();
+    void this.controlQueue.process(fn => fn());
+    void this.processPrint();
     this.printQueue.put('\x01\x01\x01\x01aztec zero knowledge terminal.\x01\n');
 
     this.printQueue.put("type command or 'help'\n");
@@ -109,11 +109,12 @@ export class TerminalHandler {
   }
 
   private handleSdkDestroyed = () => {
-    this.controlQueue.put(async () => {
+    this.controlQueue.put(() => {
       this.printQueue.put(TermControl.LOCK);
       this.printQueue.put('\rlogged out. reinitialize.\n');
       this.printQueue.put(TermControl.PROMPT);
       this.unregisterHandlers();
+      return Promise.resolve();
     });
   };
 
@@ -152,7 +153,7 @@ export class TerminalHandler {
     }
   }
 
-  private async help() {
+  private help() {
     if (!this.sdk) {
       this.printQueue.put('init [server]\n');
     } else {

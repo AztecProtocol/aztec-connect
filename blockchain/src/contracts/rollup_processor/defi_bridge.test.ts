@@ -119,7 +119,7 @@ describe('rollup_processor: defi bridge', () => {
     await expectBalance(1, inputValue);
     await expectBalance(0, 0n);
 
-    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
     });
     const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
@@ -144,7 +144,7 @@ describe('rollup_processor: defi bridge', () => {
     await expectBalance(1, inputValue);
     await expectBalance(0, 0n);
 
-    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
     });
 
@@ -168,7 +168,7 @@ describe('rollup_processor: defi bridge', () => {
     await expectBalance(0, inputValue);
     await expectBalance(2, 0n);
 
-    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
     });
     const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
@@ -194,7 +194,7 @@ describe('rollup_processor: defi bridge', () => {
     await expectBalance(1, inputValue);
     await expectBalance(2, 0n);
 
-    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
     });
     const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
@@ -225,7 +225,7 @@ describe('rollup_processor: defi bridge', () => {
     await expectBalance(1, 100n);
     await expectBalance(2, 100n);
 
-    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [
         new DefiInteractionData(bridge0, 11n),
         new DefiInteractionData(bridge1, 12n),
@@ -270,7 +270,7 @@ describe('rollup_processor: defi bridge', () => {
     await expectBalance(1, initialTokenBalance);
     await expectBalance(2, 0n);
 
-    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
     });
     const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
@@ -301,7 +301,7 @@ describe('rollup_processor: defi bridge', () => {
     await expectBalance(1, initialTokenBalance);
     await expectBalance(2, initialTokenBalance);
 
-    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
     });
     const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
@@ -335,7 +335,7 @@ describe('rollup_processor: defi bridge', () => {
     await expectBalance(1, initialTokenBalance);
     await expectBalance(2, initialTokenBalance);
 
-    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
     });
     const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
@@ -369,7 +369,7 @@ describe('rollup_processor: defi bridge', () => {
     await expectBalance(1, initialTokenBalance);
     await expectBalance(2, initialTokenBalance);
 
-    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
     });
     const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
@@ -403,7 +403,7 @@ describe('rollup_processor: defi bridge', () => {
     await expectBalance(1, initialTokenBalance);
     await expectBalance(2, initialTokenBalance);
 
-    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
     });
     const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
@@ -429,7 +429,7 @@ describe('rollup_processor: defi bridge', () => {
     await expectBalance(0, inputValue);
     await expectBalance(1, 0n);
 
-    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
     });
     const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
@@ -460,7 +460,7 @@ describe('rollup_processor: defi bridge', () => {
     await expectBalance(1, inputValue);
     await expectBalance(0, 0n);
 
-    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
     });
     const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
@@ -493,7 +493,7 @@ describe('rollup_processor: defi bridge', () => {
       await expectBalance(0, inputValue);
       await expectBalance(1, 0n);
 
-      const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+      const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
         defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
       });
       const interactionResult = [new DefiInteractionNote(bridgeId, 0, inputValue, outputValueA, 0n, true)];
@@ -520,7 +520,7 @@ describe('rollup_processor: defi bridge', () => {
       const inputValue = 19n;
       await expectBalance(0, 0n);
 
-      const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+      const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
         defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
         previousDefiInteractionHash,
         rollupId: 1,
@@ -559,7 +559,7 @@ describe('rollup_processor: defi bridge', () => {
     await expectBalance(0, inputValue);
     await expectBalance(1, 0n);
 
-    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
     });
     const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);

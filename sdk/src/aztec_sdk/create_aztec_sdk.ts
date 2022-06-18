@@ -105,16 +105,16 @@ export async function createPlainAztecSdk(ethereumProvider: EthereumProvider, op
 export async function createAztecSdk(ethereumProvider: EthereumProvider, options: CreateSdkOptions) {
   switch (options.flavour) {
     case SdkFlavour.HOSTED:
-      return createHostedAztecSdk(ethereumProvider, options);
+      return await createHostedAztecSdk(ethereumProvider, options);
     case SdkFlavour.SHARED_WORKER:
-      return createSharedWorkerSdk(ethereumProvider, options);
+      return await createSharedWorkerSdk(ethereumProvider, options);
     case SdkFlavour.PLAIN:
-      return createPlainAztecSdk(ethereumProvider, options);
+      return await createPlainAztecSdk(ethereumProvider, options);
     default:
       if (isNode) {
-        return createPlainAztecSdk(ethereumProvider, options);
+        return await createPlainAztecSdk(ethereumProvider, options);
       } else {
-        return createHostedAztecSdk(ethereumProvider, options);
+        return await createHostedAztecSdk(ethereumProvider, options);
       }
   }
 }

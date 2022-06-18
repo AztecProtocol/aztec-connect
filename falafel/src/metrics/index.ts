@@ -91,8 +91,8 @@ export class Metrics {
     new Gauge({
       name: 'world_state_data_size',
       help: 'Size of data tree',
-      async collect() {
-        this.set(Number(await worldStateDb.getSize(0)));
+      collect() {
+        this.set(Number(worldStateDb.getSize(0)));
       },
     });
 
@@ -277,7 +277,7 @@ export class Metrics {
     this.rollupGasPrice.set(Number(toBigIntBE(rollup.gasPrice!)));
   }
 
-  async getMetrics() {
+  getMetrics() {
     return client.register.metrics();
   }
 }

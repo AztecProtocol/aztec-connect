@@ -19,9 +19,7 @@ export async function createStrawberryCoreSdk(options: StrawberryCoreSdkOptions)
   const iframeFrontend = new IframeFrontend(transportClient);
   const { coreSdk } = await iframeFrontend.initComponents(options);
 
-  iframe.on(IframeEvent.DESTROYED, async () => {
-    coreSdk.emit(SdkEvent.DESTROYED);
-  });
+  iframe.on(IframeEvent.DESTROYED, () => coreSdk.emit(SdkEvent.DESTROYED));
 
   return coreSdk;
 }

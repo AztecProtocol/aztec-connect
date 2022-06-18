@@ -9,7 +9,7 @@ import {
   InfoValuePlaceholder,
   Value,
 } from '../block_summary';
-import { getNetwork, Network } from '../config';
+import { Network } from '../config';
 import { DetailsSection } from '../template';
 import etherscanIcon from '../images/etherscan.svg';
 import { ProofData, ProofDataPlaceholder } from '../proof_data';

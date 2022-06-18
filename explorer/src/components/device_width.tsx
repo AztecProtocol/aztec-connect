@@ -23,7 +23,7 @@ export const DeviceWidth: React.FunctionComponent<DeviceWidthProps> = ({ childre
     };
   });
 
-  const breakpointLevel = Object.values(breakpoints).findIndex((v) => width <= parseInt(v));
+  const breakpointLevel = Object.values(breakpoints).findIndex(v => width <= parseInt(v));
   const breakpoint = breakpointKeys[breakpointLevel] || breakpointKeys[breakpointKeys.length - 1];
 
   return children({ breakpoint });

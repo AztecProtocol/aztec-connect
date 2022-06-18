@@ -109,7 +109,7 @@ export class RollupPipeline {
   }
 
   public async start() {
-    return this.pipelineCoordinator.start();
+    return await this.pipelineCoordinator.start();
   }
 
   public async stop() {
@@ -164,7 +164,7 @@ export class RollupPipelineFactory {
     return outerRollupSize;
   }
 
-  public async create() {
+  public create() {
     return new RollupPipeline(
       this.proofGenerator,
       this.blockchain,

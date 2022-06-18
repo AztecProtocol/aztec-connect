@@ -195,7 +195,7 @@ export class DefiController {
     await this.core.awaitDefiSettlement(txId, timeout);
   }
 
-  public async getInteractionNonce() {
+  public getInteractionNonce() {
     const txId = this.getDefiTxId();
     if (!txId) {
       throw new Error(`Call ${!this.proofOutput ? 'createProof()' : 'send()'} first.`);

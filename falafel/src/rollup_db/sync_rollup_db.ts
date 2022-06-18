@@ -11,151 +11,151 @@ export class SyncRollupDb {
 
   constructor(private rollupDb: RollupDb) {}
 
-  public async addTx(txDao: TxDao) {
+  public addTx(txDao: TxDao) {
     return this.synchronise(() => this.rollupDb.addTx(txDao));
   }
 
-  public async addTxs(txs: TxDao[]) {
+  public addTxs(txs: TxDao[]) {
     return this.synchronise(() => this.rollupDb.addTxs(txs));
   }
 
-  public async deleteTxsById(ids: Buffer[]) {
+  public deleteTxsById(ids: Buffer[]) {
     return this.synchronise(() => this.rollupDb.deleteTxsById(ids));
   }
 
-  public async addAccounts(accounts: AccountDao[]) {
+  public addAccounts(accounts: AccountDao[]) {
     return this.synchronise(() => this.rollupDb.addAccounts(accounts));
   }
 
-  public async getTx(txId: Buffer) {
+  public getTx(txId: Buffer) {
     return this.synchronise(() => this.rollupDb.getTx(txId));
   }
 
-  public async getPendingTxCount() {
+  public getPendingTxCount() {
     return this.synchronise(() => this.rollupDb.getPendingTxCount());
   }
 
-  public async deletePendingTxs() {
+  public deletePendingTxs() {
     return this.synchronise(() => this.rollupDb.deletePendingTxs());
   }
 
-  public async getTotalTxCount() {
+  public getTotalTxCount() {
     return this.synchronise(() => this.rollupDb.getTotalTxCount());
   }
 
-  public async getJoinSplitTxCount() {
+  public getJoinSplitTxCount() {
     return this.synchronise(() => this.rollupDb.getJoinSplitTxCount());
   }
 
-  public async getDefiTxCount() {
+  public getDefiTxCount() {
     return this.synchronise(() => this.rollupDb.getDefiTxCount());
   }
 
-  public async getAccountTxCount() {
+  public getAccountTxCount() {
     return this.synchronise(() => this.rollupDb.getAccountTxCount());
   }
 
-  public async getAccountCount() {
+  public getAccountCount() {
     return this.synchronise(() => this.rollupDb.getAccountCount());
   }
 
-  public async isAccountRegistered(accountPublicKey: GrumpkinAddress) {
+  public isAccountRegistered(accountPublicKey: GrumpkinAddress) {
     return this.synchronise(() => this.rollupDb.isAccountRegistered(accountPublicKey));
   }
 
-  public async isAliasRegistered(aliasHash: AliasHash) {
+  public isAliasRegistered(aliasHash: AliasHash) {
     return this.synchronise(() => this.rollupDb.isAliasRegistered(aliasHash));
   }
 
-  public async isAliasRegisteredToAccount(accountPublicKey: GrumpkinAddress, aliasHash: AliasHash) {
+  public isAliasRegisteredToAccount(accountPublicKey: GrumpkinAddress, aliasHash: AliasHash) {
     return this.synchronise(() => this.rollupDb.isAliasRegisteredToAccount(accountPublicKey, aliasHash));
   }
 
-  public async getUnsettledTxCount() {
+  public getUnsettledTxCount() {
     return this.synchronise(() => this.rollupDb.getUnsettledTxCount());
   }
 
-  public async getUnsettledTxs() {
+  public getUnsettledTxs() {
     return this.synchronise(() => this.rollupDb.getUnsettledTxs());
   }
 
-  public async getUnsettledDepositTxs() {
+  public getUnsettledDepositTxs() {
     return this.synchronise(() => this.rollupDb.getUnsettledDepositTxs());
   }
 
-  public async getUnsettledAccounts() {
+  public getUnsettledAccounts() {
     return this.synchronise(() => this.rollupDb.getUnsettledAccounts());
   }
 
-  public async getPendingTxs(take?: number) {
+  public getPendingTxs(take?: number) {
     return this.synchronise(() => this.rollupDb.getPendingTxs(take));
   }
 
-  public async getUnsettledNullifiers() {
+  public getUnsettledNullifiers() {
     return this.synchronise(() => this.rollupDb.getUnsettledNullifiers());
   }
 
-  public async nullifiersExist(n1: Buffer, n2: Buffer) {
+  public nullifiersExist(n1: Buffer, n2: Buffer) {
     return this.synchronise(() => this.rollupDb.nullifiersExist(n1, n2));
   }
 
-  public async addRollupProof(rollupDao: RollupProofDao) {
+  public addRollupProof(rollupDao: RollupProofDao) {
     return this.synchronise(() => this.rollupDb.addRollupProof(rollupDao));
   }
 
-  public async addRollupProofs(rollupDaos: RollupProofDao[]) {
+  public addRollupProofs(rollupDaos: RollupProofDao[]) {
     return this.synchronise(() => this.rollupDb.addRollupProofs(rollupDaos));
   }
 
-  public async getRollupProof(id: Buffer, includeTxs = false) {
+  public getRollupProof(id: Buffer, includeTxs = false) {
     return this.synchronise(() => this.rollupDb.getRollupProof(id, includeTxs));
   }
 
-  public async deleteRollupProof(id: Buffer) {
+  public deleteRollupProof(id: Buffer) {
     return this.synchronise(() => this.rollupDb.deleteRollupProof(id));
   }
 
-  public async deleteTxlessRollupProofs() {
+  public deleteTxlessRollupProofs() {
     return this.synchronise(() => this.rollupDb.deleteTxlessRollupProofs());
   }
 
-  public async deleteOrphanedRollupProofs() {
+  public deleteOrphanedRollupProofs() {
     return this.synchronise(() => this.rollupDb.deleteOrphanedRollupProofs());
   }
 
-  public async getNextRollupId() {
+  public getNextRollupId() {
     return this.synchronise(() => this.rollupDb.getNextRollupId());
   }
 
-  public async getRollup(id: number) {
+  public getRollup(id: number) {
     return this.synchronise(() => this.rollupDb.getRollup(id));
   }
 
-  public async getRollups(take?: number, skip?: number, descending = false) {
+  public getRollups(take?: number, skip?: number, descending = false) {
     return this.synchronise(() => this.rollupDb.getRollups(take, skip, descending));
   }
 
-  public async getRollupsByRollupIds(ids: number[]) {
+  public getRollupsByRollupIds(ids: number[]) {
     return this.synchronise(() => this.rollupDb.getRollupsByRollupIds(ids));
   }
 
-  public async getNumSettledRollups() {
+  public getNumSettledRollups() {
     return this.synchronise(() => this.rollupDb.getNumSettledRollups());
   }
 
-  public async addRollup(rollup: RollupDao) {
+  public addRollup(rollup: RollupDao) {
     return this.synchronise(() => this.rollupDb.addRollup(rollup));
   }
 
-  public async setCallData(id: number, rollupProofCalldata: Buffer) {
+  public setCallData(id: number, rollupProofCalldata: Buffer) {
     return this.synchronise(() => this.rollupDb.setCallData(id, rollupProofCalldata));
   }
 
-  public async confirmSent(id: number, txHash: TxHash) {
+  public confirmSent(id: number, txHash: TxHash) {
     return this.synchronise(() => this.rollupDb.confirmSent(id, txHash));
   }
 
-  public async confirmMined(
+  public confirmMined(
     id: number,
     gasUsed: number,
     gasPrice: bigint,
@@ -185,7 +185,7 @@ export class SyncRollupDb {
     return this.synchronise(() => this.rollupDb.getSettledRollups(from, take));
   }
 
-  public async getLastSettledRollup() {
+  public getLastSettledRollup() {
     return this.synchronise(() => this.rollupDb.getLastSettledRollup());
   }
 
@@ -193,41 +193,41 @@ export class SyncRollupDb {
     return this.synchronise(() => this.rollupDb.getUnsettledRollups());
   }
 
-  public async deleteUnsettledRollups() {
+  public deleteUnsettledRollups() {
     return this.synchronise(() => this.rollupDb.deleteUnsettledRollups());
   }
 
-  public async getRollupByDataRoot(dataRoot: Buffer) {
+  public getRollupByDataRoot(dataRoot: Buffer) {
     return this.synchronise(() => this.rollupDb.getRollupByDataRoot(dataRoot));
   }
 
-  public async getDataRootsIndex(root: Buffer) {
+  public getDataRootsIndex(root: Buffer) {
     return this.synchronise(() => this.rollupDb.getDataRootsIndex(root));
   }
 
-  public async addClaim(claim: ClaimDao) {
+  public addClaim(claim: ClaimDao) {
     return this.synchronise(() => this.rollupDb.addClaim(claim));
   }
 
-  public async getClaimsToRollup(take?: number) {
+  public getClaimsToRollup(take?: number) {
     return this.synchronise(() => this.rollupDb.getClaimsToRollup(take));
   }
 
-  public async updateClaimsWithResultRollupId(interactionNonce: number, interactionResultRollupId: number) {
+  public updateClaimsWithResultRollupId(interactionNonce: number, interactionResultRollupId: number) {
     return this.synchronise(() =>
       this.rollupDb.updateClaimsWithResultRollupId(interactionNonce, interactionResultRollupId),
     );
   }
 
-  public async confirmClaimed(nullifier: Buffer, claimed: Date) {
+  public confirmClaimed(nullifier: Buffer, claimed: Date) {
     return this.synchronise(() => this.rollupDb.confirmClaimed(nullifier, claimed));
   }
 
-  public async deleteUnsettledClaimTxs() {
+  public deleteUnsettledClaimTxs() {
     return this.synchronise(() => this.rollupDb.deleteUnsettledClaimTxs());
   }
 
-  public async getAssetMetrics(assetId: number) {
+  public getAssetMetrics(assetId: number) {
     return this.synchronise(() => this.rollupDb.getAssetMetrics(assetId));
   }
 
@@ -240,7 +240,7 @@ export class SyncRollupDb {
     }
   }
 
-  public async eraseDb() {
+  public eraseDb() {
     return this.synchronise(() => this.rollupDb.eraseDb());
   }
 }

@@ -139,7 +139,7 @@ export class Server {
     this.log('Stop...');
     this.ready = false;
 
-    this.proofGenerator.stop();
+    await this.proofGenerator.stop();
     await this.txReceiver.destroy();
     await this.worldState.stop();
     await this.txFeeResolver.stop();
@@ -216,7 +216,7 @@ export class Server {
     );
   }
 
-  public async removeData() {
+  public removeData() {
     this.log('Removing data dir and signal to shutdown...');
     process.kill(process.pid, 'SIGUSR1');
   }
@@ -288,29 +288,29 @@ export class Server {
   }
 
   public async getUnsettledTxs() {
-    return this.rollupDb.getUnsettledTxs();
+    return await this.rollupDb.getUnsettledTxs();
   }
 
   public async getUnsettledNullifiers() {
-    return this.rollupDb.getUnsettledNullifiers();
+    return await this.rollupDb.getUnsettledNullifiers();
   }
 
   public async isAccountRegistered(accountPublicKey: GrumpkinAddress) {
-    return this.rollupDb.isAccountRegistered(accountPublicKey);
+    return await this.rollupDb.isAccountRegistered(accountPublicKey);
   }
 
   public async isAliasRegistered(alias: string) {
     const aliasHash = AliasHash.fromAlias(alias, this.blake);
-    return this.rollupDb.isAliasRegistered(aliasHash);
+    return await this.rollupDb.isAliasRegistered(aliasHash);
   }
 
   public async isAliasRegisteredToAccount(accountPublicKey: GrumpkinAddress, alias: string) {
     const aliasHash = AliasHash.fromAlias(alias, this.blake);
-    return this.rollupDb.isAliasRegisteredToAccount(accountPublicKey, aliasHash);
+    return await this.rollupDb.isAliasRegisteredToAccount(accountPublicKey, aliasHash);
   }
 
   public async getUnsettledDepositTxs() {
-    return this.rollupDb.getUnsettledDepositTxs();
+    return await this.rollupDb.getUnsettledDepositTxs();
   }
 
   public getBlockBuffers(from: number, take?: number) {

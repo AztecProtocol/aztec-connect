@@ -66,7 +66,7 @@ class Iframe extends EventEmitter {
     await frameReadyPromise;
   }
 
-  private async destroyWhenOutdated() {
+  private destroyWhenOutdated() {
     const handleOutdated = (e: MessageEvent) => {
       if (e.origin !== this.origin) {
         return;

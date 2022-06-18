@@ -75,11 +75,11 @@ export class CoreSdkServerStub {
   }
 
   public async isAccountRegistered(accountPublicKey: string, includePending: boolean) {
-    return this.core.isAccountRegistered(GrumpkinAddress.fromString(accountPublicKey), includePending);
+    return await this.core.isAccountRegistered(GrumpkinAddress.fromString(accountPublicKey), includePending);
   }
 
   public async isAliasRegistered(alias: string, includePending: boolean) {
-    return this.core.isAliasRegistered(alias, includePending);
+    return await this.core.isAliasRegistered(alias, includePending);
   }
 
   public async isAliasRegisteredToAccount(
@@ -87,7 +87,7 @@ export class CoreSdkServerStub {
     alias: string,
     isAliasRegisteredToAccount: boolean,
   ) {
-    return this.core.isAliasRegisteredToAccount(
+    return await this.core.isAliasRegisteredToAccount(
       GrumpkinAddress.fromString(accountPublicKey),
       alias,
       isAliasRegisteredToAccount,
@@ -250,7 +250,7 @@ export class CoreSdkServerStub {
   }
 
   public async isUserSynching(userId: string) {
-    return this.core.isUserSynching(GrumpkinAddress.fromString(userId));
+    return await this.core.isUserSynching(GrumpkinAddress.fromString(userId));
   }
 
   public async awaitUserSynchronised(userId: string, timeout?: number) {
@@ -274,11 +274,11 @@ export class CoreSdkServerStub {
   }
 
   public async getDefiInteractionNonce(txId: string) {
-    return this.core.getDefiInteractionNonce(TxId.fromString(txId));
+    return await this.core.getDefiInteractionNonce(TxId.fromString(txId));
   }
 
   public async userExists(userId: string) {
-    return this.core.userExists(GrumpkinAddress.fromString(userId));
+    return await this.core.userExists(GrumpkinAddress.fromString(userId));
   }
 
   public async getUsers() {
@@ -306,7 +306,7 @@ export class CoreSdkServerStub {
   }
 
   public async getUserSyncedToRollup(userId: string) {
-    return this.core.getUserSyncedToRollup(GrumpkinAddress.fromString(userId));
+    return await this.core.getUserSyncedToRollup(GrumpkinAddress.fromString(userId));
   }
 
   public async getSpendingKeys(userId: string) {

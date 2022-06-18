@@ -249,7 +249,7 @@ describe('rollup_coordinator', () => {
       interrupt: jest.fn(),
       createRollup: jest
         .fn()
-        .mockImplementation(async (txs: TxDao[], rootRollupBridgeIds: bigint[], rootRollupAssetIds: Set<number>) => {
+        .mockImplementation((txs: TxDao[], rootRollupBridgeIds: bigint[], rootRollupAssetIds: Set<number>) => {
           for (const tx of txs) {
             const proof = new ProofData(tx.proofData);
             if (proof.proofId === ProofId.ACCOUNT) {
@@ -1751,7 +1751,7 @@ describe('rollup_coordinator', () => {
       currentTime = new Date('2021-06-20T12:00:01+01:00');
 
       // run again and we should have published it
-      rp = await await coordinator.processPendingTxs(pendingTxs);
+      rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
       expectProcessedTxIds([0]);
 

@@ -1,6 +1,6 @@
 import * as cbor from 'cbor';
 import { createHash, createVerify } from 'crypto';
-import { AuthData,parseAuthData } from './parse_auth_data';
+import { AuthData, parseAuthData } from './parse_auth_data';
 
 /* tslint:disable:no-console */
 

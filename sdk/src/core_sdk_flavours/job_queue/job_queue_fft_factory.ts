@@ -8,19 +8,19 @@ class JobQueueFft implements Fft {
   constructor(private queue: JobQueue, private circuitSize: number) {}
 
   async fft(coefficients: Uint8Array, constant: Uint8Array) {
-    return this.queue.createJob(this.target, 'fft', [this.circuitSize, coefficients, constant]);
+    return await this.queue.createJob(this.target, 'fft', [this.circuitSize, coefficients, constant]);
   }
 
   async ifft(coefficients: Uint8Array) {
-    return this.queue.createJob(this.target, 'ifft', [this.circuitSize, coefficients]);
+    return await this.queue.createJob(this.target, 'ifft', [this.circuitSize, coefficients]);
   }
 }
 
 export class JobQueueFftFactory implements FftFactory {
   constructor(private queue: JobQueue) {}
 
-  async createFft(circuitSize: number) {
-    return new JobQueueFft(this.queue, circuitSize);
+  createFft(circuitSize: number) {
+    return Promise.resolve(new JobQueueFft(this.queue, circuitSize));
   }
 
   async destroy(): Promise<void> {}
@@ -30,11 +30,11 @@ class JobQueueFftClient {
   constructor(private fftInstance: Fft) {}
 
   async fft(coefficients: Uint8Array, constant: Uint8Array) {
-    return this.fftInstance.fft(coefficients, constant);
+    return await this.fftInstance.fft(coefficients, constant);
   }
 
   async ifft(coefficients: Uint8Array) {
-    return this.fftInstance.ifft(coefficients);
+    return await this.fftInstance.ifft(coefficients);
   }
 }
 
@@ -52,6 +52,6 @@ export class JobQueueFftFactoryClient {
   }
 
   async getFft(circuitSize: number) {
-    return this.createFft(circuitSize);
+    return await this.createFft(circuitSize);
   }
 }

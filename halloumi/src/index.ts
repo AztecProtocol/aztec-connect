@@ -46,7 +46,7 @@ async function main() {
   console.log(`Server listening on port ${PORT}.`);
 
   await server.start();
-  await worker.start();
+  worker.start();
 }
 
 main().catch(err => {

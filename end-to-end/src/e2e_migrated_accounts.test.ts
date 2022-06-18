@@ -198,7 +198,7 @@ describe('end-to-end migrated tests', () => {
         expect(recipientAccount).toBeTruthy();
 
         debug(`transferring ${sdk.fromBaseUnits(transferValue, true)} from account ${i} to account ${i + 1}`);
-        const controller = await sdk.createTransferController(
+        const controller = sdk.createTransferController(
           sender,
           signer,
           transferValue,

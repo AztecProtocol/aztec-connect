@@ -42,7 +42,7 @@ describe('rollup_processor: defi bridge', () => {
       outputAssetIdA: 2,
       outputAssetIdB: 2,
     });
-    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, 1n)],
     });
     const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
@@ -54,7 +54,7 @@ describe('rollup_processor: defi bridge', () => {
       outputAssetIdA: virtualAssetIdPlaceholder,
       outputAssetIdB: virtualAssetIdPlaceholder,
     });
-    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, 1n)],
     });
     const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
@@ -66,7 +66,7 @@ describe('rollup_processor: defi bridge', () => {
       inputAssetIdA: 2,
       inputAssetIdB: 2,
     });
-    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, 1n)],
     });
     const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
@@ -78,7 +78,7 @@ describe('rollup_processor: defi bridge', () => {
       inputAssetIdA: 2 + virtualAssetIdFlag,
       inputAssetIdB: 2 + virtualAssetIdFlag,
     });
-    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, 1n)],
     });
     const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
@@ -93,7 +93,7 @@ describe('rollup_processor: defi bridge', () => {
     const buffer = bridgeId.toBuffer();
     toBufferBE(bitConfig.toBigInt(), 4).copy(buffer, (256 - 184) / 8, 0, 4);
 
-    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, 1n)],
     });
 
@@ -111,7 +111,7 @@ describe('rollup_processor: defi bridge', () => {
     const buffer = bridgeId.toBuffer();
     toBufferBE(bitConfig.toBigInt(), 4).copy(buffer, (256 - 184) / 8, 0, 4);
 
-    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, 1n)],
     });
 
@@ -129,7 +129,7 @@ describe('rollup_processor: defi bridge', () => {
     const buffer = bridgeId.toBuffer();
     toBufferBE(bitConfig.toBigInt(), 4).copy(buffer, (256 - 184) / 8, 0, 4);
 
-    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, 1n)],
     });
 
@@ -147,7 +147,7 @@ describe('rollup_processor: defi bridge', () => {
     const buffer = bridgeId.toBuffer();
     toBufferBE(bitConfig.toBigInt(), 4).copy(buffer, (256 - 184) / 8, 0, 4);
 
-    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, 1n)],
     });
 

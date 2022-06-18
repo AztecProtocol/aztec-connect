@@ -48,35 +48,35 @@ export class RecoverAccountController {
   }
 
   public async getPendingFunds() {
-    return this.depositController!.getPendingFunds();
+    return await this.depositController!.getPendingFunds();
   }
 
   public async getRequiredFunds() {
-    return this.depositController!.getRequiredFunds();
+    return await this.depositController!.getRequiredFunds();
   }
 
   public async getPublicAllowance() {
-    return this.depositController!.getPublicAllowance();
+    return await this.depositController!.getPublicAllowance();
   }
 
   public async approve() {
-    return this.depositController!.approve();
+    return await this.depositController!.approve();
   }
 
   public async awaitApprove(timeout?: number, interval?: number) {
-    this.depositController!.awaitApprove(timeout, interval);
+    await this.depositController!.awaitApprove(timeout, interval);
   }
 
   public async depositFundsToContract(permitDeadline?: bigint) {
-    return this.depositController!.depositFundsToContract(permitDeadline);
+    return await this.depositController!.depositFundsToContract(permitDeadline);
   }
 
   public async depositFundsToContractWithNonStandardPermit(permitDeadline: bigint) {
-    return this.depositController!.depositFundsToContractWithNonStandardPermit(permitDeadline);
+    return await this.depositController!.depositFundsToContractWithNonStandardPermit(permitDeadline);
   }
 
   public async awaitDepositFundsToContract(timeout?: number, interval?: number) {
-    return this.depositController!.awaitDepositFundsToContract(timeout, interval);
+    return await this.depositController!.awaitDepositFundsToContract(timeout, interval);
   }
 
   public async createProof() {
@@ -113,19 +113,19 @@ export class RecoverAccountController {
   }
 
   public async isProofApproved() {
-    return this.depositController!.isProofApproved();
+    return await this.depositController!.isProofApproved();
   }
 
   public async approveProof() {
-    return this.depositController!.approveProof();
+    return await this.depositController!.approveProof();
   }
 
   public async awaitApproveProof(timeout?: number, interval?: number) {
-    return this.depositController!.awaitApproveProof(timeout, interval);
+    return await this.depositController!.awaitApproveProof(timeout, interval);
   }
 
   public async sign() {
-    return this.depositController!.sign();
+    return await this.depositController!.sign();
   }
 
   public isSignatureValid() {

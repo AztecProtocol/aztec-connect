@@ -19,21 +19,16 @@ export class JobQueue extends EventEmitter implements JobQueueInterface {
   private pendingJobs = new MemoryFifo<PendingJob>();
   private pending?: PendingJob;
   private interruptableSleep = new InterruptableSleep();
+  private runningPromise: Promise<void>;
 
   constructor() {
     super();
-    this.processPendingJobs();
+    this.runningPromise = this.pendingJobs.process(job => this.broadcastNewJob(job));
   }
 
-  private async processPendingJobs() {
-    while (true) {
-      const job = await this.pendingJobs.get();
-      if (!job) {
-        break;
-      }
-
-      await this.broadcastNewJob(job);
-    }
+  async stop() {
+    this.pendingJobs.cancel();
+    await this.runningPromise;
   }
 
   private async broadcastNewJob(job: PendingJob) {
@@ -46,32 +41,32 @@ export class JobQueue extends EventEmitter implements JobQueueInterface {
     }
   }
 
-  async getJob() {
+  getJob() {
     const now = Date.now();
     const pendingJob = this.pending;
     if (!pendingJob || now - pendingJob.timestamp < pingElapsed) {
-      return;
+      return Promise.resolve(undefined);
     }
 
     pendingJob.timestamp = now;
 
-    return pendingJob.job;
+    return Promise.resolve(pendingJob.job);
   }
 
-  async ping(jobId: number) {
+  ping(jobId: number) {
     if (!this.pending) {
-      return;
+      return Promise.resolve(undefined);
     }
     if (this.pending.job.id === jobId) {
       const now = Date.now();
       this.pending.timestamp = now;
     }
-    return this.pending.job.id;
+    return Promise.resolve(this.pending.job.id);
   }
 
-  async completeJob(jobId: number, data?: any, error?: string) {
+  completeJob(jobId: number, data?: any, error?: string) {
     if (!this.pending || this.pending.job.id !== jobId) {
-      return;
+      return Promise.resolve();
     }
 
     if (error) {
@@ -81,9 +76,10 @@ export class JobQueue extends EventEmitter implements JobQueueInterface {
     }
     this.pending = undefined;
     this.interruptableSleep.interrupt();
+    return Promise.resolve();
   }
 
-  async createJob(target: JobQueueTarget, query: string, args: any[] = []) {
+  createJob(target: JobQueueTarget, query: string, args: any[] = []) {
     return new Promise<any>((resolve, reject) => {
       const job = { id: this.jobId++, target, query, args };
       this.pendingJobs.put({ job, resolve, reject, timestamp: 0 });

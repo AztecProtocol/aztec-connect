@@ -112,11 +112,15 @@ export class BarretenbergWasm extends EventEmitter {
     }
   }
 
-  public getMemory() {
+  private getMemory() {
     if (this.heap.length === 0) {
       return new Uint8Array(this.memory.buffer);
     }
     return this.heap;
+  }
+
+  public memSize() {
+    return this.getMemory().length;
   }
 
   public sliceMemory(start: number, end: number) {
@@ -136,11 +140,11 @@ export class BarretenbergWasm extends EventEmitter {
    * transferToHeap before the result is read via sliceMemory.
    * acquire() gets a single token from a fifo. The caller must call release() to add the token back.
    */
-  async acquire() {
+  public async acquire() {
     await this.mutexQ.get();
   }
 
-  release() {
+  public release() {
     if (this.mutexQ.length() !== 0) {
       throw new Error('Release called but not acquired.');
     }

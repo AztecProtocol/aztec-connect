@@ -2,14 +2,11 @@ import { HttpJobServer } from './http_job_server';
 import { HttpJobWorker } from './http_job_worker';
 import { randomBytes } from 'crypto';
 import { Server } from '../server';
+import { sleep } from '@aztec/barretenberg/sleep';
 
 type Mockify<T> = {
   [P in keyof T]: jest.Mock;
 };
-
-async function sleep(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
 
 describe('HttpJobServer', () => {
   function createWorker() {
@@ -38,7 +35,7 @@ describe('HttpJobServer', () => {
 
   it('simple test', async () => {
     const generator = new HttpJobServer();
-    generator.start();
+    await generator.start();
 
     const { server, worker } = createWorker();
     worker.start();
@@ -55,7 +52,7 @@ describe('HttpJobServer', () => {
 
   it('one worker should process two ready jobs', async () => {
     const generator = new HttpJobServer();
-    generator.start();
+    await generator.start();
 
     const createProofInput = randomBytes(32);
     const proofResult = generator.createProof(createProofInput);
@@ -79,7 +76,7 @@ describe('HttpJobServer', () => {
 
   it('two workers should process two ready jobs', async () => {
     const generator = new HttpJobServer();
-    generator.start();
+    await generator.start();
 
     const createProofInput = randomBytes(32);
     const proofResult = generator.createProof(createProofInput);
@@ -110,7 +107,7 @@ describe('HttpJobServer', () => {
 
   it('two waiting workers should process two new jobs', async () => {
     const generator = new HttpJobServer();
-    generator.start();
+    await generator.start();
 
     // Create workers and call start to start consuming jobs.
     const { server: server1, worker: worker1 } = createWorker();
@@ -143,7 +140,7 @@ describe('HttpJobServer', () => {
   it('worker pings server its processing job', async () => {
     // Any job that hasn't been pinged in 2s is up for grabs.
     const generator = new HttpJobServer(undefined, 2000);
-    generator.start();
+    await generator.start();
 
     // Create workers and call start to start consuming jobs.
     const { server: server1, worker: worker1 } = createWorker();
@@ -181,7 +178,7 @@ describe('HttpJobServer', () => {
 
     {
       const generator = new HttpJobServer();
-      generator.start();
+      await generator.start();
       worker.start();
 
       // Give time for worker to request work.
@@ -193,7 +190,7 @@ describe('HttpJobServer', () => {
 
     {
       const generator = new HttpJobServer();
-      generator.start();
+      await generator.start();
 
       const createProofInput = randomBytes(32);
       const proofResult = await generator.createProof(createProofInput);
@@ -209,7 +206,7 @@ describe('HttpJobServer', () => {
 
   it('expired job will be reissued', async () => {
     const generator = new HttpJobServer(undefined, 3000);
-    generator.start();
+    await generator.start();
 
     // Create a job.
     const createProofInput = randomBytes(32);

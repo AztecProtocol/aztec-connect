@@ -42,7 +42,7 @@ export class Prover {
   ) {}
 
   public getWorker() {
-    return this.wasm;
+    return this.wasm as BarretenbergWorker;
   }
 
   private async proverCall(name: string, ...args: any[]) {

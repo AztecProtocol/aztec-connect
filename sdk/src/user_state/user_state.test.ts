@@ -82,10 +82,10 @@ describe('user state', () => {
       created: block.created,
       offchainTxData: block.offchainTxData,
       interactionResult: block.interactionResult,
-      getBlockSubtreeHashPath: async function (index: number) {
+      getBlockSubtreeHashPath: function (index: number) {
         const path = createHashPath(11);
         generatedHashPaths[index] = path;
-        return path;
+        return Promise.resolve(path);
       },
     } as BlockContext;
   };
@@ -713,7 +713,7 @@ describe('user state', () => {
     const stranger = createUser();
     const block = createRollupBlock([generatePaymentProof({ proofSender: stranger, newNoteOwner: stranger })]);
 
-    userState.processBlock(createBlockContext(block));
+    await userState.processBlock(createBlockContext(block));
 
     expect(db.addNote).toHaveBeenCalledTimes(0);
     expect(db.nullifyNote).toHaveBeenCalledTimes(0);

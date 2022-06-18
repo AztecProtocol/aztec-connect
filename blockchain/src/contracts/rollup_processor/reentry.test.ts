@@ -141,7 +141,7 @@ describe('rollup_processor: reentry', () => {
       0,
     );
 
-    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, amount)],
     });
 
@@ -162,7 +162,7 @@ describe('rollup_processor: reentry', () => {
         0,
       );
 
-      const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+      const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
         rollupId: 1,
         defiInteractionData: [new DefiInteractionData(bridgeId, amount)],
       });
@@ -195,7 +195,7 @@ describe('rollup_processor: reentry', () => {
       0,
     );
 
-    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, amount), new DefiInteractionData(bridgeId, amount)],
     });
 
@@ -216,7 +216,7 @@ describe('rollup_processor: reentry', () => {
         0,
       );
 
-      const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+      const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
         rollupId: 1,
         defiInteractionData: [new DefiInteractionData(bridgeId, amount)],
       });
@@ -249,7 +249,7 @@ describe('rollup_processor: reentry', () => {
       0,
     );
 
-    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, amount)],
     });
 
@@ -269,7 +269,7 @@ describe('rollup_processor: reentry', () => {
         0,
       );
 
-      const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+      const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
         rollupId: 1,
         defiInteractionData: [new DefiInteractionData(bridgeId, amount)],
       });
@@ -303,7 +303,7 @@ describe('rollup_processor: reentry', () => {
 
     const bridgeId = new BridgeId(bridgeAddressId, 0, 0);
 
-    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, amount)],
     });
 
@@ -353,7 +353,7 @@ describe('rollup_processor: reentry', () => {
 
     const bridgeId = new BridgeId(bridgeAddressId, 0, 0);
 
-    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, amount)],
     });
 
@@ -407,7 +407,7 @@ describe('rollup_processor: reentry', () => {
 
     const bridgeId = new BridgeId(bridgeAddressId, 0, 0);
 
-    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, amount)],
     });
 
@@ -437,7 +437,7 @@ describe('rollup_processor: reentry', () => {
 
     const bridgeId = new BridgeId(bridgeAddressId, 0, 0);
 
-    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, amount)],
     });
 
@@ -469,7 +469,7 @@ describe('rollup_processor: reentry', () => {
 
     const bridgeId = new BridgeId(bridgeAddressId, 0, 0);
 
-    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, amount)],
     });
 
@@ -494,7 +494,7 @@ describe('rollup_processor: reentry', () => {
 
     const bridgeId = new BridgeId(bridgeAddressId, 0, 0);
 
-    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, amount)],
     });
 
@@ -523,7 +523,7 @@ describe('rollup_processor: reentry', () => {
 
     const bridgeId = new BridgeId(bridgeAddressId, 0, 0);
 
-    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, amount)],
     });
 
@@ -573,7 +573,7 @@ describe('rollup_processor: reentry', () => {
 
     const bridgeId = new BridgeId(bridgeAddressId, 0, 0);
 
-    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, amount)],
     });
 
@@ -628,7 +628,7 @@ describe('rollup_processor: reentry', () => {
 
     const bridgeId = new BridgeId(bridgeAddressId, 0, 0);
 
-    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, amount)],
     });
 
@@ -658,7 +658,7 @@ describe('rollup_processor: reentry', () => {
 
     const bridgeId = new BridgeId(bridgeAddressId, 0, 0);
 
-    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, amount)],
     });
 
@@ -685,7 +685,7 @@ describe('rollup_processor: reentry', () => {
 
     const bridgeId = new BridgeId(bridgeAddressId, 0, 0);
 
-    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, amount)],
     });
 
@@ -710,7 +710,7 @@ describe('rollup_processor: reentry', () => {
 
     const bridgeId = new BridgeId(bridgeAddressId, 0, 0);
 
-    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, amount)],
     });
 
@@ -742,7 +742,7 @@ describe('rollup_processor: reentry', () => {
 
     const bridgeId = new BridgeId(bridgeAddressId, 0, 0);
 
-    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, amount)],
     });
 
@@ -767,7 +767,7 @@ describe('rollup_processor: reentry', () => {
 
     const bridgeId = new BridgeId(bridgeAddressId, 0, 0);
 
-    const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, amount)],
     });
 

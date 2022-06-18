@@ -25,7 +25,7 @@ export class RootRollup {
     public assetIds: Buffer[],
     public defiInteractionNotes: Buffer[],
     public rollupBeneficiary: EthAddress,
-  ) { }
+  ) {}
 
   public toBuffer() {
     return Buffer.concat([

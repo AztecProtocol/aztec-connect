@@ -4,12 +4,13 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "build": "rm -rf ./dest && tsc -p tsconfig.cjs.json",
+    "build": "rm -rf ./dest && yarn formatting && tsc -p tsconfig.cjs.json",
     "build:dev": "tsc -p tsconfig.cjs.json --watch",
     "start": "node ./dest",
     "debug": "node --inspect-brk=0.0.0.0:9221 ./dest",
     "start:dev": "tsc-watch -p tsconfig.cjs.json --onSuccess 'yarn start'",
     "test": "jest --passWithNoTests",
+    "formatting": "prettier --check ./src && eslint --max-warnings 0 ./src",
     "clean": "rm -rf ./data ./dest"
   },
   "jest": {
@@ -37,10 +38,10 @@
     "typescript": "^4.4.4"
   },
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "^4.1.1",
-    "@typescript-eslint/parser": "^4.1.1",
-    "eslint": "^7.9.0",
-    "eslint-config-prettier": "^6.11.0",
+    "@typescript-eslint/eslint-plugin": "^5.27.0",
+    "@typescript-eslint/parser": "^5.27.0",
+    "eslint": "^8.16.0",
+    "eslint-config-prettier": "^8.5.0",
     "jest": "^24.8.0",
     "prettier": "^2.0.5",
     "ts-jest": "^24.0.2",

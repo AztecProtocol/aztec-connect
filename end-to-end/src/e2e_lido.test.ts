@@ -118,7 +118,7 @@ describe('end-to-end defi tests', () => {
       );
     }
 
-	debug(`Initiating withdraw`);
+    debug(`Initiating withdraw`);
 
     // Rollup 2.
     // Account 0 swaps wstETH to ETH.

@@ -1,5 +1,6 @@
 import { AliasHash } from '@aztec/barretenberg/account_id';
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
+import { sleep } from '@aztec/barretenberg/sleep';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { randomBytes } from 'crypto';
 import { CoreAccountTx, CoreDefiTx, CorePaymentTx, CoreUserTx } from '../../core_tx';
@@ -926,8 +927,6 @@ export const databaseTestSuite = (
     describe('Mutex', () => {
       const name = 'mutex-test';
       const timeout = 10000000;
-
-      const sleep = async (time: number) => new Promise(resolve => setTimeout(resolve, time));
 
       it('acquire and release locks', async () => {
         expect(await db.acquireLock('mutex-1', timeout)).toBe(true);

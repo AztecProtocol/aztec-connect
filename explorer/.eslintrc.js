@@ -1,6 +1,1 @@
-module.exports = {
-  ...require('../.eslintrc'),
-  env: {
-    browser: true,
-  },
-};
+../shared-config/.eslintrc.js

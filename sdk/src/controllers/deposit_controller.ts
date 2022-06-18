@@ -76,13 +76,13 @@ export class DepositController {
     return this.blockchain.getAsset(assetId).allowance(this.depositor, rollupContractAddress);
   }
 
-  public async hasPermitSupport() {
+  public hasPermitSupport() {
     const { assetId } = this.publicInput;
     return this.blockchain.hasPermitSupport(assetId);
   }
 
   public async approve() {
-    const permitSupport = await this.hasPermitSupport();
+    const permitSupport = this.hasPermitSupport();
     if (permitSupport) {
       throw new Error('Asset supports permit. No need to call approve().');
     }
@@ -95,7 +95,7 @@ export class DepositController {
 
     const { assetId } = this.publicInput;
     const { rollupContractAddress } = await this.core.getLocalStatus();
-    const approve = async () =>
+    const approve = () =>
       this.blockchain
         .getAsset(assetId)
         .approve(value, this.depositor, rollupContractAddress, { provider: this.provider });
@@ -154,7 +154,7 @@ export class DepositController {
     const isContract = await this.blockchain.isContract(this.depositor);
     const depositFunds = async () => {
       const proofHash = isContract ? this.getProofHash() : undefined;
-      const permitSupport = await this.hasPermitSupport();
+      const permitSupport = this.hasPermitSupport();
       if (!permitSupport) {
         return this.blockchain.depositPendingFunds(assetId, value, proofHash, {
           signingAddress: this.depositor,
@@ -207,7 +207,7 @@ export class DepositController {
     const deadline = permitDeadline ?? BigInt(Math.floor(Date.now() / 1000) + 5 * 60); // Default deadline is 5 mins from now.
     const { signature, nonce } = await this.createPermitArgsNonStandard(deadline);
     const { assetId } = this.publicInput;
-    const depositFunds = async () =>
+    const depositFunds = () =>
       this.blockchain.depositPendingFundsPermitNonStandard(assetId, value, nonce, deadline, signature, proofHash, {
         signingAddress: this.depositor,
         provider: this.provider,
@@ -313,7 +313,7 @@ export class DepositController {
   public async approveProof() {
     const proofHash = this.getProofHash();
     const isContract = await this.blockchain.isContract(this.depositor);
-    const approveProof = async () =>
+    const approveProof = () =>
       this.blockchain.approveProof(proofHash, {
         signingAddress: this.depositor,
         provider: this.provider,
@@ -322,7 +322,7 @@ export class DepositController {
     if (!isContract) {
       approveProofTxHash = await approveProof();
     } else {
-      const checkOnchainData = async () => this.isProofApproved();
+      const checkOnchainData = () => this.isProofApproved();
       approveProofTxHash = await this.sendTransactionAndCheckOnchainData(
         'approve proof from contract wallet',
         approveProof,
@@ -348,7 +348,7 @@ export class DepositController {
       throw new Error('Call approveProof() first.');
     }
 
-    const checkOnchainData = async () => this.isProofApproved();
+    const checkOnchainData = () => this.isProofApproved();
     await this.awaitTransaction('approve proof', checkOnchainData, timeout, interval);
   }
 
@@ -482,7 +482,9 @@ export class DepositController {
     const interruptableSleep = new InterruptableSleep();
     let txHash: TxHash | undefined;
     let txError: Error | undefined;
-    (async () => {
+
+    // May never return due to wallet connect provider bugs.
+    void (async () => {
       try {
         txHash = await sendTx();
       } catch (e: any) {

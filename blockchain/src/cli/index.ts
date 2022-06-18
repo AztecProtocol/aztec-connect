@@ -58,7 +58,7 @@ export async function decodeError(
   return await decodeErrorFromContractByTxHash(contract, txHash, provider);
 }
 
-export async function decodeContractSelector(
+export function decodeContractSelector(
   contractAddress: string,
   contractName: string,
   selector: string,
@@ -66,10 +66,10 @@ export async function decodeContractSelector(
 ) {
   const web3 = new Web3Provider(provider);
   const contract = new Contract(contractAddress, abis[contractName].abi, web3.getSigner());
-  return await decodeSelector(contract, selector);
+  return decodeSelector(contract, selector);
 }
 
-export async function getContractSelectors(
+export function getContractSelectors(
   contractAddress: EthAddress,
   contractName: string,
   provider: EthereumProvider,
@@ -77,7 +77,7 @@ export async function getContractSelectors(
 ) {
   const web3 = new Web3Provider(provider);
   const contract = new Contract(contractAddress.toString(), abis[contractName].abi, web3.getSigner());
-  return await retrieveContractSelectors(contract, type);
+  return retrieveContractSelectors(contract, type);
 }
 
 export const createElementBridgeData = (
@@ -109,7 +109,7 @@ export async function profileElement(
   const finaliseEvents = await retrieveEvents(elementAddress, 'Element', provider, 'LogFinalise', from, to);
   const poolEvents = await retrieveEvents(elementAddress, 'Element', provider, 'LogPoolAdded', from, to);
   const rollupBridgeEvents = await retrieveEvents(rollupAddress, 'Rollup', provider, 'DefiBridgeProcessed', from, to);
-  const elementBridgeData = await createElementBridgeData(rollupAddress, elementAddress, provider);
+  const elementBridgeData = createElementBridgeData(rollupAddress, elementAddress, provider);
 
   const interactions: {
     [key: string]: {
@@ -268,12 +268,12 @@ async function main() {
     .argument('<contractName>', 'the name of the contract, valid values: Rollup, Element')
     .argument('<selector>', 'the 4 byte selector that you wish to decode, as a hex string 0x...')
     .argument('[url]', 'your ganache url', 'http://localhost:8545')
-    .action(async (contractAddress, contractName, selector, url) => {
+    .action((contractAddress, contractName, selector, url) => {
       const provider = getProvider(url);
       if (selector.length == 10) {
         selector = selector.slice(2);
       }
-      const error = await decodeContractSelector(contractAddress, contractName, selector, provider);
+      const error = decodeContractSelector(contractAddress, contractName, selector, provider);
       if (!error) {
         console.log(`Failed to retrieve error code for selector ${selector}`);
         return;
@@ -413,14 +413,9 @@ async function main() {
     .argument('<contractName>', 'the name of the contract, valid values: Rollup, Element')
     .argument('[type]', 'optional filter for the type of selectors, e.g. error, event')
     .argument('[url]', 'your ganache url', 'http://localhost:8545')
-    .action(async (contractAddress, contractName, type, url) => {
+    .action((contractAddress, contractName, type, url) => {
       const ourProvider = getProvider(url);
-      const selectorMap = await getContractSelectors(
-        EthAddress.fromString(contractAddress),
-        contractName,
-        ourProvider,
-        type,
-      );
+      const selectorMap = getContractSelectors(EthAddress.fromString(contractAddress), contractName, ourProvider, type);
       console.log(selectorMap);
     });
 

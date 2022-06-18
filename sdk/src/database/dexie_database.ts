@@ -449,8 +449,9 @@ export class DexieDatabase implements Database {
     this.userTx = this.dexie.table('userTx');
   }
 
-  async close() {
+  close() {
     this.dexie.close();
+    return Promise.resolve();
   }
 
   async clear() {
@@ -710,7 +711,7 @@ export class DexieDatabase implements Database {
   }
 
   async addAlias(alias: Alias) {
-    return this.addAliases([alias]);
+    return await this.addAliases([alias]);
   }
 
   async addAliases(aliases: Alias[]) {

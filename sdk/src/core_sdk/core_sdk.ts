@@ -208,7 +208,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
 
     // The serial queue will cancel itself. This ensures that anything currently in the queue finishes, and ensures
     // that once the await to push() returns, nothing else is on, or can be added to the queue.
-    await this.serialQueue.push(async () => this.serialQueue.cancel());
+    await this.serialQueue.push(() => Promise.resolve(this.serialQueue.cancel()));
 
     // Stop listening to account state updates.
     this.userStates.forEach(us => us.removeAllListeners());
@@ -226,8 +226,8 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     debug('destroyed.');
   }
 
-  public async getLocalStatus() {
-    return { ...this.sdkStatus };
+  public getLocalStatus() {
+    return Promise.resolve({ ...this.sdkStatus });
   }
 
   public async getRemoteStatus() {
@@ -242,7 +242,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   }
 
   public async isAliasRegistered(alias: string, includePending: boolean) {
-    const aliasHash = await this.computeAliasHash(alias);
+    const aliasHash = this.computeAliasHash(alias);
     return (
       (await this.db.getAliases(aliasHash)).length > 0 ||
       (includePending && (await this.rollupProvider.isAliasRegistered(alias)))
@@ -250,7 +250,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   }
 
   public async isAliasRegisteredToAccount(accountPublicKey: GrumpkinAddress, alias: string, includePending: boolean) {
-    const aliasHash = await this.computeAliasHash(alias);
+    const aliasHash = this.computeAliasHash(alias);
     const savedAlias = await this.db.getAlias(accountPublicKey);
     return savedAlias
       ? savedAlias.aliasHash.equals(aliasHash)
@@ -258,21 +258,21 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   }
 
   public async getAccountPublicKey(alias: string) {
-    const aliasHash = await this.computeAliasHash(alias);
+    const aliasHash = this.computeAliasHash(alias);
     const aliases = await this.db.getAliases(aliasHash);
     return aliases[0]?.accountPublicKey;
   }
 
   public async getTxFees(assetId: number) {
-    return this.rollupProvider.getTxFees(assetId);
+    return await this.rollupProvider.getTxFees(assetId);
   }
 
   public async getDefiFees(bridgeId: BridgeId) {
-    return this.rollupProvider.getDefiFees(bridgeId);
+    return await this.rollupProvider.getDefiFees(bridgeId);
   }
 
   public async getPendingDepositTxs() {
-    return this.rollupProvider.getPendingDepositTxs();
+    return await this.rollupProvider.getPendingDepositTxs();
   }
 
   public async getDefiInteractionNonce(txId: TxId) {
@@ -287,20 +287,20 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     return !!(await this.db.getUser(userId));
   }
 
-  public async getUsers() {
-    return this.userStates.map(us => us.getUserData().accountPublicKey);
+  public getUsers() {
+    return Promise.resolve(this.userStates.map(us => us.getUserData().accountPublicKey));
   }
 
-  public async derivePublicKey(privateKey: Buffer) {
-    return new GrumpkinAddress(this.grumpkin.mul(Grumpkin.one, privateKey));
+  public derivePublicKey(privateKey: Buffer) {
+    return Promise.resolve(new GrumpkinAddress(this.grumpkin.mul(Grumpkin.one, privateKey)));
   }
 
-  public async constructSignature(message: Buffer, privateKey: Buffer) {
-    return this.schnorr.constructSignature(message, privateKey);
+  public constructSignature(message: Buffer, privateKey: Buffer) {
+    return Promise.resolve(this.schnorr.constructSignature(message, privateKey));
   }
 
   public async addUser(accountPrivateKey: Buffer, noSync = false) {
-    return this.serialQueue.push(async () => {
+    return await this.serialQueue.push(async () => {
       const accountPublicKey = await this.derivePublicKey(accountPrivateKey);
       if (await this.db.getUser(accountPublicKey)) {
         throw new Error(`User already exists: ${accountPublicKey}`);
@@ -339,7 +339,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   }
 
   public async removeUser(userId: GrumpkinAddress) {
-    return this.serialQueue.push(async () => {
+    return await this.serialQueue.push(async () => {
       const userState = this.getUserState(userId);
       this.userStates = this.userStates.filter(us => us !== userState);
       userState.removeAllListeners();
@@ -349,8 +349,8 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     });
   }
 
-  public async getUserSyncedToRollup(userId: GrumpkinAddress) {
-    return this.getUserState(userId).getUserData().syncedToRollup;
+  public getUserSyncedToRollup(userId: GrumpkinAddress) {
+    return Promise.resolve(this.getUserState(userId).getUserData().syncedToRollup);
   }
 
   public async getSpendingKeys(userId: GrumpkinAddress) {
@@ -358,13 +358,13 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     return keys.map(k => k.key);
   }
 
-  public async getBalances(userId: GrumpkinAddress, unsafe?: boolean) {
-    return this.getUserState(userId).getBalances(unsafe);
+  public getBalances(userId: GrumpkinAddress, unsafe?: boolean) {
+    return Promise.resolve(this.getUserState(userId).getBalances(unsafe));
   }
 
-  public async getBalance(userId: GrumpkinAddress, assetId: number, unsafe?: boolean) {
+  public getBalance(userId: GrumpkinAddress, assetId: number, unsafe?: boolean) {
     const userState = this.getUserState(userId);
-    return userState.getBalance(assetId, unsafe);
+    return Promise.resolve(userState.getBalance(assetId, unsafe));
   }
 
   public async getSpendableSum(
@@ -374,12 +374,12 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     unsafe?: boolean,
   ) {
     const userState = this.getUserState(userId);
-    return userState.getSpendableSum(assetId, excludePendingNotes, unsafe);
+    return await userState.getSpendableSum(assetId, excludePendingNotes, unsafe);
   }
 
   public async getSpendableSums(userId: GrumpkinAddress, excludePendingNotes?: boolean, unsafe?: boolean) {
     const userState = this.getUserState(userId);
-    return userState.getSpendableSums(excludePendingNotes, unsafe);
+    return await userState.getSpendableSums(excludePendingNotes, unsafe);
   }
 
   public async getMaxSpendableValue(
@@ -390,7 +390,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     unsafe?: boolean,
   ) {
     const userState = this.getUserState(userId);
-    return userState.getMaxSpendableValue(assetId, numNotes, excludePendingNotes, unsafe);
+    return await userState.getMaxSpendableValue(assetId, numNotes, excludePendingNotes, unsafe);
   }
 
   public async pickNotes(
@@ -400,7 +400,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     excludePendingNotes?: boolean,
     unsafe?: boolean,
   ) {
-    return this.getUserState(userId).pickNotes(assetId, value, excludePendingNotes, unsafe);
+    return await this.getUserState(userId).pickNotes(assetId, value, excludePendingNotes, unsafe);
   }
 
   public async pickNote(
@@ -410,20 +410,20 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     excludePendingNotes?: boolean,
     unsafe?: boolean,
   ) {
-    return this.getUserState(userId).pickNote(assetId, value, excludePendingNotes, unsafe);
+    return await this.getUserState(userId).pickNote(assetId, value, excludePendingNotes, unsafe);
   }
 
   public async getUserTxs(userId: GrumpkinAddress) {
-    return this.db.getUserTxs(userId);
+    return await this.db.getUserTxs(userId);
   }
 
   /**
    * Moves the sdk into RUNNING state.
    * Kicks off data tree updates, user note decryptions, alias table updates, proving key construction.
    */
-  public async run() {
+  public run() {
     if (this.initState === SdkInitState.RUNNING) {
-      return;
+      return Promise.resolve();
     }
 
     this.initState = SdkInitState.RUNNING;
@@ -443,7 +443,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
 
         await this.pippenger.init(crsData);
         await this.genesisSync();
-        await this.startReceivingBlocks();
+        this.startReceivingBlocks();
         await this.createJoinSplitProofCreator(forceCreateProvingKeys, proverless);
         await this.createAccountProofCreator(forceCreateProvingKeys, proverless);
 
@@ -452,8 +452,10 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       })
       .catch(err => {
         debug('failed to run:', err);
-        this.destroy();
+        return this.destroy();
       });
+
+    return Promise.resolve();
   }
 
   // -------------------------------------------------------
@@ -469,7 +471,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     recipientAccountRequired: boolean,
     txRefNo: number,
   ) {
-    return this.serialQueue.push(async () => {
+    return await this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
 
       // Create a one time user to generate and sign the proof.
@@ -518,7 +520,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     spendingPublicKey: GrumpkinAddress,
     allowChain: number,
   ) {
-    return this.serialQueue.push(async () => {
+    return await this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
 
       const userState = this.getUserState(userId);
@@ -549,14 +551,14 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   }
 
   public async createPaymentProof(input: JoinSplitProofInput, txRefNo: number) {
-    return this.serialQueue.push(async () => {
+    return await this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
 
       const { outputNotes } = input.tx;
       const userId = outputNotes[1].ownerPubKey;
       const userState = this.getUserState(userId);
       const user = userState.getUserData();
-      return this.paymentProofCreator.createProof(user, input, txRefNo);
+      return await this.paymentProofCreator.createProof(user, input, txRefNo);
     });
   }
 
@@ -569,7 +571,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     newSpendingPublicKey1?: GrumpkinAddress,
     newSpendingPublicKey2?: GrumpkinAddress,
   ) {
-    return this.serialQueue.push(async () => {
+    return await this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
       const aliasHash = this.computeAliasHash(alias);
       const { signingData } = await this.accountProofCreator.createProofInput(
@@ -595,11 +597,11 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     newSpendingPublicKey2?: GrumpkinAddress,
     newAccountPrivateKey?: Buffer,
   ) {
-    return this.serialQueue.push(async () => {
+    return await this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
-      const aliasHash = await this.computeAliasHash(alias);
+      const aliasHash = this.computeAliasHash(alias);
       const newAccountPublicKey = newAccountPrivateKey ? await this.derivePublicKey(newAccountPrivateKey) : undefined;
-      return this.accountProofCreator.createProofInput(
+      return await this.accountProofCreator.createProofInput(
         userId,
         aliasHash,
         migrate,
@@ -612,9 +614,9 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   }
 
   public async createAccountProof(input: AccountProofInput, txRefNo: number) {
-    return this.serialQueue.push(async () => {
+    return await this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
-      return this.accountProofCreator.createProof(input, txRefNo);
+      return await this.accountProofCreator.createProof(input, txRefNo);
     });
   }
 
@@ -625,28 +627,34 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     inputNotes: Note[],
     spendingPublicKey: GrumpkinAddress,
   ) {
-    return this.serialQueue.push(async () => {
+    return await this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
       const userState = this.getUserState(userId);
       const user = userState.getUserData();
-      return this.defiDepositProofCreator.createProofInput(user, bridgeId, depositValue, inputNotes, spendingPublicKey);
+      return await this.defiDepositProofCreator.createProofInput(
+        user,
+        bridgeId,
+        depositValue,
+        inputNotes,
+        spendingPublicKey,
+      );
     });
   }
 
   public async createDefiProof(input: JoinSplitProofInput, txRefNo: number) {
-    return this.serialQueue.push(async () => {
+    return await this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
 
       const { outputNotes } = input.tx;
       const userId = outputNotes[1].ownerPubKey;
       const userState = this.getUserState(userId);
       const user = userState.getUserData();
-      return this.defiDepositProofCreator.createProof(user, input, txRefNo);
+      return await this.defiDepositProofCreator.createProof(user, input, txRefNo);
     });
   }
 
   public async sendProofs(proofs: ProofOutput[]) {
-    return this.serialQueue.push(async () => {
+    return await this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
 
       const txs = proofs.map(({ proofData, offchainTxData, signature }) => ({
@@ -693,10 +701,10 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     await retryUntil(() => this.isSynchronised(), 'data synchronised', timeout);
   }
 
-  public async isUserSynching(userId: GrumpkinAddress) {
+  public isUserSynching(userId: GrumpkinAddress) {
     this.assertInitState(SdkInitState.RUNNING);
 
-    return !this.getUserState(userId).isSynchronised();
+    return Promise.resolve(!this.getUserState(userId).isSynchronised());
   }
 
   public async awaitUserSynchronised(userId: GrumpkinAddress, timeout?: number) {
@@ -708,7 +716,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   public async awaitSettlement(txId: TxId, timeout?: number) {
     this.assertInitState(SdkInitState.RUNNING);
 
-    await retryUntil(async () => this.db.isUserTxSettled(txId), `tx settlement: ${txId}`, timeout);
+    await retryUntil(() => this.db.isUserTxSettled(txId), `tx settlement: ${txId}`, timeout);
   }
 
   public async awaitDefiDepositCompletion(txId: TxId, timeout?: number) {
@@ -938,7 +946,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
    * This mechanism ensures we don't starve servicing the serial queue for long periods of time.
    * Will return once destroy() is called and the state shifts to STOPPING.
    */
-  private async startReceivingBlocks() {
+  private startReceivingBlocks() {
     this.synchingPromise = (async () => {
       debug('starting sync task...');
       while (this.initState !== SdkInitState.STOPPING) {
@@ -1015,7 +1023,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
         const newSize = this.worldState.getSize();
         await this.reinitDataTree();
         await this.writeSyncInfo(-1);
-        this.rollupProvider.clientLog({
+        await this.rollupProvider.clientLog({
           message: 'Invalid dataRoot.',
           synchingFromRollup: syncedToRollup,
           blocksReceived: coreBlocks.length,

@@ -43,23 +43,23 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
   }
 
   public async getLocalStatus() {
-    return this.core.getLocalStatus();
+    return await this.core.getLocalStatus();
   }
 
   public async getRemoteStatus() {
-    return this.core.getRemoteStatus();
+    return await this.core.getRemoteStatus();
   }
 
   public async isAccountRegistered(accountPublicKey: string, includePending: boolean) {
-    return this.core.isAccountRegistered(accountPublicKey, includePending);
+    return await this.core.isAccountRegistered(accountPublicKey, includePending);
   }
 
   public async isAliasRegistered(alias: string, includePending: boolean) {
-    return this.core.isAliasRegistered(alias, includePending);
+    return await this.core.isAliasRegistered(alias, includePending);
   }
 
   public async isAliasRegisteredToAccount(accountPublicKey: string, alias: string, includePending: boolean) {
-    return this.core.isAliasRegisteredToAccount(accountPublicKey, alias, includePending);
+    return await this.core.isAliasRegisteredToAccount(accountPublicKey, alias, includePending);
   }
 
   public async getAccountPublicKey(alias: string) {
@@ -68,15 +68,15 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
   }
 
   public async getTxFees(assetId: number) {
-    return this.core.getTxFees(assetId);
+    return await this.core.getTxFees(assetId);
   }
 
   public async getDefiFees(bridgeId: string) {
-    return this.core.getDefiFees(bridgeId);
+    return await this.core.getDefiFees(bridgeId);
   }
 
   public async getPendingDepositTxs() {
-    return this.core.getPendingDepositTxs();
+    return await this.core.getPendingDepositTxs();
   }
 
   public async createDepositProof(
@@ -88,7 +88,7 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
     recipientAccountRequired: boolean,
     txRefNo: number,
   ) {
-    return this.core.createDepositProof(
+    return await this.core.createDepositProof(
       assetId,
       publicInput,
       privateOutput,
@@ -148,7 +148,7 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
     newSpendingPublicKey1?: string,
     newSpendingPublicKey2?: string,
   ) {
-    return this.core.createAccountProofSigningData(
+    return await this.core.createAccountProofSigningData(
       accountPublicKey,
       alias,
       migrate,
@@ -209,7 +209,7 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
   }
 
   public async sendProofs(proofs: ProofOutputJson[]) {
-    return this.core.sendProofs(proofs);
+    return await this.core.sendProofs(proofs);
   }
 
   public async awaitSynchronised(timeout?: number) {
@@ -243,7 +243,7 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
   }
 
   public async getDefiInteractionNonce(txId: string) {
-    return this.core.getDefiInteractionNonce(txId);
+    return await this.core.getDefiInteractionNonce(txId);
   }
 
   public async userExists(userId: string) {
@@ -257,15 +257,15 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
   }
 
   public async derivePublicKey(privateKey: Uint8Array) {
-    return this.core.derivePublicKey(privateKey);
+    return await this.core.derivePublicKey(privateKey);
   }
 
   public async constructSignature(message: Uint8Array, privateKey: Uint8Array) {
-    return this.core.constructSignature(message, privateKey);
+    return await this.core.constructSignature(message, privateKey);
   }
 
   public async addUser(accountPrivateKey: Uint8Array, noSync?: boolean) {
-    return this.serialQueue.push(async () => {
+    return await this.serialQueue.push(async () => {
       let addUserError: Error;
       try {
         const accountPublicKey = await this.core.addUser(accountPrivateKey, noSync);
@@ -289,7 +289,7 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
   }
 
   public async removeUser(userId: string) {
-    return this.serialQueue.push(async () => {
+    return await this.serialQueue.push(async () => {
       await this.checkPermission(userId);
       const domains = await this.getUserDomains(userId);
       if (domains.length === 1) {
@@ -393,7 +393,7 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
   }
 
   private async getUserDomains(userId: string): Promise<string[]> {
-    return this.leveldb
+    return await this.leveldb
       .get(userId)
       .then(buf => JSON.parse(buf.toString()))
       .catch(() => []);

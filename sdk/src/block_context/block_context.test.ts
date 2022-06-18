@@ -103,7 +103,7 @@ describe('block_context', () => {
     );
   });
 
-  it('should not build sub tree if not required', async () => {
+  it('should not build sub tree if not required', () => {
     const block = buildBlock(3, 192, 32);
     BlockContext.fromBlock(block, pedersen);
     expect(mockMerkleFactory).toBeCalledTimes(0);

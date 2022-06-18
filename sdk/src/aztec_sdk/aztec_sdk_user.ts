@@ -5,50 +5,50 @@ export class AztecSdkUser {
   constructor(public id: GrumpkinAddress, private sdk: AztecSdk) {}
 
   public async isSynching() {
-    return this.sdk.isUserSynching(this.id);
+    return await this.sdk.isUserSynching(this.id);
   }
 
   public async awaitSynchronised(timeout?: number) {
-    return this.sdk.awaitUserSynchronised(this.id, timeout);
+    return await this.sdk.awaitUserSynchronised(this.id, timeout);
   }
 
   public async getSyncedToRollup() {
-    return this.sdk.getUserSyncedToRollup(this.id);
+    return await this.sdk.getUserSyncedToRollup(this.id);
   }
 
   public async getSpendingKeys() {
-    return this.sdk.getSpendingKeys(this.id);
+    return await this.sdk.getSpendingKeys(this.id);
   }
 
   public async getBalance(assetId: number) {
-    return this.sdk.getBalance(this.id, assetId);
+    return await this.sdk.getBalance(this.id, assetId);
   }
 
   public async getSpendableSum(assetId: number, excludePendingNotes?: boolean) {
-    return this.sdk.getSpendableSum(this.id, assetId, excludePendingNotes);
+    return await this.sdk.getSpendableSum(this.id, assetId, excludePendingNotes);
   }
 
   public async getSpendableSums(excludePendingNotes?: boolean) {
-    return this.sdk.getSpendableSums(this.id, excludePendingNotes);
+    return await this.sdk.getSpendableSums(this.id, excludePendingNotes);
   }
 
   public async getMaxSpendableValue(assetId: number, numNotes?: number, excludePendingNotes?: boolean) {
-    return this.sdk.getMaxSpendableValue(this.id, assetId, numNotes, excludePendingNotes);
+    return await this.sdk.getMaxSpendableValue(this.id, assetId, numNotes, excludePendingNotes);
   }
 
   public async getTxs() {
-    return this.sdk.getUserTxs(this.id);
+    return await this.sdk.getUserTxs(this.id);
   }
 
   public async getPaymentTxs() {
-    return this.sdk.getPaymentTxs(this.id);
+    return await this.sdk.getPaymentTxs(this.id);
   }
 
   public async getAccountTxs() {
-    return this.sdk.getAccountTxs(this.id);
+    return await this.sdk.getAccountTxs(this.id);
   }
 
   public async getDefiTxs() {
-    return this.sdk.getDefiTxs(this.id);
+    return await this.sdk.getDefiTxs(this.id);
   }
 }

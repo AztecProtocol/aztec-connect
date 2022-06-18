@@ -9,7 +9,7 @@ const debug = createDebugLogger('bb:create_banana_core_sdk');
 
 export async function createBananaCoreSdk(options: BananaCoreSdkOptions) {
   debug('creating shared worker frontend...');
-  const worker = await createSharedWorker();
+  const worker = createSharedWorker();
   const connector = new SharedWorkerTransportConnect(worker);
   const transportClient = new TransportClient(connector);
   await transportClient.open();

@@ -168,7 +168,7 @@ export class SQLDatabase implements Database {
   }
 
   async getUser(accountPublicKey: GrumpkinAddress) {
-    return this.userDataRep.findOne({ accountPublicKey });
+    return await this.userDataRep.findOne({ accountPublicKey });
   }
 
   async addUser(user: UserData) {
@@ -176,7 +176,7 @@ export class SQLDatabase implements Database {
   }
 
   async getUsers() {
-    return this.userDataRep.find();
+    return await this.userDataRep.find();
   }
 
   async updateUser(user: UserData) {
@@ -283,7 +283,7 @@ export class SQLDatabase implements Database {
   }
 
   async getClaimTx(nullifier: Buffer) {
-    return this.claimTxRep.findOne({ nullifier });
+    return await this.claimTxRep.findOne({ nullifier });
   }
 
   async getUserTxs(userId: GrumpkinAddress) {
@@ -403,11 +403,11 @@ export class SQLDatabase implements Database {
   }
 
   async getAlias(accountPublicKey: GrumpkinAddress) {
-    return this.aliasRep.findOne({ accountPublicKey });
+    return await this.aliasRep.findOne({ accountPublicKey });
   }
 
   async getAliases(aliasHash: AliasHash) {
-    return this.aliasRep.find({ where: { aliasHash }, order: { index: 'DESC' } });
+    return await this.aliasRep.find({ where: { aliasHash }, order: { index: 'DESC' } });
   }
 
   async addKey(name: string, value: Buffer) {

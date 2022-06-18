@@ -174,7 +174,7 @@ export class MerkleTree {
     const newRoot = this.hasher.compress(left, right);
     batch.put(newRoot, Buffer.concat([left, right]));
     if (!root.equals(newRoot)) {
-      await batch.del(root);
+      batch.del(root);
     }
     return newRoot;
   }

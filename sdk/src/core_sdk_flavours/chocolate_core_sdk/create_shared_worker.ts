@@ -3,7 +3,7 @@ import { sdkVersion } from '../../core_sdk';
 /**
  * Loads the shared worker. The banana sdk calls this as part of it's factory function.
  */
-export async function createSharedWorker() {
+export function createSharedWorker() {
   if (typeof window.SharedWorker === 'undefined') {
     throw new Error('SharedWorker is not supported.');
   }
