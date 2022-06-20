@@ -24,7 +24,9 @@ exports.main = async function (event: any, ctx: any, callback: any) {
   response.status = '200';
   response.statusDescription = 'OK';
 
-  let oldBody = await (await fetch('http://zk.money-aztec-connect-dev.s3-website.eu-west-2.amazonaws.com')).text();
+  const hostName = request.headers.host[0].value;
+
+  let oldBody = await (await fetch(`http://${hostName}`)).text();
 
   if (alias && lambdaPaths.indexOf(uri) > -1) {
     response.body = oldBody.replace(

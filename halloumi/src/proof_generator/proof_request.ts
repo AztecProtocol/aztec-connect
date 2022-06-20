@@ -32,10 +32,7 @@ export class RootRollupProofRequest {
   constructor(public rootRollup: RootRollup) {}
 
   toBuffer() {
-    return Buffer.concat([
-      numToUInt32BE(this.proofId),
-      this.rootRollup.toBuffer(),
-    ]);
+    return Buffer.concat([numToUInt32BE(this.proofId), this.rootRollup.toBuffer()]);
   }
 }
 
@@ -55,9 +52,6 @@ export class RootVerifierProofRequest {
   constructor(public rootVerifier: RootVerifier) {}
 
   toBuffer() {
-    return Buffer.concat([
-      numToUInt32BE(this.proofId),
-      this.rootVerifier.toBuffer(),
-    ]);
+    return Buffer.concat([numToUInt32BE(this.proofId), this.rootVerifier.toBuffer()]);
   }
 }

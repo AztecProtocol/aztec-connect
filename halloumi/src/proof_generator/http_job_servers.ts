@@ -26,11 +26,11 @@ export class HttpJobServers implements ProofGenerator {
 
   public async reset() {}
 
-  public async getJoinSplitVk() {
+  public getJoinSplitVk() {
     return this.rootAndVerifierServer.getJoinSplitVk();
   }
 
-  public async getAccountVk() {
+  public getAccountVk() {
     return this.rootAndVerifierServer.getAccountVk();
   }
 

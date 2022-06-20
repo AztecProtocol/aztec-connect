@@ -65,7 +65,7 @@ describe('hummus terminal test', () => {
 
   async function injectProvider(host: string, privateKey: Buffer) {
     await page.evaluate(
-      async (host, privateKeyStr) => {
+      (host, privateKeyStr) => {
         window.injectProvider(host);
         window.ethereum.addAccount(Buffer.from(privateKeyStr, 'hex'));
       },
@@ -110,7 +110,7 @@ describe('hummus terminal test', () => {
     const alias = randomBytes(4).toString('hex');
     await sendCommand(`register ${alias}`);
     await sendCommand(`deposit 0.5`);
-    await page.evaluate(async () => window.aztecSdk.awaitAllUserTxsSettled());
+    await page.evaluate(() => window.aztecSdk.awaitAllUserTxsSettled());
 
     expect(await getBalance(alias, 0)).toBe(toBaseUnits('0.5', 18));
 
@@ -118,11 +118,11 @@ describe('hummus terminal test', () => {
     await sendCommand(`balance 1`);
 
     await sendCommand(`defi 0.01 1 0 1`);
-    await page.evaluate(async () => window.aztecSdk.awaitAllUserTxsSettled());
+    await page.evaluate(() => window.aztecSdk.awaitAllUserTxsSettled());
 
     // Flushing claim through with a withdraw.
     await sendCommand(`withdraw 0.1`);
-    await page.evaluate(async () => window.aztecSdk.awaitAllUserTxsClaimed());
+    await page.evaluate(() => window.aztecSdk.awaitAllUserTxsClaimed());
 
     await sendCommand(`balance 0`);
     await sendCommand(`balance 1`);

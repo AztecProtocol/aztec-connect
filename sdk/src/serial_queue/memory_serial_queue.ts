@@ -5,7 +5,7 @@ export class MemorySerialQueue implements SerialQueue {
   private readonly queue = new MemoryFifo<() => Promise<void>>();
 
   constructor() {
-    this.queue.process(fn => fn());
+    void this.queue.process(fn => fn());
   }
 
   public length() {
@@ -16,7 +16,7 @@ export class MemorySerialQueue implements SerialQueue {
     this.queue.cancel();
   }
 
-  public async push<T>(fn: () => Promise<T>): Promise<T> {
+  public push<T>(fn: () => Promise<T>): Promise<T> {
     return new Promise((resolve, reject) => {
       this.queue.put(async () => {
         try {

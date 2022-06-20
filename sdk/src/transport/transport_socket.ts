@@ -6,7 +6,7 @@
  */
 export interface TransportSocket {
   send(msg: any): Promise<void>;
-  registerHandler(cb: (msg: any) => Promise<any>): void;
+  registerHandler(cb: (msg: any) => any): void;
   close();
 }
 
@@ -16,12 +16,13 @@ export interface TransportSocket {
 export class MessageChannelTransportSocket implements TransportSocket {
   constructor(private port: MessagePort) {}
 
-  async send(msg: any): Promise<void> {
+  send(msg: any): Promise<void> {
     this.port.postMessage(msg);
+    return Promise.resolve();
   }
 
-  registerHandler(cb: (msg: any) => Promise<any>): void {
-    this.port.onmessage = async event => cb(event.data);
+  registerHandler(cb: (msg: any) => any): void {
+    this.port.onmessage = event => cb(event.data);
   }
 
   close() {

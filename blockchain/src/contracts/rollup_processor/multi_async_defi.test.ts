@@ -138,7 +138,7 @@ describe('rollup_processor: multi async defi', () => {
     }
 
     while (defiDepositProofs.length) {
-      const { proofData } = await createRollupProof(
+      const { proofData } = createRollupProof(
         rollupProvider,
         mergeInnerProofs(defiDepositProofs.splice(0, RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK)),
         {
@@ -187,7 +187,7 @@ describe('rollup_processor: multi async defi', () => {
 
     // populate hashes with asyncHashes
     {
-      const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+      const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
         rollupId,
         rollupSize,
       });
@@ -204,7 +204,7 @@ describe('rollup_processor: multi async defi', () => {
     {
       const defiInteractionData = expectedAsyncResult.slice(-RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK);
       const previousDefiInteractionHash = packInteractionNotes(defiInteractionData);
-      const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+      const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
         rollupId,
         rollupSize,
         previousDefiInteractionHash,

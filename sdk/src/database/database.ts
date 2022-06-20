@@ -36,11 +36,11 @@ export interface Database extends MutexDatabase {
   getPendingNotes(userId: GrumpkinAddress): Promise<Note[]>;
   removeNote(nullifier: Buffer): Promise<void>;
 
-  getUser(userId: GrumpkinAddress): Promise<UserData | undefined>;
+  getUser(accountPublicKey: GrumpkinAddress): Promise<UserData | undefined>;
   getUsers(): Promise<UserData[]>;
   addUser(user: UserData): Promise<void>;
   updateUser(user: UserData): Promise<void>;
-  removeUser(userId: GrumpkinAddress): Promise<void>;
+  removeUser(accountPublicKey: GrumpkinAddress): Promise<void>;
   resetUsers(): Promise<void>;
 
   addPaymentTx(tx: CorePaymentTx): Promise<void>;
@@ -89,4 +89,7 @@ export interface Database extends MutexDatabase {
   addKey(name: string, value: Buffer): Promise<void>;
   getKey(name: string): Promise<Buffer | undefined>;
   deleteKey(name: string): Promise<void>;
+
+  setGenesisData(data: Buffer): Promise<void>;
+  getGenesisData(): Promise<Buffer>;
 }

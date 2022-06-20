@@ -16,7 +16,7 @@ const {
 } = process.env;
 
 async function main() {
-  const shutdown = async () => process.exit(0);
+  const shutdown = () => process.exit(0);
   process.once('SIGINT', shutdown);
   process.once('SIGTERM', shutdown);
 

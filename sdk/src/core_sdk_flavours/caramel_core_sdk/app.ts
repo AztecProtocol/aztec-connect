@@ -19,7 +19,7 @@ function main() {
    *     }]
    *   }
    */
-  const dispatchFn = async ({ fn, args }: DispatchMsg) => iframeBackend[fn](...args);
+  const dispatchFn = ({ fn, args }: DispatchMsg) => iframeBackend[fn](...args);
   const listener = new IframeTransportListener(window);
   const transportServer = new TransportServer(listener, dispatchFn);
   iframeBackend.on('dispatch_msg', (msg: DispatchMsg) => transportServer.broadcast(msg));

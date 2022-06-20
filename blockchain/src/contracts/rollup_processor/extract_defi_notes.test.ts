@@ -104,7 +104,7 @@ describe('rollup_processor: extract defi notes', () => {
 
     const txProofs = [];
     for (let i = 0; i < innerProofOutputs.length; ++i) {
-      const proof = await createRollupProof(signers[0], innerProofOutputs[i], {
+      const proof = createRollupProof(signers[0], innerProofOutputs[i], {
         rollupId: i,
         defiInteractionData:
           i === 2

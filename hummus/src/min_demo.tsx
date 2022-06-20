@@ -154,6 +154,6 @@ function getKey() {
   }
 }
 
-export async function minDemo() {
+export function minDemo() {
   ReactDOM.render(<MinForm grumpkinPrivKey={getKey()} />, document.getElementById('root'));
 }

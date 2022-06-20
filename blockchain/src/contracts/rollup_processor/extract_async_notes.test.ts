@@ -108,7 +108,7 @@ describe('rollup_processor: extract async notes', () => {
 
     const txProofs = [];
     txProofs.push(
-      await createRollupProof(signers[0], innerProofOutputs[0], {
+      createRollupProof(signers[0], innerProofOutputs[0], {
         rollupId: rollupId++,
         rollupSize: 32,
         defiInteractionData: createDefiInteractionData(asyncBatchSize, asyncBridgeId),
@@ -116,7 +116,7 @@ describe('rollup_processor: extract async notes', () => {
       }),
     );
     txProofs.push(
-      await createRollupProof(signers[0], innerProofOutputs[1], {
+      createRollupProof(signers[0], innerProofOutputs[1], {
         rollupId: rollupId++,
         rollupSize: 32,
         defiInteractionData: createDefiInteractionData(asyncBatchSize, asyncBridgeId),
@@ -124,7 +124,7 @@ describe('rollup_processor: extract async notes', () => {
       }),
     );
     txProofs.push(
-      await createRollupProof(signers[0], innerProofOutputs[2], {
+      createRollupProof(signers[0], innerProofOutputs[2], {
         rollupId: rollupId++,
         rollupSize: 32,
         defiInteractionData: createDefiInteractionData(asyncBatchSize, asyncBridgeId),
@@ -132,7 +132,7 @@ describe('rollup_processor: extract async notes', () => {
       }),
     );
     txProofs.push(
-      await createRollupProof(signers[0], innerProofOutputs[3], {
+      createRollupProof(signers[0], innerProofOutputs[3], {
         rollupId: rollupId++,
         rollupSize: 32,
         defiInteractionData: createDefiInteractionData(syncBatchSize, syncBridgeId),
@@ -180,7 +180,7 @@ describe('rollup_processor: extract async notes', () => {
     );
     const previousDefiInteractionHash1 = packInteractionNotes(firstBatchOfNotes, numberOfBridgeCalls);
     txProofs.push(
-      await createRollupProof(signers[4], innerProofOutputs[4], {
+      createRollupProof(signers[4], innerProofOutputs[4], {
         rollupId: rollupId++,
         rollupSize: 32,
         defiInteractionData: [],
@@ -199,7 +199,7 @@ describe('rollup_processor: extract async notes', () => {
     ];
     const previousDefiInteractionHash2 = packInteractionNotes(secondBatchOfNotes, numberOfBridgeCalls);
     txProofs.push(
-      await createRollupProof(signers[5], innerProofOutputs[5], {
+      createRollupProof(signers[5], innerProofOutputs[5], {
         rollupId: rollupId++,
         rollupSize: 32,
         defiInteractionData: [],
@@ -214,7 +214,7 @@ describe('rollup_processor: extract async notes', () => {
     ];
     const previousDefiInteractionHash3 = packInteractionNotes(thirdBatchOfNotes, numberOfBridgeCalls);
     txProofs.push(
-      await createRollupProof(signers[6], innerProofOutputs[6], {
+      createRollupProof(signers[6], innerProofOutputs[6], {
         rollupId: rollupId++,
         rollupSize: 32,
         defiInteractionData: [],

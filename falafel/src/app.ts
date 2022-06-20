@@ -8,6 +8,7 @@ import {
   PendingTxJson,
   rollupProviderStatusToJson,
   TxJson,
+  initialWorldStateToBuffer,
 } from '@aztec/barretenberg/rollup_provider';
 import { numToInt32BE, serializeBufferArrayToVector } from '@aztec/barretenberg/serialize';
 import cors from '@koa/cors';
@@ -87,7 +88,7 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     }
   };
 
-  router.get('/', recordMetric, async (ctx: Koa.Context) => {
+  router.get('/', recordMetric, (ctx: Koa.Context) => {
     ctx.body = {
       serviceName: 'falafel',
       isReady: server.isReady(),
@@ -122,7 +123,7 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
   });
 
   router.get('/get-blocks', recordMetric, async (ctx: Koa.Context) => {
-    const blocks = server.getBlockBuffers(+ctx.query.from, 100);
+    const blocks = ctx.query.from ? server.getBlockBuffers(+ctx.query.from, 100) : [];
     const response = Buffer.concat([
       numToInt32BE(await server.getLatestRollupId()),
       serializeBufferArrayToVector(blocks),
@@ -132,8 +133,8 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     ctx.status = 200;
   });
 
-  router.get('/remove-data', recordMetric, validateAuth, async (ctx: Koa.Context) => {
-    await server.removeData();
+  router.get('/remove-data', recordMetric, validateAuth, (ctx: Koa.Context) => {
+    server.removeData();
     ctx.status = 200;
   });
 
@@ -145,11 +146,11 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
   router.patch('/runtime-config', recordMetric, validateAuth, async (ctx: Koa.Context) => {
     const stream = new PromiseReadable(ctx.req);
     const runtimeConfig = partialRuntimeConfigFromJson(JSON.parse((await stream.readAll()) as string));
-    server.setRuntimeConfig(runtimeConfig);
+    await server.setRuntimeConfig(runtimeConfig);
     ctx.status = 200;
   });
 
-  router.get('/flush', recordMetric, validateAuth, async (ctx: Koa.Context) => {
+  router.get('/flush', recordMetric, validateAuth, (ctx: Koa.Context) => {
     server.flushTxs();
     ctx.status = 200;
   });
@@ -166,7 +167,7 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     const stream = new PromiseReadable(ctx.req);
     const data = JSON.parse((await stream.readAll()) as string);
     const assetId = +data.assetId;
-    const txFees = await server.getTxFees(assetId);
+    const txFees = server.getTxFees(assetId);
 
     ctx.set('content-type', 'application/json');
     ctx.body = txFees.map(fees => fees.map(assetValueToJson));
@@ -177,7 +178,7 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     const stream = new PromiseReadable(ctx.req);
     const data = JSON.parse((await stream.readAll()) as string);
     const bridgeId = BigInt(data.bridgeId);
-    const defiFees = await server.getDefiFees(bridgeId);
+    const defiFees = server.getDefiFees(bridgeId);
 
     ctx.set('content-type', 'application/json');
     ctx.body = defiFees.map(assetValueToJson);
@@ -186,7 +187,7 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
 
   router.get('/get-initial-world-state', recordMetric, async (ctx: Koa.Context) => {
     const response = await server.getInitialWorldState();
-    ctx.body = response.initialAccounts;
+    ctx.body = initialWorldStateToBuffer(response);
     ctx.status = 200;
   });
 

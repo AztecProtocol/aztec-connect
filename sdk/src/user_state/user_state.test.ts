@@ -8,7 +8,14 @@ import { BridgeId, virtualAssetIdFlag, virtualAssetIdPlaceholder } from '@aztec/
 import { ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
 import { HashPath } from '@aztec/barretenberg/merkle_tree';
-import { deriveNoteSecret, NoteAlgorithms, TreeClaimNote, TreeNote } from '@aztec/barretenberg/note_algorithms';
+import {
+  deriveNoteSecret,
+  NoteAlgorithms,
+  NoteDecryptor,
+  SingleNoteDecryptor,
+  TreeClaimNote,
+  TreeNote,
+} from '@aztec/barretenberg/note_algorithms';
 import {
   OffchainAccountData,
   OffchainDefiClaimData,
@@ -21,6 +28,7 @@ import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
 import { randomBytes } from 'crypto';
+import { BlockContext } from '../block_context/block_context';
 import { CoreDefiTx, CorePaymentTx, PaymentProofId } from '../core_tx';
 import { Database } from '../database';
 import { Note } from '../note';
@@ -34,6 +42,7 @@ type Mockify<T> = {
 describe('user state', () => {
   let grumpkin: Grumpkin;
   let noteAlgos: NoteAlgorithms;
+  let noteDecryptor: NoteDecryptor;
   let db: Mockify<Database>;
   let rollupProvider: Mockify<RollupProvider>;
   let userState: UserState;
@@ -53,7 +62,6 @@ describe('user state', () => {
     const accountPrivateKey = randomBytes(32);
     const accountPublicKey = new GrumpkinAddress(grumpkin.mul(Grumpkin.one, accountPrivateKey));
     return {
-      id: accountPublicKey,
       accountPrivateKey,
       accountPublicKey,
       syncedToRollup: -1,
@@ -70,13 +78,16 @@ describe('user state', () => {
 
   const createBlockContext = (block: Block) => {
     return {
-      block,
-      getBlockSubtreeHashPath: async function (index: number) {
+      rollup: RollupProofData.fromBuffer(block.rollupProofData),
+      created: block.created,
+      offchainTxData: block.offchainTxData,
+      interactionResult: block.interactionResult,
+      getBlockSubtreeHashPath: function (index: number) {
         const path = createHashPath(11);
         generatedHashPaths[index] = path;
-        return path;
+        return Promise.resolve(path);
       },
-    } as any;
+    } as BlockContext;
   };
 
   const addInputNote = (
@@ -102,6 +113,7 @@ describe('user state', () => {
     const barretenberg = await BarretenbergWasm.new();
     grumpkin = new Grumpkin(barretenberg);
     noteAlgos = new NoteAlgorithms(barretenberg);
+    noteDecryptor = new SingleNoteDecryptor(barretenberg);
   });
 
   beforeEach(async () => {
@@ -138,6 +150,7 @@ describe('user state', () => {
     } as any;
 
     rollupProvider = {
+      getLatestRollupId: jest.fn().mockResolvedValue(0),
       getBlocks: jest.fn().mockResolvedValue([]),
       getPendingTxs: jest.fn().mockResolvedValue([]),
     } as any;
@@ -145,7 +158,7 @@ describe('user state', () => {
     inputNotes = [];
     generatedHashPaths = {};
 
-    userState = new UserState(user, grumpkin, noteAlgos, db as any, rollupProvider as any);
+    userState = new UserState(user, grumpkin, noteAlgos, noteDecryptor, db as any, rollupProvider as any);
     await userState.init();
   });
 
@@ -222,10 +235,10 @@ describe('user state', () => {
       ? Buffer.alloc(32)
       : noteAlgos.valueNoteNullifier(randomBytes(32), proofSender.accountPrivateKey);
     if (inputNoteValue1) {
-      addInputNote(proofSender.id, proofSenderAccountRequired, assetId, inputNoteValue1, nullifier1);
+      addInputNote(proofSender.accountPublicKey, proofSenderAccountRequired, assetId, inputNoteValue1, nullifier1);
     }
     if (inputNoteValue2) {
-      addInputNote(proofSender.id, proofSenderAccountRequired, assetId, inputNoteValue2, nullifier2);
+      addInputNote(proofSender.accountPublicKey, proofSenderAccountRequired, assetId, inputNoteValue2, nullifier2);
     }
 
     // Output notes
@@ -252,7 +265,7 @@ describe('user state', () => {
 
     const tx = new CorePaymentTx(
       new TxId(proofData.txId),
-      proofSender.id,
+      proofSender.accountPublicKey,
       proofId,
       assetId,
       publicValue,
@@ -260,8 +273,8 @@ describe('user state', () => {
       outputNoteValue1 + outputNoteValue2 + txFee,
       outputNoteValue1,
       outputNoteValue2,
-      newNoteOwner.id.equals(user.id),
-      proofSender.id.equals(user.id),
+      newNoteOwner.accountPublicKey.equals(user.accountPublicKey),
+      proofSender.accountPublicKey.equals(user.accountPublicKey),
       newNoteOwnerAccountRequired,
       txRefNo,
       new Date(),
@@ -354,7 +367,7 @@ describe('user state', () => {
     });
 
   const generateAccountProof = ({
-    userId = user.id,
+    userId = user.accountPublicKey,
     aliasHash = AliasHash.random(),
     newAccountPublicKey = userId,
     newSpendingPublicKey1 = GrumpkinAddress.random(),
@@ -398,18 +411,18 @@ describe('user state', () => {
     depositValue = 0n,
     txFee = 0n,
     proofSender = user,
-    claimNoteRecipient = user.id,
+    claimNoteRecipient = user.accountPublicKey,
     txRefNo = 0,
   } = {}) => {
     const assetId = bridgeId.inputAssetIdA;
     const nullifier1 = noteAlgos.valueNoteNullifier(randomBytes(32), proofSender.accountPrivateKey);
     const nullifier2 = noteAlgos.valueNoteNullifier(randomBytes(32), proofSender.accountPrivateKey);
-    addInputNote(proofSender.id, true, assetId, inputNoteValue1, nullifier1);
-    addInputNote(proofSender.id, true, assetId, inputNoteValue2, nullifier2);
+    addInputNote(proofSender.accountPublicKey, true, assetId, inputNoteValue1, nullifier1);
+    addInputNote(proofSender.accountPublicKey, true, assetId, inputNoteValue2, nullifier2);
 
     const accountRequired = true; // accountRequired is always true for defi deposit.
-    const dummyNote = createNote(assetId, 0n, proofSender.id, accountRequired, randomBytes(32));
-    const changeNote = createNote(assetId, outputNoteValue, proofSender.id, accountRequired, nullifier2);
+    const dummyNote = createNote(assetId, 0n, proofSender.accountPublicKey, accountRequired, randomBytes(32));
+    const changeNote = createNote(assetId, outputNoteValue, proofSender.accountPublicKey, accountRequired, nullifier2);
     const { partialClaimNote, partialStateSecretEphPubKey, partialStateSecret } = createClaimNote(
       bridgeId,
       depositValue,
@@ -441,7 +454,7 @@ describe('user state', () => {
     );
     const tx = new CoreDefiTx(
       new TxId(proofData.txId),
-      proofSender.id,
+      proofSender.accountPublicKey,
       bridgeId,
       depositValue,
       txFee,
@@ -468,8 +481,8 @@ describe('user state', () => {
     const assetId = bridgeId.inputAssetIdA;
     const accountRequired = true;
     const notes = [
-      createNote(assetId, outputValueA, noteRecipient.id, accountRequired, nullifier1),
-      createNote(assetId, outputValueB, noteRecipient.id, accountRequired, nullifier2),
+      createNote(assetId, outputValueA, noteRecipient.accountPublicKey, accountRequired, nullifier1),
+      createNote(assetId, outputValueB, noteRecipient.accountPublicKey, accountRequired, nullifier2),
     ];
     const proofData = new InnerProofData(
       ProofId.DEFI_CLAIM,
@@ -555,7 +568,11 @@ describe('user state', () => {
     expect(db.nullifyNote).toHaveBeenCalledWith(jsProof.proofData.nullifier1);
     expect(db.nullifyNote).toHaveBeenCalledWith(jsProof.proofData.nullifier2);
     expect(db.settlePaymentTx).toHaveBeenCalledTimes(1);
-    expect(db.settlePaymentTx).toHaveBeenCalledWith(user.id, new TxId(jsProof.proofData.txId), block.created);
+    expect(db.settlePaymentTx).toHaveBeenCalledWith(
+      user.accountPublicKey,
+      new TxId(jsProof.proofData.txId),
+      block.created,
+    );
     expect(db.addPaymentTx).toHaveBeenCalledTimes(0);
     expect(db.updateUser).toHaveBeenLastCalledWith({
       ...user,
@@ -607,7 +624,11 @@ describe('user state', () => {
     });
     expect(db.addPaymentTx).toHaveBeenCalledTimes(0);
     expect(db.settlePaymentTx).toHaveBeenCalledTimes(1);
-    expect(db.settlePaymentTx).toHaveBeenCalledWith(user.id, new TxId(jsProof.proofData.txId), block.created);
+    expect(db.settlePaymentTx).toHaveBeenCalledWith(
+      user.accountPublicKey,
+      new TxId(jsProof.proofData.txId),
+      block.created,
+    );
   });
 
   it('should correctly process multiple blocks', async () => {
@@ -649,8 +670,16 @@ describe('user state', () => {
     expect(db.nullifyNote).toHaveBeenCalledWith(jsProof2.proofData.nullifier1);
     expect(db.nullifyNote).toHaveBeenCalledWith(jsProof2.proofData.nullifier1);
     expect(db.settlePaymentTx).toHaveBeenCalledTimes(2);
-    expect(db.settlePaymentTx).toHaveBeenCalledWith(user.id, new TxId(jsProof1.proofData.txId), block1.created);
-    expect(db.settlePaymentTx).toHaveBeenCalledWith(user.id, new TxId(jsProof2.proofData.txId), block2.created);
+    expect(db.settlePaymentTx).toHaveBeenCalledWith(
+      user.accountPublicKey,
+      new TxId(jsProof1.proofData.txId),
+      block1.created,
+    );
+    expect(db.settlePaymentTx).toHaveBeenCalledWith(
+      user.accountPublicKey,
+      new TxId(jsProof2.proofData.txId),
+      block2.created,
+    );
     expect(db.addPaymentTx).toHaveBeenCalledTimes(0);
     expect(db.updateUser).toHaveBeenCalledTimes(1);
     expect(db.updateUser).toHaveBeenLastCalledWith({
@@ -684,7 +713,7 @@ describe('user state', () => {
     const stranger = createUser();
     const block = createRollupBlock([generatePaymentProof({ proofSender: stranger, newNoteOwner: stranger })]);
 
-    userState.processBlock(createBlockContext(block));
+    await userState.processBlock(createBlockContext(block));
 
     expect(db.addNote).toHaveBeenCalledTimes(0);
     expect(db.nullifyNote).toHaveBeenCalledTimes(0);
@@ -718,7 +747,7 @@ describe('user state', () => {
     expect(db.addPaymentTx).toHaveBeenCalledTimes(1);
     expect(db.addPaymentTx.mock.calls[0][0]).toMatchObject({
       txId,
-      userId: user.id,
+      userId: user.accountPublicKey,
       publicValue: depositValue + txFee,
       publicOwner: ethAddress,
       privateInput: 0n,
@@ -763,7 +792,7 @@ describe('user state', () => {
     expect(db.addPaymentTx).toHaveBeenCalledTimes(1);
     expect(db.addPaymentTx.mock.calls[0][0]).toMatchObject({
       txId,
-      userId: user.id,
+      userId: user.accountPublicKey,
       publicValue: withdrawValue + txFee,
       publicOwner: recipient,
       privateInput: inputNoteValue1 + inputNoteValue2,
@@ -795,7 +824,7 @@ describe('user state', () => {
     expect(db.nullifyNote).toHaveBeenCalledTimes(0);
     expect(db.addPaymentTx).toHaveBeenCalledTimes(1);
     expect(db.addPaymentTx.mock.calls[0][0]).toMatchObject({
-      userId: user.id,
+      userId: user.accountPublicKey,
       privateInput: 0n,
       recipientPrivateOutput: proof.tx.recipientPrivateOutput,
       senderPrivateOutput: 0n,
@@ -829,7 +858,7 @@ describe('user state', () => {
 
     expect(db.addPaymentTx).toHaveBeenCalledTimes(1);
     expect(db.addPaymentTx.mock.calls[0][0]).toMatchObject({
-      userId: user.id,
+      userId: user.accountPublicKey,
       privateInput: 0n,
       recipientPrivateOutput: proof.tx.recipientPrivateOutput,
       senderPrivateOutput: 0n,
@@ -854,7 +883,7 @@ describe('user state', () => {
     expect(db.nullifyNote).toHaveBeenCalledTimes(2);
     expect(db.addPaymentTx).toHaveBeenCalledTimes(1);
     expect(db.addPaymentTx.mock.calls[0][0]).toMatchObject({
-      userId: user.id,
+      userId: user.accountPublicKey,
       recipientPrivateOutput: 0n,
       senderPrivateOutput: proof.tx.senderPrivateOutput,
       isSender: true,
@@ -875,7 +904,7 @@ describe('user state', () => {
     await userState.processBlock(createBlockContext(block));
 
     expect(db.addPaymentTx.mock.calls[0][0]).toMatchObject({
-      userId: user.id,
+      userId: user.accountPublicKey,
       isRecipient: true,
       isSender: false,
       accountRequired: true,
@@ -894,7 +923,7 @@ describe('user state', () => {
     await userState.processBlock(createBlockContext(block));
 
     expect(db.addPaymentTx.mock.calls[0][0]).toMatchObject({
-      userId: user.id,
+      userId: user.accountPublicKey,
       isRecipient: false,
       isSender: true,
       accountRequired: true,
@@ -913,7 +942,7 @@ describe('user state', () => {
     await userState.processBlock(createBlockContext(block));
 
     expect(db.addPaymentTx.mock.calls[0][0]).toMatchObject({
-      userId: user.id,
+      userId: user.accountPublicKey,
       isRecipient: true,
       isSender: false,
       accountRequired: false,
@@ -936,13 +965,13 @@ describe('user state', () => {
 
     expect(db.addSpendingKey).toHaveBeenCalledTimes(2);
     expect(db.addSpendingKey.mock.calls[0][0]).toEqual({
-      userId: user.id,
+      userId: user.accountPublicKey,
       key: newSpendingPublicKey1.x(),
       treeIndex: 0,
       hashPath: generatedHashPaths[0].toBuffer(),
     });
     expect(db.addSpendingKey.mock.calls[1][0]).toEqual({
-      userId: user.id,
+      userId: user.accountPublicKey,
       key: newSpendingPublicKey2.x(),
       treeIndex: 1,
       hashPath: generatedHashPaths[1].toBuffer(),
@@ -965,13 +994,13 @@ describe('user state', () => {
 
     expect(db.addSpendingKey).toHaveBeenCalledTimes(2);
     expect(db.addSpendingKey.mock.calls[0][0]).toEqual({
-      userId: user.id,
+      userId: user.accountPublicKey,
       key: newSpendingPublicKey1.x(),
       treeIndex: 0,
       hashPath: generatedHashPaths[0].toBuffer(),
     });
     expect(db.addSpendingKey.mock.calls[1][0]).toEqual({
-      userId: user.id,
+      userId: user.accountPublicKey,
       key: newSpendingPublicKey2.x(),
       treeIndex: 1,
       hashPath: generatedHashPaths[1].toBuffer(),
@@ -980,7 +1009,7 @@ describe('user state', () => {
     expect(db.addAccountTx).toHaveBeenCalledTimes(1);
     expect(db.addAccountTx.mock.calls[0][0]).toMatchObject({
       txId,
-      userId: user.id,
+      userId: user.accountPublicKey,
       aliasHash,
       newSpendingPublicKey1: newSpendingPublicKey1.x(),
       newSpendingPublicKey2: newSpendingPublicKey2.x(),
@@ -1015,7 +1044,7 @@ describe('user state', () => {
     const newSpendingPublicKey1 = GrumpkinAddress.random();
     const newSpendingPublicKey2 = GrumpkinAddress.random();
     const accountProof = generateAccountProof({
-      userId: oldUser.id,
+      userId: oldUser.accountPublicKey,
       aliasHash,
       newAccountPublicKey: user.accountPublicKey,
       newSpendingPublicKey1,
@@ -1029,13 +1058,13 @@ describe('user state', () => {
 
     expect(db.addSpendingKey).toHaveBeenCalledTimes(2);
     expect(db.addSpendingKey.mock.calls[0][0]).toEqual({
-      userId: user.id,
+      userId: user.accountPublicKey,
       key: newSpendingPublicKey1.x(),
       treeIndex: 0,
       hashPath: generatedHashPaths[0].toBuffer(),
     });
     expect(db.addSpendingKey.mock.calls[1][0]).toEqual({
-      userId: user.id,
+      userId: user.accountPublicKey,
       key: newSpendingPublicKey2.x(),
       treeIndex: 1,
       hashPath: generatedHashPaths[1].toBuffer(),
@@ -1044,7 +1073,7 @@ describe('user state', () => {
     expect(db.addAccountTx).toHaveBeenCalledTimes(1);
     expect(db.addAccountTx.mock.calls[0][0]).toMatchObject({
       txId,
-      userId: user.id,
+      userId: user.accountPublicKey,
       aliasHash,
       newSpendingPublicKey1: newSpendingPublicKey1.x(),
       newSpendingPublicKey2: newSpendingPublicKey2.x(),
@@ -1055,7 +1084,7 @@ describe('user state', () => {
 
   it('should ignore account proof that is not us', async () => {
     const randomUser = createUser();
-    const accountProof = generateAccountProof({ userId: randomUser.id });
+    const accountProof = generateAccountProof({ userId: randomUser.accountPublicKey });
     const block = createRollupBlock([accountProof]);
 
     await userState.processBlock(createBlockContext(block));
@@ -1075,10 +1104,9 @@ describe('user state', () => {
     const outputValueA = depositValue / 5n;
     const outputValueB = totalOutputValueB / 5n;
     const result = true;
-    const rollupId = 4;
 
     const defiProof = generateDefiDepositProof({ bridgeId, outputNoteValue, depositValue });
-    const defiProofInteractionNonce = rollupId * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK;
+    const defiProofInteractionNonce = 0;
     const interactionResult = [
       new DefiInteractionEvent(
         bridgeId,
@@ -1091,7 +1119,6 @@ describe('user state', () => {
       new DefiInteractionEvent(BridgeId.random(), defiProofInteractionNonce + 1, 12n, 34n, 56n, result),
     ];
     const block = createRollupBlock([defiProof], {
-      rollupId,
       interactionResult,
       bridgeIds: interactionResult.map(ir => ir.bridgeId),
       dataStartIndex: 256,
@@ -1109,7 +1136,7 @@ describe('user state', () => {
     expect(db.addClaimTx).toHaveBeenCalledTimes(1);
     expect(db.addClaimTx.mock.calls[0][0]).toMatchObject({
       defiTxId: txId,
-      userId: user.id,
+      userId: user.accountPublicKey,
       secret: partialStateSecret,
     });
     expect(db.addNote).toHaveBeenCalledTimes(1);
@@ -1146,14 +1173,12 @@ describe('user state', () => {
     const outputValueA = depositValue / 5n;
     const outputValueB = totalOutputValueB / 5n;
     const result = true;
-    const rollupId = 4;
 
     const defiProof = generateDefiDepositProof({ bridgeId, outputNoteValue, depositValue });
-    const defiProofInteractionNonce = rollupId * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK;
+    const defiProofInteractionNonce = 0;
 
     // first rollup doesn't have defi result
     const block1 = createRollupBlock([defiProof], {
-      rollupId,
       bridgeIds: [bridgeId, BridgeId.random(), BridgeId.random()],
       interactionResult: [
         new DefiInteractionEvent(BridgeId.random(), defiProofInteractionNonce + 1, 12n, 34n, 56n, result),
@@ -1168,7 +1193,7 @@ describe('user state', () => {
     // the defi interaction result will go in this block
     const jsProof = generateTransferProof();
     const block2 = createRollupBlock([jsProof], {
-      rollupId: rollupId + 1,
+      rollupId: 1,
       interactionResult: [
         new DefiInteractionEvent(
           bridgeId,
@@ -1197,7 +1222,7 @@ describe('user state', () => {
     expect(db.addClaimTx.mock.calls[0][0]).toMatchObject({
       defiTxId: txId,
       secret: partialStateSecret,
-      userId: user.id,
+      userId: user.accountPublicKey,
     });
 
     // defi inputs should have been nullified
@@ -1247,11 +1272,10 @@ describe('user state', () => {
     const totalOutputValueA = depositValue;
     const totalOutputValueB = depositValue * 10n;
     const result = true;
-    const rollupId = 5;
     const txFee = inputNoteValues[0] + inputNoteValues[1] - outputNoteValue - depositValue;
 
     const defiProof = generateDefiDepositProof({ bridgeId, outputNoteValue, depositValue, txFee });
-    const defiProofInteractionNonce = rollupId * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK;
+    const defiProofInteractionNonce = 0;
     const interactionResult = [
       new DefiInteractionEvent(
         bridgeId,
@@ -1264,7 +1288,6 @@ describe('user state', () => {
       new DefiInteractionEvent(BridgeId.random(), defiProofInteractionNonce + 1, 12n, 34n, 56n, result),
     ];
     const block = createRollupBlock([defiProof], {
-      rollupId,
       interactionResult,
       bridgeIds: [bridgeId],
       dataStartIndex: 64,
@@ -1278,7 +1301,7 @@ describe('user state', () => {
     const txId = new TxId(defiProof.proofData.txId);
     expect(db.addClaimTx.mock.calls[0][0]).toMatchObject({
       defiTxId: txId,
-      userId: user.id,
+      userId: user.accountPublicKey,
     });
     expect(db.addNote).toHaveBeenCalledTimes(1);
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
@@ -1293,7 +1316,7 @@ describe('user state', () => {
     expect(db.addDefiTx).toHaveBeenCalledWith(
       expect.objectContaining({
         txId,
-        userId: user.id,
+        userId: user.accountPublicKey,
         bridgeId,
         depositValue,
         txFee,
@@ -1362,8 +1385,7 @@ describe('user state', () => {
 
     db.getDefiTx.mockResolvedValue({ settled: undefined });
 
-    const rollupId = 4;
-    const defiProofInteractionNonce = rollupId * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK;
+    const defiProofInteractionNonce = 0;
     const interactionResult = [
       new DefiInteractionEvent(
         bridgeId,
@@ -1375,7 +1397,6 @@ describe('user state', () => {
       ),
     ];
     const block = createRollupBlock([jsProof, defiProof], {
-      rollupId,
       interactionResult,
       bridgeIds: [bridgeId],
       dataStartIndex: 92,
@@ -1460,12 +1481,12 @@ describe('user state', () => {
     ];
     rollupProvider.getPendingTxs.mockResolvedValue(pendingTxs);
 
-    userState = new UserState(user, grumpkin, noteAlgos, db as any, rollupProvider as any);
+    userState = new UserState(user, grumpkin, noteAlgos, noteDecryptor, db as any, rollupProvider as any);
     await userState.init();
 
     expect(db.removeUserTx).toHaveBeenCalledTimes(2);
-    expect(db.removeUserTx).toHaveBeenCalledWith(user.id, unsettledUserTxs[0]);
-    expect(db.removeUserTx).toHaveBeenCalledWith(user.id, unsettledUserTxs[2]);
+    expect(db.removeUserTx).toHaveBeenCalledWith(user.accountPublicKey, unsettledUserTxs[0]);
+    expect(db.removeUserTx).toHaveBeenCalledWith(user.accountPublicKey, unsettledUserTxs[2]);
     expect(db.removeNote).toHaveBeenCalledTimes(2);
     expect(db.removeNote).toHaveBeenCalledWith(pendingNotes[0].nullifier);
     expect(db.removeNote).toHaveBeenCalledWith(pendingNotes[3].nullifier);
@@ -1485,7 +1506,7 @@ describe('user state', () => {
       const nullifier2 = randomBytes(32);
       const success = true;
 
-      db.getClaimTx.mockImplementation(() => ({ defiTxId: txId, userId: user.id, secret }));
+      db.getClaimTx.mockImplementation(() => ({ defiTxId: txId, userId: user.accountPublicKey, secret }));
       db.getDefiTx.mockImplementation(() => ({ bridgeId, depositValue, outputValueA, outputValueB, success }));
 
       const claimProof = generateDefiClaimProof({ bridgeId, outputValueA, outputValueB, nullifier1, nullifier2 });
@@ -1527,7 +1548,12 @@ describe('user state', () => {
       const success = true;
       const interactionNonce = 789;
 
-      db.getClaimTx.mockImplementation(() => ({ defiTxId: txId, userId: user.id, secret, interactionNonce }));
+      db.getClaimTx.mockImplementation(() => ({
+        defiTxId: txId,
+        userId: user.accountPublicKey,
+        secret,
+        interactionNonce,
+      }));
       db.getDefiTx.mockImplementation(() => ({ bridgeId, depositValue, outputValueA, outputValueB, success }));
 
       const claimProof = generateDefiClaimProof({ bridgeId, outputValueA, outputValueB, nullifier1, nullifier2 });
@@ -1562,7 +1588,12 @@ describe('user state', () => {
       const success = true;
       const interactionNonce = 789;
 
-      db.getClaimTx.mockImplementation(() => ({ defiTxId: txId, userId: user.id, secret, interactionNonce }));
+      db.getClaimTx.mockImplementation(() => ({
+        defiTxId: txId,
+        userId: user.accountPublicKey,
+        secret,
+        interactionNonce,
+      }));
       db.getDefiTx.mockImplementation(() => ({ bridgeId, depositValue, outputValueA, outputValueB, success }));
 
       const claimProof = generateDefiClaimProof({ bridgeId, outputValueA, outputValueB, nullifier1, nullifier2 });
@@ -1603,7 +1634,7 @@ describe('user state', () => {
       const nullifier2 = randomBytes(32);
       const result = false;
 
-      db.getClaimTx.mockImplementation(() => ({ defiTxId: txId, userId: user.id, secret }));
+      db.getClaimTx.mockImplementation(() => ({ defiTxId: txId, userId: user.accountPublicKey, secret }));
       db.getDefiTx.mockImplementation(() => ({ bridgeId, depositValue, outputValueA, outputValueB, result }));
 
       const claimProof = generateDefiClaimProof({ bridgeId, outputValueA, outputValueB, nullifier1, nullifier2 });
@@ -1637,7 +1668,7 @@ describe('user state', () => {
       const nullifier2 = randomBytes(32);
       const result = false;
 
-      db.getClaimTx.mockImplementation(() => ({ defiTxId: txId, userId: user.id, secret }));
+      db.getClaimTx.mockImplementation(() => ({ defiTxId: txId, userId: user.accountPublicKey, secret }));
       db.getDefiTx.mockImplementation(() => ({ bridgeId, depositValue, outputValueA, outputValueB, result }));
 
       const claimProof = generateDefiClaimProof({ bridgeId, outputValueA, outputValueB, nullifier1, nullifier2 });

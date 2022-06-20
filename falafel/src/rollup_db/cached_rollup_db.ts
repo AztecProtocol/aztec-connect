@@ -18,6 +18,7 @@ export class CachedRollupDb extends SyncRollupDb {
   private log = createLogger('CachedRollupDb');
 
   public async init() {
+    this.log('Loading rollup cache...');
     this.rollups = await super.getRollups();
     this.settledRollups = this.rollups.filter(rollup => rollup.mined);
     this.rollups
@@ -38,68 +39,70 @@ export class CachedRollupDb extends SyncRollupDb {
     this.log(`Refreshed db cache in ${new Date().getTime() - start}ms.`);
   }
 
-  public async getPendingTxCount() {
-    return this.pendingTxCount;
+  public getPendingTxCount() {
+    return Promise.resolve(this.pendingTxCount);
   }
 
-  public async getRollup(id: number) {
-    return this.rollups[id];
+  public getRollup(id: number) {
+    return Promise.resolve(this.rollups[id]);
   }
 
-  public async getRollups(take?: number, skip = 0, descending = false) {
+  public getRollups(take?: number, skip = 0, descending = false) {
     const rollups = descending ? this.rollups.slice().reverse() : this.rollups;
-    return rollups.slice(skip, take ? skip + take : undefined);
+    return Promise.resolve(rollups.slice(skip, take ? skip + take : undefined));
   }
 
-  public async getNumSettledRollups() {
-    return this.settledRollups.length;
+  public getNumSettledRollups() {
+    return Promise.resolve(this.settledRollups.length);
   }
 
-  public async getUnsettledTxCount() {
-    return this.unsettledTxs.length;
+  public getUnsettledTxCount() {
+    return Promise.resolve(this.unsettledTxs.length);
   }
 
-  public async getUnsettledTxs() {
-    return this.unsettledTxs;
+  public getUnsettledTxs() {
+    return Promise.resolve(this.unsettledTxs);
   }
 
-  public async getUnsettledDepositTxs() {
-    return this.unsettledTxs.filter(tx => tx.txType === TxType.DEPOSIT);
+  public getUnsettledDepositTxs() {
+    return Promise.resolve(this.unsettledTxs.filter(tx => tx.txType === TxType.DEPOSIT));
   }
 
-  public async getUnsettledAccounts() {
-    return getNewAccountDaos(this.unsettledTxs);
+  public getUnsettledAccounts() {
+    return Promise.resolve(getNewAccountDaos(this.unsettledTxs));
   }
 
-  public async getUnsettledNullifiers() {
-    return this.unsettledNullifiers;
+  public getUnsettledNullifiers() {
+    return Promise.resolve(this.unsettledNullifiers);
   }
 
-  public async nullifiersExist(n1: Buffer, n2: Buffer) {
-    return (
+  public nullifiersExist(n1: Buffer, n2: Buffer) {
+    return Promise.resolve(
       this.settledNullifiers.has(toBigIntBE(n1)) ||
-      this.settledNullifiers.has(toBigIntBE(n2)) ||
-      this.unsettledNullifiers.findIndex(b => b.equals(n1) || b.equals(n2)) != -1
+        this.settledNullifiers.has(toBigIntBE(n2)) ||
+        this.unsettledNullifiers.findIndex(b => b.equals(n1) || b.equals(n2)) != -1,
     );
   }
 
-  public async getSettledRollups(from = 0, take?: number) {
-    return this.settledRollups.slice(from, take ? from + take : undefined);
+  public getSettledRollups(from = 0, take?: number) {
+    return Promise.resolve(this.settledRollups.slice(from, take ? from + take : undefined));
   }
 
-  public async getLastSettledRollup() {
-    return this.settledRollups.length ? this.settledRollups[this.settledRollups.length - 1] : undefined;
+  public getLastSettledRollup() {
+    return Promise.resolve(
+      this.settledRollups.length ? this.settledRollups[this.settledRollups.length - 1] : undefined,
+    );
   }
 
-  public async getNextRollupId() {
+  public getNextRollupId() {
     if (this.settledRollups.length === 0) {
-      return 0;
+      return Promise.resolve(0);
     }
-    return this.settledRollups[this.settledRollups.length - 1].id + 1;
+    return Promise.resolve(this.settledRollups[this.settledRollups.length - 1].id + 1);
   }
 
-  public async getTotalTxCount() {
-    return this.totalTxCount;
+  public getTotalTxCount() {
+    return Promise.resolve(this.totalTxCount);
   }
 
   public async addTx(txDao: TxDao) {
@@ -208,6 +211,11 @@ export class CachedRollupDb extends SyncRollupDb {
   public async deleteUnsettledRollups() {
     await super.deleteUnsettledRollups();
     this.rollups = this.settledRollups.slice();
+  }
+
+  public async deleteUnsettledClaimTxs() {
+    await super.deleteUnsettledClaimTxs();
+    await this.refresh();
   }
 
   public async eraseDb() {

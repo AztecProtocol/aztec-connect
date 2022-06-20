@@ -31,12 +31,6 @@ const ProofContent = styled.div`
   }
 `;
 
-// This will make sure the copy button won't overlap with proof data.
-const TextSpacing = styled(Text)`
-  display: inline;
-  opacity: 0;
-`;
-
 const InlineCopyButtonRoot = styled.div`
   position: absolute;
   right: 20px;

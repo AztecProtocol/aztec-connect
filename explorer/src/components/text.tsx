@@ -18,12 +18,9 @@ const TextRoot = styled.div`
     line-height: ${lineHeights[size]};
   `}
   ${({ weight }: TextRootProps) => weight && `font-weight: ${fontWeights[weight]};`}
-  ${({ color }: TextRootProps) =>
-    color && `color: ${colours[color]};`}
+  ${({ color }: TextRootProps) => color && `color: ${colours[color]};`}
   ${({ italic }: TextRootProps) => italic && 'font-style: italic;'}
-  ${({
-    monospace,
-  }: TextRootProps) => monospace && `font-family: ${fontFamily.monospace};`}
+  ${({ monospace }: TextRootProps) => monospace && `font-family: ${fontFamily.monospace};`}
 `;
 
 export interface TextProps {

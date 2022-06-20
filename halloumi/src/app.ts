@@ -27,7 +27,7 @@ export function appFactory(server: Server, prefix: string) {
     }
   };
 
-  router.get('/', async (ctx: Koa.Context) => {
+  router.get('/', (ctx: Koa.Context) => {
     ctx.body = {
       serviceName: 'halloumi',
       isReady: server.isReady(),

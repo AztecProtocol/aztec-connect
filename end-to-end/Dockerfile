@@ -11,6 +11,6 @@ ENV CHROME_BIN="/usr/bin/chromium-browser" PUPPETEER_SKIP_CHROMIUM_DOWNLOAD="tru
 RUN apk update && apk add --no-cache udev ttf-freefont chromium
 WORKDIR /usr/src/end-to-end
 COPY . .
-RUN yarn install --frozen-lockfile
+RUN yarn install --frozen-lockfile && yarn formatting
 ENV DEBUG=bb:*
 CMD ["yarn", "test"]

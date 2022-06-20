@@ -119,8 +119,8 @@ resource "aws_ec2_fleet" "halloumi_inner" {
 
   target_capacity_specification {
     default_target_capacity_type = "spot"
-    total_target_capacity        = 32
-    spot_target_capacity         = 31
+    total_target_capacity        = 4
+    spot_target_capacity         = 3
     on_demand_target_capacity    = 1
   }
 

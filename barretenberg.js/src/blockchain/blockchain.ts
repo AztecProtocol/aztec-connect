@@ -18,7 +18,8 @@ export interface Receipt {
 }
 
 export interface SendTxOptions {
-  gasPrice?: bigint;
+  maxFeePerGas?: bigint;
+  maxPriorityFeePerGas?: bigint;
   gasLimit?: number;
   signingAddress?: EthAddress;
   provider?: EthereumProvider;

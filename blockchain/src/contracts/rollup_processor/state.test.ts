@@ -28,7 +28,7 @@ describe('rollup_processor: state', () => {
   });
 
   it('should update merkle tree state', async () => {
-    const { proofData, signatures, rollupProofData } = await createRollupProof(rollupProvider, createSendProof());
+    const { proofData, signatures, rollupProofData } = createRollupProof(rollupProvider, createSendProof());
 
     const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
     await rollupProcessor.sendTx(tx);
@@ -48,7 +48,7 @@ describe('rollup_processor: state', () => {
 
   it('should pass with 3 rollups where intermediate have odd size', async () => {
     {
-      const { proofData, signatures } = await createRollupProof(rollupProvider, createSendProof(), { rollupSize: 28 });
+      const { proofData, signatures } = createRollupProof(rollupProvider, createSendProof(), { rollupSize: 28 });
       const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
       expect(await rollupProcessor.sendTx(tx));
     }
@@ -59,7 +59,7 @@ describe('rollup_processor: state', () => {
       const numDataLeaves = rollupSize * 2;
       const expectedStart = datasize + numDataLeaves - (datasize % numDataLeaves);
 
-      const { proofData, signatures } = await createRollupProof(rollupProvider, createSendProof(), {
+      const { proofData, signatures } = createRollupProof(rollupProvider, createSendProof(), {
         rollupId: 1,
         rollupSize: rollupSize,
         dataStartIndex: expectedStart,
@@ -74,7 +74,7 @@ describe('rollup_processor: state', () => {
       const numDataLeaves = rollupSize * 2;
       const expectedStart = datasize + numDataLeaves - (datasize % numDataLeaves);
 
-      const { proofData, signatures } = await createRollupProof(rollupProvider, createSendProof(), {
+      const { proofData, signatures } = createRollupProof(rollupProvider, createSendProof(), {
         rollupId: 2,
         dataStartIndex: expectedStart,
         rollupSize: rollupSize,
@@ -85,7 +85,7 @@ describe('rollup_processor: state', () => {
   });
 
   it('should reject for incorrect rollupId', async () => {
-    const { proofData, signatures } = await createRollupProof(rollupProvider, createSendProof());
+    const { proofData, signatures } = createRollupProof(rollupProvider, createSendProof());
     proofData.writeUInt32BE(666, RollupProofDataOffsets.ROLLUP_ID);
 
     const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
@@ -93,7 +93,7 @@ describe('rollup_processor: state', () => {
   });
 
   it('should reject for incorrect data start index', async () => {
-    const { proofData, signatures } = await createRollupProof(rollupProvider, createSendProof());
+    const { proofData, signatures } = createRollupProof(rollupProvider, createSendProof());
     proofData.writeUInt32BE(666, RollupProofDataOffsets.DATA_START_INDEX);
 
     const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
@@ -102,7 +102,7 @@ describe('rollup_processor: state', () => {
 
   it('should reject for incorrect data start index 2', async () => {
     {
-      const { proofData, signatures } = await createRollupProof(rollupProvider, createSendProof());
+      const { proofData, signatures } = createRollupProof(rollupProvider, createSendProof());
       const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
       expect(await rollupProcessor.sendTx(tx));
     }
@@ -110,7 +110,7 @@ describe('rollup_processor: state', () => {
     const datasize = await rollupProcessor.getDataSize();
     const expectedStart = datasize + 6 - (datasize % 6);
 
-    const { proofData, signatures } = await createRollupProof(rollupProvider, createSendProof(), {
+    const { proofData, signatures } = createRollupProof(rollupProvider, createSendProof(), {
       rollupId: 1,
       rollupSize: 3,
     });
@@ -121,7 +121,7 @@ describe('rollup_processor: state', () => {
   });
 
   it('should reject for incorrect old data root', async () => {
-    const { proofData, signatures } = await createRollupProof(rollupProvider, createSendProof());
+    const { proofData, signatures } = createRollupProof(rollupProvider, createSendProof());
     proofData.writeUInt32BE(666, RollupProofDataOffsets.OLD_DATA_ROOT);
 
     const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
@@ -129,7 +129,7 @@ describe('rollup_processor: state', () => {
   });
 
   it('should reject for incorrect old nullifier root', async () => {
-    const { proofData, signatures } = await createRollupProof(rollupProvider, createSendProof());
+    const { proofData, signatures } = createRollupProof(rollupProvider, createSendProof());
     proofData.writeUInt32BE(666, RollupProofDataOffsets.OLD_NULL_ROOT);
 
     const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
@@ -137,7 +137,7 @@ describe('rollup_processor: state', () => {
   });
 
   it('should reject for malformed root root', async () => {
-    const { proofData, signatures } = await createRollupProof(rollupProvider, createSendProof());
+    const { proofData, signatures } = createRollupProof(rollupProvider, createSendProof());
     proofData.writeUInt32BE(666, RollupProofDataOffsets.OLD_ROOT_ROOT);
 
     const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);

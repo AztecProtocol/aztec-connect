@@ -63,8 +63,7 @@ export class WorldState {
   }
 
   public logTreeStats() {
-    const subTreeSize = 1 << this.subTreeDepth;
-    debug(`data size: ${this.tree.getSize() * subTreeSize}`);
+    debug(`data size: ${this.tree.getSize()}`);
     debug(`data root: ${this.tree.getRoot().toString('hex')}`);
   }
 

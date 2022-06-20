@@ -103,7 +103,7 @@ describe('tx fee resolver', () => {
     dateSpy.mockRestore();
   });
 
-  it('return correct defi fees', async () => {
+  it('return correct defi fees', () => {
     const assetId = 0;
     const bridgeId = new BridgeId(0, assetId, 0).toBigInt();
     const defiFees = txFeeResolver.getDefiFees(bridgeId);
@@ -114,7 +114,7 @@ describe('tx fee resolver', () => {
     ]);
   });
 
-  it('correctly determines if fee paying asset', async () => {
+  it('correctly determines if fee paying asset', () => {
     expect(txFeeResolver.isFeePayingAsset(0)).toEqual(true);
     expect(txFeeResolver.isFeePayingAsset(1)).toEqual(true);
     expect(txFeeResolver.isFeePayingAsset(2)).toEqual(false);

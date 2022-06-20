@@ -4,18 +4,17 @@ import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { AccountProver, JoinSplitProver, ProofId, UnrolledProver } from '@aztec/barretenberg/client_proofs';
 import { Crs } from '@aztec/barretenberg/crs';
-import { Blake2s, Pedersen, Schnorr, randomBytes } from '@aztec/barretenberg/crypto';
-import { createDebugLogger } from '@aztec/barretenberg/log';
+import { Blake2s, Pedersen, randomBytes, Schnorr } from '@aztec/barretenberg/crypto';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
-import { AccountData, InitHelpers } from '@aztec/barretenberg/environment';
+import { InitHelpers } from '@aztec/barretenberg/environment';
 import { FftFactory } from '@aztec/barretenberg/fft';
-import { HashPath, MemoryMerkleTree } from '@aztec/barretenberg/merkle_tree';
-import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
+import { createDebugLogger } from '@aztec/barretenberg/log';
+import { NoteAlgorithms, NoteDecryptor } from '@aztec/barretenberg/note_algorithms';
 import { OffchainAccountData } from '@aztec/barretenberg/offchain_tx_data';
 import { Pippenger } from '@aztec/barretenberg/pippenger';
+import { retryUntil } from '@aztec/barretenberg/retry';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { RollupProvider } from '@aztec/barretenberg/rollup_provider';
-import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { InterruptableSleep } from '@aztec/barretenberg/sleep';
 import { Timer } from '@aztec/barretenberg/timer';
 import { TxId } from '@aztec/barretenberg/tx_id';
@@ -25,7 +24,8 @@ import { EventEmitter } from 'events';
 import { LevelUp } from 'levelup';
 import { BlockContext } from '../block_context/block_context';
 import { CorePaymentTx, createCorePaymentTxForRecipient } from '../core_tx';
-import { Alias, Database, SpendingKey } from '../database';
+import { Alias, Database } from '../database';
+import { parseGenesisAliasesAndKeys, getUserSpendingKeysFromGenesisData } from '../genesis_state.ts';
 import { Note } from '../note';
 import {
   AccountProofCreator,
@@ -42,6 +42,7 @@ import { CoreSdkInterface } from './core_sdk_interface';
 import { CoreSdkOptions } from './core_sdk_options';
 import { SdkEvent, SdkStatus } from './sdk_status';
 import { sdkVersion } from './sdk_version';
+import { UserData } from '../user';
 
 const debug = createDebugLogger('bb:core_sdk');
 
@@ -80,11 +81,15 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     serverUrl: '',
     chainId: -1,
     rollupContractAddress: EthAddress.ZERO,
+    verifierContractAddress: EthAddress.ZERO,
     feePayingAssetIds: [0],
+    rollupSize: -1,
     syncedToRollup: -1,
     latestRollupId: -1,
     dataRoot: Buffer.alloc(0),
     dataSize: 0,
+    useKeyCache: false,
+    proverless: false,
     version: sdkVersion,
   };
   private initState = SdkInitState.UNINITIALIZED;
@@ -100,6 +105,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     private db: Database,
     private rollupProvider: RollupProvider,
     private barretenberg: BarretenbergWasm,
+    private noteDecryptor: NoteDecryptor,
     private pedersen: Pedersen,
     private pippenger: Pippenger,
     private fftFactory: FftFactory,
@@ -128,13 +134,20 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       this.blake2s = new Blake2s(this.barretenberg);
       this.grumpkin = new Grumpkin(this.barretenberg);
       this.schnorr = new Schnorr(this.barretenberg);
-      this.userStateFactory = new UserStateFactory(this.grumpkin, this.noteAlgos, this.db, this.rollupProvider);
+      this.userStateFactory = new UserStateFactory(
+        this.grumpkin,
+        this.noteAlgos,
+        this.noteDecryptor,
+        this.db,
+        this.rollupProvider,
+      );
       this.worldState = new WorldState(this.leveldb, this.pedersen);
 
       const {
-        blockchainStatus: { chainId, rollupContractAddress },
-        runtimeConfig: { feePayingAssetIds },
+        blockchainStatus: { chainId, rollupContractAddress, verifierContractAddress },
+        runtimeConfig: { feePayingAssetIds, useKeyCache },
         rollupSize,
+        proverless,
       } = await this.getRemoteStatus();
 
       // Clear all data if contract changed.
@@ -152,7 +165,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
 
       // Must fetch `syncedToRollup` before initialising worldState.
       // Getting this value first ensures that it will be syncing from latest or older block.
-      const syncedToRollup = await this.getSyncedToRollup();
+      const syncedToRollup = await this.getLocalSyncedToRollup();
 
       // Initialize the "mutable" merkle tree. This is the tree that represents all layers about each rollup subtree.
       const subtreeDepth = Math.ceil(Math.log2(rollupSize * WorldStateConstants.NUM_NEW_DATA_TREE_NOTES_PER_TX));
@@ -162,12 +175,16 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
         ...this.sdkStatus,
         serverUrl: options.serverUrl,
         chainId,
-        rollupContractAddress: rollupContractAddress,
+        rollupContractAddress,
+        verifierContractAddress,
         feePayingAssetIds,
+        rollupSize,
+        syncedToRollup,
+        latestRollupId: await this.rollupProvider.getLatestRollupId(),
         dataSize: this.worldState.getSize(),
         dataRoot: this.worldState.getRoot(),
-        syncedToRollup,
-        latestRollupId: await this.getLatestRollupId(),
+        useKeyCache,
+        proverless,
       };
 
       this.initState = SdkInitState.INITIALIZED;
@@ -191,7 +208,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
 
     // The serial queue will cancel itself. This ensures that anything currently in the queue finishes, and ensures
     // that once the await to push() returns, nothing else is on, or can be added to the queue.
-    await this.serialQueue.push(async () => this.serialQueue.cancel());
+    await this.serialQueue.push(() => Promise.resolve(this.serialQueue.cancel()));
 
     // Stop listening to account state updates.
     this.userStates.forEach(us => us.removeAllListeners());
@@ -209,8 +226,8 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     debug('destroyed.');
   }
 
-  public async getLocalStatus() {
-    return { ...this.sdkStatus };
+  public getLocalStatus() {
+    return Promise.resolve({ ...this.sdkStatus });
   }
 
   public async getRemoteStatus() {
@@ -225,7 +242,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   }
 
   public async isAliasRegistered(alias: string, includePending: boolean) {
-    const aliasHash = await this.computeAliasHash(alias);
+    const aliasHash = this.computeAliasHash(alias);
     return (
       (await this.db.getAliases(aliasHash)).length > 0 ||
       (includePending && (await this.rollupProvider.isAliasRegistered(alias)))
@@ -233,30 +250,29 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   }
 
   public async isAliasRegisteredToAccount(accountPublicKey: GrumpkinAddress, alias: string, includePending: boolean) {
-    const aliasHash = await this.computeAliasHash(alias);
+    const aliasHash = this.computeAliasHash(alias);
     const savedAlias = await this.db.getAlias(accountPublicKey);
-    return (
-      (!!savedAlias && savedAlias.aliasHash.equals(aliasHash)) ||
-      (includePending && (await this.rollupProvider.isAliasRegisteredToAccount(accountPublicKey, alias)))
-    );
+    return savedAlias
+      ? savedAlias.aliasHash.equals(aliasHash)
+      : includePending && (await this.rollupProvider.isAliasRegisteredToAccount(accountPublicKey, alias));
   }
 
   public async getAccountPublicKey(alias: string) {
-    const aliasHash = await this.computeAliasHash(alias);
+    const aliasHash = this.computeAliasHash(alias);
     const aliases = await this.db.getAliases(aliasHash);
     return aliases[0]?.accountPublicKey;
   }
 
   public async getTxFees(assetId: number) {
-    return this.rollupProvider.getTxFees(assetId);
+    return await this.rollupProvider.getTxFees(assetId);
   }
 
   public async getDefiFees(bridgeId: BridgeId) {
-    return this.rollupProvider.getDefiFees(bridgeId);
+    return await this.rollupProvider.getDefiFees(bridgeId);
   }
 
   public async getPendingDepositTxs() {
-    return this.rollupProvider.getPendingDepositTxs();
+    return await this.rollupProvider.getPendingDepositTxs();
   }
 
   public async getDefiInteractionNonce(txId: TxId) {
@@ -271,39 +287,30 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     return !!(await this.db.getUser(userId));
   }
 
-  public async getUserData(userId: GrumpkinAddress) {
-    return this.getUserState(userId).getUserData();
+  public getUsers() {
+    return Promise.resolve(this.userStates.map(us => us.getUserData().accountPublicKey));
   }
 
-  public async getUsersData() {
-    return this.userStates.map(us => us.getUserData());
+  public derivePublicKey(privateKey: Buffer) {
+    return Promise.resolve(new GrumpkinAddress(this.grumpkin.mul(Grumpkin.one, privateKey)));
   }
 
-  public async derivePublicKey(privateKey: Buffer) {
-    return new GrumpkinAddress(this.grumpkin.mul(Grumpkin.one, privateKey));
-  }
-
-  public async constructSignature(message: Buffer, privateKey: Buffer) {
-    return this.schnorr.constructSignature(message, privateKey);
+  public constructSignature(message: Buffer, privateKey: Buffer) {
+    return Promise.resolve(this.schnorr.constructSignature(message, privateKey));
   }
 
   public async addUser(accountPrivateKey: Buffer, noSync = false) {
-    return this.serialQueue.push(async () => {
+    return await this.serialQueue.push(async () => {
       const accountPublicKey = await this.derivePublicKey(accountPrivateKey);
       if (await this.db.getUser(accountPublicKey)) {
         throw new Error(`User already exists: ${accountPublicKey}`);
       }
 
-      let syncedToRollup = -1;
-      if (noSync) {
-        const {
-          blockchainStatus: { nextRollupId },
-        } = await this.getRemoteStatus();
-        syncedToRollup = nextRollupId - 1;
-      }
-
-      const user = { id: accountPublicKey, accountPrivateKey, accountPublicKey, syncedToRollup };
+      const syncedToRollup = noSync ? await this.rollupProvider.getLatestRollupId() : -1;
+      const user: UserData = { accountPrivateKey, accountPublicKey, syncedToRollup };
       await this.db.addUser(user);
+
+      await this.addInitialUserSpendingKeys([user.accountPublicKey]);
 
       const userState = await this.userStateFactory.createUserState(user);
       userState.on(UserStateEvent.UPDATED_USER_STATE, id => this.emit(SdkEvent.UPDATED_USER_STATE, id));
@@ -316,12 +323,23 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
         this.syncSleep.interrupt();
       }
 
-      return userState.getUserData();
+      return accountPublicKey;
     });
   }
 
+  private async retrieveGenesisData() {
+    const stored = await this.db.getGenesisData();
+    if (stored.length) {
+      return stored;
+    }
+    debug('genesis data not found locally, retrieving from server...');
+    const serverData = await this.rollupProvider.getInitialWorldState();
+    await this.db.setGenesisData(serverData.initialAccounts);
+    return serverData.initialAccounts;
+  }
+
   public async removeUser(userId: GrumpkinAddress) {
-    return this.serialQueue.push(async () => {
+    return await this.serialQueue.push(async () => {
       const userState = this.getUserState(userId);
       this.userStates = this.userStates.filter(us => us !== userState);
       userState.removeAllListeners();
@@ -331,18 +349,22 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     });
   }
 
+  public getUserSyncedToRollup(userId: GrumpkinAddress) {
+    return Promise.resolve(this.getUserState(userId).getUserData().syncedToRollup);
+  }
+
   public async getSpendingKeys(userId: GrumpkinAddress) {
     const keys = await this.db.getSpendingKeys(userId);
     return keys.map(k => k.key);
   }
 
-  public async getBalances(userId: GrumpkinAddress, unsafe?: boolean) {
-    return this.getUserState(userId).getBalances(unsafe);
+  public getBalances(userId: GrumpkinAddress, unsafe?: boolean) {
+    return Promise.resolve(this.getUserState(userId).getBalances(unsafe));
   }
 
-  public async getBalance(userId: GrumpkinAddress, assetId: number, unsafe?: boolean) {
+  public getBalance(userId: GrumpkinAddress, assetId: number, unsafe?: boolean) {
     const userState = this.getUserState(userId);
-    return userState.getBalance(assetId, unsafe);
+    return Promise.resolve(userState.getBalance(assetId, unsafe));
   }
 
   public async getSpendableSum(
@@ -352,12 +374,12 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     unsafe?: boolean,
   ) {
     const userState = this.getUserState(userId);
-    return userState.getSpendableSum(assetId, excludePendingNotes, unsafe);
+    return await userState.getSpendableSum(assetId, excludePendingNotes, unsafe);
   }
 
   public async getSpendableSums(userId: GrumpkinAddress, excludePendingNotes?: boolean, unsafe?: boolean) {
     const userState = this.getUserState(userId);
-    return userState.getSpendableSums(excludePendingNotes, unsafe);
+    return await userState.getSpendableSums(excludePendingNotes, unsafe);
   }
 
   public async getMaxSpendableValue(
@@ -368,7 +390,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     unsafe?: boolean,
   ) {
     const userState = this.getUserState(userId);
-    return userState.getMaxSpendableValue(assetId, numNotes, excludePendingNotes, unsafe);
+    return await userState.getMaxSpendableValue(assetId, numNotes, excludePendingNotes, unsafe);
   }
 
   public async pickNotes(
@@ -378,7 +400,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     excludePendingNotes?: boolean,
     unsafe?: boolean,
   ) {
-    return this.getUserState(userId).pickNotes(assetId, value, excludePendingNotes, unsafe);
+    return await this.getUserState(userId).pickNotes(assetId, value, excludePendingNotes, unsafe);
   }
 
   public async pickNote(
@@ -388,20 +410,20 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     excludePendingNotes?: boolean,
     unsafe?: boolean,
   ) {
-    return this.getUserState(userId).pickNote(assetId, value, excludePendingNotes, unsafe);
+    return await this.getUserState(userId).pickNote(assetId, value, excludePendingNotes, unsafe);
   }
 
   public async getUserTxs(userId: GrumpkinAddress) {
-    return this.db.getUserTxs(userId);
+    return await this.db.getUserTxs(userId);
   }
 
   /**
    * Moves the sdk into RUNNING state.
    * Kicks off data tree updates, user note decryptions, alias table updates, proving key construction.
    */
-  public async run() {
+  public run() {
     if (this.initState === SdkInitState.RUNNING) {
-      return;
+      return Promise.resolve();
     }
 
     this.initState = SdkInitState.RUNNING;
@@ -410,11 +432,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       .push(async () => {
         const { useKeyCache: localUseKeyCache } = this.options;
 
-        const {
-          proverless,
-          blockchainStatus: { verifierContractAddress },
-          runtimeConfig: { useKeyCache },
-        } = await this.getRemoteStatus();
+        const { proverless, verifierContractAddress, useKeyCache } = this.sdkStatus;
 
         const vca = await this.getLocalVerifierContractAddress();
         const forceCreateProvingKeys =
@@ -425,7 +443,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
 
         await this.pippenger.init(crsData);
         await this.genesisSync();
-        await this.startReceivingBlocks();
+        this.startReceivingBlocks();
         await this.createJoinSplitProofCreator(forceCreateProvingKeys, proverless);
         await this.createAccountProofCreator(forceCreateProvingKeys, proverless);
 
@@ -434,8 +452,10 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       })
       .catch(err => {
         debug('failed to run:', err);
-        this.destroy();
+        return this.destroy();
       });
+
+    return Promise.resolve();
   }
 
   // -------------------------------------------------------
@@ -451,14 +471,13 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     recipientAccountRequired: boolean,
     txRefNo: number,
   ) {
-    return this.serialQueue.push(async () => {
+    return await this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
 
       // Create a one time user to generate and sign the proof.
       const accountPrivateKey = randomBytes(32);
       const accountPublicKey = await this.derivePublicKey(accountPrivateKey);
-      const user = {
-        id: accountPublicKey,
+      const user: UserData = {
         accountPrivateKey,
         accountPublicKey,
         syncedToRollup: -1,
@@ -501,7 +520,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     spendingPublicKey: GrumpkinAddress,
     allowChain: number,
   ) {
-    return this.serialQueue.push(async () => {
+    return await this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
 
       const userState = this.getUserState(userId);
@@ -532,14 +551,14 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   }
 
   public async createPaymentProof(input: JoinSplitProofInput, txRefNo: number) {
-    return this.serialQueue.push(async () => {
+    return await this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
 
       const { outputNotes } = input.tx;
       const userId = outputNotes[1].ownerPubKey;
       const userState = this.getUserState(userId);
       const user = userState.getUserData();
-      return this.paymentProofCreator.createProof(user, input, txRefNo);
+      return await this.paymentProofCreator.createProof(user, input, txRefNo);
     });
   }
 
@@ -552,7 +571,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     newSpendingPublicKey1?: GrumpkinAddress,
     newSpendingPublicKey2?: GrumpkinAddress,
   ) {
-    return this.serialQueue.push(async () => {
+    return await this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
       const aliasHash = this.computeAliasHash(alias);
       const { signingData } = await this.accountProofCreator.createProofInput(
@@ -578,11 +597,11 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     newSpendingPublicKey2?: GrumpkinAddress,
     newAccountPrivateKey?: Buffer,
   ) {
-    return this.serialQueue.push(async () => {
+    return await this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
-      const aliasHash = await this.computeAliasHash(alias);
+      const aliasHash = this.computeAliasHash(alias);
       const newAccountPublicKey = newAccountPrivateKey ? await this.derivePublicKey(newAccountPrivateKey) : undefined;
-      return this.accountProofCreator.createProofInput(
+      return await this.accountProofCreator.createProofInput(
         userId,
         aliasHash,
         migrate,
@@ -595,9 +614,9 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   }
 
   public async createAccountProof(input: AccountProofInput, txRefNo: number) {
-    return this.serialQueue.push(async () => {
+    return await this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
-      return this.accountProofCreator.createProof(input, txRefNo);
+      return await this.accountProofCreator.createProof(input, txRefNo);
     });
   }
 
@@ -608,28 +627,34 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     inputNotes: Note[],
     spendingPublicKey: GrumpkinAddress,
   ) {
-    return this.serialQueue.push(async () => {
+    return await this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
       const userState = this.getUserState(userId);
       const user = userState.getUserData();
-      return this.defiDepositProofCreator.createProofInput(user, bridgeId, depositValue, inputNotes, spendingPublicKey);
+      return await this.defiDepositProofCreator.createProofInput(
+        user,
+        bridgeId,
+        depositValue,
+        inputNotes,
+        spendingPublicKey,
+      );
     });
   }
 
   public async createDefiProof(input: JoinSplitProofInput, txRefNo: number) {
-    return this.serialQueue.push(async () => {
+    return await this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
 
       const { outputNotes } = input.tx;
       const userId = outputNotes[1].ownerPubKey;
       const userState = this.getUserState(userId);
       const user = userState.getUserData();
-      return this.defiDepositProofCreator.createProof(user, input, txRefNo);
+      return await this.defiDepositProofCreator.createProof(user, input, txRefNo);
     });
   }
 
   public async sendProofs(proofs: ProofOutput[]) {
-    return this.serialQueue.push(async () => {
+    return await this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
 
       const txs = proofs.map(({ proofData, offchainTxData, signature }) => ({
@@ -670,111 +695,70 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     });
   }
 
-  public async awaitSynchronised() {
+  public async awaitSynchronised(timeout?: number) {
     this.assertInitState(SdkInitState.RUNNING);
 
-    while (true) {
-      try {
-        if (await this.isSynchronised()) {
-          return;
-        }
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      } catch (err) {
-        debug(err);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-    }
+    await retryUntil(() => this.isSynchronised(), 'data synchronised', timeout);
   }
 
-  public async isUserSynching(userId: GrumpkinAddress) {
+  public isUserSynching(userId: GrumpkinAddress) {
     this.assertInitState(SdkInitState.RUNNING);
 
-    return this.getUserState(userId).isSyncing();
+    return Promise.resolve(!this.getUserState(userId).isSynchronised());
   }
 
-  public async awaitUserSynchronised(userId: GrumpkinAddress) {
+  public async awaitUserSynchronised(userId: GrumpkinAddress, timeout?: number) {
     this.assertInitState(SdkInitState.RUNNING);
 
-    await this.getUserState(userId).awaitSynchronised();
+    await this.getUserState(userId).awaitSynchronised(timeout);
   }
 
   public async awaitSettlement(txId: TxId, timeout?: number) {
     this.assertInitState(SdkInitState.RUNNING);
 
-    const started = new Date().getTime();
-    while (true) {
-      if (timeout && new Date().getTime() - started > timeout * 1000) {
-        throw new Error(`Timeout awaiting tx settlement: ${txId}`);
-      }
-
-      if (await this.db.isUserTxSettled(txId)) {
-        break;
-      }
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
+    await retryUntil(() => this.db.isUserTxSettled(txId), `tx settlement: ${txId}`, timeout);
   }
 
   public async awaitDefiDepositCompletion(txId: TxId, timeout?: number) {
     this.assertInitState(SdkInitState.RUNNING);
 
-    const started = new Date().getTime();
-    while (true) {
-      if (timeout && new Date().getTime() - started > timeout * 1000) {
-        throw new Error(`Timeout awaiting defi interaction: ${txId}`);
-      }
-
+    const defiDepositCompleted = async () => {
       const tx = await this.db.getDefiTx(txId);
       if (!tx) {
         throw new Error('Unknown txId.');
       }
 
-      if (tx.settled) {
-        break;
-      }
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
+      return !!tx.settled;
+    };
+    await retryUntil(defiDepositCompleted, `defi interaction: ${txId}`, timeout);
   }
 
   public async awaitDefiFinalisation(txId: TxId, timeout?: number) {
     this.assertInitState(SdkInitState.RUNNING);
 
-    const started = new Date().getTime();
-    while (true) {
-      if (timeout && new Date().getTime() - started > timeout * 1000) {
-        throw new Error(`Timeout awaiting defi interaction: ${txId}`);
-      }
-
+    const defiFinalised = async () => {
       const tx = await this.db.getDefiTx(txId);
       if (!tx) {
         throw new Error('Unknown txId.');
       }
 
-      if (tx.finalised) {
-        break;
-      }
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
+      return !!tx.finalised;
+    };
+    await retryUntil(defiFinalised, `defi finalisation: ${txId}`, timeout);
   }
 
   public async awaitDefiSettlement(txId: TxId, timeout?: number) {
     this.assertInitState(SdkInitState.RUNNING);
 
-    const started = new Date().getTime();
-    while (true) {
-      if (timeout && new Date().getTime() - started > timeout * 1000) {
-        throw new Error(`Timeout awaiting defi interaction: ${txId}`);
-      }
-
+    const defiSettled = async () => {
       const tx = await this.db.getDefiTx(txId);
       if (!tx) {
         throw new Error('Unknown txId.');
       }
 
-      if (tx.claimSettled) {
-        break;
-      }
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
+      return !!tx.claimSettled;
+    };
+    await retryUntil(defiSettled, `defi settlement: ${txId}`, timeout);
   }
 
   // ---------------
@@ -782,17 +766,15 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   // ---------------
 
   private getUserState(userId: GrumpkinAddress) {
-    const userState = this.userStates.find(us => us.getUserData().id.equals(userId));
+    const userState = this.userStates.find(us => us.getUserData().accountPublicKey.equals(userId));
     if (!userState) {
       throw new Error(`User not found: ${userId}`);
     }
     return userState;
   }
 
-  private async isSynchronised() {
-    const providerStatus = await this.rollupProvider.getStatus();
-    const localDataRoot = this.worldState.getRoot();
-    return localDataRoot.equals(providerStatus.blockchainStatus.dataRoot);
+  private isSynchronised() {
+    return this.sdkStatus.syncedToRollup === this.sdkStatus.latestRollupId;
   }
 
   private assertInitState(state: SdkInitState) {
@@ -811,13 +793,8 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     return result ? new EthAddress(result) : undefined;
   }
 
-  private async getSyncedToRollup() {
+  private async getLocalSyncedToRollup() {
     return +(await this.leveldb.get('syncedToRollup').catch(() => -1));
-  }
-
-  private async getLatestRollupId() {
-    const latestRollupId = await this.db.getKey('latestRollupId');
-    return latestRollupId ? latestRollupId.readUInt32BE(0) : -1;
   }
 
   private async getCrsData(circuitSize: number) {
@@ -835,10 +812,30 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   private async initUserStates() {
     debug('initializing user states...');
     const users = await this.db.getUsers();
+    await this.addInitialUserSpendingKeys(users.map(x => x.accountPublicKey));
     this.userStates = await Promise.all(users.map(u => this.userStateFactory.createUserState(u)));
     this.userStates.forEach(us =>
       us.on(UserStateEvent.UPDATED_USER_STATE, id => this.emit(SdkEvent.UPDATED_USER_STATE, id)),
     );
+  }
+
+  private async addInitialUserSpendingKeys(userIds: GrumpkinAddress[]) {
+    if (!userIds.length) {
+      return;
+    }
+    const genesisAccountsData = await this.retrieveGenesisData();
+    if (genesisAccountsData.length) {
+      const spendingKeys = await getUserSpendingKeysFromGenesisData(
+        userIds,
+        genesisAccountsData,
+        this.pedersen,
+        this.sdkStatus.rollupSize,
+      );
+      debug(`found ${spendingKeys.length} spending keys for user${userIds.length == 1 ? '' : 's'}`);
+      if (spendingKeys.length) {
+        await this.db.addSpendingKeys(spendingKeys);
+      }
+    }
   }
 
   private computeAliasHash(alias: string) {
@@ -917,65 +914,6 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     }
     debug(`done.`);
   }
-
-  private async syncGenesisAliasesAndKeys(accounts: AccountData[], hashPathMap: { [key: number]: HashPath }) {
-    const aliases: Alias[] = [];
-    const spendingKeys: SpendingKey[] = [];
-
-    // There can be duplicate account/spending key combinations.
-    // We need to just keep the most recent one.
-    // This loop simulates upserts by keeping the most recent version before inserting into the DB.
-    let treeIndex = 0;
-    for (const account of accounts) {
-      const {
-        alias: { aliasHash, address },
-        signingKeys: { signingKey1, signingKey2 },
-      } = account;
-      const accountPublicKey = new GrumpkinAddress(address);
-
-      aliases.push({
-        accountPublicKey,
-        aliasHash: new AliasHash(aliasHash),
-        index: treeIndex,
-      });
-
-      [signingKey1, signingKey2].forEach(key => {
-        spendingKeys.push({ userId: accountPublicKey, treeIndex, key, hashPath: hashPathMap[treeIndex].toBuffer() });
-        treeIndex++;
-      });
-    }
-
-    debug(`saving ${aliases.length} aliases...`);
-    await this.db.addAliases(aliases);
-    debug(`saving ${spendingKeys.length} spending keys...`);
-    await this.db.addSpendingKeys(spendingKeys);
-  }
-
-  // Returns a mapping of tree index to hash path for all account notes
-  private async syncGenesisCommitments(accounts: AccountData[]) {
-    const { rollupSize } = await this.getRemoteStatus();
-    const commitments = accounts.flatMap(x => [x.notes.note1, x.notes.note2]);
-    const size = 1 << Math.ceil(Math.log2(rollupSize));
-    const notesInSubtree = size * WorldStateConstants.NUM_NEW_DATA_TREE_NOTES_PER_TX;
-    let noteIndex = 0;
-    const hashPathMap: { [key: number]: HashPath } = {};
-    const roots: Buffer[] = [];
-    debug(`building immutable sub-trees from commitments...`);
-    while (commitments.length > 0) {
-      const slice = commitments.splice(0, notesInSubtree);
-      const zeroNotes = Array(notesInSubtree - slice.length).fill(MemoryMerkleTree.ZERO_ELEMENT);
-      const fullTreeNotes = [...slice, ...zeroNotes];
-      const merkleSubTree = await MemoryMerkleTree.new(fullTreeNotes, this.pedersen);
-      for (let i = 0; i < notesInSubtree; i++) {
-        hashPathMap[noteIndex++] = merkleSubTree.getHashPath(i);
-      }
-      roots.push(merkleSubTree.getRoot());
-    }
-    debug(`adding ${roots.length} subtree roots to data tree...`);
-    await this.worldState.insertElements(0, roots);
-    return hashPathMap;
-  }
-
   /**
    * If the world state has no data, download the initial world state data and process it.
    */
@@ -987,28 +925,39 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     debug('initialising genesis state from server...');
     const genesisTimer = new Timer();
     const initialState = await this.rollupProvider.getInitialWorldState();
-    const accounts = InitHelpers.parseAccountTreeData(initialState.initialAccounts);
-    const hashPathMap = await this.syncGenesisCommitments(accounts);
+    debug(
+      `received genesis state with ${initialState.initialAccounts.length} bytes and ${initialState.initialSubtreeRoots.length} sub-tree roots`,
+    );
+    await this.db.setGenesisData(initialState.initialAccounts);
+    await this.worldState.insertElements(0, initialState.initialSubtreeRoots);
     if (!commitmentsOnly) {
-      await this.syncGenesisAliasesAndKeys(accounts, hashPathMap);
+      const accounts = InitHelpers.parseAccountTreeData(initialState.initialAccounts);
+      const genesisData = parseGenesisAliasesAndKeys(accounts);
+      debug(`storing aliases to db...`);
+      await this.db.addAliases(genesisData.aliases);
     }
     debug(`genesis sync complete in ${genesisTimer.s()}s`);
   }
 
   /**
-   * Starts a micro task that calls sync() via the serial queue every 10s.
+   * Starts a micro task that repeatedly calls sync() on the serial queue.
+   * sync() will only process so much data at a time. We sleep for 10s between calls only if we're fully synched.
+   * If we're not fully synched, we loop around immediately to process more data.
+   * This mechanism ensures we don't starve servicing the serial queue for long periods of time.
    * Will return once destroy() is called and the state shifts to STOPPING.
    */
-  private async startReceivingBlocks() {
+  private startReceivingBlocks() {
     this.synchingPromise = (async () => {
       debug('starting sync task...');
       while (this.initState !== SdkInitState.STOPPING) {
         try {
           await this.serialQueue.push(() => this.sync());
         } catch (err) {
-          debug(err);
+          debug('sync() failed:', err);
         }
-        await this.syncSleep.sleep(10000);
+        if (this.isSynchronised() && this.userStates.every(us => us.isSynchronised())) {
+          await this.syncSleep.sleep(this.options.pollInterval || 10000);
+        }
       }
       debug('stopped sync task.');
     })();
@@ -1022,81 +971,101 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
 
     await this.leveldb.clear();
 
-    const { rollupSize } = await this.getRemoteStatus();
-
-    const subtreeDepth = Math.ceil(Math.log2(rollupSize * WorldStateConstants.NUM_NEW_DATA_TREE_NOTES_PER_TX));
+    const subtreeDepth = Math.ceil(
+      Math.log2(this.sdkStatus.rollupSize * WorldStateConstants.NUM_NEW_DATA_TREE_NOTES_PER_TX),
+    );
     await this.worldState.init(subtreeDepth);
     await this.genesisSync(true);
   }
 
   /**
-   * Every time called, determine the lowest `from` block, and start downloading and processing the blocks in chunks.
+   * Every time called, determine the lowest `from` block, and download and process the next chunk of blocks.
    * Will always first bring the data tree into sync, and then forward the blocks onto user states.
    * This is always called on the serial queue.
    */
   private async sync() {
-    let coreSyncedToRollup = await this.syncRollupInfoFromDb();
-    let from = Math.min(coreSyncedToRollup, ...this.userStates.map(us => us.getUserData().syncedToRollup)) + 1;
+    // Persistent data could have changed underfoot. Ensure this.sdkStatus and user states are up to date first.
+    await this.readSyncInfo();
+    await Promise.all(this.userStates.map(us => us.syncFromDb()));
 
-    // Server will return blocks in chunks. We will break out of this loop when it stops returning blocks.
-    while (true) {
-      const blocks = await this.rollupProvider.getBlocks(from);
-      if (!blocks.length) {
-        break;
+    const { syncedToRollup } = this.sdkStatus;
+    const from = syncedToRollup + 1;
+
+    // First we focus on bringing the core in sync (mutable data tree layers and accounts).
+    // Server will return a chunk of blocks.
+    const timer = new Timer();
+    debug(`fetching blocks from ${from}...`);
+    const coreBlocks = await this.rollupProvider.getBlocks(from);
+    if (coreBlocks.length) {
+      debug(`creating contexts for blocks ${from} to ${from + coreBlocks.length}...`);
+    }
+    const coreBlockContexts = coreBlocks.map(b => BlockContext.fromBlock(b, this.pedersen));
+
+    if (coreBlocks.length) {
+      // For debugging corrupted data root.
+      const oldRoot = this.worldState.getRoot();
+
+      const rollups = coreBlockContexts.map(b => b.rollup);
+      const offchainTxData = coreBlocks.map(b => b.offchainTxData);
+      const subtreeRoots = coreBlocks.map(block => block.subtreeRoot!);
+      debug(`inserting ${subtreeRoots.length} rollup roots into data tree...`);
+      await this.worldState.insertElements(rollups[0].dataStartIndex, subtreeRoots);
+      debug(`processing aliases...`);
+      await this.processAliases(rollups, offchainTxData);
+      await this.writeSyncInfo(rollups[rollups.length - 1].rollupId);
+
+      // TODO: Ugly hotfix. Find root cause.
+      // We expect our data root to be equal to the new data root in the last block we processed.
+      // UPDATE: Possibly solved. But leaving in for now. Can monitor for clientLogs.
+      const expectedDataRoot = rollups[rollups.length - 1].newDataRoot;
+      const newRoot = this.worldState.getRoot();
+      if (!newRoot.equals(expectedDataRoot)) {
+        const newSize = this.worldState.getSize();
+        await this.reinitDataTree();
+        await this.writeSyncInfo(-1);
+        await this.rollupProvider.clientLog({
+          message: 'Invalid dataRoot.',
+          synchingFromRollup: syncedToRollup,
+          blocksReceived: coreBlocks.length,
+          oldRoot: oldRoot.toString('hex'),
+          newRoot: newRoot.toString('hex'),
+          newSize,
+          expectedDataRoot: expectedDataRoot.toString('hex'),
+        });
+        return;
       }
 
-      const coreBlocks = blocks.filter(b => b.rollupId > coreSyncedToRollup);
+      debug(`forwarding blocks to user states...`);
+      await Promise.all(this.userStates.map(us => us.processBlocks(coreBlockContexts)));
 
-      if (coreBlocks.length) {
-        // For debugging corrupted data root.
-        const oldRoot = this.worldState.getRoot();
+      debug(`finished processing blocks ${from} to ${from + coreBlocks.length} in ${timer.s()}s...`);
+    }
 
-        const rollups = coreBlocks.map(b => RollupProofData.fromBuffer(b.rollupProofData));
-        const offchainTxData = coreBlocks.map(b => b.offchainTxData);
-        const subtreeRoots = coreBlocks.map(block => block.subtreeRoot!);
-        await this.worldState.insertElements(rollups[0].dataStartIndex, subtreeRoots);
-        await this.processAliases(rollups, offchainTxData);
-        await this.updateStatusRollupInfo(rollups[rollups.length - 1]);
+    // Secondly we want bring user states in sync. Determine the lowest block.
+    const userSyncedToRollup = Math.min(...this.userStates.map(us => us.getUserData().syncedToRollup));
 
-        // TODO: Ugly hotfix. Find root cause.
-        // We expect our data root to be equal to the new data root in the last block we processed.
-        // UPDATE: Possibly solved. But leaving in for now. Can monitor for clientLogs.
-        const expectedDataRoot = rollups[rollups.length - 1].newDataRoot;
-        const newRoot = this.worldState.getRoot();
-        if (!newRoot.equals(expectedDataRoot)) {
-          const newSize = this.worldState.getSize();
-          await this.reinitDataTree();
-          await this.updateStatusRollupInfo();
-          this.rollupProvider.clientLog({
-            message: 'Invalid dataRoot.',
-            synchingFromRollup: coreSyncedToRollup,
-            blocksReceived: coreBlocks.length,
-            oldRoot: oldRoot.toString('hex'),
-            newRoot: newRoot.toString('hex'),
-            newSize,
-            expectedDataRoot: expectedDataRoot.toString('hex'),
-          });
-          coreSyncedToRollup = -1;
-          from = coreSyncedToRollup + 1;
-          continue;
-        }
-      }
-
-      // BlockContexts wrap a block, and are shared amongst user states. Allows reuse of subtree computations.
-      const blockContexts = blocks.map(block => new BlockContext(block, this.pedersen));
-
-      // Forward the block contexts on to each UserState for processing.
-      await Promise.all(this.userStates.map(us => us.processBlocks(blockContexts)));
-
-      from = blocks[blocks.length - 1].rollupId + 1;
+    // If it's lower than we downloaded for core, fetch and process blocks.
+    if (userSyncedToRollup < syncedToRollup) {
+      const timer = new Timer();
+      const from = userSyncedToRollup + 1;
+      debug(`fetching blocks from ${from} for user states...`);
+      const userBlocks = await this.rollupProvider.getBlocks(from);
+      debug(`creating contexts for blocks ${from} to ${from + userBlocks.length}...`);
+      const userBlockContexts = userBlocks.map(b => BlockContext.fromBlock(b, this.pedersen));
+      debug(`forwarding blocks to user states...`);
+      await Promise.all(this.userStates.map(us => us.processBlocks(userBlockContexts)));
+      debug(`finished processing user state blocks ${from} to ${from + coreBlocks.length} in ${timer.s()}s...`);
     }
   }
 
-  private async syncRollupInfoFromDb() {
-    const syncedToRollup = await this.getSyncedToRollup();
+  /**
+   * Brings this.sdkStatus, in line with whats persisted.
+   */
+  private async readSyncInfo() {
+    const syncedToRollup = await this.getLocalSyncedToRollup();
     if (this.sdkStatus.syncedToRollup < syncedToRollup) {
       await this.worldState.syncFromDb();
-      const latestRollupId = await this.getLatestRollupId();
+      const latestRollupId = await this.rollupProvider.getLatestRollupId();
 
       this.sdkStatus.syncedToRollup = syncedToRollup;
       this.sdkStatus.latestRollupId = latestRollupId;
@@ -1105,15 +1074,14 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
 
       this.emit(SdkEvent.UPDATED_WORLD_STATE, syncedToRollup, latestRollupId);
     }
-
-    return syncedToRollup;
   }
 
-  private async updateStatusRollupInfo(rollup?: RollupProofData) {
-    const syncedToRollup = rollup ? rollup.rollupId : -1;
-    const latestRollupId = this.rollupProvider.getLatestRollupId();
+  /**
+   * Persist new syncedToRollup and update this.sdkStatus.
+   */
+  private async writeSyncInfo(syncedToRollup: number) {
+    const latestRollupId = await this.rollupProvider.getLatestRollupId();
     await this.leveldb.put('syncedToRollup', syncedToRollup.toString());
-    await this.db.addKey('latestRollupId', numToUInt32BE(latestRollupId));
 
     this.sdkStatus.syncedToRollup = syncedToRollup;
     this.sdkStatus.latestRollupId = latestRollupId;

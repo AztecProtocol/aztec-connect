@@ -38,6 +38,7 @@ export class HttpJobServer implements ProofGenerator {
   private running = true;
   private serialQueue = new MemoryFifo<() => Promise<void>>();
   private interruptableSleep = new InterruptableSleep();
+  private runningPromise: Promise<void>;
 
   constructor(private port = 8082, private ackTimeout = 5000) {
     const router = new Router<DefaultState, Context>();
@@ -51,13 +52,13 @@ export class HttpJobServer implements ProofGenerator {
     router.post('/job-complete', async (ctx: Koa.Context) => {
       const stream = new PromiseReadable(ctx.req);
       const buf = (await stream.readAll()) as Buffer;
-      await this.completeJob(buf);
+      this.completeJob(buf);
       ctx.status = 200;
     });
 
-    router.get('/ping', async (ctx: Koa.Context) => {
+    router.get('/ping', (ctx: Koa.Context) => {
       const jobId = Buffer.from(ctx.query['job-id'] as string, 'hex');
-      await this.ping(jobId);
+      this.ping(jobId);
       ctx.status = 200;
     });
 
@@ -68,7 +69,7 @@ export class HttpJobServer implements ProofGenerator {
     this.server = http.createServer(app.callback());
 
     // Start processing serialization queue.
-    this.serialQueue.process(fn => fn());
+    this.runningPromise = this.serialQueue.process(fn => fn());
   }
 
   private serialExecute<T>(fn: () => Promise<T>): Promise<T> {
@@ -103,7 +104,7 @@ export class HttpJobServer implements ProofGenerator {
     return Buffer.alloc(0);
   }
 
-  private async completeJob(buf: Buffer) {
+  private completeJob(buf: Buffer) {
     this.log('received result for job: ', Protocol.logUnpack(buf).id);
     const { id, cmd, data } = Protocol.unpack(buf);
 
@@ -123,7 +124,7 @@ export class HttpJobServer implements ProofGenerator {
     }
   }
 
-  private async ping(jobId: Buffer) {
+  private ping(jobId: Buffer) {
     this.log('ping for job:', jobId.toString('hex'));
     const job = this.jobs.find(j => j.id.equals(jobId));
     if (job) {
@@ -131,9 +132,10 @@ export class HttpJobServer implements ProofGenerator {
     }
   }
 
-  public async start() {
+  public start() {
     this.server.listen(this.port);
     console.log(`Proof job server listening on port ${this.port}.`);
+    return Promise.resolve();
   }
 
   public async stop() {
@@ -142,6 +144,7 @@ export class HttpJobServer implements ProofGenerator {
     this.server.close();
     this.serialQueue.cancel();
     this.interruptableSleep.interrupt();
+    await this.runningPromise;
     this.log('stop complete');
   }
 
@@ -153,11 +156,11 @@ export class HttpJobServer implements ProofGenerator {
    */
   public async reset() {}
 
-  public async getJoinSplitVk() {
+  public getJoinSplitVk() {
     return this.createJob(Command.GET_JOIN_SPLIT_VK);
   }
 
-  public async getAccountVk() {
+  public getAccountVk() {
     return this.createJob(Command.GET_ACCOUNT_VK);
   }
 

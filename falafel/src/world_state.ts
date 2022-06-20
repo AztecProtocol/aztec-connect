@@ -69,6 +69,8 @@ export class WorldState {
   private blockBufferCache: Buffer[] = [];
   private txPoolProfile!: TxPoolProfile;
   private txPoolProfileValidUntil!: Date;
+  private initialSubtreeRootsCache: Buffer[] = [];
+  private runningPromise!: Promise<void>;
 
   constructor(
     public rollupDb: RollupDb,
@@ -101,9 +103,9 @@ export class WorldState {
     this.blockchain.on('block', block => this.blockQueue.put(block));
     await this.blockchain.start(await this.rollupDb.getNextRollupId());
 
-    this.blockQueue.process(block => this.handleBlock(block));
+    this.runningPromise = this.blockQueue.process(block => this.handleBlock(block));
 
-    await this.startNewPipeline();
+    this.startNewPipeline();
   }
 
   public setTxFeeResolver(txFeeResolver: TxFeeResolver) {
@@ -126,6 +128,10 @@ export class WorldState {
       baseTimeout: undefined,
       bridgeTimeouts: new Map<bigint, RollupTimeout>(),
     } as RollupTimeouts;
+  }
+
+  public getInitialStateSubtreeRoots() {
+    return this.initialSubtreeRootsCache;
   }
 
   public async getTxPoolProfile() {
@@ -170,15 +176,33 @@ export class WorldState {
     return this.txPoolProfile;
   }
 
-  public async stop() {
-    this.blockQueue.cancel();
-    this.blockchain.stop();
+  public async stop(flushQueue = false) {
+    flushQueue ? this.blockQueue.end() : this.blockQueue.cancel();
+    await this.runningPromise;
+    await this.blockchain.stop();
     await this.pipeline?.stop();
     this.worldStateDb.stop();
   }
 
   public flushTxs() {
     this.pipeline?.flushTxs();
+  }
+
+  private async cacheInitialStateSubtreeRoots() {
+    const chainId = await this.blockchain.getChainId();
+    const dataSize = InitHelpers.getInitDataSize(chainId);
+    const numNotesPerRollup = WorldStateConstants.NUM_NEW_DATA_TREE_NOTES_PER_TX * this.getRollupSize();
+    const numRollups = Math.floor(dataSize / numNotesPerRollup) + (dataSize % numNotesPerRollup ? 1 : 0);
+    const subtreeDepth = Math.ceil(Math.log2(numNotesPerRollup));
+    for (let i = 0; i < numRollups; i++) {
+      const subtreeRoot = await this.worldStateDb.getSubtreeRoot(
+        RollupTreeId.DATA,
+        BigInt(i * numNotesPerRollup),
+        subtreeDepth,
+      );
+      this.initialSubtreeRootsCache.push(subtreeRoot);
+    }
+    this.log(`Cached ${this.initialSubtreeRootsCache.length} initial sub-tree roots`);
   }
 
   private async syncStateFromInitFiles() {
@@ -260,6 +284,7 @@ export class WorldState {
       await this.syncStateFromInitFiles();
     }
     await this.syncStateFromBlockchain(nextRollupId);
+    await this.cacheInitialStateSubtreeRoots();
 
     // This deletes all proofs created until now. Not ideal, figure out a way to resume.
     await this.rollupDb.deleteUnsettledRollups();
@@ -285,7 +310,7 @@ export class WorldState {
     await this.rollupDb.deleteUnsettledRollups();
     await this.rollupDb.deleteOrphanedRollupProofs();
     await this.rollupDb.deletePendingTxs();
-    await this.startNewPipeline();
+    this.startNewPipeline();
   }
 
   /**
@@ -294,11 +319,11 @@ export class WorldState {
   public async restartPipeline() {
     await this.pipeline?.stop();
     await this.worldStateDb.rollback();
-    await this.startNewPipeline();
+    this.startNewPipeline();
   }
 
-  private async startNewPipeline() {
-    this.pipeline = await this.pipelineFactory.create();
+  private startNewPipeline() {
+    this.pipeline = this.pipelineFactory.create();
     this.pipeline.start().catch(err => {
       this.pipeline = undefined;
       this.log('PIPELINE PANIC! Handle the exception!');
@@ -315,7 +340,7 @@ export class WorldState {
   private async handleBlock(block: Block) {
     await this.pipeline?.stop();
     await this.updateDbs(block);
-    await this.startNewPipeline();
+    this.startNewPipeline();
   }
 
   /**
@@ -545,7 +570,7 @@ export class WorldState {
         this.metrics.txSettlementDuration(block.created.getTime() - tx.created.getTime());
       }
 
-      this.metrics.rollupReceived(rollupDao);
+      await this.metrics.rollupReceived(rollupDao);
     } else {
       // Not a rollup we created. Add or replace rollup.
       const txs = rollup.innerProofData
@@ -575,7 +600,7 @@ export class WorldState {
       });
 
       await this.rollupDb.addRollup(rollupDao);
-      this.metrics.rollupReceived(rollupDao);
+      await this.metrics.rollupReceived(rollupDao);
     }
 
     const rollupDao = (await this.rollupDb.getRollup(rollup.rollupId))!;

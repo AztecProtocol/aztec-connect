@@ -12,7 +12,7 @@ export class DefiController {
   private proofOutput?: ProofOutput;
   private jsProofOutput?: ProofOutput;
   private feeProofOutput?: ProofOutput;
-  private txId?: TxId;
+  private txIds: TxId[] = [];
 
   constructor(
     public readonly userId: GrumpkinAddress,
@@ -166,38 +166,44 @@ export class DefiController {
     if (!this.proofOutput) {
       throw new Error('Call createProof() first.');
     }
-    const txIds = await this.core.sendProofs(
+    this.txIds = await this.core.sendProofs(
       filterUndefined([this.jsProofOutput, this.proofOutput, this.feeProofOutput]),
     );
-    this.txId = txIds[this.jsProofOutput ? 1 : 0];
-    return this.txId;
+    return this.getDefiTxId();
   }
 
   public async awaitDefiDepositCompletion(timeout?: number) {
-    if (!this.txId) {
+    if (!this.txIds.length) {
       throw new Error(`Call ${!this.proofOutput ? 'createProof()' : 'send()'} first.`);
     }
-    await this.core.awaitDefiDepositCompletion(this.txId, timeout);
+    await Promise.all(this.txIds.map(txId => this.core.awaitSettlement(txId, timeout)));
   }
 
   public async awaitDefiFinalisation(timeout?: number) {
-    if (!this.txId) {
+    const txId = this.getDefiTxId();
+    if (!txId) {
       throw new Error(`Call ${!this.proofOutput ? 'createProof()' : 'send()'} first.`);
     }
-    await this.core.awaitDefiFinalisation(this.txId, timeout);
+    await this.core.awaitDefiFinalisation(txId, timeout);
   }
 
   public async awaitSettlement(timeout?: number) {
-    if (!this.txId) {
+    const txId = this.getDefiTxId();
+    if (!txId) {
       throw new Error(`Call ${!this.proofOutput ? 'createProof()' : 'send()'} first.`);
     }
-    await this.core.awaitDefiSettlement(this.txId, timeout);
+    await this.core.awaitDefiSettlement(txId, timeout);
   }
 
-  public async getInteractionNonce() {
-    if (!this.txId) {
+  public getInteractionNonce() {
+    const txId = this.getDefiTxId();
+    if (!txId) {
       throw new Error(`Call ${!this.proofOutput ? 'createProof()' : 'send()'} first.`);
     }
-    return this.core.getDefiInteractionNonce(this.txId);
+    return this.core.getDefiInteractionNonce(txId);
+  }
+
+  private getDefiTxId() {
+    return this.txIds[this.jsProofOutput ? 1 : 0];
   }
 }

@@ -22,7 +22,8 @@ export interface RuntimeConfig {
   maxFeeGasPrice: bigint;
   feeGasPriceMultiplier: number;
   feeRoundUpSignificantFigures: number;
-  maxProviderGasPrice: bigint;
+  maxFeePerGas: bigint;
+  maxPriorityFeePerGas: bigint;
   maxUnsettledTxs: number;
   defaultDeFiBatchSize: number;
   bridgeConfigs: BridgeConfig[];
@@ -40,7 +41,8 @@ export interface RuntimeConfigJson {
   maxFeeGasPrice: string;
   feeGasPriceMultiplier: number;
   feeRoundUpSignificantFigures: number;
-  maxProviderGasPrice: string;
+  maxFeePerGas: string;
+  maxPriorityFeePerGas: string;
   maxUnsettledTxs: number;
   defaultDeFiBatchSize: number;
   bridgeConfigs: BridgeConfigJson[];
@@ -50,42 +52,48 @@ export interface RuntimeConfigJson {
 
 export const runtimeConfigToJson = ({
   maxFeeGasPrice,
-  maxProviderGasPrice,
+  maxFeePerGas,
+  maxPriorityFeePerGas,
   bridgeConfigs,
   privacySets,
   ...rest
 }: RuntimeConfig): RuntimeConfigJson => ({
   ...rest,
   maxFeeGasPrice: maxFeeGasPrice.toString(),
-  maxProviderGasPrice: maxProviderGasPrice.toString(),
+  maxFeePerGas: maxFeePerGas.toString(),
+  maxPriorityFeePerGas: maxPriorityFeePerGas.toString(),
   bridgeConfigs: bridgeConfigs.map(bridgeConfigToJson),
   privacySets: privacySetsToJson(privacySets),
 });
 
 export const runtimeConfigFromJson = ({
   maxFeeGasPrice,
-  maxProviderGasPrice,
+  maxFeePerGas,
+  maxPriorityFeePerGas,
   bridgeConfigs,
   privacySets,
   ...rest
 }: RuntimeConfigJson): RuntimeConfig => ({
   ...rest,
   maxFeeGasPrice: BigInt(maxFeeGasPrice),
-  maxProviderGasPrice: BigInt(maxProviderGasPrice),
+  maxFeePerGas: BigInt(maxFeePerGas),
+  maxPriorityFeePerGas: BigInt(maxPriorityFeePerGas),
   bridgeConfigs: bridgeConfigs.map(bridgeConfigFromJson),
   privacySets: privacySetsFromJson(privacySets),
 });
 
 export const partialRuntimeConfigFromJson = ({
   maxFeeGasPrice,
-  maxProviderGasPrice,
+  maxFeePerGas,
+  maxPriorityFeePerGas,
   bridgeConfigs,
   privacySets,
   ...rest
 }: Partial<RuntimeConfigJson>): Partial<RuntimeConfig> => ({
   ...rest,
   ...(maxFeeGasPrice !== undefined ? { maxFeeGasPrice: BigInt(maxFeeGasPrice) } : {}),
-  ...(maxProviderGasPrice !== undefined ? { maxProviderGasPrice: BigInt(maxProviderGasPrice) } : {}),
+  ...(maxFeePerGas !== undefined ? { maxFeePerGas: BigInt(maxFeePerGas) } : {}),
+  ...(maxPriorityFeePerGas !== undefined ? { maxPriorityFeePerGas: BigInt(maxPriorityFeePerGas) } : {}),
   ...(bridgeConfigs ? { bridgeConfigs: bridgeConfigs.map(bridgeConfigFromJson) } : {}),
   ...(privacySets ? { privacySets: privacySetsFromJson(privacySets) } : {}),
 });

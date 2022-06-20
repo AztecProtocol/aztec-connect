@@ -116,7 +116,7 @@ export function TerminalPage({ terminal }: TerminalProps) {
   return (
     <>
       <Monitor>
-        <Display onPaste={async e => terminal.pasteString(e.clipboardData.getData('text'))}>
+        <Display onPaste={e => terminal.pasteString(e.clipboardData.getData('text'))}>
           <Logo>
             <svg viewBox="500 80 135 138">
               <g>
@@ -142,7 +142,7 @@ export function TerminalPage({ terminal }: TerminalProps) {
           </ScanlineContainer>
         </Display>
       </Monitor>
-      <StyledTerminalSelectionText onPaste={async e => terminal.pasteString(e.clipboardData.getData('text'))}>
+      <StyledTerminalSelectionText onPaste={e => terminal.pasteString(e.clipboardData.getData('text'))}>
         {terminal.asString(false).toLowerCase()}
       </StyledTerminalSelectionText>
     </>

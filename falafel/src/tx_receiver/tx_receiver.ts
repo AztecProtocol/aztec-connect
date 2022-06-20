@@ -117,7 +117,7 @@ export class TxReceiver {
   }
 
   private async validateTx({ proof, offchainTxData, depositSignature }: Tx, txType: TxType) {
-    await this.validateAsset(proof);
+    this.validateAsset(proof);
 
     if (proof.proofId === ProofId.DEPOSIT) {
       await this.validateDepositProofApproval(proof, depositSignature);
@@ -259,7 +259,7 @@ export class TxReceiver {
     }
   }
 
-  private async validateAsset(proof: ProofData) {
+  private validateAsset(proof: ProofData) {
     const validateNonVirtualAssetId = (assetId: number) => {
       const { assets } = this.blockchain.getBlockchainStatus();
       if (assetId >= assets.length) {

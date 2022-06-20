@@ -116,7 +116,7 @@ describe('end-to-end tests', () => {
       await asyncMap(userIds, async (userId, i) => {
         const controller = depositControllers[i];
         await controller.awaitSettlement();
-        debugBalance(userId);
+        await debugBalance(userId);
         expect(await sdk.getBalance(userId, assetId)).toEqual(depositValue);
       });
     }
@@ -162,7 +162,7 @@ describe('end-to-end tests', () => {
 
       debug(`waiting to settle...`);
       await Promise.all([...withdrawControllers, transferController].map(c => c.awaitSettlement()));
-      await asyncMap(userIds, async userId => debugBalance(userId));
+      await asyncMap(userIds, userId => debugBalance(userId));
 
       expect((await sdk.getPublicBalance(addresses[2], assetId)).value).toBe(
         withdrawalValues[0].value + withdrawalValues[1].value,

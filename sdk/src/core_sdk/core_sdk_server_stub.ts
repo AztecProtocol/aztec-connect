@@ -17,7 +17,6 @@ import {
   ProofOutputJson,
   proofOutputToJson,
 } from '../proofs';
-import { userDataToJson } from '../user';
 import { CoreSdkInterface } from './core_sdk_interface';
 import { CoreSdkOptions } from './core_sdk_options';
 import { SdkEvent, sdkStatusToJson } from './sdk_status';
@@ -76,11 +75,11 @@ export class CoreSdkServerStub {
   }
 
   public async isAccountRegistered(accountPublicKey: string, includePending: boolean) {
-    return this.core.isAccountRegistered(GrumpkinAddress.fromString(accountPublicKey), includePending);
+    return await this.core.isAccountRegistered(GrumpkinAddress.fromString(accountPublicKey), includePending);
   }
 
   public async isAliasRegistered(alias: string, includePending: boolean) {
-    return this.core.isAliasRegistered(alias, includePending);
+    return await this.core.isAliasRegistered(alias, includePending);
   }
 
   public async isAliasRegisteredToAccount(
@@ -88,7 +87,7 @@ export class CoreSdkServerStub {
     alias: string,
     isAliasRegisteredToAccount: boolean,
   ) {
-    return this.core.isAliasRegisteredToAccount(
+    return await this.core.isAliasRegisteredToAccount(
       GrumpkinAddress.fromString(accountPublicKey),
       alias,
       isAliasRegisteredToAccount,
@@ -246,16 +245,16 @@ export class CoreSdkServerStub {
     return txIds.map(txId => txId.toString());
   }
 
-  public async awaitSynchronised() {
-    await this.core.awaitSynchronised();
+  public async awaitSynchronised(timeout?: number) {
+    await this.core.awaitSynchronised(timeout);
   }
 
   public async isUserSynching(userId: string) {
-    return this.core.isUserSynching(GrumpkinAddress.fromString(userId));
+    return await this.core.isUserSynching(GrumpkinAddress.fromString(userId));
   }
 
-  public async awaitUserSynchronised(userId: string) {
-    await this.core.awaitUserSynchronised(GrumpkinAddress.fromString(userId));
+  public async awaitUserSynchronised(userId: string, timeout?: number) {
+    await this.core.awaitUserSynchronised(GrumpkinAddress.fromString(userId), timeout);
   }
 
   public async awaitSettlement(txId: string, timeout?: number) {
@@ -275,21 +274,16 @@ export class CoreSdkServerStub {
   }
 
   public async getDefiInteractionNonce(txId: string) {
-    return this.core.getDefiInteractionNonce(TxId.fromString(txId));
+    return await this.core.getDefiInteractionNonce(TxId.fromString(txId));
   }
 
   public async userExists(userId: string) {
-    return this.core.userExists(GrumpkinAddress.fromString(userId));
+    return await this.core.userExists(GrumpkinAddress.fromString(userId));
   }
 
-  public async getUserData(userId: string) {
-    const userData = await this.core.getUserData(GrumpkinAddress.fromString(userId));
-    return userDataToJson(userData);
-  }
-
-  public async getUsersData() {
-    const usersData = await this.core.getUsersData();
-    return usersData.map(userDataToJson);
+  public async getUsers() {
+    const accountPublicKeys = await this.core.getUsers();
+    return accountPublicKeys.map(pk => pk.toString());
   }
 
   public async derivePublicKey(privateKey: Uint8Array) {
@@ -302,13 +296,17 @@ export class CoreSdkServerStub {
     return signature.toString();
   }
 
-  public async addUser(privateKey: Uint8Array, noSync?: boolean) {
-    const userData = await this.core.addUser(Buffer.from(privateKey), noSync);
-    return userDataToJson(userData);
+  public async addUser(accountPrivateKey: Uint8Array, noSync?: boolean) {
+    const accountPublicKey = await this.core.addUser(Buffer.from(accountPrivateKey), noSync);
+    return accountPublicKey.toString();
   }
 
   public async removeUser(userId: string) {
     await this.core.removeUser(GrumpkinAddress.fromString(userId));
+  }
+
+  public async getUserSyncedToRollup(userId: string) {
+    return await this.core.getUserSyncedToRollup(GrumpkinAddress.fromString(userId));
   }
 
   public async getSpendingKeys(userId: string) {

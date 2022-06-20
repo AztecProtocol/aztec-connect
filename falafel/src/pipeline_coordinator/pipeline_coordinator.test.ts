@@ -164,23 +164,22 @@ describe('pipeline_coordinator', () => {
 
   it('should return publishInterval seconds from now if not running', async () => {
     expect(coordinator.getNextPublishTime().baseTimeout?.timeout).toEqual(moment().add(10, 's').toDate());
-    coordinator.start();
+    coordinator.start().catch(console.log);
     await new Promise(resolve => setTimeout(resolve, 100));
-    coordinator.stop();
+    await coordinator.stop();
     expect(coordinator.getNextPublishTime().baseTimeout?.timeout).toEqual(moment().add(10, 's').toDate());
   });
 
   it('cannot start when it has already started', async () => {
-    const p = coordinator.start();
-    await expect(async () => coordinator.start()).rejects.toThrow();
-    coordinator.stop();
-    await p;
+    coordinator.start().catch(console.log);
+    await expect(async () => await coordinator.start()).rejects.toThrow();
+    await coordinator.stop();
   });
 
   it('should interrupt all helpers when it is stop', async () => {
-    coordinator.start();
+    coordinator.start().catch(console.log);
     await new Promise(resolve => setTimeout(resolve, 100));
-    coordinator.stop();
+    await coordinator.stop();
     expect(rollupCreator.interrupt).toHaveBeenCalledTimes(1);
     expect(rollupAggregator.interrupt).toHaveBeenCalledTimes(1);
     expect(rollupPublisher.interrupt).toHaveBeenCalledTimes(1);

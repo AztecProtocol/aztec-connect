@@ -27,7 +27,7 @@ describe('pippenger', () => {
     wasm.exports().pippenger_unsafe(pippengerPtr, mem, 0, numPoints, 0);
     wasm.exports().bbfree(mem);
 
-    debug('mem:', wasm.getMemory().length);
+    debug('mem:', wasm.memSize());
   }, 60000);
 
   it('should not blow up with worker', async () => {

@@ -23,7 +23,7 @@ const GlobalStyle = createGlobalStyle`
   }
 `;
 
-async function main() {
+function main() {
   if (!debug.enabled('bb:') && process.env.NODE_ENV !== 'production') {
     debug.enable('bb:*');
     location.reload();
@@ -33,7 +33,7 @@ async function main() {
   window.injectProvider = (host: string) => (window.ethereum = new WalletProvider(new JsonRpcProvider(host)));
 
   if (window.location.pathname === '/min-demo') {
-    await minDemo();
+    minDemo();
   } else {
     const terminal = new Terminal(12, 40);
     // Expose terminal prompting, for use in tests.
@@ -50,4 +50,4 @@ async function main() {
 }
 
 // tslint:disable-next-line:no-console
-main().catch(console.error);
+main();

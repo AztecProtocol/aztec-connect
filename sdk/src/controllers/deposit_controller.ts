@@ -1,6 +1,7 @@
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetValue } from '@aztec/barretenberg/asset';
 import { EthereumProvider, TxHash } from '@aztec/barretenberg/blockchain';
+import { retryUntil } from '@aztec/barretenberg/retry';
 import { InterruptableSleep, sleep } from '@aztec/barretenberg/sleep';
 import { Timer } from '@aztec/barretenberg/timer';
 import { TxId } from '@aztec/barretenberg/tx_id';
@@ -20,7 +21,7 @@ export class DepositController {
   private readonly publicInput: AssetValue;
   private proofOutput?: ProofOutput;
   private feeProofOutput?: ProofOutput;
-  private txId?: TxId;
+  private txIds: TxId[] = [];
   private pendingFundsStatus: {
     pendingDeposit: bigint;
     pendingFunds: bigint;
@@ -75,13 +76,13 @@ export class DepositController {
     return this.blockchain.getAsset(assetId).allowance(this.depositor, rollupContractAddress);
   }
 
-  public async hasPermitSupport() {
+  public hasPermitSupport() {
     const { assetId } = this.publicInput;
     return this.blockchain.hasPermitSupport(assetId);
   }
 
   public async approve() {
-    const permitSupport = await this.hasPermitSupport();
+    const permitSupport = this.hasPermitSupport();
     if (permitSupport) {
       throw new Error('Asset supports permit. No need to call approve().');
     }
@@ -94,7 +95,7 @@ export class DepositController {
 
     const { assetId } = this.publicInput;
     const { rollupContractAddress } = await this.core.getLocalStatus();
-    const approve = async () =>
+    const approve = () =>
       this.blockchain
         .getAsset(assetId)
         .approve(value, this.depositor, rollupContractAddress, { provider: this.provider });
@@ -153,7 +154,7 @@ export class DepositController {
     const isContract = await this.blockchain.isContract(this.depositor);
     const depositFunds = async () => {
       const proofHash = isContract ? this.getProofHash() : undefined;
-      const permitSupport = await this.hasPermitSupport();
+      const permitSupport = this.hasPermitSupport();
       if (!permitSupport) {
         return this.blockchain.depositPendingFunds(assetId, value, proofHash, {
           signingAddress: this.depositor,
@@ -206,13 +207,13 @@ export class DepositController {
     const deadline = permitDeadline ?? BigInt(Math.floor(Date.now() / 1000) + 5 * 60); // Default deadline is 5 mins from now.
     const { signature, nonce } = await this.createPermitArgsNonStandard(deadline);
     const { assetId } = this.publicInput;
-    const depositFunds = async () =>
+    const depositFunds = () =>
       this.blockchain.depositPendingFundsPermitNonStandard(assetId, value, nonce, deadline, signature, proofHash, {
         signingAddress: this.depositor,
         provider: this.provider,
       });
     let txHash: TxHash | undefined;
-    if (isContract) {
+    if (!isContract) {
       txHash = await depositFunds();
     } else {
       const { pendingDeposit, requiredFunds } = pendingFundsStatus;
@@ -312,7 +313,7 @@ export class DepositController {
   public async approveProof() {
     const proofHash = this.getProofHash();
     const isContract = await this.blockchain.isContract(this.depositor);
-    const approveProof = async () =>
+    const approveProof = () =>
       this.blockchain.approveProof(proofHash, {
         signingAddress: this.depositor,
         provider: this.provider,
@@ -321,7 +322,7 @@ export class DepositController {
     if (!isContract) {
       approveProofTxHash = await approveProof();
     } else {
-      const checkOnchainData = async () => this.isProofApproved();
+      const checkOnchainData = () => this.isProofApproved();
       approveProofTxHash = await this.sendTransactionAndCheckOnchainData(
         'approve proof from contract wallet',
         approveProof,
@@ -347,7 +348,7 @@ export class DepositController {
       throw new Error('Call approveProof() first.');
     }
 
-    const checkOnchainData = async () => this.isProofApproved();
+    const checkOnchainData = () => this.isProofApproved();
     await this.awaitTransaction('approve proof', checkOnchainData, timeout, interval);
   }
 
@@ -396,16 +397,15 @@ export class DepositController {
       throw new Error('Call sign() or approveProof() first.');
     }
 
-    [this.txId] = await this.core.sendProofs(this.getProofs());
-    return this.txId;
+    this.txIds = await this.core.sendProofs(this.getProofs());
+    return this.txIds[0];
   }
 
   public async awaitSettlement(timeout?: number) {
-    if (!this.txId) {
+    if (!this.txIds.length) {
       throw new Error('Call send() first.');
     }
-
-    await this.core.awaitSettlement(this.txId, timeout);
+    await Promise.all(this.txIds.map(txId => this.core.awaitSettlement(txId, timeout)));
   }
 
   private async getPendingFundsStatus() {
@@ -482,7 +482,9 @@ export class DepositController {
     const interruptableSleep = new InterruptableSleep();
     let txHash: TxHash | undefined;
     let txError: Error | undefined;
-    (async () => {
+
+    // May never return due to wallet connect provider bugs.
+    void (async () => {
       try {
         txHash = await sendTx();
       } catch (e: any) {
@@ -516,24 +518,14 @@ export class DepositController {
 
   private async awaitTransaction(
     name: string,
-    checkOnchainData: () => Promise<boolean>,
+    confirmedFromOnchainData: () => Promise<boolean>,
     timeout?: number,
     interval = 1,
   ) {
-    const timer = new Timer();
-    while (true) {
-      // We want confidence the tx will be accepted, so simulate waiting for confirmations.
-      if (await checkOnchainData()) {
-        const secondsTillConfirmed = (this.blockchain.minConfirmations - 1) * 15;
-        await sleep(secondsTillConfirmed * 1000);
-        return true;
-      }
+    await retryUntil(confirmedFromOnchainData, `chain state condition: ${name}`, timeout, interval);
 
-      await sleep(interval * 1000);
-
-      if (timeout && timer.s() > timeout) {
-        throw new Error(`Timeout awaiting chain state condition: ${name}`);
-      }
-    }
+    // We want confidence the tx will be accepted, so simulate waiting for confirmations.
+    const secondsTillConfirmed = (this.blockchain.minConfirmations - 1) * 15;
+    await sleep(secondsTillConfirmed * 1000);
   }
 }

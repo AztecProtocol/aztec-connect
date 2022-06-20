@@ -9,7 +9,7 @@ export class RecoverSignatureSigner implements Signer {
     return this.publicKey;
   }
 
-  async signMessage() {
-    return this.signature;
+  signMessage() {
+    return Promise.resolve(this.signature);
   }
 }

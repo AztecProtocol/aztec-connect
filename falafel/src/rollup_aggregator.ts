@@ -56,7 +56,7 @@ export class RollupAggregator {
 
     this.log(`Creating root verifier proof...`);
 
-    const rootVerifier = await this.createRootVerifier(rootRollupProofBuf);
+    const rootVerifier = this.createRootVerifier(rootRollupProofBuf);
     const rootVerifierRequest = new RootVerifierProofRequest(rootVerifier);
     const finalProofData = await this.proofGenerator.createProof(rootVerifierRequest.toBuffer());
 
@@ -142,7 +142,7 @@ export class RollupAggregator {
     return rootRollup;
   }
 
-  private async createRootVerifier(rootRollupProofBuf: Buffer) {
+  private createRootVerifier(rootRollupProofBuf: Buffer) {
     const rootVerifier = new RootVerifier(rootRollupProofBuf);
     return rootVerifier;
   }

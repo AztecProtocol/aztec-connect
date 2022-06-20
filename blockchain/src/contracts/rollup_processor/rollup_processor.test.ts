@@ -304,13 +304,13 @@ describe('rollup_processor', () => {
   });
 
   it('should allow any address to use escape hatch', async () => {
-    const { proofData } = await createRollupProof(signers[0], createSendProof());
+    const { proofData } = createRollupProof(signers[0], createSendProof());
     const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
     await rollupProcessor.sendTx(tx, { signingAddress: EthAddress.fromString(await signers[1].getAddress()) });
   });
 
   it('should reject a rollup from an unknown provider outside escape hatch window', async () => {
-    const { proofData, signatures } = await createRollupProof(signers[0], createSendProof(), {
+    const { proofData, signatures } = createRollupProof(signers[0], createSendProof(), {
       feeDistributorAddress: feeDistributor.address,
     });
     await advanceBlocksHardhat(50, ethers.provider);
@@ -399,7 +399,7 @@ describe('rollup_processor', () => {
     });
 
     for (let i = 0; i < innerProofOutputs.length; ++i) {
-      const { proofData, signatures, offchainTxData } = await createRollupProof(signers[0], innerProofOutputs[i], {
+      const { proofData, signatures, offchainTxData } = createRollupProof(signers[0], innerProofOutputs[i], {
         rollupId: i,
         defiInteractionData:
           i === 2

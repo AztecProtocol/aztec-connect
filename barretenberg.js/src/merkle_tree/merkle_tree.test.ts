@@ -319,7 +319,7 @@ describe('merkle_tree', () => {
   it('should serialize hash path data to a buffer and be able to deserialize it back', async () => {
     const db = levelup(memdown());
     const tree = await MerkleTree.new(db, pedersen, 'test', 10);
-    tree.updateElement(0, values[0]);
+    await tree.updateElement(0, values[0]);
 
     const hashPath = await tree.getHashPath(0);
     const buf = hashPath.toBuffer();

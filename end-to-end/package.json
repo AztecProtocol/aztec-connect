@@ -6,7 +6,7 @@
   "license": "GPL-2.0",
   "scripts": {
     "test": "DEBUG=${DEBUG:-bb:e2e*} jest --runInBand",
-    "test:forked": "yarn test e2e_element.test.ts e2e_non_fee_assets.test.ts",
+    "formatting": "prettier --check ./src && eslint --max-warnings 0 ./src",
     "clean": "rm -rf ./data"
   },
   "jest": {
@@ -36,10 +36,10 @@
     "@types/debug": "^4.1.7",
     "@types/jest": "^25.2.3",
     "@types/node": "^14.0.5",
-    "@typescript-eslint/eslint-plugin": "^4.1.1",
-    "@typescript-eslint/parser": "^4.1.1",
-    "eslint": "^7.9.0",
-    "eslint-config-prettier": "^6.11.0",
+    "@typescript-eslint/eslint-plugin": "^5.27.0",
+    "@typescript-eslint/parser": "^5.27.0",
+    "eslint": "^8.16.0",
+    "eslint-config-prettier": "^8.5.0",
     "jest": "^27.3.1",
     "prettier": "^2.0.5",
     "ts-jest": "^27.0.7",

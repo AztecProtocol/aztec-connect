@@ -40,6 +40,7 @@ export class WorldStateDb {
 
   public async start() {
     await this.launch();
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.processStdioQueue();
   }
 

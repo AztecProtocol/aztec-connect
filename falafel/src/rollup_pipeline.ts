@@ -29,7 +29,8 @@ export class RollupPipeline {
     rollupBeneficiary: EthAddress,
     publishInterval: number,
     flushAfterIdle: number,
-    maxProviderGasPrice: bigint,
+    maxFeePerGas: bigint,
+    maxPriorityFeePerGas: bigint,
     gasLimit: number,
     numInnerRollupTxs: number,
     numOuterRollupProofs: number,
@@ -48,9 +49,17 @@ export class RollupPipeline {
     this.log(`  flushAfterIdle: ${flushAfterIdle}s`);
     this.log(`  gasLimit: ${gasLimit}`);
     this.log(`  maxCallDataPerRollup: ${maxCallDataPerRollup}`);
-    this.log(`  maxProviderGasPrice: ${fromBaseUnits(maxProviderGasPrice, 9, 2)} gwei`);
+    this.log(`  maxFeePerGas: ${fromBaseUnits(maxFeePerGas, 9, 2)} gwei`);
+    this.log(`  maxPriorityFeePerGas: ${fromBaseUnits(maxPriorityFeePerGas, 9, 2)} gwei`);
 
-    const rollupPublisher = new RollupPublisher(rollupDb, blockchain, maxProviderGasPrice, gasLimit, metrics);
+    const rollupPublisher = new RollupPublisher(
+      rollupDb,
+      blockchain,
+      maxFeePerGas,
+      maxPriorityFeePerGas,
+      gasLimit,
+      metrics,
+    );
     const rollupAggregator = new RollupAggregator(
       proofGenerator,
       rollupDb,
@@ -100,7 +109,7 @@ export class RollupPipeline {
   }
 
   public async start() {
-    return this.pipelineCoordinator.start();
+    return await this.pipelineCoordinator.start();
   }
 
   public async stop() {
@@ -124,7 +133,8 @@ export class RollupPipelineFactory {
     private rollupBeneficiary: EthAddress,
     private publishInterval: number,
     private flushAfterIdle: number,
-    private maxProviderGasPrice: bigint,
+    private maxFeePerGas: bigint,
+    private maxPriorityFeePerGas: bigint,
     private gasLimit: number,
     private numInnerRollupTxs: number,
     private numOuterRollupProofs: number,
@@ -136,13 +146,15 @@ export class RollupPipelineFactory {
     txFeeResolver: TxFeeResolver,
     publishInterval: number,
     flushAfterIdle: number,
-    maxProviderGasPrice: bigint,
+    maxFeePerGas: bigint,
+    maxPriorityFeePerGas: bigint,
     gasLimit: number,
   ) {
     this.txFeeResolver = txFeeResolver;
     this.publishInterval = publishInterval;
     this.flushAfterIdle = flushAfterIdle;
-    this.maxProviderGasPrice = maxProviderGasPrice;
+    this.maxFeePerGas = maxFeePerGas;
+    this.maxPriorityFeePerGas = maxPriorityFeePerGas;
     this.gasLimit = gasLimit;
   }
 
@@ -152,7 +164,7 @@ export class RollupPipelineFactory {
     return outerRollupSize;
   }
 
-  public async create() {
+  public create() {
     return new RollupPipeline(
       this.proofGenerator,
       this.blockchain,
@@ -164,7 +176,8 @@ export class RollupPipelineFactory {
       this.rollupBeneficiary,
       this.publishInterval,
       this.flushAfterIdle,
-      this.maxProviderGasPrice,
+      this.maxFeePerGas,
+      this.maxPriorityFeePerGas,
       this.gasLimit,
       this.numInnerRollupTxs,
       this.numOuterRollupProofs,

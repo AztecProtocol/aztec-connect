@@ -83,7 +83,7 @@ describe('price tracker', () => {
     expect(priceTracker.getAssetPrice(1, msAgo)).toBe(0n);
   });
 
-  it('return 0 if not started yet', async () => {
+  it('return 0 if not started yet', () => {
     expect(priceTracker.getGasPrice()).toBe(0n);
     expect(priceTracker.getAssetPrice(0)).toBe(0n);
     expect(priceTracker.getAssetPrice(1)).toBe(0n);

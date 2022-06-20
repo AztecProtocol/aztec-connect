@@ -18,7 +18,6 @@ import {
   proofOutputFromJson,
   proofOutputToJson,
 } from '../proofs';
-import { userDataFromJson } from '../user';
 import { CoreSdkInterface } from './core_sdk_interface';
 import { CoreSdkOptions } from './core_sdk_options';
 import { CoreSdkSerializedInterface } from './core_sdk_serialized_interface';
@@ -74,15 +73,15 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
   }
 
   public async isAccountRegistered(accountPublicKey: GrumpkinAddress, includePending: boolean) {
-    return this.backend.isAccountRegistered(accountPublicKey.toString(), includePending);
+    return await this.backend.isAccountRegistered(accountPublicKey.toString(), includePending);
   }
 
   public async isAliasRegistered(alias: string, includePending: boolean) {
-    return this.backend.isAliasRegistered(alias, includePending);
+    return await this.backend.isAliasRegistered(alias, includePending);
   }
 
   public async isAliasRegisteredToAccount(accountPublicKey: GrumpkinAddress, alias: string, includePending: boolean) {
-    return this.backend.isAliasRegisteredToAccount(accountPublicKey.toString(), alias, includePending);
+    return await this.backend.isAliasRegisteredToAccount(accountPublicKey.toString(), alias, includePending);
   }
 
   public async getAccountPublicKey(alias: string) {
@@ -236,16 +235,16 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
     return txIds.map(TxId.fromString);
   }
 
-  public async awaitSynchronised() {
-    await this.backend.awaitSynchronised();
+  public async awaitSynchronised(timeout?: number) {
+    await this.backend.awaitSynchronised(timeout);
   }
 
   public async isUserSynching(userId: GrumpkinAddress) {
-    return this.backend.isUserSynching(userId.toString());
+    return await this.backend.isUserSynching(userId.toString());
   }
 
-  public async awaitUserSynchronised(userId: GrumpkinAddress) {
-    await this.backend.awaitUserSynchronised(userId.toString());
+  public async awaitUserSynchronised(userId: GrumpkinAddress, timeout?: number) {
+    await this.backend.awaitUserSynchronised(userId.toString(), timeout);
   }
 
   public async awaitSettlement(txId: TxId, timeout?: number) {
@@ -265,21 +264,16 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
   }
 
   public async getDefiInteractionNonce(txId: TxId) {
-    return this.backend.getDefiInteractionNonce(txId.toString());
+    return await this.backend.getDefiInteractionNonce(txId.toString());
   }
 
   public async userExists(userId: GrumpkinAddress) {
-    return this.backend.userExists(userId.toString());
+    return await this.backend.userExists(userId.toString());
   }
 
-  public async getUserData(userId: GrumpkinAddress) {
-    const json = await this.backend.getUserData(userId.toString());
-    return userDataFromJson(json);
-  }
-
-  public async getUsersData() {
-    const json = await this.backend.getUsersData();
-    return json.map(userDataFromJson);
+  public async getUsers() {
+    const accountPublicKeys = await this.backend.getUsers();
+    return accountPublicKeys.map(pk => GrumpkinAddress.fromString(pk));
   }
 
   public async derivePublicKey(privateKey: Buffer) {
@@ -292,13 +286,17 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
     return SchnorrSignature.fromString(signature);
   }
 
-  public async addUser(privateKey: Buffer, noSync?: boolean) {
-    const json = await this.backend.addUser(new Uint8Array(privateKey), noSync);
-    return userDataFromJson(json);
+  public async addUser(accountPrivateKey: Buffer, noSync?: boolean) {
+    const accountPublicKey = await this.backend.addUser(new Uint8Array(accountPrivateKey), noSync);
+    return GrumpkinAddress.fromString(accountPublicKey);
   }
 
   public async removeUser(userId: GrumpkinAddress) {
     await this.backend.removeUser(userId.toString());
+  }
+
+  public async getUserSyncedToRollup(userId: GrumpkinAddress) {
+    return await this.backend.getUserSyncedToRollup(userId.toString());
   }
 
   public async getSpendingKeys(userId: GrumpkinAddress) {

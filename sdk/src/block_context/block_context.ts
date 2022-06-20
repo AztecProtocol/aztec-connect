@@ -1,9 +1,9 @@
 import { MemoryMerkleTree } from '@aztec/barretenberg/merkle_tree';
-import { Block } from '@aztec/barretenberg/block_source';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { Mutex } from 'async-mutex';
 import { WorldStateConstants } from '@aztec/barretenberg/world_state';
 import { Pedersen } from '@aztec/barretenberg/crypto';
+import { Block, DefiInteractionEvent } from '@aztec/barretenberg/block_source';
 
 /**
  * Block Context is designed to wrap a block received from the rollup provider
@@ -16,7 +16,25 @@ export class BlockContext {
   private mutex = new Mutex();
   private startIndex?: number;
 
-  constructor(public block: Block, private pedersen: Pedersen) {}
+  constructor(
+    public rollup: RollupProofData,
+    private rollupSize: number,
+    public created: Date,
+    public interactionResult: DefiInteractionEvent[],
+    public offchainTxData: Buffer[],
+    private pedersen: Pedersen,
+  ) {}
+
+  static fromBlock(block: Block, pedersen: Pedersen) {
+    return new BlockContext(
+      RollupProofData.fromBuffer(block.rollupProofData),
+      block.rollupSize,
+      block.created,
+      block.interactionResult,
+      block.offchainTxData,
+      pedersen,
+    );
+  }
 
   /**
    * Provides the hash path at the given index of the block's immutable sub-tree
@@ -28,14 +46,13 @@ export class BlockContext {
     const release = await this.mutex.acquire();
     try {
       if (!this.subtree) {
-        const numNotesInFullRollup = WorldStateConstants.NUM_NEW_DATA_TREE_NOTES_PER_TX * this.block.rollupSize;
-        const rollup = RollupProofData.fromBuffer(this.block.rollupProofData);
-        this.startIndex = rollup.dataStartIndex;
+        const numNotesInFullRollup = WorldStateConstants.NUM_NEW_DATA_TREE_NOTES_PER_TX * this.rollupSize;
+        this.startIndex = this.rollup.dataStartIndex;
         const maxIndex = this.startIndex + numNotesInFullRollup;
         if (index < this.startIndex || index >= maxIndex) {
           throw new Error('Index out of bounds.');
         }
-        const notes = rollup.innerProofData.flatMap(x => [x.noteCommitment1, x.noteCommitment2]);
+        const notes = this.rollup.innerProofData.flatMap(x => [x.noteCommitment1, x.noteCommitment2]);
         const allNotes = [...notes, ...Array(numNotesInFullRollup - notes.length).fill(MemoryMerkleTree.ZERO_ELEMENT)];
         this.subtree = await MemoryMerkleTree.new(allNotes, this.pedersen);
       }

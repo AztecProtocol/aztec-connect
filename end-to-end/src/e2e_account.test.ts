@@ -166,7 +166,7 @@ describe('end-to-end account tests', () => {
     const user1 = await sdk.addUser(account1.privateKey);
     {
       const fee = (await sdk.getMigrateAccountFees(assetId))[TxSettlementTime.INSTANT];
-      const controller = await sdk.createMigrateAccountController(
+      const controller = sdk.createMigrateAccountController(
         user0.id,
         newSigner,
         alias,

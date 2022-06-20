@@ -42,7 +42,7 @@ export class TransportClient<Payload> extends EventEmitter {
     this.removeAllListeners();
   }
 
-  async request(payload: Payload) {
+  request(payload: Payload) {
     if (!this.socket) {
       throw new Error('Socket not open.');
     }
@@ -51,11 +51,11 @@ export class TransportClient<Payload> extends EventEmitter {
     debug(`->`, msg);
     return new Promise<any>((resolve, reject) => {
       this.pendingRequests.push({ resolve, reject, msgId });
-      this.socket!.send(msg);
+      this.socket!.send(msg).catch(reject);
     });
   }
 
-  private async handleSocketMessage(msg: ResponseMessage<Payload> | EventMessage<Payload>) {
+  private handleSocketMessage(msg: ResponseMessage<Payload> | EventMessage<Payload>) {
     debug(`<-`, msg);
     if (isEventMessage(msg)) {
       this.emit('event_msg', msg.payload);

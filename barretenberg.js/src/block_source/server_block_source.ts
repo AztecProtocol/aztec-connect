@@ -10,7 +10,7 @@ export class ServerBlockSource extends EventEmitter implements BlockSource {
   private runningPromise = Promise.resolve();
   private interruptPromise = Promise.resolve();
   private interruptResolve = () => {};
-  private latestRollupId = -1;
+  private latestRollupId?: number;
   protected baseUrl: string;
 
   constructor(baseUrl: URL, private pollInterval = 10000) {
@@ -18,8 +18,12 @@ export class ServerBlockSource extends EventEmitter implements BlockSource {
     this.baseUrl = baseUrl.toString().replace(/\/$/, '');
   }
 
-  getLatestRollupId() {
-    return this.latestRollupId;
+  public async getLatestRollupId() {
+    if (this.latestRollupId === undefined) {
+      // Call getBlocks to set latest rollup id, but we don't actually want any blocks.
+      await this.getBlocks();
+    }
+    return this.latestRollupId!;
   }
 
   public async start(from = 0) {
@@ -70,9 +74,11 @@ export class ServerBlockSource extends EventEmitter implements BlockSource {
     }
   }
 
-  public async getBlocks(from: number) {
+  public async getBlocks(from?: number) {
     const url = new URL(`${this.baseUrl}/get-blocks`);
-    url.searchParams.append('from', from.toString());
+    if (from !== undefined) {
+      url.searchParams.append('from', from.toString());
+    }
     const response = await this.awaitSucceed(() => fetch(url.toString(), { headers: { 'Accept-encoding': 'gzip' } }));
     const result = Buffer.from(await response.arrayBuffer());
     const des = new Deserializer(result);

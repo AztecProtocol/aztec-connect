@@ -249,7 +249,7 @@ describe('rollup_coordinator', () => {
       interrupt: jest.fn(),
       createRollup: jest
         .fn()
-        .mockImplementation(async (txs: TxDao[], rootRollupBridgeIds: bigint[], rootRollupAssetIds: Set<number>) => {
+        .mockImplementation((txs: TxDao[], rootRollupBridgeIds: bigint[], rootRollupAssetIds: Set<number>) => {
           for (const tx of txs) {
             const proof = new ProofData(tx.proofData);
             if (proof.proofId === ProofId.ACCOUNT) {
@@ -1751,7 +1751,7 @@ describe('rollup_coordinator', () => {
       currentTime = new Date('2021-06-20T12:00:01+01:00');
 
       // run again and we should have published it
-      rp = await await coordinator.processPendingTxs(pendingTxs);
+      rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
       expectProcessedTxIds([0]);
 
@@ -2019,25 +2019,31 @@ describe('rollup_coordinator', () => {
       coordinator = newRollupCoordinator(numInnerRollupTxs, numOuterRollupProofs, maxGasForRollup, callDataForRollup);
     });
 
-    it('should not publish txs that would breach the available gas', async () => {
-      // set the gas value for deposits so we can only fit 3 in a rollup
-      gasValues[0] = 80000; //DEPOSIT
-      gasValues[1] = 40000; //TRANSFER
+    it.each([
+      [TxType.DEPOSIT, TxType.TRANSFER],
+      [TxType.TRANSFER, TxType.DEPOSIT],
+      [TxType.WITHDRAW_TO_CONTRACT, TxType.TRANSFER],
+      [TxType.WITHDRAW_TO_WALLET, TxType.TRANSFER],
+      [TxType.ACCOUNT, TxType.TRANSFER],
+    ])(`should not publish txs of type %d would breach the available gas`, async (txTypeUnderTest, secondaryTxType) => {
+      // set the gas value for the tx type under test so we can only fit 3 in a rollup
+      gasValues[txTypeUnderTest] = 80000;
+      gasValues[secondaryTxType] = 40000;
       // ensure that we have enough call data for everything
-      callDataValues[0] = 10;
-      callDataValues[1] = 10;
+      callDataValues[txTypeUnderTest] = 10;
+      callDataValues[secondaryTxType] = 10;
       const pendingTxs = [
-        mockTx(0, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
-        mockTx(1, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
-        mockTx(2, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
-        mockTx(3, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
-        mockTx(4, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
+        mockTx(0, { txType: txTypeUnderTest, txFeeAssetId: 0 }),
+        mockTx(1, { txType: txTypeUnderTest, txFeeAssetId: 0 }),
+        mockTx(2, { txType: secondaryTxType, txFeeAssetId: 0 }),
+        mockTx(3, { txType: txTypeUnderTest, txFeeAssetId: 0 }),
+        mockTx(4, { txType: txTypeUnderTest, txFeeAssetId: 0 }),
       ];
 
-      // we can fit the first 3 deposits + the transfer in the rollup
+      // we can fit the first 3 tested txs + the secondary in the rollup
       const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
-      expect(rp.totalGas).toBe(360000); // 4 * BASE_GAS + 3 * DEPOSIT + 1 * TRANSFER
+      expect(rp.totalGas).toBe(360000); // 4 * BASE_GAS + 3 * TxType under test + 1 * secondary
       expect(rp.totalCallData).toBe(40); // 4 * 10
       expectProcessedTxIds([0, 1, 2, 3]);
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
@@ -2045,39 +2051,103 @@ describe('rollup_coordinator', () => {
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
 
-    it('should not publish txs that would breach the available call data', async () => {
-      // set the call data value for deposits so we can only fit 3 in a rollup
-      callDataValues[0] = 30000; //DEPOSIT
-      callDataValues[1] = 10000; //TRANSFER
-      // ensure that we have enough gas for everything
-      gasValues[0] = 10;
-      gasValues[1] = 10;
+    it('should not publish defi claim txs that would breach the available gas', async () => {
+      // set the gas value for defi claims so we can only fit 3 in a rollup
+      gasValues[TxType.DEFI_CLAIM] = 95000;
+      gasValues[TxType.TRANSFER] = 30000; //TRANSFER
+      // ensure that we have enough call data for everything
+      callDataValues[TxType.DEFI_CLAIM] = 10;
+      callDataValues[TxType.TRANSFER] = 10;
       const pendingTxs = [
-        mockTx(0, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
-        mockTx(1, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
+        mockTx(0, { txType: TxType.DEFI_CLAIM, txFeeAssetId: 0 }),
+        mockTx(1, { txType: TxType.DEFI_CLAIM, txFeeAssetId: 0 }),
         mockTx(2, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
-        mockTx(3, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
-        mockTx(4, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
+        mockTx(3, { txType: TxType.DEFI_CLAIM, txFeeAssetId: 0 }),
+        mockTx(4, { txType: TxType.DEFI_CLAIM, txFeeAssetId: 0 }),
       ];
 
-      // we can fit the first 3 deposits + the transfer in the rollup
+      // claims are reordered to be at the front of the queue
+      // we should end up with the first 3 claims and the transfer
       const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
-      expect(rp.totalCallData).toBe(100000); // 3 * DEPOSIT + TRANSFER
-      expect(rp.totalGas).toBe(80040); // 4 * BASE_GAS + 4 * 10
-      expectProcessedTxIds([0, 1, 2, 3]);
+
+      expectProcessedTxIds([0, 1, 3, 2]);
+      expect(rp.totalGas).toBe(395000); // 8 * BASE_GAS + 3 * DEFI_CLAIM + 1 * TRANSFER
+      expect(rp.totalCallData).toBe(40); // 4 * 10
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
 
+    it('should not publish defi claims that would breach the available call data', async () => {
+      // set the call data value for deposits so we can only fit 3 in a rollup
+      callDataValues[TxType.DEFI_CLAIM] = 30000; //DEFI_CLAIM
+      callDataValues[TxType.TRANSFER] = 10000; //TRANSFER
+      // ensure that we have enough gas for everything
+      gasValues[TxType.DEFI_CLAIM] = 10;
+      gasValues[TxType.TRANSFER] = 10;
+      const pendingTxs = [
+        mockTx(0, { txType: TxType.DEFI_CLAIM, txFeeAssetId: 0 }),
+        mockTx(1, { txType: TxType.DEFI_CLAIM, txFeeAssetId: 0 }),
+        mockTx(2, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockTx(3, { txType: TxType.DEFI_CLAIM, txFeeAssetId: 0 }),
+        mockTx(4, { txType: TxType.DEFI_CLAIM, txFeeAssetId: 0 }),
+      ];
+
+      // claims are reordered to be at the front of the queue
+      // we should end up with the first 3 claims and the transfer
+      const rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(true);
+      expect(rp.totalCallData).toBe(100000); // 3 * DEFI_CLAIM + TRANSFER
+      expect(rp.totalGas).toBe(80040); // 4 * BASE_GAS + 4 * 10
+      expectProcessedTxIds([0, 1, 3, 2]);
+      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([
+      [TxType.DEPOSIT, TxType.TRANSFER],
+      [TxType.TRANSFER, TxType.DEPOSIT],
+      [TxType.WITHDRAW_TO_CONTRACT, TxType.TRANSFER],
+      [TxType.WITHDRAW_TO_WALLET, TxType.TRANSFER],
+      [TxType.ACCOUNT, TxType.TRANSFER],
+    ])(
+      `should not publish txs of type %d would breach the available call data`,
+      async (txTypeUnderTest, secondaryTxType) => {
+        // set the call data value for tx under test so we can only fit 3 in a rollup
+        callDataValues[txTypeUnderTest] = 30000; //Tx under test
+        callDataValues[secondaryTxType] = 10000; //secondary tx type
+        // ensure that we have enough gas for everything
+        gasValues[txTypeUnderTest] = 10;
+        gasValues[secondaryTxType] = 10;
+        const pendingTxs = [
+          mockTx(0, { txType: txTypeUnderTest, txFeeAssetId: 0 }),
+          mockTx(1, { txType: txTypeUnderTest, txFeeAssetId: 0 }),
+          mockTx(2, { txType: secondaryTxType, txFeeAssetId: 0 }),
+          mockTx(3, { txType: txTypeUnderTest, txFeeAssetId: 0 }),
+          mockTx(4, { txType: txTypeUnderTest, txFeeAssetId: 0 }),
+        ];
+
+        // we can fit the first 3 tested txs + the secondary in the rollup
+        const rp = await coordinator.processPendingTxs(pendingTxs);
+        expect(rp.published).toBe(true);
+        expect(rp.totalCallData).toBe(100000); // 3 * Tested txs + secondary
+        expect(rp.totalGas).toBe(80040); // 4 * BASE_GAS + 4 * 10
+        expectProcessedTxIds([0, 1, 2, 3]);
+        expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+        expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+        expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+      },
+    );
+
     it('should not publish txs that would breach the available gas even with flush', async () => {
       // set the gas value for deposits so we can only fit 3 in a rollup
-      gasValues[0] = 80000; //DEPOSIT
-      gasValues[1] = 40000; //TRANSFER
+      gasValues[TxType.DEPOSIT] = 80000; //DEPOSIT
+      gasValues[TxType.TRANSFER] = 40000; //TRANSFER
       // ensure that we have enough call data for everything
-      callDataValues[0] = 10;
-      callDataValues[1] = 10;
+      callDataValues[TxType.DEPOSIT] = 10;
+      callDataValues[TxType.TRANSFER] = 10;
       const pendingTxs = [
         mockTx(0, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
         mockTx(1, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
@@ -2099,11 +2169,11 @@ describe('rollup_coordinator', () => {
 
     it('should not publish txs that would breach the available gas even with timeout', async () => {
       // set the gas value for deposits so we can only fit 3 in a rollup
-      gasValues[0] = 80000; //DEPOSIT
-      gasValues[1] = 40000; //TRANSFER
+      gasValues[TxType.DEPOSIT] = 80000; //DEPOSIT
+      gasValues[TxType.TRANSFER] = 40000; //TRANSFER
       // ensure that we have enough call data for everything
-      callDataValues[0] = 10;
-      callDataValues[1] = 10;
+      callDataValues[TxType.DEPOSIT] = 10;
+      callDataValues[TxType.TRANSFER] = 10;
       const pendingTxs = [
         mockTx(0, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
         mockTx(1, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
@@ -2134,11 +2204,11 @@ describe('rollup_coordinator', () => {
 
     it('should not publish txs that would breach the available call data even with flush', async () => {
       // set the call data value for deposits so we can only fit 3 in a rollup
-      callDataValues[0] = 30000; //DEPOSIT
-      callDataValues[1] = 10000; //TRANSFER
+      callDataValues[TxType.DEPOSIT] = 30000; //DEPOSIT
+      callDataValues[TxType.TRANSFER] = 10000; //TRANSFER
       // ensure that we have enough gas for everything
-      gasValues[0] = 10;
-      gasValues[1] = 10;
+      gasValues[TxType.DEPOSIT] = 10;
+      gasValues[TxType.TRANSFER] = 10;
       const pendingTxs = [
         mockTx(0, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
         mockTx(1, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
@@ -2160,11 +2230,11 @@ describe('rollup_coordinator', () => {
 
     it('should not publish txs that would breach the available call data even with timeout', async () => {
       // set the call data value for deposits so we can only fit 3 in a rollup
-      callDataValues[0] = 30000; //DEPOSIT
-      callDataValues[1] = 10000; //TRANSFER
+      callDataValues[TxType.DEPOSIT] = 30000; //DEPOSIT
+      callDataValues[TxType.TRANSFER] = 10000; //TRANSFER
       // ensure that we have enough gas for everything
-      gasValues[0] = 10;
-      gasValues[1] = 10;
+      gasValues[TxType.DEPOSIT] = 10;
+      gasValues[TxType.TRANSFER] = 10;
       const pendingTxs = [
         mockTx(0, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
         mockTx(1, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
@@ -2195,12 +2265,13 @@ describe('rollup_coordinator', () => {
 
     it('should ignore txs chained from ignored txs', async () => {
       // set the gas value for deposits so we can only fit 3 in a rollup
-      gasValues[0] = 100000; //DEPOSIT
-      gasValues[1] = 10000; //TRANSFER
-      gasValues[2] = 110000; //WITHDRAW_TO_WALLET
+      gasValues[TxType.DEPOSIT] = 100000; //DEPOSIT
+      gasValues[TxType.TRANSFER] = 10000; //TRANSFER
+      gasValues[TxType.WITHDRAW_TO_WALLET] = 110000; //WITHDRAW_TO_WALLET
       // ensure that we have enough call data for everything
-      callDataValues[0] = 10;
-      callDataValues[1] = 10;
+      callDataValues[TxType.DEPOSIT] = 10;
+      callDataValues[TxType.TRANSFER] = 10;
+      callDataValues[TxType.WITHDRAW_TO_WALLET] = 10;
       const commitment1 = randomBytes(32);
       const commitment2 = randomBytes(32);
       const pendingTxs = [
@@ -2229,66 +2300,84 @@ describe('rollup_coordinator', () => {
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
 
-    it('should publish a later tx if it is within the gas limit', async () => {
-      // set the gas value for deposits so we can only fit 2 in a rollup
-      gasValues[0] = 135000; //DEPOSIT
-      gasValues[1] = 25000; //TRANSFER
-      // ensure that we have enough call data for everything
-      callDataValues[0] = 10;
-      callDataValues[1] = 10;
-      const pendingTxs = [
-        mockTx(0, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
-        mockTx(1, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
-        mockTx(2, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
-        mockTx(3, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
-        mockTx(4, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
-      ];
+    it.each([
+      [TxType.DEPOSIT, TxType.TRANSFER],
+      [TxType.TRANSFER, TxType.DEPOSIT],
+      [TxType.WITHDRAW_TO_CONTRACT, TxType.TRANSFER],
+      [TxType.WITHDRAW_TO_WALLET, TxType.TRANSFER],
+      [TxType.ACCOUNT, TxType.TRANSFER],
+    ])(
+      `should publish a later tx of type %d if it is within the gas limit'`,
+      async (txTypeUnderTest, secondaryTxType) => {
+        // set the gas value for the tx under test so we can only fit 2 in a rollup
+        gasValues[txTypeUnderTest] = 135000;
+        gasValues[secondaryTxType] = 25000;
+        // ensure that we have enough call data for everything
+        callDataValues[txTypeUnderTest] = 10;
+        callDataValues[secondaryTxType] = 10;
+        const pendingTxs = [
+          mockTx(0, { txType: txTypeUnderTest, txFeeAssetId: 0 }),
+          mockTx(1, { txType: txTypeUnderTest, txFeeAssetId: 0 }),
+          mockTx(2, { txType: txTypeUnderTest, txFeeAssetId: 0 }),
+          mockTx(3, { txType: txTypeUnderTest, txFeeAssetId: 0 }),
+          mockTx(4, { txType: secondaryTxType, txFeeAssetId: 0 }),
+        ];
 
-      // we can fit the first 2 deposits + the transfer in the rollup
-      const rp = await coordinator.processPendingTxs(pendingTxs);
-      expect(rp.published).toBe(true);
-      expect(rp.totalGas).toBe(395000); // 2 * DEPOSIT + TRANSFER + 5 * BASE_GAS
-      expect(rp.totalCallData).toBe(30);
-      expectProcessedTxIds([0, 1, 4]);
-      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
-      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
-    });
+        // we can fit the first 2 txs undr test + the secondary tx in the rollup
+        const rp = await coordinator.processPendingTxs(pendingTxs);
+        expect(rp.published).toBe(true);
+        expect(rp.totalGas).toBe(395000); // 2 * tx under test + secondary + 5 * BASE_GAS
+        expect(rp.totalCallData).toBe(30);
+        expectProcessedTxIds([0, 1, 4]);
+        expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+        expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+        expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+      },
+    );
 
-    it('should publish a later tx if it is within the call data limit', async () => {
-      // set the gas value for deposits so we can only fit 3 in a rollup
-      callDataValues[0] = 30000; //DEPOSIT
-      callDataValues[1] = 10000; //TRANSFER
-      // ensure that we have enough gas for everything
-      gasValues[0] = 10;
-      gasValues[1] = 10;
-      const pendingTxs = [
-        mockTx(0, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
-        mockTx(1, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
-        mockTx(2, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
-        mockTx(3, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
-        mockTx(4, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
-      ];
+    it.each([
+      [TxType.DEPOSIT, TxType.TRANSFER],
+      [TxType.TRANSFER, TxType.DEPOSIT],
+      [TxType.WITHDRAW_TO_CONTRACT, TxType.TRANSFER],
+      [TxType.WITHDRAW_TO_WALLET, TxType.TRANSFER],
+      [TxType.ACCOUNT, TxType.TRANSFER],
+    ])(
+      `should publish a later tx of type %d if it is within the call data limit'`,
+      async (txTypeUnderTest, secondaryTxType) => {
+        // set the call data for txs under test so we can only fit 3 in a rollup
+        callDataValues[txTypeUnderTest] = 30000;
+        callDataValues[secondaryTxType] = 10000;
+        // ensure that we have enough gas for everything
+        gasValues[txTypeUnderTest] = 10;
+        gasValues[secondaryTxType] = 10;
+        const pendingTxs = [
+          mockTx(0, { txType: txTypeUnderTest, txFeeAssetId: 0 }),
+          mockTx(1, { txType: txTypeUnderTest, txFeeAssetId: 0 }),
+          mockTx(2, { txType: txTypeUnderTest, txFeeAssetId: 0 }),
+          mockTx(3, { txType: txTypeUnderTest, txFeeAssetId: 0 }),
+          mockTx(4, { txType: secondaryTxType, txFeeAssetId: 0 }),
+        ];
 
-      // we can fit the first 3 deposits + the transfer in the rollup
-      const rp = await coordinator.processPendingTxs(pendingTxs);
-      expect(rp.published).toBe(true);
-      expect(rp.totalCallData).toBe(100000); // 3 * DEPOSIT + TRANSFER
-      expectProcessedTxIds([0, 1, 2, 4]);
-      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
-      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
-    });
+        // we can fit the first 3 txs under test + the secondary in the rollup
+        const rp = await coordinator.processPendingTxs(pendingTxs);
+        expect(rp.published).toBe(true);
+        expect(rp.totalCallData).toBe(100000); // 3 * tx under test + secondary
+        expectProcessedTxIds([0, 1, 2, 4]);
+        expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+        expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+        expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+      },
+    );
 
     it('should publish once remaining gas is lower than any tx type', async () => {
       // set the gas value for deposits so we can only fit 3 in a rollup
-      gasValues[0] = 60000; //DEPOSIT
-      gasValues[1] = 75000; //TRANSFER
-      gasValues[3] = 110001; //WITHDRAW_TO_CONTRACT
+      gasValues[TxType.DEPOSIT] = 60000; //DEPOSIT
+      gasValues[TxType.TRANSFER] = 75000; //TRANSFER
+      gasValues[TxType.WITHDRAW_TO_CONTRACT] = 110001; //WITHDRAW_TO_CONTRACT
       // ensure that we have enough call data for everything
-      callDataValues[0] = 10;
-      callDataValues[1] = 10;
-      callDataValues[3] = 10;
+      callDataValues[TxType.DEPOSIT] = 10;
+      callDataValues[TxType.TRANSFER] = 10;
+      callDataValues[TxType.WITHDRAW_TO_CONTRACT] = 10;
       const pendingTxs = [
         mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
         mockTx(1, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
@@ -2310,13 +2399,13 @@ describe('rollup_coordinator', () => {
     });
 
     it('should publish once remaining call data is lower than any tx type', async () => {
-      callDataValues[0] = 30000; //DEPOSIT
-      callDataValues[1] = 10000; //TRANSFER
-      callDataValues[3] = 50001; //WITHDRAW_TO_CONTRACT
+      callDataValues[TxType.DEPOSIT] = 30000; //DEPOSIT
+      callDataValues[TxType.TRANSFER] = 10000; //TRANSFER
+      callDataValues[TxType.WITHDRAW_TO_CONTRACT] = 50001; //WITHDRAW_TO_CONTRACT
       // ensure that we have enough gas for everything
-      gasValues[0] = 10;
-      gasValues[1] = 10;
-      gasValues[3] = 10;
+      gasValues[TxType.DEPOSIT] = 10;
+      gasValues[TxType.TRANSFER] = 10;
+      gasValues[TxType.WITHDRAW_TO_CONTRACT] = 10;
       const pendingTxs = [
         mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
         mockTx(1, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
@@ -2350,15 +2439,15 @@ describe('rollup_coordinator', () => {
       const bridgeId = bridgeConfigs[0].bridgeId;
       const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeId);
 
-      gasValues[0] = 250000; //DEPOSIT
-      gasValues[1] = 300000; //TRANSFER
-      gasValues[3] = 250001; //WITHDRAW_TO_CONTRACT
-      gasValues[5] = 200000; //DEFI_DEPOSIT
+      gasValues[TxType.DEPOSIT] = 250000; //DEPOSIT
+      gasValues[TxType.TRANSFER] = 300000; //TRANSFER
+      gasValues[TxType.WITHDRAW_TO_CONTRACT] = 250001; //WITHDRAW_TO_CONTRACT
+      gasValues[TxType.DEFI_DEPOSIT] = 200000; //DEFI_DEPOSIT
       // ensure that we have enough call data for everything
-      callDataValues[0] = 10;
-      callDataValues[1] = 10;
-      callDataValues[3] = 10;
-      callDataValues[5] = 10;
+      callDataValues[TxType.DEPOSIT] = 10;
+      callDataValues[TxType.TRANSFER] = 10;
+      callDataValues[TxType.WITHDRAW_TO_CONTRACT] = 10;
+      callDataValues[TxType.DEFI_DEPOSIT] = 10;
       const pendingTxs = [
         mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }), // adds 300000
         mockDefiBridgeTxLocal(1, DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeId)), // pays for complete bridge. adds 1000000 + 200000 gas
@@ -2388,15 +2477,15 @@ describe('rollup_coordinator', () => {
       // set the gas limit for this bridge id to 900000 on the contract
       bridgeContractGasLimits.set(bridgeId, 900000);
 
-      gasValues[0] = 250000; //DEPOSIT
-      gasValues[1] = 300000; //TRANSFER
-      gasValues[3] = 250001; //WITHDRAW_TO_CONTRACT
-      gasValues[5] = 200000; //DEFI_DEPOSIT
+      gasValues[TxType.DEPOSIT] = 250000; //DEPOSIT
+      gasValues[TxType.TRANSFER] = 300000; //TRANSFER
+      gasValues[TxType.WITHDRAW_TO_CONTRACT] = 250001; //WITHDRAW_TO_CONTRACT
+      gasValues[TxType.DEFI_DEPOSIT] = 200000; //DEFI_DEPOSIT
       // ensure that we have enough call data for everything
-      callDataValues[0] = 10;
-      callDataValues[1] = 10;
-      callDataValues[3] = 10;
-      callDataValues[5] = 10;
+      callDataValues[TxType.DEPOSIT] = 10;
+      callDataValues[TxType.TRANSFER] = 10;
+      callDataValues[TxType.WITHDRAW_TO_CONTRACT] = 10;
+      callDataValues[TxType.DEFI_DEPOSIT] = 10;
       const pendingTxs = [
         mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }), // adds 300000
         mockDefiBridgeTxLocal(1, DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeId)), // pays for complete bridge. adds 900000 + 200000 gas
@@ -2428,15 +2517,15 @@ describe('rollup_coordinator', () => {
       // set the gas limit for thie bridge id to 1500000 on the contract
       bridgeContractGasLimits.set(bridgeId, 1300000);
 
-      gasValues[0] = 250000; //DEPOSIT
-      gasValues[1] = 300000; //TRANSFER
-      gasValues[3] = 250001; //WITHDRAW_TO_CONTRACT
-      gasValues[5] = 200000; //DEFI_DEPOSIT
+      gasValues[TxType.DEPOSIT] = 250000; //DEPOSIT
+      gasValues[TxType.TRANSFER] = 300000; //TRANSFER
+      gasValues[TxType.WITHDRAW_TO_CONTRACT] = 250001; //WITHDRAW_TO_CONTRACT
+      gasValues[TxType.DEFI_DEPOSIT] = 200000; //DEFI_DEPOSIT
       // ensure that we have enough call data for everything
-      callDataValues[0] = 10;
-      callDataValues[1] = 10;
-      callDataValues[3] = 10;
-      callDataValues[5] = 10;
+      callDataValues[TxType.DEPOSIT] = 10;
+      callDataValues[TxType.TRANSFER] = 10;
+      callDataValues[TxType.WITHDRAW_TO_CONTRACT] = 10;
+      callDataValues[TxType.DEFI_DEPOSIT] = 10;
       const pendingTxs = [
         mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }), // adds 300000
         mockDefiBridgeTxLocal(1, DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeId)), // pays for complete bridge. adds 1300000 + 200000 gas. We now have 1800000 + 6 * BASE_GAS
@@ -2465,15 +2554,15 @@ describe('rollup_coordinator', () => {
       const bridgeId = bridgeConfigs[0].bridgeId;
       const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeId);
 
-      callDataValues[0] = 25000; //DEPOSIT
-      callDataValues[1] = 30000; //TRANSFER
-      callDataValues[3] = 25001; //WITHDRAW_TO_CONTRACT
-      callDataValues[5] = 20000; //DEFI_DEPOSIT
+      callDataValues[TxType.DEPOSIT] = 25000; //DEPOSIT
+      callDataValues[TxType.TRANSFER] = 30000; //TRANSFER
+      callDataValues[TxType.WITHDRAW_TO_CONTRACT] = 25001; //WITHDRAW_TO_CONTRACT
+      callDataValues[TxType.DEFI_DEPOSIT] = 20000; //DEFI_DEPOSIT
       // ensure that we have enough gas for everything
-      gasValues[0] = 10;
-      gasValues[1] = 10;
-      gasValues[3] = 10;
-      gasValues[5] = 10;
+      gasValues[TxType.DEPOSIT] = 10;
+      gasValues[TxType.TRANSFER] = 10;
+      gasValues[TxType.WITHDRAW_TO_CONTRACT] = 10;
+      gasValues[TxType.DEFI_DEPOSIT] = 10;
       const pendingTxs = [
         mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }), // adds 30000
         mockDefiBridgeTxLocal(1, DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeId)), // adds 20000 call data, bridge is paid for so it will be included
@@ -2500,15 +2589,15 @@ describe('rollup_coordinator', () => {
       const bridgeId = bridgeConfigs[0].bridgeId;
       const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeId);
 
-      gasValues[0] = 250000; //DEPOSIT
-      gasValues[1] = 200000; //TRANSFER
-      gasValues[3] = 420001; //WITHDRAW_TO_CONTRACT
-      gasValues[5] = 100000; //DEFI_DEPOSIT
+      gasValues[TxType.DEPOSIT] = 250000; //DEPOSIT
+      gasValues[TxType.TRANSFER] = 200000; //TRANSFER
+      gasValues[TxType.WITHDRAW_TO_CONTRACT] = 420001; //WITHDRAW_TO_CONTRACT
+      gasValues[TxType.DEFI_DEPOSIT] = 100000; //DEFI_DEPOSIT
       // ensure that we have enough call data for everything
-      callDataValues[0] = 10;
-      callDataValues[1] = 10;
-      callDataValues[3] = 10;
-      callDataValues[5] = 10;
+      callDataValues[TxType.DEPOSIT] = 10;
+      callDataValues[TxType.TRANSFER] = 10;
+      callDataValues[TxType.WITHDRAW_TO_CONTRACT] = 10;
+      callDataValues[TxType.DEFI_DEPOSIT] = 10;
       const pendingTxs = [
         mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }), // adds 200000
         mockDefiBridgeTxLocal(1, DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeId)), // pays for complete bridge. adds 1000000 + 100000 gas
@@ -2535,15 +2624,15 @@ describe('rollup_coordinator', () => {
       const bridgeId = bridgeConfigs[0].bridgeId;
       const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeId);
       // set the call data value for deposits so we can only fit 3 in a rollup
-      callDataValues[0] = 25000; //DEPOSIT
-      callDataValues[1] = 30000; //TRANSFER
-      callDataValues[3] = 30001; //WITHDRAW_TO_CONTRACT
-      callDataValues[5] = 10000; //DEFI_DEPOSIT
+      callDataValues[TxType.DEPOSIT] = 25000; //DEPOSIT
+      callDataValues[TxType.TRANSFER] = 30000; //TRANSFER
+      callDataValues[TxType.WITHDRAW_TO_CONTRACT] = 30001; //WITHDRAW_TO_CONTRACT
+      callDataValues[TxType.DEFI_DEPOSIT] = 10000; //DEFI_DEPOSIT
       // ensure that we have enough gas for everything
-      gasValues[0] = 10;
-      gasValues[1] = 10;
-      gasValues[3] = 10;
-      gasValues[5] = 10;
+      gasValues[TxType.DEPOSIT] = 10;
+      gasValues[TxType.TRANSFER] = 10;
+      gasValues[TxType.WITHDRAW_TO_CONTRACT] = 10;
+      gasValues[TxType.DEFI_DEPOSIT] = 10;
       const pendingTxs = [
         mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }), // adds 30000
         mockDefiBridgeTxLocal(1, DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeId)), // pays for complete bridge. adds 10000
@@ -2569,16 +2658,16 @@ describe('rollup_coordinator', () => {
       const bridgeId = bridgeConfigs[0].bridgeId;
       const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeId);
       // set the gas value for deposits so we can only fit 3 in a rollup
-      gasValues[0] = 200000; //DEPOSIT
-      gasValues[1] = 300000; //TRANSFER
-      gasValues[3] = 300001; //WITHDRAW_TO_CONTRACT
-      gasValues[5] = 100000; //DEFI_DEPOSIT
+      gasValues[TxType.DEPOSIT] = 200000; //DEPOSIT
+      gasValues[TxType.TRANSFER] = 300000; //TRANSFER
+      gasValues[TxType.WITHDRAW_TO_CONTRACT] = 300001; //WITHDRAW_TO_CONTRACT
+      gasValues[TxType.DEFI_DEPOSIT] = 100000; //DEFI_DEPOSIT
 
       // ensure that we have enough call data for everything
-      callDataValues[0] = 10;
-      callDataValues[1] = 10;
-      callDataValues[3] = 10;
-      callDataValues[5] = 10;
+      callDataValues[TxType.DEPOSIT] = 10;
+      callDataValues[TxType.TRANSFER] = 10;
+      callDataValues[TxType.WITHDRAW_TO_CONTRACT] = 10;
+      callDataValues[TxType.DEFI_DEPOSIT] = 10;
       const pendingTxs = [
         mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }), // adds 300000
         mockDefiBridgeTxLocal(1, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)), // adds 100000 gas as it is included
@@ -2608,16 +2697,16 @@ describe('rollup_coordinator', () => {
       const bridgeId = bridgeConfigs[0].bridgeId;
       const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeId);
       // set the call data for deposits so we can only fit 3 in a rollup
-      callDataValues[0] = 25000; //DEPOSIT
-      callDataValues[1] = 30000; //TRANSFER
-      callDataValues[3] = 30001; //WITHDRAW_TO_CONTRACT
-      callDataValues[5] = 10000; //DEFI_DEPOSIT
+      callDataValues[TxType.DEPOSIT] = 25000; //DEPOSIT
+      callDataValues[TxType.TRANSFER] = 30000; //TRANSFER
+      callDataValues[TxType.WITHDRAW_TO_CONTRACT] = 30001; //WITHDRAW_TO_CONTRACT
+      callDataValues[TxType.DEFI_DEPOSIT] = 10000; //DEFI_DEPOSIT
 
       // ensure that we have enough gas for everything
-      gasValues[0] = 10;
-      gasValues[1] = 10;
-      gasValues[3] = 10;
-      gasValues[5] = 10;
+      gasValues[TxType.DEPOSIT] = 10;
+      gasValues[TxType.TRANSFER] = 10;
+      gasValues[TxType.WITHDRAW_TO_CONTRACT] = 10;
+      gasValues[TxType.DEFI_DEPOSIT] = 10;
       const pendingTxs = [
         mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }), // adds 30000
         mockDefiBridgeTxLocal(1, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)), // adds 10000 call data as it is included
@@ -2647,16 +2736,16 @@ describe('rollup_coordinator', () => {
       const bridgeId = bridgeConfigs[0].bridgeId;
       const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeId);
       // set the call data for deposits so we can only fit 3 in a rollup
-      callDataValues[0] = 25000; //DEPOSIT
-      callDataValues[1] = 30000; //TRANSFER
-      callDataValues[3] = 30001; //WITHDRAW_TO_CONTRACT
-      callDataValues[5] = 10000; //DEFI_DEPOSIT
+      callDataValues[TxType.DEPOSIT] = 25000; //DEPOSIT
+      callDataValues[TxType.TRANSFER] = 30000; //TRANSFER
+      callDataValues[TxType.WITHDRAW_TO_CONTRACT] = 30001; //WITHDRAW_TO_CONTRACT
+      callDataValues[TxType.DEFI_DEPOSIT] = 10000; //DEFI_DEPOSIT
 
       // ensure that we have enough gas for everything
-      gasValues[0] = 10;
-      gasValues[1] = 10;
-      gasValues[3] = 10;
-      gasValues[5] = 10;
+      gasValues[TxType.DEPOSIT] = 10;
+      gasValues[TxType.TRANSFER] = 10;
+      gasValues[TxType.WITHDRAW_TO_CONTRACT] = 10;
+      gasValues[TxType.DEFI_DEPOSIT] = 10;
       const pendingTxs = [
         mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }), // adds 30000
         mockDefiBridgeTxLocal(1, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)), // adds 10000 call data as it is included
@@ -2690,16 +2779,16 @@ describe('rollup_coordinator', () => {
       const bridgeId = bridgeConfigs[0].bridgeId;
       const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeId);
       // set the gas value for deposits so we can only fit 3 in a rollup
-      gasValues[0] = 200000; //DEPOSIT
-      gasValues[1] = 300000; //TRANSFER
-      gasValues[3] = 300001; //WITHDRAW_TO_CONTRACT
-      gasValues[5] = 100000; //DEFI_DEPOSIT
+      gasValues[TxType.DEPOSIT] = 200000; //DEPOSIT
+      gasValues[TxType.TRANSFER] = 300000; //TRANSFER
+      gasValues[TxType.WITHDRAW_TO_CONTRACT] = 300001; //WITHDRAW_TO_CONTRACT
+      gasValues[TxType.DEFI_DEPOSIT] = 100000; //DEFI_DEPOSIT
 
       // ensure that we have enough call data for everything
-      callDataValues[0] = 10;
-      callDataValues[1] = 10;
-      callDataValues[3] = 10;
-      callDataValues[5] = 10;
+      callDataValues[TxType.DEPOSIT] = 10;
+      callDataValues[TxType.TRANSFER] = 10;
+      callDataValues[TxType.WITHDRAW_TO_CONTRACT] = 10;
+      callDataValues[TxType.DEFI_DEPOSIT] = 10;
       const pendingTxs = [
         mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }), // adds 300000
         mockDefiBridgeTxLocal(1, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)), // adds 100000 gas as it is included
@@ -2729,16 +2818,16 @@ describe('rollup_coordinator', () => {
       const bridgeId = bridgeConfigs[0].bridgeId;
       const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeId);
       // set the gas value for deposits so we can only fit 3 in a rollup
-      gasValues[0] = 200000; //DEPOSIT
-      gasValues[1] = 300000; //TRANSFER
-      gasValues[3] = 300001; //WITHDRAW_TO_CONTRACT
-      gasValues[5] = 100000; //DEFI_DEPOSIT
+      gasValues[TxType.DEPOSIT] = 200000; //DEPOSIT
+      gasValues[TxType.TRANSFER] = 300000; //TRANSFER
+      gasValues[TxType.WITHDRAW_TO_CONTRACT] = 300001; //WITHDRAW_TO_CONTRACT
+      gasValues[TxType.DEFI_DEPOSIT] = 100000; //DEFI_DEPOSIT
 
       // ensure that we have enough call data for everything
-      callDataValues[0] = 10;
-      callDataValues[1] = 10;
-      callDataValues[3] = 10;
-      callDataValues[5] = 10;
+      callDataValues[TxType.DEPOSIT] = 10;
+      callDataValues[TxType.TRANSFER] = 10;
+      callDataValues[TxType.WITHDRAW_TO_CONTRACT] = 10;
+      callDataValues[TxType.DEFI_DEPOSIT] = 10;
       const pendingTxs = [
         mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }), // adds 300000
         mockDefiBridgeTxLocal(1, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)), // adds 100000 gas as it is included
@@ -2778,16 +2867,16 @@ describe('rollup_coordinator', () => {
       const bridgeId = bridgeConfigs[0].bridgeId;
       const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeId);
       // set the call data for deposits so we can only fit 3 in a rollup
-      callDataValues[0] = 25000; //DEPOSIT
-      callDataValues[1] = 30000; //TRANSFER
-      callDataValues[3] = 30001; //WITHDRAW_TO_CONTRACT
-      callDataValues[5] = 10000; //DEFI_DEPOSIT
+      callDataValues[TxType.DEPOSIT] = 25000; //DEPOSIT
+      callDataValues[TxType.TRANSFER] = 30000; //TRANSFER
+      callDataValues[TxType.WITHDRAW_TO_CONTRACT] = 30001; //WITHDRAW_TO_CONTRACT
+      callDataValues[TxType.DEFI_DEPOSIT] = 10000; //DEFI_DEPOSIT
 
       // ensure that we have enough gas for everything
-      gasValues[0] = 10;
-      gasValues[1] = 10;
-      gasValues[3] = 10;
-      gasValues[5] = 10;
+      gasValues[TxType.DEPOSIT] = 10;
+      gasValues[TxType.TRANSFER] = 10;
+      gasValues[TxType.WITHDRAW_TO_CONTRACT] = 10;
+      gasValues[TxType.DEFI_DEPOSIT] = 10;
       const pendingTxs = [
         mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }), // adds 30000
         mockDefiBridgeTxLocal(1, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)), // adds 10000 call data as it is included
@@ -2817,16 +2906,16 @@ describe('rollup_coordinator', () => {
       const bridgeId = bridgeConfigs[0].bridgeId;
       const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeId);
       // set the call data for deposits so we can only fit 3 in a rollup
-      callDataValues[0] = 25000; //DEPOSIT
-      callDataValues[1] = 30000; //TRANSFER
-      callDataValues[3] = 30001; //WITHDRAW_TO_CONTRACT
-      callDataValues[5] = 10000; //DEFI_DEPOSIT
+      callDataValues[TxType.DEPOSIT] = 25000; //DEPOSIT
+      callDataValues[TxType.TRANSFER] = 30000; //TRANSFER
+      callDataValues[TxType.WITHDRAW_TO_CONTRACT] = 30001; //WITHDRAW_TO_CONTRACT
+      callDataValues[TxType.DEFI_DEPOSIT] = 10000; //DEFI_DEPOSIT
 
       // ensure that we have enough gas for everything
-      gasValues[0] = 10;
-      gasValues[1] = 10;
-      gasValues[3] = 10;
-      gasValues[5] = 10;
+      gasValues[TxType.DEPOSIT] = 10;
+      gasValues[TxType.TRANSFER] = 10;
+      gasValues[TxType.WITHDRAW_TO_CONTRACT] = 10;
+      gasValues[TxType.DEFI_DEPOSIT] = 10;
       const pendingTxs = [
         mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }), // adds 30000
         mockDefiBridgeTxLocal(1, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)), // adds 10000 call data as it is included
@@ -2866,15 +2955,15 @@ describe('rollup_coordinator', () => {
       const maxGasForRollup = 4000000;
       coordinator = newRollupCoordinator(numInnerRollupTxs, numOuterRollupProofs, maxGasForRollup, callDataForRollup);
 
-      gasValues[0] = 250000; //DEPOSIT
-      gasValues[1] = 300000; //TRANSFER
-      gasValues[3] = 300001; //WITHDRAW_TO_CONTRACT
-      gasValues[5] = 100000; //DEFI_DEPOSIT
+      gasValues[TxType.DEPOSIT] = 250000; //DEPOSIT
+      gasValues[TxType.TRANSFER] = 300000; //TRANSFER
+      gasValues[TxType.WITHDRAW_TO_CONTRACT] = 300001; //WITHDRAW_TO_CONTRACT
+      gasValues[TxType.DEFI_DEPOSIT] = 100000; //DEFI_DEPOSIT
       // ensure that we have enough call data for everything
-      callDataValues[0] = 10;
-      callDataValues[1] = 10;
-      callDataValues[3] = 10;
-      callDataValues[5] = 10;
+      callDataValues[TxType.DEPOSIT] = 10;
+      callDataValues[TxType.TRANSFER] = 10;
+      callDataValues[TxType.WITHDRAW_TO_CONTRACT] = 10;
+      callDataValues[TxType.DEFI_DEPOSIT] = 10;
       const pendingTxs = [
         mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }), // adds 300000
         mockDefiBridgeTx(
@@ -2909,15 +2998,15 @@ describe('rollup_coordinator', () => {
       coordinator = newRollupCoordinator(numInnerRollupTxs, numOuterRollupProofs, maxGasForRollup, callDataForRollup);
 
       // set the gas value for deposits so we can only fit 3 in a rollup
-      gasValues[0] = 250000; //DEPOSIT
-      gasValues[1] = 300000; //TRANSFER
-      gasValues[3] = 300001; //WITHDRAW_TO_CONTRACT
-      gasValues[5] = 100000; //DEFI_DEPOSIT
+      gasValues[TxType.DEPOSIT] = 250000; //DEPOSIT
+      gasValues[TxType.TRANSFER] = 300000; //TRANSFER
+      gasValues[TxType.WITHDRAW_TO_CONTRACT] = 300001; //WITHDRAW_TO_CONTRACT
+      gasValues[TxType.DEFI_DEPOSIT] = 100000; //DEFI_DEPOSIT
       // ensure that we have enough call data for everything
-      callDataValues[0] = 10;
-      callDataValues[1] = 10;
-      callDataValues[3] = 10;
-      callDataValues[5] = 10;
+      callDataValues[TxType.DEPOSIT] = 10;
+      callDataValues[TxType.TRANSFER] = 10;
+      callDataValues[TxType.WITHDRAW_TO_CONTRACT] = 10;
+      callDataValues[TxType.DEFI_DEPOSIT] = 10;
       const pendingTxs = [
         mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }), // adds 300000
         mockDefiBridgeTx(

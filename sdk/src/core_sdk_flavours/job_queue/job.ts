@@ -1,4 +1,5 @@
 export enum JobQueueTarget {
+  NOTE_DECRYPTOR = 'NOTE_DECRYPTOR',
   PEDERSEN = 'PEDERSEN',
   PIPPENGER = 'PIPPENGER',
   FFT = 'FFT',

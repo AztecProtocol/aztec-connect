@@ -46,7 +46,7 @@ describe('rollup_processor: deposit', () => {
       signingAddress: userAddresses[0],
     });
 
-    const { proofData, signatures } = await createRollupProof(
+    const { proofData, signatures } = createRollupProof(
       rollupProvider,
       await createDepositProof(depositAmount, userAddresses[0], userSigners[0], 0, txFee),
       { feeDistributorAddress },
@@ -78,7 +78,7 @@ describe('rollup_processor: deposit', () => {
       signingAddress: userAddresses[0],
     });
 
-    const { proofData, signatures } = await createRollupProof(
+    const { proofData, signatures } = createRollupProof(
       rollupProvider,
       await createDepositProof(depositAmount, userAddresses[0], userSigners[0], 1, txFee),
       { feeDistributorAddress },

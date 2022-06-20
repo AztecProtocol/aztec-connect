@@ -9,6 +9,7 @@ import {
 } from '../serialize';
 import { TxHash } from '../blockchain';
 import { DefiInteractionEvent } from './defi_interaction_event';
+import { EventEmitter } from 'stream';
 
 export class Block {
   constructor(
@@ -73,10 +74,10 @@ export class Block {
   }
 }
 
-export interface BlockSource {
+export interface BlockSource extends EventEmitter {
   /**
-   * Returns all blocks from rollup id `from`.
-   * In the future this will *not* guarantee *all* blocks are returned. It may return a subset, and the
+   * Returns blocks from rollup id `from`.
+   * This does not guarantee all blocks are returned. It may return a subset, and the
    * client should use `getLatestRollupId()` to determine if it needs to make further requests.
    */
   getBlocks(from: number): Promise<Block[]>;
@@ -85,15 +86,16 @@ export interface BlockSource {
    * Starts emitting rollup blocks.
    * All historical blocks must have been emitted before this function returns.
    */
-  start(fromBlock?: number);
+  start(fromBlock?: number): Promise<void>;
 
   stop(): Promise<void>;
 
-  on(event: 'block', fn: (block: Block) => void);
+  on(event: 'block', fn: (block: Block) => void): this;
 
-  removeAllListeners();
+  removeAllListeners(): this;
 
-  getLatestRollupId(): number;
+  getLatestRollupId(): Promise<number>;
 }
 
 export * from './server_block_source';
+export * from './defi_interaction_event';

@@ -37,7 +37,7 @@ export class Server {
   public async stop() {
     console.log('Server stop...');
     this.ready = false;
-    this.proofGenerator.stop();
+    await this.proofGenerator.stop();
   }
 
   public isReady() {

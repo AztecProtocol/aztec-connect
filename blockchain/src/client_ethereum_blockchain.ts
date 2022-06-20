@@ -80,8 +80,8 @@ export class ClientEthereumBlockchain {
     return index + 1;
   }
 
-  public async hasPermitSupport(assetId: number) {
-    return await this.permitSupportAssetIds.includes(assetId);
+  public hasPermitSupport(assetId: number) {
+    return this.permitSupportAssetIds.includes(assetId);
   }
 
   public async getUserPendingDeposit(assetId: number, account: EthAddress) {

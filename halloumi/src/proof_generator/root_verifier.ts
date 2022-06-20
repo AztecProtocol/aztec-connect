@@ -1,17 +1,10 @@
-import {
-  deserializeBufferFromVector,
-  serializeBufferToVector,
-} from '@aztec/barretenberg/serialize';
+import { deserializeBufferFromVector, serializeBufferToVector } from '@aztec/barretenberg/serialize';
 
 export class RootVerifier {
-  constructor(
-    public rootRollupProofBuf: Buffer,
-  ) { }
+  constructor(public rootRollupProofBuf: Buffer) {}
 
   public toBuffer() {
-    return Buffer.concat([
-      serializeBufferToVector(this.rootRollupProofBuf)
-    ]);
+    return Buffer.concat([serializeBufferToVector(this.rootRollupProofBuf)]);
   }
 
   public static fromBuffer(buf: Buffer) {

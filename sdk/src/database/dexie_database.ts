@@ -84,21 +84,21 @@ const fromDexieNote = ({
   );
 
 class DexieUser {
-  constructor(public id: Uint8Array, public accountPrivateKey: Uint8Array, public syncedToRollup: number) {}
+  constructor(
+    public accountPublicKey: Uint8Array,
+    public accountPrivateKey: Uint8Array,
+    public syncedToRollup: number,
+  ) {}
 }
 
-const toDexieUser = ({ id, accountPrivateKey, syncedToRollup }: UserData) =>
-  new DexieUser(new Uint8Array(id.toBuffer()), new Uint8Array(accountPrivateKey), syncedToRollup);
+const toDexieUser = ({ accountPublicKey, accountPrivateKey, syncedToRollup }: UserData) =>
+  new DexieUser(new Uint8Array(accountPublicKey.toBuffer()), new Uint8Array(accountPrivateKey), syncedToRollup);
 
-const fromDexieUser = ({ id, accountPrivateKey, syncedToRollup }: DexieUser): UserData => {
-  const accountPublicKey = new GrumpkinAddress(Buffer.from(id));
-  return {
-    id: accountPublicKey,
-    accountPublicKey,
-    accountPrivateKey: Buffer.from(accountPrivateKey),
-    syncedToRollup,
-  };
-};
+const fromDexieUser = ({ accountPublicKey, accountPrivateKey, syncedToRollup }: DexieUser): UserData => ({
+  accountPublicKey: new GrumpkinAddress(Buffer.from(accountPublicKey)),
+  accountPrivateKey: Buffer.from(accountPrivateKey),
+  syncedToRollup,
+});
 
 class DexieUserTx {
   constructor(
@@ -404,6 +404,7 @@ export class DexieDatabase implements Database {
   private spendingKey!: Dexie.Table<DexieSpendingKey, Uint8Array>;
   private user!: Dexie.Table<DexieUser, Uint8Array>;
   private userTx!: Dexie.Table<DexieUserTx, Uint8Array>;
+  private readonly genesisDataKey = 'genesisData';
 
   constructor(private dbName = 'hummus', private version = 7) {}
 
@@ -433,7 +434,7 @@ export class DexieDatabase implements Database {
       mutex: '&name',
       note: '&commitment, nullifier, [owner+nullified], [owner+pending]',
       spendingKey: '&[userId+key], userId',
-      user: '&id',
+      user: '&accountPublicKey',
       userTx:
         '&[txId+userId], txId, [txId+proofId], [userId+proofId], proofId, settled, [userId+proofId+interactionNonce]',
     });
@@ -448,8 +449,9 @@ export class DexieDatabase implements Database {
     this.userTx = this.dexie.table('userTx');
   }
 
-  async close() {
+  close() {
     this.dexie.close();
+    return Promise.resolve();
   }
 
   async clear() {
@@ -500,8 +502,8 @@ export class DexieDatabase implements Database {
     await this.note.where({ nullifier: new Uint8Array(nullifier) }).delete();
   }
 
-  async getUser(userId: GrumpkinAddress) {
-    const user = await this.user.get(new Uint8Array(userId.toBuffer()));
+  async getUser(accountPublicKey: GrumpkinAddress) {
+    const user = await this.user.get(new Uint8Array(accountPublicKey.toBuffer()));
     return user ? fromDexieUser(user) : undefined;
   }
 
@@ -514,7 +516,26 @@ export class DexieDatabase implements Database {
   }
 
   async updateUser(user: UserData) {
-    await this.user.where({ id: new Uint8Array(user.id.toBuffer()) }).modify(toDexieUser(user));
+    await this.user
+      .where({ accountPublicKey: new Uint8Array(user.accountPublicKey.toBuffer()) })
+      .modify(toDexieUser(user));
+  }
+
+  async removeUser(accountPublicKey: GrumpkinAddress) {
+    const userId = new Uint8Array(accountPublicKey.toBuffer());
+    await this.user.where({ accountPublicKey: userId }).delete();
+    await this.userTx.where({ userId }).delete();
+    await this.claimTx.where({ userId }).delete();
+    await this.spendingKey.where({ userId }).delete();
+    await this.note.where({ owner: userId }).delete();
+  }
+
+  async resetUsers() {
+    await this.user.toCollection().modify({ syncedToRollup: -1 });
+    await this.note.clear();
+    await this.userTx.clear();
+    await this.claimTx.clear();
+    await this.spendingKey.clear();
   }
 
   async addPaymentTx(tx: CorePaymentTx) {
@@ -547,7 +568,7 @@ export class DexieDatabase implements Database {
         txId: new Uint8Array(txId.toBuffer()),
         userId: new Uint8Array(userId.toBuffer()),
       })
-      .modify({ settled });
+      .modify({ settled: settled.getTime() });
   }
 
   async addAccountTx(tx: CoreAccountTx) {
@@ -571,7 +592,9 @@ export class DexieDatabase implements Database {
   }
 
   async settleAccountTx(txId: TxId, settled: Date) {
-    await this.userTx.where({ txId: new Uint8Array(txId.toBuffer()), proofId: ProofId.ACCOUNT }).modify({ settled });
+    await this.userTx
+      .where({ txId: new Uint8Array(txId.toBuffer()), proofId: ProofId.ACCOUNT })
+      .modify({ settled: settled.getTime() });
   }
 
   async addDefiTx(tx: CoreDefiTx) {
@@ -605,7 +628,7 @@ export class DexieDatabase implements Database {
   async settleDefiDeposit(txId: TxId, interactionNonce: number, isAsync: boolean, settled: Date) {
     await this.userTx
       .where({ txId: new Uint8Array(txId.toBuffer()), proofId: ProofId.DEFI_DEPOSIT })
-      .modify({ interactionNonce, isAsync, settled });
+      .modify({ interactionNonce, isAsync, settled: settled.getTime() });
   }
 
   async updateDefiTxFinalisationResult(
@@ -662,23 +685,6 @@ export class DexieDatabase implements Database {
       .delete();
   }
 
-  async removeUser(userId: GrumpkinAddress) {
-    const id = new Uint8Array(userId.toBuffer());
-    await this.user.where({ id }).delete();
-    await this.userTx.where({ userId: id }).delete();
-    await this.claimTx.where({ userId: id }).delete();
-    await this.spendingKey.where({ userId: id }).delete();
-    await this.note.where({ owner: id }).delete();
-  }
-
-  async resetUsers() {
-    await this.user.toCollection().modify({ syncedToRollup: -1 });
-    await this.note.clear();
-    await this.userTx.clear();
-    await this.claimTx.clear();
-    await this.spendingKey.clear();
-  }
-
   async addSpendingKey(spendingKey: SpendingKey) {
     await this.spendingKey.put(toDexieSpendingKey(spendingKey));
   }
@@ -705,7 +711,7 @@ export class DexieDatabase implements Database {
   }
 
   async addAlias(alias: Alias) {
-    return this.addAliases([alias]);
+    return await this.addAliases([alias]);
   }
 
   async addAliases(aliases: Alias[]) {
@@ -798,5 +804,14 @@ export class DexieDatabase implements Database {
 
   async releaseLock(name: string) {
     await this.mutex.delete(name);
+  }
+
+  public async setGenesisData(data: Buffer) {
+    await this.addKey(this.genesisDataKey, data);
+  }
+
+  public async getGenesisData() {
+    const data = await this.getKey(this.genesisDataKey);
+    return data ?? Buffer.alloc(0);
   }
 }
