@@ -120,7 +120,7 @@ export class CoreSdkServerStub {
     privateOutput: string,
     depositor: string,
     recipient: string,
-    recipientAccountRequired: boolean,
+    recipientSpendingKeyRequired: boolean,
     txRefNo: number,
   ) {
     const proofOutput = await this.core.createDepositProof(
@@ -129,7 +129,7 @@ export class CoreSdkServerStub {
       BigInt(privateOutput),
       EthAddress.fromString(depositor),
       GrumpkinAddress.fromString(recipient),
-      recipientAccountRequired,
+      recipientSpendingKeyRequired,
       txRefNo,
     );
     return proofOutputToJson(proofOutput);
@@ -144,7 +144,7 @@ export class CoreSdkServerStub {
     recipientPrivateOutput: string,
     senderPrivateOutput: string,
     noteRecipient: string | undefined,
-    recipientAccountRequired: boolean,
+    recipientSpendingKeyRequired: boolean,
     publicOwner: string | undefined,
     spendingPublicKey: string,
     allowChain: number,
@@ -158,7 +158,7 @@ export class CoreSdkServerStub {
       BigInt(recipientPrivateOutput),
       BigInt(senderPrivateOutput),
       noteRecipient ? GrumpkinAddress.fromString(noteRecipient) : undefined,
-      recipientAccountRequired,
+      recipientSpendingKeyRequired,
       publicOwner ? EthAddress.fromString(publicOwner) : undefined,
       GrumpkinAddress.fromString(spendingPublicKey),
       allowChain,
@@ -314,44 +314,53 @@ export class CoreSdkServerStub {
     return keys.map(k => new Uint8Array(k));
   }
 
-  public async getBalances(userId: string, unsafe?: boolean) {
-    const balances = await this.core.getBalances(GrumpkinAddress.fromString(userId), unsafe);
+  public async getBalances(userId: string) {
+    const balances = await this.core.getBalances(GrumpkinAddress.fromString(userId));
     return balances.map(assetValueToJson);
   }
 
-  public async getBalance(userId: string, assetId: number, unsafe?: boolean) {
-    const balance = await this.core.getBalance(GrumpkinAddress.fromString(userId), assetId, unsafe);
+  public async getBalance(userId: string, assetId: number) {
+    const balance = await this.core.getBalance(GrumpkinAddress.fromString(userId), assetId);
     return balance.toString();
   }
 
-  public async getSpendableSum(userId: string, assetId: number, excludePendingNotes?: boolean, unsafe?: boolean) {
+  public async getSpendableSum(
+    userId: string,
+    assetId: number,
+    spendingKeyRequired?: boolean,
+    excludePendingNotes?: boolean,
+  ) {
     const sum = await this.core.getSpendableSum(
       GrumpkinAddress.fromString(userId),
       assetId,
+      spendingKeyRequired,
       excludePendingNotes,
-      unsafe,
     );
     return sum.toString();
   }
 
-  public async getSpendableSums(userId: string, excludePendingNotes?: boolean, unsafe?: boolean) {
-    const sums = await this.core.getSpendableSums(GrumpkinAddress.fromString(userId), excludePendingNotes, unsafe);
+  public async getSpendableSums(userId: string, spendingKeyRequired?: boolean, excludePendingNotes?: boolean) {
+    const sums = await this.core.getSpendableSums(
+      GrumpkinAddress.fromString(userId),
+      spendingKeyRequired,
+      excludePendingNotes,
+    );
     return sums.map(assetValueToJson);
   }
 
   public async getMaxSpendableValue(
     userId: string,
     assetId: number,
-    numNotes?: number,
+    spendingKeyRequired?: boolean,
     excludePendingNotes?: boolean,
-    unsafe?: boolean,
+    numNotes?: number,
   ) {
     const value = await this.core.getMaxSpendableValue(
       GrumpkinAddress.fromString(userId),
       assetId,
-      numNotes,
+      spendingKeyRequired,
       excludePendingNotes,
-      unsafe,
+      numNotes,
     );
     return value.toString();
   }
@@ -360,11 +369,17 @@ export class CoreSdkServerStub {
     userId: string,
     assetId: number,
     value: string,
+    spendingKeyRequired?: boolean,
     excludePendingNotes?: boolean,
-    unsafe?: boolean,
   ) {
     return (
-      await this.core.pickNotes(GrumpkinAddress.fromString(userId), assetId, BigInt(value), excludePendingNotes, unsafe)
+      await this.core.pickNotes(
+        GrumpkinAddress.fromString(userId),
+        assetId,
+        BigInt(value),
+        spendingKeyRequired,
+        excludePendingNotes,
+      )
     ).map(noteToJson);
   }
 
@@ -372,15 +387,15 @@ export class CoreSdkServerStub {
     userId: string,
     assetId: number,
     value: string,
+    spendingKeyRequired?: boolean,
     excludePendingNotes?: boolean,
-    unsafe?: boolean,
   ) {
     const note = await this.core.pickNote(
       GrumpkinAddress.fromString(userId),
       assetId,
       BigInt(value),
+      spendingKeyRequired,
       excludePendingNotes,
-      unsafe,
     );
     return note ? noteToJson(note) : undefined;
   }

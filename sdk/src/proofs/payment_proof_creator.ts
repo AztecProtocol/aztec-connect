@@ -114,18 +114,8 @@ export class PaymentProofCreator {
     const { assetId, value: senderPrivateOutput } = changeNote;
     const newNoteOwner = valueNote.ownerPubKey;
     const userId = changeNote.ownerPubKey;
-    let isRecipient = newNoteOwner.equals(userId);
-    let isSender = true;
-    let accountRequired = changeNote.accountRequired;
-    if (
-      valueNote.ownerPubKey.equals(changeNote.ownerPubKey) &&
-      valueNote.accountRequired !== changeNote.accountRequired
-    ) {
-      // Tx should be owned by the registered user if sent from/to their own unregistered account.
-      isRecipient = valueNote.accountRequired;
-      isSender = changeNote.accountRequired;
-      accountRequired = true;
-    }
+    const isRecipient = newNoteOwner.equals(userId);
+    const isSender = true;
     const coreTx = new CorePaymentTx(
       txId,
       userId,
@@ -138,7 +128,6 @@ export class PaymentProofCreator {
       senderPrivateOutput,
       isRecipient,
       isSender,
-      accountRequired,
       txRefNo,
       new Date(),
     );

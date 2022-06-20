@@ -36,11 +36,8 @@ export class DefiDepositProofCreator {
     inputNotes: Note[],
     spendingPublicKey: GrumpkinAddress,
   ) {
-    if (spendingPublicKey.equals(user.accountPublicKey)) {
-      throw new Error('Cannot spend notes for defi deposit using account key.');
-    }
-
     const assetId = bridgeId.inputAssetIdA;
+    const newNoteOwnerAccountRequired = !spendingPublicKey.equals(user.accountPublicKey);
     const proofInput = await this.txFactory.createTx(
       user,
       ProofId.DEFI_DEPOSIT,
@@ -51,7 +48,7 @@ export class DefiDepositProofCreator {
         bridgeId,
         defiDepositValue: depositValue,
         newNoteOwner: user.accountPublicKey,
-        newNoteOwnerAccountRequired: true,
+        newNoteOwnerAccountRequired,
       },
     );
 
@@ -81,20 +78,12 @@ export class DefiDepositProofCreator {
     const privateInput =
       bridgeId.numInputAssets > 1 ? inputNotes[0].value : inputNotes.reduce((sum, n) => sum + n.value, BigInt(0));
     const txFee = privateInput - depositValue;
-    const coreTx = new CoreDefiTx(
-      txId,
-      accountPublicKey,
-      bridgeId,
-      depositValue,
-      txFee,
-      partialStateSecret,
-      txRefNo,
-      new Date(),
-    );
+    const accountRequired = outputNotes[1].accountRequired;
+    const coreTx = new CoreDefiTx(txId, accountPublicKey, bridgeId, depositValue, txFee, txRefNo, new Date());
     const partialState = this.noteAlgos.valueNotePartialCommitment(
       partialStateSecret,
       accountPublicKey,
-      true, // accountRequired
+      accountRequired,
     );
     const offchainTxData = new OffchainDefiDepositData(
       bridgeId,

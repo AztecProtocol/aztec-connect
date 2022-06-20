@@ -50,7 +50,7 @@ export interface CoreSdkInterface {
     privateOutput: bigint,
     depositor: EthAddress,
     recipient: GrumpkinAddress,
-    recipientAccountRequired: boolean,
+    recipientSpendingKeyRequired: boolean,
     txRefNo: number,
   ): Promise<ProofOutput>;
 
@@ -63,7 +63,7 @@ export interface CoreSdkInterface {
     recipientPrivateOutput: bigint,
     senderPrivateOutput: bigint,
     noteRecipient: GrumpkinAddress | undefined,
-    recipientAccountRequired: boolean,
+    recipientSpendingKeyRequired: boolean,
     publicOwner: EthAddress | undefined,
     spendingPublicKey: GrumpkinAddress,
     allowChain: number,
@@ -137,41 +137,45 @@ export interface CoreSdkInterface {
 
   getSpendingKeys(userId: GrumpkinAddress): Promise<Buffer[]>;
 
-  getBalances(userId: GrumpkinAddress, unsafe?: boolean): Promise<AssetValue[]>;
+  getBalances(userId: GrumpkinAddress): Promise<AssetValue[]>;
 
-  getBalance(userId: GrumpkinAddress, assetId: number, unsafe?: boolean): Promise<bigint>;
+  getBalance(userId: GrumpkinAddress, assetId: number): Promise<bigint>;
 
   getSpendableSum(
     userId: GrumpkinAddress,
     assetId: number,
+    spendingKeyRequired?: boolean,
     excludePendingNotes?: boolean,
-    unsafe?: boolean,
   ): Promise<bigint>;
 
-  getSpendableSums(userId: GrumpkinAddress, excludePendingNotes?: boolean, unsafe?: boolean): Promise<AssetValue[]>;
+  getSpendableSums(
+    userId: GrumpkinAddress,
+    spendingKeyRequired?: boolean,
+    excludePendingNotes?: boolean,
+  ): Promise<AssetValue[]>;
 
   getMaxSpendableValue(
     userId: GrumpkinAddress,
     assetId: number,
-    numNotes?: number,
+    spendingKeyRequired?: boolean,
     excludePendingNotes?: boolean,
-    unsafe?: boolean,
+    numNotes?: number,
   ): Promise<bigint>;
 
   pickNotes(
     userId: GrumpkinAddress,
     assetId: number,
     value: bigint,
+    spendingKeyRequired?: boolean,
     excludePendingNotes?: boolean,
-    unsafe?: boolean,
   ): Promise<Note[]>;
 
   pickNote(
     userId: GrumpkinAddress,
     assetId: number,
     value: bigint,
+    spendingKeyRequired?: boolean,
     excludePendingNotes?: boolean,
-    unsafe?: boolean,
   ): Promise<Note | undefined>;
 
   getUserTxs(userId: GrumpkinAddress): Promise<CoreUserTx[]>;

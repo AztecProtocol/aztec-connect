@@ -58,7 +58,9 @@ export function useMaxSpendableValue(assetId?: number) {
   useEffect(() => {
     if (sdk && userId) {
       if (assetId !== undefined) {
-        const updateMaxSpendableValue = () => sdk.getMaxSpendableValue(userId, assetId).then(setMaxSpendableValue);
+        const spendingKeyRequired = true;
+        const updateMaxSpendableValue = () =>
+          sdk.getMaxSpendableValue(userId, assetId, spendingKeyRequired).then(setMaxSpendableValue);
         updateMaxSpendableValue();
         return listenAccountUpdated(sdk, userId, updateMaxSpendableValue);
       } else {

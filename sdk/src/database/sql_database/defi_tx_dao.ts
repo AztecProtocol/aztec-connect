@@ -23,9 +23,6 @@ export class DefiTxDao {
   public txFee!: bigint;
 
   @Column()
-  public partialStateSecret!: Buffer;
-
-  @Column()
   public txRefNo!: number;
 
   @Column()

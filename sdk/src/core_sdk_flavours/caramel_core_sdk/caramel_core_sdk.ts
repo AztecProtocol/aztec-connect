@@ -85,7 +85,7 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
     privateOutput: string,
     depositor: string,
     recipient: string,
-    recipientAccountRequired: boolean,
+    recipientSpendingKeyRequired: boolean,
     txRefNo: number,
   ) {
     return await this.core.createDepositProof(
@@ -94,7 +94,7 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
       privateOutput,
       depositor,
       recipient,
-      recipientAccountRequired,
+      recipientSpendingKeyRequired,
       txRefNo,
     );
   }
@@ -108,7 +108,7 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
     recipientPrivateOutput: string,
     senderPrivateOutput: string,
     noteRecipient: string | undefined,
-    recipientAccountRequired: boolean,
+    recipientSpendingKeyRequired: boolean,
     publicOwner: string | undefined,
     spendingPublicKey: string,
     allowChain: number,
@@ -123,7 +123,7 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
       recipientPrivateOutput,
       senderPrivateOutput,
       noteRecipient,
-      recipientAccountRequired,
+      recipientSpendingKeyRequired,
       publicOwner,
       spendingPublicKey,
       allowChain,
@@ -309,57 +309,62 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
     return this.core.getSpendingKeys(userId);
   }
 
-  public async getBalances(userId: string, unsafe?: boolean) {
+  public async getBalances(userId: string) {
     await this.checkPermission(userId);
-    return this.core.getBalances(userId, unsafe);
+    return this.core.getBalances(userId);
   }
 
-  public async getBalance(userId: string, assetId: number, unsafe?: boolean) {
+  public async getBalance(userId: string, assetId: number) {
     await this.checkPermission(userId);
-    return this.core.getBalance(userId, assetId, unsafe);
+    return this.core.getBalance(userId, assetId);
   }
 
-  public async getSpendableSum(userId: string, assetId: number, excludePendingNotes?: boolean, unsafe?: boolean) {
+  public async getSpendableSum(
+    userId: string,
+    assetId: number,
+    spendingKeyRequired?: boolean,
+    excludePendingNotes?: boolean,
+  ) {
     await this.checkPermission(userId);
-    return this.core.getSpendableSum(userId, assetId, excludePendingNotes, unsafe);
+    return this.core.getSpendableSum(userId, assetId, spendingKeyRequired, excludePendingNotes);
   }
 
-  public async getSpendableSums(userId: string, excludePendingNotes?: boolean, unsafe?: boolean) {
+  public async getSpendableSums(userId: string, spendingKeyRequired?: boolean, excludePendingNotes?: boolean) {
     await this.checkPermission(userId);
-    return this.core.getSpendableSums(userId, excludePendingNotes, unsafe);
+    return this.core.getSpendableSums(userId, spendingKeyRequired, excludePendingNotes);
   }
 
   public async getMaxSpendableValue(
     userId: string,
     assetId: number,
-    numNotes?: number,
+    spendingKeyRequired?: boolean,
     excludePendingNotes?: boolean,
-    unsafe?: boolean,
+    numNotes?: number,
   ) {
     await this.checkPermission(userId);
-    return this.core.getMaxSpendableValue(userId, assetId, numNotes, excludePendingNotes, unsafe);
+    return this.core.getMaxSpendableValue(userId, assetId, spendingKeyRequired, excludePendingNotes, numNotes);
   }
 
   public async pickNotes(
     userId: string,
     assetId: number,
     value: string,
+    spendingKeyRequired?: boolean,
     excludePendingNotes?: boolean,
-    unsafe?: boolean,
   ) {
     await this.checkPermission(userId);
-    return this.core.pickNotes(userId, assetId, value, excludePendingNotes, unsafe);
+    return this.core.pickNotes(userId, assetId, value, spendingKeyRequired, excludePendingNotes);
   }
 
   public async pickNote(
     userId: string,
     assetId: number,
     value: string,
+    spendingKeyRequired?: boolean,
     excludePendingNotes?: boolean,
-    unsafe?: boolean,
   ) {
     await this.checkPermission(userId);
-    return this.core.pickNote(userId, assetId, value, excludePendingNotes, unsafe);
+    return this.core.pickNote(userId, assetId, value, spendingKeyRequired, excludePendingNotes);
   }
 
   public async getUserTxs(userId: string) {

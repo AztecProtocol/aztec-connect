@@ -275,7 +275,7 @@ export class AztecSdk extends EventEmitter {
     value: AssetValue,
     fee: AssetValue,
     recipient: GrumpkinAddress,
-    recipientAccountRequired = true,
+    recipientSpendingKeyRequired = true,
     feePayer?: FeePayer,
     provider = this.provider,
   ) {
@@ -284,7 +284,7 @@ export class AztecSdk extends EventEmitter {
       fee,
       depositor,
       recipient,
-      recipientAccountRequired,
+      recipientSpendingKeyRequired,
       feePayer,
       this.core,
       this.blockchain,
@@ -318,9 +318,9 @@ export class AztecSdk extends EventEmitter {
     value: AssetValue,
     fee: AssetValue,
     recipient: GrumpkinAddress,
-    recipientAccountRequired = true,
+    recipientSpendingKeyRequired = true,
   ) {
-    return new TransferController(userId, userSigner, value, fee, recipient, recipientAccountRequired, this.core);
+    return new TransferController(userId, userSigner, value, fee, recipient, recipientSpendingKeyRequired, this.core);
   }
 
   public async getDefiFees(bridgeId: BridgeId, userId?: GrumpkinAddress, depositValue?: AssetValue) {
@@ -579,64 +579,38 @@ export class AztecSdk extends EventEmitter {
     return await this.core.getBalances(userId);
   }
 
-  public async getBalancesUnsafe(accountPublicKey: GrumpkinAddress) {
-    return await this.core.getBalances(accountPublicKey, true);
-  }
-
   public async getBalance(userId: GrumpkinAddress, assetId: number) {
     return { assetId, value: await this.core.getBalance(userId, assetId) };
-  }
-
-  public async getBalanceUnsafe(accountPublicKey: GrumpkinAddress, assetId: number) {
-    return { assetId, value: await this.core.getBalance(accountPublicKey, assetId, true) };
   }
 
   public async getFormattedBalance(userId: GrumpkinAddress, assetId: number, symbol = true, precision?: number) {
     return this.fromBaseUnits(await this.getBalance(userId, assetId), symbol, precision);
   }
 
-  public async getSpendableSum(userId: GrumpkinAddress, assetId: number, excludePendingNotes?: boolean) {
-    return await this.core.getSpendableSum(userId, assetId, excludePendingNotes);
-  }
-
-  public async getSpendableSumUnsafe(
-    accountPublicKey: GrumpkinAddress,
+  public async getSpendableSum(
+    userId: GrumpkinAddress,
     assetId: number,
+    spendingKeyRequired?: boolean,
     excludePendingNotes?: boolean,
   ) {
-    return await this.core.getSpendableSum(accountPublicKey, assetId, excludePendingNotes, true);
+    return await this.core.getSpendableSum(userId, assetId, spendingKeyRequired, excludePendingNotes);
   }
 
-  public async getSpendableSums(userId: GrumpkinAddress, excludePendingNotes?: boolean) {
-    return await this.core.getSpendableSums(userId, excludePendingNotes);
-  }
-
-  public async getSpendableSumsUnsafe(accountPublicKey: GrumpkinAddress, excludePendingNotes?: boolean) {
-    return await this.core.getSpendableSums(accountPublicKey, excludePendingNotes, true);
+  public async getSpendableSums(userId: GrumpkinAddress, spendingKeyRequired?: boolean, excludePendingNotes?: boolean) {
+    return await this.core.getSpendableSums(userId, spendingKeyRequired, excludePendingNotes);
   }
 
   public async getMaxSpendableValue(
     userId: GrumpkinAddress,
     assetId: number,
-    numNotes?: number,
+    spendingKeyRequired?: boolean,
     excludePendingNotes?: boolean,
+    numNotes?: number,
   ) {
     if (numNotes !== undefined && (numNotes > 2 || numNotes < 1)) {
       throw new Error(`numNotes can only be 1 or 2. Got ${numNotes}.`);
     }
-    return await this.core.getMaxSpendableValue(userId, assetId, numNotes, excludePendingNotes);
-  }
-
-  public async getMaxSpendableValueUnsafe(
-    accountPublicKey: GrumpkinAddress,
-    assetId: number,
-    numNotes?: number,
-    excludePendingNotes?: boolean,
-  ) {
-    if (numNotes !== undefined && (numNotes > 2 || numNotes < 1)) {
-      throw new Error(`numNotes can only be 1 or 2. Got ${numNotes}.`);
-    }
-    return await this.core.getMaxSpendableValue(accountPublicKey, assetId, numNotes, excludePendingNotes, true);
+    return await this.core.getMaxSpendableValue(userId, assetId, spendingKeyRequired, excludePendingNotes, numNotes);
   }
 
   public async getUserTxs(userId: GrumpkinAddress) {

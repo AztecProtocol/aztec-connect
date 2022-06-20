@@ -6,7 +6,7 @@ const computeNullifier = (value: bigint) => toBufferBE(value, 32);
 
 const computeNullifiers = (values: bigint[]) => values.map(computeNullifier);
 
-const randomNote = (value: bigint, allowChain = false, pending = false, ownerAccountRequired = true) =>
+const randomNote = (value: bigint, allowChain = false, pending = false, ownerAccountRequired = false) =>
   ({
     value,
     nullifier: computeNullifier(value),
@@ -15,8 +15,8 @@ const randomNote = (value: bigint, allowChain = false, pending = false, ownerAcc
     ownerAccountRequired,
   } as Note);
 
-const randomUnsafeNote = (value: bigint, allowChain = false, pending = false) =>
-  randomNote(value, allowChain, pending, false);
+const randomRegisteredNote = (value: bigint, allowChain = false, pending = false) =>
+  randomNote(value, allowChain, pending, true);
 
 const randomNotes = (values: bigint[]) => values.map(value => randomNote(value));
 
@@ -27,18 +27,18 @@ const expectNoteValues = (notes: Note[], values: bigint[] = []) => {
 describe('NotePicker', () => {
   const allowChain = true;
   const pending = true;
-  const unsafe = true;
+  const ownerAccountRequired = true;
   const notes = randomNotes([10n, 1n, 7n, 9n, 3n, 2n]);
   const excludePendingNotes = true;
   const mixedNotes = [
     randomNote(11n, false, false),
-    randomUnsafeNote(19n, false, false),
+    randomRegisteredNote(19n, false, false),
     randomNote(23n, true, false),
-    randomUnsafeNote(17n, true, false),
+    randomRegisteredNote(17n, true, false),
     randomNote(7n, false, true),
-    randomUnsafeNote(3n, false, true),
+    randomRegisteredNote(3n, false, true),
     randomNote(13n, true, true),
-    randomUnsafeNote(5n, true, true),
+    randomRegisteredNote(5n, true, true),
   ];
 
   describe('pick', () => {
@@ -95,10 +95,10 @@ describe('NotePicker', () => {
       expect(notePicker.pick(7n)).toEqual([expect.objectContaining({ value: 7n, pending: false })]);
     });
 
-    it('pick unsafe notes', () => {
+    it('pick registered notes', () => {
       const notePicker = new NotePicker(mixedNotes);
-      expectNoteValues(notePicker.pick(7n, [], false, unsafe), [5n, 19n]);
-      expectNoteValues(notePicker.pick(7n, [], excludePendingNotes, unsafe), [17n, 19n]);
+      expectNoteValues(notePicker.pick(7n, [], false, ownerAccountRequired), [5n, 19n]);
+      expectNoteValues(notePicker.pick(7n, [], excludePendingNotes, ownerAccountRequired), [17n, 19n]);
     });
   });
 
@@ -138,9 +138,9 @@ describe('NotePicker', () => {
       expect(notePicker.pickOne(3n)).toEqual(expect.objectContaining({ value: 4n, allowChain: false, pending: false }));
     });
 
-    it('pick unsafe notes if specified', () => {
+    it('pick registered notes if specified', () => {
       const notePicker = new NotePicker(mixedNotes);
-      expect(notePicker.pickOne(7n, [], false, unsafe)!.value).toBe(17n);
+      expect(notePicker.pickOne(7n, [], false, ownerAccountRequired)!.value).toBe(17n);
     });
   });
 
@@ -154,11 +154,10 @@ describe('NotePicker', () => {
         const notePicker = new NotePicker([...notes, randomNote(5n, false, true), randomNote(4n, true, true)]);
         expect(notePicker.getSum()).toBe(32n);
       }
-    });
-
-    it('calculate the sum of settled unsafe notes', () => {
-      const notePicker = new NotePicker(mixedNotes);
-      expect(notePicker.getSum(unsafe)).toBe(19n + 17n);
+      {
+        const notePicker = new NotePicker(mixedNotes);
+        expect(notePicker.getSum()).toBe(11n + 19n + 23n + 17n);
+      }
     });
   });
 
@@ -191,9 +190,9 @@ describe('NotePicker', () => {
       expect(notePicker.getSpendableSum([], excludePendingNotes)).toBe(32n);
     });
 
-    it('calculate the sum of spendable unsafe notes', () => {
+    it('calculate the sum of spendable registered notes', () => {
       const notePicker = new NotePicker(mixedNotes);
-      expect(notePicker.getSpendableSum([], false, unsafe)).toBe(19n + 17n + 5n);
+      expect(notePicker.getSpendableSum([], false, ownerAccountRequired)).toBe(19n + 17n + 5n);
     });
   });
 
@@ -209,9 +208,9 @@ describe('NotePicker', () => {
       expect(notePicker.getMaxSpendableValue()).toBe(10n + 9n);
     });
 
-    it('get the sum of the 2 largest spendable unsafe notes', () => {
+    it('get the sum of the 2 largest spendable registered notes', () => {
       const notePicker = new NotePicker(mixedNotes);
-      expect(notePicker.getMaxSpendableValue([], 2, false, unsafe)).toBe(19n + 17n);
+      expect(notePicker.getMaxSpendableValue([], 2, false, ownerAccountRequired)).toBe(19n + 17n);
     });
 
     it('get the sum of the 2 largest spendable notes without excluded notes', () => {
@@ -262,10 +261,10 @@ describe('NotePicker', () => {
       expect(notePicker.getMaxSpendableValue(excludeNullifiers, numNotes, excludePendingNotes)).toBe(3n);
     });
 
-    it('find the value of the largest spendable unsafe note', () => {
+    it('find the value of the largest spendable registered note', () => {
       const numNotes = 1;
       const notePicker = new NotePicker(mixedNotes);
-      expect(notePicker.getMaxSpendableValue([], numNotes, false, unsafe)).toBe(19n);
+      expect(notePicker.getMaxSpendableValue([], numNotes, false, ownerAccountRequired)).toBe(19n);
     });
 
     it('throw if try to get max spendable value with invalid numNotes', () => {

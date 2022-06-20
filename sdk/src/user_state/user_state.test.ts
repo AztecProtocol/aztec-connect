@@ -275,7 +275,6 @@ describe('user state', () => {
       outputNoteValue2,
       newNoteOwner.accountPublicKey.equals(user.accountPublicKey),
       proofSender.accountPublicKey.equals(user.accountPublicKey),
-      newNoteOwnerAccountRequired,
       txRefNo,
       new Date(),
     );
@@ -411,6 +410,7 @@ describe('user state', () => {
     depositValue = 0n,
     txFee = 0n,
     proofSender = user,
+    proofSenderAccountRequired = true,
     claimNoteRecipient = user.accountPublicKey,
     txRefNo = 0,
   } = {}) => {
@@ -420,14 +420,25 @@ describe('user state', () => {
     addInputNote(proofSender.accountPublicKey, true, assetId, inputNoteValue1, nullifier1);
     addInputNote(proofSender.accountPublicKey, true, assetId, inputNoteValue2, nullifier2);
 
-    const accountRequired = true; // accountRequired is always true for defi deposit.
-    const dummyNote = createNote(assetId, 0n, proofSender.accountPublicKey, accountRequired, randomBytes(32));
-    const changeNote = createNote(assetId, outputNoteValue, proofSender.accountPublicKey, accountRequired, nullifier2);
-    const { partialClaimNote, partialStateSecretEphPubKey, partialStateSecret } = createClaimNote(
+    const dummyNote = createNote(
+      assetId,
+      0n,
+      proofSender.accountPublicKey,
+      proofSenderAccountRequired,
+      randomBytes(32),
+    );
+    const changeNote = createNote(
+      assetId,
+      outputNoteValue,
+      proofSender.accountPublicKey,
+      proofSenderAccountRequired,
+      nullifier2,
+    );
+    const { partialClaimNote, partialStateSecretEphPubKey } = createClaimNote(
       bridgeId,
       depositValue,
       claimNoteRecipient,
-      accountRequired,
+      proofSenderAccountRequired,
       nullifier1,
     );
     const partialClaimNoteCommitment = noteAlgos.claimNotePartialCommitment(partialClaimNote);
@@ -458,7 +469,6 @@ describe('user state', () => {
       bridgeId,
       depositValue,
       txFee,
-      partialStateSecret,
       txRefNo,
       new Date(),
       undefined,
@@ -471,7 +481,8 @@ describe('user state', () => {
   };
 
   const generateDefiClaimProof = ({
-    noteRecipient = user,
+    owner = user,
+    accountRequired = true,
     bridgeId = BridgeId.random(),
     outputValueA = 0n,
     outputValueB = 0n,
@@ -479,10 +490,9 @@ describe('user state', () => {
     nullifier2 = randomBytes(32),
   } = {}) => {
     const assetId = bridgeId.inputAssetIdA;
-    const accountRequired = true;
     const notes = [
-      createNote(assetId, outputValueA, noteRecipient.accountPublicKey, accountRequired, nullifier1),
-      createNote(assetId, outputValueB, noteRecipient.accountPublicKey, accountRequired, nullifier2),
+      createNote(assetId, outputValueA, owner.accountPublicKey, accountRequired, nullifier1),
+      createNote(assetId, outputValueB, owner.accountPublicKey, accountRequired, nullifier2),
     ];
     const proofData = new InnerProofData(
       ProofId.DEFI_CLAIM,
@@ -754,7 +764,6 @@ describe('user state', () => {
       recipientPrivateOutput: depositValue,
       senderPrivateOutput: 0n,
       isRecipient: true,
-      accountRequired: true,
       settled: block.created,
     });
   });
@@ -906,8 +915,7 @@ describe('user state', () => {
     expect(db.addPaymentTx.mock.calls[0][0]).toMatchObject({
       userId: user.accountPublicKey,
       isRecipient: true,
-      isSender: false,
-      accountRequired: true,
+      isSender: true,
     });
   });
 
@@ -924,9 +932,8 @@ describe('user state', () => {
 
     expect(db.addPaymentTx.mock.calls[0][0]).toMatchObject({
       userId: user.accountPublicKey,
-      isRecipient: false,
+      isRecipient: true,
       isSender: true,
-      accountRequired: true,
     });
   });
 
@@ -945,7 +952,6 @@ describe('user state', () => {
       userId: user.accountPublicKey,
       isRecipient: true,
       isSender: false,
-      accountRequired: false,
     });
   });
 
@@ -1502,15 +1508,17 @@ describe('user state', () => {
       const outputValueB = 56n;
       const txId = TxId.random();
       const secret = randomBytes(32);
+      const accountRequired = true;
+      const partialState = noteAlgos.valueNotePartialCommitment(secret, user.accountPublicKey, accountRequired);
       const nullifier1 = randomBytes(32);
       const nullifier2 = randomBytes(32);
       const success = true;
 
-      db.getClaimTx.mockImplementation(() => ({ defiTxId: txId, userId: user.accountPublicKey, secret }));
-      db.getDefiTx.mockImplementation(() => ({ bridgeId, depositValue, outputValueA, outputValueB, success }));
-
       const claimProof = generateDefiClaimProof({ bridgeId, outputValueA, outputValueB, nullifier1, nullifier2 });
       const block = createRollupBlock([claimProof]);
+
+      db.getClaimTx.mockImplementation(() => ({ defiTxId: txId, userId: user.accountPublicKey, partialState, secret }));
+      db.getDefiTx.mockImplementation(() => ({ bridgeId, depositValue, outputValueA, outputValueB, success }));
 
       await userState.processBlock(createBlockContext(block));
 
@@ -1521,6 +1529,7 @@ describe('user state', () => {
           assetId: outputAssetIdA,
           value: outputValueA,
           noteSecret: secret,
+          accountRequired,
         }),
       });
       expect(db.addNote.mock.calls[1][0]).toMatchObject({
@@ -1529,6 +1538,60 @@ describe('user state', () => {
           assetId: outputAssetIdB,
           value: outputValueB,
           noteSecret: secret,
+          accountRequired,
+        }),
+      });
+      expect(db.settleDefiTx).toHaveBeenCalledTimes(1);
+      expect(db.settleDefiTx).toHaveBeenCalledWith(txId, block.created, new TxId(claimProof.proofData.txId));
+    });
+
+    it('settle a defi tx and add new notes for unregistered account', async () => {
+      const outputAssetIdA = 3;
+      const outputAssetIdB = 4;
+      const bridgeId = new BridgeId(0, 1, outputAssetIdA, 2, outputAssetIdB);
+      const depositValue = 12n;
+      const outputValueA = 34n;
+      const outputValueB = 56n;
+      const txId = TxId.random();
+      const secret = randomBytes(32);
+      const accountRequired = false; // <--
+      const partialState = noteAlgos.valueNotePartialCommitment(secret, user.accountPublicKey, accountRequired);
+      const nullifier1 = randomBytes(32);
+      const nullifier2 = randomBytes(32);
+      const success = true;
+
+      const claimProof = generateDefiClaimProof({
+        accountRequired,
+        bridgeId,
+        outputValueA,
+        outputValueB,
+        nullifier1,
+        nullifier2,
+      });
+      const block = createRollupBlock([claimProof]);
+
+      db.getClaimTx.mockImplementation(() => ({ defiTxId: txId, userId: user.accountPublicKey, partialState, secret }));
+      db.getDefiTx.mockImplementation(() => ({ bridgeId, depositValue, outputValueA, outputValueB, success }));
+
+      await userState.processBlock(createBlockContext(block));
+
+      expect(db.addNote).toHaveBeenCalledTimes(2);
+      expect(db.addNote.mock.calls[0][0]).toMatchObject({
+        commitment: claimProof.proofData.noteCommitment1,
+        treeNote: expect.objectContaining({
+          assetId: outputAssetIdA,
+          value: outputValueA,
+          noteSecret: secret,
+          accountRequired,
+        }),
+      });
+      expect(db.addNote.mock.calls[1][0]).toMatchObject({
+        commitment: claimProof.proofData.noteCommitment2,
+        treeNote: expect.objectContaining({
+          assetId: outputAssetIdB,
+          value: outputValueB,
+          noteSecret: secret,
+          accountRequired,
         }),
       });
       expect(db.settleDefiTx).toHaveBeenCalledTimes(1);
@@ -1543,6 +1606,8 @@ describe('user state', () => {
       const outputValueB = 0n;
       const txId = TxId.random();
       const secret = randomBytes(32);
+      const accountRequired = true;
+      const partialState = noteAlgos.valueNotePartialCommitment(secret, user.accountPublicKey, accountRequired);
       const nullifier1 = randomBytes(32);
       const nullifier2 = randomBytes(32);
       const success = true;
@@ -1551,6 +1616,7 @@ describe('user state', () => {
       db.getClaimTx.mockImplementation(() => ({
         defiTxId: txId,
         userId: user.accountPublicKey,
+        partialState,
         secret,
         interactionNonce,
       }));
@@ -1568,6 +1634,7 @@ describe('user state', () => {
           assetId: virtualAssetIdFlag + interactionNonce,
           value: outputValueA,
           noteSecret: secret,
+          accountRequired,
         }),
       });
       expect(db.settleDefiTx).toHaveBeenCalledTimes(1);
@@ -1583,6 +1650,8 @@ describe('user state', () => {
       const outputValueB = 56n;
       const txId = TxId.random();
       const secret = randomBytes(32);
+      const accountRequired = true;
+      const partialState = noteAlgos.valueNotePartialCommitment(secret, user.accountPublicKey, accountRequired);
       const nullifier1 = randomBytes(32);
       const nullifier2 = randomBytes(32);
       const success = true;
@@ -1591,6 +1660,7 @@ describe('user state', () => {
       db.getClaimTx.mockImplementation(() => ({
         defiTxId: txId,
         userId: user.accountPublicKey,
+        partialState,
         secret,
         interactionNonce,
       }));
@@ -1608,6 +1678,7 @@ describe('user state', () => {
           assetId: outputAssetIdA,
           value: outputValueA,
           noteSecret: secret,
+          accountRequired,
         }),
       });
       expect(db.addNote.mock.calls[1][0]).toMatchObject({
@@ -1616,6 +1687,7 @@ describe('user state', () => {
           assetId: virtualAssetIdFlag + interactionNonce,
           value: outputValueB,
           noteSecret: secret,
+          accountRequired,
         }),
       });
       expect(db.settleDefiTx).toHaveBeenCalledTimes(1);
@@ -1630,11 +1702,13 @@ describe('user state', () => {
       const outputValueB = 0n;
       const txId = TxId.random();
       const secret = randomBytes(32);
+      const accountRequired = true;
+      const partialState = noteAlgos.valueNotePartialCommitment(secret, user.accountPublicKey, accountRequired);
       const nullifier1 = randomBytes(32);
       const nullifier2 = randomBytes(32);
       const result = false;
 
-      db.getClaimTx.mockImplementation(() => ({ defiTxId: txId, userId: user.accountPublicKey, secret }));
+      db.getClaimTx.mockImplementation(() => ({ defiTxId: txId, userId: user.accountPublicKey, partialState, secret }));
       db.getDefiTx.mockImplementation(() => ({ bridgeId, depositValue, outputValueA, outputValueB, result }));
 
       const claimProof = generateDefiClaimProof({ bridgeId, outputValueA, outputValueB, nullifier1, nullifier2 });
@@ -1649,6 +1723,50 @@ describe('user state', () => {
           assetId: inputAssetIdA,
           value: depositValue,
           noteSecret: secret,
+          accountRequired,
+        }),
+      });
+      expect(db.settleDefiTx).toHaveBeenCalledTimes(1);
+      expect(db.settleDefiTx).toHaveBeenCalledWith(txId, block.created, new TxId(claimProof.proofData.txId));
+    });
+
+    it('settle a failed defi tx and add a refund note for unregistered account', async () => {
+      const inputAssetIdA = 1;
+      const bridgeId = new BridgeId(0, inputAssetIdA, 2);
+      const depositValue = 12n;
+      const outputValueA = 0n;
+      const outputValueB = 0n;
+      const txId = TxId.random();
+      const secret = randomBytes(32);
+      const accountRequired = false; // <--
+      const partialState = noteAlgos.valueNotePartialCommitment(secret, user.accountPublicKey, accountRequired);
+      const nullifier1 = randomBytes(32);
+      const nullifier2 = randomBytes(32);
+      const result = false;
+
+      db.getClaimTx.mockImplementation(() => ({ defiTxId: txId, userId: user.accountPublicKey, partialState, secret }));
+      db.getDefiTx.mockImplementation(() => ({ bridgeId, depositValue, outputValueA, outputValueB, result }));
+
+      const claimProof = generateDefiClaimProof({
+        accountRequired,
+        bridgeId,
+        outputValueA,
+        outputValueB,
+        nullifier1,
+        nullifier2,
+      });
+      const block = createRollupBlock([claimProof]);
+
+      await userState.processBlock(createBlockContext(block));
+
+      expect(db.addNote).toHaveBeenCalledTimes(1);
+      expect(db.addNote.mock.calls[0][0]).toMatchObject({
+        commitment: claimProof.proofData.noteCommitment1,
+        treeNote: expect.objectContaining({
+          assetId: inputAssetIdA,
+          value: depositValue,
+          noteSecret: secret,
+          accountRequired,
         }),
       });
       expect(db.settleDefiTx).toHaveBeenCalledTimes(1);
@@ -1664,11 +1782,13 @@ describe('user state', () => {
       const outputValueB = 0n;
       const txId = TxId.random();
       const secret = randomBytes(32);
+      const accountRequired = true;
+      const partialState = noteAlgos.valueNotePartialCommitment(secret, user.accountPublicKey, accountRequired);
       const nullifier1 = randomBytes(32);
       const nullifier2 = randomBytes(32);
       const result = false;
 
-      db.getClaimTx.mockImplementation(() => ({ defiTxId: txId, userId: user.accountPublicKey, secret }));
+      db.getClaimTx.mockImplementation(() => ({ defiTxId: txId, userId: user.accountPublicKey, partialState, secret }));
       db.getDefiTx.mockImplementation(() => ({ bridgeId, depositValue, outputValueA, outputValueB, result }));
 
       const claimProof = generateDefiClaimProof({ bridgeId, outputValueA, outputValueB, nullifier1, nullifier2 });
@@ -1683,6 +1803,7 @@ describe('user state', () => {
           assetId: inputAssetIdA,
           value: depositValue,
           noteSecret: secret,
+          accountRequired,
         }),
       });
       expect(db.addNote.mock.calls[1][0]).toMatchObject({
@@ -1691,6 +1812,7 @@ describe('user state', () => {
           assetId: inputAssetIdB,
           value: depositValue,
           noteSecret: secret,
+          accountRequired,
         }),
       });
       expect(db.settleDefiTx).toHaveBeenCalledTimes(1);

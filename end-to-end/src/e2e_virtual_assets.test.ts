@@ -494,11 +494,26 @@ describe('end-to-end virtual assets tests', () => {
 
       // V2 and V3 to ETH.
       const bridgeIdV2V3ToEth = new BridgeId(bridgeAddressId, virtualAssetIds[2], ethAssetId, virtualAssetIds[3]);
+      const spendingKeyRequired = true;
+      const excludePendingNotes = false;
+      const numNotes = 1;
       const depositV2V3Value = {
         assetId: virtualAssetIds[2],
         value: min(
-          await sdk.getMaxSpendableValue(userIds[0], virtualAssetIds[2], 1),
-          await sdk.getMaxSpendableValue(userIds[0], virtualAssetIds[3], 1),
+          await sdk.getMaxSpendableValue(
+            userIds[0],
+            virtualAssetIds[2],
+            spendingKeyRequired,
+            excludePendingNotes,
+            numNotes,
+          ),
+          await sdk.getMaxSpendableValue(
+            userIds[0],
+            virtualAssetIds[3],
+            spendingKeyRequired,
+            excludePendingNotes,
+            numNotes,
+          ),
         ),
       };
       const fee0 = (await sdk.getDefiFees(bridgeIdV2V3ToEth))[DefiSettlementTime.INSTANT];

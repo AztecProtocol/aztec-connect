@@ -7,21 +7,21 @@ const noteSum = (notes: Note[]) => notes.reduce((sum, { value }) => sum + value,
 export class NotePicker {
   private readonly spendableNotes: SortedNotes;
   private readonly settledNotes: SortedNotes;
-  private readonly unsafeSpendableNotes: SortedNotes;
-  private readonly unsafeSettledNotes: SortedNotes;
+  private readonly unregisteredSpendableNotes: SortedNotes;
+  private readonly unregisteredSettledNotes: SortedNotes;
 
-  constructor(readonly notes: Note[] = []) {
-    const safeNotes = notes.filter(n => n.ownerAccountRequired);
-    this.spendableNotes = new SortedNotes(safeNotes.filter(n => !n.pending || n.allowChain));
-    this.settledNotes = new SortedNotes(safeNotes.filter(n => !n.pending));
+  constructor(notes: Note[] = []) {
+    const registeredNotes = notes.filter(n => n.ownerAccountRequired);
+    this.spendableNotes = new SortedNotes(registeredNotes.filter(n => !n.pending || n.allowChain));
+    this.settledNotes = new SortedNotes(registeredNotes.filter(n => !n.pending));
 
-    const unsafeNotes = notes.filter(n => !n.ownerAccountRequired);
-    this.unsafeSpendableNotes = new SortedNotes(unsafeNotes.filter(n => !n.pending || n.allowChain));
-    this.unsafeSettledNotes = new SortedNotes(unsafeNotes.filter(n => !n.pending));
+    const unregisteredNotes = notes.filter(n => !n.ownerAccountRequired);
+    this.unregisteredSpendableNotes = new SortedNotes(unregisteredNotes.filter(n => !n.pending || n.allowChain));
+    this.unregisteredSettledNotes = new SortedNotes(unregisteredNotes.filter(n => !n.pending));
   }
 
-  pick(value: bigint, excludeNullifiers?: Buffer[], excludePendingNotes = false, unsafe = false) {
-    const spendableNotes = this.getSortedNotes(excludeNullifiers, excludePendingNotes, unsafe);
+  pick(value: bigint, excludeNullifiers?: Buffer[], excludePendingNotes = false, ownerAccountRequired = false) {
+    const spendableNotes = this.getSortedNotes(excludeNullifiers, excludePendingNotes, ownerAccountRequired);
     const notes = pick(spendableNotes, value) || [];
     const sum = noteSum(notes);
     if (sum === value) {
@@ -31,34 +31,39 @@ export class NotePicker {
     return note ? [note] : notes;
   }
 
-  pickOne(value: bigint, excludeNullifiers?: Buffer[], excludePendingNotes = false, unsafe = false) {
-    const settledNote = this.getSortedNotes(excludeNullifiers, true, unsafe).find(n => n.value >= value);
+  pickOne(value: bigint, excludeNullifiers?: Buffer[], excludePendingNotes = false, ownerAccountRequired = false) {
+    const settledNote = this.getSortedNotes(excludeNullifiers, true, ownerAccountRequired).find(n => n.value >= value);
     if (excludePendingNotes) {
       return settledNote;
     }
 
-    const pendingNote = this.getSortedNotes(excludeNullifiers, false, unsafe).find(n => n.value >= value);
+    const pendingNote = this.getSortedNotes(excludeNullifiers, false, ownerAccountRequired).find(n => n.value >= value);
     if (!settledNote || !pendingNote) {
       return settledNote || pendingNote;
     }
     return settledNote.value <= pendingNote.value ? settledNote : pendingNote;
   }
 
-  getSum(unsafe = false) {
-    return noteSum(unsafe ? this.unsafeSettledNotes.notes : this.settledNotes.notes);
+  getSum() {
+    return noteSum(this.settledNotes.notes) + noteSum(this.unregisteredSettledNotes.notes);
   }
 
-  getSpendableSum(excludeNullifiers?: Buffer[], excludePendingNotes = false, unsafe = false) {
-    const spendableNotes = this.getSortedNotes(excludeNullifiers, excludePendingNotes, unsafe);
+  getSpendableSum(excludeNullifiers?: Buffer[], excludePendingNotes = false, ownerAccountRequired = false) {
+    const spendableNotes = this.getSortedNotes(excludeNullifiers, excludePendingNotes, ownerAccountRequired);
     return noteSum(spendableNotes.notes);
   }
 
-  getMaxSpendableValue(excludeNullifiers?: Buffer[], numNotes = 2, excludePendingNotes = false, unsafe = false) {
+  getMaxSpendableValue(
+    excludeNullifiers?: Buffer[],
+    numNotes = 2,
+    excludePendingNotes = false,
+    ownerAccountRequired = false,
+  ) {
     if (numNotes <= 0 || numNotes > 2) {
       throw new Error('`numNotes` can only be 1 or 2.');
     }
 
-    const spendableNotes = this.getSortedNotes(excludeNullifiers, excludePendingNotes, unsafe);
+    const spendableNotes = this.getSortedNotes(excludeNullifiers, excludePendingNotes, ownerAccountRequired);
     const notes: Note[] = [];
     let hasPendingNote = false;
     spendableNotes.findLast(note => {
@@ -71,10 +76,14 @@ export class NotePicker {
     return noteSum(notes);
   }
 
-  private getSortedNotes(excludeNullifiers: Buffer[] = [], excludePendingNotes: boolean, unsafe: boolean) {
-    const [settledNotes, spendableNotes] = unsafe
-      ? [this.unsafeSettledNotes, this.unsafeSpendableNotes]
-      : [this.settledNotes, this.spendableNotes];
+  private getSortedNotes(
+    excludeNullifiers: Buffer[] = [],
+    excludePendingNotes: boolean,
+    ownerAccountRequired: boolean,
+  ) {
+    const [settledNotes, spendableNotes] = ownerAccountRequired
+      ? [this.settledNotes, this.spendableNotes]
+      : [this.unregisteredSettledNotes, this.unregisteredSpendableNotes];
     const notes = excludePendingNotes ? settledNotes : spendableNotes;
     return notes.filter(({ nullifier }) => !excludeNullifiers.some(n => n.equals(nullifier)));
   }

@@ -35,7 +35,7 @@ export class RegisterController {
         fee,
         depositor,
         this.userId,
-        true, // recipientAccountRequired
+        true, // recipientSpendingKeyRequired
         feePayer,
         core,
         blockchain,

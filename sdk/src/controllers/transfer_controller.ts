@@ -18,7 +18,7 @@ export class TransferController {
     public readonly assetValue: AssetValue,
     public readonly fee: AssetValue,
     public readonly recipient: GrumpkinAddress,
-    public readonly recipientAccountRequired: boolean,
+    public readonly recipientSpendingKeyRequired: boolean,
     private readonly core: CoreSdkInterface,
   ) {
     if (!assetValue.value) {
@@ -42,7 +42,7 @@ export class TransferController {
       value,
       BigInt(0),
       this.recipient,
-      this.recipientAccountRequired,
+      this.recipientSpendingKeyRequired,
       undefined,
       spendingPublicKey,
       2,
@@ -51,7 +51,7 @@ export class TransferController {
     this.proofOutput = await this.core.createPaymentProof(proofInput, txRefNo);
 
     if (requireFeePayingTx) {
-      const accountRequired = !spendingPublicKey.equals(this.userId);
+      const spendingKeyRequired = !spendingPublicKey.equals(this.userId);
       const feeProofInput = await this.core.createPaymentProofInput(
         this.userId,
         this.fee.assetId,
@@ -61,7 +61,7 @@ export class TransferController {
         BigInt(0),
         BigInt(0),
         this.userId,
-        accountRequired,
+        spendingKeyRequired,
         undefined,
         spendingPublicKey,
         2,

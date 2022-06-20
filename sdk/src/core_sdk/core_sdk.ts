@@ -358,59 +358,59 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     return keys.map(k => k.key);
   }
 
-  public getBalances(userId: GrumpkinAddress, unsafe?: boolean) {
-    return Promise.resolve(this.getUserState(userId).getBalances(unsafe));
+  public getBalances(userId: GrumpkinAddress) {
+    return Promise.resolve(this.getUserState(userId).getBalances());
   }
 
-  public getBalance(userId: GrumpkinAddress, assetId: number, unsafe?: boolean) {
+  public getBalance(userId: GrumpkinAddress, assetId: number) {
     const userState = this.getUserState(userId);
-    return Promise.resolve(userState.getBalance(assetId, unsafe));
+    return Promise.resolve(userState.getBalance(assetId));
   }
 
   public async getSpendableSum(
     userId: GrumpkinAddress,
     assetId: number,
+    spendingKeyRequired?: boolean,
     excludePendingNotes?: boolean,
-    unsafe?: boolean,
   ) {
     const userState = this.getUserState(userId);
-    return await userState.getSpendableSum(assetId, excludePendingNotes, unsafe);
+    return await userState.getSpendableSum(assetId, spendingKeyRequired, excludePendingNotes);
   }
 
-  public async getSpendableSums(userId: GrumpkinAddress, excludePendingNotes?: boolean, unsafe?: boolean) {
+  public async getSpendableSums(userId: GrumpkinAddress, spendingKeyRequired?: boolean, excludePendingNotes?: boolean) {
     const userState = this.getUserState(userId);
-    return await userState.getSpendableSums(excludePendingNotes, unsafe);
+    return await userState.getSpendableSums(spendingKeyRequired, excludePendingNotes);
   }
 
   public async getMaxSpendableValue(
     userId: GrumpkinAddress,
     assetId: number,
-    numNotes?: number,
+    spendingKeyRequired?: boolean,
     excludePendingNotes?: boolean,
-    unsafe?: boolean,
+    numNotes?: number,
   ) {
     const userState = this.getUserState(userId);
-    return await userState.getMaxSpendableValue(assetId, numNotes, excludePendingNotes, unsafe);
+    return await userState.getMaxSpendableValue(assetId, spendingKeyRequired, excludePendingNotes, numNotes);
   }
 
   public async pickNotes(
     userId: GrumpkinAddress,
     assetId: number,
     value: bigint,
+    spendingKeyRequired?: boolean,
     excludePendingNotes?: boolean,
-    unsafe?: boolean,
   ) {
-    return await this.getUserState(userId).pickNotes(assetId, value, excludePendingNotes, unsafe);
+    return await this.getUserState(userId).pickNotes(assetId, value, spendingKeyRequired, excludePendingNotes);
   }
 
   public async pickNote(
     userId: GrumpkinAddress,
     assetId: number,
     value: bigint,
+    spendingKeyRequired?: boolean,
     excludePendingNotes?: boolean,
-    unsafe?: boolean,
   ) {
-    return await this.getUserState(userId).pickNote(assetId, value, excludePendingNotes, unsafe);
+    return await this.getUserState(userId).pickNote(assetId, value, spendingKeyRequired, excludePendingNotes);
   }
 
   public async getUserTxs(userId: GrumpkinAddress) {
@@ -468,7 +468,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     privateOutput: bigint,
     depositor: EthAddress,
     recipient: GrumpkinAddress,
-    recipientAccountRequired: boolean,
+    recipientSpendingKeyRequired: boolean,
     txRefNo: number,
   ) {
     return await this.serialQueue.push(async () => {
@@ -495,7 +495,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
         BigInt(0), // publicOutput
         assetId,
         recipient,
-        recipientAccountRequired,
+        recipientSpendingKeyRequired,
         depositor,
         spendingPublicKey,
         0, // allowChain
@@ -515,7 +515,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     recipientPrivateOutput: bigint,
     senderPrivateOutput: bigint,
     noteRecipient: GrumpkinAddress | undefined,
-    recipientAccountRequired: boolean,
+    recipientSpendingKeyRequired: boolean,
     publicOwner: EthAddress | undefined,
     spendingPublicKey: GrumpkinAddress,
     allowChain: number,
@@ -526,8 +526,8 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       const userState = this.getUserState(userId);
       const user = userState.getUserData();
 
-      const unsafe = spendingPublicKey.equals(userId);
-      const notes = privateInput ? await userState.pickNotes(assetId, privateInput, false, unsafe) : [];
+      const spendingKeyRequired = !spendingPublicKey.equals(userId);
+      const notes = privateInput ? await userState.pickNotes(assetId, privateInput, spendingKeyRequired) : [];
       if (privateInput && !notes.length) {
         throw new Error(`Failed to find no more than 2 notes that sum to ${privateInput}.`);
       }
@@ -542,7 +542,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
         publicOutput,
         assetId,
         noteRecipient,
-        recipientAccountRequired,
+        recipientSpendingKeyRequired,
         publicOwner,
         spendingPublicKey,
         allowChain,
@@ -676,12 +676,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
         if ([ProofId.DEPOSIT, ProofId.SEND].includes(proof.tx.proofId)) {
           const recipient = proof.outputNotes[0].owner;
           if (!recipient.equals(userId)) {
-            const recipientAccountRequired = proof.outputNotes[0].ownerAccountRequired;
-            const recipientTx = createCorePaymentTxForRecipient(
-              proof.tx as CorePaymentTx,
-              recipient,
-              recipientAccountRequired,
-            );
+            const recipientTx = createCorePaymentTxForRecipient(proof.tx as CorePaymentTx, recipient);
             try {
               await this.getUserState(recipient).addProof({ ...proof, tx: recipientTx });
             } catch (e) {

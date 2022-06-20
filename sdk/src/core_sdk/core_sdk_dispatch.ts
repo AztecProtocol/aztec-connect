@@ -72,7 +72,7 @@ export class CoreSdkDispatch extends EventEmitter implements CoreSdkSerializedIn
     privateOutput: string,
     depositor: string,
     recipient: string,
-    recipientAccountRequired: boolean,
+    recipientSpendingKeyRequired: boolean,
     txRefNo: number,
   ) {
     return await this.request('createDepositProof', [
@@ -81,7 +81,7 @@ export class CoreSdkDispatch extends EventEmitter implements CoreSdkSerializedIn
       privateOutput,
       depositor,
       recipient,
-      recipientAccountRequired,
+      recipientSpendingKeyRequired,
       txRefNo,
     ]);
   }
@@ -95,7 +95,7 @@ export class CoreSdkDispatch extends EventEmitter implements CoreSdkSerializedIn
     recipientPrivateOutput: string,
     senderPrivateOutput: string,
     noteRecipient: string | undefined,
-    recipientAccountRequired: boolean,
+    recipientSpendingKeyRequired: boolean,
     publicOwner: string | undefined,
     spendingPublicKey: string,
     allowChain: number,
@@ -109,7 +109,7 @@ export class CoreSdkDispatch extends EventEmitter implements CoreSdkSerializedIn
       recipientPrivateOutput,
       senderPrivateOutput,
       noteRecipient,
-      recipientAccountRequired,
+      recipientSpendingKeyRequired,
       publicOwner,
       spendingPublicKey,
       allowChain,
@@ -246,50 +246,61 @@ export class CoreSdkDispatch extends EventEmitter implements CoreSdkSerializedIn
     return await this.request('getSpendingKeys', [userId]);
   }
 
-  public async getBalances(userId: string, unsafe?: boolean) {
-    return await this.request('getBalances', [userId, unsafe]);
+  public async getBalances(userId: string) {
+    return await this.request('getBalances', [userId]);
   }
 
-  public async getBalance(userId: string, assetId: number, unsafe?: boolean) {
-    return await this.request('getBalance', [userId, assetId, unsafe]);
+  public async getBalance(userId: string, assetId: number) {
+    return await this.request('getBalance', [userId, assetId]);
   }
 
-  public async getSpendableSum(userId: string, assetId: number, excludePendingNotes?: boolean, unsafe?: boolean) {
-    return await this.request('getSpendableSum', [userId, assetId, excludePendingNotes, unsafe]);
+  public async getSpendableSum(
+    userId: string,
+    assetId: number,
+    spendingKeyRequired?: boolean,
+    excludePendingNotes?: boolean,
+  ) {
+    return await this.request('getSpendableSum', [userId, assetId, spendingKeyRequired, excludePendingNotes]);
   }
 
-  public async getSpendableSums(userId: string, excludePendingNotes?: boolean, unsafe?: boolean) {
-    return await this.request('getSpendableSums', [userId, excludePendingNotes, unsafe]);
+  public async getSpendableSums(userId: string, spendingKeyRequired?: boolean, excludePendingNotes?: boolean) {
+    return await this.request('getSpendableSums', [userId, spendingKeyRequired, excludePendingNotes]);
   }
 
   public async getMaxSpendableValue(
     userId: string,
     assetId: number,
-    numNotes?: number,
+    spendingKeyRequired?: boolean,
     excludePendingNotes?: boolean,
-    unsafe?: boolean,
+    numNotes?: number,
   ) {
-    return await this.request('getMaxSpendableValue', [userId, assetId, numNotes, excludePendingNotes, unsafe]);
+    return await this.request('getMaxSpendableValue', [
+      userId,
+      assetId,
+      spendingKeyRequired,
+      excludePendingNotes,
+      numNotes,
+    ]);
   }
 
   public async pickNotes(
     userId: string,
     assetId: number,
     value: string,
+    spendingKeyRequired?: boolean,
     excludePendingNotes?: boolean,
-    unsafe?: boolean,
   ) {
-    return await this.request('pickNotes', [userId, assetId, value, excludePendingNotes, unsafe]);
+    return await this.request('pickNotes', [userId, assetId, value, spendingKeyRequired, excludePendingNotes]);
   }
 
   public async pickNote(
     userId: string,
     assetId: number,
     value: string,
+    spendingKeyRequired?: boolean,
     excludePendingNotes?: boolean,
-    unsafe?: boolean,
   ) {
-    return await this.request('pickNote', [userId, assetId, value, excludePendingNotes, unsafe]);
+    return await this.request('pickNote', [userId, assetId, value, spendingKeyRequired, excludePendingNotes]);
   }
 
   public async getUserTxs(userId: string) {
