@@ -196,7 +196,8 @@ describe('end-to-end defi tests', () => {
 
         for (let i = 0; i < 2; ++i) {
           const fee = i ? depositDaiFee1 : depositDaiFee0;
-          const daiBalance = await sdk.getSpendableSum(userIds[i], daiAssetId);
+          const spendingKeyRequired = true;
+          const daiBalance = await sdk.getSpendableSum(userIds[i], daiAssetId, spendingKeyRequired);
           const depositValue = {
             assetId: inputAssetIdA,
             value: daiBalance - fee.value,

@@ -40,7 +40,6 @@ export enum UserStateEvent {
 
 export class UserState extends EventEmitter {
   private notePickers: { assetId: number; notePicker: NotePicker }[] = [];
-  private latestRollupId = -1;
 
   constructor(
     private userData: UserData,
@@ -53,8 +52,9 @@ export class UserState extends EventEmitter {
     super();
   }
 
-  private debug(str: string) {
-    debug(`${this.userData.accountPublicKey.toShortString()}: ${str}`);
+  private debug(...args: any[]) {
+    const [first, ...rest] = args;
+    debug(`${this.userData.accountPublicKey.toShortString()}: ${first}`, ...rest);
   }
 
   /**
@@ -63,7 +63,6 @@ export class UserState extends EventEmitter {
   public async init() {
     await this.resetData();
     await this.refreshNotePicker();
-    this.latestRollupId = await this.rollupProvider.getLatestRollupId();
   }
 
   /**
@@ -71,7 +70,6 @@ export class UserState extends EventEmitter {
    * If the user has synched further underfoot, we refresh our notepicker and emit an update event.
    */
   public async syncFromDb() {
-    this.latestRollupId = await this.rollupProvider.getLatestRollupId();
     const { syncedToRollup } = (await this.db.getUser(this.userData.accountPublicKey))!;
     if (syncedToRollup !== this.userData.syncedToRollup) {
       this.userData.syncedToRollup = syncedToRollup;
@@ -80,12 +78,12 @@ export class UserState extends EventEmitter {
     }
   }
 
-  public isSynchronised() {
-    return this.userData.syncedToRollup === this.latestRollupId;
+  public isSynchronised(latestRollupId: number) {
+    return this.userData.syncedToRollup >= latestRollupId;
   }
 
-  public async awaitSynchronised(timeout?: number) {
-    await retryUntil(() => this.isSynchronised(), 'user synchronised', timeout);
+  public async awaitSynchronised(latestRollupId: number, timeout?: number) {
+    await retryUntil(() => this.isSynchronised(latestRollupId), 'user synchronised', timeout);
   }
 
   public getUserData(): UserData {
@@ -108,7 +106,7 @@ export class UserState extends EventEmitter {
 
     const timer = new Timer();
     const from = blockContexts[0].rollup.rollupId;
-    this.debug(`synching blocks ${from} to ${from + blockContexts.length}...`);
+    this.debug(`synching blocks ${from} to ${from + blockContexts.length - 1}...`);
 
     const rollupProofData = blockContexts.map(b => b.rollup);
     const innerProofs = rollupProofData.map(p => p.innerProofData.filter(i => !i.isPadding())).flat();
@@ -238,60 +236,65 @@ export class UserState extends EventEmitter {
     this.debug(`done in ${timer.s()}s.`);
   }
 
-  public async pickNotes(assetId: number, value: bigint, excludePendingNotes = false, unsafe = false) {
+  public async pickNotes(assetId: number, value: bigint, spendingKeyRequired = false, excludePendingNotes = false) {
     const { notePicker } = this.notePickers.find(np => np.assetId === assetId) || {};
     if (!notePicker) {
       return [];
     }
     const pendingNullifiers = await this.rollupProvider.getPendingNoteNullifiers();
-    return notePicker.pick(value, pendingNullifiers, excludePendingNotes, unsafe);
+    return notePicker.pick(value, pendingNullifiers, excludePendingNotes, spendingKeyRequired);
   }
 
-  public async pickNote(assetId: number, value: bigint, excludePendingNotes = false, unsafe = false) {
+  public async pickNote(assetId: number, value: bigint, spendingKeyRequired = false, excludePendingNotes = false) {
     const { notePicker } = this.notePickers.find(np => np.assetId === assetId) || {};
     if (!notePicker) {
       return;
     }
     const pendingNullifiers = await this.rollupProvider.getPendingNoteNullifiers();
-    return notePicker.pickOne(value, pendingNullifiers, excludePendingNotes, unsafe);
+    return notePicker.pickOne(value, pendingNullifiers, excludePendingNotes, spendingKeyRequired);
   }
 
-  public async getSpendableSum(assetId: number, excludePendingNotes = false, unsafe = false) {
+  public async getSpendableSum(assetId: number, spendingKeyRequired = false, excludePendingNotes = false) {
     const { notePicker } = this.notePickers.find(np => np.assetId === assetId) || {};
     if (!notePicker) {
       return BigInt(0);
     }
     const pendingNullifiers = await this.rollupProvider.getPendingNoteNullifiers();
-    return notePicker.getSpendableSum(pendingNullifiers, excludePendingNotes, unsafe);
+    return notePicker.getSpendableSum(pendingNullifiers, excludePendingNotes, spendingKeyRequired);
   }
 
-  public async getSpendableSums(excludePendingNotes = false, unsafe = false) {
+  public async getSpendableSums(spendingKeyRequired = false, excludePendingNotes = false) {
     const pendingNullifiers = await this.rollupProvider.getPendingNoteNullifiers();
     return this.notePickers
       .map(({ assetId, notePicker }) => ({
         assetId,
-        value: notePicker.getSpendableSum(pendingNullifiers, excludePendingNotes, unsafe),
+        value: notePicker.getSpendableSum(pendingNullifiers, excludePendingNotes, spendingKeyRequired),
       }))
       .filter(assetValue => assetValue.value > BigInt(0));
   }
 
-  public async getMaxSpendableValue(assetId: number, numNotes?: number, excludePendingNotes = false, unsafe = false) {
+  public async getMaxSpendableValue(
+    assetId: number,
+    spendingKeyRequired = false,
+    excludePendingNotes = false,
+    numNotes?: number,
+  ) {
     const { notePicker } = this.notePickers.find(np => np.assetId === assetId) || {};
     if (!notePicker) {
       return BigInt(0);
     }
     const pendingNullifiers = await this.rollupProvider.getPendingNoteNullifiers();
-    return notePicker.getMaxSpendableValue(pendingNullifiers, numNotes, excludePendingNotes, unsafe);
+    return notePicker.getMaxSpendableValue(pendingNullifiers, numNotes, excludePendingNotes, spendingKeyRequired);
   }
 
-  public getBalance(assetId: number, unsafe = false) {
+  public getBalance(assetId: number) {
     const { notePicker } = this.notePickers.find(np => np.assetId === assetId) || {};
-    return notePicker ? notePicker.getSum(unsafe) : BigInt(0);
+    return notePicker ? notePicker.getSum() : BigInt(0);
   }
 
-  public getBalances(unsafe = false) {
+  public getBalances() {
     return this.notePickers
-      .map(({ assetId, notePicker }) => ({ assetId, value: notePicker.getSum(unsafe) }))
+      .map(({ assetId, notePicker }) => ({ assetId, value: notePicker.getSum() }))
       .filter(assetValue => assetValue.value > BigInt(0));
   }
 
@@ -456,7 +459,7 @@ export class UserState extends EventEmitter {
       // Owned by the account with a different nonce.
       return;
     }
-    const { bridgeId, partialStateSecretEphPubKey } = offchainTxData;
+    const { bridgeId, partialState, partialStateSecretEphPubKey } = offchainTxData;
     const partialStateSecret = deriveNoteSecret(
       partialStateSecretEphPubKey,
       this.userData.accountPrivateKey,
@@ -469,7 +472,7 @@ export class UserState extends EventEmitter {
       bridgeIds.findIndex(bridge => bridge.equals(bridgeId.toBuffer()));
     const isAsync = interactionResult.every(n => n.nonce !== interactionNonce);
 
-    await this.addClaim(txId, noteCommitment1, partialStateSecret, interactionNonce);
+    await this.addClaim(txId, noteCommitment1, partialState, partialStateSecret, interactionNonce);
 
     const { nullifier1, nullifier2 } = proof;
     await this.nullifyNote(nullifier1);
@@ -515,10 +518,16 @@ export class UserState extends EventEmitter {
     }
 
     const { created } = blockContext;
-    const { defiTxId, userId, secret, interactionNonce } = claim;
+    const { defiTxId, userId, partialState, secret, interactionNonce } = claim;
     const { noteCommitment1, noteCommitment2, nullifier2 } = proof;
     const { bridgeId, depositValue, outputValueA, outputValueB, success } = (await this.db.getDefiTx(defiTxId))!;
-    const accountRequired = true;
+    const accountRequired = this.noteAlgos
+      .valueNotePartialCommitment(
+        secret,
+        userId,
+        true, // accountRequired
+      )
+      .equals(partialState);
 
     // When generating output notes, set creatorPubKey to 0 (it's a DeFi txn, recipient of note is same as creator of claim note)
     if (!success) {
@@ -612,11 +621,18 @@ export class UserState extends EventEmitter {
     return note;
   }
 
-  private async addClaim(defiTxId: TxId, commitment: Buffer, noteSecret: Buffer, interactionNonce: number) {
+  private async addClaim(
+    defiTxId: TxId,
+    commitment: Buffer,
+    partialState: Buffer,
+    noteSecret: Buffer,
+    interactionNonce: number,
+  ) {
     const nullifier = this.noteAlgos.claimNoteNullifier(commitment);
     await this.db.addClaimTx({
       defiTxId,
       userId: this.userData.accountPublicKey,
+      partialState,
       secret: noteSecret,
       nullifier,
       interactionNonce,
@@ -642,20 +658,8 @@ export class UserState extends EventEmitter {
     const privateInput = noteValue(destroyedNote1) + noteValue(destroyedNote2);
     const recipientPrivateOutput = noteValue(valueNote);
     const senderPrivateOutput = noteValue(changeNote);
-    let isRecipient = !!valueNote;
-    let isSender = !!changeNote;
-    let accountRequired = (valueNote || changeNote)!.ownerAccountRequired;
-    if (
-      valueNote &&
-      changeNote &&
-      valueNote.owner.equals(changeNote.owner) &&
-      valueNote.ownerAccountRequired !== changeNote.ownerAccountRequired
-    ) {
-      // Tx should be owned by the registered user if sent from/to their own unregistered account.
-      isRecipient = valueNote.ownerAccountRequired;
-      isSender = changeNote.ownerAccountRequired;
-      accountRequired = true;
-    }
+    const isRecipient = !!valueNote;
+    const isSender = !!changeNote;
 
     const { txRefNo } = offchainTxData;
 
@@ -671,7 +675,6 @@ export class UserState extends EventEmitter {
       senderPrivateOutput,
       isRecipient,
       isSender,
-      accountRequired,
       txRefNo,
       new Date(),
       blockCreated,
@@ -705,21 +708,14 @@ export class UserState extends EventEmitter {
     interactionNonce: number,
     isAsync: boolean,
   ) {
-    const { bridgeId, depositValue, txFee, partialStateSecretEphPubKey, txRefNo } = offchainTxData;
+    const { bridgeId, depositValue, txFee, txRefNo } = offchainTxData;
     const txId = new TxId(proof.txId);
-    const partialStateSecret = deriveNoteSecret(
-      partialStateSecretEphPubKey,
-      this.userData.accountPrivateKey,
-      this.grumpkin,
-    );
-
     return new CoreDefiTx(
       txId,
       this.userData.accountPublicKey,
       bridgeId,
       depositValue,
       txFee,
-      partialStateSecret,
       txRefNo,
       new Date(),
       blockCreated,

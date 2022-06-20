@@ -2,7 +2,7 @@ import { readFile } from 'fs';
 import isNode from 'detect-node';
 import { promisify } from 'util';
 import { EventEmitter } from 'events';
-import createDebug from 'debug';
+import { createDebugLogger } from '../log';
 import { randomBytes } from '../crypto';
 import { MemoryFifo } from '../fifo';
 
@@ -26,7 +26,7 @@ export class BarretenbergWasm extends EventEmitter {
 
   public static async new(name = 'wasm', initial?: number) {
     const barretenberg = new BarretenbergWasm();
-    barretenberg.on('log', createDebug(`bb:${name}`));
+    barretenberg.on('log', createDebugLogger(`bb:${name}`));
     await barretenberg.init(undefined, initial);
     return barretenberg;
   }

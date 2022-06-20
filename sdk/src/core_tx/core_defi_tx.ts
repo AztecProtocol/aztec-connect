@@ -12,7 +12,6 @@ export class CoreDefiTx {
     public readonly bridgeId: BridgeId,
     public readonly depositValue: bigint,
     public readonly txFee: bigint,
-    public readonly partialStateSecret: Buffer,
     public readonly txRefNo: number,
     public readonly created: Date,
     public readonly settled?: Date,
@@ -34,7 +33,6 @@ export interface CoreDefiTxJson {
   bridgeId: string;
   depositValue: string;
   txFee: string;
-  partialStateSecret: string;
   txRefNo: number;
   created: Date;
   settled?: Date;
@@ -55,7 +53,6 @@ export const coreDefiTxToJson = (tx: CoreDefiTx): CoreDefiTxJson => ({
   bridgeId: tx.bridgeId.toString(),
   depositValue: tx.depositValue.toString(),
   txFee: tx.txFee.toString(),
-  partialStateSecret: tx.partialStateSecret.toString('hex'),
   outputValueA: tx.outputValueA?.toString(),
   outputValueB: tx.outputValueB?.toString(),
   claimTxId: tx.claimTxId?.toString(),
@@ -68,7 +65,6 @@ export const coreDefiTxFromJson = (json: CoreDefiTxJson) =>
     BridgeId.fromString(json.bridgeId),
     BigInt(json.depositValue),
     BigInt(json.txFee),
-    Buffer.from(json.partialStateSecret, 'hex'),
     json.txRefNo,
     json.created,
     json.settled,

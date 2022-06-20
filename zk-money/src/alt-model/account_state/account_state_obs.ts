@@ -9,7 +9,8 @@ export function createAccountStateObs(sdk: AztecSdk, userId: GrumpkinAddress) {
     // Fetch in parallel
     const txsProm = sdk.getUserTxs(userId);
     const balancesProm = sdk.getBalances(userId);
-    const spendableBalancesProm = sdk.getSpendableSums(userId);
+    const spendingKeyRequired = true;
+    const spendableBalancesProm = sdk.getSpendableSums(userId, spendingKeyRequired);
     accountStateObs.next({
       txs: await txsProm,
       balances: await balancesProm,

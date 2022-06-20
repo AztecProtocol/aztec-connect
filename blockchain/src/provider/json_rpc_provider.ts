@@ -1,9 +1,9 @@
 import { EthereumProvider, RequestArguments } from '@aztec/barretenberg/blockchain';
 import { fetch } from '@aztec/barretenberg/iso_fetch';
 import { retry } from '@aztec/barretenberg/retry';
-import debug from 'debug';
+import { createDebugLogger } from '@aztec/barretenberg/log';
 
-const log = debug('json_rpc_provider');
+const log = createDebugLogger('json_rpc_provider');
 
 export class JsonRpcProvider implements EthereumProvider {
   private id = 0;

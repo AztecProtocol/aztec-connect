@@ -24,16 +24,21 @@ export class AztecSdkUser {
     return await this.sdk.getBalance(this.id, assetId);
   }
 
-  public async getSpendableSum(assetId: number, excludePendingNotes?: boolean) {
-    return await this.sdk.getSpendableSum(this.id, assetId, excludePendingNotes);
+  public async getSpendableSum(assetId: number, spendingKeyRequired?: boolean, excludePendingNotes?: boolean) {
+    return await this.sdk.getSpendableSum(this.id, assetId, spendingKeyRequired, excludePendingNotes);
   }
 
-  public async getSpendableSums(excludePendingNotes?: boolean) {
-    return await this.sdk.getSpendableSums(this.id, excludePendingNotes);
+  public async getSpendableSums(spendingKeyRequired?: boolean, excludePendingNotes?: boolean) {
+    return await this.sdk.getSpendableSums(this.id, spendingKeyRequired, excludePendingNotes);
   }
 
-  public async getMaxSpendableValue(assetId: number, numNotes?: number, excludePendingNotes?: boolean) {
-    return await this.sdk.getMaxSpendableValue(this.id, assetId, numNotes, excludePendingNotes);
+  public async getMaxSpendableValue(
+    assetId: number,
+    spendingKeyRequired?: boolean,
+    excludePendingNotes?: boolean,
+    numNotes?: number,
+  ) {
+    return await this.sdk.getMaxSpendableValue(this.id, assetId, spendingKeyRequired, excludePendingNotes, numNotes);
   }
 
   public async getTxs() {

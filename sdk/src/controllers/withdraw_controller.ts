@@ -31,7 +31,7 @@ export class WithdrawController {
     const privateInput = value + (!requireFeePayingTx ? this.fee.value : BigInt(0));
     const txRefNo = requireFeePayingTx ? createTxRefNo() : 0;
     const spendingPublicKey = this.userSigner.getPublicKey();
-    const accountRequired = !spendingPublicKey.equals(this.userId);
+    const spendingKeyRequired = !spendingPublicKey.equals(this.userId);
 
     const proofInput = await this.core.createPaymentProofInput(
       this.userId,
@@ -42,7 +42,7 @@ export class WithdrawController {
       BigInt(0),
       BigInt(0),
       this.userId,
-      accountRequired,
+      spendingKeyRequired,
       this.recipient,
       spendingPublicKey,
       2,
@@ -60,7 +60,7 @@ export class WithdrawController {
         BigInt(0),
         BigInt(0),
         this.userId,
-        accountRequired,
+        spendingKeyRequired,
         undefined,
         spendingPublicKey,
         2,

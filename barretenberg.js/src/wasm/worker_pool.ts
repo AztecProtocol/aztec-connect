@@ -1,9 +1,9 @@
-import createDebug from 'debug';
+import { createDebugLogger } from '../log';
 import { BarretenbergWasm } from './barretenberg_wasm';
 import { BarretenbergWorker } from './worker';
 import { createWorker, destroyWorker } from './worker_factory';
 
-const debug = createDebug('bb:worker_pool');
+const debug = createDebugLogger('bb:worker_pool');
 
 export class WorkerPool {
   public workers: BarretenbergWorker[] = [];

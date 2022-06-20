@@ -6,7 +6,7 @@ export class InnerProofData {
   static LENGTH = InnerProofData.NUM_PUBLIC_INPUTS * 32;
   static PADDING = InnerProofData.fromBuffer(Buffer.alloc(InnerProofData.LENGTH));
 
-  public txId: Buffer;
+  public txId_?: Buffer;
 
   constructor(
     public proofId: ProofId,
@@ -17,8 +17,13 @@ export class InnerProofData {
     public publicValue: Buffer,
     public publicOwner: Buffer,
     public assetId: Buffer,
-  ) {
-    this.txId = createTxId(this.toBuffer());
+  ) {}
+
+  public get txId(): Buffer {
+    if (!this.txId_) {
+      this.txId_ = createTxId(this.toBuffer());
+    }
+    return this.txId_;
   }
 
   getDepositSigningData() {

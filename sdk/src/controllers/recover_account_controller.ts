@@ -38,7 +38,7 @@ export class RecoverAccountController {
         fee,
         depositor,
         accountPublicKey,
-        true, // recipientAccountRequired
+        true, // recipientSpendingKeyRequired
         undefined,
         core,
         blockchain,

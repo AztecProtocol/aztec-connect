@@ -226,19 +226,6 @@ describe('groupUserTxs', () => {
         ),
       ]);
     });
-
-    it('ignore tx depositing to unregistered account', () => {
-      const depositTx = randomCorePaymentTx({
-        proofId: ProofId.DEPOSIT,
-        publicOwner: EthAddress.random(),
-        publicValue: 100n,
-        recipientPrivateOutput: 80n,
-        isRecipient: true,
-        isSender: false,
-        accountRequired: false, // <--
-      });
-      expect(groupUserTxs([depositTx])).toEqual([]);
-    });
   });
 
   describe('withdraw tx', () => {
@@ -286,17 +273,6 @@ describe('groupUserTxs', () => {
           withdrawTx.created,
         ),
       ]);
-    });
-
-    it('ignore tx withdrawing from unregistered account', () => {
-      const withdrawTx = randomCorePaymentTx({
-        proofId: ProofId.WITHDRAW,
-        publicOwner: EthAddress.random(),
-        publicValue: 80n,
-        privateInput: 100n,
-        accountRequired: false, // <--
-      });
-      expect(groupUserTxs([withdrawTx])).toEqual([]);
     });
   });
 
@@ -423,84 +399,6 @@ describe('groupUserTxs', () => {
           undefined,
           true,
           sendTx.created,
-        ),
-      ]);
-    });
-
-    it('ignore txs transfering to or from unregistered account', () => {
-      const fetchTxsForRegisteredUser = true;
-      const sendTx0 = randomCorePaymentTx({
-        proofId: ProofId.SEND,
-        privateInput: 60n,
-        recipientPrivateOutput: 50n,
-        accountRequired: false,
-      });
-      const sendTx1 = randomCorePaymentTx({
-        proofId: ProofId.SEND,
-        privateInput: 100n,
-        recipientPrivateOutput: 80n,
-        accountRequired: true,
-      });
-      const sendTx2 = randomCorePaymentTx({
-        proofId: ProofId.SEND,
-        privateInput: 130n,
-        recipientPrivateOutput: 90n,
-        accountRequired: false,
-      });
-      expect(groupUserTxs([sendTx2, sendTx1, sendTx0], fetchTxsForRegisteredUser)).toEqual([
-        new UserPaymentTx(
-          sendTx1.txId,
-          sendTx1.userId,
-          ProofId.SEND,
-          { assetId: 0, value: 80n },
-          { assetId: 0, value: 20n },
-          undefined,
-          true,
-          sendTx1.created,
-        ),
-      ]);
-    });
-
-    it('get txs transfering to or from unregistered account', () => {
-      const fetchTxsForRegisteredUser = false;
-      const sendTx0 = randomCorePaymentTx({
-        proofId: ProofId.SEND,
-        privateInput: 60n,
-        recipientPrivateOutput: 50n,
-        accountRequired: false,
-      });
-      const sendTx1 = randomCorePaymentTx({
-        proofId: ProofId.SEND,
-        privateInput: 100n,
-        recipientPrivateOutput: 80n,
-        accountRequired: true,
-      });
-      const sendTx2 = randomCorePaymentTx({
-        proofId: ProofId.SEND,
-        privateInput: 130n,
-        recipientPrivateOutput: 90n,
-        accountRequired: false,
-      });
-      expect(groupUserTxs([sendTx2, sendTx1, sendTx0], fetchTxsForRegisteredUser)).toEqual([
-        new UserPaymentTx(
-          sendTx2.txId,
-          sendTx2.userId,
-          ProofId.SEND,
-          { assetId: 0, value: 90n },
-          { assetId: 0, value: 40n },
-          undefined,
-          true,
-          sendTx2.created,
-        ),
-        new UserPaymentTx(
-          sendTx0.txId,
-          sendTx0.userId,
-          ProofId.SEND,
-          { assetId: 0, value: 50n },
-          { assetId: 0, value: 10n },
-          undefined,
-          true,
-          sendTx0.created,
         ),
       ]);
     });

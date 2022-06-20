@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "es2020",
+    "module": "commonjs",
+    "lib": ["es2021"],
+    "moduleResolution": "node",
+    "outDir": "dest",
+    "strict": true,
+    "noImplicitAny": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "inlineSourceMap": true
+  },
+  "include": ["./src"],
+  "exclude": ["**/*.tsx"]
+}

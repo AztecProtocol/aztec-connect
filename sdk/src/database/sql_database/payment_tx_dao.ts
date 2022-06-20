@@ -41,9 +41,6 @@ export class PaymentTxDao implements CorePaymentTx {
   public isSender!: boolean;
 
   @Column()
-  public accountRequired!: boolean;
-
-  @Column()
   public txRefNo!: number;
 
   @Column()

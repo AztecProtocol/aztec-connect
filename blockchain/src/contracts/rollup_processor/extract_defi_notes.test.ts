@@ -39,6 +39,13 @@ describe('rollup_processor: extract defi notes', () => {
   const escapeBlockLowerBound = 80;
   const escapeBlockUpperBound = 100;
 
+  const rollupProofDataFromBuffer = (buffer: Buffer) => {
+    const rollupProofData = RollupProofData.fromBuffer(buffer);
+    // Coax lazy init of txId.
+    rollupProofData.innerProofData.forEach(p => p.txId);
+    return rollupProofData;
+  };
+
   beforeAll(async () => {
     signers = await ethers.getSigners();
     addresses = await Promise.all(signers.map(async u => EthAddress.fromString(await u.getAddress())));
@@ -147,7 +154,7 @@ describe('rollup_processor: extract defi notes', () => {
 
     {
       const block = blocks[0];
-      const rollup = RollupProofData.fromBuffer(block.rollupProofData);
+      const rollup = rollupProofDataFromBuffer(block.rollupProofData);
       const { innerProofs, offchainTxData } = innerProofOutputs[0];
       expect(block).toMatchObject({
         rollupId: 0,
@@ -166,7 +173,7 @@ describe('rollup_processor: extract defi notes', () => {
 
     {
       const block = blocks[1];
-      const rollup = RollupProofData.fromBuffer(block.rollupProofData);
+      const rollup = rollupProofDataFromBuffer(block.rollupProofData);
       const { innerProofs, offchainTxData } = innerProofOutputs[1];
       expect(block).toMatchObject({
         rollupId: 1,
@@ -183,7 +190,7 @@ describe('rollup_processor: extract defi notes', () => {
 
     {
       const block = blocks[2];
-      const rollup = RollupProofData.fromBuffer(block.rollupProofData);
+      const rollup = rollupProofDataFromBuffer(block.rollupProofData);
       const { innerProofs, offchainTxData } = innerProofOutputs[2];
       expect(block).toMatchObject({
         rollupId: 2,
@@ -199,7 +206,7 @@ describe('rollup_processor: extract defi notes', () => {
 
     {
       const block = blocks[3];
-      const rollup = RollupProofData.fromBuffer(block.rollupProofData);
+      const rollup = rollupProofDataFromBuffer(block.rollupProofData);
       const { innerProofs, offchainTxData } = innerProofOutputs[3];
       expect(block).toMatchObject({
         rollupId: 3,
@@ -216,7 +223,7 @@ describe('rollup_processor: extract defi notes', () => {
 
     {
       const block = blocks[4];
-      const rollup = RollupProofData.fromBuffer(block.rollupProofData);
+      const rollup = rollupProofDataFromBuffer(block.rollupProofData);
       const { innerProofs, offchainTxData } = innerProofOutputs[4];
       expect(block).toMatchObject({
         rollupId: 4,

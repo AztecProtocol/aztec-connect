@@ -40,7 +40,7 @@ export class MigrateAccountController {
     this.proofOutput = await this.core.createAccountProof(proofInput, txRefNo);
 
     if (requireFeePayingTx) {
-      const accountRequired = !spendingPublicKey.equals(this.userId);
+      const spendingKeyRequired = !spendingPublicKey.equals(this.userId);
       const feeProofInput = await this.core.createPaymentProofInput(
         this.userId,
         this.fee.assetId,
@@ -50,7 +50,7 @@ export class MigrateAccountController {
         BigInt(0),
         BigInt(0),
         this.userId,
-        accountRequired,
+        spendingKeyRequired,
         undefined,
         spendingPublicKey,
         2,

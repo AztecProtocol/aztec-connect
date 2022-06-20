@@ -39,7 +39,7 @@ export class DepositController {
     public readonly fee: AssetValue,
     public readonly depositor: EthAddress,
     public readonly recipient: GrumpkinAddress,
-    public readonly recipientAccountRequired: boolean,
+    public readonly recipientSpendingKeyRequired: boolean,
     public readonly feePayer: FeePayer | undefined,
     private readonly core: CoreSdkInterface,
     private readonly blockchain: ClientEthereumBlockchain,
@@ -270,14 +270,14 @@ export class DepositController {
       privateOutput,
       this.depositor,
       this.recipient,
-      this.recipientAccountRequired,
+      this.recipientSpendingKeyRequired,
       txRefNo,
     );
 
     if (requireFeePayingTx) {
       const { userId, signer } = this.feePayer!;
       const spendingPublicKey = signer.getPublicKey();
-      const accountRequired = !spendingPublicKey.equals(userId);
+      const spendingKeyRequired = !spendingPublicKey.equals(userId);
       const feeProofInput = await this.core.createPaymentProofInput(
         userId,
         this.fee.assetId,
@@ -287,7 +287,7 @@ export class DepositController {
         BigInt(0),
         BigInt(0),
         userId,
-        accountRequired,
+        spendingKeyRequired,
         undefined,
         spendingPublicKey,
         2,

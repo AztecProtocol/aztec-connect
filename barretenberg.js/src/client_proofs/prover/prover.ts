@@ -1,9 +1,9 @@
-import createDebug from 'debug';
+import { createDebugLogger } from '../../log';
 import { Fft } from '../../fft';
 import { Pippenger } from '../../pippenger';
 import { BarretenbergWasm, BarretenbergWorker } from '../../wasm';
 
-const debug = createDebug('bb:prover');
+const debug = createDebugLogger('bb:prover');
 
 class Timer {
   private start: number;

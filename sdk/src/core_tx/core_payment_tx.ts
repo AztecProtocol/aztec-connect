@@ -24,7 +24,6 @@ export class CorePaymentTx {
     public readonly senderPrivateOutput: bigint,
     public readonly isRecipient: boolean,
     public readonly isSender: boolean,
-    public readonly accountRequired: boolean,
     public readonly txRefNo: number,
     public readonly created: Date,
     public readonly settled?: Date,
@@ -43,7 +42,6 @@ export interface CorePaymentTxJson {
   senderPrivateOutput: string;
   isRecipient: boolean;
   isSender: boolean;
-  accountRequired: boolean;
   txRefNo: number;
   created: Date;
   settled?: Date;
@@ -73,7 +71,6 @@ export const corePaymentTxFromJson = (json: CorePaymentTxJson) =>
     BigInt(json.senderPrivateOutput),
     json.isRecipient,
     json.isSender,
-    json.accountRequired,
     json.txRefNo,
     json.created,
     json.settled,
@@ -95,7 +92,6 @@ export const createCorePaymentTxForRecipient = (
     settled,
   }: CorePaymentTx,
   recipient: GrumpkinAddress,
-  recipientAccountRequired: boolean,
 ) =>
   new CorePaymentTx(
     txId,
@@ -109,7 +105,6 @@ export const createCorePaymentTxForRecipient = (
     senderPrivateOutput,
     true,
     recipient.equals(userId),
-    recipientAccountRequired,
     txRefNo,
     created,
     settled,

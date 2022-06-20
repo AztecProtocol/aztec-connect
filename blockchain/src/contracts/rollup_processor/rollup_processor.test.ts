@@ -421,6 +421,10 @@ describe('rollup_processor', () => {
     {
       const block = blocks[0];
       const rollup = RollupProofData.fromBuffer(block.rollupProofData);
+
+      // Coax lazy init of txId.
+      rollup.innerProofData.forEach(p => p.txId);
+
       const { innerProofs, offchainTxData } = innerProofOutputs[0];
       expect(block).toMatchObject({
         rollupId: 0,

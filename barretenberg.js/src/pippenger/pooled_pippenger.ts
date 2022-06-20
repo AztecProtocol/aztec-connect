@@ -1,9 +1,9 @@
 import { Pippenger } from './pippenger';
 import { SinglePippenger } from './single_pippenger';
-import createDebug from 'debug';
+import { createDebugLogger } from '../log';
 import { WorkerPool } from '../wasm/worker_pool';
 
-const debug = createDebug('bb:pippenger');
+const debug = createDebugLogger('bb:pippenger');
 
 export class PooledPippenger implements Pippenger {
   public pool: SinglePippenger[] = [];

@@ -1,4 +1,13 @@
-import { AztecSdk, createAztecSdk, EthAddress, EthereumRpc, GrumpkinAddress, TxSettlementTime } from '@aztec/sdk';
+import {
+  AztecSdk,
+  createAztecSdk,
+  EthAddress,
+  EthereumRpc,
+  GrumpkinAddress,
+  ProofId,
+  SdkEvent,
+  TxSettlementTime,
+} from '@aztec/sdk';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { asyncMap } from './async_map';
@@ -28,6 +37,7 @@ describe('end-to-end tests', () => {
   let userIds: GrumpkinAddress[] = [];
   const assetId = 0;
   const debug = createDebug('bb:e2e');
+  const userStateUpdatedFn = jest.fn();
 
   const debugBalance = async (userId: GrumpkinAddress) => {
     const userIndex = userIds.findIndex(id => id.equals(userId));
@@ -63,6 +73,8 @@ describe('end-to-end tests', () => {
     await sdk.run();
     await sdk.awaitSynchronised();
 
+    sdk.on(SdkEvent.UPDATED_USER_STATE, userStateUpdatedFn);
+
     for (const addr of addresses) {
       debug(
         `address ${addr.toString()} public balance: ${sdk.fromBaseUnits(
@@ -72,6 +84,7 @@ describe('end-to-end tests', () => {
       );
     }
 
+    // TODO: Remove. Also move chaining into specific test. This test should just deposit, transfer, withdraw.
     debug(`registering users...`);
     userIds = await registerUsers(sdk, addresses.slice(0, 2), { assetId, value: 0n });
   });
@@ -112,6 +125,30 @@ describe('end-to-end tests', () => {
         return controller;
       });
 
+      {
+        const user0Txs = await sdk.getPaymentTxs(userIds[0]);
+        expect(user0Txs.length).toBe(1);
+        expect(user0Txs[0]).toMatchObject({
+          userId: userIds[0],
+          proofId: ProofId.DEPOSIT,
+          value: depositValue,
+          fee: depositFees[TxSettlementTime.NEXT_ROLLUP],
+          publicOwner: addresses[0],
+          isSender: false,
+        });
+
+        const user1Txs = await sdk.getPaymentTxs(userIds[1]);
+        expect(user1Txs.length).toBe(1);
+        expect(user1Txs[0]).toMatchObject({
+          userId: userIds[1],
+          proofId: ProofId.DEPOSIT,
+          value: depositValue,
+          fee: depositFees[TxSettlementTime.INSTANT],
+          publicOwner: addresses[1],
+          isSender: false,
+        });
+      }
+
       debug(`waiting to settle...`);
       await asyncMap(userIds, async (userId, i) => {
         const controller = depositControllers[i];
@@ -119,6 +156,16 @@ describe('end-to-end tests', () => {
         await debugBalance(userId);
         expect(await sdk.getBalance(userId, assetId)).toEqual(depositValue);
       });
+
+      const user0Txs = await sdk.getPaymentTxs(userIds[0]);
+      expect(user0Txs.length).toBe(1);
+      expect(user0Txs[0].settled).not.toBeUndefined();
+      const user1Txs = await sdk.getPaymentTxs(userIds[1]);
+      expect(user1Txs.length).toBe(1);
+      expect(user1Txs[0].settled).not.toBeUndefined();
+
+      expect(userStateUpdatedFn).toHaveBeenCalledWith(userIds[0]);
+      expect(userStateUpdatedFn).toHaveBeenCalledWith(userIds[1]);
     }
 
     // Rollup 2: Withdrawals and transfers.

@@ -5,7 +5,7 @@ import { createDebugLogger } from '@aztec/barretenberg/log';
 import { PooledNoteDecryptor } from '@aztec/barretenberg/note_algorithms';
 import { PooledPippenger } from '@aztec/barretenberg/pippenger';
 import { BarretenbergWasm, WorkerPool } from '@aztec/barretenberg/wasm';
-import { CoreSdkClientStub, CoreSdkSerializedInterface, SdkEvent } from '../../core_sdk';
+import { CoreSdkClientStub, CoreSdkSerializedInterface } from '../../core_sdk';
 import { getNumWorkers } from '../get_num_workers';
 import { JobQueueDispatch, JobQueueInterface, JobQueueWorker } from '../job_queue';
 import { createDispatchFn, TransportClient } from '../transport';
@@ -56,8 +56,6 @@ export class SharedWorkerFrontend {
       jobQueueWorker,
       workerPool,
     );
-
-    this.coreSdk.on(SdkEvent.DESTROYED, () => this.transportClient.close());
 
     return { coreSdk: new CoreSdkClientStub(this.coreSdk) };
   }

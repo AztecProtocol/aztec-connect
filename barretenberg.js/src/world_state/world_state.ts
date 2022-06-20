@@ -2,9 +2,9 @@ import { MerkleTree, MemoryMerkleTree, HashPath } from '../merkle_tree';
 import { WorldStateConstants } from './world_state_constants';
 import { LevelUp } from 'levelup';
 import { Pedersen } from '../crypto/pedersen';
-import createDebug from 'debug';
+import { createDebugLogger } from '../log';
 
-const debug = createDebug('bb:world_state');
+const debug = createDebugLogger('bb:world_state');
 
 export class WorldState {
   private tree!: MerkleTree;

@@ -16,6 +16,7 @@ export * from '@aztec/barretenberg/fifo';
 export * from '@aztec/barretenberg/tx_id';
 export * from '@aztec/barretenberg/blockchain';
 export * from '@aztec/barretenberg/service';
+export * from '@aztec/barretenberg/timer';
 
 export {
   JsonRpcProvider,

@@ -1,5 +1,5 @@
 import { GrumpkinAddress } from '../address';
-import { createDebugLogger } from '../log/debug';
+import { createDebugLogger } from '../log';
 import { Grumpkin } from '../ecc/grumpkin';
 import { DecryptedNote } from './decrypted_note';
 import { NoteAlgorithms } from './note_algorithms';
