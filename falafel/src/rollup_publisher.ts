@@ -98,7 +98,7 @@ export class RollupPublisher {
       let nonce = await this.ethereumRpc.getTransactionCount(defaultSignerAddress);
 
       // Send each tx (if we haven't already successfully received receipt).
-      for (let i = 0; i < txStatuses.length; i++) {
+      for (let i = 0; i < txStatuses.length && !this.interrupted; i++) {
         const { tx, success, name } = txStatuses[i];
         if (success) {
           continue;

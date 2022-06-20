@@ -2,14 +2,14 @@ import { Server } from '../server';
 import { Command, Protocol } from './http_job_protocol';
 import { fetch } from '@aztec/barretenberg/iso_fetch';
 import { InterruptableSleep } from '@aztec/barretenberg/sleep';
-import debug from 'debug';
+import { createDebugLogger } from '@aztec/barretenberg/log';
 import { randomBytes } from 'crypto';
 
 export class HttpJobWorker {
   private id = randomBytes(32);
   private running = true;
   private runningPromise!: Promise<void>;
-  private log = debug(`http_job_worker:${this.id.slice(0, 4).toString('hex')}`);
+  private log = createDebugLogger(`http_job_worker:${this.id.slice(0, 4).toString('hex')}`);
   private interruptableSleep = new InterruptableSleep();
   private abortController!: AbortController;
   private pingTimeout?: NodeJS.Timeout;

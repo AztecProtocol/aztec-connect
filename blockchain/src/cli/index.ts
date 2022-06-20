@@ -15,6 +15,7 @@ import { WalletProvider } from '../provider';
 import { getTokenBalance, getWethBalance } from '../tokens';
 import { LogDescription } from 'ethers/lib/utils';
 import { RollupProcessor } from '../contracts';
+import { akiToKey } from './key_derivation';
 
 const { PRIVATE_KEY } = process.env;
 
@@ -210,6 +211,15 @@ export async function profileElement(
 const program = new Command();
 
 async function main() {
+  program
+    .command('pkFromAki')
+    .description('derive private key from an aztec key identifier')
+    .argument('<mnemonic>', 'repository mnemonic')
+    .argument('<aki>', 'an aztec key identifier')
+    .action((mnemonic: string, aki: string) => {
+      console.log(akiToKey(mnemonic, aki));
+    });
+
   program
     .command('pkFromStore')
     .description('print a private key from an encrypted keystore file')

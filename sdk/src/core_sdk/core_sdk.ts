@@ -160,13 +160,6 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
 
       await this.db.addKey('rollupContractAddress', rollupContractAddress.toBuffer());
 
-      // Ensures we can get the list of users and access current known balances.
-      await this.initUserStates();
-
-      // Must fetch `syncedToRollup` before initialising worldState.
-      // Getting this value first ensures that it will be syncing from latest or older block.
-      const syncedToRollup = await this.getLocalSyncedToRollup();
-
       // Initialize the "mutable" merkle tree. This is the tree that represents all layers about each rollup subtree.
       const subtreeDepth = Math.ceil(Math.log2(rollupSize * WorldStateConstants.NUM_NEW_DATA_TREE_NOTES_PER_TX));
       await this.worldState.init(subtreeDepth);
@@ -179,7 +172,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
         verifierContractAddress,
         feePayingAssetIds,
         rollupSize,
-        syncedToRollup,
+        syncedToRollup: await this.getLocalSyncedToRollup(),
         latestRollupId: await this.rollupProvider.getLatestRollupId(),
         dataSize: this.worldState.getSize(),
         dataRoot: this.worldState.getRoot(),
@@ -187,9 +180,14 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
         proverless,
       };
 
+      // Ensures we can get the list of users and access current known balances.
+      await this.initUserStates();
+
       this.initState = SdkInitState.INITIALIZED;
+      debug('initialization complete.');
     } catch (err) {
-      // If initialisation fails, we should destroy the components we've taken ownership of.
+      debug('initialization failed: ', err);
+      // If initialization fails, we should destroy the components we've taken ownership of.
       await this.leveldb.close();
       await this.db.close();
       await this.workerPool?.destroy();
@@ -306,7 +304,8 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
         throw new Error(`User already exists: ${accountPublicKey}`);
       }
 
-      const syncedToRollup = noSync ? await this.rollupProvider.getLatestRollupId() : -1;
+      const { latestRollupId } = this.sdkStatus;
+      const syncedToRollup = noSync ? latestRollupId : -1;
       const user: UserData = { accountPrivateKey, accountPublicKey, syncedToRollup };
       await this.db.addUser(user);
 
@@ -699,13 +698,13 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   public isUserSynching(userId: GrumpkinAddress) {
     this.assertInitState(SdkInitState.RUNNING);
 
-    return Promise.resolve(!this.getUserState(userId).isSynchronised());
+    return Promise.resolve(!this.getUserState(userId).isSynchronised(this.sdkStatus.latestRollupId));
   }
 
   public async awaitUserSynchronised(userId: GrumpkinAddress, timeout?: number) {
     this.assertInitState(SdkInitState.RUNNING);
 
-    await this.getUserState(userId).awaitSynchronised(timeout);
+    await this.getUserState(userId).awaitSynchronised(this.sdkStatus.latestRollupId, timeout);
   }
 
   public async awaitSettlement(txId: TxId, timeout?: number) {
@@ -917,7 +916,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       return;
     }
 
-    debug('initialising genesis state from server...');
+    debug('initializing genesis state from server...');
     const genesisTimer = new Timer();
     const initialState = await this.rollupProvider.getInitialWorldState();
     debug(
@@ -945,13 +944,18 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     this.synchingPromise = (async () => {
       debug('starting sync task...');
       while (this.initState !== SdkInitState.STOPPING) {
+        const timer = new Timer();
         try {
           await this.serialQueue.push(() => this.sync());
         } catch (err) {
           debug('sync() failed:', err);
+          await this.syncSleep.sleep(10000);
         }
-        if (this.isSynchronised() && this.userStates.every(us => us.isSynchronised())) {
+        if (this.isSynchronised() && this.userStates.every(us => us.isSynchronised(this.sdkStatus.latestRollupId))) {
           await this.syncSleep.sleep(this.options.pollInterval || 10000);
+        } else if (timer.s() < 1) {
+          // Ensure that at least 1s has passed before we loop around again.
+          await this.syncSleep.sleep(1000);
         }
       }
       debug('stopped sync task.');
@@ -962,7 +966,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
    * Called when data root is not as expected. We need to erase the db and rebuild the merkle tree.
    */
   private async reinitDataTree() {
-    debug('re-initialising data tree...');
+    debug('re-initializing data tree...');
 
     await this.leveldb.clear();
 
@@ -992,7 +996,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     debug(`fetching blocks from ${from}...`);
     const coreBlocks = await this.rollupProvider.getBlocks(from);
     if (coreBlocks.length) {
-      debug(`creating contexts for blocks ${from} to ${from + coreBlocks.length}...`);
+      debug(`creating contexts for blocks ${from} to ${from + coreBlocks.length - 1}...`);
     }
     const coreBlockContexts = coreBlocks.map(b => BlockContext.fromBlock(b, this.pedersen));
 
@@ -1033,7 +1037,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       debug(`forwarding blocks to user states...`);
       await Promise.all(this.userStates.map(us => us.processBlocks(coreBlockContexts)));
 
-      debug(`finished processing blocks ${from} to ${from + coreBlocks.length} in ${timer.s()}s...`);
+      debug(`finished processing blocks ${from} to ${from + coreBlocks.length - 1} in ${timer.s()}s...`);
     }
 
     // Secondly we want bring user states in sync. Determine the lowest block.
@@ -1045,11 +1049,11 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       const from = userSyncedToRollup + 1;
       debug(`fetching blocks from ${from} for user states...`);
       const userBlocks = await this.rollupProvider.getBlocks(from);
-      debug(`creating contexts for blocks ${from} to ${from + userBlocks.length}...`);
+      debug(`creating contexts for blocks ${from} to ${from + userBlocks.length - 1}...`);
       const userBlockContexts = userBlocks.map(b => BlockContext.fromBlock(b, this.pedersen));
       debug(`forwarding blocks to user states...`);
       await Promise.all(this.userStates.map(us => us.processBlocks(userBlockContexts)));
-      debug(`finished processing user state blocks ${from} to ${from + coreBlocks.length} in ${timer.s()}s...`);
+      debug(`finished processing user state blocks ${from} to ${from + coreBlocks.length - 1} in ${timer.s()}s...`);
     }
   }
 
@@ -1058,15 +1062,14 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
    */
   private async readSyncInfo() {
     const syncedToRollup = await this.getLocalSyncedToRollup();
+    const latestRollupId = await this.rollupProvider.getLatestRollupId();
+    this.sdkStatus.latestRollupId = latestRollupId;
+
     if (this.sdkStatus.syncedToRollup < syncedToRollup) {
       await this.worldState.syncFromDb();
-      const latestRollupId = await this.rollupProvider.getLatestRollupId();
-
       this.sdkStatus.syncedToRollup = syncedToRollup;
-      this.sdkStatus.latestRollupId = latestRollupId;
       this.sdkStatus.dataRoot = this.worldState.getRoot();
       this.sdkStatus.dataSize = this.worldState.getSize();
-
       this.emit(SdkEvent.UPDATED_WORLD_STATE, syncedToRollup, latestRollupId);
     }
   }
@@ -1075,15 +1078,13 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
    * Persist new syncedToRollup and update this.sdkStatus.
    */
   private async writeSyncInfo(syncedToRollup: number) {
-    const latestRollupId = await this.rollupProvider.getLatestRollupId();
     await this.leveldb.put('syncedToRollup', syncedToRollup.toString());
 
     this.sdkStatus.syncedToRollup = syncedToRollup;
-    this.sdkStatus.latestRollupId = latestRollupId;
     this.sdkStatus.dataRoot = this.worldState.getRoot();
     this.sdkStatus.dataSize = this.worldState.getSize();
 
-    this.emit(SdkEvent.UPDATED_WORLD_STATE, syncedToRollup, latestRollupId);
+    this.emit(SdkEvent.UPDATED_WORLD_STATE, syncedToRollup, this.sdkStatus.latestRollupId);
   }
 
   private async processAliases(rollups: RollupProofData[], offchainTxData: Buffer[][]) {

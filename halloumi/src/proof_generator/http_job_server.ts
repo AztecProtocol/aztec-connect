@@ -1,6 +1,6 @@
 import { ProofGenerator } from './proof_generator';
 import { randomBytes } from '@aztec/barretenberg/crypto';
-import debug from 'debug';
+import { createDebugLogger } from '@aztec/barretenberg/log';
 import { Command, Protocol } from './http_job_protocol';
 import http from 'http';
 import Koa, { DefaultState, Context } from 'koa';
@@ -34,7 +34,7 @@ interface Job {
 export class HttpJobServer implements ProofGenerator {
   private jobs: Job[] = [];
   private server: http.Server;
-  private log = debug('http_job_server');
+  private log = createDebugLogger('http_job_server');
   private running = true;
   private serialQueue = new MemoryFifo<() => Promise<void>>();
   private interruptableSleep = new InterruptableSleep();

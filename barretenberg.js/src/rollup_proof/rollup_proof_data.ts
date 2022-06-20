@@ -124,7 +124,7 @@ export class RollupProofData {
   static NUM_ROLLUP_HEADER_INPUTS =
     14 + RollupProofData.NUMBER_OF_ASSETS * 2 + RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK * 3;
   static LENGTH_ROLLUP_HEADER_INPUTS = RollupProofData.NUM_ROLLUP_HEADER_INPUTS * 32;
-  public rollupHash: Buffer;
+  public rollupHash_?: Buffer;
 
   constructor(
     public rollupId: number,
@@ -162,9 +162,14 @@ export class RollupProofData {
         `Expect defiInteractionNotes to be an array of size ${RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK}.`,
       );
     }
+  }
 
-    const allTxIds = this.innerProofData.map(innerProof => innerProof.txId);
-    this.rollupHash = createHash('sha256').update(Buffer.concat(allTxIds)).digest();
+  public get rollupHash(): Buffer {
+    if (!this.rollupHash_) {
+      const allTxIds = this.innerProofData.map(innerProof => innerProof.txId);
+      this.rollupHash_ = createHash('sha256').update(Buffer.concat(allTxIds)).digest();
+    }
+    return this.rollupHash_;
   }
 
   toBuffer() {

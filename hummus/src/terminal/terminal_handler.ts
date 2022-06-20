@@ -4,6 +4,7 @@ import {
   AztecSdkUser,
   BridgeId,
   createAztecSdk,
+  CreateSdkOptions,
   DefiSettlementTime,
   EthAddress,
   EthereumProvider,
@@ -14,9 +15,16 @@ import {
   TxType,
   UserPaymentTx,
   WalletProvider,
+  Timer,
 } from '@aztec/sdk';
 import createDebug from 'debug';
 import { Terminal } from './terminal';
+
+declare global {
+  interface Window {
+    aztecSdk: any;
+  }
+}
 
 const debug = createDebug('bb:terminal_handler');
 
@@ -46,15 +54,21 @@ export class TerminalHandler {
     balance: this.balance,
     fees: this.fees,
     status: this.status,
+    user: this.userInfo,
   };
   private assetId = 0;
   private sdk!: AztecSdk;
-  private provider!: EthereumProvider;
   private ethAddress!: EthAddress;
   private user!: AztecSdkUser;
   private accountPrivateKey!: Buffer;
 
-  constructor(private terminal: Terminal) {}
+  constructor(
+    private terminal: Terminal,
+    public provider: EthereumProvider,
+    private options: CreateSdkOptions = {
+      serverUrl: 'http://localhost:8081',
+    },
+  ) {}
 
   public start() {
     void this.controlQueue.process(fn => fn());
@@ -166,53 +180,36 @@ export class TerminalHandler {
           'register <alias> [amount]\n' +
           'balance\n' +
           'fees\n' +
-          'status [num] [from]\n',
+          'status [num] [from]\n' +
+          'user\n',
       );
     }
   }
 
-  private async getDeployTag() {
-    // If we haven't overridden our deploy tag, we discover it at runtime. All s3 deployments have a file
-    // called DEPLOY_TAG in their root containing the deploy tag.
-    if (process.env.NODE_ENV === 'production') {
-      return await fetch('/DEPLOY_TAG').then(resp => (resp.ok ? resp.text() : ''));
-    } else {
-      return '';
-    }
-  }
-
-  private async init(server: string) {
+  private async init(serverUrl: string) {
     this.unregisterHandlers();
 
-    if (!window.ethereum) {
-      throw new Error('No provider found.');
-    }
-
-    if (window.ethereum instanceof WalletProvider) {
+    if (this.provider instanceof WalletProvider) {
       this.printQueue.put(`using injected wallet provider.\n`);
     }
 
-    if (window.ethereum.enable) {
+    if ((this.provider as any).enable) {
       this.printQueue.put(`requesting account access...\n`);
-      await window.ethereum.enable();
+      await (this.provider as any).enable();
     }
 
-    this.provider = window.ethereum;
-
-    const deployTag = await this.getDeployTag();
-    const serverUrl = server || (deployTag ? `https://${deployTag}-sdk.aztec.network/` : 'http://localhost:1234');
-    this.sdk = await createAztecSdk(this.provider, {
-      serverUrl,
-      debug: window.localStorage.getItem('debug') || 'bb:*',
-    });
-
-    // Expose sdk for use in tests.
-    window.aztecSdk = this.sdk;
+    this.sdk = await createAztecSdk(this.provider, serverUrl ? { ...this.options, serverUrl } : this.options);
+    try {
+      window.aztecSdk = this.sdk;
+    } catch (_) {
+      // Nom.
+    }
 
     const ethereumRpc = new EthereumRpc(this.provider);
     [this.ethAddress] = await ethereumRpc.getAccounts();
     this.printQueue.put(`check provider to create account key...\n`);
     const { publicKey, privateKey } = await this.sdk.generateAccountKeyPair(this.ethAddress, this.provider);
+    this.accountPrivateKey = privateKey;
 
     try {
       const {
@@ -225,13 +222,19 @@ export class TerminalHandler {
       this.printQueue.put('failed to get server status.\n');
     }
 
-    this.user = await this.sdk.addUser(privateKey);
-    this.accountPrivateKey = privateKey;
+    const pubKey = await this.sdk.derivePublicKey(privateKey);
+    if (!(await this.sdk.userExists(pubKey))) {
+      this.user = await this.sdk.addUser(privateKey);
+    } else {
+      this.user = await this.sdk.getUser(pubKey);
+    }
 
     await this.sdk.run();
 
+    const timer = new Timer();
     this.printQueue.put(`syncing user: ${publicKey.toString().slice(0, 12)}...\n`);
     await this.sdk.awaitUserSynchronised(this.user.id);
+    this.printQueue.put(`sync complete in ${timer.s()}s\n`);
     await this.balance();
 
     this.registerHandlers();
@@ -411,5 +414,10 @@ export class TerminalHandler {
       }
       printTx(tx, ProofId[tx.proofId], tx.value);
     }
+  }
+
+  private async userInfo() {
+    this.printQueue.put(`user: ${this.user.id.toString().slice(0, 12)}...\n`);
+    this.printQueue.put(`synchronised: ${!(await this.user.isSynching())}\n`);
   }
 }

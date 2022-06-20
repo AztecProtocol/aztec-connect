@@ -2,15 +2,14 @@ import { BlockSource, Block } from '.';
 import { EventEmitter } from 'events';
 import { fetch } from '../iso_fetch';
 import { Deserializer } from '../serialize';
-// import createDebug from 'debug';
-// const debug = createDebug('bb:server_block_source');
+// import { createDebugLogger } from '@aztec/barretenberg/log';
+// const debug = createDebugLogger('bb:server_block_source');
 
 export class ServerBlockSource extends EventEmitter implements BlockSource {
   private running = false;
   private runningPromise = Promise.resolve();
   private interruptPromise = Promise.resolve();
   private interruptResolve = () => {};
-  private latestRollupId?: number;
   protected baseUrl: string;
 
   constructor(baseUrl: URL, private pollInterval = 10000) {
@@ -19,11 +18,11 @@ export class ServerBlockSource extends EventEmitter implements BlockSource {
   }
 
   public async getLatestRollupId() {
-    if (this.latestRollupId === undefined) {
-      // Call getBlocks to set latest rollup id, but we don't actually want any blocks.
-      await this.getBlocks();
-    }
-    return this.latestRollupId!;
+    const url = new URL(`${this.baseUrl}/get-blocks`);
+    const response = await this.awaitSucceed(() => fetch(url.toString(), { headers: { 'Accept-encoding': 'gzip' } }));
+    const result = Buffer.from(await response.arrayBuffer());
+    const des = new Deserializer(result);
+    return des.int32();
   }
 
   public async start(from = 0) {
@@ -82,7 +81,7 @@ export class ServerBlockSource extends EventEmitter implements BlockSource {
     const response = await this.awaitSucceed(() => fetch(url.toString(), { headers: { 'Accept-encoding': 'gzip' } }));
     const result = Buffer.from(await response.arrayBuffer());
     const des = new Deserializer(result);
-    this.latestRollupId = des.int32();
+    des.int32();
     return des.deserializeArray(Block.deserialize);
   }
 

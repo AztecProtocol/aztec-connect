@@ -9,7 +9,7 @@ declare global {
     ethereum: any;
     aztecSdk: AztecSdk;
     terminalPrompting: () => boolean;
-    injectProvider: (host: string) => void;
+    injectProvider: (host: string, pk: string) => void;
   }
 }
 
@@ -65,21 +65,14 @@ describe('hummus terminal test', () => {
 
   async function injectProvider(host: string, privateKey: Buffer) {
     await page.evaluate(
-      (host, privateKeyStr) => {
-        window.injectProvider(host);
-        window.ethereum.addAccount(Buffer.from(privateKeyStr, 'hex'));
-      },
+      (host, privateKeyStr) => window.injectProvider(host, privateKeyStr),
       host,
       privateKey.toString('hex'),
     );
   }
 
   async function waitUntilPrompting() {
-    return await page.evaluate(async () => {
-      while (!window.terminalPrompting()) {
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
-    });
+    return await page.evaluate(() => window.terminalPrompting());
   }
 
   async function sendCommand(cmd: string) {

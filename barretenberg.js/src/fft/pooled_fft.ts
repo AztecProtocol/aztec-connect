@@ -1,10 +1,10 @@
-import createDebug from 'debug';
+import { createDebugLogger } from '../log';
 import { MemoryFifo } from '../fifo';
 import { WorkerPool } from '../wasm/worker_pool';
 import { Fft, FftFactory } from './fft';
 import { SingleFft } from './single_fft';
 
-const debug = createDebug('bb:fft');
+const debug = createDebugLogger('bb:fft');
 
 interface Job {
   coefficients: Uint8Array;

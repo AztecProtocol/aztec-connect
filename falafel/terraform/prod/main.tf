@@ -167,7 +167,7 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "ETHEREUM_HOST",
-        "value": "http://ethereum.aztec.network:8545"
+        "value": "https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35"
       },
       {
         "name": "ROLLUP_CONTRACT_ADDRESS",

@@ -2,7 +2,7 @@ import { EventEmitter } from 'events';
 import { blockCursor, Cursor, spinnerCursor } from './cursor';
 import createDebug from 'debug';
 
-const debug = createDebug('bb:terminal');
+const debug = createDebug('aztec:hummus:terminal');
 
 export enum EscapeChars {
   PAUSE = '\x01',
@@ -18,46 +18,14 @@ export class Terminal extends EventEmitter {
   private interval!: NodeJS.Timeout;
   private cmd = '';
 
-  constructor(private rows: number, private cols: number) {
+  constructor(private rows: number, private cols: number, private forceUpper = false) {
     super();
     this.charBuf = Buffer.alloc(rows * cols, ' ', 'ascii');
     this.setCursor(blockCursor());
   }
 
-  private setCursor(cursor: Cursor) {
-    this.cursor = cursor;
+  public stop() {
     clearTimeout(this.interval);
-    const f = () => {
-      this.cursor.advance();
-      this.updated();
-      this.interval = setTimeout(f, this.cursor.getDelay());
-    };
-    this.interval = setTimeout(f, this.cursor.getDelay());
-  }
-
-  stop() {
-    clearTimeout(this.interval);
-  }
-
-  charAt(x: number, y: number) {
-    return String.fromCharCode(this.charBuf[y * this.cols + x]);
-  }
-
-  putChar(x: number, y: number, char: string) {
-    this.charBuf[y * this.cols + x] = char.charCodeAt(0);
-  }
-
-  putCursorChar(char: string) {
-    this.putChar(this.cursorX, this.cursorY, char);
-    this.cursorX++;
-    if (this.cursorX >= this.cols) {
-      this.newLine();
-    }
-  }
-
-  private clearLine() {
-    this.cursorX = 0;
-    this.charBuf.fill(' ', this.cols * this.cursorY);
   }
 
   public isPrompting() {
@@ -75,11 +43,19 @@ export class Terminal extends EventEmitter {
     this.inputLocked = true;
   }
 
-  private updated() {
-    this.emit('updated', ++this.stateCounter);
+  public async awaitPrompting() {
+    while (!this.isPrompting()) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
   }
 
-  async pasteString(str: string) {
+  public putInput(str: string) {
+    for (const char of str) {
+      this.rawKeyDown(char.charCodeAt(0));
+    }
+  }
+
+  public async pasteString(str: string) {
     if (this.inputLocked) {
       return;
     }
@@ -87,7 +63,7 @@ export class Terminal extends EventEmitter {
     await this.putString(str);
   }
 
-  async putString(str: string) {
+  public async putString(str: string) {
     debug(
       str
         .replace(/\n$/, '')
@@ -98,7 +74,7 @@ export class Terminal extends EventEmitter {
     const savedInputLocked = this.inputLocked;
     const savedCursor = this.cursor;
     this.inputLocked = true;
-    for (const char of str.toUpperCase()) {
+    for (const char of this.forceUpper ? str.toUpperCase() : str) {
       switch (char) {
         case EscapeChars.PAUSE:
           await new Promise(resolve => setTimeout(resolve, 500));
@@ -126,28 +102,7 @@ export class Terminal extends EventEmitter {
     this.updated();
   }
 
-  private newLine() {
-    this.cursorX = 0;
-    if (this.cursorY === this.rows - 1) {
-      this.charBuf.copyWithin(0, this.cols);
-      this.charBuf.fill(' ', (this.rows - 1) * this.cols);
-    } else {
-      this.cursorY++;
-    }
-  }
-
-  private backspace() {
-    if (this.cursorX > 0) {
-      this.putChar(this.cursorX - 1, this.cursorY, ' ');
-      this.cursorX--;
-    } else {
-      this.putChar(this.getCols() - 1, this.cursorY - 1, ' ');
-      this.cursorX = this.getCols() - 1;
-      this.cursorY--;
-    }
-  }
-
-  keyDown(event: KeyboardEvent) {
+  public keyDown(event: KeyboardEvent) {
     if (this.inputLocked || event.metaKey) {
       return;
     }
@@ -198,7 +153,45 @@ export class Terminal extends EventEmitter {
     this.updated();
   }
 
-  asString(includeCursor = true) {
+  public rawKeyDown(key: number) {
+    if (this.printableAscii(key)) {
+      // Reset blink.
+      this.setCursor(blockCursor());
+
+      this.putCursorChar(String.fromCharCode(key));
+      this.cmd += String.fromCharCode(key);
+    } else {
+      switch (key) {
+        case 127:
+          // Reset blink.
+          this.setCursor(blockCursor());
+          if (!this.cmd.length) {
+            break;
+          }
+          this.backspace();
+          this.cmd = this.cmd.slice(0, -1);
+          break;
+        case 13: {
+          const cmd = this.cmd;
+          this.cmd = '';
+          this.newLine();
+          this.lock();
+          this.emit('cmd', cmd);
+          break;
+        }
+        case 3: {
+          this.emit('ctrl-c');
+          break;
+        }
+        default:
+          return;
+      }
+    }
+
+    this.updated();
+  }
+
+  public asString(includeCursor = true) {
     let data = '';
     for (let i = 0; i < this.rows; ++i) {
       const row = this.charBuf.slice(i * this.cols, i * this.cols + this.cols).toString('ascii');
@@ -211,22 +204,80 @@ export class Terminal extends EventEmitter {
     return data;
   }
 
-  getRows() {
+  public getRows() {
     return this.rows;
   }
 
-  getCols() {
+  public getCols() {
     return this.cols;
+  }
+
+  private putChar(x: number, y: number, char: string) {
+    this.charBuf[y * this.cols + x] = char.charCodeAt(0);
+  }
+
+  private putCursorChar(char: string) {
+    this.putChar(this.cursorX, this.cursorY, char);
+    this.cursorX++;
+    if (this.cursorX >= this.cols) {
+      this.newLine();
+    }
   }
 
   private printable(keycode: number) {
     return (
       (keycode > 47 && keycode < 58) || // number keys
       keycode === 32 || // space
-      (keycode > 64 && keycode < 91) || // letter keys
+      (keycode > 64 && keycode < 91) || // upper letter keys
+      (keycode > 96 && keycode < 123) || // lower letter keys
       (keycode > 95 && keycode < 112) || // numpad keys
       (keycode > 185 && keycode < 193) || // ;=,-./` (in order)
       (keycode > 218 && keycode < 223) // [\]' (in order)
     );
+  }
+
+  private printableAscii(keycode: number) {
+    return keycode > 31 && keycode < 127;
+  }
+
+  private setCursor(cursor: Cursor) {
+    this.cursor = cursor;
+    clearTimeout(this.interval);
+    const f = () => {
+      this.cursor.advance();
+      this.updated();
+      this.interval = setTimeout(f, this.cursor.getDelay());
+    };
+    this.interval = setTimeout(f, this.cursor.getDelay());
+  }
+
+  private newLine() {
+    this.cursorX = 0;
+    if (this.cursorY === this.rows - 1) {
+      this.charBuf.copyWithin(0, this.cols);
+      this.charBuf.fill(' ', (this.rows - 1) * this.cols);
+    } else {
+      this.cursorY++;
+    }
+  }
+
+  private backspace() {
+    if (this.cursorX > 0) {
+      this.putChar(this.cursorX - 1, this.cursorY, ' ');
+      this.cursorX--;
+    } else {
+      this.putChar(this.getCols() - 1, this.cursorY - 1, ' ');
+      this.cursorX = this.getCols() - 1;
+      this.cursorY--;
+    }
+  }
+
+  private updated() {
+    this.emit('updated', ++this.stateCounter);
+  }
+
+  private clearLine() {
+    this.cursorX = 0;
+    this.charBuf.fill(' ', this.cols * this.cursorY);
   }
 }

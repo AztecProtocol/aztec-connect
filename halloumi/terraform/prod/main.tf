@@ -107,13 +107,13 @@ resource "aws_ec2_fleet" "halloumi_inner" {
     override {
       subnet_id         = data.terraform_remote_state.setup_iac.outputs.subnet_az1_private_id
       availability_zone = "eu-west-2a"
-      max_price         = "0.6"
+      max_price         = "0.7"
     }
 
     override {
       subnet_id         = data.terraform_remote_state.setup_iac.outputs.subnet_az2_private_id
       availability_zone = "eu-west-2b"
-      max_price         = "0.6"
+      max_price         = "0.7"
     }
   }
 
@@ -253,7 +253,7 @@ resource "aws_ecs_service" "halloumi_inner" {
   name                               = "${var.DEPLOY_TAG}-halloumi-inner"
   cluster                            = data.terraform_remote_state.setup_iac.outputs.ecs_cluster_id
   launch_type                        = "EC2"
-  desired_count                      = 32
+  desired_count                      = 4
   deployment_maximum_percent         = 100
   deployment_minimum_healthy_percent = 0
 

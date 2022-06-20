@@ -40,7 +40,6 @@ export enum UserStateEvent {
 
 export class UserState extends EventEmitter {
   private notePickers: { assetId: number; notePicker: NotePicker }[] = [];
-  private latestRollupId = -1;
 
   constructor(
     private userData: UserData,
@@ -53,8 +52,9 @@ export class UserState extends EventEmitter {
     super();
   }
 
-  private debug(str: string) {
-    debug(`${this.userData.accountPublicKey.toShortString()}: ${str}`);
+  private debug(...args: any[]) {
+    const [first, ...rest] = args;
+    debug(`${this.userData.accountPublicKey.toShortString()}: ${first}`, ...rest);
   }
 
   /**
@@ -63,7 +63,6 @@ export class UserState extends EventEmitter {
   public async init() {
     await this.resetData();
     await this.refreshNotePicker();
-    this.latestRollupId = await this.rollupProvider.getLatestRollupId();
   }
 
   /**
@@ -71,7 +70,6 @@ export class UserState extends EventEmitter {
    * If the user has synched further underfoot, we refresh our notepicker and emit an update event.
    */
   public async syncFromDb() {
-    this.latestRollupId = await this.rollupProvider.getLatestRollupId();
     const { syncedToRollup } = (await this.db.getUser(this.userData.accountPublicKey))!;
     if (syncedToRollup !== this.userData.syncedToRollup) {
       this.userData.syncedToRollup = syncedToRollup;
@@ -80,12 +78,12 @@ export class UserState extends EventEmitter {
     }
   }
 
-  public isSynchronised() {
-    return this.userData.syncedToRollup === this.latestRollupId;
+  public isSynchronised(latestRollupId: number) {
+    return this.userData.syncedToRollup >= latestRollupId;
   }
 
-  public async awaitSynchronised(timeout?: number) {
-    await retryUntil(() => this.isSynchronised(), 'user synchronised', timeout);
+  public async awaitSynchronised(latestRollupId: number, timeout?: number) {
+    await retryUntil(() => this.isSynchronised(latestRollupId), 'user synchronised', timeout);
   }
 
   public getUserData(): UserData {
@@ -108,7 +106,7 @@ export class UserState extends EventEmitter {
 
     const timer = new Timer();
     const from = blockContexts[0].rollup.rollupId;
-    this.debug(`synching blocks ${from} to ${from + blockContexts.length}...`);
+    this.debug(`synching blocks ${from} to ${from + blockContexts.length - 1}...`);
 
     const rollupProofData = blockContexts.map(b => b.rollup);
     const innerProofs = rollupProofData.map(p => p.innerProofData.filter(i => !i.isPadding())).flat();

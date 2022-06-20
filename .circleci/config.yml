@@ -602,6 +602,20 @@ jobs:
             deploy_ecr docs
             deploy_s3 docs
 
+  smoketest:
+    docker:
+      - image: aztecprotocol/build-image
+    resource_class: small
+    steps:
+      - checkout
+      - *setup_env
+      - setup_remote_docker:
+          version: 19.03.13
+      - run:
+          name: 'Test'
+          working_directory: end-to-end/scripts
+          command: ./run_smoketest
+
   deploy-website:
     docker:
       - image: aztecprotocol/build-image
@@ -748,46 +762,57 @@ workflows:
       - e2e-prover:
           requires:
             - end-to-end
+            - hummus
           filters: *tag_filter
       - e2e-payment:
           requires:
             - end-to-end
+            - hummus
           filters: *tag_filter
       - e2e-permit:
           requires:
             - end-to-end
+            - hummus
           filters: *tag_filter
       - e2e-migrated-accounts:
           requires:
             - end-to-end
+            - hummus
           filters: *tag_filter
       - e2e-account:
           requires:
             - end-to-end
+            - hummus
           filters: *tag_filter
       - e2e-defi:
           requires:
             - end-to-end
+            - hummus
           filters: *tag_filter
       - e2e-non-fee-assets:
           requires:
             - end-to-end
+            - hummus
           filters: *tag_filter
       - e2e-virtual-assets:
           requires:
             - end-to-end
+            - hummus
           filters: *tag_filter
       - e2e-element:
           requires:
             - end-to-end
+            - hummus
           filters: *tag_filter
       - e2e-lido:
           requires:
             - end-to-end
+            - hummus
           filters: *tag_filter
       - e2e-hosted-sdk:
           requires:
             - end-to-end
+            - hummus
           filters: *tag_filter
       - deploy:
           requires:

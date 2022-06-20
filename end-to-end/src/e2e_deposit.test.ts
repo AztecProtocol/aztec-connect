@@ -20,6 +20,8 @@ const {
 } = process.env;
 
 /**
+ * This simple deposit is run with the prover enabled in the e2e-prover test in CI.
+ *
  * Run the following:
  * blockchain: yarn start:ganache
  * halloumi: yarn start:e2e
@@ -27,7 +29,7 @@ const {
  * end-to-end: yarn test ./src/e2e_deposit.test.ts
  */
 
-describe('end-to-end tests', () => {
+describe('end-to-end deposit test', () => {
   let provider: WalletProvider;
   let sdk: AztecSdk;
   let depositor: EthAddress;
