@@ -29,6 +29,10 @@ Most of the above capabilities are possible through the use of `Controllers`. Co
 
 For example, the `RegisterController` is used for registering accounts, the `DepositController` for sending Ether or tokens to an Aztec account from an Ethereum account and the `TransferController` for spending notes within the Aztec network.
 
+## Accounts
+
+Aztec accounts may have two or more associated private keys. A new Aztec account should register a unique spending key before handling funds. Please review the [account overview page](../how-aztec-works/accounts) for a high level overview or dig into the code in the [Add Accounts to the SDK page](./usage/add-account).
+
 ## SDK Flavours
 
 The SDK comes in 3 flavours. The users environment will typically automatically determine which flavour is used, but it is good to be aware of them because they do have tradeoffs.
