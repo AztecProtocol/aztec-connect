@@ -12,11 +12,9 @@ A spending key must be registered on the network before it can be used. The SDK 
 
 You can find the interface for the `RegisterController` class [here](../types/sdk/RegisterController).
 
-## RegisterController Setup
+## Setup
 
-You can find the type definition of the RegisterController class [here](../types/RegisterController).
-
-`AztecSdk.createRegisterController`
+You can find the type definition of the RegisterController class [here](../types/sdk/RegisterController).
 
 ```ts
 AztecSdk.createRegisterController(
