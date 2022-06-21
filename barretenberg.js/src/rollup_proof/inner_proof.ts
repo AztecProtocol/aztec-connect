@@ -16,7 +16,7 @@ export class InnerProofData {
     public nullifier2: Buffer,
     public publicValue: Buffer,
     public publicOwner: Buffer,
-    public assetId: Buffer,
+    public publicAssetId: Buffer,
   ) {}
 
   public get txId(): Buffer {
@@ -39,7 +39,7 @@ export class InnerProofData {
       this.nullifier2,
       this.publicValue,
       this.publicOwner,
-      this.assetId,
+      this.publicAssetId,
     ]);
   }
 
@@ -63,7 +63,7 @@ export class InnerProofData {
     dataStart += 32;
     const publicOwner = innerPublicInputs.slice(dataStart, dataStart + 32);
     dataStart += 32;
-    const assetId = innerPublicInputs.slice(dataStart, dataStart + 32);
+    const publicAssetId = innerPublicInputs.slice(dataStart, dataStart + 32);
     dataStart += 32;
 
     return new InnerProofData(
@@ -74,7 +74,7 @@ export class InnerProofData {
       nullifier2,
       publicValue,
       publicOwner,
-      assetId,
+      publicAssetId,
     );
   }
 }

@@ -267,14 +267,14 @@ export const createRollupProof = (
     switch (proof.proofId) {
       case ProofId.DEFI_DEPOSIT:
       case ProofId.DEFI_CLAIM: {
-        const bridgeId = BridgeId.fromBuffer(proof.assetId);
+        const bridgeId = BridgeId.fromBuffer(proof.publicAssetId);
         assetIds.add(bridgeId.inputAssetIdA);
         break;
       }
       case ProofId.ACCOUNT:
         break;
       default:
-        assetIds.add(proof.assetId.readUInt32BE(28));
+        assetIds.add(proof.publicAssetId.readUInt32BE(28));
     }
   });
 

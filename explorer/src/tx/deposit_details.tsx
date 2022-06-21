@@ -9,7 +9,7 @@ import { useAsset } from '../context';
 
 export function DepositDetails({ tx }: { tx: Tx }) {
   const innerProofData = InnerProofData.fromBuffer(Buffer.from(tx.proofData, 'hex'));
-  const assetId = assetIdFromBuffer(innerProofData.assetId);
+  const assetId = assetIdFromBuffer(innerProofData.publicAssetId);
   const asset = useAsset(assetId);
   const assetIcon = getAssetIcon(asset);
   const publicValue = toBigIntBE(innerProofData.publicValue);

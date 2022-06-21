@@ -649,7 +649,7 @@ export class UserState extends EventEmitter {
     destroyedNote2: Note | undefined,
   ) {
     const proofId = proof.proofId as PaymentProofId;
-    const assetId = proof.assetId.readUInt32BE(28);
+    const assetId = (valueNote || changeNote)!.assetId;
 
     const publicValue = toBigIntBE(proof.publicValue);
     const publicOwner = publicValue ? new EthAddress(proof.publicOwner) : undefined;

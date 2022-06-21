@@ -16,7 +16,7 @@ export class RollupDefiClaimProofData {
   }
 
   get bridgeId() {
-    return BridgeId.fromBuffer(this.proofData.assetId);
+    return BridgeId.fromBuffer(this.proofData.publicAssetId);
   }
 
   static decode(encoded: Buffer) {
