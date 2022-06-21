@@ -12,15 +12,12 @@ import {
   SendComposerPayload,
 } from 'alt-model/send';
 import style from './send_confirmation_page.module.scss';
-import { RemoteAsset } from 'alt-model/types';
 import { RetrySigningButton } from '../modal_molecules/retry_signing_button';
 
 interface SendConfirmationPageProps {
   composerState: SendComposerState;
   lockedComposerPayload: SendComposerPayload;
   state: SendFormDerivedData;
-  asset: RemoteAsset;
-  txAmountLimit: bigint;
   onSubmit: () => void;
   onClose: () => void;
 }
@@ -36,8 +33,6 @@ export function SendConfirmationPage({
   composerState,
   lockedComposerPayload,
   state,
-  asset,
-  txAmountLimit,
   onSubmit,
   onClose,
 }: SendConfirmationPageProps) {

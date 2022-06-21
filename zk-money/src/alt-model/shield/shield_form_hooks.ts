@@ -22,7 +22,7 @@ import { estimateTxSettlementTimes } from 'alt-model/estimate_settlement_times';
 
 const debug = createDebug('zm:shield_form_hooks');
 
-export function useShieldForm(preselectedAssetId?: number) {
+export function useShieldForm(preselectedAssetId?: number, onShieldComplete?: () => void) {
   const { alias, provider, requiredNetwork, config, keyVault, userId } = useApp();
   const [fields, setFields] = useState<ShieldFormFields>({
     assetId: preselectedAssetId ?? 0,
@@ -110,7 +110,7 @@ export function useShieldForm(preselectedAssetId?: number) {
     setLockedComposer(composer);
   };
 
-  const submit = () => {
+  const submit = async () => {
     if (!lockedComposer) {
       debug('Attempted to submit before locking');
       return;
@@ -119,15 +119,15 @@ export function useShieldForm(preselectedAssetId?: number) {
       debug('Tried to resubmit form while in progress');
       return;
     }
-    lockedComposer.compose().then(txId => {
-      if (txId) {
-        const timeToSettlement = [nextSettlementTime, instantSettlementTime][fields.speed];
-        if (timeToSettlement) {
-          localStorage.setItem(txId.toString(), timeToSettlement.toString());
-        }
-        rpStatusPoller.invalidate();
+    const txId = await lockedComposer.compose();
+    if (txId) {
+      const timeToSettlement = [nextSettlementTime, instantSettlementTime][fields.speed];
+      if (timeToSettlement) {
+        localStorage.setItem(txId.toString(), timeToSettlement.toString());
       }
-    });
+      rpStatusPoller.invalidate();
+      onShieldComplete?.();
+    }
   };
 
   const unlock = () => {

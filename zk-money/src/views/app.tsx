@@ -375,7 +375,11 @@ export class AppView extends PureComponent<AppProps, AppState> {
                       <>
                         <Home onSignup={this.handleSignup} />
                         {!isLoggedIn && (
-                          <SelfDismissingIncentiveModal instanceName="home" onShieldNow={this.handleSignup} />
+                          <SelfDismissingIncentiveModal
+                            instanceName="home"
+                            buttonLabel="Shield now"
+                            onButtonClick={this.handleSignup}
+                          />
                         )}
                       </>
                     }

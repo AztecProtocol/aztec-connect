@@ -9,6 +9,7 @@ import { ShieldModalHeader } from './shield_modal_header';
 interface ShieldModalProps {
   onClose: () => void;
   preselectedAssetId?: number;
+  onShieldComplete?: () => void;
 }
 
 export function ShieldModal(props: ShieldModalProps) {
@@ -25,7 +26,7 @@ export function ShieldModal(props: ShieldModalProps) {
     feedback,
     submit,
     unlock,
-  } = useShieldForm(props.preselectedAssetId);
+  } = useShieldForm(props.preselectedAssetId, props.onShieldComplete);
 
   const phase = composerState?.phase;
   const isIdle = phase === ShieldComposerPhase.IDLE;

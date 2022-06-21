@@ -1,7 +1,4 @@
-import { isKnownAssetAddressString } from 'alt-model/known_assets/known_asset_addresses';
-import type { RemoteAsset } from 'alt-model/types';
 import { Card, CardHeaderSize } from 'ui-components';
-import { useApp } from 'alt-model';
 import { Modal } from 'components';
 import { SendFormFieldsPage } from './send_form_fields_page';
 import { SendComposerPhase, useSendForm } from 'alt-model/send';
@@ -11,12 +8,11 @@ import { SendModalHeader } from './send_modal_header';
 
 interface SendModalProps {
   onClose: () => void;
-  asset: RemoteAsset;
+  assetId: number;
 }
 
-export function SendModal({ asset, onClose }: SendModalProps) {
-  const { config } = useApp();
-  const sendForm = useSendForm(asset.id);
+export function SendModal({ assetId, onClose }: SendModalProps) {
+  const sendForm = useSendForm(assetId);
   const {
     state,
     setters,
@@ -39,12 +35,6 @@ export function SendModal({ asset, onClose }: SendModalProps) {
   const overrideModalLayout = !generatingKey;
   const theme = generatingKey ? Theme.GRADIENT : Theme.WHITE;
 
-  const assetAddressStr = asset.address.toString();
-  if (!isKnownAssetAddressString(assetAddressStr)) {
-    throw new Error(`Attempting SendModal with unknown asset address '${assetAddressStr}'`);
-  }
-  const txAmountLimit = config.txAmountLimits[assetAddressStr];
-
   const cardContent =
     isLocked && composerState && lockedComposerPayload ? (
       <SendConfirmationPage
@@ -53,12 +43,9 @@ export function SendModal({ asset, onClose }: SendModalProps) {
         composerState={composerState}
         onSubmit={submit}
         onClose={onClose}
-        asset={asset}
-        txAmountLimit={txAmountLimit}
       />
     ) : (
       <SendFormFieldsPage
-        asset={asset}
         state={state}
         feedback={feedback}
         isValid={!!isValid}

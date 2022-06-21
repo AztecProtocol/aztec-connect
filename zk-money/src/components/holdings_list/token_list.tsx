@@ -4,19 +4,17 @@ import { RemoteAsset } from 'alt-model/types';
 import { Pagination } from 'components/pagination';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { SendModal } from 'views/account/dashboard/modals/send_modal';
-import { ShieldModal } from 'views/account/dashboard/modals/shield_modal';
 import { HOLDINGS_PER_PAGE, slicePage } from './helpers';
 import { Holding } from './holding';
 
 interface TokenListProps {
   balances: AssetValue[] | undefined;
+  onOpenShieldModal: (assetId: number) => void;
+  onOpenSendModal: (assetId: number) => void;
 }
 
-export function TokenList({ balances }: TokenListProps) {
+export function TokenList(props: TokenListProps) {
   const navigate = useNavigate();
-  const [sendModalAsset, setSendModalAsset] = useState<RemoteAsset | undefined>(undefined);
-  const [shieldModalAsset, setShieldModalAsset] = useState<RemoteAsset | undefined>(undefined);
   const [page, setPage] = useState(1);
 
   const handleGoToEarn = (asset: RemoteAsset) => {
@@ -24,33 +22,30 @@ export function TokenList({ balances }: TokenListProps) {
     navigate(`/earn${searchStr}`);
   };
 
-  if (!balances) return <></>;
-  if (balances.length === 0) return <div>You have no tokens yet.</div>;
+  if (!props.balances) return <></>;
+  if (props.balances.length === 0) return <div>You have no tokens yet.</div>;
 
   return (
     <>
-      {slicePage(balances ?? [], page).map(balance => {
+      {slicePage(props.balances ?? [], page).map(balance => {
+        const { assetId } = balance;
         return (
           <Holding
-            key={balance.assetId}
+            key={assetId}
             assetValue={balance}
-            onSend={setSendModalAsset}
-            onShield={setShieldModalAsset}
+            onSend={() => props.onOpenSendModal(assetId)}
+            onShield={() => props.onOpenShieldModal(assetId)}
             onGoToEarn={handleGoToEarn}
           />
         );
       })}
-      {balances.length > HOLDINGS_PER_PAGE && (
+      {props.balances.length > HOLDINGS_PER_PAGE && (
         <Pagination
-          totalItems={balances?.length ?? 0}
+          totalItems={props.balances?.length ?? 0}
           itemsPerPage={HOLDINGS_PER_PAGE}
           page={page}
           onChangePage={setPage}
         />
-      )}
-      {sendModalAsset && <SendModal asset={sendModalAsset} onClose={() => setSendModalAsset(undefined)} />}
-      {shieldModalAsset && (
-        <ShieldModal preselectedAssetId={shieldModalAsset.id} onClose={() => setShieldModalAsset(undefined)} />
       )}
     </>
   );

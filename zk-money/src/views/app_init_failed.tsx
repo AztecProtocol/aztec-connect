@@ -40,7 +40,7 @@ export function AppInitFailed({ reason }: AppInitFailedProps) {
       {showingReason && reason.type === 'unsupported' && (
         <UnsupportedPopup onClose={handleClosePopup} supportStatus={reason.supportStatus} />
       )}
-      <SelfDismissingIncentiveModal instanceName="failure" onShieldNow={handleInteraction} />
+      <SelfDismissingIncentiveModal instanceName="failure" buttonLabel="Shield now" onButtonClick={handleInteraction} />
     </Template>
   );
 }

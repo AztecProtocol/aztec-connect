@@ -16,6 +16,8 @@ type View = typeof VIEWS[number]['value'];
 
 interface HoldingsListProps {
   onOpenDefiExitModal: (recipe: DefiRecipe) => void;
+  onOpenShieldModal: (assetId: number) => void;
+  onOpenSendModal: (assetId: number) => void;
 }
 
 export function HoldingsList(props: HoldingsListProps) {
@@ -30,7 +32,11 @@ export function HoldingsList(props: HoldingsListProps) {
       </div>
       <>
         {view === 'tokens' ? (
-          <TokenList balances={balances} />
+          <TokenList
+            balances={balances}
+            onOpenShieldModal={props.onOpenShieldModal}
+            onOpenSendModal={props.onOpenSendModal}
+          />
         ) : (
           <DefiInvestments positions={positions} onOpenDefiExitModal={props.onOpenDefiExitModal} />
         )}
