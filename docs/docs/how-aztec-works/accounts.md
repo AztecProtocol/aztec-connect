@@ -16,7 +16,7 @@ In [zk.money](https://zk.money), Aztec accounts are generated using Ethereum acc
 
 ## Users And Accounts
 
-Users in Aztec will use the main account to receive notes and decrypt balances and the signer to spend notes or initiate bridged Ethereum interactions.
+Users in Aztec will use the main account to receive notes and decrypt balances and the signer (or spending key) to spend notes or initiate bridged Ethereum interactions.
 
 ### Account
 
@@ -38,11 +38,25 @@ You can add as many spending keys to an account as you want. This allows you to 
 
 To register a new account, you need to choose an alias and a new spending public key. Optionally, you can include a recovery account public key and a deposit.
 
+Generally, an account with a registered spending key is considered safer than account that only uses the default account keys. An account without a spending key uses default account private key for note decryption as well as spending notes. When a spending key is registered, the default private key can only be used for decrypting notes and spending must be done with a registered spending key.
+
+Most users will typically use an account with a registered spending key and are thus considered "safe". There are use cases (airdrops) where you might want to use an account that has not yet registered a spending key and is using the default account key for both note decryption and spending. So it is possible to use the system without registering your account.
+
+When you use an unregistered account, your notes are marked as spendable by the account key. It's possible to register an alias and it's the sender that defines wether notes are marked spendable with the account key. A sender can check whether an account has registered spending keys before specifying how the notes can be spent.
+
+You cannot mix the spending of these notes. You can send unspent notes from the default account to yourself, but marked as spendable by the signing key.
+
+The SDK tries to abstract much of this complexity away and presents everything to a developer as if this notion does not exist (e.g. the account balance is the sum of all notes regardless of registered or not).
+
+If you want to know exactly what you can spend in one transaction, you have to tell the SDK whether your interested in the unregistered or registered balances.
+
+When actually creating the zero knowledge proof, the SDK infers which balance you're drawing from based on whether you give it a spending key or the account key.
+
 ### Account Alias
 
 The main privacy account public key is associated with a human-readable alias when the account registers a new signing key (see below). The alias can be anything (20 alphanumeric, lowercase characters or less) as long as it hasn't been claimed yet.
 
-Do not forget your alias. If you forget your alias you will not be able to share it with others to make it easy for them to send you asset notes.
+Do not forget your alias. If you forget your alias you will not be able to share it to make it easy for them to send you asset notes.
 
 There is no way to recover a forgotten alias, but you can register a new account with a new alias and transfer your notes to the new account.
 
@@ -50,11 +64,13 @@ If you forget your alias you can still transfer and withdraw asset notes.
 
 ### Account Migration
 
-Keep your alias and update your account (privacy) keys. This will update the public key associated with your alias as well as the key that is used to decrypt your account notes. This can only be done 1 time.
+Account migration allows you to keep your alias and just update your account (privacy) keys. This will update the public key associated with your alias as well as the key that is used to decrypt your account notes. This can only be done 1 time.
 
 ### Account Recovery
 
 If you lose access to all of your spending keys for an account, the designated recovery account can help you recover access and register a new spending key that you have access to.
+
+This recovery information is created and registered with the account during the account registration step.
 
 ## Frequently Asked Questions
 
