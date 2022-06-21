@@ -21,9 +21,10 @@ type FailureReason =
 
 interface AppInitFailedProps {
   reason: FailureReason;
+  explorerUrl: string;
 }
 
-export function AppInitFailed({ reason }: AppInitFailedProps) {
+export function AppInitFailed({ reason, explorerUrl }: AppInitFailedProps) {
   const [showingReason, setShowingReason] = useState(false);
   const handleInteraction = () => setShowingReason(true);
   const handleClosePopup = () => setShowingReason(false);
@@ -34,7 +35,7 @@ export function AppInitFailed({ reason }: AppInitFailedProps) {
 
   const systemMessage = showingReason && reason.type === 'falafel-down' ? FALAFEL_UNREACHABLE_MSG : undefined;
   return (
-    <Template theme={Theme.GRADIENT} systemMessage={systemMessage}>
+    <Template theme={Theme.GRADIENT} systemMessage={systemMessage} explorerUrl={explorerUrl}>
       <Navbar path={window.location.pathname} theme={Theme.GRADIENT} isLoggingIn={false} isLoggedIn={false} />
       <Home onSignup={handleInteraction} />
       {showingReason && reason.type === 'unsupported' && (

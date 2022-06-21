@@ -17,7 +17,7 @@ function AppViewConnector({ config }: { config: Config }) {
     return <AppView config={config} sdkObs={sdkObs} path={pathname} navigate={navigate} />;
   }
   return (
-    <Template theme={Theme.GRADIENT}>
+    <Template theme={Theme.GRADIENT} explorerUrl={config.explorerUrl}>
       <div>Not Found</div>
     </Template>
   );

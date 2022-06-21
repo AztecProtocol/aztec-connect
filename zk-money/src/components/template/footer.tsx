@@ -12,11 +12,7 @@ interface MenuItem {
   to?: string;
 }
 
-const helpItems = [
-  {
-    name: 'Block Explorer',
-    href: 'https://explorer.aztec.network/',
-  },
+const staticHelpItems = [
   {
     name: 'Discord',
     href: 'https://discord.gg/c7kaz9s5kr',
@@ -107,17 +103,24 @@ const Foot = styled.div`
   }
 `;
 
-export const Footer: React.FunctionComponent = () => (
-  <FooterRoot>
-    <ContentWrapper>
-      <FooterContent>
-        <FooterMenu title="Need Help?" menuItems={helpItems} />
-        <FooterMenu title="About" menuItems={aboutItems} />
-        <FooterMenu title="Social" menuItems={socialItems} />
-      </FooterContent>
-      <Foot>
-        <Text text="Made in London" size="xs" />
-      </Foot>
-    </ContentWrapper>
-  </FooterRoot>
-);
+interface FooterProps {
+  explorerUrl: string;
+}
+
+export function Footer(props: FooterProps) {
+  const helpItems = [{ name: 'Block Explorer', href: props.explorerUrl }, ...staticHelpItems];
+  return (
+    <FooterRoot>
+      <ContentWrapper>
+        <FooterContent>
+          <FooterMenu title="Need Help?" menuItems={helpItems} />
+          <FooterMenu title="About" menuItems={aboutItems} />
+          <FooterMenu title="Social" menuItems={socialItems} />
+        </FooterContent>
+        <Foot>
+          <Text text="Made in London" size="xs" />
+        </Foot>
+      </ContentWrapper>
+    </FooterRoot>
+  );
+}

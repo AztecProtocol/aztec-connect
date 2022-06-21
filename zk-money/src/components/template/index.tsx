@@ -93,6 +93,7 @@ interface TemplateProps {
   children: React.ReactNode;
   systemMessage?: SystemMessage;
   isLoading?: boolean;
+  explorerUrl: string;
 }
 
 export const Template: React.FunctionComponent<TemplateProps> = ({
@@ -100,6 +101,7 @@ export const Template: React.FunctionComponent<TemplateProps> = ({
   children,
   systemMessage,
   isLoading = false,
+  explorerUrl,
 }) => {
   const [withCookie, setWithCookie] = useState(!isCookieAccepted());
   const [isResizing, setResizing] = useState(false);
@@ -126,7 +128,7 @@ export const Template: React.FunctionComponent<TemplateProps> = ({
         </ContentRoot>
         {!isLoading && (
           <>
-            <Footer />
+            <Footer explorerUrl={explorerUrl} />
             {!!systemMessage?.message && (
               <SystemMessagePopup message={systemMessage.message} type={systemMessage.type} />
             )}
