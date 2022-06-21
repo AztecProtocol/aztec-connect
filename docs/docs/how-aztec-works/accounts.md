@@ -24,15 +24,37 @@ The privacy account is the first account that is generated for an Aztec user.
 
 The private key associated with this account can be used to decrypt notes. The private key can also be used to register a distinct spending key. This allows for account abstraction by creating a separation between the key required to decrypt notes (privacy key) and the key required to spend notes (spending key). If a spending has not been registered, the account private key can be used.
 
-The main privacy account public key is associated with a human-readable alias when the account registers a new signing key (see below). The alias can be anything as long as it hasn't been claimed yet.
-
-### Signer
+### Spending keys (signer)
 
 An account should register a signer with a new spending key on the network in order to take advantage of account abstraction.
 
-Signers are registered with a human-readable alias, a spending key and a recovery key. If the spending key is lost, a recovery flow can be initiated by the recovery account specified when the new spending key was registered.
+When an account is first registered, you can pick a human-readable alias, a spending key and a recovery key. If the spending key is lost, a recovery flow can be initiated by the recovery account specified when the new spending key was registered (account recovery).
 
 Registering a spending key has an associated fee as it typically includes a token (or ETH) deposit and posts transactions to the network.
+
+You can add as many spending keys to an account as you want. This allows you to spend notes from the same account from multiple devices without having to share sensitive private keys across devices.
+
+### Account Registration
+
+To register a new account, you need to choose an alias and a new spending public key. Optionally, you can include a recovery account public key and a deposit.
+
+### Account Alias
+
+The main privacy account public key is associated with a human-readable alias when the account registers a new signing key (see below). The alias can be anything (20 alphanumeric, lowercase characters or less) as long as it hasn't been claimed yet.
+
+Do not forget your alias. If you forget your alias you will not be able to share it with others to make it easy for them to send you asset notes.
+
+There is no way to recover a forgotten alias, but you can register a new account with a new alias and transfer your notes to the new account.
+
+If you forget your alias you can still transfer and withdraw asset notes.
+
+### Account Migration
+
+Keep your alias and update your account (privacy) keys. This will update the public key associated with your alias as well as the key that is used to decrypt your account notes. This can only be done 1 time.
+
+### Account Recovery
+
+If you lose access to all of your spending keys for an account, the designated recovery account can help you recover access and register a new spending key that you have access to.
 
 ## Frequently Asked Questions
 
