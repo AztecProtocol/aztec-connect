@@ -177,7 +177,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   private async getPerRollupState(block?: Block) {
     const state = await this.contracts.getPerRollupState();
     if (block) {
-      const rollupProofData = RollupProofData.fromBuffer(block.rollupProofData);
+      const rollupProofData = RollupProofData.decode(block.encodedRollupProofData);
       return {
         ...state,
         nextRollupId: rollupProofData.rollupId + 1,

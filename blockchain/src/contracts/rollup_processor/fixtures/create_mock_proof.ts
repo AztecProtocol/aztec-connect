@@ -310,7 +310,7 @@ export const createRollupProof = (
 
   return {
     ...innerProofOutput,
-    proofData,
+    encodedProofData: rollupProofData.encode(),
     rollupProofData,
     offchainTxData,
   };

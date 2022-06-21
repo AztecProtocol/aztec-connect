@@ -168,7 +168,6 @@ export class RollupPublisher {
   }
 
   private async createTxData(rollup: RollupDao) {
-    const proof = rollup.rollupProof.proofData;
     const txs = rollup.rollupProof.txs;
     const offchainTxData = txs.map(tx => tx.offchainTxData);
     const jsTxs = txs.filter(tx => tx.signature);
@@ -180,7 +179,7 @@ export class RollupPublisher {
         signatures.push(tx.signature!);
       }
     }
-    return await this.blockchain.createRollupTxs(proof, signatures, offchainTxData);
+    return await this.blockchain.createRollupTxs(rollup.rollupProof.encodedProofData, signatures, offchainTxData);
   }
 
   private async sendTx(txData: Buffer, options: SendTxOptions) {

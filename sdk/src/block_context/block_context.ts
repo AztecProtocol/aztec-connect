@@ -27,7 +27,7 @@ export class BlockContext {
 
   static fromBlock(block: Block, pedersen: Pedersen) {
     return new BlockContext(
-      RollupProofData.fromBuffer(block.rollupProofData),
+      RollupProofData.decode(block.encodedRollupProofData),
       block.rollupSize,
       block.created,
       block.interactionResult,

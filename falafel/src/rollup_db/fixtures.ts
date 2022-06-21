@@ -1,9 +1,9 @@
 import { AliasHash } from '@aztec/barretenberg/account_id';
-import { GrumpkinAddress } from '@aztec/barretenberg/address';
+import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { TxType } from '@aztec/barretenberg/blockchain';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
-import { ProofData } from '@aztec/barretenberg/client_proofs';
+import { ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
 import { OffchainAccountData } from '@aztec/barretenberg/offchain_tx_data';
 import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { numToUInt32BE } from '@aztec/barretenberg/serialize';
@@ -13,7 +13,23 @@ import { ClaimDao, RollupDao, RollupProofDao, TxDao } from '../entity';
 
 const now = moment();
 
-const txTypeToProofId = (txType: TxType) => (txType < TxType.WITHDRAW_TO_CONTRACT ? txType + 1 : txType);
+const txTypeToProofId = (txType: TxType) => {
+  switch (txType) {
+    case TxType.ACCOUNT:
+      return ProofId.ACCOUNT;
+    case TxType.DEFI_CLAIM:
+      return ProofId.DEFI_CLAIM;
+    case TxType.DEFI_DEPOSIT:
+      return ProofId.DEFI_DEPOSIT;
+    case TxType.DEPOSIT:
+      return ProofId.DEPOSIT;
+    case TxType.TRANSFER:
+      return ProofId.SEND;
+    case TxType.WITHDRAW_TO_CONTRACT:
+    case TxType.WITHDRAW_TO_WALLET:
+      return ProofId.WITHDRAW;
+  }
+};
 
 export const randomTx = ({
   txType = TxType.TRANSFER,
@@ -24,6 +40,8 @@ export const randomTx = ({
   aliasHash = AliasHash.random(),
 } = {}) => {
   const proofId = txTypeToProofId(txType);
+  const isPublic =
+    txType == TxType.WITHDRAW_TO_CONTRACT || txType == TxType.WITHDRAW_TO_WALLET || txType == TxType.DEPOSIT;
   const proofData = new ProofData(
     Buffer.concat([
       numToUInt32BE(proofId, 32),
@@ -31,7 +49,9 @@ export const randomTx = ({
       randomBytes(32),
       nullifier1,
       nullifier2,
-      randomBytes(32 * (ProofData.NUM_PUBLIC_INPUTS - 5)),
+      isPublic ? randomBytes(32) : Buffer.alloc(32),
+      isPublic ? Buffer.concat([Buffer.alloc(12), EthAddress.random().toBuffer()]) : Buffer.alloc(32),
+      isPublic ? Buffer.concat([Buffer.alloc(28), randomBytes(4)]) : Buffer.alloc(32),
     ]),
   );
   const offchainTxData =
@@ -64,20 +84,22 @@ export const randomAccountTx = ({
     nullifier2: !addKey ? accountPublicKey.y() : Buffer.alloc(32),
   });
 
-export const randomRollupProof = (txs: TxDao[], dataStartIndex = 0, rollupSize = txs.length) =>
-  new RollupProofDao({
+export const randomRollupProof = (txs: TxDao[], dataStartIndex = 0, rollupSize = txs.length) => {
+  const encodedProofData = RollupProofData.randomData(
+    0,
+    txs.length,
+    dataStartIndex,
+    txs.map(tx => InnerProofData.fromBuffer(tx.proofData)),
+  ).encode();
+  return new RollupProofDao({
     id: randomBytes(32),
     txs,
     dataStartIndex,
     rollupSize,
-    proofData: RollupProofData.randomData(
-      0,
-      txs.length,
-      dataStartIndex,
-      txs.map(tx => InnerProofData.fromBuffer(tx.proofData)),
-    ).toBuffer(),
+    encodedProofData,
     created: new Date(),
   });
+};
 
 export const randomRollup = (rollupId: number, rollupProof: RollupProofDao) =>
   new RollupDao({

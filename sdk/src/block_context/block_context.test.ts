@@ -16,7 +16,7 @@ const buildBlock = (rollupId: number, dataStartIndex: number, rollupSize: number
     new Date(),
     rollupId,
     rollupSize,
-    rollup.toBuffer(),
+    rollup.encode(),
     [],
     [],
     1000,
@@ -61,7 +61,7 @@ describe('block_context', () => {
     );
     expect(mockMerkleFactory).toBeCalledTimes(1);
     expect(mockMerkleFactory.mock.calls[0][0]).toEqual(
-      RollupProofData.fromBuffer(block.rollupProofData).innerProofData.flatMap(x => [
+      RollupProofData.decode(block.encodedRollupProofData).innerProofData.flatMap(x => [
         x.noteCommitment1,
         x.noteCommitment2,
       ]),
@@ -96,7 +96,7 @@ describe('block_context', () => {
     }
     expect(mockMerkleFactory).toBeCalledTimes(1);
     expect(mockMerkleFactory.mock.calls[0][0]).toEqual(
-      RollupProofData.fromBuffer(block.rollupProofData).innerProofData.flatMap(x => [
+      RollupProofData.decode(block.encodedRollupProofData).innerProofData.flatMap(x => [
         x.noteCommitment1,
         x.noteCommitment2,
       ]),
@@ -131,7 +131,7 @@ describe('block_context', () => {
     expect(merkleTree.getHashPath).toBeCalledTimes(64 * numConcurrent);
     expect(mockMerkleFactory).toBeCalledTimes(1);
     expect(mockMerkleFactory.mock.calls[0][0]).toEqual(
-      RollupProofData.fromBuffer(block.rollupProofData).innerProofData.flatMap(x => [
+      RollupProofData.decode(block.encodedRollupProofData).innerProofData.flatMap(x => [
         x.noteCommitment1,
         x.noteCommitment2,
       ]),

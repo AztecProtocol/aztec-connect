@@ -115,10 +115,10 @@ describe('rollup_processor: async defi bridge', () => {
     await expectBalance(2, 0n);
 
     {
-      const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
+      const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
         defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
       });
-      const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+      const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
       const txHash = await rollupProcessor.sendTx(tx);
 
       await expectResult(txHash, []);
@@ -144,10 +144,10 @@ describe('rollup_processor: async defi bridge', () => {
     }
 
     {
-      const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
+      const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
         rollupId: 1,
       });
-      const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+      const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
       const txHash = await rollupProcessor.sendTx(tx);
 
       await expectResult(txHash, []);
@@ -165,10 +165,10 @@ describe('rollup_processor: async defi bridge', () => {
     const initialBalance = 50n;
     await topupToken(1, initialBalance);
 
-    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
+    const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
     });
-    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+    const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
     const txHash = await rollupProcessor.sendTx(tx);
 
     const expectedResult = [new DefiInteractionNote(bridgeId, 0, inputValue, 0n, 0n, false)];
@@ -195,10 +195,10 @@ describe('rollup_processor: async defi bridge', () => {
     await expectBalance(2, 0n);
 
     {
-      const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
+      const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
         defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
       });
-      const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+      const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
       const txHash = await rollupProcessor.sendTx(tx);
 
       await expectResult(txHash, []);
@@ -230,10 +230,10 @@ describe('rollup_processor: async defi bridge', () => {
     await expectBalance(2, 0n);
 
     {
-      const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
+      const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
         defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
       });
-      const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+      const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
       const txHash = await rollupProcessor.sendTx(tx);
 
       await expectResult(txHash, []);
@@ -265,10 +265,10 @@ describe('rollup_processor: async defi bridge', () => {
     await expectBalance(2, 0n);
 
     {
-      const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
+      const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
         defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
       });
-      const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+      const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
       const txHash = await rollupProcessor.sendTx(tx);
 
       await expectResult(txHash, []);
@@ -297,10 +297,10 @@ describe('rollup_processor: async defi bridge', () => {
     await expectBalance(1, initialBalance);
 
     {
-      const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
+      const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
         defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
       });
-      const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+      const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
       const txHash = await rollupProcessor.sendTx(tx);
 
       await expectResult(txHash, []);
@@ -339,10 +339,10 @@ describe('rollup_processor: async defi bridge', () => {
     await expectBalance(1, 0n);
 
     {
-      const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
+      const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
         defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
       });
-      const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+      const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
       const txHash = await rollupProcessor.sendTx(tx);
 
       await expectResult(txHash, []);
@@ -381,10 +381,10 @@ describe('rollup_processor: async defi bridge', () => {
     await expectBalance(2, 0n);
 
     {
-      const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
+      const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
         defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
       });
-      const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+      const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
       const txHash = await rollupProcessor.sendTx(tx);
 
       await expectResult(txHash, []);
@@ -416,10 +416,10 @@ describe('rollup_processor: async defi bridge', () => {
     await expectBalance(2, 0n);
 
     {
-      const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
+      const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
         defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
       });
-      const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+      const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
       const txHash = await rollupProcessor.sendTx(tx);
 
       await expectResult(txHash, []);
@@ -441,10 +441,10 @@ describe('rollup_processor: async defi bridge', () => {
     const initialBalance = 50n;
     await topupToken(1, initialBalance);
 
-    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
+    const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
     });
-    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+    const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
     await rollupProcessor.sendTx(tx);
 
     await rollupProcessor.processAsyncDefiInteraction(0);
@@ -459,10 +459,10 @@ describe('rollup_processor: async defi bridge', () => {
     const initialBalance = 50n;
     await topupToken(1, initialBalance);
 
-    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
+    const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
     });
-    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+    const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
     await rollupProcessor.sendTx(tx);
 
     await expect(rollupProcessor.processAsyncDefiInteraction(1)).rejects.toThrow();
@@ -477,19 +477,19 @@ describe('rollup_processor: async defi bridge', () => {
     await topupToken(1, initialBalance);
 
     {
-      const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
+      const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
         defiInteractionData: [new DefiInteractionData(bridgeId0, inputValue)],
       });
-      const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+      const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
       await rollupProcessor.sendTx(tx);
     }
 
     {
-      const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
+      const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
         rollupId: 1,
         defiInteractionData: [new DefiInteractionData(bridgeId1, inputValue)],
       });
-      const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+      const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
       await rollupProcessor.sendTx(tx);
     }
 
@@ -507,11 +507,11 @@ describe('rollup_processor: async defi bridge', () => {
     const initialBalance = 50n;
     await topupToken(1, initialBalance);
 
-    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
+    const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
     });
 
-    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+    const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
     await rollupProcessor.sendTx(tx);
 
     await rollupProcessor.stubAsyncTransactionHashes(511);
@@ -527,11 +527,11 @@ describe('rollup_processor: async defi bridge', () => {
     const initialBalance = 50n;
     await topupToken(1, initialBalance);
 
-    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
+    const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
     });
 
-    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+    const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
     await rollupProcessor.sendTx(tx);
 
     await rollupProcessor.stubAsyncTransactionHashes(512);

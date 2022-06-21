@@ -42,10 +42,10 @@ describe('rollup_processor: defi bridge', () => {
       outputAssetIdA: 2,
       outputAssetIdB: 2,
     });
-    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
+    const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, 1n)],
     });
-    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+    const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
     await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('BRIDGE_WITH_IDENTICAL_OUTPUT_ASSETS');
   });
 
@@ -54,10 +54,10 @@ describe('rollup_processor: defi bridge', () => {
       outputAssetIdA: virtualAssetIdPlaceholder,
       outputAssetIdB: virtualAssetIdPlaceholder,
     });
-    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
+    const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, 1n)],
     });
-    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+    const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
     expect(await rollupProcessor.sendTx(tx));
   });
 
@@ -66,10 +66,10 @@ describe('rollup_processor: defi bridge', () => {
       inputAssetIdA: 2,
       inputAssetIdB: 2,
     });
-    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
+    const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, 1n)],
     });
-    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+    const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
     await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('BRIDGE_WITH_IDENTICAL_INPUT_ASSETS');
   });
 
@@ -78,10 +78,10 @@ describe('rollup_processor: defi bridge', () => {
       inputAssetIdA: 2 + virtualAssetIdFlag,
       inputAssetIdB: 2 + virtualAssetIdFlag,
     });
-    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
+    const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, 1n)],
     });
-    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+    const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
     await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('BRIDGE_WITH_IDENTICAL_INPUT_ASSETS');
   });
 
@@ -93,13 +93,13 @@ describe('rollup_processor: defi bridge', () => {
     const buffer = bridgeId.toBuffer();
     toBufferBE(bitConfig.toBigInt(), 4).copy(buffer, (256 - 184) / 8, 0, 4);
 
-    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
+    const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, 1n)],
     });
 
-    buffer.copy(proofData, 32 * 11, 0, 32);
+    buffer.copy(encodedProofData, 32 * 11, 0, 32);
 
-    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+    const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
     await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('BRIDGE_ID_IS_INCONSISTENT()');
   });
 
@@ -111,13 +111,13 @@ describe('rollup_processor: defi bridge', () => {
     const buffer = bridgeId.toBuffer();
     toBufferBE(bitConfig.toBigInt(), 4).copy(buffer, (256 - 184) / 8, 0, 4);
 
-    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
+    const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, 1n)],
     });
 
-    buffer.copy(proofData, 32 * 11, 0, 32);
+    buffer.copy(encodedProofData, 32 * 11, 0, 32);
 
-    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+    const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
     await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('BRIDGE_ID_IS_INCONSISTENT()');
   });
 
@@ -129,13 +129,13 @@ describe('rollup_processor: defi bridge', () => {
     const buffer = bridgeId.toBuffer();
     toBufferBE(bitConfig.toBigInt(), 4).copy(buffer, (256 - 184) / 8, 0, 4);
 
-    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
+    const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, 1n)],
     });
 
-    buffer.copy(proofData, 32 * 11, 0, 32);
+    buffer.copy(encodedProofData, 32 * 11, 0, 32);
 
-    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+    const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
     await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('BRIDGE_ID_IS_INCONSISTENT()');
   });
 
@@ -147,13 +147,13 @@ describe('rollup_processor: defi bridge', () => {
     const buffer = bridgeId.toBuffer();
     toBufferBE(bitConfig.toBigInt(), 4).copy(buffer, (256 - 184) / 8, 0, 4);
 
-    const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
+    const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
       defiInteractionData: [new DefiInteractionData(bridgeId, 1n)],
     });
 
-    buffer.copy(proofData, 32 * 11, 0, 32);
+    buffer.copy(encodedProofData, 32 * 11, 0, 32);
 
-    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+    const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
     await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('BRIDGE_ID_IS_INCONSISTENT()');
   });
 });

@@ -4,7 +4,7 @@ import { Blockchain, TxHash, TxType } from '@aztec/barretenberg/blockchain';
 import { Block } from '@aztec/barretenberg/block_source';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
-import { DefiInteractionNote, NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
+import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { BridgeConfig } from '@aztec/barretenberg/rollup_provider';
 import { numToUInt32BE } from '@aztec/barretenberg/serialize';
@@ -75,22 +75,20 @@ const buildRollupProofData = () => {
 };
 
 const createDummyBlock = () => {
+  const rollupProofData = buildRollupProofData();
   const block = new Block(
     TxHash.random(),
     new Date(),
     nextRollupId,
     8,
-    buildRollupProofData().toBuffer(),
-    [],
+    rollupProofData.encode(),
+    rollupProofData.innerProofData.map(() => randomBytes(32)), // off chain tx data
     [],
     1000000,
     20n ** 10n,
   );
   return block;
 };
-
-const buildBridgeId = (address: number) => new BridgeId(address, 1, 0);
-const BRIDGE_1 = buildBridgeId(1);
 
 const buildPendingDepositKey = (asset: number, owner: EthAddress) => {
   return asset.toString().concat(owner.toString());
@@ -128,23 +126,6 @@ const buildTxDao = ({
     offchainTxData: Buffer.alloc(32),
   });
   return txDao;
-};
-
-const getDummyRollupDao = (id: number) => {
-  const dao = new RollupDao({
-    ethTxHash: TxHash.random(),
-    created: new Date(),
-    id,
-    rollupProof: {
-      rollupSize: 1,
-      proofData: randomBytes(32),
-      txs: [buildTxDao()],
-    } as any,
-    interactionResult: new DefiInteractionNote(BRIDGE_1, 0, 10000n, 1000000n, 0n, true).toBuffer(),
-    gasUsed: 1000000,
-    gasPrice: numToUInt32BE(10000000),
-  });
-  return dao;
 };
 
 const BASE_GAS = 20000;
@@ -261,8 +242,11 @@ describe('world_state', () => {
   let proccessedTxs: TxDao[] = [];
   const nullifiers: { [key: string]: Buffer } = {};
   const pendingDeposits: { [key: string]: bigint } = {};
+  let rollupStore: { [key: number]: RollupDao } = {};
 
   beforeEach(() => {
+    rollupStore = {};
+
     rollupDb = {
       getSettledRollups: jest.fn().mockResolvedValue([]),
       getNextRollupId: jest.fn().mockImplementation(() => getNextRollupId()),
@@ -270,10 +254,14 @@ describe('world_state', () => {
       deleteOrphanedRollupProofs: jest.fn(),
       deletePendingTxs: jest.fn(),
       getRollupProof: jest.fn().mockResolvedValue(undefined),
-      addRollup: jest.fn(),
+      addRollup: jest.fn().mockImplementation((rollupDao: RollupDao) => {
+        rollupStore[rollupDao.id] = rollupDao;
+      }),
       getAssetMetrics: jest.fn().mockReturnValue(undefined),
-      getRollup: jest.fn().mockImplementation((id: number) => getDummyRollupDao(id)),
-      getPendingTxs: jest.fn().mockImplementation(() => pendingTxs),
+      getRollup: jest.fn().mockImplementation((id: number) => rollupStore[id]),
+      getPendingTxs: jest.fn().mockImplementation(() => {
+        return pendingTxs;
+      }),
       getUnsettledTxCount: jest.fn().mockResolvedValue(0),
       deleteTxsById: jest.fn(),
     } as Mockify<RollupDb>;

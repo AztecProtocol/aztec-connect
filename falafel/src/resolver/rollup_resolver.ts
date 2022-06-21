@@ -45,43 +45,43 @@ export class RollupResolver {
   }
 
   @FieldResolver()
-  oldDataRoot(@Root() { rollupProof: { proofData } }: RollupDao) {
-    const rollup = proofData ? RollupProofData.fromBuffer(proofData) : undefined;
+  oldDataRoot(@Root() { rollupProof: { encodedProofData } }: RollupDao) {
+    const rollup = encodedProofData ? RollupProofData.decode(encodedProofData) : undefined;
     return rollup ? rollup.oldDataRoot : undefined;
   }
 
   @FieldResolver()
-  proofData(@Root() { rollupProof: { proofData } }: RollupDao) {
-    return proofData;
+  proofData(@Root() { rollupProof: { encodedProofData } }: RollupDao) {
+    return encodedProofData ? RollupProofData.decode(encodedProofData) : undefined;
   }
 
   @FieldResolver()
-  dataRoot(@Root() { rollupProof: { proofData } }: RollupDao) {
-    const rollup = proofData ? RollupProofData.fromBuffer(proofData) : undefined;
+  dataRoot(@Root() { rollupProof: { encodedProofData } }: RollupDao) {
+    const rollup = encodedProofData ? RollupProofData.decode(encodedProofData) : undefined;
     return rollup ? rollup.newDataRoot : undefined;
   }
 
   @FieldResolver()
-  oldNullifierRoot(@Root() { rollupProof: { proofData } }: RollupDao) {
-    const rollup = proofData ? RollupProofData.fromBuffer(proofData) : undefined;
+  oldNullifierRoot(@Root() { rollupProof: { encodedProofData } }: RollupDao) {
+    const rollup = encodedProofData ? RollupProofData.decode(encodedProofData) : undefined;
     return rollup ? rollup.oldNullRoot : undefined;
   }
 
   @FieldResolver()
-  nullifierRoot(@Root() { rollupProof: { proofData } }: RollupDao) {
-    const rollup = proofData ? RollupProofData.fromBuffer(proofData) : undefined;
+  nullifierRoot(@Root() { rollupProof: { encodedProofData } }: RollupDao) {
+    const rollup = encodedProofData ? RollupProofData.decode(encodedProofData) : undefined;
     return rollup ? rollup.newNullRoot : undefined;
   }
 
   @FieldResolver()
-  oldDataRootsRoot(@Root() { rollupProof: { proofData } }: RollupDao) {
-    const rollup = proofData ? RollupProofData.fromBuffer(proofData) : undefined;
+  oldDataRootsRoot(@Root() { rollupProof: { encodedProofData } }: RollupDao) {
+    const rollup = encodedProofData ? RollupProofData.decode(encodedProofData) : undefined;
     return rollup ? rollup.oldDataRootsRoot : undefined;
   }
 
   @FieldResolver()
-  dataRootsRoot(@Root() { rollupProof: { proofData } }: RollupDao) {
-    const rollup = proofData ? RollupProofData.fromBuffer(proofData) : undefined;
+  dataRootsRoot(@Root() { rollupProof: { encodedProofData } }: RollupDao) {
+    const rollup = encodedProofData ? RollupProofData.decode(encodedProofData) : undefined;
     return rollup ? rollup.newDataRootsRoot : undefined;
   }
 

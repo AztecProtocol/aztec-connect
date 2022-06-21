@@ -7,8 +7,10 @@ import { RollupPaddingProofData } from './rollup_padding_proof_data';
 import { RollupSendProofData } from './rollup_send_proof_data';
 import { RollupWithdrawProofData } from './rollup_withdraw_proof_data';
 
+export const decodeProofId = (encoded: Buffer) => encoded.readUInt8(0);
+
 const recoverProof = (encoded: Buffer) => {
-  const proofId = encoded.readUInt8(0);
+  const proofId = decodeProofId(encoded);
   switch (proofId) {
     case ProofId.DEPOSIT:
       return RollupDepositProofData.decode(encoded);
@@ -24,6 +26,25 @@ const recoverProof = (encoded: Buffer) => {
       return RollupDefiClaimProofData.decode(encoded);
     case ProofId.PADDING:
       return RollupPaddingProofData.decode(encoded);
+  }
+};
+
+export const getEncodedProofSizeForId = (proofId: ProofId) => {
+  switch (proofId) {
+    case ProofId.DEPOSIT:
+      return RollupDepositProofData.ENCODED_LENGTH;
+    case ProofId.WITHDRAW:
+      return RollupWithdrawProofData.ENCODED_LENGTH;
+    case ProofId.SEND:
+      return RollupSendProofData.ENCODED_LENGTH;
+    case ProofId.ACCOUNT:
+      return RollupAccountProofData.ENCODED_LENGTH;
+    case ProofId.DEFI_DEPOSIT:
+      return RollupDefiDepositProofData.ENCODED_LENGTH;
+    case ProofId.DEFI_CLAIM:
+      return RollupDefiClaimProofData.ENCODED_LENGTH;
+    case ProofId.PADDING:
+      return RollupPaddingProofData.ENCODED_LENGTH;
   }
 };
 

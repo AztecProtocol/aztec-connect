@@ -31,7 +31,7 @@ export async function getAccountsConnect(options: any) {
     } as Accounts;
   }
 
-  const rollupProofs = filteredBlocks.map(block => RollupProofData.fromBuffer(block.rollupProofData));
+  const rollupProofs = filteredBlocks.map(block => RollupProofData.decode(block.encodedRollupProofData));
   const innerProofs = rollupProofs.flatMap(outerProof => outerProof.innerProofData).filter(x => !x.isPadding());
   const offChainData = filteredBlocks.map(block => block.offchainTxData);
   const offChainAccountData = offChainData.flat().filter((data, index) => {

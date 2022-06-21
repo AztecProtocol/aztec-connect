@@ -48,16 +48,16 @@ export class RollupCreator {
       throw new Error('Failed to create proof. This should not happen.');
     }
 
+    // Although we don't actually write this to the database we will use the DAO object
     const rollupProofDao = new RollupProofDao({
       id: rollup.rollupHash,
       txs,
-      proofData: proof,
+      // store the proof data here in the encoded proof data member
+      encodedProofData: proof,
       rollupSize: this.innerRollupSize,
       dataStartIndex: rollup.dataStartIndex,
       created: new Date(),
     });
-
-    await this.rollupDb.addRollupProof(rollupProofDao);
 
     return rollupProofDao;
   }

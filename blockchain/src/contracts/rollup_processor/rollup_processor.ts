@@ -275,21 +275,17 @@ export class RollupProcessor {
   }
 
   /**
-   * Given the raw "root verifier" data buffer returned by the proof generator, slice off the the broadcast
-   * data and the proof data, encode the broadcast data, create a new buffer ready for a processRollup tx.
+   * The dataBuf argument should be formatted as the rollup broadcast data in encoded form
+   * concatenated with the proof data as provided by the root verifier
    * The given offchainTxData is chunked into multiple offchainData txs.
    * Openethereum will accept a maximum tx size of 300kb. Pick 280kb to allow for overheads.
    * Returns the txs to be published.
    */
   async createRollupTxs(dataBuf: Buffer, signatures: Buffer[], offchainTxData: Buffer[], offchainChunkSize = 280000) {
-    const broadcastData = RollupProofData.fromBuffer(dataBuf);
-    const broadcastDataLength = broadcastData.toBuffer().length;
-    const encodedBroadcastData = broadcastData.encode();
-    const proofData = dataBuf.slice(broadcastDataLength);
-    const encodedData = Buffer.concat([encodedBroadcastData, proofData]);
+    const broadcastData = RollupProofData.decode(dataBuf);
     const formattedSignatures = solidityFormatSignatures(signatures);
     const rollupProofTxRaw = await this.rollupProcessor.populateTransaction
-      .processRollup(encodedData, formattedSignatures)
+      .processRollup(dataBuf, formattedSignatures)
       .catch(fixEthersStackTrace);
     const rollupProofTx = Buffer.from(rollupProofTxRaw.data!.slice(2), 'hex');
 
@@ -728,16 +724,17 @@ export class RollupProcessor {
         .map(parsed => Buffer.from(parsed.args[3].slice(2), 'hex')),
     );
     const [proofData] = parsedRollupTx.args;
-    const rollupProofData = RollupProofData.decode(Buffer.from(proofData.slice(2), 'hex'));
-    const proofIds = rollupProofData.innerProofData.filter(p => !p.isPadding()).map(p => p.proofId);
-    const offchainTxData = sliceOffchainTxData(proofIds, offchainTxDataBuf);
+    const encodedProofBuffer = Buffer.from(proofData.slice(2), 'hex');
+    const rollupProofData = RollupProofData.decode(encodedProofBuffer);
+    const validProofIds = rollupProofData.getNonPaddingProofIds();
+    const offchainTxData = sliceOffchainTxData(validProofIds, offchainTxDataBuf);
 
     return new Block(
       TxHash.fromString(rollupTx.hash),
       new Date(rollupTx.timestamp! * 1000),
       rollupProofData.rollupId,
       rollupProofData.rollupSize,
-      rollupProofData.toBuffer(),
+      encodedProofBuffer,
       offchainTxData,
       interactionResult,
       receipt.gasUsed.toNumber() + offchainDataReceipts.reduce((a, r) => a + r.gasUsed.toNumber(), 0),

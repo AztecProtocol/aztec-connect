@@ -66,13 +66,17 @@ export class RollupAggregator {
     end();
 
     const rollupProofData = RollupProofData.fromBuffer(finalProofData);
+    const broadcastDataLength = rollupProofData.toBuffer().length;
+    const proofBuffer = finalProofData.slice(broadcastDataLength);
     const rollupProofDao = new RollupProofDao();
     rollupProofDao.id = rollupProofData.rollupHash;
     // TypeOrm is bugged using Buffers as primaries, so there's an internalId that's a string.
     // I've mostly hidden this workaround in the entities but it's needed here.
     rollupProofDao.internalId = rollupProofData.rollupHash.toString('hex');
     rollupProofDao.txs = innerProofs.map(p => p.txs).flat();
-    rollupProofDao.proofData = finalProofData;
+    // we need to add the encoded rollup proof data concatenated with the proof buffer here
+    // just like it exists when taken from chain
+    rollupProofDao.encodedProofData = Buffer.concat([rollupProofData.encode(), proofBuffer]);
     rollupProofDao.rollupSize = this.outerRollupSize;
     rollupProofDao.created = new Date();
     rollupProofDao.dataStartIndex = innerProofs[0].dataStartIndex;
@@ -85,8 +89,6 @@ export class RollupAggregator {
     });
 
     await this.rollupDb.addRollup(rollupDao);
-
-    await this.rollupDb.deleteTxlessRollupProofs();
 
     return rollupDao;
   }
@@ -126,7 +128,8 @@ export class RollupAggregator {
 
     const rootRollup = new RootRollup(
       rollupId,
-      rollupProofs.map(tx => tx.proofData),
+      // the inner proofs are stored in the encoded proof data member of the DAO
+      rollupProofs.map(tx => tx.encodedProofData),
       oldDataRootsRoot,
       newDataRootsRoot,
       oldDataRootsPath,
