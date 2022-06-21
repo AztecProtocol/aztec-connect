@@ -18,31 +18,38 @@ You can find the type definition of the RegisterController class [here](../types
 
 ```ts
 AztecSdk.createRegisterController(
-    userId: AccountId,     // privacy account (nonce 0)
-    userSigner: Signer,    // account 0 signer
-    alias: string,         // arbitrary account identifier
-    signingPublicKey: GrumpkinAddress,  // signing key
-    recoveryPublicKey: GrumpkinAddress | undefined, // optional recovery key
-    deposit: AssetValue,   // deposit asset & amount
-    fee: AssetValue,       // network fee
-    depositor: EthAddress, // depositers Ethereum account 
-    provider?: EthereumProvider)
-        : Promise<RegisterController>;
+    userId: GrumpkinAddress, 
+    alias: string, 
+    accountPrivateKey: Buffer, 
+    spendingPublicKey: GrumpkinAddress, 
+    recoveryPublicKey: GrumpkinAddress | undefined, 
+    deposit: AssetValue, 
+    fee: AssetValue, 
+    depositor: EthAddress, 
+    feePayer?: FeePayer, 
+    provider?: EthereumProvider) : Promise<RegisterController>;
 ```
 
 ### Inputs
 
 | Arguments | Type | Description |
 | --------- | ---- | ----------- |
-| userId | [AccountId](../types/AccountId) | The AccountId of the account with nonce 0 registering the new account. |
-| userSigner | [Signer](../types/Signer) | The signer for AccountId with nonce 0. |
+| userId | [GrumpkinAddress](../types/GrumpkinAddress) | The public key of the account registering the new signing key. |
 | alias | string | The alias to register the new account with. This is typically a human-readable, easy to remember identifier. |
-| signingPublicKey | [GrumpkinAddress](../types/GrumpkinAddress) | The public key for the new account. Users must remember the corresponding private key (or the derivation method). |
-| recoveryPublicKey | [GrumpkinAddress](../types/GrumpkinAddress) | An optional recovery key that allows the account to be recovered if the `signingPublicKey` is lost. |
+| accountPrivateKey | Buffer | The account private key. |
+| spendingPublicKey | [GrumpkinAddress](../types/GrumpkinAddress) | The public key for the new account. Users must remember the corresponding private key (or the derivation method). |
+| recoveryPublicKey | [GrumpkinAddress](../types/GrumpkinAddress) or `undefined` | An optional recovery key that allows the account to be recovered if the spending key is lost. |
 | deposit | [AssetValue](../types/AssetValue) | The `assetId` (number) and `value` (bigint) to deposit. |
 | fee | [AssetValue](../types/AssetValue) | The network fee for registering the account. |
 | depositor | [EthAddress](../types/EthAddress) | The Ethereum account from which to deposit the funds. |
-| provider | [EthereumProvider](../types/EthereumProvider) | Optional Ethereum Provider. |
+| feePayer? | [FeePayer](../types/FeePayer) | Optional account to pay the registration fee. |
+| provider? | [EthereumProvider](../types/EthereumProvider) | Optional Ethereum Provider. |
+
+### Outputs
+
+| Return Type | Description |
+| --------- | ----------- |
+| [RegisterController](../types/RegisterController) | A user instance with apis bound to the user's account id. |
 
 ### Calculating Fees
 
