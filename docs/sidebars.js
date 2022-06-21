@@ -79,11 +79,10 @@ const sidebars = {
           items: [
             "sdk/usage/setup",
             "sdk/usage/add-account",
-            "sdk/usage/register-user",
+            "sdk/usage/register",
             "sdk/usage/deposit",
             "sdk/usage/transfer",
             "sdk/usage/withdraw",
-            // "sdk/usage/defi",
           ],
         },
         {
