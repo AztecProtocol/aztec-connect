@@ -5,6 +5,7 @@ import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import client, { Counter, Gauge, Histogram } from 'prom-client';
 import { RollupDb } from '../rollup_db';
 import { RollupDao } from '../entity/rollup';
+import { EthAddress } from '@aztec/barretenberg/address';
 
 export class Metrics {
   private receiveTxDuration: Histogram<string>;
@@ -29,7 +30,12 @@ export class Metrics {
   private httpEndpointCounter: Counter<string>;
   private txReceivedCounter: Counter<string>;
 
-  constructor(worldStateDb: WorldStateDb, private rollupDb: RollupDb, private blockchain: Blockchain) {
+  constructor(
+    worldStateDb: WorldStateDb,
+    rollupDb: RollupDb,
+    private blockchain: Blockchain,
+    public rollupBeneficiary: EthAddress,
+  ) {
     client.collectDefaultMetrics();
 
     new Gauge({
@@ -266,9 +272,9 @@ export class Metrics {
       const totalFees = +fromBaseUnits(assetMetric.totalFees, assetDecimals);
       this.totalFees.labels(assetName).set(totalFees);
 
-      const feeDistributorBalanceInt = await this.blockchain.getFeeDistributorBalance(assetId);
-      const feeDistributorBalance = +fromBaseUnits(feeDistributorBalanceInt, assetDecimals);
-      this.feeDistributorContractBalance.labels(assetName).set(feeDistributorBalance);
+      const rollupBeneficiaryBalanceInt = await this.blockchain.getAsset(assetId).balanceOf(this.rollupBeneficiary);
+      const rollupBeneficiaryBalance = +fromBaseUnits(rollupBeneficiaryBalanceInt, assetDecimals);
+      this.feeDistributorContractBalance.labels(assetName).set(rollupBeneficiaryBalance);
     }
 
     this.rollupSize.set(rollup.rollupProof.rollupSize);

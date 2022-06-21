@@ -12,6 +12,7 @@ import { PublishTimeManager } from './publish_time_manager';
 import { RollupCoordinator } from './rollup_coordinator';
 import { TxDao } from '../entity';
 import { createDebugLogger, createLogger } from '@aztec/barretenberg/log';
+import { InterruptError } from '@aztec/barretenberg/errors';
 import { RollupProfile, emptyProfile } from './rollup_profiler';
 
 export class PipelineCoordinator {
@@ -90,7 +91,13 @@ export class PipelineCoordinator {
       this.log('Pipeline exited.');
     };
 
-    return (this.runningPromise = fn());
+    return (this.runningPromise = fn().catch(err => {
+      if (err instanceof InterruptError) {
+        this.log('Pipeline interrupted.');
+      } else {
+        throw err;
+      }
+    }));
   }
 
   /**
@@ -98,12 +105,13 @@ export class PipelineCoordinator {
    */
   public async stop() {
     if (!this.running) {
+      await this.runningPromise;
       return;
     }
 
     this.running = false;
     this.claimProofCreator.interrupt();
-    this.rollupCoordinator?.interrupt();
+    await this.rollupCoordinator?.interrupt();
     await this.runningPromise;
   }
 

@@ -107,18 +107,16 @@ function getPerChainBridgeConfig(chainId: number): BridgeConfig[] {
 export async function getComponents(configurator: Configurator) {
   const confVars = configurator.getConfVars();
   const {
-    runtimeConfig: { gasLimit, feePayingAssetIds },
+    runtimeConfig: { gasLimit, feePayingAssetIds, rollupBeneficiary },
     ethereumHost,
     privateKey,
     rollupContractAddress,
-    feeDistributorAddress,
     priceFeedContractAddresses,
     typeOrmLogging,
     dbUrl,
     proverless,
     rollupCallDataLimit,
   } = confVars;
-
   const ormConfig = getOrmConfig(dbUrl, typeOrmLogging);
   const { provider, signingAddress, chainId } = await getProvider(ethereumHost, privateKey);
   const ethConfig = getEthereumBlockchainConfig(confVars);
@@ -130,11 +128,11 @@ export async function getComponents(configurator: Configurator) {
   console.log(`Ethereum host: ${ethereumHost}`);
   console.log(`Gas limit: ${gasLimit || 'default'}`);
   console.log(`Call data limit: ${rollupCallDataLimit}`);
-  console.log(`Rollup provider address: ${rollupContractAddress || 'none'}`);
-  console.log(`Fee distributor address: ${feeDistributorAddress || 'none'}`);
+  console.log(`Signing address: ${signingAddress}`);
+  console.log(`Rollup contract address: ${rollupContractAddress || 'none'}`);
+  console.log(`Rollup fee beneficiary: ${rollupBeneficiary || signingAddress}`);
   console.log(`Fee paying asset ids: ${feePayingAssetIds}`);
   console.log(`Price feed addresses: ${priceFeedContractAddresses.map(a => a.toString()).join(',') || 'none'}`);
-  console.log(`Signing address: ${signingAddress}`);
   console.log(`Proverless: ${proverless}`);
 
   if (priceFeedContractAddresses.length < feePayingAssetIds.length) {

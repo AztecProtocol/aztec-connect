@@ -510,13 +510,13 @@ export class UserState extends EventEmitter {
   private async handleDefiClaimTx(blockContext: BlockContext, proof: InnerProofData, noteStartIndex: number) {
     const { nullifier1 } = proof;
     const claimTxId = new TxId(proof.txId);
-    this.debug(`found claim tx: ${claimTxId}`);
 
     const claim = await this.db.getClaimTx(nullifier1);
     if (!claim?.userId.equals(this.userData.accountPublicKey)) {
       return;
     }
 
+    this.debug(`found claim tx: ${claimTxId}`);
     const { created } = blockContext;
     const { defiTxId, userId, partialState, secret, interactionNonce } = claim;
     const { noteCommitment1, noteCommitment2, nullifier2 } = proof;

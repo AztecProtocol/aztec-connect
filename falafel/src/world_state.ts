@@ -324,7 +324,7 @@ export class WorldState {
 
   private startNewPipeline() {
     this.pipeline = this.pipelineFactory.create();
-    this.pipeline.start().catch(err => {
+    void this.pipeline.start().catch(err => {
       this.pipeline = undefined;
       this.log('PIPELINE PANIC! Handle the exception!');
       this.log(err);

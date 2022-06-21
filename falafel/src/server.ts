@@ -31,7 +31,7 @@ export class Server {
 
   constructor(
     private configurator: Configurator,
-    signingAddress: EthAddress,
+    private signingAddress: EthAddress,
     private blockchain: Blockchain,
     private rollupDb: RollupDb,
     worldStateDb: WorldStateDb,
@@ -53,6 +53,7 @@ export class Server {
         gasLimit,
         defaultDeFiBatchSize,
         bridgeConfigs,
+        rollupBeneficiary = signingAddress,
       },
     } = configurator.getConfVars();
 
@@ -89,7 +90,7 @@ export class Server {
       this.txFeeResolver,
       noteAlgo,
       metrics,
-      signingAddress,
+      rollupBeneficiary,
       publishInterval,
       flushAfterIdle,
       maxFeePerGas,
@@ -167,6 +168,7 @@ export class Server {
         gasLimit,
         defaultDeFiBatchSize,
         bridgeConfigs,
+        rollupBeneficiary = this.signingAddress,
       },
     } = this.configurator.getConfVars();
 
@@ -184,7 +186,9 @@ export class Server {
       maxFeePerGas,
       maxPriorityFeePerGas,
       gasLimit,
+      rollupBeneficiary,
     );
+    this.metrics.rollupBeneficiary = rollupBeneficiary;
 
     await this.worldState.restartPipeline();
   }

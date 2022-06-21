@@ -42,10 +42,10 @@ export class RollupCoordinator {
     return this.processedTxs.map(rollupTx => rollupTx.tx);
   }
 
-  public interrupt() {
+  public async interrupt() {
     this.processedTxs = [];
-    this.rollupCreator.interrupt();
-    this.rollupAggregator.interrupt();
+    await this.rollupCreator.interrupt();
+    await this.rollupAggregator.interrupt();
     this.rollupPublisher.interrupt();
   }
 

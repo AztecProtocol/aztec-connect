@@ -8,6 +8,7 @@ import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { BridgeConfig } from '@aztec/barretenberg/rollup_provider';
 import { numToUInt32BE } from '@aztec/barretenberg/serialize';
+import { sleep } from '@aztec/barretenberg/sleep';
 import { RollupTreeId, WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { randomBytes } from 'crypto';
 import { EventEmitter } from 'stream';
@@ -239,7 +240,7 @@ describe('world_state', () => {
     });
 
   let pendingTxs: TxDao[] = [];
-  let proccessedTxs: TxDao[] = [];
+  let processedTxs: TxDao[] = [];
   const nullifiers: { [key: string]: Buffer } = {};
   const pendingDeposits: { [key: string]: bigint } = {};
   let rollupStore: { [key: number]: RollupDao } = {};
@@ -296,7 +297,7 @@ describe('world_state', () => {
     })() as Mockify<Blockchain>;
 
     pipeline = {
-      getProcessedTxs: jest.fn().mockImplementation(() => proccessedTxs),
+      getProcessedTxs: jest.fn().mockImplementation(() => processedTxs),
       start: jest.fn().mockImplementation(async () => {}),
       stop: jest.fn().mockImplementation(async () => {}),
     } as Mockify<RollupPipeline>;
@@ -684,13 +685,15 @@ describe('world_state', () => {
     );
   });
 
-  it('should generate a txPoolProfile from the pending txs', async done => {
+  it('should generate a txPoolProfile from the pending txs', async () => {
     jest.setTimeout(10000);
     pendingTxs = [];
     await worldState.start();
-    let txPoolProfile = await worldState.getTxPoolProfile();
+
     // check the empty state
+    let txPoolProfile = await worldState.getTxPoolProfile();
     expect(txPoolProfile.pendingTxCount).toBe(0);
+
     // add one transaction
     pendingTxs = [
       buildTxDao({
@@ -699,8 +702,8 @@ describe('world_state', () => {
       }),
     ];
 
-    // wait for the cache timeout
-    await new Promise(r => setTimeout(r, 1001));
+    // wait for internal loop.
+    await sleep(1000);
 
     txPoolProfile = await worldState.getTxPoolProfile();
     expect(txPoolProfile.pendingTxCount).toBe(1);
@@ -713,10 +716,11 @@ describe('world_state', () => {
       }),
       mockDefiBridgeTx(2, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId1), bridgeId1),
     ];
-    // wait for the cache timeout
-    await new Promise(r => setTimeout(r, 1001));
-    txPoolProfile = await worldState.getTxPoolProfile();
 
+    // wait for internal loop.
+    await sleep(1000);
+
+    txPoolProfile = await worldState.getTxPoolProfile();
     expect(txPoolProfile.pendingTxCount).toBe(2);
     expect(txPoolProfile.pendingBridgeStats).toEqual([
       { bridgeId: bridgeId1, gasAccrued: bridgeConfigs[0].gas / bridgeConfigs[0].numTxs },
@@ -733,19 +737,21 @@ describe('world_state', () => {
       mockDefiBridgeTx(4, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId1), bridgeId1),
     ];
 
-    proccessedTxs = [
+    processedTxs = [
       buildTxDao({
         proofId: ProofId.DEPOSIT,
         id: 1,
       }),
       mockDefiBridgeTx(2, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId1), bridgeId1),
     ];
-    await new Promise(r => setTimeout(r, 1001));
+
+    // wait for internal loop.
+    await sleep(1000);
+
     txPoolProfile = await worldState.getTxPoolProfile();
     expect(txPoolProfile.pendingTxCount).toBe(2);
     expect(txPoolProfile.pendingBridgeStats).toEqual([
       { bridgeId: bridgeId1, gasAccrued: (bridgeConfigs[0].gas / bridgeConfigs[0].numTxs) * 2 },
     ]);
-    done();
   });
 });

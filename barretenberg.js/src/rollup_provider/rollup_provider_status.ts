@@ -1,3 +1,4 @@
+import { EthAddress } from '../address';
 import {
   BlockchainStatus,
   blockchainStatusFromJson,
@@ -29,6 +30,7 @@ export interface RuntimeConfig {
   bridgeConfigs: BridgeConfig[];
   feePayingAssetIds: number[];
   privacySets: { [key: number]: PrivacySet[] };
+  rollupBeneficiary?: EthAddress;
 }
 
 export interface RuntimeConfigJson {
@@ -48,6 +50,7 @@ export interface RuntimeConfigJson {
   bridgeConfigs: BridgeConfigJson[];
   feePayingAssetIds: number[];
   privacySets: { [key: string]: PrivacySetJson[] };
+  rollupBeneficiary?: string;
 }
 
 export const runtimeConfigToJson = ({
@@ -56,6 +59,7 @@ export const runtimeConfigToJson = ({
   maxPriorityFeePerGas,
   bridgeConfigs,
   privacySets,
+  rollupBeneficiary,
   ...rest
 }: RuntimeConfig): RuntimeConfigJson => ({
   ...rest,
@@ -64,6 +68,7 @@ export const runtimeConfigToJson = ({
   maxPriorityFeePerGas: maxPriorityFeePerGas.toString(),
   bridgeConfigs: bridgeConfigs.map(bridgeConfigToJson),
   privacySets: privacySetsToJson(privacySets),
+  rollupBeneficiary: rollupBeneficiary ? rollupBeneficiary.toString() : undefined,
 });
 
 export const runtimeConfigFromJson = ({
@@ -72,6 +77,7 @@ export const runtimeConfigFromJson = ({
   maxPriorityFeePerGas,
   bridgeConfigs,
   privacySets,
+  rollupBeneficiary,
   ...rest
 }: RuntimeConfigJson): RuntimeConfig => ({
   ...rest,
@@ -80,6 +86,7 @@ export const runtimeConfigFromJson = ({
   maxPriorityFeePerGas: BigInt(maxPriorityFeePerGas),
   bridgeConfigs: bridgeConfigs.map(bridgeConfigFromJson),
   privacySets: privacySetsFromJson(privacySets),
+  rollupBeneficiary: rollupBeneficiary ? EthAddress.fromString(rollupBeneficiary) : undefined,
 });
 
 export const partialRuntimeConfigFromJson = ({
@@ -88,6 +95,7 @@ export const partialRuntimeConfigFromJson = ({
   maxPriorityFeePerGas,
   bridgeConfigs,
   privacySets,
+  rollupBeneficiary,
   ...rest
 }: Partial<RuntimeConfigJson>): Partial<RuntimeConfig> => ({
   ...rest,
@@ -96,6 +104,7 @@ export const partialRuntimeConfigFromJson = ({
   ...(maxPriorityFeePerGas !== undefined ? { maxPriorityFeePerGas: BigInt(maxPriorityFeePerGas) } : {}),
   ...(bridgeConfigs ? { bridgeConfigs: bridgeConfigs.map(bridgeConfigFromJson) } : {}),
   ...(privacySets ? { privacySets: privacySetsFromJson(privacySets) } : {}),
+  ...(rollupBeneficiary ? { rollupBeneficiary: EthAddress.fromString(rollupBeneficiary) } : {}),
 });
 
 export interface RollupProviderStatus {

@@ -55,14 +55,12 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   static async new(
     config: EthereumBlockchainConfig,
     rollupContractAddress: EthAddress,
-    feeDistributorAddress: EthAddress,
     priceFeedContractAddresses: EthAddress[],
     provider: EthereumProvider,
   ) {
     const confirmations = config.minConfirmation || EthereumBlockchain.DEFAULT_MIN_CONFIRMATIONS;
     const contracts = await Contracts.fromAddresses(
       rollupContractAddress,
-      feeDistributorAddress,
       priceFeedContractAddresses,
       provider,
       confirmations,
@@ -93,7 +91,6 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     this.status = {
       chainId,
       rollupContractAddress: this.contracts.getRollupContractAddress(),
-      feeDistributorContractAddress: this.contracts.getFeeDistributorContractAddress(),
       verifierContractAddress: await this.contracts.getVerifierContractAddress(),
       ...(await this.getPerRollupState(latestBlock)),
       ...(await this.getPerEthBlockState()),
@@ -325,6 +322,10 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     return await this.contracts.signTypedData(data, address);
   }
 
+  public getAsset(assetId: number) {
+    return this.contracts.getAsset(assetId);
+  }
+
   public async getAssetPrice(assetId: number) {
     return await this.contracts.getAssetPrice(assetId);
   }
@@ -351,10 +352,6 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
 
   public getRollupBalance(assetId: number) {
     return this.contracts.getRollupBalance(assetId);
-  }
-
-  public getFeeDistributorBalance(assetId: number) {
-    return this.contracts.getFeeDistributorBalance(assetId);
   }
 
   public async getFeeData() {

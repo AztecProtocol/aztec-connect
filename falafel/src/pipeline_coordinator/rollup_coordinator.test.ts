@@ -1961,8 +1961,8 @@ describe('rollup_coordinator', () => {
   });
 
   describe('interrupt', () => {
-    it('should interrupt all helpers', () => {
-      coordinator.interrupt();
+    it('should interrupt all helpers', async () => {
+      await coordinator.interrupt();
       expect(rollupCreator.interrupt).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.interrupt).toHaveBeenCalledTimes(1);
       expect(rollupPublisher.interrupt).toHaveBeenCalledTimes(1);

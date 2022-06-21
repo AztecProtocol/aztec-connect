@@ -149,6 +149,7 @@ export class RollupPipelineFactory {
     maxFeePerGas: bigint,
     maxPriorityFeePerGas: bigint,
     gasLimit: number,
+    rollupBeneficiary: EthAddress,
   ) {
     this.txFeeResolver = txFeeResolver;
     this.publishInterval = publishInterval;
@@ -156,6 +157,7 @@ export class RollupPipelineFactory {
     this.maxFeePerGas = maxFeePerGas;
     this.maxPriorityFeePerGas = maxPriorityFeePerGas;
     this.gasLimit = gasLimit;
+    this.rollupBeneficiary = rollupBeneficiary;
   }
 
   public getRollupSize() {
