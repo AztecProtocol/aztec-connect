@@ -78,7 +78,7 @@ AztecSdk.addUser(accountPrivateKey: Buffer, noSync?: boolean): Promise<AztecSdkU
 
 | Return Type | Description |
 | --------- | ----------- |
-| [AztecSdkUser](../types/AztecSdkUser) | A user instance with apis bound to the user's account id. |
+| [AztecSdkUser](../types/sdk/AztecSdkUser) | A user instance with apis bound to the user's account id. |
 
 ## Get User
 
@@ -88,8 +88,8 @@ AztecSdk.getUser(userId: GrumpkinAddress): Promise<AztecSdkUser>;
 
 | Arguments | Type | Description |
 | --------- | ---- | ----------- |
-| userId | [GrumpkinAddress](../types/GrumpkinAddress) | The public key of the user. |
+| userId | [GrumpkinAddress](../types/barretenberg/GrumpkinAddress) | The public key of the user. |
 
 | Return Type | Description |
 | --------- | ----------- |
-| [AztecSdkUser](./../types/AztecSdkUser) | A user instance with apis bound to the user's account id. |
+| [AztecSdkUser](./../types/sdk/AztecSdkUser) | A user instance with apis bound to the user's account id. |
