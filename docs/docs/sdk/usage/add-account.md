@@ -49,7 +49,7 @@ const zkEthBalance = await account.getBalance(AztecSdk.getAssetIdBySymbol("ETH")
 
 ## Spending Keys
 
-The account key can be used to spend notes on the network until you register a spending a key for the account. Once a spending key has been registered, the account key can only be used to decrypt notes. This creates a useful separation between account (or "viewing keys") and spending keys.
+The account key can be used to spend notes on the network until you register a spending a key for the account. Once a spending key has been registered, the account key can only be used to decrypt notes. This creates a useful separation between account (or "viewing/privacy keys") and spending keys.
 
 It is considered best practice to register a new spending key as soon as possible. You can read more about registering new accounts for users on the [Register Users page](./register-user). Here, we will briefly review how to add a spending key to the SDK that has already been registered.
 
