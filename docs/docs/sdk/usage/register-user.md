@@ -6,9 +6,11 @@ Register an Aztec spending key.
 
 Please review the [Accounts overview](../../how-aztec-works/accounts) and [Add User](./add-account) pages if you haven't already.
 
-As mentioned in the above pages, there is an important difference between the account (privacy) keys and the spending keys. The account key is used to decrypt notes, calculate balances and track transactions associated with an account. The signing key associated with an account is used to spend notes associated with an account.
+As mentioned in the above pages, there is an important difference between the account (privacy) keys and spending keys. The account key is used to decrypt notes, calculate balances and track transactions associated with an account. The signing key associated with an account is used to spend notes associated with an account.
 
 A spending key must be registered on the network before it can be used. The SDK makes it easy to register a new spending key using the `RegisterController`.
+
+You can find the interface for the `RegisterController` class [here](../types/sdk/RegisterController).
 
 ## RegisterController Setup
 
@@ -30,26 +32,26 @@ AztecSdk.createRegisterController(
     provider?: EthereumProvider) : Promise<RegisterController>;
 ```
 
-### Inputs
+### Controller Inputs
 
 | Arguments | Type | Description |
 | --------- | ---- | ----------- |
-| userId | [GrumpkinAddress](../types/GrumpkinAddress) | The public key of the account registering the new signing key. |
+| userId | [GrumpkinAddress](../types/barretenberg/GrumpkinAddress) | The public key of the account registering the new signing key. |
 | alias | string | The alias to register the new account with. This is typically a human-readable, easy to remember identifier. |
 | accountPrivateKey | Buffer | The account private key. |
-| spendingPublicKey | [GrumpkinAddress](../types/GrumpkinAddress) | The public key for the new account. Users must remember the corresponding private key (or the derivation method). |
-| recoveryPublicKey | [GrumpkinAddress](../types/GrumpkinAddress) or `undefined` | An optional recovery key that allows the account to be recovered if the spending key is lost. |
-| deposit | [AssetValue](../types/AssetValue) | The `assetId` (number) and `value` (bigint) to deposit. |
-| fee | [AssetValue](../types/AssetValue) | The network fee for registering the account. |
-| depositor | [EthAddress](../types/EthAddress) | The Ethereum account from which to deposit the funds. |
-| feePayer? | [FeePayer](../types/FeePayer) | Optional account to pay the registration fee. |
-| provider? | [EthereumProvider](../types/EthereumProvider) | Optional Ethereum Provider. |
+| spendingPublicKey | [GrumpkinAddress](../types/barretenberg/GrumpkinAddress) | The public key for the new account. Users must remember the corresponding private key (or the derivation method). |
+| recoveryPublicKey | [GrumpkinAddress](../types/barretenberg/GrumpkinAddress) or `undefined` | An optional recovery key that allows the account to be recovered if the spending key is lost. |
+| deposit | [AssetValue](../types/barretenberg/AssetValue) | The `assetId` (number) and `value` (bigint) to deposit. |
+| fee | [AssetValue](../types/barretenberg/AssetValue) | The network fee for registering the account. |
+| depositor | [EthAddress](../types/barretenberg/EthAddress) | The Ethereum account from which to deposit the funds. |
+| feePayer? | [FeePayer](../types/sdk/FeePayer) | Optional account to pay the registration fee. |
+| provider? | [EthereumProvider](../types/barretenberg/EthereumProvider) | Optional Ethereum Provider. |
 
-### Outputs
+#### Returns
 
 | Return Type | Description |
 | --------- | ----------- |
-| [RegisterController](../types/RegisterController) | A user instance with apis bound to the user's account id. |
+| [RegisterController](../types/sdk/RegisterController) | A user instance with apis bound to the user's account id. |
 
 ### Calculating Fees
 
@@ -75,12 +77,15 @@ const controller = await sdk.createRegisterController(
     depositer
 );
 
-await controller.depositFundsToContract();
-await controller.awaitDepositFundsToContract();
+// check if there is a pending deposit
+if ((await controller.getPendingFunds()) < tokenQuantity) {
+    await controller.depositFundsToContract();
+    await controller.awaitDepositFundsToContract();
+}
 
 await controller.createProof();
 await controller.sign();
 await controller.send();
 ```
 
-You can find the full example script that calls this method [here](https://github.com/critesjosh/aztec-sdk-starter/blob/main/src/registerAccount.ts).
+You can find the full example script that calls this method [here](https://github.com/critesjosh/aztec-sdk-starter/blob/mainnet-fork/src/latest/registerAccount.ts).
