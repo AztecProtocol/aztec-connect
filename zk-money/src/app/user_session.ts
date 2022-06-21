@@ -268,7 +268,21 @@ export class UserSession extends EventEmitter {
     }
   }
 
+  private async ensureIsntContractWallet() {
+    if (!this.provider?.account) {
+      throw new Error('Could not determine wallet address');
+    }
+    const isContract = await this.sdk.isContract(this.provider?.account);
+    if (isContract) {
+      throw new Error(
+        'Contract wallets cannot be used to register aztec accounts. Please use an externally owned address.',
+      );
+    }
+  }
+
   private async signupWithWallet() {
+    await this.ensureIsntContractWallet();
+
     this.emitSystemMessage('Please sign the message in your wallet to create a new account...', MessageType.WARNING);
 
     try {
@@ -298,6 +312,8 @@ export class UserSession extends EventEmitter {
   }
 
   private async loginWithWallet() {
+    await this.ensureIsntContractWallet();
+
     this.emitSystemMessage('Please sign the message in your wallet to login...', MessageType.WARNING);
 
     try {
