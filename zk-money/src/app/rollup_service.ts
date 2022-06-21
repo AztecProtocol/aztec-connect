@@ -177,6 +177,7 @@ export class RollupService extends EventEmitter {
   private async fetchTxFees() {
     const txFees: AssetValue[][][] = [];
     for (let id = 0; id < this.assets.length; id++) {
+      // TODO: delete getTxFees method from AztecSdk when this class is retired
       txFees[id] = await this.sdk.getTxFees(id);
     }
     return txFees;
