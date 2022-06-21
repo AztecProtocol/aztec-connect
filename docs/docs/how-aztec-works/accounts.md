@@ -42,7 +42,7 @@ Generally, an account with a registered spending key is considered safer than ac
 
 Most users will typically use an account with a registered spending key and are thus considered "safe". There are use cases (airdrops) where you might want to use an account that has not yet registered a spending key and is using the default account key for both note decryption and spending. So it is possible to use the system without registering your account.
 
-When you use an unregistered account, your notes are marked as spendable by the account key. It's possible to register an alias and it's the sender that defines wether notes are marked spendable with the account key. A sender can check whether an account has registered spending keys before specifying how the notes can be spent.
+When you use an unregistered account, your notes are marked as spendable by the account key. It's the sender that defines wether notes are marked spendable with the account key. A sender can check whether an account has registered spending keys before specifying the spending key.
 
 You cannot mix the spending of these notes. You can send unspent notes from the default account to yourself, but marked as spendable by the signing key.
 
