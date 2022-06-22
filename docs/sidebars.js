@@ -51,6 +51,7 @@ const sidebars = {
         'how-aztec-works/talks-videos',
         'how-aztec-works/zkmoney-userguide',
         'how-aztec-works/faq',
+
       ],
     },
     // {
@@ -106,6 +107,7 @@ const sidebars = {
         },
       ],
     },
+    'glossary'
   ],
 };
 
