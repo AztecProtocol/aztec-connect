@@ -111,14 +111,9 @@ export class CliProofGenerator implements ProofGenerator {
 
   /**
    * TODO: Should signal to the rollup_cli to stop what it's doing and await new work.
-   * This will require the rollup_cli to fork child processes, and for the parent process to terminate the child.
+   * This will require the rollup_cli to fork a child process after producing required proving keys.
    */
-  public interrupt() {}
-
-  /**
-   * TODO: Clear the interrupt flag allowing for continued proof creation.
-   */
-  public clearInterrupt() {}
+  public async interrupt() {}
 
   private async createProofInternal(buffer: Buffer) {
     this.proc!.stdin!.write(buffer);

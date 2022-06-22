@@ -1,6 +1,7 @@
 import { ProofGenerator } from './proof_generator';
 import { randomBytes } from '@aztec/barretenberg/crypto';
 import { createDebugLogger } from '@aztec/barretenberg/log';
+import { InterruptError } from '@aztec/barretenberg/errors';
 import { Command, Protocol } from './http_job_protocol';
 import http from 'http';
 import Koa, { DefaultState, Context } from 'koa';
@@ -148,13 +149,12 @@ export class HttpJobServer implements ProofGenerator {
     this.log('stop complete');
   }
 
-  /**
-   * DEPRECATE.
-   * Once upon a time it was anticipated we would want to interrupt workers in some conditions. These conditions
-   * are looking increasingly rare, so no need to cancel as long as our cluster can pick up additional work.
-   * If we *do* want this, it's the final nail in the coffin for this approach and should use AMQP so can fan out reset.
-   */
-  public async reset() {}
+  public interrupt() {
+    for (const job of this.jobs) {
+      job.reject(new InterruptError('Interrupted.'));
+    }
+    return Promise.resolve();
+  }
 
   public getJoinSplitVk() {
     return this.createJob(Command.GET_JOIN_SPLIT_VK);

@@ -1,28 +1,20 @@
-import type { AssetValue, BridgeId } from '@aztec/sdk';
-import { createGatedSetter, listenPoll } from 'app/util';
+import type { BridgeId } from '@aztec/sdk';
 import { useAmounts, useSdk } from 'alt-model/top_level_context';
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
 import { normaliseFeeForPrivacy } from 'alt-model/forms/fee_helpers';
+import { usePolledCallback } from 'app/util/polling_hooks';
 
 const POLL_INTERVAL = 1000 * 60 * 10;
 
 export function useDefiFeeAmounts(bridgeId: BridgeId | undefined) {
   const sdk = useSdk();
-  const [fees, setFees] = useState<AssetValue[]>();
-  useEffect(() => {
-    setFees(undefined);
-    if (sdk && bridgeId) {
-      const gatedSetter = createGatedSetter(setFees);
-      const unlisten = listenPoll(async () => {
-        const unnormalisedFees = await sdk.getDefiFees(bridgeId);
-        const fees = unnormalisedFees.map(normaliseFeeForPrivacy);
-        gatedSetter.set(fees);
-      }, POLL_INTERVAL);
-      return () => {
-        gatedSetter.close();
-        unlisten();
-      };
-    }
+  const poll = useMemo(() => {
+    if (!sdk || !bridgeId) return;
+    return async () => {
+      const unnormalisedFees = await sdk.getDefiFees(bridgeId);
+      return unnormalisedFees.map(normaliseFeeForPrivacy);
+    };
   }, [sdk, bridgeId]);
+  const fees = usePolledCallback(poll, POLL_INTERVAL);
   return useAmounts(fees);
 }

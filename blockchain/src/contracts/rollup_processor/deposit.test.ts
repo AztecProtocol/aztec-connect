@@ -57,12 +57,12 @@ describe('rollup_processor: deposit', () => {
       expect(rollupBalance).toBe(depositAmount);
     }
 
-    const { proofData, signatures } = createRollupProof(
+    const { encodedProofData, signatures } = createRollupProof(
       rollupProvider,
       await createDepositProof(depositAmount, userAddresses[0], userSigners[0], 0),
     );
 
-    const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
+    const tx = await rollupProcessor.createRollupProofTx(encodedProofData, signatures, []);
     await rollupProcessor.sendTx(tx);
 
     {
@@ -89,12 +89,12 @@ describe('rollup_processor: deposit', () => {
       expect(rollupBalance).toBe(depositAmount);
     }
 
-    const { proofData, signatures } = createRollupProof(
+    const { encodedProofData, signatures } = createRollupProof(
       rollupProvider,
       await createDepositProof(depositAmount, userAddresses[0], userSigners[0], 1),
     );
 
-    const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
+    const tx = await rollupProcessor.createRollupProofTx(encodedProofData, signatures, []);
     await rollupProcessor.sendTx(tx);
 
     {
@@ -112,7 +112,7 @@ describe('rollup_processor: deposit', () => {
     const erc20A = assets[1];
     const erc20B = assets[2];
 
-    const { proofData, signatures } = createRollupProof(
+    const { encodedProofData, signatures } = createRollupProof(
       rollupProvider,
       mergeInnerProofs([
         await createDepositProof(userADepositAmount, userAddresses[0], userSigners[0], 1),
@@ -129,7 +129,7 @@ describe('rollup_processor: deposit', () => {
       signingAddress: userAddresses[1],
     });
 
-    const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
+    const tx = await rollupProcessor.createRollupProofTx(encodedProofData, signatures, []);
     await rollupProcessor.sendTx(tx);
 
     const postDepositUserABalance = await rollupProcessor.getUserPendingDeposit(1, userAddresses[0]);
@@ -215,11 +215,11 @@ describe('rollup_processor: deposit', () => {
     await rollupProcessor.depositPendingFunds(1, depositAmount, undefined, { signingAddress });
 
     const innerProofData = await createDepositProof(depositAmount, signingAddress, userSigners[0], 1);
-    const { proofData } = createRollupProof(rollupProvider, innerProofData);
+    const { encodedProofData } = createRollupProof(rollupProvider, innerProofData);
 
     await rollupProcessor.approveProof(innerProofData.innerProofs[0].txId, { signingAddress });
 
-    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+    const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
     await rollupProcessor.sendTx(tx);
 
     expect(await rollupProcessor.getUserPendingDeposit(1, signingAddress)).toBe(0n);
@@ -233,14 +233,14 @@ describe('rollup_processor: deposit', () => {
     await rollupProcessor.depositPendingFunds(1, depositAmount, undefined, { signingAddress });
 
     const innerProofData = await createDepositProof(depositAmount, signingAddress, userSigners[0], 1);
-    const { proofData } = createRollupProof(rollupProvider, innerProofData);
+    const { encodedProofData } = createRollupProof(rollupProvider, innerProofData);
 
     const badSignature = await new Web3Signer(ethereumProvider).signMessage(
       innerProofData.innerProofs[0].getDepositSigningData(),
       userAddresses[1],
     );
 
-    const tx = await rollupProcessor.createRollupProofTx(proofData, [badSignature], []);
+    const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [badSignature], []);
     await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('INVALID_SIGNATURE');
   });
 
@@ -252,12 +252,12 @@ describe('rollup_processor: deposit', () => {
       signingAddress: userAddresses[0],
     });
 
-    const { proofData, signatures } = createRollupProof(
+    const { encodedProofData, signatures } = createRollupProof(
       rollupProvider,
       await createDepositProof(depositAmount, userAddresses[0], userSigners[0], 1),
     );
 
-    const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
+    const tx = await rollupProcessor.createRollupProofTx(encodedProofData, signatures, []);
     await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('INSUFFICIENT_DEPOSIT()');
   });
 
@@ -350,11 +350,11 @@ describe('rollup_processor: deposit', () => {
         .depositPendingFunds(virtualAssetId, 1, userAddresses[0].toString(), RANDOM_BYTES),
     ).rejects.toThrow('INVALID_ASSET_ID()');
 
-    const { proofData, signatures } = createRollupProof(
+    const { encodedProofData, signatures } = createRollupProof(
       rollupProvider,
       await createDepositProof(depositAmount, userAddresses[0], userSigners[0], virtualAssetId),
     );
-    const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
+    const tx = await rollupProcessor.createRollupProofTx(encodedProofData, signatures, []);
     await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('INVALID_ASSET_ID()');
   });
 
@@ -382,11 +382,11 @@ describe('rollup_processor: deposit', () => {
         ),
     ).rejects.toThrow('INVALID_ASSET_ID');
 
-    const { proofData, signatures } = createRollupProof(
+    const { encodedProofData, signatures } = createRollupProof(
       rollupProvider,
       await createDepositProof(depositAmount, userAddresses[0], userSigners[0], virtualAssetId),
     );
-    const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
+    const tx = await rollupProcessor.createRollupProofTx(encodedProofData, signatures, []);
     await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('INVALID_ASSET_ID()');
   });
 
@@ -415,11 +415,11 @@ describe('rollup_processor: deposit', () => {
         ),
     ).rejects.toThrow('INVALID_ASSET_ID');
 
-    const { proofData, signatures } = createRollupProof(
+    const { encodedProofData, signatures } = createRollupProof(
       rollupProvider,
       await createDepositProof(depositAmount, userAddresses[0], userSigners[0], virtualAssetId),
     );
-    const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
+    const tx = await rollupProcessor.createRollupProofTx(encodedProofData, signatures, []);
     await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('INVALID_ASSET_ID()');
   });
 
@@ -432,9 +432,9 @@ describe('rollup_processor: deposit', () => {
     const txId = innerProofData.innerProofs[0].txId;
     await rollupProcessor.depositPendingFunds(1, depositAmount, txId, { signingAddress });
 
-    const { proofData } = createRollupProof(rollupProvider, innerProofData);
+    const { encodedProofData } = createRollupProof(rollupProvider, innerProofData);
 
-    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+    const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
     await rollupProcessor.sendTx(tx);
 
     expect(await rollupProcessor.getProofApprovalStatus(signingAddress, txId)).toBe(true);
@@ -466,12 +466,12 @@ describe('rollup_processor: deposit', () => {
     await rollupProcessor.depositPendingFundsPermit(1, depositAmount, deadline, signature, txId, {
       signingAddress: depositor,
     });
-    const { proofData } = createRollupProof(rollupProvider, innerProofData);
+    const { encodedProofData } = createRollupProof(rollupProvider, innerProofData);
 
     expect(await rollupProcessor.getProofApprovalStatus(depositor, txId)).toBe(true);
     expect(await rollupProcessor.getUserPendingDeposit(1, depositor)).toBe(depositAmount);
 
-    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+    const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
     await rollupProcessor.sendTx(tx);
 
     expect(await rollupProcessor.getProofApprovalStatus(depositor, txId)).toBe(true);
@@ -512,12 +512,12 @@ describe('rollup_processor: deposit', () => {
         signingAddress: depositor,
       },
     );
-    const { proofData } = createRollupProof(rollupProvider, innerProofData);
+    const { encodedProofData } = createRollupProof(rollupProvider, innerProofData);
 
     expect(await rollupProcessor.getProofApprovalStatus(depositor, txId)).toBe(true);
     expect(await rollupProcessor.getUserPendingDeposit(1, depositor)).toBe(depositAmount);
 
-    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+    const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
     await rollupProcessor.sendTx(tx);
 
     expect(await rollupProcessor.getProofApprovalStatus(depositor, txId)).toBe(true);

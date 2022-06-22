@@ -2,6 +2,7 @@ import { EthAddress } from '@aztec/barretenberg/address';
 import { Asset } from '@aztec/barretenberg/blockchain';
 import { DefiInteractionNote, packInteractionNotes } from '@aztec/barretenberg/note_algorithms';
 import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
+import { Block } from '@aztec/barretenberg/block_source';
 import { Signer } from 'ethers';
 import { ethers } from 'hardhat';
 import {
@@ -39,11 +40,13 @@ describe('rollup_processor: extract defi notes', () => {
   const escapeBlockLowerBound = 80;
   const escapeBlockUpperBound = 100;
 
-  const rollupProofDataFromBuffer = (buffer: Buffer) => {
-    const rollupProofData = RollupProofData.fromBuffer(buffer);
-    // Coax lazy init of txId.
-    rollupProofData.innerProofData.forEach(p => p.txId);
-    return rollupProofData;
+  const txCallDataLimit = 120 * 1024;
+
+  const decodeRollup = (block: Block) => {
+    const rollup = RollupProofData.decode(block.encodedRollupProofData);
+    // Coax lazy init of txId
+    rollup.innerProofData.forEach(x => x.txId);
+    return rollup;
   };
 
   beforeAll(async () => {
@@ -128,9 +131,10 @@ describe('rollup_processor: extract defi notes', () => {
     // send the first 3 txs, this will take us beyond the defi deposits
     for (let i = 0; i < 3; i++) {
       const txs = await rollupProcessor.createRollupTxs(
-        txProofs[i].proofData,
+        txProofs[i].encodedProofData,
         txProofs[i].signatures,
         txProofs[i].offchainTxData,
+        txCallDataLimit,
       );
       await rollupProcessor.sendRollupTxs(txs);
     }
@@ -142,9 +146,10 @@ describe('rollup_processor: extract defi notes', () => {
     // now send the last 2 tx rollups
     for (let i = 3; i < txProofs.length; i++) {
       const txs = await rollupProcessor.createRollupTxs(
-        txProofs[i].proofData,
+        txProofs[i].encodedProofData,
         txProofs[i].signatures,
         txProofs[i].offchainTxData,
+        txCallDataLimit,
       );
       await rollupProcessor.sendRollupTxs(txs);
     }
@@ -154,7 +159,7 @@ describe('rollup_processor: extract defi notes', () => {
 
     {
       const block = blocks[0];
-      const rollup = rollupProofDataFromBuffer(block.rollupProofData);
+      const rollup = decodeRollup(block);
       const { innerProofs, offchainTxData } = innerProofOutputs[0];
       expect(block).toMatchObject({
         rollupId: 0,
@@ -173,7 +178,7 @@ describe('rollup_processor: extract defi notes', () => {
 
     {
       const block = blocks[1];
-      const rollup = rollupProofDataFromBuffer(block.rollupProofData);
+      const rollup = decodeRollup(block);
       const { innerProofs, offchainTxData } = innerProofOutputs[1];
       expect(block).toMatchObject({
         rollupId: 1,
@@ -190,7 +195,7 @@ describe('rollup_processor: extract defi notes', () => {
 
     {
       const block = blocks[2];
-      const rollup = rollupProofDataFromBuffer(block.rollupProofData);
+      const rollup = decodeRollup(block);
       const { innerProofs, offchainTxData } = innerProofOutputs[2];
       expect(block).toMatchObject({
         rollupId: 2,
@@ -206,7 +211,7 @@ describe('rollup_processor: extract defi notes', () => {
 
     {
       const block = blocks[3];
-      const rollup = rollupProofDataFromBuffer(block.rollupProofData);
+      const rollup = decodeRollup(block);
       const { innerProofs, offchainTxData } = innerProofOutputs[3];
       expect(block).toMatchObject({
         rollupId: 3,
@@ -223,7 +228,7 @@ describe('rollup_processor: extract defi notes', () => {
 
     {
       const block = blocks[4];
-      const rollup = rollupProofDataFromBuffer(block.rollupProofData);
+      const rollup = decodeRollup(block);
       const { innerProofs, offchainTxData } = innerProofOutputs[4];
       expect(block).toMatchObject({
         rollupId: 4,

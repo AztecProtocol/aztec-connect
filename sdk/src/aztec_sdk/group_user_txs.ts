@@ -145,7 +145,7 @@ const getPaymentValue = ({
         if (isRecipient || recipientPrivateOutput) {
           return recipientPrivateOutput;
         }
-        return privateInput;
+        return privateInput - senderPrivateOutput;
     }
   })();
   return { assetId, value };

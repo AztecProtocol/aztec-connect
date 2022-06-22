@@ -4,10 +4,11 @@ import { Blockchain, TxHash, TxType } from '@aztec/barretenberg/blockchain';
 import { Block } from '@aztec/barretenberg/block_source';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
-import { DefiInteractionNote, NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
+import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { BridgeConfig } from '@aztec/barretenberg/rollup_provider';
 import { numToUInt32BE } from '@aztec/barretenberg/serialize';
+import { sleep } from '@aztec/barretenberg/sleep';
 import { RollupTreeId, WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { randomBytes } from 'crypto';
 import { EventEmitter } from 'stream';
@@ -75,22 +76,20 @@ const buildRollupProofData = () => {
 };
 
 const createDummyBlock = () => {
+  const rollupProofData = buildRollupProofData();
   const block = new Block(
     TxHash.random(),
     new Date(),
     nextRollupId,
     8,
-    buildRollupProofData().toBuffer(),
-    [],
+    rollupProofData.encode(),
+    rollupProofData.innerProofData.map(() => randomBytes(32)), // off chain tx data
     [],
     1000000,
     20n ** 10n,
   );
   return block;
 };
-
-const buildBridgeId = (address: number) => new BridgeId(address, 1, 0);
-const BRIDGE_1 = buildBridgeId(1);
 
 const buildPendingDepositKey = (asset: number, owner: EthAddress) => {
   return asset.toString().concat(owner.toString());
@@ -128,23 +127,6 @@ const buildTxDao = ({
     offchainTxData: Buffer.alloc(32),
   });
   return txDao;
-};
-
-const getDummyRollupDao = (id: number) => {
-  const dao = new RollupDao({
-    ethTxHash: TxHash.random(),
-    created: new Date(),
-    id,
-    rollupProof: {
-      rollupSize: 1,
-      proofData: randomBytes(32),
-      txs: [buildTxDao()],
-    } as any,
-    interactionResult: new DefiInteractionNote(BRIDGE_1, 0, 10000n, 1000000n, 0n, true).toBuffer(),
-    gasUsed: 1000000,
-    gasPrice: numToUInt32BE(10000000),
-  });
-  return dao;
 };
 
 const BASE_GAS = 20000;
@@ -258,11 +240,14 @@ describe('world_state', () => {
     });
 
   let pendingTxs: TxDao[] = [];
-  let proccessedTxs: TxDao[] = [];
+  let processedTxs: TxDao[] = [];
   const nullifiers: { [key: string]: Buffer } = {};
   const pendingDeposits: { [key: string]: bigint } = {};
+  let rollupStore: { [key: number]: RollupDao } = {};
 
   beforeEach(() => {
+    rollupStore = {};
+
     rollupDb = {
       getSettledRollups: jest.fn().mockResolvedValue([]),
       getNextRollupId: jest.fn().mockImplementation(() => getNextRollupId()),
@@ -270,10 +255,14 @@ describe('world_state', () => {
       deleteOrphanedRollupProofs: jest.fn(),
       deletePendingTxs: jest.fn(),
       getRollupProof: jest.fn().mockResolvedValue(undefined),
-      addRollup: jest.fn(),
+      addRollup: jest.fn().mockImplementation((rollupDao: RollupDao) => {
+        rollupStore[rollupDao.id] = rollupDao;
+      }),
       getAssetMetrics: jest.fn().mockReturnValue(undefined),
-      getRollup: jest.fn().mockImplementation((id: number) => getDummyRollupDao(id)),
-      getPendingTxs: jest.fn().mockImplementation(() => pendingTxs),
+      getRollup: jest.fn().mockImplementation((id: number) => rollupStore[id]),
+      getPendingTxs: jest.fn().mockImplementation(() => {
+        return pendingTxs;
+      }),
       getUnsettledTxCount: jest.fn().mockResolvedValue(0),
       deleteTxsById: jest.fn(),
     } as Mockify<RollupDb>;
@@ -308,7 +297,7 @@ describe('world_state', () => {
     })() as Mockify<Blockchain>;
 
     pipeline = {
-      getProcessedTxs: jest.fn().mockImplementation(() => proccessedTxs),
+      getProcessedTxs: jest.fn().mockImplementation(() => processedTxs),
       start: jest.fn().mockImplementation(async () => {}),
       stop: jest.fn().mockImplementation(async () => {}),
     } as Mockify<RollupPipeline>;
@@ -696,13 +685,15 @@ describe('world_state', () => {
     );
   });
 
-  it('should generate a txPoolProfile from the pending txs', async done => {
+  it('should generate a txPoolProfile from the pending txs', async () => {
     jest.setTimeout(10000);
     pendingTxs = [];
     await worldState.start();
-    let txPoolProfile = await worldState.getTxPoolProfile();
+
     // check the empty state
+    let txPoolProfile = await worldState.getTxPoolProfile();
     expect(txPoolProfile.pendingTxCount).toBe(0);
+
     // add one transaction
     pendingTxs = [
       buildTxDao({
@@ -711,8 +702,8 @@ describe('world_state', () => {
       }),
     ];
 
-    // wait for the cache timeout
-    await new Promise(r => setTimeout(r, 1001));
+    // wait for internal loop.
+    await sleep(1000);
 
     txPoolProfile = await worldState.getTxPoolProfile();
     expect(txPoolProfile.pendingTxCount).toBe(1);
@@ -725,10 +716,11 @@ describe('world_state', () => {
       }),
       mockDefiBridgeTx(2, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId1), bridgeId1),
     ];
-    // wait for the cache timeout
-    await new Promise(r => setTimeout(r, 1001));
-    txPoolProfile = await worldState.getTxPoolProfile();
 
+    // wait for internal loop.
+    await sleep(1000);
+
+    txPoolProfile = await worldState.getTxPoolProfile();
     expect(txPoolProfile.pendingTxCount).toBe(2);
     expect(txPoolProfile.pendingBridgeStats).toEqual([
       { bridgeId: bridgeId1, gasAccrued: bridgeConfigs[0].gas / bridgeConfigs[0].numTxs },
@@ -745,19 +737,21 @@ describe('world_state', () => {
       mockDefiBridgeTx(4, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId1), bridgeId1),
     ];
 
-    proccessedTxs = [
+    processedTxs = [
       buildTxDao({
         proofId: ProofId.DEPOSIT,
         id: 1,
       }),
       mockDefiBridgeTx(2, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId1), bridgeId1),
     ];
-    await new Promise(r => setTimeout(r, 1001));
+
+    // wait for internal loop.
+    await sleep(1000);
+
     txPoolProfile = await worldState.getTxPoolProfile();
     expect(txPoolProfile.pendingTxCount).toBe(2);
     expect(txPoolProfile.pendingBridgeStats).toEqual([
       { bridgeId: bridgeId1, gasAccrued: (bridgeConfigs[0].gas / bridgeConfigs[0].numTxs) * 2 },
     ]);
-    done();
   });
 });

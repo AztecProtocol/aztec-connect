@@ -2,6 +2,7 @@ import { EthAddress } from '@aztec/barretenberg/address';
 import { Asset, TxHash } from '@aztec/barretenberg/blockchain';
 import { DefiInteractionNote, packInteractionNotes } from '@aztec/barretenberg/note_algorithms';
 import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
+import { Block } from '@aztec/barretenberg/block_source';
 import { randomBytes } from 'crypto';
 import { Signer } from 'ethers';
 import { keccak256, Result, toUtf8Bytes } from 'ethers/lib/utils';
@@ -54,6 +55,13 @@ describe('rollup_processor', () => {
       .filter(e => e.eventFragment.name === eventName)
       .map(e => e.args);
     return eventArgs;
+  };
+
+  const decodeRollup = (block: Block) => {
+    const rollup = RollupProofData.decode(block.encodedRollupProofData);
+    // Coax lazy init of txId
+    rollup.innerProofData.forEach(x => x.txId);
+    return rollup;
   };
 
   beforeAll(async () => {
@@ -304,20 +312,20 @@ describe('rollup_processor', () => {
   });
 
   it('should allow any address to use escape hatch', async () => {
-    const { proofData } = createRollupProof(signers[0], createSendProof());
-    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+    const { encodedProofData } = createRollupProof(signers[0], createSendProof());
+    const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
     await rollupProcessor.sendTx(tx, { signingAddress: EthAddress.fromString(await signers[1].getAddress()) });
   });
 
   it('should reject a rollup from an unknown provider outside escape hatch window', async () => {
-    const { proofData, signatures } = createRollupProof(signers[0], createSendProof(), {
+    const { encodedProofData, signatures } = createRollupProof(signers[0], createSendProof(), {
       feeDistributorAddress: feeDistributor.address,
     });
     await advanceBlocksHardhat(50, ethers.provider);
 
     const { escapeOpen } = await rollupProcessor.getEscapeHatchStatus();
     expect(escapeOpen).toBe(false);
-    const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
+    const tx = await rollupProcessor.createRollupProofTx(encodedProofData, signatures, []);
 
     await expect(
       rollupProcessor.sendTx(tx, { signingAddress: EthAddress.fromString(await signers[1].getAddress()) }),
@@ -399,7 +407,7 @@ describe('rollup_processor', () => {
     });
 
     for (let i = 0; i < innerProofOutputs.length; ++i) {
-      const { proofData, signatures, offchainTxData } = createRollupProof(signers[0], innerProofOutputs[i], {
+      const { encodedProofData, signatures, offchainTxData } = createRollupProof(signers[0], innerProofOutputs[i], {
         rollupId: i,
         defiInteractionData:
           i === 2
@@ -411,7 +419,7 @@ describe('rollup_processor', () => {
         previousDefiInteractionHash: i === 3 ? previousDefiInteractionHash : undefined,
       });
       // Use a small chunk size to test offchain chunking.
-      const txs = await rollupProcessor.createRollupTxs(proofData, signatures, offchainTxData, 300);
+      const txs = await rollupProcessor.createRollupTxs(encodedProofData, signatures, offchainTxData, 300);
       await rollupProcessor.sendRollupTxs(txs);
     }
 
@@ -420,11 +428,7 @@ describe('rollup_processor', () => {
 
     {
       const block = blocks[0];
-      const rollup = RollupProofData.fromBuffer(block.rollupProofData);
-
-      // Coax lazy init of txId.
-      rollup.innerProofData.forEach(p => p.txId);
-
+      const rollup = decodeRollup(block);
       const { innerProofs, offchainTxData } = innerProofOutputs[0];
       expect(block).toMatchObject({
         rollupId: 0,
@@ -443,7 +447,7 @@ describe('rollup_processor', () => {
 
     {
       const block = blocks[1];
-      const rollup = RollupProofData.fromBuffer(block.rollupProofData);
+      const rollup = decodeRollup(block);
       const { innerProofs, offchainTxData } = innerProofOutputs[1];
       expect(block).toMatchObject({
         rollupId: 1,
@@ -460,7 +464,7 @@ describe('rollup_processor', () => {
 
     {
       const block = blocks[2];
-      const rollup = RollupProofData.fromBuffer(block.rollupProofData);
+      const rollup = decodeRollup(block);
       const { innerProofs, offchainTxData } = innerProofOutputs[2];
       expect(block).toMatchObject({
         rollupId: 2,
@@ -477,7 +481,7 @@ describe('rollup_processor', () => {
 
     {
       const block = blocks[3];
-      const rollup = RollupProofData.fromBuffer(block.rollupProofData);
+      const rollup = decodeRollup(block);
       const { innerProofs, offchainTxData } = innerProofOutputs[3];
       expect(block).toMatchObject({
         rollupId: 3,
@@ -494,7 +498,7 @@ describe('rollup_processor', () => {
 
     {
       const block = blocks[4];
-      const rollup = RollupProofData.fromBuffer(block.rollupProofData);
+      const rollup = decodeRollup(block);
       const { innerProofs, offchainTxData } = innerProofOutputs[4];
       expect(block).toMatchObject({
         rollupId: 4,

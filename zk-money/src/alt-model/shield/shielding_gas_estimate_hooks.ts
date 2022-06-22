@@ -71,7 +71,7 @@ export function useEstimatedShieldingGasCosts(depositor?: EthAddress, assetId?: 
   const stableEthereumProvider = useStableEthereumProvider();
   const gasUnitPrice = useGasUnitPrice();
   const rpStatus = useRollupProviderStatus();
-  const contractAddress = rpStatus?.blockchainStatus.feeDistributorContractAddress.toString();
+  const contractAddress = EthAddress.ZERO.toString();
   const [depositFundsGas, setDepositFundsGas] = useState<bigint>();
   const [approveProofGas, setApproveProofGas] = useState<bigint>();
   const contract = useMemo(() => {

@@ -115,7 +115,7 @@ describe('ethereum_blockchain', () => {
 
   it('correct initial state', () => {
     const status = blockchain.getBlockchainStatus();
-    const lastRollup = RollupProofData.fromBuffer(blocks[blocks.length - 1].rollupProofData);
+    const lastRollup = RollupProofData.decode(blocks[blocks.length - 1].encodedRollupProofData);
     expect(status.dataRoot).toEqual(lastRollup.newDataRoot);
     expect(status.nullRoot).toEqual(lastRollup.newNullRoot);
     expect(status.rootRoot).toEqual(lastRollup.newDataRootsRoot);

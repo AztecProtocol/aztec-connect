@@ -43,27 +43,22 @@ export class RollupCreator {
     this.log(`Tx rollup proof received: ${proof.length} bytes`);
     end();
 
-    if (!proof) {
-      // TODO: Once we correctly handle interrupts, this is not a panic scenario.
-      throw new Error('Failed to create proof. This should not happen.');
-    }
-
+    // Although we don't actually write this to the database we will use the DAO object
     const rollupProofDao = new RollupProofDao({
       id: rollup.rollupHash,
       txs,
-      proofData: proof,
+      // store the proof data here in the encoded proof data member
+      encodedProofData: proof,
       rollupSize: this.innerRollupSize,
       dataStartIndex: rollup.dataStartIndex,
       created: new Date(),
     });
 
-    await this.rollupDb.addRollupProof(rollupProofDao);
-
     return rollupProofDao;
   }
 
-  public interrupt() {
-    // TODO: Interrupt proof creation.
+  public async interrupt() {
+    await this.proofGenerator.interrupt();
   }
 
   public async createRollup(

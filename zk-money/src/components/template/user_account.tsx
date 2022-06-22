@@ -254,19 +254,6 @@ export const UserAccount: React.FunctionComponent<UserAccountProps> = ({ account
 
             <DropdownItemRoot>
               <DropdownItem>
-                <TextLink
-                  text="Share zk.money on Twitter"
-                  color="indigo"
-                  href={`https://twitter.com/intent/tweet?text=Join%20me%20on%20zk.money%2F%3Falias%3D${alias}%20and%20experience%20private%20DeFi.%20Deposit%201ETH%20for%20a%20chance%20to%20win%201ETH.`}
-                  target="_blank"
-                  weight="semibold"
-                  nowrap
-                />
-              </DropdownItem>
-            </DropdownItemRoot>
-
-            <DropdownItemRoot>
-              <DropdownItem>
                 <TextLink text="Switch user" onClick={onLogout} color="indigo" weight="semibold" nowrap />
               </DropdownItem>
             </DropdownItemRoot>

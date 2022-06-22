@@ -24,7 +24,6 @@ import {
 } from '@aztec/barretenberg/offchain_tx_data';
 import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { RollupProvider } from '@aztec/barretenberg/rollup_provider';
-import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
 import { randomBytes } from 'crypto';
@@ -77,8 +76,9 @@ describe('user state', () => {
   };
 
   const createBlockContext = (block: Block) => {
+    const decoded = RollupProofData.decode(block.encodedRollupProofData);
     return {
-      rollup: RollupProofData.fromBuffer(block.rollupProofData),
+      rollup: decoded,
       created: block.created,
       offchainTxData: block.offchainTxData,
       interactionResult: block.interactionResult,
@@ -258,7 +258,7 @@ describe('user state', () => {
       nullifier2,
       toBufferBE(publicValue, 32),
       publicOwner.toBuffer32(),
-      numToUInt32BE(assetId, 32),
+      Buffer.alloc(32),
     );
 
     const offchainTxData = new OffchainJoinSplitData(viewingKeys, txRefNo);
@@ -532,7 +532,7 @@ describe('user state', () => {
       new Date(),
       rollupProofData.rollupId,
       1,
-      rollupProofData.toBuffer(),
+      rollupProofData.encode(),
       offchainTxData,
       interactionResult,
       0,

@@ -1,5 +1,4 @@
 import React from 'react';
-import type { RemoteAsset } from 'alt-model/types';
 import { InputTheme } from 'components';
 import { SplitSection } from '../sections/split_section';
 import { AmountSection } from 'views/account/dashboard/modals/sections/amount_section';
@@ -15,7 +14,6 @@ import style from './send_form_fields_page.module.scss';
 import { FooterSection } from '../sections/footer_section';
 
 export interface SendProps {
-  asset: RemoteAsset;
   state: SendFormDerivedData;
   feedback: SendFormFeedback;
   isValid: boolean;
@@ -43,7 +41,6 @@ function getDescription(sendMode: SendMode) {
 }
 
 export const SendFormFieldsPage: React.FunctionComponent<SendProps> = ({
-  asset,
   state,
   feedback,
   isValid,
@@ -54,6 +51,7 @@ export const SendFormFieldsPage: React.FunctionComponent<SendProps> = ({
   onNext,
 }) => {
   const { sendMode } = state.fields;
+  const { asset } = state;
 
   return (
     <div className={style.root}>

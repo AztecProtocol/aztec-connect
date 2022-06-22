@@ -301,7 +301,7 @@ export class AppView extends PureComponent<AppProps, AppState> {
     ) : undefined;
 
     return (
-      <Template theme={theme} systemMessage={systemMessage} isLoading={isLoading}>
+      <Template theme={theme} systemMessage={systemMessage} isLoading={isLoading} explorerUrl={config.explorerUrl}>
         <AppContext.Provider
           value={{
             config,
@@ -375,7 +375,11 @@ export class AppView extends PureComponent<AppProps, AppState> {
                       <>
                         <Home onSignup={this.handleSignup} />
                         {!isLoggedIn && (
-                          <SelfDismissingIncentiveModal instanceName="home" onShieldNow={this.handleSignup} />
+                          <SelfDismissingIncentiveModal
+                            instanceName="home"
+                            buttonLabel="Shield now"
+                            onButtonClick={this.handleSignup}
+                          />
                         )}
                       </>
                     }

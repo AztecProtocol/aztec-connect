@@ -42,7 +42,7 @@ const rollupDaoToBlockBuffer = (dao: RollupDao) => {
     dao.created,
     dao.id,
     dao.rollupProof.rollupSize,
-    dao.rollupProof.proofData!,
+    dao.rollupProof.encodedProofData!,
     dao.rollupProof.txs.map(tx => tx.offchainTxData),
     parseInteractionResult(dao.interactionResult!),
     dao.gasUsed!,
@@ -324,7 +324,7 @@ export class WorldState {
 
   private startNewPipeline() {
     this.pipeline = this.pipelineFactory.create();
-    this.pipeline.start().catch(err => {
+    void this.pipeline.start().catch(err => {
       this.pipeline = undefined;
       this.log('PIPELINE PANIC! Handle the exception!');
       this.log(err);
@@ -348,9 +348,9 @@ export class WorldState {
    */
   private async updateDbs(block: Block) {
     const end = this.metrics.processBlockTimer();
-    const { rollupProofData: rawRollupData, offchainTxData } = block;
-    const rollupProofData = RollupProofData.fromBuffer(rawRollupData);
-    const { rollupId, rollupHash, newDataRoot, newNullRoot, newDataRootsRoot, newDefiRoot } = rollupProofData;
+    const { encodedRollupProofData, offchainTxData } = block;
+    const decodedRollupProofData = RollupProofData.decode(encodedRollupProofData);
+    const { rollupId, rollupHash, newDataRoot, newNullRoot, newDataRootsRoot, newDefiRoot } = decodedRollupProofData;
 
     this.log(`Processing rollup ${rollupId}: ${rollupHash.toString('hex')}...`);
 
@@ -365,12 +365,12 @@ export class WorldState {
     } else {
       // Someone elses rollup. Discard any of our world state modifications and update world state with new rollup.
       await this.worldStateDb.rollback();
-      await this.addRollupToWorldState(rollupProofData);
+      await this.addRollupToWorldState(decodedRollupProofData);
     }
 
-    await this.processDefiProofs(rollupProofData, offchainTxData, block);
+    await this.processDefiProofs(decodedRollupProofData, offchainTxData, block);
 
-    await this.confirmOrAddRollupToDb(rollupProofData, offchainTxData, block);
+    await this.confirmOrAddRollupToDb(decodedRollupProofData, offchainTxData, block);
 
     await this.purgeInvalidTxs();
 
@@ -523,7 +523,7 @@ export class WorldState {
   }
 
   private async confirmOrAddRollupToDb(rollup: RollupProofData, offchainTxData: Buffer[], block: Block) {
-    const { txHash, rollupProofData: proofData, created } = block;
+    const { txHash, encodedRollupProofData, created } = block;
 
     const assetMetrics = await this.getAssetMetrics(rollup, block.interactionResult);
 
@@ -581,7 +581,7 @@ export class WorldState {
         txs,
         rollupSize: rollup.rollupSize,
         dataStartIndex: rollup.dataStartIndex,
-        proofData: proofData,
+        encodedProofData: encodedRollupProofData,
         created: created,
       });
 

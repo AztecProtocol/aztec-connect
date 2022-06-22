@@ -278,6 +278,18 @@ export class RollupProofData {
       .filter(id => !id.equals(InnerProofData.PADDING.txId));
   }
 
+  public getNonPaddingProofs() {
+    return this.innerProofData.filter(proofData => !proofData.isPadding());
+  }
+
+  public getNonPaddingTxIds() {
+    return this.getNonPaddingProofs().map(proof => proof.txId);
+  }
+
+  public getNonPaddingProofIds() {
+    return this.getNonPaddingProofs().map(proof => proof.proofId);
+  }
+
   static fromBuffer(proofData: Buffer) {
     const {
       rollupId,

@@ -141,19 +141,19 @@ describe('rollup_processor: defi bridge with loans', () => {
 
     // Empty rollup to ensure defi_interaction_nonce > 0 while drawing a loan
     {
-      const { proofData } = createRollupProof(rollupProvider, dummyProof());
-      const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+      const { encodedProofData } = createRollupProof(rollupProvider, dummyProof());
+      const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
       await rollupProcessor.sendTx(tx);
     }
 
     // Drawing a loan in ETH against DAI as collateral
     let previousDefiInteractionHash: Buffer;
     {
-      const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
+      const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
         rollupId: 1,
         defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
       });
-      const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+      const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
       const txHash = await rollupProcessor.sendTx(tx);
 
       await expectBalance(0, outputValueA);
@@ -181,12 +181,12 @@ describe('rollup_processor: defi bridge with loans', () => {
       });
       await bridge2.recordInterestRate(numberOfBridgeCalls, 10); // interest rate = 10 %
 
-      const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
+      const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
         rollupId: 2,
         defiInteractionData: [new DefiInteractionData(bridgeId2, outputValueA)],
         previousDefiInteractionHash,
       });
-      const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+      const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
       const txHash = await rollupProcessor.sendTx(tx);
 
       const inputValueETH = outputValueA;
@@ -233,22 +233,22 @@ describe('rollup_processor: defi bridge with loans', () => {
 
     // Empty rollup to ensure defi_interaction_nonce > 0 while drawing a loan
     {
-      const { proofData } = createRollupProof(rollupProvider, dummyProof());
-      const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+      const { encodedProofData } = createRollupProof(rollupProvider, dummyProof());
+      const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
       await rollupProcessor.sendTx(tx);
     }
 
     // Drawing two loans: (DAI -> ETH) and (ETH -> renBTC)
     let previousDefiInteractionHash: Buffer;
     {
-      const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
+      const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
         rollupId: 1,
         defiInteractionData: [
           new DefiInteractionData(bridgeId1, collateralValue1),
           new DefiInteractionData(bridgeId2, collateralValue2),
         ],
       });
-      const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+      const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
       const txHash = await rollupProcessor.sendTx(tx);
 
       const interactionResult = [
@@ -283,7 +283,7 @@ describe('rollup_processor: defi bridge with loans', () => {
       });
       await repayBridge2.recordInterestRate(5, 20); // interest rate = 20 %
 
-      const { proofData } = createRollupProof(rollupProvider, dummyProof(), {
+      const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
         rollupId: 2,
         defiInteractionData: [
           new DefiInteractionData(repayBridgeId1, loanValue1),
@@ -291,7 +291,7 @@ describe('rollup_processor: defi bridge with loans', () => {
         ],
         previousDefiInteractionHash,
       });
-      const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+      const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
       const txHash = await rollupProcessor.sendTx(tx);
 
       const collateralReturned1 = (collateralValue1 * BigInt(9)) / BigInt(10);

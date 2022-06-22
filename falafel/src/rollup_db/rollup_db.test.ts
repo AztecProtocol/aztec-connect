@@ -135,7 +135,7 @@ describe('rollup_db', () => {
 
     const rollupDao = (await rollupDb.getRollupProof(rollup.id))!;
     expect(rollupDao.id).toStrictEqual(rollup.id);
-    expect(rollupDao.proofData).toStrictEqual(rollup.proofData);
+    expect(rollupDao.encodedProofData).toStrictEqual(rollup.encodedProofData);
     expect(rollupDao.created).toStrictEqual(rollup.created);
   });
 
@@ -307,7 +307,6 @@ describe('rollup_db', () => {
     ].map(txType => randomTx({ txType }));
     const rollupProof = randomRollupProof(txs, 0);
     const rollup = randomRollup(0, rollupProof);
-
     await rollupDb.addRollup(rollup);
 
     const newRollup = (await rollupDb.getRollup(0))!;
@@ -344,7 +343,8 @@ describe('rollup_db', () => {
     const tx1 = randomTx();
 
     {
-      const rollupProof = randomRollupProof([tx0, tx1], 0);
+      const txs = [tx0, tx1];
+      const rollupProof = randomRollupProof(txs, 0);
       const rollup = randomRollup(0, rollupProof);
 
       await rollupDb.addRollup(rollup);

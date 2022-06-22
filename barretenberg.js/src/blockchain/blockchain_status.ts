@@ -66,7 +66,6 @@ export const blockchainBridgeFromJson = ({ address, ...bridge }: BlockchainBridg
 export interface BlockchainStatus {
   chainId: number;
   rollupContractAddress: EthAddress;
-  feeDistributorContractAddress: EthAddress;
   verifierContractAddress: EthAddress;
   nextRollupId: number;
   dataSize: number;
@@ -88,7 +87,6 @@ export function blockchainStatusToJson(status: BlockchainStatus): BlockchainStat
   return {
     ...status,
     rollupContractAddress: status.rollupContractAddress.toString(),
-    feeDistributorContractAddress: status.feeDistributorContractAddress.toString(),
     verifierContractAddress: status.verifierContractAddress.toString(),
     dataRoot: status.dataRoot.toString('hex'),
     nullRoot: status.nullRoot.toString('hex'),
@@ -104,8 +102,7 @@ export function blockchainStatusFromJson(json: BlockchainStatusJson): Blockchain
   return {
     ...json,
     rollupContractAddress: EthAddress.fromString(json.rollupContractAddress),
-    feeDistributorContractAddress: EthAddress.fromString(json.feeDistributorContractAddress),
-    verifierContractAddress: EthAddress.fromString(json.feeDistributorContractAddress),
+    verifierContractAddress: EthAddress.fromString(json.verifierContractAddress),
     dataRoot: Buffer.from(json.dataRoot, 'hex'),
     nullRoot: Buffer.from(json.nullRoot, 'hex'),
     rootRoot: Buffer.from(json.rootRoot, 'hex'),

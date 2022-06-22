@@ -75,13 +75,13 @@ function getEthereumHost(chainId: number) {
   }
 }
 
-function getInferredDeployTag() {
+async function getInferredDeployTag() {
   // If we haven't overridden our deploy tag, we discover it at runtime. All s3 deployments have a file
   // called DEPLOY_TAG in their root containing the deploy tag.
   if (process.env.NODE_ENV !== 'development') {
-    return fetch('/DEPLOY_TAG')
-      .then(resp => resp.text())
-      .catch(() => '');
+    const resp = await fetch('/DEPLOY_TAG');
+    const text = await resp.text();
+    return text.replace('\n', '');
   } else {
     // Webpack's dev-server would serve up index.html instead of the DEPLOY_TAG.
     return 'aztec-connect-dev';
@@ -91,10 +91,8 @@ function getInferredDeployTag() {
 function getDeployConfig(deployTag: string, rollupProviderUrl: string, chainId: number) {
   if (deployTag) {
     const hostedSdkUrl = `https://${deployTag}-sdk.aztec.network`;
-    // If this is prod release, we will use the prod domain name.
-    const explorerUrl = deployTag.match(/-prod$/)
-      ? 'https://explorer.aztec.network'
-      : `https://${deployTag}-explorer.aztec.network`;
+    // TODO: use https://explorer.aztec.network on prod once old explorer is switched out
+    const explorerUrl = `https://${deployTag}-explorer.aztec.network`;
 
     const ethereumHost = getEthereumHost(chainId);
     const mainnetEthereumHost = getEthereumHost(1);

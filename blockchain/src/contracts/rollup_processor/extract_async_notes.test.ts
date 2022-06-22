@@ -34,6 +34,8 @@ describe('rollup_processor: extract async notes', () => {
   const escapeBlockLowerBound = 80;
   const escapeBlockUpperBound = 100;
 
+  const txDataCallLimit = 120 * 1024;
+
   const mockBridge = (params: MockBridgeParams = {}) =>
     deployMockBridge(signers[0], rollupProcessor, assetAddresses, params);
 
@@ -144,9 +146,10 @@ describe('rollup_processor: extract async notes', () => {
       // send the first 3 txs
       for (let i = 0; i < 3; i++) {
         const txs = await rollupProcessor.createRollupTxs(
-          txProofs[i].proofData,
+          txProofs[i].encodedProofData,
           txProofs[i].signatures,
           txProofs[i].offchainTxData,
+          txDataCallLimit,
         );
         await rollupProcessor.sendRollupTxs(txs);
       }
@@ -162,9 +165,10 @@ describe('rollup_processor: extract async notes', () => {
     // now send the block of sync defi deposits
     {
       const txs = await rollupProcessor.createRollupTxs(
-        txProofs[3].proofData,
+        txProofs[3].encodedProofData,
         txProofs[3].signatures,
         txProofs[3].offchainTxData,
+        txDataCallLimit,
       );
       await rollupProcessor.sendRollupTxs(txs);
     }
@@ -226,9 +230,10 @@ describe('rollup_processor: extract async notes', () => {
       // now send the last 2 withdraw proofs rollups
       for (let i = 4; i < txProofs.length; i++) {
         const txs = await rollupProcessor.createRollupTxs(
-          txProofs[i].proofData,
+          txProofs[i].encodedProofData,
           txProofs[i].signatures,
           txProofs[i].offchainTxData,
+          txDataCallLimit,
         );
         await rollupProcessor.sendRollupTxs(txs);
       }
@@ -250,7 +255,7 @@ describe('rollup_processor: extract async notes', () => {
     // rollup 1 was the first batch of async defi deposits
     {
       const block = blocks[expectedRollupId];
-      const rollup = RollupProofData.fromBuffer(block.rollupProofData);
+      const rollup = RollupProofData.decode(block.encodedRollupProofData);
       const { innerProofs, offchainTxData } = innerProofOutputs[expectedRollupId];
       expect(block).toMatchObject({
         rollupId: expectedRollupId,
@@ -267,7 +272,7 @@ describe('rollup_processor: extract async notes', () => {
     // rollup 2 was the second batch of async defi deposits
     {
       const block = blocks[expectedRollupId];
-      const rollup = RollupProofData.fromBuffer(block.rollupProofData);
+      const rollup = RollupProofData.decode(block.encodedRollupProofData);
       const { innerProofs, offchainTxData } = innerProofOutputs[expectedRollupId];
       expect(block).toMatchObject({
         rollupId: expectedRollupId,
@@ -284,7 +289,7 @@ describe('rollup_processor: extract async notes', () => {
     // rollup 3 was the third batch of async defi deposits
     {
       const block = blocks[expectedRollupId];
-      const rollup = RollupProofData.fromBuffer(block.rollupProofData);
+      const rollup = RollupProofData.decode(block.encodedRollupProofData);
       const { innerProofs, offchainTxData } = innerProofOutputs[expectedRollupId];
       expect(block).toMatchObject({
         rollupId: expectedRollupId,
@@ -302,7 +307,7 @@ describe('rollup_processor: extract async notes', () => {
     // rollup 4 was the batch of sync defi deposits
     {
       const block = blocks[expectedRollupId];
-      const rollup = RollupProofData.fromBuffer(block.rollupProofData);
+      const rollup = RollupProofData.decode(block.encodedRollupProofData);
       const { innerProofs, offchainTxData } = innerProofOutputs[expectedRollupId];
       expect(block).toMatchObject({
         rollupId: expectedRollupId,
@@ -320,7 +325,7 @@ describe('rollup_processor: extract async notes', () => {
     // rollup 5 was the first withdraw
     {
       const block = blocks[expectedRollupId];
-      const rollup = RollupProofData.fromBuffer(block.rollupProofData);
+      const rollup = RollupProofData.decode(block.encodedRollupProofData);
       const { innerProofs, offchainTxData } = innerProofOutputs[expectedRollupId];
       expect(block).toMatchObject({
         rollupId: expectedRollupId,
@@ -338,7 +343,7 @@ describe('rollup_processor: extract async notes', () => {
     // rollup 6 was the second withdraw
     {
       const block = blocks[expectedRollupId];
-      const rollup = RollupProofData.fromBuffer(block.rollupProofData);
+      const rollup = RollupProofData.decode(block.encodedRollupProofData);
       const { innerProofs, offchainTxData } = innerProofOutputs[expectedRollupId];
       expect(block).toMatchObject({
         rollupId: expectedRollupId,
@@ -356,7 +361,7 @@ describe('rollup_processor: extract async notes', () => {
     // rollup 7 was the third withdraw
     {
       const block = blocks[expectedRollupId];
-      const rollup = RollupProofData.fromBuffer(block.rollupProofData);
+      const rollup = RollupProofData.decode(block.encodedRollupProofData);
       const { innerProofs, offchainTxData } = innerProofOutputs[expectedRollupId];
       expect(block).toMatchObject({
         rollupId: expectedRollupId,

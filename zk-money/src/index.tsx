@@ -15,6 +15,8 @@ declare global {
   }
 }
 
+const PROD_EXPLORER_URL = 'https://aztec-connect-prod-explorer.aztec.network/';
+
 async function rootRender() {
   try {
     // TODO: remove this check for launch
@@ -23,7 +25,7 @@ async function rootRender() {
     if (!isDevSite && !localStorage.getItem('unlock_prod')) {
       return (
         <BrowserRouter>
-          <AppInitFailed reason={{ type: 'unlaunched' }} />
+          <AppInitFailed reason={{ type: 'unlaunched' }} explorerUrl={PROD_EXPLORER_URL} />
         </BrowserRouter>
       );
     }
@@ -33,7 +35,7 @@ async function rootRender() {
     if (supportStatus !== 'supported') {
       return (
         <BrowserRouter>
-          <AppInitFailed reason={{ type: 'unsupported', supportStatus }} />
+          <AppInitFailed reason={{ type: 'unsupported', supportStatus }} explorerUrl={PROD_EXPLORER_URL} />
         </BrowserRouter>
       );
     }
@@ -48,7 +50,7 @@ async function rootRender() {
   } catch {
     return (
       <BrowserRouter>
-        <AppInitFailed reason={{ type: 'falafel-down' }} />
+        <AppInitFailed reason={{ type: 'falafel-down' }} explorerUrl={PROD_EXPLORER_URL} />
       </BrowserRouter>
     );
   }

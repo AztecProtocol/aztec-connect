@@ -1,19 +1,24 @@
+import { InterruptError } from '../errors';
+
 export class InterruptableSleep {
-  private interruptResolve = () => {};
-  private interruptPromise = new Promise<void>(resolve => (this.interruptResolve = resolve));
+  private interruptResolve: (shouldThrow: boolean) => void = () => {};
+  private interruptPromise = new Promise<boolean>(resolve => (this.interruptResolve = resolve));
   private timeouts: NodeJS.Timeout[] = [];
 
   public async sleep(ms: number) {
     let timeout!: NodeJS.Timeout;
-    const promise = new Promise(resolve => (timeout = setTimeout(resolve, ms)));
+    const promise = new Promise<boolean>(resolve => (timeout = setTimeout(() => resolve(false), ms)));
     this.timeouts.push(timeout);
-    await Promise.race([promise, this.interruptPromise]);
+    const shouldThrow = await Promise.race([promise, this.interruptPromise]);
     clearTimeout(timeout);
     this.timeouts.splice(this.timeouts.indexOf(timeout), 1);
+    if (shouldThrow) {
+      throw new InterruptError('Interrupted.');
+    }
   }
 
-  public interrupt() {
-    this.interruptResolve();
+  public interrupt(sleepShouldThrow = false) {
+    this.interruptResolve(sleepShouldThrow);
     this.interruptPromise = new Promise(resolve => (this.interruptResolve = resolve));
   }
 }

@@ -281,6 +281,7 @@ describe('groupUserTxs', () => {
       const sendTx = randomCorePaymentTx({
         proofId: ProofId.SEND,
         privateInput: 100n,
+        senderPrivateOutput: 5n,
         recipientPrivateOutput: 80n,
       });
       expect(groupUserTxs([sendTx])).toEqual([
@@ -289,7 +290,7 @@ describe('groupUserTxs', () => {
           sendTx.userId,
           ProofId.SEND,
           { assetId: 0, value: 80n },
-          { assetId: 0, value: 20n },
+          { assetId: 0, value: 15n },
           undefined,
           true,
           sendTx.created,
@@ -301,6 +302,7 @@ describe('groupUserTxs', () => {
       const sendTx = randomCorePaymentTx({
         proofId: ProofId.SEND,
         privateInput: 20n,
+        senderPrivateOutput: 5n,
       });
       expect(groupUserTxs([sendTx])).toEqual([
         new UserPaymentTx(
@@ -308,7 +310,7 @@ describe('groupUserTxs', () => {
           sendTx.userId,
           ProofId.SEND,
           { assetId: 0, value: 0n },
-          { assetId: 0, value: 20n },
+          { assetId: 0, value: 15n },
           undefined,
           true,
           sendTx.created,
@@ -320,6 +322,7 @@ describe('groupUserTxs', () => {
       const sendTx = randomCorePaymentTx({
         proofId: ProofId.SEND,
         privateInput: 100n,
+        senderPrivateOutput: 5n,
         recipientPrivateOutput: 80n,
         isRecipient: false,
       });
@@ -329,7 +332,7 @@ describe('groupUserTxs', () => {
           sendTx.userId,
           ProofId.SEND,
           { assetId: 0, value: 80n },
-          { assetId: 0, value: 20n },
+          { assetId: 0, value: 15n },
           undefined,
           true,
           sendTx.created,
@@ -337,10 +340,11 @@ describe('groupUserTxs', () => {
       ]);
     });
 
-    it('recover transfer tx sent to other user without local state', () => {
+    it('recover transfer tx sent to other user without recipient state', () => {
       const sendTx = randomCorePaymentTx({
         proofId: ProofId.SEND,
         privateInput: 100n,
+        senderPrivateOutput: 5n,
         isRecipient: false,
       });
       expect(groupUserTxs([sendTx])).toEqual([
@@ -348,7 +352,7 @@ describe('groupUserTxs', () => {
           sendTx.txId,
           sendTx.userId,
           ProofId.SEND,
-          { assetId: 0, value: 100n },
+          { assetId: 0, value: 95n },
           { assetId: 0, value: 0n },
           undefined,
           true,
@@ -383,8 +387,35 @@ describe('groupUserTxs', () => {
       const sendTx = randomCorePaymentTx({
         proofId: ProofId.SEND,
         assetId: garbageAssetId,
-        privateInput: 80n,
+        privateInput: 100n,
+        senderPrivateOutput: 20n,
         recipientPrivateOutput: 80n,
+        isRecipient: false,
+        txRefNo,
+      });
+      const feeTx = createFeeTx(20n, txRefNo);
+      expect(groupUserTxs([sendTx, feeTx])).toEqual([
+        new UserPaymentTx(
+          sendTx.txId,
+          sendTx.userId,
+          ProofId.SEND,
+          { assetId: garbageAssetId, value: 80n },
+          { assetId: 0, value: 20n },
+          undefined,
+          true,
+          sendTx.created,
+        ),
+      ]);
+    });
+
+    it('recover transfer tx sent to other user with fee paying tx and without recipient state', () => {
+      const txRefNo = createTxRefNo();
+      const sendTx = randomCorePaymentTx({
+        proofId: ProofId.SEND,
+        assetId: garbageAssetId,
+        privateInput: 100n,
+        senderPrivateOutput: 20n,
+        recipientPrivateOutput: 0n, // <--
         isRecipient: false,
         txRefNo,
       });

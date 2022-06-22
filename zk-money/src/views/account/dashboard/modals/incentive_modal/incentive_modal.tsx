@@ -9,10 +9,11 @@ import style from './incentive_modal.module.scss';
 const cx = bindStyle(style);
 export interface IncentiveModalProps {
   onClose: () => void;
-  onShieldNow: () => void;
+  onButtonClick: () => void;
+  buttonLabel: string;
 }
 
-function IncentiveModal(props: IncentiveModalProps) {
+export function IncentiveModal(props: IncentiveModalProps) {
   return (
     <Modal className={style.incentiveModal}>
       <div className={style.incentiveModalWrapper}>
@@ -25,7 +26,7 @@ function IncentiveModal(props: IncentiveModalProps) {
           <div className={cx(style.body, style.body2)}>
             Winners will be drawn at 12PM UTC every Friday and announced on our official Aztec Twitter.
           </div>
-          <Button className={style.button} text="Shield Now" onClick={props.onShieldNow} />
+          <Button className={style.button} text={props.buttonLabel} onClick={props.onButtonClick} />
         </div>
         <img src={closeIconWhite} onClick={props.onClose} className={style.close} alt="Close button" />
         <img src={gift} className={style.gift} alt="A gift box" />
@@ -36,25 +37,31 @@ function IncentiveModal(props: IncentiveModalProps) {
 
 interface SelfDismissingIncentiveModalProps {
   instanceName: string;
-  onShieldNow: () => void;
+  onButtonClick: () => void;
+  buttonLabel: string;
 }
 
 // TODO: Only show incentive modals once we have gone live
 // (similar change required in home.tsx & src/index.tsx)
 const hasGoneLive = false;
 
-export function SelfDismissingIncentiveModal(props: SelfDismissingIncentiveModalProps) {
-  const storageKey = `incentive_modal_was_closed:${props.instanceName}`;
-  const [isShowing, setIsShowing] = useState(!localStorage.getItem(storageKey));
-  const handleClose = () => {
+export function useShouldShowIncentiveModal(instanceName: string) {
+  const storageKey = `incentive_modal_was_closed:${instanceName}`;
+  const [shouldShow, setShouldShow] = useState(() => hasGoneLive && !localStorage.getItem(storageKey));
+  const markAsShown = () => {
     localStorage.setItem(storageKey, 'true');
-    setIsShowing(false);
+    setShouldShow(false);
   };
-  const handleShieldNow = () => {
-    handleClose();
-    props.onShieldNow();
+  return [shouldShow, markAsShown] as const;
+}
+
+export function SelfDismissingIncentiveModal(props: SelfDismissingIncentiveModalProps) {
+  const [shouldShow, markAsShown] = useShouldShowIncentiveModal(props.instanceName);
+  const handleButtonClick = () => {
+    markAsShown();
+    props.onButtonClick();
   };
 
-  if (!isShowing || !hasGoneLive) return <></>;
-  return <IncentiveModal onClose={handleClose} onShieldNow={handleShieldNow} />;
+  if (!shouldShow) return <></>;
+  return <IncentiveModal onClose={markAsShown} onButtonClick={handleButtonClick} buttonLabel={props.buttonLabel} />;
 }

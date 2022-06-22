@@ -17,7 +17,7 @@ export class RollupDepositProofData {
   }
 
   get assetId() {
-    return this.proofData.assetId.readUInt32BE(28);
+    return this.proofData.publicAssetId.readUInt32BE(28);
   }
 
   get publicValue() {
@@ -47,7 +47,7 @@ export class RollupDepositProofData {
     offset += 32;
     const publicOwner = Buffer.concat([Buffer.alloc(12), encoded.slice(offset, offset + 20)]);
     offset += 20;
-    const assetId = Buffer.concat([Buffer.alloc(28), encoded.slice(offset, offset + 4)]);
+    const publicAssetId = Buffer.concat([Buffer.alloc(28), encoded.slice(offset, offset + 4)]);
     return new RollupDepositProofData(
       new InnerProofData(
         ProofId.DEPOSIT,
@@ -57,14 +57,14 @@ export class RollupDepositProofData {
         nullifier2,
         publicValue,
         publicOwner,
-        assetId,
+        publicAssetId,
       ),
     );
   }
 
   encode() {
-    const { noteCommitment1, noteCommitment2, nullifier1, nullifier2, publicValue, assetId } = this.proofData;
-    const encodedAssetId = assetId.slice(28, 32);
+    const { noteCommitment1, noteCommitment2, nullifier1, nullifier2, publicValue, publicAssetId } = this.proofData;
+    const encodedAssetId = publicAssetId.slice(28, 32);
     return Buffer.concat([
       Buffer.from([ProofId.DEPOSIT]),
       noteCommitment1,
