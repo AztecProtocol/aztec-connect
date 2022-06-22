@@ -238,8 +238,8 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     return await this.contracts.getUserProofApprovalStatus(account, txId);
   }
 
-  async createRollupTxs(dataBuf: Buffer, signatures: Buffer[], offchainTxData: Buffer[]) {
-    return await this.contracts.createRollupTxs(dataBuf, signatures, offchainTxData);
+  async createRollupTxs(dataBuf: Buffer, signatures: Buffer[], offchainTxData: Buffer[], txCallDataLimit: number) {
+    return await this.contracts.createRollupTxs(dataBuf, signatures, offchainTxData, txCallDataLimit);
   }
 
   public sendTx(tx: Buffer, options: SendTxOptions = {}) {

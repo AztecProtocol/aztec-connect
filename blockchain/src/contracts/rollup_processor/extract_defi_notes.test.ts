@@ -40,6 +40,8 @@ describe('rollup_processor: extract defi notes', () => {
   const escapeBlockLowerBound = 80;
   const escapeBlockUpperBound = 100;
 
+  const txCallDataLimit = 120 * 1024;
+
   const decodeRollup = (block: Block) => {
     const rollup = RollupProofData.decode(block.encodedRollupProofData);
     // Coax lazy init of txId
@@ -132,6 +134,7 @@ describe('rollup_processor: extract defi notes', () => {
         txProofs[i].encodedProofData,
         txProofs[i].signatures,
         txProofs[i].offchainTxData,
+        txCallDataLimit,
       );
       await rollupProcessor.sendRollupTxs(txs);
     }
@@ -146,6 +149,7 @@ describe('rollup_processor: extract defi notes', () => {
         txProofs[i].encodedProofData,
         txProofs[i].signatures,
         txProofs[i].offchainTxData,
+        txCallDataLimit,
       );
       await rollupProcessor.sendRollupTxs(txs);
     }

@@ -34,6 +34,8 @@ describe('rollup_processor: extract async notes', () => {
   const escapeBlockLowerBound = 80;
   const escapeBlockUpperBound = 100;
 
+  const txDataCallLimit = 120 * 1024;
+
   const mockBridge = (params: MockBridgeParams = {}) =>
     deployMockBridge(signers[0], rollupProcessor, assetAddresses, params);
 
@@ -147,6 +149,7 @@ describe('rollup_processor: extract async notes', () => {
           txProofs[i].encodedProofData,
           txProofs[i].signatures,
           txProofs[i].offchainTxData,
+          txDataCallLimit,
         );
         await rollupProcessor.sendRollupTxs(txs);
       }
@@ -165,6 +168,7 @@ describe('rollup_processor: extract async notes', () => {
         txProofs[3].encodedProofData,
         txProofs[3].signatures,
         txProofs[3].offchainTxData,
+        txDataCallLimit,
       );
       await rollupProcessor.sendRollupTxs(txs);
     }
@@ -229,6 +233,7 @@ describe('rollup_processor: extract async notes', () => {
           txProofs[i].encodedProofData,
           txProofs[i].signatures,
           txProofs[i].offchainTxData,
+          txDataCallLimit,
         );
         await rollupProcessor.sendRollupTxs(txs);
       }

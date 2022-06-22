@@ -58,6 +58,7 @@ export class RollupPipeline {
       maxFeePerGas,
       maxPriorityFeePerGas,
       gasLimit,
+      maxCallDataPerRollup,
       metrics,
     );
     const rollupAggregator = new RollupAggregator(

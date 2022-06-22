@@ -271,17 +271,17 @@ export class RollupProcessor {
   // Deprecated: Used by lots of tests. We now use createRollupTxs() to produce two txs, one with broadcast data,
   // the other with the actual rollup proof.
   async createRollupProofTx(dataBuf: Buffer, signatures: Buffer[], offchainTxData: Buffer[]) {
-    return (await this.createRollupTxs(dataBuf, signatures, offchainTxData)).rollupProofTx;
+    // setting the tx call data limit to 120kb as this function is only used by tests
+    return (await this.createRollupTxs(dataBuf, signatures, offchainTxData, 120 * 1024)).rollupProofTx;
   }
 
   /**
    * The dataBuf argument should be formatted as the rollup broadcast data in encoded form
    * concatenated with the proof data as provided by the root verifier
    * The given offchainTxData is chunked into multiple offchainData txs.
-   * Openethereum will accept a maximum tx size of 300kb. Pick 280kb to allow for overheads.
    * Returns the txs to be published.
    */
-  async createRollupTxs(dataBuf: Buffer, signatures: Buffer[], offchainTxData: Buffer[], offchainChunkSize = 280000) {
+  async createRollupTxs(dataBuf: Buffer, signatures: Buffer[], offchainTxData: Buffer[], txDataLimit: number) {
     const broadcastData = RollupProofData.decode(dataBuf);
     const formattedSignatures = solidityFormatSignatures(signatures);
     const rollupProofTxRaw = await this.rollupProcessor.populateTransaction
@@ -290,11 +290,11 @@ export class RollupProcessor {
     const rollupProofTx = Buffer.from(rollupProofTxRaw.data!.slice(2), 'hex');
 
     const ocData = Buffer.concat(offchainTxData);
-    const chunks = Math.ceil(ocData.length / offchainChunkSize);
+    const chunks = Math.ceil(ocData.length / txDataLimit);
     // We should always publish at least 1 chunk, even if it's 0 length.
     // We want the log event to be emitted so we can can be sure things are working as intended.
     const ocdChunks = chunks
-      ? Array.from({ length: chunks }).map((_, i) => ocData.slice(i * offchainChunkSize, (i + 1) * offchainChunkSize))
+      ? Array.from({ length: chunks }).map((_, i) => ocData.slice(i * txDataLimit, (i + 1) * txDataLimit))
       : [Buffer.alloc(0)];
 
     const offchainDataTxsRaw = await Promise.all(

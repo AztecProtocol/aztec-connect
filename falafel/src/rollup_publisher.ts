@@ -18,6 +18,7 @@ export class RollupPublisher {
     private maxFeePerGas: bigint,
     private maxPriorityFeePerGas: bigint,
     private gasLimit: number,
+    private callDataLimit: number,
     private metrics: Metrics,
     private log = createLogger('RollupPublisher'),
   ) {
@@ -165,7 +166,12 @@ export class RollupPublisher {
         signatures.push(tx.signature!);
       }
     }
-    return await this.blockchain.createRollupTxs(rollup.rollupProof.encodedProofData, signatures, offchainTxData);
+    return await this.blockchain.createRollupTxs(
+      rollup.rollupProof.encodedProofData,
+      signatures,
+      offchainTxData,
+      this.callDataLimit,
+    );
   }
 
   private async sendTx(txData: Buffer, options: SendTxOptions) {

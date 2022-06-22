@@ -106,8 +106,8 @@ export class Contracts {
     return await this.rollupProcessor.verifier();
   }
 
-  async createRollupTxs(dataBuf: Buffer, signatures: Buffer[], offchainTxData: Buffer[]) {
-    return await this.rollupProcessor.createRollupTxs(dataBuf, signatures, offchainTxData);
+  async createRollupTxs(dataBuf: Buffer, signatures: Buffer[], offchainTxData: Buffer[], txCallDataLimit: number) {
+    return await this.rollupProcessor.createRollupTxs(dataBuf, signatures, offchainTxData, txCallDataLimit);
   }
 
   public async sendTx(data: Buffer, options: SendTxOptions = {}) {

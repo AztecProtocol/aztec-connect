@@ -54,7 +54,12 @@ export interface Blockchain extends BlockSource, BlockchainStatusSource, Ethereu
 
   getUserPendingDeposit(assetId: number, account: EthAddress): Promise<bigint>;
 
-  createRollupTxs(dataBuf: Buffer, signatures: Buffer[], offchainTxData: Buffer[]): Promise<RollupTxs>;
+  createRollupTxs(
+    dataBuf: Buffer,
+    signatures: Buffer[],
+    offchainTxData: Buffer[],
+    txCallDataLimit: number,
+  ): Promise<RollupTxs>;
 
   sendTx(tx: Buffer, options?: SendTxOptions): Promise<TxHash>;
 
