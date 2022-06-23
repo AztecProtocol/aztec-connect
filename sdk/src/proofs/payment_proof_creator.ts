@@ -75,6 +75,10 @@ export class PaymentProofCreator {
     })();
 
     const totalInputNoteValue = inputNotes.reduce((sum, note) => sum + note.value, BigInt(0));
+    if (totalInputNoteValue && proofId === ProofId.DEPOSIT) {
+      // TODO - Enable it and modify the recovery logic in group_user_txs.
+      throw new Error('Merging private balance with public balance is not supported.');
+    }
     const changeValue = totalInputNoteValue > privateInput ? totalInputNoteValue - privateInput : BigInt(0);
 
     const proofInput = await this.txFactory.createTx(user, proofId, assetId, inputNotes, spendingPublicKey, {

@@ -9,6 +9,7 @@ import { createLogger } from '@aztec/barretenberg/log';
 import { DefiInteractionNote, NoteAlgorithms, TreeClaimNote } from '@aztec/barretenberg/note_algorithms';
 import { OffchainDefiDepositData } from '@aztec/barretenberg/offchain_tx_data';
 import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
+import { serializeBufferArrayToVector } from '@aztec/barretenberg/serialize';
 import { Timer } from '@aztec/barretenberg/timer';
 import { WorldStateConstants } from '@aztec/barretenberg/world_state';
 import { RollupTreeId, WorldStateDb } from '@aztec/barretenberg/world_state_db';
@@ -592,7 +593,7 @@ export class WorldState {
         ethTxHash: txHash,
         mined: block.created,
         created: block.created,
-        interactionResult: Buffer.concat(block.interactionResult.map(r => r.toBuffer())),
+        interactionResult: serializeBufferArrayToVector(block.interactionResult.map(r => r.toBuffer())),
         gasPrice: toBufferBE(block.gasPrice, 32),
         gasUsed: block.gasUsed,
         assetMetrics,
