@@ -19,14 +19,17 @@ function filterForPendingShields(txs: UserTx[]): UserPaymentTx[] {
   return txs.filter((tx): tx is UserPaymentTx => tx.proofId === ProofId.DEPOSIT && !tx.settled);
 }
 
-function sumPendingShields(txs: UserPaymentTx[], assetId: number) {
-  let total = 0n;
-  for (const tx of txs) {
-    if (tx.value.assetId === assetId) {
-      total += tx.value.value;
+function squashValues(assetValues: AssetValue[]) {
+  const out: AssetValue[] = [];
+  for (const { assetId, value } of assetValues) {
+    const existing = out.find(x => x.assetId === assetId);
+    if (existing) {
+      existing.value += value;
+    } else {
+      out.push({ assetId, value });
     }
   }
-  return total;
+  return out.sort((x1, x2) => x1.assetId - x2.assetId);
 }
 
 export function useBalance(assetId?: number) {
@@ -38,10 +41,7 @@ export function useBalances() {
   const balances = useMemo(() => {
     if (!accountState) return;
     const pendingShields = filterForPendingShields(accountState.txs);
-    return accountState.balances.map(({ assetId, value }) => ({
-      assetId,
-      value: value + sumPendingShields(pendingShields, assetId),
-    }));
+    return squashValues(pendingShields.map(tx => tx.value).concat(accountState.balances));
   }, [accountState]);
   return useWithoutDust(balances);
 }
@@ -50,7 +50,7 @@ export function useSpendableBalance(assetId: number) {
   return useSpendableBalances()?.find(assetValue => assetValue.assetId === assetId)?.value;
 }
 
-// maxSpendableValue is the sum of the two highest avaiable notes
+// maxSpendableValue is the sum of the two highest available notes
 export function useMaxSpendableValue(assetId?: number) {
   const { userId } = useApp();
   const sdk = useSdk();
