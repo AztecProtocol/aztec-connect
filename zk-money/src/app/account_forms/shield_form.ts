@@ -47,9 +47,9 @@ export enum ShieldStatus {
   NADA,
   CONFIRM,
   VALIDATE,
-  DEPOSIT,
   GENERATE_KEY,
   CREATE_PROOF,
+  DEPOSIT,
   APPROVE_PROOF,
   SEND_PROOF,
   DONE,
@@ -570,6 +570,14 @@ export class ShieldForm extends EventEmitter implements AccountForm {
         signed: false,
       };
     }
+
+    const { controller } = this.proof;
+
+    if (this.status <= ShieldStatus.CREATE_PROOF) {
+      this.proceed(ShieldStatus.CREATE_PROOF);
+      await controller.createProof();
+    }
+
     if (this.status <= ShieldStatus.DEPOSIT) {
       this.proceed(ShieldStatus.DEPOSIT);
       try {
@@ -577,13 +585,6 @@ export class ShieldForm extends EventEmitter implements AccountForm {
       } catch (e) {
         return this.abort(e.message);
       }
-    }
-
-    const { controller } = this.proof;
-
-    if (this.status <= ShieldStatus.CREATE_PROOF) {
-      this.proceed(ShieldStatus.CREATE_PROOF);
-      await controller.createProof();
     }
 
     if (this.status <= ShieldStatus.APPROVE_PROOF) {

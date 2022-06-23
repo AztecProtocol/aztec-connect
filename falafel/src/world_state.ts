@@ -9,6 +9,7 @@ import { createLogger } from '@aztec/barretenberg/log';
 import { DefiInteractionNote, NoteAlgorithms, TreeClaimNote } from '@aztec/barretenberg/note_algorithms';
 import { OffchainDefiDepositData } from '@aztec/barretenberg/offchain_tx_data';
 import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
+import { serializeBufferArrayToVector } from '@aztec/barretenberg/serialize';
 import { Timer } from '@aztec/barretenberg/timer';
 import { WorldStateConstants } from '@aztec/barretenberg/world_state';
 import { RollupTreeId, WorldStateDb } from '@aztec/barretenberg/world_state_db';
@@ -207,49 +208,57 @@ export class WorldState {
 
   private async syncStateFromInitFiles() {
     this.log('Synching state from initialisation files...');
+
     const chainId = await this.blockchain.getChainId();
     this.log(`Chain id: ${chainId}`);
+
     const accountDataFile = InitHelpers.getAccountDataFile(chainId);
     if (!accountDataFile) {
       this.log(`No account initialisation file for chain ${chainId}.`);
       return;
     }
+
     const accounts = await InitHelpers.readAccountTreeData(accountDataFile);
-    const {
-      dataRoot: initDataRoot,
-      nullRoot: initNullRoot,
-      rootsRoot: initRootsRoot,
-    } = InitHelpers.getInitRoots(chainId);
     if (accounts.length === 0) {
       this.log('No accounts read from file, continuing without syncing from file.');
       return;
     }
-    if (!initDataRoot.length || !initNullRoot.length || !initRootsRoot.length) {
-      this.log('No roots read from file, continuing without syncing from file.');
-      return;
-    }
     this.log(`Read ${accounts.length} accounts from file.`);
-    const numNotesPerRollup = WorldStateConstants.NUM_NEW_DATA_TREE_NOTES_PER_TX * this.getRollupSize();
-    const { dataRoot, rootsRoot } = await InitHelpers.populateDataAndRootsTrees(
-      accounts,
-      this.worldStateDb,
-      RollupTreeId.DATA,
-      RollupTreeId.ROOT,
-      numNotesPerRollup,
-    );
-    const newNullRoot = await InitHelpers.populateNullifierTree(accounts, this.worldStateDb, RollupTreeId.NULL);
-    await this.worldStateDb.commit();
 
-    this.printState();
+    if (this.worldStateDb.getSize(RollupTreeId.DATA) === 0n) {
+      const {
+        dataRoot: initDataRoot,
+        nullRoot: initNullRoot,
+        rootsRoot: initRootsRoot,
+      } = InitHelpers.getInitRoots(chainId);
+      if (!initDataRoot.length || !initNullRoot.length || !initRootsRoot.length) {
+        this.log('No roots read from file, continuing without syncing from file.');
+        return;
+      }
+      const numNotesPerRollup = WorldStateConstants.NUM_NEW_DATA_TREE_NOTES_PER_TX * this.getRollupSize();
+      const { dataRoot, rootsRoot } = await InitHelpers.populateDataAndRootsTrees(
+        accounts,
+        this.worldStateDb,
+        RollupTreeId.DATA,
+        RollupTreeId.ROOT,
+        numNotesPerRollup,
+      );
+      const newNullRoot = await InitHelpers.populateNullifierTree(accounts, this.worldStateDb, RollupTreeId.NULL);
+      await this.worldStateDb.commit();
 
-    if (!initDataRoot.equals(dataRoot)) {
-      throw new Error(`New data root different to init file: ${initDataRoot.toString('hex')}`);
-    }
-    if (!initRootsRoot.equals(rootsRoot)) {
-      throw new Error(`New roots root different to init file: ${initRootsRoot.toString('hex')}`);
-    }
-    if (!initNullRoot.equals(newNullRoot)) {
-      throw new Error(`New null root different to init file: ${initNullRoot.toString('hex')}`);
+      this.printState();
+
+      if (!initDataRoot.equals(dataRoot)) {
+        throw new Error(`New data root different to init file: ${initDataRoot.toString('hex')}`);
+      }
+      if (!initRootsRoot.equals(rootsRoot)) {
+        throw new Error(`New roots root different to init file: ${initRootsRoot.toString('hex')}`);
+      }
+      if (!initNullRoot.equals(newNullRoot)) {
+        throw new Error(`New null root different to init file: ${initNullRoot.toString('hex')}`);
+      }
+    } else {
+      this.log('Data tree already has information. Skipping merkle tree genesis sync.');
     }
 
     const accountDaos = accounts.map(
@@ -280,7 +289,7 @@ export class WorldState {
     this.printState();
     const nextRollupId = await this.rollupDb.getNextRollupId();
     const updateDbsStart = new Timer();
-    if (this.worldStateDb.getSize(RollupTreeId.DATA) == 0n) {
+    if (nextRollupId === 0) {
       await this.syncStateFromInitFiles();
     }
     await this.syncStateFromBlockchain(nextRollupId);
@@ -592,7 +601,7 @@ export class WorldState {
         ethTxHash: txHash,
         mined: block.created,
         created: block.created,
-        interactionResult: Buffer.concat(block.interactionResult.map(r => r.toBuffer())),
+        interactionResult: serializeBufferArrayToVector(block.interactionResult.map(r => r.toBuffer())),
         gasPrice: toBufferBE(block.gasPrice, 32),
         gasUsed: block.gasUsed,
         assetMetrics,

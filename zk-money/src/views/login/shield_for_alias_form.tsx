@@ -178,12 +178,12 @@ export const ShieldForAliasForm: React.FunctionComponent<DepositFormProps> = ({
 
   const submissionSteps = [
     {
-      step: ShieldStatus.DEPOSIT,
-      title: `Deposit ${asset.symbol}`,
-    },
-    {
       step: ShieldStatus.CREATE_PROOF,
       title: 'Create Shield Proof',
+    },
+    {
+      step: ShieldStatus.DEPOSIT,
+      title: `Deposit ${asset.symbol}`,
     },
     {
       step: ShieldStatus.APPROVE_PROOF,

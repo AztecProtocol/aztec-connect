@@ -9,8 +9,10 @@ function getTxTypeLabel(tx: UserTx) {
       return 'Shield';
     case ProofId.WITHDRAW:
       return 'Withdraw';
-    case ProofId.SEND:
-      return 'Send';
+    case ProofId.SEND: {
+      if (tx.isSender) return 'Send';
+      else return 'Receive';
+    }
     case ProofId.ACCOUNT:
       return 'Register Account';
     case ProofId.DEFI_DEPOSIT:

@@ -408,7 +408,7 @@ export class TerminalHandler {
       );
     };
     for (const tx of txs.slice(f, f + n)) {
-      if (!tx.isSender) {
+      if (tx.proofId === ProofId.SEND && !tx.isSender) {
         printTx(tx, 'RECEIVE', tx.value);
         return;
       }

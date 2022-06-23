@@ -476,11 +476,10 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       // Create a one time user to generate and sign the proof.
       const accountPrivateKey = randomBytes(32);
       const accountPublicKey = await this.derivePublicKey(accountPrivateKey);
-      const user: UserData = {
+      const user = {
         accountPrivateKey,
         accountPublicKey,
-        syncedToRollup: -1,
-      };
+      } as UserData;
       const signer = new SchnorrSigner(this, accountPublicKey, accountPrivateKey);
       const spendingPublicKey = accountPublicKey;
 

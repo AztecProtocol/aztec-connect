@@ -16,6 +16,37 @@ const createFeeTx = (fee: bigint, txRefNo: number) =>
     txRefNo,
   });
 
+const createDepositTx = ({ publicValue = 0n, fee = 0n, assetId = 0, txRefNo = 0 } = {}) =>
+  randomCorePaymentTx({
+    proofId: ProofId.DEPOSIT,
+    assetId,
+    publicValue,
+    publicOwner: EthAddress.random(),
+    recipientPrivateOutput: publicValue - fee,
+    isRecipient: true,
+    isSender: false,
+    txRefNo,
+  });
+
+const createWithdrawTx = ({
+  publicValue = 0n,
+  fee = 0n,
+  privateInput = publicValue + fee,
+  assetId = 0,
+  txRefNo = 0,
+} = {}) =>
+  randomCorePaymentTx({
+    proofId: ProofId.WITHDRAW,
+    assetId,
+    publicValue,
+    publicOwner: EthAddress.random(),
+    privateInput,
+    senderPrivateOutput: privateInput - fee - publicValue,
+    isSender: true,
+    isRecipient: false,
+    txRefNo,
+  });
+
 describe('groupUserTxs', () => {
   const garbageAssetId = 123;
   const now = Date.now();
@@ -40,14 +71,7 @@ describe('groupUserTxs', () => {
     it('recover account tx with fee and deposit', () => {
       const txRefNo = createTxRefNo();
       const accountTx = randomCoreAccountTx({ txRefNo });
-      const depositAndFeeTx = randomCorePaymentTx({
-        proofId: ProofId.DEPOSIT,
-        publicOwner: EthAddress.random(),
-        publicValue: 100n,
-        senderPrivateOutput: 80n,
-        txRefNo,
-        created: new Date(now),
-      });
+      const depositAndFeeTx = createDepositTx({ publicValue: 100n, fee: 20n, txRefNo });
       expect(groupUserTxs([accountTx, depositAndFeeTx])).toEqual([
         new UserAccountTx(
           accountTx.txId,
@@ -66,7 +90,7 @@ describe('groupUserTxs', () => {
           { assetId: 0, value: 80n },
           { assetId: 0, value: 20n },
           depositAndFeeTx.publicOwner,
-          true,
+          false,
           depositAndFeeTx.created,
         ),
       ]);
@@ -75,12 +99,7 @@ describe('groupUserTxs', () => {
     it('recover account tx with fee paid by deposit', () => {
       const txRefNo = createTxRefNo();
       const accountTx = randomCoreAccountTx({ txRefNo });
-      const depositAndFeeTx = randomCorePaymentTx({
-        proofId: ProofId.DEPOSIT,
-        publicOwner: EthAddress.random(),
-        publicValue: 20n,
-        txRefNo,
-      });
+      const depositAndFeeTx = createDepositTx({ publicValue: 20n, fee: 20n, txRefNo });
       expect(groupUserTxs([accountTx, depositAndFeeTx])).toEqual([
         new UserAccountTx(
           accountTx.txId,
@@ -116,103 +135,7 @@ describe('groupUserTxs', () => {
 
   describe('deposit tx', () => {
     it('recover deposit tx', () => {
-      const depositTx = randomCorePaymentTx({
-        proofId: ProofId.DEPOSIT,
-        publicOwner: EthAddress.random(),
-        publicValue: 100n,
-        senderPrivateOutput: 80n,
-      });
-      expect(groupUserTxs([depositTx])).toEqual([
-        new UserPaymentTx(
-          depositTx.txId,
-          depositTx.userId,
-          ProofId.DEPOSIT,
-          { assetId: 0, value: 80n },
-          { assetId: 0, value: 20n },
-          depositTx.publicOwner,
-          true,
-          depositTx.created,
-        ),
-      ]);
-    });
-
-    it('recover deposit tx with fee paying tx', () => {
-      const txRefNo = createTxRefNo();
-      const depositTx = randomCorePaymentTx({
-        proofId: ProofId.DEPOSIT,
-        publicOwner: EthAddress.random(),
-        assetId: garbageAssetId,
-        publicValue: 80n,
-        senderPrivateOutput: 80n,
-        txRefNo,
-      });
-      const feeTx = createFeeTx(20n, txRefNo);
-      expect(groupUserTxs([depositTx, feeTx])).toEqual([
-        new UserPaymentTx(
-          depositTx.txId,
-          depositTx.userId,
-          ProofId.DEPOSIT,
-          { assetId: garbageAssetId, value: 80n },
-          { assetId: 0, value: 20n },
-          depositTx.publicOwner,
-          true,
-          depositTx.created,
-        ),
-      ]);
-    });
-
-    it('recover deposit tx sent to another account', () => {
-      const depositTx = randomCorePaymentTx({
-        proofId: ProofId.DEPOSIT,
-        publicOwner: EthAddress.random(),
-        publicValue: 100n,
-        recipientPrivateOutput: 80n,
-        isRecipient: false,
-      });
-      expect(groupUserTxs([depositTx])).toEqual([
-        new UserPaymentTx(
-          depositTx.txId,
-          depositTx.userId,
-          ProofId.DEPOSIT,
-          { assetId: 0, value: 80n },
-          { assetId: 0, value: 20n },
-          depositTx.publicOwner,
-          true,
-          depositTx.created,
-        ),
-      ]);
-    });
-
-    it('recover deposit tx sent to another account without local state', () => {
-      const depositTx = randomCorePaymentTx({
-        proofId: ProofId.DEPOSIT,
-        publicOwner: EthAddress.random(),
-        publicValue: 100n,
-        isRecipient: false,
-      });
-      expect(groupUserTxs([depositTx])).toEqual([
-        new UserPaymentTx(
-          depositTx.txId,
-          depositTx.userId,
-          ProofId.DEPOSIT,
-          { assetId: 0, value: 100n },
-          { assetId: 0, value: 0n },
-          depositTx.publicOwner,
-          true,
-          depositTx.created,
-        ),
-      ]);
-    });
-
-    it('recover deposit tx sent to us', () => {
-      const depositTx = randomCorePaymentTx({
-        proofId: ProofId.DEPOSIT,
-        publicOwner: EthAddress.random(),
-        publicValue: 100n,
-        recipientPrivateOutput: 80n,
-        isRecipient: true,
-        isSender: false,
-      });
+      const depositTx = createDepositTx({ publicValue: 100n, fee: 20n });
       expect(groupUserTxs([depositTx])).toEqual([
         new UserPaymentTx(
           depositTx.txId,
@@ -226,16 +149,29 @@ describe('groupUserTxs', () => {
         ),
       ]);
     });
+
+    it('recover deposit tx with fee paying tx', () => {
+      const txRefNo = createTxRefNo();
+      const depositTx = createDepositTx({ assetId: garbageAssetId, publicValue: 80n, txRefNo });
+      const feeTx = createFeeTx(20n, txRefNo);
+      expect(groupUserTxs([depositTx, feeTx])).toEqual([
+        new UserPaymentTx(
+          depositTx.txId,
+          depositTx.userId,
+          ProofId.DEPOSIT,
+          { assetId: garbageAssetId, value: 80n },
+          { assetId: 0, value: 20n },
+          depositTx.publicOwner,
+          false,
+          depositTx.created,
+        ),
+      ]);
+    });
   });
 
   describe('withdraw tx', () => {
     it('recover withdraw tx', () => {
-      const withdrawTx = randomCorePaymentTx({
-        proofId: ProofId.WITHDRAW,
-        publicOwner: EthAddress.random(),
-        publicValue: 80n,
-        privateInput: 100n,
-      });
+      const withdrawTx = createWithdrawTx({ publicValue: 80n, fee: 20n, privateInput: 200n });
       expect(groupUserTxs([withdrawTx])).toEqual([
         new UserPaymentTx(
           withdrawTx.txId,
@@ -252,14 +188,7 @@ describe('groupUserTxs', () => {
 
     it('recover withdraw tx with fee paying asset', () => {
       const txRefNo = createTxRefNo();
-      const withdrawTx = randomCorePaymentTx({
-        proofId: ProofId.WITHDRAW,
-        publicOwner: EthAddress.random(),
-        assetId: garbageAssetId,
-        publicValue: 80n,
-        privateInput: 80n,
-        txRefNo,
-      });
+      const withdrawTx = createWithdrawTx({ assetId: garbageAssetId, publicValue: 80n, txRefNo });
       const feeTx = createFeeTx(20n, txRefNo);
       expect(groupUserTxs([withdrawTx, feeTx])).toEqual([
         new UserPaymentTx(
@@ -283,6 +212,8 @@ describe('groupUserTxs', () => {
         privateInput: 100n,
         senderPrivateOutput: 5n,
         recipientPrivateOutput: 80n,
+        isSender: true,
+        isRecipient: true,
       });
       expect(groupUserTxs([sendTx])).toEqual([
         new UserPaymentTx(
@@ -298,32 +229,19 @@ describe('groupUserTxs', () => {
       ]);
     });
 
-    it('recover fee tx', () => {
-      const sendTx = randomCorePaymentTx({
-        proofId: ProofId.SEND,
-        privateInput: 20n,
-        senderPrivateOutput: 5n,
-      });
-      expect(groupUserTxs([sendTx])).toEqual([
-        new UserPaymentTx(
-          sendTx.txId,
-          sendTx.userId,
-          ProofId.SEND,
-          { assetId: 0, value: 0n },
-          { assetId: 0, value: 15n },
-          undefined,
-          true,
-          sendTx.created,
-        ),
-      ]);
+    it('does not return a fee tx', () => {
+      const txRefNo = createTxRefNo();
+      const feeTx = createFeeTx(20n, txRefNo);
+      expect(groupUserTxs([feeTx])).toEqual([]);
     });
 
-    it('recover transfer tx sent to other user', () => {
+    it('recover transfer tx sent to another user', () => {
       const sendTx = randomCorePaymentTx({
         proofId: ProofId.SEND,
         privateInput: 100n,
         senderPrivateOutput: 5n,
         recipientPrivateOutput: 80n,
+        isSender: true,
         isRecipient: false,
       });
       expect(groupUserTxs([sendTx])).toEqual([
@@ -340,11 +258,13 @@ describe('groupUserTxs', () => {
       ]);
     });
 
-    it('recover transfer tx sent to other user without recipient state', () => {
+    it('recover transfer tx sent to another user without recipient state', () => {
       const sendTx = randomCorePaymentTx({
         proofId: ProofId.SEND,
         privateInput: 100n,
         senderPrivateOutput: 5n,
+        recipientPrivateOutput: 0n, // <--
+        isSender: true,
         isRecipient: false,
       });
       expect(groupUserTxs([sendTx])).toEqual([
@@ -382,14 +302,15 @@ describe('groupUserTxs', () => {
       ]);
     });
 
-    it('recover transfer tx sent to other user with fee paying tx', () => {
+    it('recover transfer tx sent to another user with fee paying tx', () => {
       const txRefNo = createTxRefNo();
       const sendTx = randomCorePaymentTx({
         proofId: ProofId.SEND,
         assetId: garbageAssetId,
         privateInput: 100n,
-        senderPrivateOutput: 20n,
-        recipientPrivateOutput: 80n,
+        senderPrivateOutput: 15n,
+        recipientPrivateOutput: 85n,
+        isSender: true,
         isRecipient: false,
         txRefNo,
       });
@@ -399,7 +320,7 @@ describe('groupUserTxs', () => {
           sendTx.txId,
           sendTx.userId,
           ProofId.SEND,
-          { assetId: garbageAssetId, value: 80n },
+          { assetId: garbageAssetId, value: 85n },
           { assetId: 0, value: 20n },
           undefined,
           true,
@@ -408,14 +329,15 @@ describe('groupUserTxs', () => {
       ]);
     });
 
-    it('recover transfer tx sent to other user with fee paying tx and without recipient state', () => {
+    it('recover transfer tx sent to another user with fee paying tx and without recipient state', () => {
       const txRefNo = createTxRefNo();
       const sendTx = randomCorePaymentTx({
         proofId: ProofId.SEND,
         assetId: garbageAssetId,
         privateInput: 100n,
-        senderPrivateOutput: 20n,
+        senderPrivateOutput: 15n,
         recipientPrivateOutput: 0n, // <--
+        isSender: true,
         isRecipient: false,
         txRefNo,
       });
@@ -425,7 +347,7 @@ describe('groupUserTxs', () => {
           sendTx.txId,
           sendTx.userId,
           ProofId.SEND,
-          { assetId: garbageAssetId, value: 80n },
+          { assetId: garbageAssetId, value: 85n },
           { assetId: 0, value: 20n },
           undefined,
           true,

@@ -135,10 +135,8 @@ const getPaymentValue = ({
 }: CorePaymentTx) => {
   const value = (() => {
     switch (proofId) {
-      case ProofId.DEPOSIT: {
-        const outputValue = recipientPrivateOutput + senderPrivateOutput;
-        return outputValue || isRecipient ? outputValue : publicValue;
-      }
+      case ProofId.DEPOSIT:
+        return recipientPrivateOutput;
       case ProofId.WITHDRAW:
         return publicValue;
       case ProofId.SEND:
@@ -173,10 +171,8 @@ const getFee = (tx: CoreUserTx) => {
   } = tx;
   const value = (() => {
     switch (proofId) {
-      case ProofId.DEPOSIT: {
-        const outputValue = recipientPrivateOutput + senderPrivateOutput;
-        return outputValue || (isSender && isRecipient) ? publicValue - outputValue : BigInt(0);
-      }
+      case ProofId.DEPOSIT:
+        return publicValue - recipientPrivateOutput;
       case ProofId.WITHDRAW:
         return privateInput - (publicValue + senderPrivateOutput);
       case ProofId.SEND:

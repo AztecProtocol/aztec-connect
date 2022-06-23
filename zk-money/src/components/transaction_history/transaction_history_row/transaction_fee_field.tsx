@@ -8,9 +8,11 @@ function FeeField({ fee }: { fee: AssetValue }) {
 
 export function renderTransactionFeeField(tx: UserTx) {
   switch (tx.proofId) {
-    case ProofId.SEND:
+    case ProofId.SEND: {
       if (!tx.isSender) return;
+      if (tx.fee.value === 0n) return 'Fee included';
       return <FeeField fee={tx.fee} />;
+    }
     case ProofId.WITHDRAW:
     case ProofId.DEFI_DEPOSIT: {
       return <FeeField fee={tx.fee} />;
