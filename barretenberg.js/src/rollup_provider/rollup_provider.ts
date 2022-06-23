@@ -1,10 +1,7 @@
-import { AliasHash } from '../account_id';
-import { GrumpkinAddress } from '../address';
+import { EthAddress, GrumpkinAddress } from '../address';
 import { AssetValue } from '../asset';
 import { BlockSource } from '../block_source';
 import { BridgeId } from '../bridge_id';
-import { JoinSplitProofData } from '../client_proofs';
-import { OffchainJoinSplitData } from '../offchain_tx_data';
 import { TxId } from '../tx_id';
 import { RollupProviderStatus } from './rollup_provider_status';
 
@@ -69,47 +66,55 @@ export const pendingTxFromJson = ({ txId, noteCommitment1, noteCommitment2 }: Pe
 
 export interface InitialWorldState {
   initialAccounts: Buffer;
+  initialSubtreeRoots: Buffer[];
 }
 
-export interface Account {
-  accountPublicKey: GrumpkinAddress;
-  aliasHash: AliasHash;
+export const initialWorldStateToBuffer = (initialWorldState: InitialWorldState): Buffer => {
+  const accountsSizeBuf = Buffer.alloc(4);
+  accountsSizeBuf.writeUInt32BE(initialWorldState.initialAccounts.length);
+  return Buffer.concat([accountsSizeBuf, initialWorldState.initialAccounts, ...initialWorldState.initialSubtreeRoots]);
+};
+
+export const initialWorldStateFromBuffer = (data: Buffer): InitialWorldState => {
+  const accountsSize = data.readUInt32BE(0);
+  const subTreeStart = 4 + accountsSize;
+  const initialWorldState = {
+    initialAccounts: data.slice(4, subTreeStart),
+    initialSubtreeRoots: [],
+  } as InitialWorldState;
+  // each sub tree root is 32 bytes
+  for (let i = subTreeStart; i < data.length; i += 32) {
+    initialWorldState.initialSubtreeRoots.push(data.slice(i, i + 32));
+  }
+  return initialWorldState;
+};
+export interface DepositTx {
+  assetId: number;
+  value: bigint;
+  publicOwner: EthAddress;
 }
 
-export interface AccountJson {
-  accountPublicKey: string;
-  aliasHash: string;
+export interface DepositTxJson {
+  assetId: number;
+  value: string;
+  publicOwner: string;
 }
 
-export const accountToJson = ({ accountPublicKey, aliasHash }: Account): AccountJson => ({
-  accountPublicKey: accountPublicKey.toString(),
-  aliasHash: aliasHash.toString(),
+export const depositTxToJson = ({ assetId, value, publicOwner }: DepositTx): DepositTxJson => ({
+  assetId,
+  value: value.toString(),
+  publicOwner: publicOwner.toString(),
 });
 
-export const accountFromJson = ({ accountPublicKey, aliasHash }: AccountJson): Account => ({
-  accountPublicKey: GrumpkinAddress.fromString(accountPublicKey),
-  aliasHash: AliasHash.fromString(aliasHash),
+export const depositTxFromJson = ({ assetId, value, publicOwner }: DepositTxJson): DepositTx => ({
+  assetId,
+  value: BigInt(value),
+  publicOwner: EthAddress.fromString(publicOwner),
 });
 
-export interface JoinSplitTx {
-  proofData: JoinSplitProofData;
-  offchainTxData: OffchainJoinSplitData;
+export interface InitialWorldState {
+  initialAccounts: Buffer;
 }
-
-export interface JoinSplitTxJson {
-  proofData: string;
-  offchainTxData: string;
-}
-
-export const joinSplitTxToJson = ({ proofData, offchainTxData }: JoinSplitTx): JoinSplitTxJson => ({
-  proofData: proofData.proofData.rawProofData.toString('hex'),
-  offchainTxData: offchainTxData.toBuffer().toString('hex'),
-});
-
-export const joinSplitTxFromJson = ({ proofData, offchainTxData }: JoinSplitTxJson): JoinSplitTx => ({
-  proofData: JoinSplitProofData.fromBuffer(Buffer.from(proofData, 'hex')),
-  offchainTxData: OffchainJoinSplitData.fromBuffer(Buffer.from(offchainTxData, 'hex')),
-});
 
 export interface RollupProvider extends BlockSource {
   sendTxs(txs: Tx[]): Promise<TxId[]>;
@@ -118,11 +123,10 @@ export interface RollupProvider extends BlockSource {
   getDefiFees(bridgeId: BridgeId): Promise<AssetValue[]>;
   getPendingTxs(): Promise<PendingTx[]>;
   getPendingNoteNullifiers(): Promise<Buffer[]>;
+  getPendingDepositTxs(): Promise<DepositTx[]>;
   clientLog(msg: any): Promise<void>;
   getInitialWorldState(): Promise<InitialWorldState>;
   isAccountRegistered(accountPublicKey: GrumpkinAddress): Promise<boolean>;
   isAliasRegistered(alias: string): Promise<boolean>;
-  accountExists(accountPublicKey: GrumpkinAddress, alias: string): Promise<boolean>;
-  getUnsettledAccounts(): Promise<Account[]>;
-  getUnsettledPaymentTxs(): Promise<JoinSplitTx[]>;
+  isAliasRegisteredToAccount(accountPublicKey: GrumpkinAddress, alias: string): Promise<boolean>;
 }

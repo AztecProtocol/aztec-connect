@@ -13,7 +13,7 @@ import { FeePayer } from './fee_payer';
 export class RegisterController {
   private depositController?: DepositController;
   private proofOutput?: ProofOutput;
-  private txId?: TxId;
+  private txIds: TxId[] = [];
 
   constructor(
     public readonly userId: GrumpkinAddress,
@@ -35,7 +35,7 @@ export class RegisterController {
         fee,
         depositor,
         this.userId,
-        true, // recipientAccountRequired
+        true, // recipientSpendingKeyRequired
         feePayer,
         core,
         blockchain,
@@ -45,35 +45,35 @@ export class RegisterController {
   }
 
   public async getPendingFunds() {
-    return this.depositController!.getPendingFunds();
+    return await this.depositController!.getPendingFunds();
   }
 
   public async getRequiredFunds() {
-    return this.depositController!.getRequiredFunds();
+    return await this.depositController!.getRequiredFunds();
   }
 
   public async getPublicAllowance() {
-    return this.depositController!.getPublicAllowance();
+    return await this.depositController!.getPublicAllowance();
   }
 
   public async approve() {
-    return this.depositController!.approve();
+    return await this.depositController!.approve();
   }
 
   public async awaitApprove(timeout?: number, interval?: number) {
-    this.depositController!.awaitApprove(timeout, interval);
+    await this.depositController!.awaitApprove(timeout, interval);
   }
 
   public async depositFundsToContract(permitDeadline?: bigint) {
-    return this.depositController!.depositFundsToContract(permitDeadline);
+    return await this.depositController!.depositFundsToContract(permitDeadline);
   }
 
   public async depositFundsToContractWithNonStandardPermit(permitDeadline: bigint) {
-    return this.depositController!.depositFundsToContractWithNonStandardPermit(permitDeadline);
+    return await this.depositController!.depositFundsToContractWithNonStandardPermit(permitDeadline);
   }
 
   public async awaitDepositFundsToContract(timeout?: number, interval?: number) {
-    return this.depositController!.awaitDepositFundsToContract(timeout, interval);
+    return await this.depositController!.awaitDepositFundsToContract(timeout, interval);
   }
 
   public async createProof() {
@@ -111,19 +111,19 @@ export class RegisterController {
   }
 
   public async isProofApproved() {
-    return this.depositController!.isProofApproved();
+    return await this.depositController!.isProofApproved();
   }
 
   public async approveProof() {
-    return this.depositController!.approveProof();
+    return await this.depositController!.approveProof();
   }
 
   public async awaitApproveProof(timeout?: number, interval?: number) {
-    return this.depositController!.awaitApproveProof(timeout, interval);
+    return await this.depositController!.awaitApproveProof(timeout, interval);
   }
 
   public async sign() {
-    return this.depositController!.sign();
+    return await this.depositController!.sign();
   }
 
   public isSignatureValid() {
@@ -136,18 +136,18 @@ export class RegisterController {
     }
 
     if (!this.depositController) {
-      [this.txId] = await this.core.sendProofs([this.proofOutput]);
+      this.txIds = await this.core.sendProofs([this.proofOutput]);
     } else {
       const [feeProofOutput] = this.depositController.getProofs();
-      [this.txId] = await this.core.sendProofs([this.proofOutput, feeProofOutput]);
+      this.txIds = await this.core.sendProofs([this.proofOutput, feeProofOutput]);
     }
-    return this.txId;
+    return this.txIds[0];
   }
 
   public async awaitSettlement(timeout?: number) {
-    if (!this.txId) {
+    if (!this.txIds.length) {
       throw new Error(`Call ${!this.proofOutput ? 'createProof()' : 'send()'} first.`);
     }
-    await this.core.awaitSettlement(this.txId, timeout);
+    await Promise.all(this.txIds.map(txId => this.core.awaitSettlement(txId, timeout)));
   }
 }

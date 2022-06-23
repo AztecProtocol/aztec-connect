@@ -484,7 +484,7 @@ template <typename C> point<C> pedersen<C>::commit(const std::vector<field_t>& i
 
 template <typename C> field_t<C> pedersen<C>::compress(const std::vector<field_t>& inputs, const size_t hash_index)
 {
-    return commit(inputs, hash_index, allow_zero_input).x;
+    return commit(inputs, hash_index).x;
 }
 
 // If the input values are all zero, we return the array length instead of `0`

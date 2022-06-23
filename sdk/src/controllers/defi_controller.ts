@@ -12,7 +12,7 @@ export class DefiController {
   private proofOutput?: ProofOutput;
   private jsProofOutput?: ProofOutput;
   private feeProofOutput?: ProofOutput;
-  private txId?: TxId;
+  private txIds: TxId[] = [];
 
   constructor(
     public readonly userId: GrumpkinAddress,
@@ -35,19 +35,19 @@ export class DefiController {
     if (bridgeId.inputAssetIdB === fee.assetId) {
       throw new Error('Fee paying asset must be the first input asset.');
     }
-
-    if (userSigner.getPublicKey().equals(this.userId)) {
-      throw new Error('Defi deposit not available for non registered user.');
-    }
   }
 
   public async createProof() {
+    const spendingPublicKey = this.userSigner.getPublicKey();
+    const spendingKeyRequired = !spendingPublicKey.equals(this.userId);
     const { assetId, value } = this.depositValue;
     const hasTwoAssets = this.bridgeId.numInputAssets === 2;
     const requireFeePayingTx = !!this.fee.value && this.fee.assetId !== assetId;
     const privateInput = value + (!requireFeePayingTx ? this.fee.value : BigInt(0));
-    const note1 = hasTwoAssets ? await this.core.pickNote(this.userId, assetId, privateInput, false) : undefined;
-    let notes = note1 ? [note1] : await this.core.pickNotes(this.userId, assetId, privateInput, false);
+    const note1 = hasTwoAssets
+      ? await this.core.pickNote(this.userId, assetId, privateInput, spendingKeyRequired)
+      : undefined;
+    let notes = note1 ? [note1] : await this.core.pickNotes(this.userId, assetId, privateInput, spendingKeyRequired);
     if (!notes.length) {
       throw new Error(`Failed to find no more than 2 notes of asset ${assetId} that sum to ${privateInput}.`);
     }
@@ -59,10 +59,16 @@ export class DefiController {
     if (hasTwoAssets) {
       const secondAssetId = this.bridgeId.inputAssetIdB!;
       const excludePendingNotes = requireJoinSplitTx || notes.some(n => n.pending);
-      const note2 = await this.core.pickNote(this.userId, secondAssetId, value, excludePendingNotes);
+      const note2 = await this.core.pickNote(
+        this.userId,
+        secondAssetId,
+        value,
+        spendingKeyRequired,
+        excludePendingNotes,
+      );
       const notes2 = note2
         ? [note2]
-        : await this.core.pickNotes(this.userId, secondAssetId, value, excludePendingNotes);
+        : await this.core.pickNotes(this.userId, secondAssetId, value, spendingKeyRequired, excludePendingNotes);
       if (!notes2.length) {
         throw new Error(`Failed to find no more than 2 notes of asset ${secondAssetId} that sum to ${value}.`);
       }
@@ -81,8 +87,6 @@ export class DefiController {
       notes = [...notes, ...notes2];
     }
 
-    const spendingPublicKey = this.userSigner.getPublicKey();
-    const accountRequired = true;
     const txRefNo = requireFeePayingTx || requireJoinSplitTx ? createTxRefNo() : 0;
 
     // Create a defi deposit tx with 0 change value.
@@ -111,7 +115,7 @@ export class DefiController {
           noteValue,
           BigInt(0),
           this.userId,
-          accountRequired,
+          spendingKeyRequired,
           undefined,
           spendingPublicKey,
           3, // allowChain
@@ -152,7 +156,7 @@ export class DefiController {
         BigInt(0),
         BigInt(0),
         this.userId,
-        accountRequired,
+        spendingKeyRequired,
         undefined,
         spendingPublicKey,
         2,
@@ -166,38 +170,44 @@ export class DefiController {
     if (!this.proofOutput) {
       throw new Error('Call createProof() first.');
     }
-    const txIds = await this.core.sendProofs(
+    this.txIds = await this.core.sendProofs(
       filterUndefined([this.jsProofOutput, this.proofOutput, this.feeProofOutput]),
     );
-    this.txId = txIds[this.jsProofOutput ? 1 : 0];
-    return this.txId;
+    return this.getDefiTxId();
   }
 
   public async awaitDefiDepositCompletion(timeout?: number) {
-    if (!this.txId) {
+    if (!this.txIds.length) {
       throw new Error(`Call ${!this.proofOutput ? 'createProof()' : 'send()'} first.`);
     }
-    await this.core.awaitDefiDepositCompletion(this.txId, timeout);
+    await Promise.all(this.txIds.map(txId => this.core.awaitSettlement(txId, timeout)));
   }
 
   public async awaitDefiFinalisation(timeout?: number) {
-    if (!this.txId) {
+    const txId = this.getDefiTxId();
+    if (!txId) {
       throw new Error(`Call ${!this.proofOutput ? 'createProof()' : 'send()'} first.`);
     }
-    await this.core.awaitDefiFinalisation(this.txId, timeout);
+    await this.core.awaitDefiFinalisation(txId, timeout);
   }
 
   public async awaitSettlement(timeout?: number) {
-    if (!this.txId) {
+    const txId = this.getDefiTxId();
+    if (!txId) {
       throw new Error(`Call ${!this.proofOutput ? 'createProof()' : 'send()'} first.`);
     }
-    await this.core.awaitDefiSettlement(this.txId, timeout);
+    await this.core.awaitDefiSettlement(txId, timeout);
   }
 
-  public async getInteractionNonce() {
-    if (!this.txId) {
+  public getInteractionNonce() {
+    const txId = this.getDefiTxId();
+    if (!txId) {
       throw new Error(`Call ${!this.proofOutput ? 'createProof()' : 'send()'} first.`);
     }
-    return this.core.getDefiInteractionNonce(this.txId);
+    return this.core.getDefiInteractionNonce(txId);
+  }
+
+  private getDefiTxId() {
+    return this.txIds[this.jsProofOutput ? 1 : 0];
   }
 }

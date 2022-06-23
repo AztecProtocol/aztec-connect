@@ -1,18 +1,18 @@
-import { NoteAlgorithms } from './note_algorithms';
 import { GrumpkinAddress } from '../address';
 import { Grumpkin } from '../ecc/grumpkin';
 import { ViewingKey } from '../viewing_key';
-import { deriveNoteSecret } from './derive_note_secret';
 import { DecryptedNote } from './decrypted_note';
+import { deriveNoteSecret } from './derive_note_secret';
+import { NoteDecryptor } from './note_decryptor/note_decryptor';
 
 export const batchDecryptNotes = async (
   viewingKeys: Buffer,
   privateKey: Buffer,
-  noteAlgorithms: NoteAlgorithms,
+  noteDecryptor: NoteDecryptor,
   grumpkin: Grumpkin,
 ) => {
   const decryptedNoteLength = 73;
-  const dataBuf = await noteAlgorithms.batchDecryptNotes(viewingKeys, privateKey);
+  const dataBuf = await noteDecryptor.batchDecryptNotes(viewingKeys, privateKey);
   const notes: (DecryptedNote | undefined)[] = [];
 
   // For each note in the buffer of decrypted notes.

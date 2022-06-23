@@ -1,17 +1,18 @@
 import { Crs } from '@aztec/barretenberg/crs';
 import { PooledPedersen } from '@aztec/barretenberg/crypto';
-import { createLogger } from '@aztec/barretenberg/debug';
 import { PooledFftFactory } from '@aztec/barretenberg/fft';
+import { createDebugLogger } from '@aztec/barretenberg/log';
+import { PooledNoteDecryptor } from '@aztec/barretenberg/note_algorithms';
 import { PooledPippenger } from '@aztec/barretenberg/pippenger';
 import { BarretenbergWasm, WorkerPool } from '@aztec/barretenberg/wasm';
-import { CoreSdkClientStub, CoreSdkSerializedInterface, SdkEvent } from '../../core_sdk';
+import { CoreSdkClientStub, CoreSdkSerializedInterface } from '../../core_sdk';
 import { getNumWorkers } from '../get_num_workers';
 import { JobQueueDispatch, JobQueueInterface, JobQueueWorker } from '../job_queue';
 import { createDispatchFn, TransportClient } from '../transport';
 import { BananaCoreSdk } from './banana_core_sdk';
 import { BananaCoreSdkOptions } from './banana_core_sdk_options';
 
-const debug = createLogger('aztec:sdk:shared_worker_frontend');
+const debug = createDebugLogger('aztec:sdk:shared_worker_frontend');
 
 export class SharedWorkerFrontend {
   private jobQueue!: JobQueueInterface;
@@ -29,11 +30,12 @@ export class SharedWorkerFrontend {
     const { numWorkers = getNumWorkers() } = options;
     const barretenberg = await BarretenbergWasm.new();
     const workerPool = await WorkerPool.new(barretenberg, numWorkers);
+    const noteDecryptor = new PooledNoteDecryptor(workerPool);
     const pedersen = new PooledPedersen(barretenberg, workerPool);
     const pippenger = new PooledPippenger(workerPool);
     const fftFactory = new PooledFftFactory(workerPool);
 
-    const jobQueueWorker = new JobQueueWorker(this.jobQueue, pedersen, pippenger, fftFactory);
+    const jobQueueWorker = new JobQueueWorker(this.jobQueue, noteDecryptor, pedersen, pippenger, fftFactory);
     const crsData = await this.getCrsData();
     await jobQueueWorker.init(crsData);
     debug('starting job queue worker...');
@@ -54,8 +56,6 @@ export class SharedWorkerFrontend {
       jobQueueWorker,
       workerPool,
     );
-
-    this.coreSdk.on(SdkEvent.DESTROYED, () => this.transportClient.close());
 
     return { coreSdk: new CoreSdkClientStub(this.coreSdk) };
   }

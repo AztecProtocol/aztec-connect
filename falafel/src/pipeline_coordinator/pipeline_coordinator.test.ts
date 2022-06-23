@@ -65,7 +65,6 @@ describe('pipeline_coordinator', () => {
       create: jest.fn().mockResolvedValue(Buffer.alloc(0)),
       interrupt: jest.fn(),
       createRollup: jest.fn(),
-      addRollupProofs: jest.fn(),
     };
 
     rollupAggregator = {
@@ -89,6 +88,7 @@ describe('pipeline_coordinator', () => {
     } as any;
 
     rollupDb = {
+      getPendingTxCount: jest.fn().mockResolvedValue(0),
       deleteUnsettledRollups: jest.fn(),
       deleteOrphanedRollupProofs: jest.fn(),
       deleteUnsettledClaimTxs: jest.fn(),
@@ -97,22 +97,25 @@ describe('pipeline_coordinator', () => {
     } as any;
 
     feeResolver = {
-      getBaseTxGas: jest.fn().mockReturnValue(1),
+      getAdjustedBaseVerificationGas: jest.fn().mockReturnValue(1),
+      getUnadjustedBaseVerificationGas: jest.fn().mockReturnValue(1),
       getGasPaidForByFee: jest.fn().mockImplementation((assetId: number, fee: bigint) => fee),
-      getMinTxFee: jest.fn().mockImplementation(() => {
-        throw new Error('This should not be called');
-      }),
+      getMinTxFee: jest.fn(),
       start: jest.fn(),
       stop: jest.fn(),
-      getTxGas: jest.fn().mockImplementation(() => {
-        throw new Error('This should not be called');
-      }),
-      getBridgeTxGas: jest.fn(),
+      getAdjustedTxGas: jest.fn().mockReturnValue(1000),
+      getUnadjustedTxGas: jest.fn().mockReturnValue(1000),
+      getAdjustedBridgeTxGas: jest.fn(),
+      getUnadjustedBridgeTxGas: jest.fn(),
       getFullBridgeGas: jest.fn().mockReturnValue(100000n),
+      getFullBridgeGasFromContract: jest.fn().mockReturnValue(100000n),
       getSingleBridgeTxGas: jest.fn().mockReturnValue(10000n),
       getTxFees: jest.fn(),
       getDefiFees: jest.fn(),
       isFeePayingAsset: jest.fn().mockImplementation((assetId: number) => assetId < 3),
+      getTxCallData: jest.fn().mockReturnValue(100),
+      getMaxTxCallData: jest.fn().mockReturnValue(100),
+      getMaxUnadjustedGas: jest.fn().mockReturnValue(1000),
     };
 
     bridgeResolver = {
@@ -137,7 +140,13 @@ describe('pipeline_coordinator', () => {
       publishInterval,
       0,
       bridgeResolver as any,
+      128 * 1024,
+      12000000,
     );
+  });
+
+  afterEach(() => {
+    expect(feeResolver.getMinTxFee).not.toBeCalled();
   });
 
   it('should publish a rollup', async () => {
@@ -155,23 +164,22 @@ describe('pipeline_coordinator', () => {
 
   it('should return publishInterval seconds from now if not running', async () => {
     expect(coordinator.getNextPublishTime().baseTimeout?.timeout).toEqual(moment().add(10, 's').toDate());
-    coordinator.start();
+    coordinator.start().catch(console.log);
     await new Promise(resolve => setTimeout(resolve, 100));
-    coordinator.stop();
+    await coordinator.stop();
     expect(coordinator.getNextPublishTime().baseTimeout?.timeout).toEqual(moment().add(10, 's').toDate());
   });
 
   it('cannot start when it has already started', async () => {
-    const p = coordinator.start();
-    await expect(async () => coordinator.start()).rejects.toThrow();
-    coordinator.stop();
-    await p;
+    coordinator.start().catch(console.log);
+    await expect(async () => await coordinator.start()).rejects.toThrow();
+    await coordinator.stop();
   });
 
   it('should interrupt all helpers when it is stop', async () => {
-    coordinator.start();
+    coordinator.start().catch(console.log);
     await new Promise(resolve => setTimeout(resolve, 100));
-    coordinator.stop();
+    await coordinator.stop();
     expect(rollupCreator.interrupt).toHaveBeenCalledTimes(1);
     expect(rollupAggregator.interrupt).toHaveBeenCalledTimes(1);
     expect(rollupPublisher.interrupt).toHaveBeenCalledTimes(1);

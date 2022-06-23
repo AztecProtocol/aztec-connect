@@ -4,7 +4,7 @@ set -e
 LINK_FOLDER="--link-folder `pwd`/../.yarn"
 
 yarn unlink $LINK_FOLDER >/dev/null 2>&1 || true
-yarn clean:first
+yarn clean
 rm -rf node_modules
 
 yarn install --frozen-lockfile

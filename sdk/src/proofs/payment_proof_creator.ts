@@ -1,6 +1,6 @@
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { JoinSplitProver, ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
-import { createLogger } from '@aztec/barretenberg/debug';
+import { createDebugLogger } from '@aztec/barretenberg/log';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { OffchainJoinSplitData } from '@aztec/barretenberg/offchain_tx_data';
@@ -13,7 +13,7 @@ import { UserData } from '../user';
 import { JoinSplitTxFactory } from './join_split_tx_factory';
 import { JoinSplitProofInput } from './proof_input';
 
-const debug = createLogger('bb:payment_proof_creator');
+const debug = createDebugLogger('bb:payment_proof_creator');
 
 export class PaymentProofCreator {
   private txFactory: JoinSplitTxFactory;
@@ -75,6 +75,10 @@ export class PaymentProofCreator {
     })();
 
     const totalInputNoteValue = inputNotes.reduce((sum, note) => sum + note.value, BigInt(0));
+    if (totalInputNoteValue && proofId === ProofId.DEPOSIT) {
+      // TODO - Enable it and modify the recovery logic in group_user_txs.
+      throw new Error('Merging private balance with public balance is not supported.');
+    }
     const changeValue = totalInputNoteValue > privateInput ? totalInputNoteValue - privateInput : BigInt(0);
 
     const proofInput = await this.txFactory.createTx(user, proofId, assetId, inputNotes, spendingPublicKey, {
@@ -114,18 +118,8 @@ export class PaymentProofCreator {
     const { assetId, value: senderPrivateOutput } = changeNote;
     const newNoteOwner = valueNote.ownerPubKey;
     const userId = changeNote.ownerPubKey;
-    let isRecipient = newNoteOwner.equals(userId);
-    let isSender = true;
-    let accountRequired = changeNote.accountRequired;
-    if (
-      valueNote.ownerPubKey.equals(changeNote.ownerPubKey) &&
-      valueNote.accountRequired !== changeNote.accountRequired
-    ) {
-      // Tx should be owned by the registered user if sent from/to their own unregistered account.
-      isRecipient = valueNote.accountRequired;
-      isSender = changeNote.accountRequired;
-      accountRequired = true;
-    }
+    const isRecipient = newNoteOwner.equals(userId);
+    const isSender = true;
     const coreTx = new CorePaymentTx(
       txId,
       userId,
@@ -138,7 +132,6 @@ export class PaymentProofCreator {
       senderPrivateOutput,
       isRecipient,
       isSender,
-      accountRequired,
       txRefNo,
       new Date(),
     );

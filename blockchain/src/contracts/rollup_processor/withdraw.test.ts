@@ -31,7 +31,7 @@ describe('rollup_processor: withdraw', () => {
     userAddresses = await Promise.all(userSigners.map(async u => EthAddress.fromString(await u.getAddress())));
     ({ assets, rollupProcessor } = await setupTestRollupProcessor(signers));
 
-    const { proofData, signatures } = await createRollupProof(
+    const { encodedProofData, signatures } = createRollupProof(
       rollupProvider,
       mergeInnerProofs([
         await createDepositProof(depositAmount, userAddresses[0], userSigners[0], 0),
@@ -46,7 +46,7 @@ describe('rollup_processor: withdraw', () => {
     await rollupProcessor.depositPendingFunds(1, depositAmount, undefined, {
       signingAddress: userAddresses[1],
     });
-    const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
+    const tx = await rollupProcessor.createRollupProofTx(encodedProofData, signatures, []);
     await rollupProcessor.sendTx(tx);
   });
 
@@ -62,13 +62,13 @@ describe('rollup_processor: withdraw', () => {
     const preWithdrawalBalance = await assets[0].balanceOf(userAddresses[0]);
     const withdrawalAmount = 20n;
 
-    const { proofData, signatures } = await createRollupProof(
+    const { encodedProofData, signatures } = createRollupProof(
       rollupProvider,
       createWithdrawProof(withdrawalAmount, userAddresses[0], 0),
       { rollupId: 1 },
     );
 
-    const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
+    const tx = await rollupProcessor.createRollupProofTx(encodedProofData, signatures, []);
     await rollupProcessor.sendTx(tx);
 
     const postWithdrawalRollupBalance = await assets[0].balanceOf(rollupProcessor.address);
@@ -82,13 +82,13 @@ describe('rollup_processor: withdraw', () => {
     const preWithdrawalBalance = await assets[1].balanceOf(userAddresses[0]);
     const withdrawalAmount = 20n;
 
-    const { proofData, signatures } = await createRollupProof(
+    const { encodedProofData, signatures } = createRollupProof(
       rollupProvider,
       createWithdrawProof(withdrawalAmount, userAddresses[2], 1),
       { rollupId: 1 },
     );
 
-    const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
+    const tx = await rollupProcessor.createRollupProofTx(encodedProofData, signatures, []);
     await rollupProcessor.sendTx(tx);
 
     const postWithdrawalRollupBalance = await assets[1].balanceOf(rollupProcessor.address);
@@ -110,7 +110,7 @@ describe('rollup_processor: withdraw', () => {
 
     // Deposit.
     {
-      const { proofData, signatures } = await createRollupProof(
+      const { encodedProofData, signatures } = createRollupProof(
         rollupProvider,
         await createDepositProof(depositAmount, userAddresses[0], userSigners[0], assetId),
         { rollupId: 1 },
@@ -122,17 +122,17 @@ describe('rollup_processor: withdraw', () => {
       await rollupProcessor.depositPendingFunds(assetId, depositAmount, undefined, {
         signingAddress: userAddresses[0],
       });
-      const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
+      const tx = await rollupProcessor.createRollupProofTx(encodedProofData, signatures, []);
       await rollupProcessor.sendTx(tx);
     }
 
     const preWithdrawalBalance = await asset.balanceOf(userAddresses[0]);
-    const { proofData } = await createRollupProof(
+    const { encodedProofData } = createRollupProof(
       rollupProvider,
       createWithdrawProof(depositAmount, userAddresses[0], assetId),
       { rollupId: 2 },
     );
-    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+    const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
     await rollupProcessor.sendTx(tx);
     const postWithdrawalBalance = await asset.balanceOf(userAddresses[0]);
     expect(postWithdrawalBalance).toBe(preWithdrawalBalance);
@@ -151,7 +151,7 @@ describe('rollup_processor: withdraw', () => {
 
     // Deposit.
     {
-      const { proofData, signatures } = await createRollupProof(
+      const { encodedProofData, signatures } = createRollupProof(
         rollupProvider,
         await createDepositProof(depositAmount, userAddresses[0], userSigners[0], assetId),
         { rollupId: 1 },
@@ -163,17 +163,17 @@ describe('rollup_processor: withdraw', () => {
       await rollupProcessor.depositPendingFunds(assetId, depositAmount, undefined, {
         signingAddress: userAddresses[0],
       });
-      const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
+      const tx = await rollupProcessor.createRollupProofTx(encodedProofData, signatures, []);
       await rollupProcessor.sendTx(tx);
     }
 
     const preWithdrawalBalance = await asset.balanceOf(userAddresses[0]);
-    const { proofData } = await createRollupProof(
+    const { encodedProofData } = createRollupProof(
       rollupProvider,
       createWithdrawProof(depositAmount, userAddresses[0], virtualAssetId),
       { rollupId: 2 },
     );
-    const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+    const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
     await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('INVALID_ASSET_ID()');
     const postWithdrawalBalance = await asset.balanceOf(userAddresses[0]);
     expect(postWithdrawalBalance).toBe(preWithdrawalBalance);

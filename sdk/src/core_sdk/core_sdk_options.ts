@@ -1,6 +1,6 @@
 export type CoreSdkOptions = {
   serverUrl: string;
+  pollInterval?: number;
   useKeyCache?: boolean;
-  useMutex?: boolean;
   debug?: string;
 };

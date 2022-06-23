@@ -1,5 +1,6 @@
 import { EthAddress } from '../address';
 import { BlockSource } from '../block_source';
+import { Asset } from './asset';
 import { BlockchainStatusSource } from './blockchain_status';
 import { EthereumProvider } from './ethereum_provider';
 import { EthereumSigner } from './ethereum_signer';
@@ -18,7 +19,8 @@ export interface Receipt {
 }
 
 export interface SendTxOptions {
-  gasPrice?: bigint;
+  maxFeePerGas?: bigint;
+  maxPriorityFeePerGas?: bigint;
   gasLimit?: number;
   signingAddress?: EthAddress;
   provider?: EthereumProvider;
@@ -52,9 +54,16 @@ export interface Blockchain extends BlockSource, BlockchainStatusSource, Ethereu
 
   getUserPendingDeposit(assetId: number, account: EthAddress): Promise<bigint>;
 
-  createRollupTxs(dataBuf: Buffer, signatures: Buffer[], offchainTxData: Buffer[]): Promise<RollupTxs>;
+  createRollupTxs(
+    dataBuf: Buffer,
+    signatures: Buffer[],
+    offchainTxData: Buffer[],
+    txCallDataLimit: number,
+  ): Promise<RollupTxs>;
 
   sendTx(tx: Buffer, options?: SendTxOptions): Promise<TxHash>;
+
+  getAsset(assetId: number): Asset;
 
   getAssetPrice(assetId: number): Promise<bigint>;
 
@@ -71,8 +80,6 @@ export interface Blockchain extends BlockSource, BlockchainStatusSource, Ethereu
   getChainId(): Promise<number>;
 
   getRollupBalance(assetId: number): Promise<bigint>;
-
-  getFeeDistributorBalance(assetId: number): Promise<bigint>;
 
   getFeeData(): Promise<FeeData>;
 

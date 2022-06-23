@@ -1,13 +1,14 @@
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { assetValueToJson } from '@aztec/barretenberg/asset';
-import { ProofData } from '@aztec/barretenberg/client_proofs';
+import { JoinSplitProofData, ProofData } from '@aztec/barretenberg/client_proofs';
+import { fetch } from '@aztec/barretenberg/iso_fetch';
 import {
-  AccountJson,
-  JoinSplitTxJson,
+  DepositTxJson,
   partialRuntimeConfigFromJson,
   PendingTxJson,
   rollupProviderStatusToJson,
   TxJson,
+  initialWorldStateToBuffer,
 } from '@aztec/barretenberg/rollup_provider';
 import { numToInt32BE, serializeBufferArrayToVector } from '@aztec/barretenberg/serialize';
 import cors from '@koa/cors';
@@ -20,22 +21,20 @@ import { PromiseReadable } from 'promise-readable';
 import requestIp from 'request-ip';
 import { buildSchemaSync } from 'type-graphql';
 import { Container } from 'typedi';
-import { AccountDao } from './entity';
 import { TxDao } from './entity/tx';
 import { Metrics } from './metrics';
-import { JoinSplitTxResolver, RollupResolver, ServerStatusResolver, TxResolver } from './resolver';
+import { RollupResolver, ServerStatusResolver, TxResolver } from './resolver';
 import { Server } from './server';
 import { Tx } from './tx_receiver';
 
-const toAccountJson = ({ accountPublicKey, aliasHash }: AccountDao): AccountJson => ({
-  accountPublicKey: accountPublicKey.toString('hex'),
-  aliasHash: aliasHash.toString('hex'),
-});
-
-const toTxJson = ({ proofData, offchainTxData }: TxDao): JoinSplitTxJson => ({
-  proofData: proofData.toString('hex'),
-  offchainTxData: offchainTxData.toString('hex'),
-});
+const toDepositTxJson = ({ proofData }: TxDao): DepositTxJson => {
+  const proof = JoinSplitProofData.fromBuffer(proofData);
+  return {
+    assetId: proof.publicAssetId,
+    value: proof.publicValue.toString(),
+    publicOwner: proof.publicOwner.toString(),
+  };
+};
 
 const toPendingTxJson = (proof: ProofData): PendingTxJson => ({
   txId: proof.txId.toString('hex'),
@@ -89,7 +88,7 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     }
   };
 
-  router.get('/', recordMetric, async (ctx: Koa.Context) => {
+  router.get('/', recordMetric, (ctx: Koa.Context) => {
     ctx.body = {
       serviceName: 'falafel',
       isReady: server.isReady(),
@@ -124,18 +123,18 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
   });
 
   router.get('/get-blocks', recordMetric, async (ctx: Koa.Context) => {
-    const blocks = server.getBlockBuffers(+ctx.query.from);
+    const blocks = ctx.query.from ? server.getBlockBuffers(+ctx.query.from, 100) : [];
     const response = Buffer.concat([
       numToInt32BE(await server.getLatestRollupId()),
       serializeBufferArrayToVector(blocks),
     ]);
-    ctx.compress = true;
+    ctx.compress = false;
     ctx.body = response;
     ctx.status = 200;
   });
 
-  router.get('/remove-data', recordMetric, validateAuth, async (ctx: Koa.Context) => {
-    await server.removeData();
+  router.get('/remove-data', recordMetric, validateAuth, (ctx: Koa.Context) => {
+    server.removeData();
     ctx.status = 200;
   });
 
@@ -147,11 +146,11 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
   router.patch('/runtime-config', recordMetric, validateAuth, async (ctx: Koa.Context) => {
     const stream = new PromiseReadable(ctx.req);
     const runtimeConfig = partialRuntimeConfigFromJson(JSON.parse((await stream.readAll()) as string));
-    server.setRuntimeConfig(runtimeConfig);
+    await server.setRuntimeConfig(runtimeConfig);
     ctx.status = 200;
   });
 
-  router.get('/flush', recordMetric, validateAuth, async (ctx: Koa.Context) => {
+  router.get('/flush', recordMetric, validateAuth, (ctx: Koa.Context) => {
     server.flushTxs();
     ctx.status = 200;
   });
@@ -168,7 +167,7 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     const stream = new PromiseReadable(ctx.req);
     const data = JSON.parse((await stream.readAll()) as string);
     const assetId = +data.assetId;
-    const txFees = await server.getTxFees(assetId);
+    const txFees = server.getTxFees(assetId);
 
     ctx.set('content-type', 'application/json');
     ctx.body = txFees.map(fees => fees.map(assetValueToJson));
@@ -179,16 +178,16 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     const stream = new PromiseReadable(ctx.req);
     const data = JSON.parse((await stream.readAll()) as string);
     const bridgeId = BigInt(data.bridgeId);
-    const defiFees = await server.getDefiFees(bridgeId);
+    const defiFees = server.getDefiFees(bridgeId);
 
     ctx.set('content-type', 'application/json');
     ctx.body = defiFees.map(assetValueToJson);
     ctx.status = 200;
   });
 
-  router.get('/get-initial-world-state', recordMetric, checkReady, async (ctx: Koa.Context) => {
+  router.get('/get-initial-world-state', recordMetric, async (ctx: Koa.Context) => {
     const response = await server.getInitialWorldState();
-    ctx.body = response.initialAccounts;
+    ctx.body = initialWorldStateToBuffer(response);
     ctx.status = 200;
   });
 
@@ -219,28 +218,30 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     ctx.status = 200;
   });
 
-  router.post('/account-exists', recordMetric, async (ctx: Koa.Context) => {
+  router.post('/is-alias-registered-to-account', recordMetric, async (ctx: Koa.Context) => {
     const stream = new PromiseReadable(ctx.req);
     const data = JSON.parse((await stream.readAll()) as string);
     const accountPublicKey = GrumpkinAddress.fromString(data.accountPublicKey);
-    ctx.body = (await server.accountExists(accountPublicKey, data.alias)) ? 1 : 0;
+    ctx.body = (await server.isAliasRegisteredToAccount(accountPublicKey, data.alias)) ? 1 : 0;
     ctx.status = 200;
   });
 
-  router.get('/get-unsettled-accounts', recordMetric, async (ctx: Koa.Context) => {
-    const accounts = await server.getUnsettledAccounts();
-    ctx.body = accounts.map(toAccountJson);
-    ctx.status = 200;
-  });
-
-  router.get('/get-unsettled-payment-txs', recordMetric, async (ctx: Koa.Context) => {
-    const txs = await server.getUnsettledPaymentTxs();
-    ctx.body = txs.map(toTxJson);
+  router.get('/get-pending-deposit-txs', recordMetric, async (ctx: Koa.Context) => {
+    const txs = await server.getUnsettledDepositTxs();
+    ctx.body = txs.map(toDepositTxJson);
     ctx.status = 200;
   });
 
   router.get('/metrics', recordMetric, async (ctx: Koa.Context) => {
     ctx.body = await metrics.getMetrics();
+
+    // Fetch and forward metrics from sidecar.
+    // Means we can easily use prometheus dns_sd_configs to make SRV queries to scrape metrics.
+    const sidecarResp = await fetch('http://localhost:9545/metrics').catch(() => undefined);
+    if (sidecarResp) {
+      ctx.body += await sidecarResp.text();
+    }
+
     ctx.status = 200;
   });
 
@@ -255,7 +256,7 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
   app.use(router.allowedMethods());
 
   const schema = buildSchemaSync({
-    resolvers: [JoinSplitTxResolver, RollupResolver, TxResolver, ServerStatusResolver],
+    resolvers: [RollupResolver, TxResolver, ServerStatusResolver],
     container: Container,
   });
   const appServer = new ApolloServer({ schema, introspection: true });

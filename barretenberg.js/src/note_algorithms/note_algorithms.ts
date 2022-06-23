@@ -1,15 +1,13 @@
 import { AliasHash } from '../account_id';
 import { GrumpkinAddress } from '../address';
 import { toBigIntBE, toBufferBE } from '../bigint_buffer';
-import { ViewingKey } from '../viewing_key';
 import { BarretenbergWasm } from '../wasm';
-import { BarretenbergWorker } from '../wasm/worker';
 import { DefiInteractionNote } from './defi_interaction_note';
 import { TreeClaimNote } from './tree_claim_note';
 import { TreeNote } from './tree_note';
 
 export class NoteAlgorithms {
-  constructor(private wasm: BarretenbergWasm, private worker: BarretenbergWorker = wasm as any) {}
+  constructor(private wasm: BarretenbergWasm) {}
 
   public valueNoteNullifier(noteCommitment: Buffer, accountPrivateKey: Buffer, real = true) {
     this.wasm.transferToHeap(noteCommitment, 0);
@@ -95,19 +93,5 @@ export class NoteAlgorithms {
     this.wasm.transferToHeap(accountPublicKey.toBuffer(), 0);
     this.wasm.call('notes__compute_account_public_key_nullifier', 0, 0);
     return Buffer.from(this.wasm.sliceMemory(0, 32));
-  }
-
-  public async batchDecryptNotes(keysBuf: Buffer, privateKey: Buffer) {
-    const decryptedNoteLength = 73;
-    const numKeys = keysBuf.length / ViewingKey.SIZE;
-
-    const mem = await this.worker.call('bbmalloc', keysBuf.length + privateKey.length);
-    await this.worker.transferToHeap(keysBuf, mem);
-    await this.worker.transferToHeap(privateKey, mem + keysBuf.length);
-
-    await this.worker.call('notes__batch_decrypt_notes', mem, mem + keysBuf.length, numKeys, mem);
-    const dataBuf: Buffer = Buffer.from(await this.worker.sliceMemory(mem, mem + numKeys * decryptedNoteLength));
-    await this.worker.call('bbfree', mem);
-    return dataBuf;
   }
 }

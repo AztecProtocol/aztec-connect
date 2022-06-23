@@ -24,13 +24,16 @@ export class HttpJobServers implements ProofGenerator {
     await this.rootAndVerifierServer.stop();
   }
 
-  public async reset() {}
+  public async interrupt() {
+    await this.txRollupAndClaimServer.interrupt();
+    await this.rootAndVerifierServer.interrupt();
+  }
 
-  public async getJoinSplitVk() {
+  public getJoinSplitVk() {
     return this.rootAndVerifierServer.getJoinSplitVk();
   }
 
-  public async getAccountVk() {
+  public getAccountVk() {
     return this.rootAndVerifierServer.getAccountVk();
   }
 

@@ -17,6 +17,9 @@ export class ClaimTxDao implements CoreClaimTx {
   public userId!: GrumpkinAddress;
 
   @Column()
+  public partialState!: Buffer;
+
+  @Column()
   public secret!: Buffer;
 
   @Column()

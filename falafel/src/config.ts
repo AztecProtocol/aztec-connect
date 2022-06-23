@@ -74,13 +74,19 @@ function getPerChainBridgeConfig(chainId: number): BridgeConfig[] {
         {
           bridgeId: new BridgeId(2, 0, 2).toBigInt(),
           numTxs: 50,
-          gas: 200000,
+          gas: 175000,
           rollupFrequency: 3,
         },
         {
-          bridgeId: new BridgeId(2, 2, 0).toBigInt(),
+          bridgeId: new BridgeId(3, 2, 0).toBigInt(),
           numTxs: 50,
-          gas: 200000,
+          gas: 250000,
+          rollupFrequency: 3,
+        },
+        {
+          bridgeId: new BridgeId(4, 0, 0).toBigInt(),
+          numTxs: 1,
+          gas: 300000,
           rollupFrequency: 3,
         },
       ];
@@ -101,17 +107,16 @@ function getPerChainBridgeConfig(chainId: number): BridgeConfig[] {
 export async function getComponents(configurator: Configurator) {
   const confVars = configurator.getConfVars();
   const {
-    runtimeConfig: { gasLimit, feePayingAssetIds },
+    runtimeConfig: { gasLimit, feePayingAssetIds, rollupBeneficiary },
     ethereumHost,
     privateKey,
     rollupContractAddress,
-    feeDistributorAddress,
     priceFeedContractAddresses,
     typeOrmLogging,
     dbUrl,
     proverless,
+    rollupCallDataLimit,
   } = confVars;
-
   const ormConfig = getOrmConfig(dbUrl, typeOrmLogging);
   const { provider, signingAddress, chainId } = await getProvider(ethereumHost, privateKey);
   const ethConfig = getEthereumBlockchainConfig(confVars);
@@ -122,11 +127,12 @@ export async function getComponents(configurator: Configurator) {
   console.log(`Database Url: ${dbUrl || 'none (local sqlite)'}`);
   console.log(`Ethereum host: ${ethereumHost}`);
   console.log(`Gas limit: ${gasLimit || 'default'}`);
-  console.log(`Rollup provider address: ${rollupContractAddress || 'none'}`);
-  console.log(`Fee distributor address: ${feeDistributorAddress || 'none'}`);
+  console.log(`Call data limit: ${rollupCallDataLimit}`);
+  console.log(`Signing address: ${signingAddress}`);
+  console.log(`Rollup contract address: ${rollupContractAddress || 'none'}`);
+  console.log(`Rollup fee beneficiary: ${rollupBeneficiary || signingAddress}`);
   console.log(`Fee paying asset ids: ${feePayingAssetIds}`);
   console.log(`Price feed addresses: ${priceFeedContractAddresses.map(a => a.toString()).join(',') || 'none'}`);
-  console.log(`Signing address: ${signingAddress}`);
   console.log(`Proverless: ${proverless}`);
 
   if (priceFeedContractAddresses.length < feePayingAssetIds.length) {

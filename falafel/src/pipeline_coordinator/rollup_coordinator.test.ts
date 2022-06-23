@@ -113,6 +113,8 @@ describe('rollup_coordinator', () => {
   const oldDefiRoot = randomBytes(32);
   const oldDefiPath = new HashPath([]);
   const defiInteractionNotes: DefiInteractionNote[] = [];
+  const maxGasForRollup = 100000000;
+  const callDataPerRollup = 128 * 1024;
   let publishTimeManager: Mockify<PublishTimeManager>;
   let rollupCreator: Mockify<RollupCreator>;
   let rollupAggregator: Mockify<RollupAggregator>;
@@ -120,6 +122,29 @@ describe('rollup_coordinator', () => {
   let feeResolver: Mockify<TxFeeResolver>;
   let bridgeResolver: Mockify<BridgeResolver>;
   let coordinator: RollupCoordinator;
+
+  const newRollupCoordinator = (
+    numInnerRollupTxs: number,
+    numOuterRollupProofs: number,
+    maxGasForRollup_ = maxGasForRollup,
+    callDataPerRollup_ = callDataPerRollup,
+  ) =>
+    new RollupCoordinator(
+      publishTimeManager as any,
+      rollupCreator as any,
+      rollupAggregator as any,
+      rollupPublisher as any,
+      numInnerRollupTxs,
+      numOuterRollupProofs,
+      oldDefiRoot,
+      oldDefiPath,
+      bridgeResolver as any,
+      feeResolver as any,
+      defiInteractionNotes,
+      maxGasForRollup_,
+      callDataPerRollup_,
+      () => {},
+    );
 
   let currentTime = new Date('2021-06-20T11:45:00+01:00');
 
@@ -133,6 +158,35 @@ describe('rollup_coordinator', () => {
       [bridgeConfigs[2].bridgeId, { timeout: new Date('2021-06-20T09:30:00+00:00'), rollupNumber: 1 }],
       [bridgeConfigs[3].bridgeId, { timeout: new Date('2021-06-20T08:00:00+00:00'), rollupNumber: 1 }],
     ]),
+  };
+
+  const callDataValues: { [key: number]: number } = {
+    0: 100,
+    1: 100,
+    2: 100,
+    3: 100,
+    4: 100,
+    5: 100,
+    6: 100,
+  };
+
+  const gasValues: { [key: number]: number } = {
+    0: 100,
+    1: 100,
+    2: 100,
+    3: 100,
+    4: 100,
+    5: 100,
+    6: 100,
+  };
+
+  const bridgeContractGasLimits: Map<bigint, number> = new Map<bigint, number>();
+
+  const resetGasAndDataValues = () => {
+    for (let i = 0; i < 7; i++) {
+      callDataValues[i] = 100;
+      gasValues[i] = 100;
+    }
   };
 
   const txTypeToProofId = (txType: TxType) => (txType < TxType.WITHDRAW_TO_CONTRACT ? txType + 1 : txType);
@@ -164,7 +218,7 @@ describe('rollup_coordinator', () => {
         toBufferBE(0n, 32),
         numToUInt32BE(txFeeAssetId, 32),
         toBufferBE(bridgeId, 32),
-        randomBytes(3 * 32),
+        randomBytes(2 * 32),
         backwardLink,
         allowChain,
       ]),
@@ -185,8 +239,6 @@ describe('rollup_coordinator', () => {
   beforeEach(() => {
     jest.spyOn(Date, 'now').mockImplementation(() => getCurrentTime().getTime());
 
-    jest.spyOn(console, 'log').mockImplementation(() => {});
-
     publishTimeManager = {
       calculateLastTimeouts: jest.fn().mockImplementation(() => rollupTimeouts),
       calculateNextTimeouts: jest.fn(),
@@ -197,13 +249,13 @@ describe('rollup_coordinator', () => {
       interrupt: jest.fn(),
       createRollup: jest
         .fn()
-        .mockImplementation(async (txs: TxDao[], rootRollupBridgeIds: bigint[], rootRollupAssetIds: Set<number>) => {
+        .mockImplementation((txs: TxDao[], rootRollupBridgeIds: bigint[], rootRollupAssetIds: Set<number>) => {
           for (const tx of txs) {
             const proof = new ProofData(tx.proofData);
             if (proof.proofId === ProofId.ACCOUNT) {
               continue;
             }
-            const asset = proof.txFeeAssetId.readUInt32BE(28);
+            const asset = proof.feeAssetId;
             if (feeResolver.isFeePayingAsset(asset)) {
               rootRollupAssetIds.add(asset);
             }
@@ -216,7 +268,6 @@ describe('rollup_coordinator', () => {
             }
           }
         }),
-      addRollupProofs: jest.fn(),
     };
 
     rollupAggregator = {
@@ -230,22 +281,31 @@ describe('rollup_coordinator', () => {
     };
 
     feeResolver = {
-      getMinTxFee: jest.fn().mockImplementation(() => {
-        throw new Error('This should not be called');
-      }),
+      getMinTxFee: jest.fn(),
       start: jest.fn(),
       stop: jest.fn(),
       getGasPaidForByFee: jest.fn().mockImplementation((assetId: number, fee: bigint) => fee),
-      getBaseTxGas: jest.fn().mockReturnValue(BASE_GAS),
-      getTxGas: jest.fn().mockImplementation(() => {
-        throw new Error('This should not be called');
+      getUnadjustedBaseVerificationGas: jest.fn().mockReturnValue(BASE_GAS),
+      getAdjustedBaseVerificationGas: jest.fn().mockReturnValue(BASE_GAS),
+      getAdjustedTxGas: jest.fn().mockImplementation((_, txType: TxType) => {
+        return gasValues[txType];
       }),
-      getBridgeTxGas: jest.fn(),
+      getUnadjustedTxGas: jest.fn().mockImplementation((_, txType: TxType) => {
+        return gasValues[txType];
+      }),
+      getAdjustedBridgeTxGas: jest.fn(),
+      getUnadjustedBridgeTxGas: jest.fn(),
       getFullBridgeGas: jest.fn().mockImplementation((bridgeId: bigint) => getBridgeCost(bridgeId)),
       getSingleBridgeTxGas: jest.fn().mockImplementation((bridgeId: bigint) => getSingleBridgeCost(bridgeId)),
       getTxFees: jest.fn(),
       getDefiFees: jest.fn(),
       isFeePayingAsset: jest.fn().mockImplementation((assetId: number) => assetId < 3),
+      getTxCallData: jest.fn().mockImplementation((txType: TxType) => callDataValues[txType]),
+      getMaxTxCallData: jest.fn().mockImplementation(() => Math.max(...Object.values(callDataValues))),
+      getMaxUnadjustedGas: jest.fn().mockImplementation(() => Math.max(...Object.values(gasValues))),
+      getFullBridgeGasFromContract: jest.fn().mockImplementation((bridgeId: bigint) => {
+        return bridgeContractGasLimits.get(bridgeId) ?? getBridgeCost(bridgeId);
+      }),
     };
 
     bridgeResolver = {
@@ -253,19 +313,11 @@ describe('rollup_coordinator', () => {
       defaultDefiBatchSize: 5,
     } as any;
 
-    coordinator = new RollupCoordinator(
-      publishTimeManager as any,
-      rollupCreator as any,
-      rollupAggregator as any,
-      rollupPublisher as any,
-      numInnerRollupTxs,
-      numOuterRollupProofs,
-      oldDefiRoot,
-      oldDefiPath,
-      bridgeResolver as any,
-      feeResolver as any,
-      defiInteractionNotes,
-    );
+    coordinator = newRollupCoordinator(numInnerRollupTxs, numOuterRollupProofs);
+  });
+
+  afterEach(() => {
+    expect(feeResolver.getMinTxFee).not.toBeCalled();
   });
 
   describe('publish time is in the future', () => {
@@ -297,22 +349,6 @@ describe('rollup_coordinator', () => {
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
-
-    it('should do nothing with new txs if it has successfully published a rollup', async () => {
-      const numTxs = numInnerRollupTxs * numOuterRollupProofs;
-      {
-        const pendingTxs = [...Array(numTxs)].map((_, i) => mockTx(i));
-        const rp = await coordinator.processPendingTxs(pendingTxs);
-        expect(rp.published).toBe(true);
-        expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
-      }
-      {
-        const pendingTxs = [...Array(numTxs)].map((_, i) => mockTx(i + numTxs));
-        const rp = await coordinator.processPendingTxs(pendingTxs);
-        expect(rp.published).toBe(false);
-        expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
-      }
-    });
   });
 
   describe('number of bridge calls per block never exceeded', () => {
@@ -322,7 +358,7 @@ describe('rollup_coordinator', () => {
     const numOuterRollupProofs = 2;
 
     beforeEach(() => {
-      Object.assign(coordinator, { numInnerRollupTxs, numOuterRollupProofs });
+      coordinator = newRollupCoordinator(numInnerRollupTxs, numOuterRollupProofs);
     });
 
     it('will not rollup defi deposit proofs with more than the allowed distinct bridge ids', async () => {
@@ -589,6 +625,7 @@ describe('rollup_coordinator', () => {
       const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeId);
       feeResolver.getSingleBridgeTxGas.mockReturnValue(mockBridgeGas / defaultDeFiBatchSize);
       feeResolver.getFullBridgeGas.mockReturnValue(mockBridgeGas);
+      feeResolver.getFullBridgeGasFromContract.mockReturnValue(mockBridgeGas);
       const pendingTxs = [
         mockDefiBridgeTxLocal(0, DEFI_TX_PLUS_BASE_GAS + feeResolver.getSingleBridgeTxGas(bridgeId)),
         mockDefiBridgeTxLocal(1, DEFI_TX_PLUS_BASE_GAS + feeResolver.getSingleBridgeTxGas(bridgeId)),
@@ -1334,19 +1371,7 @@ describe('rollup_coordinator', () => {
     };
 
     beforeEach(() => {
-      coordinator = new RollupCoordinator(
-        publishTimeManager as any,
-        rollupCreator as any,
-        rollupAggregator as any,
-        rollupPublisher as any,
-        numInnerRollupTxs,
-        numOuterRollupProofs,
-        oldDefiRoot,
-        oldDefiPath,
-        bridgeResolver as any,
-        feeResolver as any,
-        defiInteractionNotes,
-      );
+      coordinator = newRollupCoordinator(numInnerRollupTxs, numOuterRollupProofs);
 
       oldTime = currentTime;
       currentTime = new Date('2021-06-20T11:45:00+01:00');
@@ -1726,7 +1751,7 @@ describe('rollup_coordinator', () => {
       currentTime = new Date('2021-06-20T12:00:01+01:00');
 
       // run again and we should have published it
-      rp = await await coordinator.processPendingTxs(pendingTxs);
+      rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
       expectProcessedTxIds([0]);
 
@@ -1744,7 +1769,7 @@ describe('rollup_coordinator', () => {
       const numOuterRollupProofs = 2;
 
       beforeEach(() => {
-        Object.assign(coordinator, { numInnerRollupTxs, numOuterRollupProofs });
+        coordinator = newRollupCoordinator(numInnerRollupTxs, numOuterRollupProofs);
       });
 
       it('will not timeout defi deposit txs if we have more than the allowed distinct bridge ids', async () => {
@@ -1793,7 +1818,10 @@ describe('rollup_coordinator', () => {
           return bid <= numberOfBridgeCalls || bid > 1000;
         });
 
-        expect(coordinator.getProcessedTxs()).toEqual(expectedTxs);
+        expect(coordinator.getProcessedTxs().length).toBe(expectedTxs.length);
+        expect(coordinator.getProcessedTxs().map(tx => tx.id.toString('hex'))).toEqual(
+          expectedTxs.map(tx => tx.id.toString('hex')),
+        );
 
         expect(rollupCreator.create).toHaveBeenCalledTimes(2);
         expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
@@ -1815,19 +1843,7 @@ describe('rollup_coordinator', () => {
     const numOuterRollupProofs = 2;
 
     beforeEach(() => {
-      coordinator = new RollupCoordinator(
-        publishTimeManager as any,
-        rollupCreator as any,
-        rollupAggregator as any,
-        rollupPublisher as any,
-        numInnerRollupTxs,
-        numOuterRollupProofs,
-        oldDefiRoot,
-        oldDefiPath,
-        bridgeResolver as any,
-        feeResolver as any,
-        defiInteractionNotes,
-      );
+      coordinator = newRollupCoordinator(numInnerRollupTxs, numOuterRollupProofs);
     });
 
     it('should break a chain if they cannot be in the same inner rollup', async () => {
@@ -1945,8 +1961,8 @@ describe('rollup_coordinator', () => {
   });
 
   describe('interrupt', () => {
-    it('should interrupt all helpers', () => {
-      coordinator.interrupt();
+    it('should interrupt all helpers', async () => {
+      await coordinator.interrupt();
       expect(rollupCreator.interrupt).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.interrupt).toHaveBeenCalledTimes(1);
       expect(rollupPublisher.interrupt).toHaveBeenCalledTimes(1);
@@ -1990,6 +2006,1034 @@ describe('rollup_coordinator', () => {
         expect(err).toBeDefined();
         expect(err.message).toBe('Publisher Error');
       }
+    });
+  });
+
+  describe('rollup limits no defi', () => {
+    const maxGasForRollup = 400000;
+    const callDataForRollup = 100000;
+    const numInnerRollupTxs = 4;
+    const numOuterRollupProofs = 2;
+    beforeEach(() => {
+      resetGasAndDataValues();
+      coordinator = newRollupCoordinator(numInnerRollupTxs, numOuterRollupProofs, maxGasForRollup, callDataForRollup);
+    });
+
+    it.each([
+      [TxType.DEPOSIT, TxType.TRANSFER],
+      [TxType.TRANSFER, TxType.DEPOSIT],
+      [TxType.WITHDRAW_TO_CONTRACT, TxType.TRANSFER],
+      [TxType.WITHDRAW_TO_WALLET, TxType.TRANSFER],
+      [TxType.ACCOUNT, TxType.TRANSFER],
+    ])(`should not publish txs of type %d would breach the available gas`, async (txTypeUnderTest, secondaryTxType) => {
+      // set the gas value for the tx type under test so we can only fit 3 in a rollup
+      gasValues[txTypeUnderTest] = 80000;
+      gasValues[secondaryTxType] = 40000;
+      // ensure that we have enough call data for everything
+      callDataValues[txTypeUnderTest] = 10;
+      callDataValues[secondaryTxType] = 10;
+      const pendingTxs = [
+        mockTx(0, { txType: txTypeUnderTest, txFeeAssetId: 0 }),
+        mockTx(1, { txType: txTypeUnderTest, txFeeAssetId: 0 }),
+        mockTx(2, { txType: secondaryTxType, txFeeAssetId: 0 }),
+        mockTx(3, { txType: txTypeUnderTest, txFeeAssetId: 0 }),
+        mockTx(4, { txType: txTypeUnderTest, txFeeAssetId: 0 }),
+      ];
+
+      // we can fit the first 3 tested txs + the secondary in the rollup
+      const rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(true);
+      expect(rp.totalGas).toBe(360000); // 4 * BASE_GAS + 3 * TxType under test + 1 * secondary
+      expect(rp.totalCallData).toBe(40); // 4 * 10
+      expectProcessedTxIds([0, 1, 2, 3]);
+      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not publish defi claim txs that would breach the available gas', async () => {
+      // set the gas value for defi claims so we can only fit 3 in a rollup
+      gasValues[TxType.DEFI_CLAIM] = 95000;
+      gasValues[TxType.TRANSFER] = 30000; //TRANSFER
+      // ensure that we have enough call data for everything
+      callDataValues[TxType.DEFI_CLAIM] = 10;
+      callDataValues[TxType.TRANSFER] = 10;
+      const pendingTxs = [
+        mockTx(0, { txType: TxType.DEFI_CLAIM, txFeeAssetId: 0 }),
+        mockTx(1, { txType: TxType.DEFI_CLAIM, txFeeAssetId: 0 }),
+        mockTx(2, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockTx(3, { txType: TxType.DEFI_CLAIM, txFeeAssetId: 0 }),
+        mockTx(4, { txType: TxType.DEFI_CLAIM, txFeeAssetId: 0 }),
+      ];
+
+      // claims are reordered to be at the front of the queue
+      // we should end up with the first 3 claims and the transfer
+      const rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(true);
+
+      expectProcessedTxIds([0, 1, 3, 2]);
+      expect(rp.totalGas).toBe(395000); // 8 * BASE_GAS + 3 * DEFI_CLAIM + 1 * TRANSFER
+      expect(rp.totalCallData).toBe(40); // 4 * 10
+      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not publish defi claims that would breach the available call data', async () => {
+      // set the call data value for deposits so we can only fit 3 in a rollup
+      callDataValues[TxType.DEFI_CLAIM] = 30000; //DEFI_CLAIM
+      callDataValues[TxType.TRANSFER] = 10000; //TRANSFER
+      // ensure that we have enough gas for everything
+      gasValues[TxType.DEFI_CLAIM] = 10;
+      gasValues[TxType.TRANSFER] = 10;
+      const pendingTxs = [
+        mockTx(0, { txType: TxType.DEFI_CLAIM, txFeeAssetId: 0 }),
+        mockTx(1, { txType: TxType.DEFI_CLAIM, txFeeAssetId: 0 }),
+        mockTx(2, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockTx(3, { txType: TxType.DEFI_CLAIM, txFeeAssetId: 0 }),
+        mockTx(4, { txType: TxType.DEFI_CLAIM, txFeeAssetId: 0 }),
+      ];
+
+      // claims are reordered to be at the front of the queue
+      // we should end up with the first 3 claims and the transfer
+      const rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(true);
+      expect(rp.totalCallData).toBe(100000); // 3 * DEFI_CLAIM + TRANSFER
+      expect(rp.totalGas).toBe(80040); // 4 * BASE_GAS + 4 * 10
+      expectProcessedTxIds([0, 1, 3, 2]);
+      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([
+      [TxType.DEPOSIT, TxType.TRANSFER],
+      [TxType.TRANSFER, TxType.DEPOSIT],
+      [TxType.WITHDRAW_TO_CONTRACT, TxType.TRANSFER],
+      [TxType.WITHDRAW_TO_WALLET, TxType.TRANSFER],
+      [TxType.ACCOUNT, TxType.TRANSFER],
+    ])(
+      `should not publish txs of type %d would breach the available call data`,
+      async (txTypeUnderTest, secondaryTxType) => {
+        // set the call data value for tx under test so we can only fit 3 in a rollup
+        callDataValues[txTypeUnderTest] = 30000; //Tx under test
+        callDataValues[secondaryTxType] = 10000; //secondary tx type
+        // ensure that we have enough gas for everything
+        gasValues[txTypeUnderTest] = 10;
+        gasValues[secondaryTxType] = 10;
+        const pendingTxs = [
+          mockTx(0, { txType: txTypeUnderTest, txFeeAssetId: 0 }),
+          mockTx(1, { txType: txTypeUnderTest, txFeeAssetId: 0 }),
+          mockTx(2, { txType: secondaryTxType, txFeeAssetId: 0 }),
+          mockTx(3, { txType: txTypeUnderTest, txFeeAssetId: 0 }),
+          mockTx(4, { txType: txTypeUnderTest, txFeeAssetId: 0 }),
+        ];
+
+        // we can fit the first 3 tested txs + the secondary in the rollup
+        const rp = await coordinator.processPendingTxs(pendingTxs);
+        expect(rp.published).toBe(true);
+        expect(rp.totalCallData).toBe(100000); // 3 * Tested txs + secondary
+        expect(rp.totalGas).toBe(80040); // 4 * BASE_GAS + 4 * 10
+        expectProcessedTxIds([0, 1, 2, 3]);
+        expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+        expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+        expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+      },
+    );
+
+    it('should not publish txs that would breach the available gas even with flush', async () => {
+      // set the gas value for deposits so we can only fit 3 in a rollup
+      gasValues[TxType.DEPOSIT] = 80000; //DEPOSIT
+      gasValues[TxType.TRANSFER] = 40000; //TRANSFER
+      // ensure that we have enough call data for everything
+      callDataValues[TxType.DEPOSIT] = 10;
+      callDataValues[TxType.TRANSFER] = 10;
+      const pendingTxs = [
+        mockTx(0, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
+        mockTx(1, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
+        mockTx(2, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockTx(3, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
+        mockTx(4, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
+      ];
+
+      // we can fit the first 3 deposits + the transfer in the rollup
+      const rp = await coordinator.processPendingTxs(pendingTxs, true);
+      expect(rp.published).toBe(true);
+      expect(rp.totalGas).toBe(360000); // 4 * BASE_GAS + 3 * DEPOSIT + 1 * TRANSFER
+      expect(rp.totalCallData).toBe(40); // 4 * 10
+      expectProcessedTxIds([0, 1, 2, 3]);
+      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not publish txs that would breach the available gas even with timeout', async () => {
+      // set the gas value for deposits so we can only fit 3 in a rollup
+      gasValues[TxType.DEPOSIT] = 80000; //DEPOSIT
+      gasValues[TxType.TRANSFER] = 40000; //TRANSFER
+      // ensure that we have enough call data for everything
+      callDataValues[TxType.DEPOSIT] = 10;
+      callDataValues[TxType.TRANSFER] = 10;
+      const pendingTxs = [
+        mockTx(0, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
+        mockTx(1, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
+        mockTx(2, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockTx(3, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
+        mockTx(4, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
+      ];
+
+      // set the rollup timeout and bridge timeouts to the following (no timeout for bridge [2])
+      rollupTimeouts = {
+        ...rollupTimeouts,
+        baseTimeout: { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 },
+        bridgeTimeouts: new Map<bigint, RollupTimeout>(),
+      };
+      // and set current time just after the timeout
+      currentTime = new Date('2021-06-20T12:00:01+01:00');
+
+      // we can fit the first 3 deposits + the transfer in the rollup
+      const rp = await coordinator.processPendingTxs(pendingTxs, false);
+      expect(rp.published).toBe(true);
+      expect(rp.totalGas).toBe(360000); // 4 * BASE_GAS + 3 * DEPOSIT + 1 * TRANSFER
+      expect(rp.totalCallData).toBe(40); // 4 * 10
+      expectProcessedTxIds([0, 1, 2, 3]);
+      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not publish txs that would breach the available call data even with flush', async () => {
+      // set the call data value for deposits so we can only fit 3 in a rollup
+      callDataValues[TxType.DEPOSIT] = 30000; //DEPOSIT
+      callDataValues[TxType.TRANSFER] = 10000; //TRANSFER
+      // ensure that we have enough gas for everything
+      gasValues[TxType.DEPOSIT] = 10;
+      gasValues[TxType.TRANSFER] = 10;
+      const pendingTxs = [
+        mockTx(0, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
+        mockTx(1, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
+        mockTx(2, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockTx(3, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
+        mockTx(4, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
+      ];
+
+      // we can fit the first 3 deposits + the transfer in the rollup
+      const rp = await coordinator.processPendingTxs(pendingTxs, true);
+      expect(rp.published).toBe(true);
+      expect(rp.totalCallData).toBe(100000); // 3 * DEPOSIT + TRANSFER
+      expect(rp.totalGas).toBe(80040); // 4 * BASE_GAS + 4 * 10
+      expectProcessedTxIds([0, 1, 2, 3]);
+      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not publish txs that would breach the available call data even with timeout', async () => {
+      // set the call data value for deposits so we can only fit 3 in a rollup
+      callDataValues[TxType.DEPOSIT] = 30000; //DEPOSIT
+      callDataValues[TxType.TRANSFER] = 10000; //TRANSFER
+      // ensure that we have enough gas for everything
+      gasValues[TxType.DEPOSIT] = 10;
+      gasValues[TxType.TRANSFER] = 10;
+      const pendingTxs = [
+        mockTx(0, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
+        mockTx(1, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
+        mockTx(2, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockTx(3, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
+        mockTx(4, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
+      ];
+
+      // set the rollup timeout and bridge timeouts to the following (no timeout for bridge [2])
+      rollupTimeouts = {
+        ...rollupTimeouts,
+        baseTimeout: { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 },
+        bridgeTimeouts: new Map<bigint, RollupTimeout>(),
+      };
+      // and set current time just after the timeout
+      currentTime = new Date('2021-06-20T12:00:01+01:00');
+
+      // we can fit the first 3 deposits + the transfer in the rollup
+      const rp = await coordinator.processPendingTxs(pendingTxs, false);
+      expect(rp.published).toBe(true);
+      expect(rp.totalCallData).toBe(100000); // 3 * DEPOSIT + TRANSFER
+      expect(rp.totalGas).toBe(80040); // 4 * BASE_GAS + 4 * 10
+      expectProcessedTxIds([0, 1, 2, 3]);
+      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+    });
+
+    it('should ignore txs chained from ignored txs', async () => {
+      // set the gas value for deposits so we can only fit 3 in a rollup
+      gasValues[TxType.DEPOSIT] = 100000; //DEPOSIT
+      gasValues[TxType.TRANSFER] = 10000; //TRANSFER
+      gasValues[TxType.WITHDRAW_TO_WALLET] = 110000; //WITHDRAW_TO_WALLET
+      // ensure that we have enough call data for everything
+      callDataValues[TxType.DEPOSIT] = 10;
+      callDataValues[TxType.TRANSFER] = 10;
+      callDataValues[TxType.WITHDRAW_TO_WALLET] = 10;
+      const commitment1 = randomBytes(32);
+      const commitment2 = randomBytes(32);
+      const pendingTxs = [
+        mockTx(0, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }), // uses 100000
+        mockTx(1, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }), // now at 100000
+        mockTx(2, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }), // now at 100000
+        mockTx(3, { txType: TxType.WITHDRAW_TO_WALLET, txFeeAssetId: 0, noteCommitment1: commitment1 }), // will be ignored
+        mockTx(4, {
+          txType: TxType.TRANSFER,
+          txFeeAssetId: 0,
+          backwardLink: commitment1,
+          noteCommitment2: commitment2,
+        }), // below gas limit but is chained from tx 3
+        mockTx(5, { txType: TxType.TRANSFER, txFeeAssetId: 0, backwardLink: commitment2 }), // below gas limit but is chained from tx 4
+        mockTx(6, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+      ];
+
+      const rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(true);
+      expect(rp.totalGas).toBe(390000); // 3 * DEPOSIT + TRANSFER + 3 * BASE_GAS
+      expect(rp.totalCallData).toBe(40); // 4 * 10
+      expect(coordinator.getProcessedTxs().length).toBe(4);
+      expectProcessedTxIds([0, 1, 2, 6]);
+      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([
+      [TxType.DEPOSIT, TxType.TRANSFER],
+      [TxType.TRANSFER, TxType.DEPOSIT],
+      [TxType.WITHDRAW_TO_CONTRACT, TxType.TRANSFER],
+      [TxType.WITHDRAW_TO_WALLET, TxType.TRANSFER],
+      [TxType.ACCOUNT, TxType.TRANSFER],
+    ])(
+      `should publish a later tx of type %d if it is within the gas limit'`,
+      async (txTypeUnderTest, secondaryTxType) => {
+        // set the gas value for the tx under test so we can only fit 2 in a rollup
+        gasValues[txTypeUnderTest] = 135000;
+        gasValues[secondaryTxType] = 25000;
+        // ensure that we have enough call data for everything
+        callDataValues[txTypeUnderTest] = 10;
+        callDataValues[secondaryTxType] = 10;
+        const pendingTxs = [
+          mockTx(0, { txType: txTypeUnderTest, txFeeAssetId: 0 }),
+          mockTx(1, { txType: txTypeUnderTest, txFeeAssetId: 0 }),
+          mockTx(2, { txType: txTypeUnderTest, txFeeAssetId: 0 }),
+          mockTx(3, { txType: txTypeUnderTest, txFeeAssetId: 0 }),
+          mockTx(4, { txType: secondaryTxType, txFeeAssetId: 0 }),
+        ];
+
+        // we can fit the first 2 txs undr test + the secondary tx in the rollup
+        const rp = await coordinator.processPendingTxs(pendingTxs);
+        expect(rp.published).toBe(true);
+        expect(rp.totalGas).toBe(395000); // 2 * tx under test + secondary + 5 * BASE_GAS
+        expect(rp.totalCallData).toBe(30);
+        expectProcessedTxIds([0, 1, 4]);
+        expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+        expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+        expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+      },
+    );
+
+    it.each([
+      [TxType.DEPOSIT, TxType.TRANSFER],
+      [TxType.TRANSFER, TxType.DEPOSIT],
+      [TxType.WITHDRAW_TO_CONTRACT, TxType.TRANSFER],
+      [TxType.WITHDRAW_TO_WALLET, TxType.TRANSFER],
+      [TxType.ACCOUNT, TxType.TRANSFER],
+    ])(
+      `should publish a later tx of type %d if it is within the call data limit'`,
+      async (txTypeUnderTest, secondaryTxType) => {
+        // set the call data for txs under test so we can only fit 3 in a rollup
+        callDataValues[txTypeUnderTest] = 30000;
+        callDataValues[secondaryTxType] = 10000;
+        // ensure that we have enough gas for everything
+        gasValues[txTypeUnderTest] = 10;
+        gasValues[secondaryTxType] = 10;
+        const pendingTxs = [
+          mockTx(0, { txType: txTypeUnderTest, txFeeAssetId: 0 }),
+          mockTx(1, { txType: txTypeUnderTest, txFeeAssetId: 0 }),
+          mockTx(2, { txType: txTypeUnderTest, txFeeAssetId: 0 }),
+          mockTx(3, { txType: txTypeUnderTest, txFeeAssetId: 0 }),
+          mockTx(4, { txType: secondaryTxType, txFeeAssetId: 0 }),
+        ];
+
+        // we can fit the first 3 txs under test + the secondary in the rollup
+        const rp = await coordinator.processPendingTxs(pendingTxs);
+        expect(rp.published).toBe(true);
+        expect(rp.totalCallData).toBe(100000); // 3 * tx under test + secondary
+        expectProcessedTxIds([0, 1, 2, 4]);
+        expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+        expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+        expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+      },
+    );
+
+    it('should publish once remaining gas is lower than any tx type', async () => {
+      // set the gas value for deposits so we can only fit 3 in a rollup
+      gasValues[TxType.DEPOSIT] = 60000; //DEPOSIT
+      gasValues[TxType.TRANSFER] = 75000; //TRANSFER
+      gasValues[TxType.WITHDRAW_TO_CONTRACT] = 110001; //WITHDRAW_TO_CONTRACT
+      // ensure that we have enough call data for everything
+      callDataValues[TxType.DEPOSIT] = 10;
+      callDataValues[TxType.TRANSFER] = 10;
+      callDataValues[TxType.WITHDRAW_TO_CONTRACT] = 10;
+      const pendingTxs = [
+        mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockTx(1, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
+        mockTx(2, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+      ];
+
+      // we publish the 3 txs as if we were to get a WITHDRAW_TO_CONTRACT we wouldn't be able to fit it in
+      // we have 2 * TRANSFER + DEPOSIT + 5 * BASE_GAS = 310000.
+      // adding a WITHDRAW_TO_CONTRACT would make it
+      // 2 * TRANSFER + DEPOSIT + WITHDRAW_TO_CONTRACT + 4 * BASE_GAS = 400001
+      const rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(true);
+      expect(rp.totalCallData).toBe(30);
+      expect(rp.totalGas).toBe(310000);
+      expectProcessedTxIds([0, 1, 2]);
+      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+    });
+
+    it('should publish once remaining call data is lower than any tx type', async () => {
+      callDataValues[TxType.DEPOSIT] = 30000; //DEPOSIT
+      callDataValues[TxType.TRANSFER] = 10000; //TRANSFER
+      callDataValues[TxType.WITHDRAW_TO_CONTRACT] = 50001; //WITHDRAW_TO_CONTRACT
+      // ensure that we have enough gas for everything
+      gasValues[TxType.DEPOSIT] = 10;
+      gasValues[TxType.TRANSFER] = 10;
+      gasValues[TxType.WITHDRAW_TO_CONTRACT] = 10;
+      const pendingTxs = [
+        mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockTx(1, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
+        mockTx(2, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+      ];
+
+      // we publish the 3 txs as if we were to get a WITHDRAW_TO_CONTRACT we wouldn't be able to fit it in
+      const rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(true);
+      expect(rp.totalCallData).toBe(50000);
+      expect(rp.totalGas).toBe(100030);
+      expectProcessedTxIds([0, 1, 2]);
+      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('rollup limits with defi', () => {
+    const maxGasForRollup = 2000000;
+    const callDataForRollup = 100000;
+    const numInnerRollupTxs = 4;
+    const numOuterRollupProofs = 2;
+    beforeEach(() => {
+      resetGasAndDataValues();
+      coordinator = newRollupCoordinator(numInnerRollupTxs, numOuterRollupProofs, maxGasForRollup, callDataForRollup);
+    });
+
+    it('defi bridge gas is included against rollup limit', async () => {
+      // gas of this bridge is 1000000
+      const bridgeId = bridgeConfigs[0].bridgeId;
+      const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeId);
+
+      gasValues[TxType.DEPOSIT] = 250000; //DEPOSIT
+      gasValues[TxType.TRANSFER] = 300000; //TRANSFER
+      gasValues[TxType.WITHDRAW_TO_CONTRACT] = 250001; //WITHDRAW_TO_CONTRACT
+      gasValues[TxType.DEFI_DEPOSIT] = 200000; //DEFI_DEPOSIT
+      // ensure that we have enough call data for everything
+      callDataValues[TxType.DEPOSIT] = 10;
+      callDataValues[TxType.TRANSFER] = 10;
+      callDataValues[TxType.WITHDRAW_TO_CONTRACT] = 10;
+      callDataValues[TxType.DEFI_DEPOSIT] = 10;
+      const pendingTxs = [
+        mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }), // adds 300000
+        mockDefiBridgeTxLocal(1, DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeId)), // pays for complete bridge. adds 1000000 + 200000 gas
+        mockTx(2, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }), // 250000. at this point we have used 1750000 gas in tx overhead, then + 5 * BASE_GAS
+        mockTx(3, { txType: TxType.WITHDRAW_TO_CONTRACT, txFeeAssetId: 0 }), // this tx won't fit
+      ];
+
+      // we publish the first 3 txs
+      const rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(true);
+      expect(rp.totalCallData).toBe(30);
+      expect(rp.totalGas).toBe(1850000);
+      expectProcessedTxIds([0, 1, 2]);
+      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
+        bridgeId,
+        ...Array(numberOfBridgeCalls - 1).fill(0n),
+      ]);
+    });
+
+    it('defi bridge gas is taken from contract and included against rollup limit', async () => {
+      const bridgeId = bridgeConfigs[0].bridgeId;
+      const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeId);
+
+      // set the gas limit for this bridge id to 900000 on the contract
+      bridgeContractGasLimits.set(bridgeId, 900000);
+
+      gasValues[TxType.DEPOSIT] = 250000; //DEPOSIT
+      gasValues[TxType.TRANSFER] = 300000; //TRANSFER
+      gasValues[TxType.WITHDRAW_TO_CONTRACT] = 250001; //WITHDRAW_TO_CONTRACT
+      gasValues[TxType.DEFI_DEPOSIT] = 200000; //DEFI_DEPOSIT
+      // ensure that we have enough call data for everything
+      callDataValues[TxType.DEPOSIT] = 10;
+      callDataValues[TxType.TRANSFER] = 10;
+      callDataValues[TxType.WITHDRAW_TO_CONTRACT] = 10;
+      callDataValues[TxType.DEFI_DEPOSIT] = 10;
+      const pendingTxs = [
+        mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }), // adds 300000
+        mockDefiBridgeTxLocal(1, DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeId)), // pays for complete bridge. adds 900000 + 200000 gas
+        mockTx(2, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }), // 250000. at this point we have used 1650000 gas in tx overhead, then + 5 * BASE_GAS
+        mockTx(3, { txType: TxType.WITHDRAW_TO_CONTRACT, txFeeAssetId: 0 }), // this tx will now fit so we have 1900001 + 4 * BASE_GAS
+      ];
+
+      // we publish the all 4 txs
+      const rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(true);
+      expect(rp.totalCallData).toBe(40);
+      expect(rp.totalGas).toBe(1980001);
+      expectProcessedTxIds([0, 1, 2, 3]);
+      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
+        bridgeId,
+        ...Array(numberOfBridgeCalls - 1).fill(0n),
+      ]);
+
+      bridgeContractGasLimits.delete(bridgeId);
+    });
+
+    it('defi bridge gas is taken from contract and included against rollup limit 2', async () => {
+      const bridgeId = bridgeConfigs[0].bridgeId;
+      const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeId);
+
+      // set the gas limit for thie bridge id to 1500000 on the contract
+      bridgeContractGasLimits.set(bridgeId, 1300000);
+
+      gasValues[TxType.DEPOSIT] = 250000; //DEPOSIT
+      gasValues[TxType.TRANSFER] = 300000; //TRANSFER
+      gasValues[TxType.WITHDRAW_TO_CONTRACT] = 250001; //WITHDRAW_TO_CONTRACT
+      gasValues[TxType.DEFI_DEPOSIT] = 200000; //DEFI_DEPOSIT
+      // ensure that we have enough call data for everything
+      callDataValues[TxType.DEPOSIT] = 10;
+      callDataValues[TxType.TRANSFER] = 10;
+      callDataValues[TxType.WITHDRAW_TO_CONTRACT] = 10;
+      callDataValues[TxType.DEFI_DEPOSIT] = 10;
+      const pendingTxs = [
+        mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }), // adds 300000
+        mockDefiBridgeTxLocal(1, DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeId)), // pays for complete bridge. adds 1300000 + 200000 gas. We now have 1800000 + 6 * BASE_GAS
+        mockTx(2, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }), // this tx will not fit
+        mockTx(3, { txType: TxType.WITHDRAW_TO_CONTRACT, txFeeAssetId: 0 }), // this tx will not fit
+      ];
+
+      // we publish the all 4 txs
+      const rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(true);
+      expect(rp.totalCallData).toBe(20);
+      expect(rp.totalGas).toBe(1920000);
+      expectProcessedTxIds([0, 1]);
+      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
+        bridgeId,
+        ...Array(numberOfBridgeCalls - 1).fill(0n),
+      ]);
+
+      bridgeContractGasLimits.delete(bridgeId);
+    });
+
+    it('defi deposit call data is included against rollup limit', async () => {
+      const bridgeId = bridgeConfigs[0].bridgeId;
+      const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeId);
+
+      callDataValues[TxType.DEPOSIT] = 25000; //DEPOSIT
+      callDataValues[TxType.TRANSFER] = 30000; //TRANSFER
+      callDataValues[TxType.WITHDRAW_TO_CONTRACT] = 25001; //WITHDRAW_TO_CONTRACT
+      callDataValues[TxType.DEFI_DEPOSIT] = 20000; //DEFI_DEPOSIT
+      // ensure that we have enough gas for everything
+      gasValues[TxType.DEPOSIT] = 10;
+      gasValues[TxType.TRANSFER] = 10;
+      gasValues[TxType.WITHDRAW_TO_CONTRACT] = 10;
+      gasValues[TxType.DEFI_DEPOSIT] = 10;
+      const pendingTxs = [
+        mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }), // adds 30000
+        mockDefiBridgeTxLocal(1, DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeId)), // adds 20000 call data, bridge is paid for so it will be included
+        mockTx(2, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }), // 25000. at this point we have used 75000 call data
+        mockTx(3, { txType: TxType.WITHDRAW_TO_CONTRACT, txFeeAssetId: 0 }), // this tx won't fit
+      ];
+
+      // we publish the first 3 txs
+      const rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(true);
+      expect(rp.totalCallData).toBe(75000);
+      expect(rp.totalGas).toBe(1100030);
+      expectProcessedTxIds([0, 1, 2]);
+      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
+        bridgeId,
+        ...Array(numberOfBridgeCalls - 1).fill(0n),
+      ]);
+    });
+
+    it('should publish defi once remaining gas is lower than any tx type', async () => {
+      const bridgeId = bridgeConfigs[0].bridgeId;
+      const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeId);
+
+      gasValues[TxType.DEPOSIT] = 250000; //DEPOSIT
+      gasValues[TxType.TRANSFER] = 200000; //TRANSFER
+      gasValues[TxType.WITHDRAW_TO_CONTRACT] = 420001; //WITHDRAW_TO_CONTRACT
+      gasValues[TxType.DEFI_DEPOSIT] = 100000; //DEFI_DEPOSIT
+      // ensure that we have enough call data for everything
+      callDataValues[TxType.DEPOSIT] = 10;
+      callDataValues[TxType.TRANSFER] = 10;
+      callDataValues[TxType.WITHDRAW_TO_CONTRACT] = 10;
+      callDataValues[TxType.DEFI_DEPOSIT] = 10;
+      const pendingTxs = [
+        mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }), // adds 200000
+        mockDefiBridgeTxLocal(1, DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeId)), // pays for complete bridge. adds 1000000 + 100000 gas
+        mockTx(2, { txType: TxType.TRANSFER, txFeeAssetId: 0 }), // adds 200000. this gets us to 1500000 + 5 * BASE_GAS = 1600000
+      ];
+
+      // we publish these txs because a withdraw wouldn't fit if it arrived now
+      const rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(true);
+      expect(coordinator.getProcessedTxs().length).toBe(3);
+      expect(rp.totalGas).toBe(1600000);
+      expect(rp.totalCallData).toBe(30);
+      expectProcessedTxIds([0, 1, 2]);
+      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
+        bridgeId,
+        ...Array(numberOfBridgeCalls - 1).fill(0n),
+      ]);
+    });
+
+    it('should publish defi once remaining call data is lower than any tx type', async () => {
+      const bridgeId = bridgeConfigs[0].bridgeId;
+      const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeId);
+      // set the call data value for deposits so we can only fit 3 in a rollup
+      callDataValues[TxType.DEPOSIT] = 25000; //DEPOSIT
+      callDataValues[TxType.TRANSFER] = 30000; //TRANSFER
+      callDataValues[TxType.WITHDRAW_TO_CONTRACT] = 30001; //WITHDRAW_TO_CONTRACT
+      callDataValues[TxType.DEFI_DEPOSIT] = 10000; //DEFI_DEPOSIT
+      // ensure that we have enough gas for everything
+      gasValues[TxType.DEPOSIT] = 10;
+      gasValues[TxType.TRANSFER] = 10;
+      gasValues[TxType.WITHDRAW_TO_CONTRACT] = 10;
+      gasValues[TxType.DEFI_DEPOSIT] = 10;
+      const pendingTxs = [
+        mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }), // adds 30000
+        mockDefiBridgeTxLocal(1, DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeId)), // pays for complete bridge. adds 10000
+        mockTx(2, { txType: TxType.TRANSFER, txFeeAssetId: 0 }), // adds 30000. this gets us to 70000
+      ];
+
+      // we publish these txs because a withdraw wouldn't fit if it arrived now
+      const rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(true);
+      expect(rp.totalCallData).toBe(70000);
+      expect(rp.totalGas).toBe(1100030);
+      expectProcessedTxIds([0, 1, 2]);
+      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
+        bridgeId,
+        ...Array(numberOfBridgeCalls - 1).fill(0n),
+      ]);
+    });
+
+    it('should ignore defi tx if it breaches gas limit', async () => {
+      const bridgeId = bridgeConfigs[0].bridgeId;
+      const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeId);
+      // set the gas value for deposits so we can only fit 3 in a rollup
+      gasValues[TxType.DEPOSIT] = 200000; //DEPOSIT
+      gasValues[TxType.TRANSFER] = 300000; //TRANSFER
+      gasValues[TxType.WITHDRAW_TO_CONTRACT] = 300001; //WITHDRAW_TO_CONTRACT
+      gasValues[TxType.DEFI_DEPOSIT] = 100000; //DEFI_DEPOSIT
+
+      // ensure that we have enough call data for everything
+      callDataValues[TxType.DEPOSIT] = 10;
+      callDataValues[TxType.TRANSFER] = 10;
+      callDataValues[TxType.WITHDRAW_TO_CONTRACT] = 10;
+      callDataValues[TxType.DEFI_DEPOSIT] = 10;
+      const pendingTxs = [
+        mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }), // adds 300000
+        mockDefiBridgeTxLocal(1, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)), // adds 100000 gas as it is included
+        mockDefiBridgeTxLocal(2, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)), // adds 100000 gas as it is included
+        mockDefiBridgeTxLocal(3, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)), // adds 100000 gas as it is included
+        mockDefiBridgeTxLocal(4, DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeId)), // pays for complete bridge. adds 1000000 + 100000 gas
+        mockTx(5, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }), // adds 200000. this gets us to 1900000 + 2 * BASE_GASE = 1940000
+        mockDefiBridgeTxLocal(6, DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeId)), // pays for complete bridge making us very profitable, but uses too much gas
+      ];
+
+      // we publish these txs because a withdraw wouldn't fit if it arrived now
+      const rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(true);
+      expect(rp.totalCallData).toBe(60);
+      expect(rp.totalGas).toBe(1940000);
+      expectProcessedTxIds([0, 4, 1, 2, 3, 5]);
+      expect(rollupCreator.create).toHaveBeenCalledTimes(2);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
+        bridgeId,
+        ...Array(numberOfBridgeCalls - 1).fill(0n),
+      ]);
+    });
+
+    it('should ignore defi tx if it breaches call data limit', async () => {
+      const bridgeId = bridgeConfigs[0].bridgeId;
+      const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeId);
+      // set the call data for deposits so we can only fit 3 in a rollup
+      callDataValues[TxType.DEPOSIT] = 25000; //DEPOSIT
+      callDataValues[TxType.TRANSFER] = 30000; //TRANSFER
+      callDataValues[TxType.WITHDRAW_TO_CONTRACT] = 30001; //WITHDRAW_TO_CONTRACT
+      callDataValues[TxType.DEFI_DEPOSIT] = 10000; //DEFI_DEPOSIT
+
+      // ensure that we have enough gas for everything
+      gasValues[TxType.DEPOSIT] = 10;
+      gasValues[TxType.TRANSFER] = 10;
+      gasValues[TxType.WITHDRAW_TO_CONTRACT] = 10;
+      gasValues[TxType.DEFI_DEPOSIT] = 10;
+      const pendingTxs = [
+        mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }), // adds 30000
+        mockDefiBridgeTxLocal(1, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)), // adds 10000 call data as it is included
+        mockDefiBridgeTxLocal(2, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)), // adds 10000 call data as it is included
+        mockDefiBridgeTxLocal(3, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)), // adds 10000 call data as it is included
+        mockDefiBridgeTxLocal(4, DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeId)), // pays for complete bridge. adds 10000 call data
+        mockTx(5, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }), // adds 25000. this gets us to 95000
+        mockDefiBridgeTxLocal(6, DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeId)), // pays for complete bridge again making us very profitable, but uses too much call data
+      ];
+
+      // we publish these txs because a withdraw wouldn't fit if it arrived now
+      const rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(true);
+      expect(rp.totalCallData).toBe(95000);
+      expect(rp.totalGas).toBe(1040060);
+      expectProcessedTxIds([0, 4, 1, 2, 3, 5]);
+      expect(rollupCreator.create).toHaveBeenCalledTimes(2);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
+        bridgeId,
+        ...Array(numberOfBridgeCalls - 1).fill(0n),
+      ]);
+    });
+
+    it('should ignore defi tx for additional bridge if it breaches call data limit', async () => {
+      const bridgeId = bridgeConfigs[0].bridgeId;
+      const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeId);
+      // set the call data for deposits so we can only fit 3 in a rollup
+      callDataValues[TxType.DEPOSIT] = 25000; //DEPOSIT
+      callDataValues[TxType.TRANSFER] = 30000; //TRANSFER
+      callDataValues[TxType.WITHDRAW_TO_CONTRACT] = 30001; //WITHDRAW_TO_CONTRACT
+      callDataValues[TxType.DEFI_DEPOSIT] = 10000; //DEFI_DEPOSIT
+
+      // ensure that we have enough gas for everything
+      gasValues[TxType.DEPOSIT] = 10;
+      gasValues[TxType.TRANSFER] = 10;
+      gasValues[TxType.WITHDRAW_TO_CONTRACT] = 10;
+      gasValues[TxType.DEFI_DEPOSIT] = 10;
+      const pendingTxs = [
+        mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }), // adds 30000
+        mockDefiBridgeTxLocal(1, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)), // adds 10000 call data as it is included
+        mockDefiBridgeTxLocal(2, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)), // adds 10000 call data as it is included
+        mockDefiBridgeTxLocal(3, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)), // adds 10000 call data as it is included
+        mockDefiBridgeTxLocal(4, DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeId)), // pays for complete bridge. adds 10000 call data
+        mockTx(5, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }), // adds 25000. this gets us to 95000
+        mockDefiBridgeTx(
+          6,
+          DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeConfigs[1].bridgeId),
+          bridgeConfigs[1].bridgeId,
+        ), // pays for 2nd complete bridge, but uses too much call data
+      ];
+
+      // we publish these txs because a withdraw wouldn't fit if it arrived now
+      const rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(true);
+      expect(rp.totalCallData).toBe(95000);
+      expect(rp.totalGas).toBe(1040060);
+      expectProcessedTxIds([0, 4, 1, 2, 3, 5]);
+      expect(rollupCreator.create).toHaveBeenCalledTimes(2);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
+        bridgeId,
+        ...Array(numberOfBridgeCalls - 1).fill(0n),
+      ]);
+    });
+
+    it('should ignore defi tx if it breaches gas limit even with flush', async () => {
+      const bridgeId = bridgeConfigs[0].bridgeId;
+      const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeId);
+      // set the gas value for deposits so we can only fit 3 in a rollup
+      gasValues[TxType.DEPOSIT] = 200000; //DEPOSIT
+      gasValues[TxType.TRANSFER] = 300000; //TRANSFER
+      gasValues[TxType.WITHDRAW_TO_CONTRACT] = 300001; //WITHDRAW_TO_CONTRACT
+      gasValues[TxType.DEFI_DEPOSIT] = 100000; //DEFI_DEPOSIT
+
+      // ensure that we have enough call data for everything
+      callDataValues[TxType.DEPOSIT] = 10;
+      callDataValues[TxType.TRANSFER] = 10;
+      callDataValues[TxType.WITHDRAW_TO_CONTRACT] = 10;
+      callDataValues[TxType.DEFI_DEPOSIT] = 10;
+      const pendingTxs = [
+        mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }), // adds 300000
+        mockDefiBridgeTxLocal(1, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)), // adds 100000 gas as it is included
+        mockDefiBridgeTxLocal(2, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)), // adds 100000 gas as it is included
+        mockDefiBridgeTxLocal(3, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)), // adds 100000 gas as it is included
+        mockDefiBridgeTxLocal(4, DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeId)), // pays for complete bridge. adds 1000000 + 100000 gas
+        mockTx(5, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }), // adds 200000. this gets us to 1900000 + 2 * BASE_GASE = 1940000
+        mockDefiBridgeTxLocal(6, DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeId)), // pays for complete bridge making us very profitable, but uses too much gas
+      ];
+
+      // we publish these txs because a withdraw wouldn't fit if it arrived now
+      const rp = await coordinator.processPendingTxs(pendingTxs, true);
+      expect(rp.published).toBe(true);
+      expect(rp.totalCallData).toBe(60);
+      expect(rp.totalGas).toBe(1940000);
+      expectProcessedTxIds([0, 1, 2, 3, 4, 5]);
+      expect(rollupCreator.create).toHaveBeenCalledTimes(2);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
+        bridgeId,
+        ...Array(numberOfBridgeCalls - 1).fill(0n),
+      ]);
+    });
+
+    it('should ignore defi tx if it breaches gas limit even with timeout', async () => {
+      const bridgeId = bridgeConfigs[0].bridgeId;
+      const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeId);
+      // set the gas value for deposits so we can only fit 3 in a rollup
+      gasValues[TxType.DEPOSIT] = 200000; //DEPOSIT
+      gasValues[TxType.TRANSFER] = 300000; //TRANSFER
+      gasValues[TxType.WITHDRAW_TO_CONTRACT] = 300001; //WITHDRAW_TO_CONTRACT
+      gasValues[TxType.DEFI_DEPOSIT] = 100000; //DEFI_DEPOSIT
+
+      // ensure that we have enough call data for everything
+      callDataValues[TxType.DEPOSIT] = 10;
+      callDataValues[TxType.TRANSFER] = 10;
+      callDataValues[TxType.WITHDRAW_TO_CONTRACT] = 10;
+      callDataValues[TxType.DEFI_DEPOSIT] = 10;
+      const pendingTxs = [
+        mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }), // adds 300000
+        mockDefiBridgeTxLocal(1, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)), // adds 100000 gas as it is included
+        mockDefiBridgeTxLocal(2, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)), // adds 100000 gas as it is included
+        mockDefiBridgeTxLocal(3, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)), // adds 100000 gas as it is included
+        mockDefiBridgeTxLocal(4, DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeId)), // pays for complete bridge. adds 1000000 + 100000 gas
+        mockTx(5, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }), // adds 200000. this gets us to 1900000 + 2 * BASE_GASE = 1940000
+        mockDefiBridgeTxLocal(6, DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeId)), // pays for complete bridge making us very profitable, but uses too much gas
+      ];
+
+      rollupTimeouts = {
+        ...rollupTimeouts,
+        baseTimeout: { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 },
+        bridgeTimeouts: new Map<bigint, RollupTimeout>([
+          [bridgeId, { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 }],
+        ]),
+      };
+      // and set current time just after the timeout
+      currentTime = new Date('2021-06-20T12:00:01+01:00');
+
+      // we publish these txs because a withdraw wouldn't fit if it arrived now
+      const rp = await coordinator.processPendingTxs(pendingTxs, false);
+      expect(rp.published).toBe(true);
+      expect(rp.totalCallData).toBe(60);
+      expect(rp.totalGas).toBe(1940000);
+      expectProcessedTxIds([0, 1, 2, 3, 4, 5]);
+      expect(rollupCreator.create).toHaveBeenCalledTimes(2);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
+        bridgeId,
+        ...Array(numberOfBridgeCalls - 1).fill(0n),
+      ]);
+    });
+
+    it('should ignore defi tx if it breaches call data limit even with flush', async () => {
+      const bridgeId = bridgeConfigs[0].bridgeId;
+      const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeId);
+      // set the call data for deposits so we can only fit 3 in a rollup
+      callDataValues[TxType.DEPOSIT] = 25000; //DEPOSIT
+      callDataValues[TxType.TRANSFER] = 30000; //TRANSFER
+      callDataValues[TxType.WITHDRAW_TO_CONTRACT] = 30001; //WITHDRAW_TO_CONTRACT
+      callDataValues[TxType.DEFI_DEPOSIT] = 10000; //DEFI_DEPOSIT
+
+      // ensure that we have enough gas for everything
+      gasValues[TxType.DEPOSIT] = 10;
+      gasValues[TxType.TRANSFER] = 10;
+      gasValues[TxType.WITHDRAW_TO_CONTRACT] = 10;
+      gasValues[TxType.DEFI_DEPOSIT] = 10;
+      const pendingTxs = [
+        mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }), // adds 30000
+        mockDefiBridgeTxLocal(1, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)), // adds 10000 call data as it is included
+        mockDefiBridgeTxLocal(2, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)), // adds 10000 call data as it is included
+        mockDefiBridgeTxLocal(3, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)), // adds 10000 call data as it is included
+        mockDefiBridgeTxLocal(4, DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeId)), // pays for complete bridge. adds 10000 call data
+        mockTx(5, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }), // adds 25000. this gets us to 95000
+        mockDefiBridgeTxLocal(6, DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeId)), // pays for complete bridge again making us very profitable, but uses too much call data
+      ];
+
+      // we publish these txs because a withdraw wouldn't fit if it arrived now
+      const rp = await coordinator.processPendingTxs(pendingTxs, true);
+      expect(rp.published).toBe(true);
+      expect(rp.totalCallData).toBe(95000);
+      expect(rp.totalGas).toBe(1040060);
+      expectProcessedTxIds([0, 1, 2, 3, 4, 5]);
+      expect(rollupCreator.create).toHaveBeenCalledTimes(2);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
+        bridgeId,
+        ...Array(numberOfBridgeCalls - 1).fill(0n),
+      ]);
+    });
+
+    it('should ignore defi tx if it breaches call data limit even with timeout', async () => {
+      const bridgeId = bridgeConfigs[0].bridgeId;
+      const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeId);
+      // set the call data for deposits so we can only fit 3 in a rollup
+      callDataValues[TxType.DEPOSIT] = 25000; //DEPOSIT
+      callDataValues[TxType.TRANSFER] = 30000; //TRANSFER
+      callDataValues[TxType.WITHDRAW_TO_CONTRACT] = 30001; //WITHDRAW_TO_CONTRACT
+      callDataValues[TxType.DEFI_DEPOSIT] = 10000; //DEFI_DEPOSIT
+
+      // ensure that we have enough gas for everything
+      gasValues[TxType.DEPOSIT] = 10;
+      gasValues[TxType.TRANSFER] = 10;
+      gasValues[TxType.WITHDRAW_TO_CONTRACT] = 10;
+      gasValues[TxType.DEFI_DEPOSIT] = 10;
+      const pendingTxs = [
+        mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }), // adds 30000
+        mockDefiBridgeTxLocal(1, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)), // adds 10000 call data as it is included
+        mockDefiBridgeTxLocal(2, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)), // adds 10000 call data as it is included
+        mockDefiBridgeTxLocal(3, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId)), // adds 10000 call data as it is included
+        mockDefiBridgeTxLocal(4, DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeId)), // pays for complete bridge. adds 10000 call data
+        mockTx(5, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }), // adds 25000. this gets us to 95000
+        mockDefiBridgeTxLocal(6, DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeId)), // pays for complete bridge again making us very profitable, but uses too much call data
+      ];
+
+      rollupTimeouts = {
+        ...rollupTimeouts,
+        baseTimeout: { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 },
+        bridgeTimeouts: new Map<bigint, RollupTimeout>([
+          [bridgeId, { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 }],
+        ]),
+      };
+      // and set current time just after the timeout
+      currentTime = new Date('2021-06-20T12:00:01+01:00');
+
+      // we publish these txs because a withdraw wouldn't fit if it arrived now
+      const rp = await coordinator.processPendingTxs(pendingTxs, false);
+      expect(rp.published).toBe(true);
+      expect(rp.totalCallData).toBe(95000);
+      expect(rp.totalGas).toBe(1040060);
+      expectProcessedTxIds([0, 1, 2, 3, 4, 5]);
+      expect(rollupCreator.create).toHaveBeenCalledTimes(2);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
+        bridgeId,
+        ...Array(numberOfBridgeCalls - 1).fill(0n),
+      ]);
+    });
+
+    it('defi bridges are not published if they breach gas limit', async () => {
+      const maxGasForRollup = 4000000;
+      coordinator = newRollupCoordinator(numInnerRollupTxs, numOuterRollupProofs, maxGasForRollup, callDataForRollup);
+
+      gasValues[TxType.DEPOSIT] = 250000; //DEPOSIT
+      gasValues[TxType.TRANSFER] = 300000; //TRANSFER
+      gasValues[TxType.WITHDRAW_TO_CONTRACT] = 300001; //WITHDRAW_TO_CONTRACT
+      gasValues[TxType.DEFI_DEPOSIT] = 100000; //DEFI_DEPOSIT
+      // ensure that we have enough call data for everything
+      callDataValues[TxType.DEPOSIT] = 10;
+      callDataValues[TxType.TRANSFER] = 10;
+      callDataValues[TxType.WITHDRAW_TO_CONTRACT] = 10;
+      callDataValues[TxType.DEFI_DEPOSIT] = 10;
+      const pendingTxs = [
+        mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }), // adds 300000
+        mockDefiBridgeTx(
+          1,
+          DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeConfigs[3].bridgeId),
+          bridgeConfigs[3].bridgeId,
+        ), // pays for complete bridge. adds 3000000 + 100000 gas
+        mockDefiBridgeTx(
+          2,
+          DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeConfigs[1].bridgeId),
+          bridgeConfigs[1].bridgeId,
+        ), // would need to add 1000000 + 100000 so is not included
+        mockTx(3, { txType: TxType.TRANSFER, txFeeAssetId: 0 }), // adds 300000. this gets us to 3700000 + 5 * BASE_GAS
+      ];
+
+      const rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(true);
+      expect(rp.totalGas).toBe(3800000);
+      expect(rp.totalCallData).toBe(30);
+      expectProcessedTxIds([0, 1, 3]);
+      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
+        bridgeConfigs[3].bridgeId,
+        ...Array(numberOfBridgeCalls - 1).fill(0n),
+      ]);
+    });
+
+    it('defi bridges are not published if they breach gas limit even with flush', async () => {
+      const maxGasForRollup = 4000000;
+      coordinator = newRollupCoordinator(numInnerRollupTxs, numOuterRollupProofs, maxGasForRollup, callDataForRollup);
+
+      // set the gas value for deposits so we can only fit 3 in a rollup
+      gasValues[TxType.DEPOSIT] = 250000; //DEPOSIT
+      gasValues[TxType.TRANSFER] = 300000; //TRANSFER
+      gasValues[TxType.WITHDRAW_TO_CONTRACT] = 300001; //WITHDRAW_TO_CONTRACT
+      gasValues[TxType.DEFI_DEPOSIT] = 100000; //DEFI_DEPOSIT
+      // ensure that we have enough call data for everything
+      callDataValues[TxType.DEPOSIT] = 10;
+      callDataValues[TxType.TRANSFER] = 10;
+      callDataValues[TxType.WITHDRAW_TO_CONTRACT] = 10;
+      callDataValues[TxType.DEFI_DEPOSIT] = 10;
+      const pendingTxs = [
+        mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }), // adds 300000
+        mockDefiBridgeTx(
+          1,
+          DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeConfigs[3].bridgeId),
+          bridgeConfigs[3].bridgeId,
+        ), // pays for complete bridge. adds 3000000 + 100000 gas
+        mockDefiBridgeTx(
+          2,
+          DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeConfigs[1].bridgeId),
+          bridgeConfigs[1].bridgeId,
+        ), // would need to add 1000000 + 100000 so is not included
+        mockTx(3, { txType: TxType.TRANSFER, txFeeAssetId: 0 }), // adds 300000. this gets us to 3700000 + 5 * BASE_GAS
+      ];
+
+      const rp = await coordinator.processPendingTxs(pendingTxs, true);
+      expect(rp.published).toBe(true);
+      expect(rp.totalCallData).toBe(30);
+      expect(rp.totalGas).toBe(3800000);
+      expectProcessedTxIds([0, 1, 3]);
+      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
+        bridgeConfigs[3].bridgeId,
+        ...Array(numberOfBridgeCalls - 1).fill(0n),
+      ]);
     });
   });
 });

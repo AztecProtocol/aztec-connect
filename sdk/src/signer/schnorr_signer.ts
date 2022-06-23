@@ -13,7 +13,7 @@ export class SchnorrSigner implements Signer {
     return this.publicKey;
   }
 
-  async signMessage(message: Buffer) {
-    return this.schnorr.constructSignature(message, this.privateKey);
+  signMessage(message: Buffer) {
+    return Promise.resolve(this.schnorr.constructSignature(message, this.privateKey));
   }
 }

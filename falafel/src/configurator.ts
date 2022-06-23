@@ -1,13 +1,19 @@
 import { mkdirpSync, pathExistsSync, readJsonSync, writeJsonSync } from 'fs-extra';
 import { dirname } from 'path';
-import { RuntimeConfig, bridgeConfigFromJson, bridgeConfigToJson } from '@aztec/barretenberg/rollup_provider';
+import {
+  RuntimeConfig,
+  bridgeConfigFromJson,
+  bridgeConfigToJson,
+  privacySetsFromJson,
+  privacySetsToJson,
+  getDefaultPrivacySets,
+} from '@aztec/barretenberg/rollup_provider';
 import { EthAddress } from '@aztec/barretenberg/address';
 
 interface StartupConfig {
   port: number;
   dbUrl?: string;
   rollupContractAddress: EthAddress;
-  feeDistributorAddress: EthAddress;
   priceFeedContractAddresses: EthAddress[];
   ethereumHost: string;
   ethereumPollInterval?: number;
@@ -21,6 +27,7 @@ interface StartupConfig {
   minConfirmationEHW: number;
   typeOrmLogging: boolean;
   proverless: boolean;
+  rollupCallDataLimit: number;
 }
 
 export interface ConfVars extends StartupConfig {
@@ -30,7 +37,6 @@ export interface ConfVars extends StartupConfig {
 const defaultStartupConfig: StartupConfig = {
   port: 8081,
   rollupContractAddress: EthAddress.ZERO,
-  feeDistributorAddress: EthAddress.ZERO,
   priceFeedContractAddresses: [],
   ethereumHost: 'http://localhost:8545',
   ethereumPollInterval: 10000,
@@ -45,6 +51,7 @@ const defaultStartupConfig: StartupConfig = {
   serverAuthToken: '!changeme#',
   typeOrmLogging: false,
   proverless: false,
+  rollupCallDataLimit: 120 * 1024,
 };
 
 const defaultRuntimeConfig: RuntimeConfig = {
@@ -54,21 +61,22 @@ const defaultRuntimeConfig: RuntimeConfig = {
   flushAfterIdle: 0,
   gasLimit: 12000000,
   verificationGas: 500000,
-  maxFeeGasPrice: 250000000000n,
+  maxFeeGasPrice: 250000000000n, // 250 gwei
   feeGasPriceMultiplier: 1,
   feeRoundUpSignificantFigures: 2,
-  maxProviderGasPrice: 250000000000n,
-  maxUnsettledTxs: 0,
+  maxFeePerGas: 250000000000n, // 250 gwei
+  maxPriorityFeePerGas: 2500000000n, // 2.5 gwei
+  maxUnsettledTxs: 10000,
   defaultDeFiBatchSize: 5,
   bridgeConfigs: [],
   feePayingAssetIds: [0],
+  privacySets: getDefaultPrivacySets(),
 };
 
 function getStartupConfigEnvVars(): Partial<StartupConfig> {
   const {
     DB_URL,
     ROLLUP_CONTRACT_ADDRESS,
-    FEE_DISTRIBUTOR_ADDRESS,
     PRICE_FEED_CONTRACT_ADDRESSES,
     ETHEREUM_HOST,
     ETHEREUM_POLL_INTERVAL,
@@ -83,13 +91,13 @@ function getStartupConfigEnvVars(): Partial<StartupConfig> {
     PROVERLESS,
     TYPEORM_LOGGING,
     SERVER_AUTH_TOKEN,
+    CALL_DATA_LIMIT_KB,
   } = process.env;
 
   const envVars: Partial<StartupConfig> = {
     port: PORT ? +PORT : undefined,
     dbUrl: DB_URL,
     rollupContractAddress: ROLLUP_CONTRACT_ADDRESS ? EthAddress.fromString(ROLLUP_CONTRACT_ADDRESS) : undefined,
-    feeDistributorAddress: FEE_DISTRIBUTOR_ADDRESS ? EthAddress.fromString(FEE_DISTRIBUTOR_ADDRESS) : undefined,
     priceFeedContractAddresses: PRICE_FEED_CONTRACT_ADDRESSES
       ? PRICE_FEED_CONTRACT_ADDRESSES.split(',').map(EthAddress.fromString)
       : undefined,
@@ -105,27 +113,28 @@ function getStartupConfigEnvVars(): Partial<StartupConfig> {
     typeOrmLogging: TYPEORM_LOGGING ? TYPEORM_LOGGING === 'true' : undefined,
     proverless: PROVERLESS ? PROVERLESS === 'true' : undefined,
     serverAuthToken: SERVER_AUTH_TOKEN,
+    rollupCallDataLimit: CALL_DATA_LIMIT_KB ? +CALL_DATA_LIMIT_KB * 1024 : undefined,
   };
   return Object.fromEntries(Object.entries(envVars).filter(e => e[1] !== undefined));
 }
 
 function getRuntimeConfigEnvVars(): Partial<RuntimeConfig> {
   const {
-    BASE_TX_GAS,
     FEE_GAS_PRICE_MULTIPLIER,
     PUBLISH_INTERVAL,
     FLUSH_AFTER_IDLE,
     DEFAULT_DEFI_BATCH_SIZE,
     FEE_PAYING_ASSET_IDS,
+    FEE_DISTRIBUTOR_ADDRESS,
   } = process.env;
 
   const envVars = {
     publishInterval: PUBLISH_INTERVAL ? +PUBLISH_INTERVAL : undefined,
     flushAfterIdle: FLUSH_AFTER_IDLE ? +FLUSH_AFTER_IDLE : undefined,
-    baseTxGas: BASE_TX_GAS ? +BASE_TX_GAS : undefined,
     feeGasPriceMultiplier: FEE_GAS_PRICE_MULTIPLIER ? +FEE_GAS_PRICE_MULTIPLIER : undefined,
     defaultDeFiBatchSize: DEFAULT_DEFI_BATCH_SIZE ? +DEFAULT_DEFI_BATCH_SIZE : undefined,
     feePayingAssetIds: FEE_PAYING_ASSET_IDS ? FEE_PAYING_ASSET_IDS.split(',').map(id => +id) : undefined,
+    rollupBeneficiary: FEE_DISTRIBUTOR_ADDRESS ? EthAddress.fromString(FEE_DISTRIBUTOR_ADDRESS) : undefined,
   };
   return Object.fromEntries(Object.entries(envVars).filter(e => e[1] !== undefined));
 }
@@ -218,14 +227,18 @@ export class Configurator {
     return {
       ...conf,
       rollupContractAddress: EthAddress.fromString(conf.rollupContractAddress),
-      feeDistributorAddress: EthAddress.fromString(conf.feeDistributorAddress),
       priceFeedContractAddresses: conf.priceFeedContractAddresses.map(EthAddress.fromString),
       privateKey: Buffer.from(conf.privateKey, 'hex'),
       runtimeConfig: {
         ...conf.runtimeConfig,
         maxFeeGasPrice: BigInt(conf.runtimeConfig.maxFeeGasPrice),
-        maxProviderGasPrice: BigInt(conf.runtimeConfig.maxProviderGasPrice),
+        maxFeePerGas: BigInt(conf.runtimeConfig.maxFeePerGas),
+        maxPriorityFeePerGas: BigInt(conf.runtimeConfig.maxPriorityFeePerGas),
         bridgeConfigs: conf.runtimeConfig.bridgeConfigs.map(bridgeConfigFromJson),
+        privacySets: privacySetsFromJson(conf.runtimeConfig.privacySets),
+        rollupBeneficiary: conf.runtimeConfig.rollupBeneficiary
+          ? EthAddress.fromString(conf.runtimeConfig.rollupBeneficiary)
+          : undefined,
       },
     };
   }
@@ -238,15 +251,19 @@ export class Configurator {
     writeJsonSync(path, {
       ...conf,
       rollupContractAddress: conf.rollupContractAddress.toString(),
-      feeDistributorAddress: conf.feeDistributorAddress.toString(),
       priceFeedContractAddresses: conf.priceFeedContractAddresses.map(a => a.toString()),
       privateKey: conf.privateKey.toString('hex'),
       runtimeConfig: {
         ...conf.runtimeConfig,
         acceptingTxs: true,
         maxFeeGasPrice: conf.runtimeConfig.maxFeeGasPrice.toString(),
-        maxProviderGasPrice: conf.runtimeConfig.maxProviderGasPrice.toString(),
+        maxFeePerGas: conf.runtimeConfig.maxFeePerGas.toString(),
+        maxPriorityFeePerGas: conf.runtimeConfig.maxPriorityFeePerGas.toString(),
         bridgeConfigs: conf.runtimeConfig.bridgeConfigs.map(bridgeConfigToJson),
+        privacySets: privacySetsToJson(conf.runtimeConfig.privacySets),
+        rollupBeneficiary: conf.runtimeConfig.rollupBeneficiary
+          ? conf.runtimeConfig.rollupBeneficiary.toString()
+          : undefined,
       },
     });
   }

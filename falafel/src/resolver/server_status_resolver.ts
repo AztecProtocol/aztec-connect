@@ -15,7 +15,7 @@ export class ServerStatusResolver {
   }
 
   @FieldResolver()
-  async rollupContractAddress(@Root() { rollupContractAddress }: BlockchainStatus) {
+  rollupContractAddress(@Root() { rollupContractAddress }: BlockchainStatus) {
     return rollupContractAddress.toString();
   }
 

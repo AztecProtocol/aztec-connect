@@ -43,7 +43,7 @@ export class RollupProofDao {
   public dataStartIndex!: number;
 
   @Column(...bufferColumn())
-  public proofData!: Buffer;
+  public encodedProofData!: Buffer;
 
   @Column()
   public created!: Date;
@@ -66,7 +66,11 @@ export class RollupProofDao {
     if (this.txs && this.txs.length) {
       // TxDaos on the RollupProofDao are not guaranteed to be in the order they are within the rollup.
       // Sort our TxDaos to be in rollup order.
-      this.txs = RollupProofData.getTxIdsFromBuffer(this.proofData).map(id => this.txs.find(tx => tx.id.equals(id))!);
+      // We will need to decode the proof data into the RollupProofData type
+      // Then extract the txIds from the inner proof data objects
+      const decodedProofData = RollupProofData.decode(this.encodedProofData);
+      const txIds = decodedProofData.getNonPaddingTxIds();
+      this.txs = txIds.map(id => this.txs.find(tx => tx.id.equals(id))!);
     }
   }
 

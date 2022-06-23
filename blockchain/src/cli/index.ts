@@ -1,10 +1,10 @@
+#!/usr/bin/env node
 import { Web3Provider } from '@ethersproject/providers';
 import { Contract } from 'ethers';
 import { EthAddress } from '@aztec/barretenberg/address';
 import { EthereumRpc, TxHash } from '@aztec/barretenberg/blockchain';
 import { Command } from 'commander';
 import { MainnetAddresses, purchaseTokens } from '../tokens';
-import { JsonRpcProvider } from '../provider';
 import { setBlockchainTime, getCurrentBlockTime } from '../ganache/manipulate_blocks';
 import { decodeErrorFromContractByTxHash, decodeSelector, retrieveContractSelectors } from '../contracts/decode_error';
 import { EthereumProvider } from '@aztec/barretenberg/blockchain';
@@ -15,6 +15,7 @@ import { WalletProvider } from '../provider';
 import { getTokenBalance, getWethBalance } from '../tokens';
 import { LogDescription } from 'ethers/lib/utils';
 import { RollupProcessor } from '../contracts';
+import { akiToKey } from './key_derivation';
 
 const { PRIVATE_KEY } = process.env;
 
@@ -23,14 +24,14 @@ export const abis: { [key: string]: any } = {
   Element: Element.ElementBridge__factory,
 };
 
-const getProvider = (url: string) => {
+const getProvider = (url = 'http://localhost:8545') => {
+  const provider = WalletProvider.fromHost(url);
   if (PRIVATE_KEY) {
-    const provider = WalletProvider.fromHost(url);
     const address = provider.addAccount(Buffer.from(PRIVATE_KEY, 'hex'));
     console.log(`Added account ${address.toString()} from provided private key`);
     return provider;
   }
-  return new JsonRpcProvider(url);
+  return provider;
 };
 
 export async function retrieveEvents(
@@ -58,7 +59,7 @@ export async function decodeError(
   return await decodeErrorFromContractByTxHash(contract, txHash, provider);
 }
 
-export async function decodeContractSelector(
+export function decodeContractSelector(
   contractAddress: string,
   contractName: string,
   selector: string,
@@ -66,10 +67,10 @@ export async function decodeContractSelector(
 ) {
   const web3 = new Web3Provider(provider);
   const contract = new Contract(contractAddress, abis[contractName].abi, web3.getSigner());
-  return await decodeSelector(contract, selector);
+  return decodeSelector(contract, selector);
 }
 
-export async function getContractSelectors(
+export function getContractSelectors(
   contractAddress: EthAddress,
   contractName: string,
   provider: EthereumProvider,
@@ -77,7 +78,7 @@ export async function getContractSelectors(
 ) {
   const web3 = new Web3Provider(provider);
   const contract = new Contract(contractAddress.toString(), abis[contractName].abi, web3.getSigner());
-  return await retrieveContractSelectors(contract, type);
+  return retrieveContractSelectors(contract, type);
 }
 
 export const createElementBridgeData = (
@@ -109,7 +110,7 @@ export async function profileElement(
   const finaliseEvents = await retrieveEvents(elementAddress, 'Element', provider, 'LogFinalise', from, to);
   const poolEvents = await retrieveEvents(elementAddress, 'Element', provider, 'LogPoolAdded', from, to);
   const rollupBridgeEvents = await retrieveEvents(rollupAddress, 'Rollup', provider, 'DefiBridgeProcessed', from, to);
-  const elementBridgeData = await createElementBridgeData(rollupAddress, elementAddress, provider);
+  const elementBridgeData = createElementBridgeData(rollupAddress, elementAddress, provider);
 
   const interactions: {
     [key: string]: {
@@ -211,6 +212,37 @@ const program = new Command();
 
 async function main() {
   program
+    .command('pkFromAki')
+    .description('derive private key from an aztec key identifier')
+    .argument('<mnemonic>', 'repository mnemonic')
+    .argument('<aki>', 'an aztec key identifier')
+    .action((mnemonic: string, aki: string) => {
+      console.log(akiToKey(mnemonic, aki));
+    });
+
+  program
+    .command('pkFromStore')
+    .description('print a private key from an encrypted keystore file')
+    .argument('<file>', 'path to the keystore file')
+    .argument('[password]', 'password if keystore file is encrypted')
+    .action((file: string, password?: string) => {
+      const provider = getProvider();
+      provider.addAccountFromKeystore(file, password);
+      console.log(`${provider.getPrivateKey(0).toString('hex')}`);
+    });
+
+  program
+    .command('pkFromMnemonic')
+    .description('print a private key derived from a mnemonic')
+    .argument('<mnemonic>', 'mnemonic')
+    .argument('[derivation path]', 'derivation path', "m/44'/60'/0'/0/0'")
+    .action((mnemonic: string, path: string) => {
+      const provider = getProvider();
+      provider.addAccountFromMnemonicAndPath(mnemonic, path);
+      console.log(`${provider.getPrivateKey(0).toString('hex')}`);
+    });
+
+  program
     .command('setTime')
     .description('advance the blockchain time')
     .argument('<time>', 'the time you wish to set for the next block, unix timestamp format')
@@ -246,12 +278,12 @@ async function main() {
     .argument('<contractName>', 'the name of the contract, valid values: Rollup, Element')
     .argument('<selector>', 'the 4 byte selector that you wish to decode, as a hex string 0x...')
     .argument('[url]', 'your ganache url', 'http://localhost:8545')
-    .action(async (contractAddress, contractName, selector, url) => {
+    .action((contractAddress, contractName, selector, url) => {
       const provider = getProvider(url);
       if (selector.length == 10) {
         selector = selector.slice(2);
       }
-      const error = await decodeContractSelector(contractAddress, contractName, selector, provider);
+      const error = decodeContractSelector(contractAddress, contractName, selector, provider);
       if (!error) {
         console.log(`Failed to retrieve error code for selector ${selector}`);
         return;
@@ -391,14 +423,9 @@ async function main() {
     .argument('<contractName>', 'the name of the contract, valid values: Rollup, Element')
     .argument('[type]', 'optional filter for the type of selectors, e.g. error, event')
     .argument('[url]', 'your ganache url', 'http://localhost:8545')
-    .action(async (contractAddress, contractName, type, url) => {
+    .action((contractAddress, contractName, type, url) => {
       const ourProvider = getProvider(url);
-      const selectorMap = await getContractSelectors(
-        EthAddress.fromString(contractAddress),
-        contractName,
-        ourProvider,
-        type,
-      );
+      const selectorMap = getContractSelectors(EthAddress.fromString(contractAddress), contractName, ourProvider, type);
       console.log(selectorMap);
     });
 

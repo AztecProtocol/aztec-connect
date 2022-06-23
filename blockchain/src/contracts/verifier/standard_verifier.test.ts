@@ -12,7 +12,7 @@ describe('StandardVerifier', function () {
   });
 
   async function validate(inner: number, outer: number) {
-    const { proofData, inputHash } = await getRollupData(inner, outer);
+    const { proofData, inputHash } = getRollupData(inner, outer);
     const gasUsed = await verifier.verify(proofData, inputHash, { gasLimit });
     console.log(`gasUsed: ${gasUsed}`);
   }
@@ -22,7 +22,7 @@ describe('StandardVerifier', function () {
   });
 
   it('should fail to validate bad proof', async () => {
-    const { proofData, inputHash } = await getRollupData(3, 2);
+    const { proofData, inputHash } = getRollupData(3, 2);
 
     // Bork.
     proofData.writeUInt8(10, 300);

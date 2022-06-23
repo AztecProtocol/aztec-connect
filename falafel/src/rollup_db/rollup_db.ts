@@ -61,11 +61,11 @@ export class TypeOrmRollupDb implements RollupDb {
   }
 
   public async getTx(txId: Buffer) {
-    return this.txRep.findOne({ id: txId }, { relations: ['rollupProof', 'rollupProof.rollup'] });
+    return await this.txRep.findOne({ id: txId }, { relations: ['rollupProof', 'rollupProof.rollup'] });
   }
 
   public async getPendingTxCount() {
-    return this.txRep.count({
+    return await this.txRep.count({
       where: { rollupProof: null },
     });
   }
@@ -75,23 +75,23 @@ export class TypeOrmRollupDb implements RollupDb {
   }
 
   public async getTotalTxCount() {
-    return this.txRep.count();
+    return await this.txRep.count();
   }
 
   public async getJoinSplitTxCount() {
-    return this.txRep.count({ where: { txType: LessThan(TxType.ACCOUNT) } });
+    return await this.txRep.count({ where: { txType: LessThan(TxType.ACCOUNT) } });
   }
 
   public async getDefiTxCount() {
-    return this.txRep.count({ where: { txType: TxType.DEFI_DEPOSIT } });
+    return await this.txRep.count({ where: { txType: TxType.DEFI_DEPOSIT } });
   }
 
   public async getAccountTxCount() {
-    return this.txRep.count({ where: { txType: TxType.ACCOUNT } });
+    return await this.txRep.count({ where: { txType: TxType.ACCOUNT } });
   }
 
   public async getAccountCount() {
-    return this.accountRep.count();
+    return await this.accountRep.count();
   }
 
   public async isAccountRegistered(accountPublicKey: GrumpkinAddress) {
@@ -104,19 +104,11 @@ export class TypeOrmRollupDb implements RollupDb {
     return !!account;
   }
 
-  public async accountExists(accountPublicKey: GrumpkinAddress, aliasHash: AliasHash) {
+  public async isAliasRegisteredToAccount(accountPublicKey: GrumpkinAddress, aliasHash: AliasHash) {
     const account = await this.accountRep.findOne({
       where: { accountPublicKey: accountPublicKey.toBuffer(), aliasHash: aliasHash.toBuffer() },
     });
     return !!account;
-  }
-
-  public async getTotalRollupsOfSize(rollupSize: number) {
-    return await this.rollupProofRep
-      .createQueryBuilder('rp')
-      .leftJoin('rp.rollup', 'r')
-      .where('rp.rollupSize = :rollupSize AND r.mined IS NOT NULL', { rollupSize })
-      .getCount();
   }
 
   public async getUnsettledTxCount() {
@@ -127,9 +119,9 @@ export class TypeOrmRollupDb implements RollupDb {
     return await this.txRep.find({ where: { mined: null } });
   }
 
-  public async getUnsettledPaymentTxs() {
+  public async getUnsettledDepositTxs() {
     return await this.txRep.find({
-      where: { txType: LessThan(TxType.ACCOUNT), mined: null },
+      where: { txType: TxType.DEPOSIT, mined: null },
     });
   }
 
@@ -142,7 +134,7 @@ export class TypeOrmRollupDb implements RollupDb {
   }
 
   public async getPendingTxs(take?: number) {
-    return this.txRep.find({
+    return await this.txRep.find({
       where: { rollupProof: null },
       order: { created: 'ASC' },
       take,
@@ -176,7 +168,7 @@ export class TypeOrmRollupDb implements RollupDb {
   }
 
   public async getRollupProof(id: Buffer, includeTxs = false) {
-    return this.rollupProofRep.findOne({ id }, { relations: includeTxs ? ['txs'] : undefined });
+    return await this.rollupProofRep.findOne({ id }, { relations: includeTxs ? ['txs'] : undefined });
   }
 
   public async deleteRollupProof(id: Buffer) {
@@ -201,20 +193,6 @@ export class TypeOrmRollupDb implements RollupDb {
     await this.rollupProofRep.delete({ rollup: IsNull() });
   }
 
-  public async getRollupProofsBySize(numTxs: number) {
-    return await this.rollupProofRep.find({
-      where: { rollupSize: numTxs, rollup: null },
-      relations: ['txs'],
-      order: { dataStartIndex: 'ASC' },
-    });
-  }
-
-  public async getNumRollupProofsBySize(numTxs: number) {
-    return await this.rollupProofRep.count({
-      where: { rollupSize: numTxs, rollup: null },
-    });
-  }
-
   public async getNumSettledRollups() {
     return await this.rollupRep.count({
       where: { mined: Not(IsNull()) },
@@ -227,13 +205,18 @@ export class TypeOrmRollupDb implements RollupDb {
   }
 
   public async getRollup(id: number) {
-    return this.rollupRep.findOne({ id }, { relations: ['rollupProof', 'rollupProof.txs', 'assetMetrics'] });
+    return await this.rollupRep.findOne({ id }, { relations: ['rollupProof', 'rollupProof.txs', 'assetMetrics'] });
   }
 
   public async getAssetMetrics(assetId: number) {
     return await this.assetMetricsRep.findOne({ assetId }, { order: { rollupId: 'DESC' } });
   }
 
+  /**
+   * Warning: rollups[i].rollupProof.txs must be ordered as they exist within the proof.
+   * The rollupProof entity enforces this after load, but we're sidestepping it here due to join memory issues.
+   * Do not populate the tx array manually, without enforcing this order.
+   */
   public async getRollups(take?: number, skip?: number, descending = false) {
     const result = await this.rollupRep.find({
       order: { id: descending ? 'DESC' : 'ASC' },
@@ -245,12 +228,36 @@ export class TypeOrmRollupDb implements RollupDb {
     // One would think the following would be much slower, but it's not actually that bad.
     for (const rollup of result) {
       rollup.rollupProof.txs = await this.txRep.find({ where: { rollupProof: rollup.rollupProof } });
+      // Enforce tx ordering.
+      rollup.rollupProof.afterLoad();
     }
     return result;
   }
 
+  /**
+   * Warning: rollups[i].rollupProof.txs must be ordered as they exist within the proof.
+   * The rollupProof entity enforces this after load, but we're sidestepping it here due to join memory issues.
+   * Do not populate the tx array manually, without enforcing this order.
+   */
+  public async getSettledRollups(from = 0, take?: number) {
+    const rollups = await this.rollupRep.find({
+      where: { id: MoreThanOrEqual(from), mined: Not(IsNull()) },
+      order: { id: 'ASC' },
+      relations: ['rollupProof'],
+      take,
+    });
+    // Loading these as part of relations above leaks GB's of memory.
+    // One would think the following would be much slower, but it's not actually that bad.
+    for (const rollup of rollups) {
+      rollup.rollupProof.txs = await this.txRep.find({ where: { rollupProof: rollup.rollupProof } });
+      // Enforce tx ordering.
+      rollup.rollupProof.afterLoad();
+    }
+    return rollups;
+  }
+
   public async getRollupsByRollupIds(ids: number[]) {
-    return this.rollupRep.find({
+    return await this.rollupRep.find({
       where: { id: In(ids) },
     });
   }
@@ -304,20 +311,8 @@ export class TypeOrmRollupDb implements RollupDb {
     return (await this.getRollup(id))!;
   }
 
-  public async getSettledRollups(from = 0) {
-    const rollups = await this.rollupRep.find({
-      where: { id: MoreThanOrEqual(from), mined: Not(IsNull()) },
-      order: { id: 'ASC' },
-      relations: ['rollupProof'],
-    });
-    for (const rollup of rollups) {
-      rollup.rollupProof.txs = await this.txRep.find({ where: { rollupProof: rollup.rollupProof } });
-    }
-    return rollups;
-  }
-
   public async getLastSettledRollup() {
-    return this.rollupRep.findOne(
+    return await this.rollupRep.findOne(
       { mined: Not(IsNull()) },
       {
         order: { id: 'DESC' },
@@ -327,7 +322,7 @@ export class TypeOrmRollupDb implements RollupDb {
   }
 
   public async getUnsettledRollups() {
-    return this.rollupRep.find({
+    return await this.rollupRep.find({
       where: { mined: IsNull() },
       order: { id: 'ASC' },
     });
@@ -338,7 +333,7 @@ export class TypeOrmRollupDb implements RollupDb {
   }
 
   public async getRollupByDataRoot(dataRoot: Buffer) {
-    return this.rollupRep.findOne({ dataRoot });
+    return await this.rollupRep.findOne({ dataRoot });
   }
 
   public async getDataRootsIndex(root: Buffer) {
@@ -359,7 +354,7 @@ export class TypeOrmRollupDb implements RollupDb {
   }
 
   public async getClaimsToRollup(take?: number) {
-    return this.claimRep.find({
+    return await this.claimRep.find({
       where: { claimed: IsNull(), interactionResultRollupId: Not(IsNull()) },
       order: { created: 'ASC' },
       take,
@@ -383,11 +378,13 @@ export class TypeOrmRollupDb implements RollupDb {
   }
 
   public async eraseDb() {
-    await this.accountRep.delete({});
-    await this.assetMetricsRep.delete({});
-    await this.claimRep.delete({});
-    await this.rollupRep.delete({});
-    await this.rollupProofRep.delete({});
-    await this.txRep.delete({});
+    await this.connection.transaction(async transactionalEntityManager => {
+      await transactionalEntityManager.delete(this.accountRep.target, {});
+      await transactionalEntityManager.delete(this.assetMetricsRep.target, {});
+      await transactionalEntityManager.delete(this.claimRep.target, {});
+      await transactionalEntityManager.delete(this.rollupRep.target, {});
+      await transactionalEntityManager.delete(this.rollupProofRep.target, {});
+      await transactionalEntityManager.delete(this.txRep.target, {});
+    });
   }
 }

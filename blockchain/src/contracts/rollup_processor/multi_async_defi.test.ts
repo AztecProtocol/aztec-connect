@@ -138,7 +138,7 @@ describe('rollup_processor: multi async defi', () => {
     }
 
     while (defiDepositProofs.length) {
-      const { proofData } = await createRollupProof(
+      const { encodedProofData } = createRollupProof(
         rollupProvider,
         mergeInnerProofs(defiDepositProofs.splice(0, RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK)),
         {
@@ -149,7 +149,7 @@ describe('rollup_processor: multi async defi', () => {
       );
       rollupId++;
 
-      const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+      const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
       const txHash = await rollupProcessor.sendTx(tx);
 
       await expectResult(txHash, []);
@@ -187,11 +187,11 @@ describe('rollup_processor: multi async defi', () => {
 
     // populate hashes with asyncHashes
     {
-      const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+      const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
         rollupId,
         rollupSize,
       });
-      const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+      const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
       const txHash = await rollupProcessor.sendTx(tx);
       rollupId++;
 
@@ -204,12 +204,12 @@ describe('rollup_processor: multi async defi', () => {
     {
       const defiInteractionData = expectedAsyncResult.slice(-RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK);
       const previousDefiInteractionHash = packInteractionNotes(defiInteractionData);
-      const { proofData } = await createRollupProof(rollupProvider, dummyProof(), {
+      const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
         rollupId,
         rollupSize,
         previousDefiInteractionHash,
       });
-      const tx = await rollupProcessor.createRollupProofTx(proofData, [], []);
+      const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
       const txHash = await rollupProcessor.sendTx(tx);
       rollupId++;
 

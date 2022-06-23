@@ -1,5 +1,11 @@
 import { EthAddress } from '../address';
 
+type Jsonify<T> = {
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  [P in keyof T]: T[P] extends EthAddress | bigint | Buffer ? string : T[P] extends Object ? Jsonify<T[P]> : T[P];
+};
+
+// TODO: Move to TxType module.
 export enum TxType {
   DEPOSIT,
   TRANSFER,
@@ -9,12 +15,13 @@ export enum TxType {
   DEFI_DEPOSIT,
   DEFI_CLAIM,
 }
+export const numTxTypes = 7;
 
-export function isDefiDeposit(txType: TxType) {
+export function isDefiDepositTx(txType: TxType) {
   return txType === TxType.DEFI_DEPOSIT;
 }
 
-export function isAccountCreation(txType: TxType) {
+export function isAccountTx(txType: TxType) {
   return txType === TxType.ACCOUNT;
 }
 
@@ -26,13 +33,7 @@ export interface BlockchainAsset {
   gasLimit: number;
 }
 
-export interface BlockchainAssetJson {
-  address: string;
-  decimals: number;
-  symbol: string;
-  name: string;
-  gasLimit: number;
-}
+export type BlockchainAssetJson = Jsonify<BlockchainAsset>;
 
 export const blockchainAssetToJson = ({ address, ...asset }: BlockchainAsset): BlockchainAssetJson => ({
   ...asset,
@@ -50,11 +51,7 @@ export interface BlockchainBridge {
   gasLimit: number;
 }
 
-export interface BlockchainBridgeJson {
-  id: number;
-  address: string;
-  gasLimit: number;
-}
+export type BlockchainBridgeJson = Jsonify<BlockchainBridge>;
 
 export const blockchainBridgeToJson = ({ address, ...bridge }: BlockchainBridge): BlockchainBridgeJson => ({
   ...bridge,
@@ -69,7 +66,6 @@ export const blockchainBridgeFromJson = ({ address, ...bridge }: BlockchainBridg
 export interface BlockchainStatus {
   chainId: number;
   rollupContractAddress: EthAddress;
-  feeDistributorContractAddress: EthAddress;
   verifierContractAddress: EthAddress;
   nextRollupId: number;
   dataSize: number;
@@ -85,30 +81,12 @@ export interface BlockchainStatus {
   bridges: BlockchainBridge[];
 }
 
-export interface BlockchainStatusJson {
-  chainId: number;
-  rollupContractAddress: string;
-  feeDistributorContractAddress: string;
-  verifierContractAddress: string;
-  nextRollupId: number;
-  dataSize: number;
-  dataRoot: string;
-  nullRoot: string;
-  rootRoot: string;
-  defiRoot: string;
-  defiInteractionHashes: string[];
-  escapeOpen: boolean;
-  allowThirdPartyContracts: boolean;
-  numEscapeBlocksRemaining: number;
-  assets: BlockchainAssetJson[];
-  bridges: BlockchainBridgeJson[];
-}
+export type BlockchainStatusJson = Jsonify<BlockchainStatus>;
 
 export function blockchainStatusToJson(status: BlockchainStatus): BlockchainStatusJson {
   return {
     ...status,
     rollupContractAddress: status.rollupContractAddress.toString(),
-    feeDistributorContractAddress: status.feeDistributorContractAddress.toString(),
     verifierContractAddress: status.verifierContractAddress.toString(),
     dataRoot: status.dataRoot.toString('hex'),
     nullRoot: status.nullRoot.toString('hex'),
@@ -124,8 +102,7 @@ export function blockchainStatusFromJson(json: BlockchainStatusJson): Blockchain
   return {
     ...json,
     rollupContractAddress: EthAddress.fromString(json.rollupContractAddress),
-    feeDistributorContractAddress: EthAddress.fromString(json.feeDistributorContractAddress),
-    verifierContractAddress: EthAddress.fromString(json.feeDistributorContractAddress),
+    verifierContractAddress: EthAddress.fromString(json.verifierContractAddress),
     dataRoot: Buffer.from(json.dataRoot, 'hex'),
     nullRoot: Buffer.from(json.nullRoot, 'hex'),
     rootRoot: Buffer.from(json.rootRoot, 'hex'),

@@ -1,7 +1,7 @@
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { JoinSplitProver, ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
-import { createLogger } from '@aztec/barretenberg/debug';
+import { createDebugLogger } from '@aztec/barretenberg/log';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { OffchainDefiDepositData } from '@aztec/barretenberg/offchain_tx_data';
@@ -14,7 +14,7 @@ import { UserData } from '../user';
 import { JoinSplitTxFactory } from './join_split_tx_factory';
 import { JoinSplitProofInput } from './proof_input';
 
-const debug = createLogger('bb:defi_deposit_proof_creator');
+const debug = createDebugLogger('bb:defi_deposit_proof_creator');
 
 export class DefiDepositProofCreator {
   private txFactory: JoinSplitTxFactory;
@@ -36,11 +36,8 @@ export class DefiDepositProofCreator {
     inputNotes: Note[],
     spendingPublicKey: GrumpkinAddress,
   ) {
-    if (spendingPublicKey.equals(user.id)) {
-      throw new Error('Cannot spend notes for defi deposit using account key.');
-    }
-
     const assetId = bridgeId.inputAssetIdA;
+    const newNoteOwnerAccountRequired = !spendingPublicKey.equals(user.accountPublicKey);
     const proofInput = await this.txFactory.createTx(
       user,
       ProofId.DEFI_DEPOSIT,
@@ -50,8 +47,8 @@ export class DefiDepositProofCreator {
       {
         bridgeId,
         defiDepositValue: depositValue,
-        newNoteOwner: user.id,
-        newNoteOwnerAccountRequired: true,
+        newNoteOwner: user.accountPublicKey,
+        newNoteOwnerAccountRequired,
       },
     );
 
@@ -61,7 +58,7 @@ export class DefiDepositProofCreator {
   }
 
   public async createProof(
-    user: UserData,
+    { accountPublicKey, accountPrivateKey }: UserData,
     { tx, signature, partialStateSecretEphPubKey, viewingKeys }: JoinSplitProofInput,
     txRefNo: number,
   ) {
@@ -81,20 +78,12 @@ export class DefiDepositProofCreator {
     const privateInput =
       bridgeId.numInputAssets > 1 ? inputNotes[0].value : inputNotes.reduce((sum, n) => sum + n.value, BigInt(0));
     const txFee = privateInput - depositValue;
-    const coreTx = new CoreDefiTx(
-      txId,
-      user.id,
-      bridgeId,
-      depositValue,
-      txFee,
-      partialStateSecret,
-      txRefNo,
-      new Date(),
-    );
+    const accountRequired = outputNotes[1].accountRequired;
+    const coreTx = new CoreDefiTx(txId, accountPublicKey, bridgeId, depositValue, txFee, txRefNo, new Date());
     const partialState = this.noteAlgos.valueNotePartialCommitment(
       partialStateSecret,
-      user.id,
-      true, // accountRequired
+      accountPublicKey,
+      accountRequired,
     );
     const offchainTxData = new OffchainDefiDepositData(
       bridgeId,
@@ -111,10 +100,10 @@ export class DefiDepositProofCreator {
       proofData,
       offchainTxData,
       outputNotes: [
-        this.txFactory.generateNewNote(outputNotes[0], user.accountPrivateKey, {
+        this.txFactory.generateNewNote(outputNotes[0], accountPrivateKey, {
           allowChain: proofData.allowChainFromNote1,
         }),
-        this.txFactory.generateNewNote(outputNotes[1], user.accountPrivateKey, {
+        this.txFactory.generateNewNote(outputNotes[1], accountPrivateKey, {
           allowChain: proofData.allowChainFromNote2,
         }),
       ],

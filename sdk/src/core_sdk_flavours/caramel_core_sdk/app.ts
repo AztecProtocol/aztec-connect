@@ -1,6 +1,8 @@
 import { DispatchMsg, TransportServer } from '../transport';
 import { IframeBackend } from './iframe_backend';
 import { IframeTransportListener } from './iframe_transport_listener';
+import { sdkVersion } from '../../core_sdk';
+import { IframeEvent } from '../strawberry_core_sdk/create_iframe';
 
 function main() {
   const iframeBackend = new IframeBackend(document.referrer);
@@ -17,14 +19,21 @@ function main() {
    *     }]
    *   }
    */
-  const dispatchFn = async ({ fn, args }: DispatchMsg) => iframeBackend[fn](...args);
+  const dispatchFn = ({ fn, args }: DispatchMsg) => iframeBackend[fn](...args);
   const listener = new IframeTransportListener(window);
   const transportServer = new TransportServer(listener, dispatchFn);
   iframeBackend.on('dispatch_msg', (msg: DispatchMsg) => transportServer.broadcast(msg));
 
   transportServer.start();
 
-  window.parent.postMessage('Ready', '*');
+  localStorage.setItem('sdkVersion', sdkVersion);
+  window.addEventListener('storage', e => {
+    if (e.key === 'sdkVersion' && e.newValue !== sdkVersion) {
+      window.parent.postMessage(IframeEvent.NEW_VERSION_LOADED, '*');
+    }
+  });
+
+  window.parent.postMessage(IframeEvent.READY, '*');
 }
 
 main();

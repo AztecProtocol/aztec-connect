@@ -5,6 +5,7 @@ import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import client, { Counter, Gauge, Histogram } from 'prom-client';
 import { RollupDb } from '../rollup_db';
 import { RollupDao } from '../entity/rollup';
+import { EthAddress } from '@aztec/barretenberg/address';
 
 export class Metrics {
   private receiveTxDuration: Histogram<string>;
@@ -29,7 +30,12 @@ export class Metrics {
   private httpEndpointCounter: Counter<string>;
   private txReceivedCounter: Counter<string>;
 
-  constructor(worldStateDb: WorldStateDb, private rollupDb: RollupDb, private blockchain: Blockchain) {
+  constructor(
+    worldStateDb: WorldStateDb,
+    rollupDb: RollupDb,
+    private blockchain: Blockchain,
+    public rollupBeneficiary: EthAddress,
+  ) {
     client.collectDefaultMetrics();
 
     new Gauge({
@@ -91,8 +97,8 @@ export class Metrics {
     new Gauge({
       name: 'world_state_data_size',
       help: 'Size of data tree',
-      async collect() {
-        this.set(Number(await worldStateDb.getSize(0)));
+      collect() {
+        this.set(Number(worldStateDb.getSize(0)));
       },
     });
 
@@ -101,14 +107,6 @@ export class Metrics {
       help: 'Total rollups',
       async collect() {
         this.set(await rollupDb.getNextRollupId());
-      },
-    });
-
-    new Gauge({
-      name: 'escapes_total',
-      help: 'Total escapes',
-      async collect() {
-        this.set(await rollupDb.getTotalRollupsOfSize(0));
       },
     });
 
@@ -274,9 +272,9 @@ export class Metrics {
       const totalFees = +fromBaseUnits(assetMetric.totalFees, assetDecimals);
       this.totalFees.labels(assetName).set(totalFees);
 
-      const feeDistributorBalanceInt = await this.blockchain.getFeeDistributorBalance(assetId);
-      const feeDistributorBalance = +fromBaseUnits(feeDistributorBalanceInt, assetDecimals);
-      this.feeDistributorContractBalance.labels(assetName).set(feeDistributorBalance);
+      const rollupBeneficiaryBalanceInt = await this.blockchain.getAsset(assetId).balanceOf(this.rollupBeneficiary);
+      const rollupBeneficiaryBalance = +fromBaseUnits(rollupBeneficiaryBalanceInt, assetDecimals);
+      this.feeDistributorContractBalance.labels(assetName).set(rollupBeneficiaryBalance);
     }
 
     this.rollupSize.set(rollup.rollupProof.rollupSize);
@@ -285,7 +283,7 @@ export class Metrics {
     this.rollupGasPrice.set(Number(toBigIntBE(rollup.gasPrice!)));
   }
 
-  async getMetrics() {
+  getMetrics() {
     return client.register.metrics();
   }
 }

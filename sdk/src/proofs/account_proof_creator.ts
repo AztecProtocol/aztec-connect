@@ -1,7 +1,7 @@
 import { AliasHash } from '@aztec/barretenberg/account_id';
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AccountProver, AccountTx, ProofData } from '@aztec/barretenberg/client_proofs';
-import { createLogger } from '@aztec/barretenberg/debug';
+import { createDebugLogger } from '@aztec/barretenberg/log';
 import { HashPath } from '@aztec/barretenberg/merkle_tree';
 import { OffchainAccountData } from '@aztec/barretenberg/offchain_tx_data';
 import { TxId } from '@aztec/barretenberg/tx_id';
@@ -11,7 +11,7 @@ import { Database } from '../database';
 import { AccountProofInput } from './proof_input';
 import { ProofOutput } from './proof_output';
 
-const debug = createLogger('bb:account_proof');
+const debug = createDebugLogger('bb:account_proof');
 
 export class AccountProofCreator {
   constructor(private prover: AccountProver, private worldState: WorldState, private db: Database) {}

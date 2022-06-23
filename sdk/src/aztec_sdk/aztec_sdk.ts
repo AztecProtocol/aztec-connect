@@ -4,8 +4,8 @@ import { EthereumProvider, Receipt, SendTxOptions, TxHash, TxType } from '@aztec
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { randomBytes } from '@aztec/barretenberg/crypto';
+import { retryUntil } from '@aztec/barretenberg/retry';
 import { TxSettlementTime } from '@aztec/barretenberg/rollup_provider';
-import { sleep } from '@aztec/barretenberg/sleep';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { ClientEthereumBlockchain, validateSignature, Web3Signer } from '@aztec/blockchain';
 import { EventEmitter } from 'events';
@@ -30,7 +30,7 @@ import { groupUserTxs } from './group_user_txs';
 export interface AztecSdk {
   on(event: SdkEvent.UPDATED_USERS, listener: () => void): this;
   on(event: SdkEvent.UPDATED_USER_STATE, listener: (userId: GrumpkinAddress) => void): this;
-  on(event: SdkEvent.UPDATED_WORLD_STATE, listener: (rollupId: number, latestRollupId: number) => void): this;
+  on(event: SdkEvent.UPDATED_WORLD_STATE, listener: (syncedToRollup: number, latestRollupId: number) => void): this;
   on(event: SdkEvent.DESTROYED, listener: () => void): this;
 }
 
@@ -58,127 +58,109 @@ export class AztecSdk extends EventEmitter {
     this.removeAllListeners();
   }
 
-  public async awaitSynchronised() {
-    return this.core.awaitSynchronised();
+  public async awaitSynchronised(timeout?: number) {
+    return await this.core.awaitSynchronised(timeout);
   }
 
   public async isUserSynching(userId: GrumpkinAddress) {
-    return this.core.isUserSynching(userId);
+    return await this.core.isUserSynching(userId);
   }
 
-  public async awaitUserSynchronised(userId: GrumpkinAddress) {
-    return this.core.awaitUserSynchronised(userId);
+  public async awaitUserSynchronised(userId: GrumpkinAddress, timeout?: number) {
+    return await this.core.awaitUserSynchronised(userId, timeout);
   }
 
   public async awaitSettlement(txId: TxId, timeout?: number) {
-    return this.core.awaitSettlement(txId, timeout);
+    return await this.core.awaitSettlement(txId, timeout);
   }
 
   public async awaitDefiDepositCompletion(txId: TxId, timeout?: number) {
-    return this.core.awaitDefiDepositCompletion(txId, timeout);
+    return await this.core.awaitDefiDepositCompletion(txId, timeout);
   }
 
   public async awaitDefiFinalisation(txId: TxId, timeout?: number) {
-    return this.core.awaitDefiFinalisation(txId, timeout);
+    return await this.core.awaitDefiFinalisation(txId, timeout);
   }
 
   public async awaitDefiSettlement(txId: TxId, timeout?: number) {
-    return this.core.awaitDefiSettlement(txId, timeout);
+    return await this.core.awaitDefiSettlement(txId, timeout);
   }
 
-  public async awaitAllUserTxsSettled() {
-    const users = await this.core.getUsersData();
-    while (true) {
-      const txs = (await Promise.all(users.map(u => this.core.getUserTxs(u.id)))).flat();
-      if (txs.every(tx => tx.settled)) {
-        break;
-      }
-      await sleep(1000);
-    }
+  public async awaitAllUserTxsSettled(timeout?: number) {
+    const accountPublicKeys = await this.core.getUsers();
+    const allUserTxsSettled = async () => {
+      const txs = (await Promise.all(accountPublicKeys.map(pk => this.core.getUserTxs(pk)))).flat();
+      return txs.every(tx => tx.settled);
+    };
+    await retryUntil(allUserTxsSettled, 'all user txs settled', timeout);
   }
 
-  public async awaitAllUserTxsClaimed() {
-    const users = await this.core.getUsersData();
-    while (true) {
-      const txs = (await Promise.all(users.map(u => this.getDefiTxs(u.id)))).flat();
-      if (txs.every(tx => tx.interactionResult.claimSettled)) {
-        break;
-      }
-      await sleep(1000);
-    }
+  public async awaitAllUserTxsClaimed(timeout?: number) {
+    const accountPublicKeys = await this.core.getUsers();
+    const allUserTxsClaimed = async () => {
+      const txs = (await Promise.all(accountPublicKeys.map(pk => this.getDefiTxs(pk)))).flat();
+      return txs.every(tx => tx.interactionResult.claimSettled);
+    };
+    await retryUntil(allUserTxsClaimed, 'all user txs claimed', timeout);
   }
 
   public async getLocalStatus() {
-    return this.core.getLocalStatus();
+    return await this.core.getLocalStatus();
   }
 
   public async getRemoteStatus() {
-    return this.core.getRemoteStatus();
+    return await this.core.getRemoteStatus();
   }
 
-  public async isAccountRegistered(accountPublicKey: GrumpkinAddress) {
-    return this.core.isAccountRegistered(accountPublicKey);
+  public async isAccountRegistered(accountPublicKey: GrumpkinAddress, includePending = false) {
+    return await this.core.isAccountRegistered(accountPublicKey, includePending);
   }
 
-  public async isRemoteAccountRegistered(accountPublicKey: GrumpkinAddress) {
-    return this.core.isRemoteAccountRegistered(accountPublicKey);
+  public async isAliasRegistered(alias: string, includePending = false) {
+    return await this.core.isAliasRegistered(alias, includePending);
   }
 
-  public async isAliasRegistered(alias: string) {
-    return this.core.isAliasRegistered(alias);
-  }
-
-  public async isRemoteAliasRegistered(alias: string) {
-    return this.core.isRemoteAliasRegistered(alias);
-  }
-
-  public async accountExists(accountPublicKey: GrumpkinAddress, alias: string) {
-    return this.core.accountExists(accountPublicKey, alias);
-  }
-
-  public async remoteAccountExists(accountPublicKey: GrumpkinAddress, alias: string) {
-    return this.core.remoteAccountExists(accountPublicKey, alias);
+  public async isAliasRegisteredToAccount(accountPublicKey: GrumpkinAddress, alias: string, includePending = false) {
+    return await this.core.isAliasRegisteredToAccount(accountPublicKey, alias, includePending);
   }
 
   public async getAccountPublicKey(alias: string) {
-    return this.core.getAccountPublicKey(alias);
-  }
-
-  public async getRemoteUnsettledAccountPublicKey(alias: string) {
-    return this.core.getRemoteUnsettledAccountPublicKey(alias);
+    return await this.core.getAccountPublicKey(alias);
   }
 
   public async getTxFees(assetId: number) {
-    return this.core.getTxFees(assetId);
+    return await this.core.getTxFees(assetId);
   }
 
   public async userExists(accountPublicKey: GrumpkinAddress) {
-    return this.core.userExists(accountPublicKey);
+    return await this.core.userExists(accountPublicKey);
   }
 
   public async addUser(accountPrivateKey: Buffer, noSync = false) {
-    const userData = await this.core.addUser(accountPrivateKey, noSync);
-    return new AztecSdkUser(userData.id, this);
+    const userId = await this.core.addUser(accountPrivateKey, noSync);
+    return new AztecSdkUser(userId, this);
   }
 
   public async removeUser(userId: GrumpkinAddress) {
-    return this.core.removeUser(userId);
+    return await this.core.removeUser(userId);
   }
 
   /**
    * Returns a AztecSdkUser for a locally resolved user.
    */
   public async getUser(userId: GrumpkinAddress) {
-    const userData = await this.getUserData(userId); // Check that the user's been added to the sdk.
-    return new AztecSdkUser(userData.id, this);
+    if (!(await this.core.userExists(userId))) {
+      throw new Error(`User not found: ${userId}`);
+    }
+    return new AztecSdkUser(userId, this);
   }
 
-  public async getUserData(userId: GrumpkinAddress) {
-    return this.core.getUserData(userId);
+  public async getUserSyncedToRollup(userId: GrumpkinAddress) {
+    return await this.core.getUserSyncedToRollup(userId);
   }
 
-  public async getUsersData() {
-    return this.core.getUsersData();
+  public async getUsers() {
+    return await this.core.getUsers();
   }
 
   public getAccountKeySigningData() {
@@ -217,7 +199,7 @@ export class AztecSdk extends EventEmitter {
   }
 
   public async derivePublicKey(privateKey: Buffer) {
-    return this.core.derivePublicKey(privateKey);
+    return await this.core.derivePublicKey(privateKey);
   }
 
   public getAssetIdByAddress(address: EthAddress, gasLimit?: number) {
@@ -261,11 +243,11 @@ export class AztecSdk extends EventEmitter {
   }
 
   public async mint({ assetId, value }: AssetValue, account: EthAddress, provider?: EthereumProvider) {
-    return this.blockchain.getAsset(assetId).mint(value, account, { provider });
+    return await this.blockchain.getAsset(assetId).mint(value, account, { provider });
   }
 
   public async setSupportedAsset(assetAddress: EthAddress, assetGasLimit?: number, options?: SendTxOptions) {
-    return this.blockchain.setSupportedAsset(assetAddress, assetGasLimit, options);
+    return await this.blockchain.setSupportedAsset(assetAddress, assetGasLimit, options);
   }
 
   public getBridgeAddressId(address: EthAddress, gasLimit?: number) {
@@ -273,25 +255,19 @@ export class AztecSdk extends EventEmitter {
   }
 
   public async setSupportedBridge(bridgeAddress: EthAddress, bridgeGasLimit?: number, options?: SendTxOptions) {
-    return this.blockchain.setSupportedBridge(bridgeAddress, bridgeGasLimit, options);
+    return await this.blockchain.setSupportedBridge(bridgeAddress, bridgeGasLimit, options);
   }
 
   public async processAsyncDefiInteraction(interactionNonce: number, options?: SendTxOptions) {
-    return this.blockchain.processAsyncDefiInteraction(interactionNonce, options);
-  }
-
-  private async getTransactionFees(assetId: number, txType: TxType) {
-    const fees = await this.core.getTxFees(assetId);
-    const txSettlementFees = fees[txType];
-    if (await this.isFeePayingAsset(assetId)) {
-      return txSettlementFees;
-    }
-    const [feeTxTransferFee] = fees[TxType.TRANSFER];
-    return txSettlementFees.map(({ value, ...rest }) => ({ value: value + feeTxTransferFee.value, ...rest }));
+    return await this.blockchain.processAsyncDefiInteraction(interactionNonce, options);
   }
 
   public async getDepositFees(assetId: number) {
-    return this.getTransactionFees(assetId, TxType.DEPOSIT);
+    return await this.getTransactionFees(assetId, TxType.DEPOSIT);
+  }
+
+  public async getPendingDepositTxs() {
+    return await this.core.getPendingDepositTxs();
   }
 
   public createDepositController(
@@ -299,7 +275,7 @@ export class AztecSdk extends EventEmitter {
     value: AssetValue,
     fee: AssetValue,
     recipient: GrumpkinAddress,
-    recipientAccountRequired = true,
+    recipientSpendingKeyRequired = true,
     feePayer?: FeePayer,
     provider = this.provider,
   ) {
@@ -308,7 +284,7 @@ export class AztecSdk extends EventEmitter {
       fee,
       depositor,
       recipient,
-      recipientAccountRequired,
+      recipientSpendingKeyRequired,
       feePayer,
       this.core,
       this.blockchain,
@@ -333,7 +309,7 @@ export class AztecSdk extends EventEmitter {
   }
 
   public async getTransferFees(assetId: number) {
-    return this.getTransactionFees(assetId, TxType.TRANSFER);
+    return await this.getTransactionFees(assetId, TxType.TRANSFER);
   }
 
   public createTransferController(
@@ -342,9 +318,9 @@ export class AztecSdk extends EventEmitter {
     value: AssetValue,
     fee: AssetValue,
     recipient: GrumpkinAddress,
-    recipientAccountRequired = true,
+    recipientSpendingKeyRequired = true,
   ) {
-    return new TransferController(userId, userSigner, value, fee, recipient, recipientAccountRequired, this.core);
+    return new TransferController(userId, userSigner, value, fee, recipient, recipientSpendingKeyRequired, this.core);
   }
 
   public async getDefiFees(bridgeId: BridgeId, userId?: GrumpkinAddress, depositValue?: AssetValue) {
@@ -461,7 +437,12 @@ export class AztecSdk extends EventEmitter {
   }
 
   public async getRecoverAccountFees(assetId: number) {
-    return this.getAccountFee(assetId);
+    const txFees = await this.core.getTxFees(assetId);
+    const [depositFee] = txFees[TxType.DEPOSIT];
+    return txFees[TxType.ACCOUNT].map(({ value, ...rest }) => ({
+      ...rest,
+      value: value ? value + depositFee.value : value,
+    }));
   }
 
   public createRecoverAccountController(
@@ -485,7 +466,7 @@ export class AztecSdk extends EventEmitter {
   }
 
   public async getAddSpendingKeyFees(assetId: number) {
-    return this.getAccountFee(assetId);
+    return await this.getAccountFee(assetId);
   }
 
   public createAddSpendingKeyController(
@@ -508,7 +489,7 @@ export class AztecSdk extends EventEmitter {
   }
 
   public async getMigrateAccountFees(assetId: number) {
-    return this.getAccountFee(assetId);
+    return await this.getAccountFee(assetId);
   }
 
   public createMigrateAccountController(
@@ -533,32 +514,27 @@ export class AztecSdk extends EventEmitter {
   }
 
   public async depositFundsToContract({ assetId, value }: AssetValue, from: EthAddress, provider = this.provider) {
-    return this.blockchain.depositPendingFunds(assetId, value, undefined, {
+    return await this.blockchain.depositPendingFunds(assetId, value, undefined, {
       signingAddress: from,
       provider,
     });
   }
 
   public async getUserPendingDeposit(assetId: number, account: EthAddress) {
-    return this.blockchain.getUserPendingDeposit(assetId, account);
+    return await this.blockchain.getUserPendingDeposit(assetId, account);
   }
 
   public async getUserPendingFunds(assetId: number, account: EthAddress) {
     const deposited = await this.getUserPendingDeposit(assetId, account);
-    const txs = await this.getRemoteUnsettledPaymentTxs();
+    const txs = await this.getPendingDepositTxs();
     const unsettledDeposit = txs
-      .filter(
-        tx =>
-          tx.proofData.proofData.proofId === ProofId.DEPOSIT &&
-          tx.proofData.publicAssetId === assetId &&
-          tx.proofData.publicOwner.equals(account),
-      )
-      .reduce((sum, tx) => sum + BigInt(tx.proofData.publicValue), BigInt(0));
+      .filter(tx => tx.assetId === assetId && tx.publicOwner.equals(account))
+      .reduce((sum, tx) => sum + tx.value, BigInt(0));
     return deposited - unsettledDeposit;
   }
 
   public async isContract(address: EthAddress) {
-    return this.blockchain.isContract(address);
+    return await this.blockchain.isContract(address);
   }
 
   public validateSignature(publicOwner: EthAddress, signature: Buffer, signingData: Buffer) {
@@ -566,7 +542,7 @@ export class AztecSdk extends EventEmitter {
   }
 
   public async getTransactionReceipt(txHash: TxHash, timeout?: number, interval = 1): Promise<Receipt> {
-    return this.blockchain.getTransactionReceipt(txHash, timeout, interval);
+    return await this.blockchain.getTransactionReceipt(txHash, timeout, interval);
   }
 
   public async flushRollup(userId: GrumpkinAddress, userSigner: Signer) {
@@ -592,7 +568,7 @@ export class AztecSdk extends EventEmitter {
   }
 
   public async getSpendingKeys(userId: GrumpkinAddress) {
-    return this.core.getSpendingKeys(userId);
+    return await this.core.getSpendingKeys(userId);
   }
 
   public async getPublicBalance(ethAddress: EthAddress, assetId: number) {
@@ -600,67 +576,41 @@ export class AztecSdk extends EventEmitter {
   }
 
   public async getBalances(userId: GrumpkinAddress) {
-    return this.core.getBalances(userId);
-  }
-
-  public async getBalancesUnsafe(accountPublicKey: GrumpkinAddress) {
-    return this.core.getBalances(accountPublicKey, true);
+    return await this.core.getBalances(userId);
   }
 
   public async getBalance(userId: GrumpkinAddress, assetId: number) {
     return { assetId, value: await this.core.getBalance(userId, assetId) };
   }
 
-  public async getBalanceUnsafe(accountPublicKey: GrumpkinAddress, assetId: number) {
-    return { assetId, value: await this.core.getBalance(accountPublicKey, assetId, true) };
-  }
-
   public async getFormattedBalance(userId: GrumpkinAddress, assetId: number, symbol = true, precision?: number) {
     return this.fromBaseUnits(await this.getBalance(userId, assetId), symbol, precision);
   }
 
-  public async getSpendableSum(userId: GrumpkinAddress, assetId: number, excludePendingNotes?: boolean) {
-    return this.core.getSpendableSum(userId, assetId, excludePendingNotes);
-  }
-
-  public async getSpendableSumUnsafe(
-    accountPublicKey: GrumpkinAddress,
+  public async getSpendableSum(
+    userId: GrumpkinAddress,
     assetId: number,
+    spendingKeyRequired?: boolean,
     excludePendingNotes?: boolean,
   ) {
-    return this.core.getSpendableSum(accountPublicKey, assetId, excludePendingNotes, true);
+    return await this.core.getSpendableSum(userId, assetId, spendingKeyRequired, excludePendingNotes);
   }
 
-  public async getSpendableSums(userId: GrumpkinAddress, excludePendingNotes?: boolean) {
-    return this.core.getSpendableSums(userId, excludePendingNotes);
-  }
-
-  public async getSpendableSumsUnsafe(accountPublicKey: GrumpkinAddress, excludePendingNotes?: boolean) {
-    return this.core.getSpendableSums(accountPublicKey, excludePendingNotes, true);
+  public async getSpendableSums(userId: GrumpkinAddress, spendingKeyRequired?: boolean, excludePendingNotes?: boolean) {
+    return await this.core.getSpendableSums(userId, spendingKeyRequired, excludePendingNotes);
   }
 
   public async getMaxSpendableValue(
     userId: GrumpkinAddress,
     assetId: number,
-    numNotes?: number,
+    spendingKeyRequired?: boolean,
     excludePendingNotes?: boolean,
+    numNotes?: number,
   ) {
     if (numNotes !== undefined && (numNotes > 2 || numNotes < 1)) {
       throw new Error(`numNotes can only be 1 or 2. Got ${numNotes}.`);
     }
-    return this.core.getMaxSpendableValue(userId, assetId, numNotes, excludePendingNotes);
-  }
-
-  public async getMaxSpendableValueUnsafe(
-    accountPublicKey: GrumpkinAddress,
-    assetId: number,
-    numNotes?: number,
-    excludePendingNotes?: boolean,
-  ) {
-    if (numNotes !== undefined && (numNotes > 2 || numNotes < 1)) {
-      throw new Error(`numNotes can only be 1 or 2. Got ${numNotes}.`);
-    }
-    return this.core.getMaxSpendableValue(accountPublicKey, assetId, numNotes, excludePendingNotes, true);
+    return await this.core.getMaxSpendableValue(userId, assetId, spendingKeyRequired, excludePendingNotes, numNotes);
   }
 
   public async getUserTxs(userId: GrumpkinAddress) {
@@ -682,8 +632,14 @@ export class AztecSdk extends EventEmitter {
     return (await this.getUserTxs(userId)).filter(tx => tx.proofId === ProofId.DEFI_DEPOSIT) as UserDefiTx[];
   }
 
-  public async getRemoteUnsettledPaymentTxs() {
-    return this.core.getRemoteUnsettledPaymentTxs();
+  private async getTransactionFees(assetId: number, txType: TxType) {
+    const fees = await this.core.getTxFees(assetId);
+    const txSettlementFees = fees[txType];
+    if (await this.isFeePayingAsset(assetId)) {
+      return txSettlementFees;
+    }
+    const [feeTxTransferFee] = fees[TxType.TRANSFER];
+    return txSettlementFees.map(({ value, ...rest }) => ({ value: value + feeTxTransferFee.value, ...rest }));
   }
 
   private async getAccountFee(assetId: number) {

@@ -55,7 +55,6 @@ const toCorePaymentTx = (tx: PaymentTxDao) =>
     tx.senderPrivateOutput,
     tx.isRecipient,
     tx.isSender,
-    tx.accountRequired,
     tx.txRefNo,
     tx.created,
     tx.settled,
@@ -81,7 +80,6 @@ const toCoreDefiTx = (tx: DefiTxDao) =>
     tx.bridgeId,
     tx.depositValue,
     tx.txFee,
-    tx.partialStateSecret,
     tx.txRefNo,
     tx.created,
     tx.settled,
@@ -112,6 +110,7 @@ export class SQLDatabase implements Database {
   private userDataRep: Repository<UserDataDao>;
   private spendingKeyRep: Repository<SpendingKeyDao>;
   private mutex: Repository<MutexDao>;
+  private readonly genesisDataKey = 'genesisData';
 
   constructor(private connection: Connection) {
     this.accountTxRep = this.connection.getRepository(AccountTxDao);
@@ -166,8 +165,8 @@ export class SQLDatabase implements Database {
     await this.noteRep.delete({ nullifier });
   }
 
-  async getUser(userId: GrumpkinAddress) {
-    return this.userDataRep.findOne({ id: userId });
+  async getUser(accountPublicKey: GrumpkinAddress) {
+    return await this.userDataRep.findOne({ accountPublicKey });
   }
 
   async addUser(user: UserData) {
@@ -175,14 +174,15 @@ export class SQLDatabase implements Database {
   }
 
   async getUsers() {
-    return this.userDataRep.find();
+    return await this.userDataRep.find();
   }
 
   async updateUser(user: UserData) {
-    await this.userDataRep.update({ id: user.id }, user);
+    await this.userDataRep.update({ accountPublicKey: user.accountPublicKey }, user);
   }
 
-  async removeUser(userId: GrumpkinAddress) {
+  async removeUser(accountPublicKey: GrumpkinAddress) {
+    const userId = accountPublicKey;
     const user = await this.getUser(userId);
     if (!user) return;
 
@@ -191,7 +191,7 @@ export class SQLDatabase implements Database {
     await this.paymentTxRep.delete({ userId });
     await this.spendingKeyRep.delete({ userId });
     await this.noteRep.delete({ owner: userId });
-    await this.userDataRep.delete({ id: userId });
+    await this.userDataRep.delete({ accountPublicKey });
   }
 
   async resetUsers() {
@@ -281,7 +281,7 @@ export class SQLDatabase implements Database {
   }
 
   async getClaimTx(nullifier: Buffer) {
-    return this.claimTxRep.findOne({ nullifier });
+    return await this.claimTxRep.findOne({ nullifier });
   }
 
   async getUserTxs(userId: GrumpkinAddress) {
@@ -401,11 +401,11 @@ export class SQLDatabase implements Database {
   }
 
   async getAlias(accountPublicKey: GrumpkinAddress) {
-    return this.aliasRep.findOne({ accountPublicKey });
+    return await this.aliasRep.findOne({ accountPublicKey });
   }
 
   async getAliases(aliasHash: AliasHash) {
-    return this.aliasRep.find({ where: { aliasHash }, order: { index: 'DESC' } });
+    return await this.aliasRep.find({ where: { aliasHash }, order: { index: 'DESC' } });
   }
 
   async addKey(name: string, value: Buffer) {
@@ -437,5 +437,14 @@ export class SQLDatabase implements Database {
 
   async releaseLock(name: string) {
     await this.mutex.delete({ name });
+  }
+
+  public async setGenesisData(data: Buffer) {
+    await this.addKey(this.genesisDataKey, data);
+  }
+
+  public async getGenesisData() {
+    const data = await this.getKey(this.genesisDataKey);
+    return data ?? Buffer.alloc(0);
   }
 }

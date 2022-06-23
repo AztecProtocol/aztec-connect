@@ -4,6 +4,7 @@ import { Blockchain } from '@aztec/barretenberg/blockchain';
 import { AccountVerifier, JoinSplitVerifier } from '@aztec/barretenberg/client_proofs';
 import { Blake2s } from '@aztec/barretenberg/crypto';
 import { InitHelpers } from '@aztec/barretenberg/environment';
+import { createLogger } from '@aztec/barretenberg/log';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { InitialWorldState, RollupProviderStatus, RuntimeConfig } from '@aztec/barretenberg/rollup_provider';
 import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
@@ -30,25 +31,29 @@ export class Server {
 
   constructor(
     private configurator: Configurator,
-    signingAddress: EthAddress,
+    private signingAddress: EthAddress,
     private blockchain: Blockchain,
     private rollupDb: RollupDb,
     worldStateDb: WorldStateDb,
     private metrics: Metrics,
     barretenberg: BarretenbergWasm,
+    private log = createLogger('Server'),
   ) {
     const {
       proofGeneratorMode,
       numInnerRollupTxs,
       numOuterRollupProofs,
       proverless,
+      rollupCallDataLimit,
       runtimeConfig: {
         publishInterval,
         flushAfterIdle,
-        maxProviderGasPrice,
+        maxFeePerGas,
+        maxPriorityFeePerGas,
         gasLimit,
         defaultDeFiBatchSize,
         bridgeConfigs,
+        rollupBeneficiary = signingAddress,
       },
     } = configurator.getConfVars();
 
@@ -85,14 +90,16 @@ export class Server {
       this.txFeeResolver,
       noteAlgo,
       metrics,
-      signingAddress,
+      rollupBeneficiary,
       publishInterval,
       flushAfterIdle,
-      maxProviderGasPrice,
+      maxFeePerGas,
+      maxPriorityFeePerGas,
       gasLimit,
       numInnerRollupTxs,
       numOuterRollupProofs,
       this.bridgeResolver,
+      rollupCallDataLimit,
     );
     this.worldState = new WorldState(
       rollupDb,
@@ -118,7 +125,7 @@ export class Server {
   }
 
   public async start() {
-    console.log('Server initializing...');
+    this.log('Initializing...');
 
     await this.proofGenerator.start();
     await this.txFeeResolver.start();
@@ -126,19 +133,19 @@ export class Server {
     await this.txReceiver.init();
 
     this.ready = true;
-    console.log('Server ready to receive txs.');
+    this.log('Ready to receive txs.');
   }
 
   public async stop() {
-    console.log('Server stop...');
+    this.log('Stop...');
     this.ready = false;
 
-    this.proofGenerator.stop();
+    await this.proofGenerator.stop();
     await this.txReceiver.destroy();
     await this.worldState.stop();
     await this.txFeeResolver.stop();
 
-    console.log('Server stopped.');
+    this.log('Stopped.');
   }
 
   public isReady() {
@@ -150,15 +157,18 @@ export class Server {
   }
 
   public async setRuntimeConfig(config: Partial<RuntimeConfig>) {
+    this.log('Updating runtime config...');
     this.configurator.saveRuntimeConfig(config);
     const {
       runtimeConfig: {
         publishInterval,
         flushAfterIdle,
-        maxProviderGasPrice,
+        maxFeePerGas,
+        maxPriorityFeePerGas,
         gasLimit,
         defaultDeFiBatchSize,
         bridgeConfigs,
+        rollupBeneficiary = this.signingAddress,
       },
     } = this.configurator.getConfVars();
 
@@ -169,15 +179,25 @@ export class Server {
     this.worldState.setTxFeeResolver(this.txFeeResolver);
     this.txReceiver.setTxFeeResolver(this.txFeeResolver);
     this.bridgeResolver.setConf(defaultDeFiBatchSize, bridgeConfigs);
-    this.pipelineFactory.setConf(this.txFeeResolver, publishInterval, flushAfterIdle, maxProviderGasPrice, gasLimit);
+    this.pipelineFactory.setConf(
+      this.txFeeResolver,
+      publishInterval,
+      flushAfterIdle,
+      maxFeePerGas,
+      maxPriorityFeePerGas,
+      gasLimit,
+      rollupBeneficiary,
+    );
+    this.metrics.rollupBeneficiary = rollupBeneficiary;
 
-    await this.worldState.resetPipeline();
+    await this.worldState.restartPipeline();
   }
 
   private createTxFeeResolver() {
     const {
       numInnerRollupTxs,
       numOuterRollupProofs,
+      rollupCallDataLimit,
       runtimeConfig: {
         verificationGas,
         maxFeeGasPrice,
@@ -195,17 +215,18 @@ export class Server {
       feeGasPriceMultiplier,
       numInnerRollupTxs * numOuterRollupProofs,
       feePayingAssetIds,
+      rollupCallDataLimit,
       feeRoundUpSignificantFigures,
     );
   }
 
-  public async removeData() {
-    console.log('Removing data dir and signal to shutdown...');
+  public removeData() {
+    this.log('Removing data dir and signal to shutdown...');
     process.kill(process.pid, 'SIGUSR1');
   }
 
   public async resetPipline() {
-    console.log('Resetting pipeline...');
+    this.log('Resetting pipeline...');
     await this.worldState.resetPipeline();
   }
 
@@ -267,41 +288,37 @@ export class Server {
     const chainId = await this.blockchain.getChainId();
     const accountFileName = InitHelpers.getAccountDataFile(chainId);
     const initialAccounts = accountFileName ? await InitHelpers.readData(accountFileName) : Buffer.alloc(0);
-    return { initialAccounts };
+    return { initialAccounts, initialSubtreeRoots: this.worldState.getInitialStateSubtreeRoots() };
   }
 
   public async getUnsettledTxs() {
-    return this.rollupDb.getUnsettledTxs();
+    return await this.rollupDb.getUnsettledTxs();
   }
 
   public async getUnsettledNullifiers() {
-    return this.rollupDb.getUnsettledNullifiers();
+    return await this.rollupDb.getUnsettledNullifiers();
   }
 
   public async isAccountRegistered(accountPublicKey: GrumpkinAddress) {
-    return this.rollupDb.isAccountRegistered(accountPublicKey);
+    return await this.rollupDb.isAccountRegistered(accountPublicKey);
   }
 
   public async isAliasRegistered(alias: string) {
     const aliasHash = AliasHash.fromAlias(alias, this.blake);
-    return this.rollupDb.isAliasRegistered(aliasHash);
+    return await this.rollupDb.isAliasRegistered(aliasHash);
   }
 
-  public async accountExists(accountPublicKey: GrumpkinAddress, alias: string) {
+  public async isAliasRegisteredToAccount(accountPublicKey: GrumpkinAddress, alias: string) {
     const aliasHash = AliasHash.fromAlias(alias, this.blake);
-    return this.rollupDb.accountExists(accountPublicKey, aliasHash);
+    return await this.rollupDb.isAliasRegisteredToAccount(accountPublicKey, aliasHash);
   }
 
-  public async getUnsettledAccounts() {
-    return this.rollupDb.getUnsettledAccounts();
+  public async getUnsettledDepositTxs() {
+    return await this.rollupDb.getUnsettledDepositTxs();
   }
 
-  public async getUnsettledPaymentTxs() {
-    return this.rollupDb.getUnsettledPaymentTxs();
-  }
-
-  public getBlockBuffers(from: number) {
-    return this.worldState.getBlockBuffers(from);
+  public getBlockBuffers(from: number, take?: number) {
+    return this.worldState.getBlockBuffers(from, take);
   }
 
   public async getLatestRollupId() {
@@ -319,12 +336,12 @@ export class Server {
     const end = this.metrics.receiveTxTimer();
     const result = await this.txReceiver.receiveTxs(txs);
     end();
-    console.log(`Received tx in ${new Date().getTime() - start}ms.`);
+    this.log(`Received tx in ${new Date().getTime() - start}ms.`);
     return result;
   }
 
   public flushTxs() {
-    console.log('Flushing queued transactions...');
+    this.log('Flushing queued transactions...');
     this.worldState.flushTxs();
   }
 }

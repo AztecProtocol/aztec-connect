@@ -1,8 +1,17 @@
-export class Iframe {
+import EventEmitter from 'events';
+
+export enum IframeEvent {
+  READY = 'READY',
+  NEW_VERSION_LOADED = 'NEW_VERSION_LOADED',
+  DESTROYED = 'DESTROYED',
+}
+
+class Iframe extends EventEmitter {
   private origin: string;
   private frame!: HTMLIFrameElement;
 
   constructor(private src: string, private id = 'aztec-sdk-iframe') {
+    super();
     this.origin = new URL(src).origin;
   }
 
@@ -11,11 +20,7 @@ export class Iframe {
   }
 
   public async init() {
-    document.getElementById(this.id)?.remove();
-
-    if (document.getElementById(this.id)) {
-      throw new Error(`iframe#${this.id} already exists.`);
-    }
+    this.destroy();
 
     const frame = document.createElement('iframe');
     frame.id = this.id;
@@ -25,12 +30,18 @@ export class Iframe {
     frame.style.border = 'none';
     frame.src = this.src;
 
-    await this.awaitFrameReady(() => document.body.appendChild(frame));
+    this.destroyWhenOutdated();
+
+    await this.awaitFrameReady(frame);
 
     this.frame = frame;
   }
 
-  private async awaitFrameReady(fn: () => void) {
+  public destroy() {
+    document.getElementById(this.id)?.remove();
+  }
+
+  private async awaitFrameReady(frame: HTMLIFrameElement) {
     let resolveFrameCreated: () => void;
     const frameReadyPromise = Promise.race([
       new Promise<void>(resolve => (resolveFrameCreated = resolve)),
@@ -42,15 +53,33 @@ export class Iframe {
         return;
       }
 
-      window.removeEventListener('message', handleFrameReadyEvent);
-      resolveFrameCreated();
+      if (e.data === IframeEvent.READY) {
+        window.removeEventListener('message', handleFrameReadyEvent);
+        resolveFrameCreated();
+      }
     };
 
     window.addEventListener('message', handleFrameReadyEvent);
 
-    fn();
+    document.body.appendChild(frame);
 
     await frameReadyPromise;
+  }
+
+  private destroyWhenOutdated() {
+    const handleOutdated = (e: MessageEvent) => {
+      if (e.origin !== this.origin) {
+        return;
+      }
+
+      if (e.data === IframeEvent.NEW_VERSION_LOADED) {
+        this.destroy();
+        this.emit(IframeEvent.DESTROYED);
+        window.removeEventListener('message', handleOutdated);
+      }
+    };
+
+    window.addEventListener('message', handleOutdated);
   }
 }
 

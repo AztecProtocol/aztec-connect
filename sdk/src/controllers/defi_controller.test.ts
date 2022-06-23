@@ -650,12 +650,5 @@ describe('defi controller', () => {
         'Fee paying asset must be the first input asset.',
       );
     });
-
-    it('cannot use unsafe notes for defi deposit', () => {
-      userSigner.getPublicKey.mockReturnValue(userId);
-      expect(() => new DefiController(userId, userSigner, bridgeId, depositValue, fee, coreSdk)).toThrow(
-        'Defi deposit not available for non registered user.',
-      );
-    });
   });
 });

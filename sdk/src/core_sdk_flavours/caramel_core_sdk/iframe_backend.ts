@@ -1,4 +1,4 @@
-import { createLogger, enableLogs } from '@aztec/barretenberg/debug';
+import { createDebugLogger, enableLogs } from '@aztec/barretenberg/log';
 import EventEmitter from 'events';
 import { SdkEvent } from '../../core_sdk';
 import { BananaCoreSdkOptions } from '../banana_core_sdk';
@@ -6,7 +6,7 @@ import { createDispatchFn, DispatchMsg } from '../transport';
 import { CaramelCoreSdk } from './caramel_core_sdk';
 import { createCaramelCoreSdk } from './create_caramel_core_sdk';
 
-const debug = createLogger('aztec:sdk:iframe_backend');
+const debug = createDebugLogger('aztec:sdk:iframe_backend');
 
 async function getServerUrl() {
   if (process.env.NODE_ENV === 'production') {

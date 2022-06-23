@@ -46,7 +46,7 @@ describe('rollup_processor: deposit', () => {
       signingAddress: userAddresses[0],
     });
 
-    const { proofData, signatures } = await createRollupProof(
+    const { encodedProofData, signatures } = createRollupProof(
       rollupProvider,
       await createDepositProof(depositAmount, userAddresses[0], userSigners[0], 0, txFee),
       { feeDistributorAddress },
@@ -54,7 +54,7 @@ describe('rollup_processor: deposit', () => {
 
     const providerInitialBalance = await assets[0].balanceOf(rollupProviderAddress);
 
-    const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
+    const tx = await rollupProcessor.createRollupProofTx(encodedProofData, signatures, []);
     const txHash = await rollupProcessor.sendTx(tx);
 
     const { gasPrice } = await ethers.provider.getTransaction(txHash.toString());
@@ -78,13 +78,13 @@ describe('rollup_processor: deposit', () => {
       signingAddress: userAddresses[0],
     });
 
-    const { proofData, signatures } = await createRollupProof(
+    const { encodedProofData, signatures } = createRollupProof(
       rollupProvider,
       await createDepositProof(depositAmount, userAddresses[0], userSigners[0], 1, txFee),
       { feeDistributorAddress },
     );
 
-    const tx = await rollupProcessor.createRollupProofTx(proofData, signatures, []);
+    const tx = await rollupProcessor.createRollupProofTx(encodedProofData, signatures, []);
     await rollupProcessor.sendTx(tx);
 
     expect(await feeDistributor.txFeeBalance(EthAddress.ZERO)).toBe(0n);

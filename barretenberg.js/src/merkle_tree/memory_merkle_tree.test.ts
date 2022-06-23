@@ -3,14 +3,14 @@ import { HashPath } from './hash_path';
 import { BarretenbergWasm } from '../wasm';
 import { SinglePedersen } from '../crypto';
 
-const expectSameTrees = async (tree1: MemoryMerkleTree, tree2: MemoryMerkleTree) => {
+const expectSameTrees = (tree1: MemoryMerkleTree, tree2: MemoryMerkleTree) => {
   const size = tree1.getSize();
   expect(size).toBe(tree2.getSize());
   expect(tree1.getRoot().toString('hex')).toBe(tree2.getRoot().toString('hex'));
 
   for (let i = 0; i < size; ++i) {
-    const hashPath1 = await tree1.getHashPath(i);
-    const hashPath2 = await tree2.getHashPath(i);
+    const hashPath1 = tree1.getHashPath(i);
+    const hashPath2 = tree2.getHashPath(i);
     expect(hashPath2).toStrictEqual(hashPath1);
   }
 };
@@ -54,16 +54,16 @@ describe('memory_merkle_tree', () => {
       [e10, e11],
     ]);
 
-    expect(await tree.getHashPath(0)).toEqual(expected);
-    expect(await tree.getHashPath(1)).toEqual(expected);
+    expect(tree.getHashPath(0)).toEqual(expected);
+    expect(tree.getHashPath(1)).toEqual(expected);
 
     expected = new HashPath([
       [e02, e03],
       [e10, e11],
     ]);
 
-    expect(await tree.getHashPath(2)).toEqual(expected);
-    expect(await tree.getHashPath(3)).toEqual(expected);
+    expect(tree.getHashPath(2)).toEqual(expected);
+    expect(tree.getHashPath(3)).toEqual(expected);
     expect(tree.getRoot()).toEqual(root);
     expect(tree.getSize()).toBe(4);
 
@@ -97,6 +97,6 @@ describe('memory_merkle_tree', () => {
     const notes = Array(2 ** 10).fill(MemoryMerkleTree.ZERO_ELEMENT);
     const tree1 = await MemoryMerkleTree.new(notes, pedersen);
     const tree2 = await MemoryMerkleTree.new(notes, pedersen);
-    await expectSameTrees(tree1, tree2);
+    expectSameTrees(tree1, tree2);
   });
 });

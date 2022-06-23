@@ -2,15 +2,14 @@ import { BlockSource, Block } from '.';
 import { EventEmitter } from 'events';
 import { fetch } from '../iso_fetch';
 import { Deserializer } from '../serialize';
-// import createDebug from 'debug';
-// const debug = createDebug('bb:server_block_source');
+// import { createDebugLogger } from '@aztec/barretenberg/log';
+// const debug = createDebugLogger('bb:server_block_source');
 
 export class ServerBlockSource extends EventEmitter implements BlockSource {
   private running = false;
   private runningPromise = Promise.resolve();
   private interruptPromise = Promise.resolve();
   private interruptResolve = () => {};
-  private latestRollupId = -1;
   protected baseUrl: string;
 
   constructor(baseUrl: URL, private pollInterval = 10000) {
@@ -18,8 +17,12 @@ export class ServerBlockSource extends EventEmitter implements BlockSource {
     this.baseUrl = baseUrl.toString().replace(/\/$/, '');
   }
 
-  getLatestRollupId() {
-    return this.latestRollupId;
+  public async getLatestRollupId() {
+    const url = new URL(`${this.baseUrl}/get-blocks`);
+    const response = await this.awaitSucceed(() => fetch(url.toString(), { headers: { 'Accept-encoding': 'gzip' } }));
+    const result = Buffer.from(await response.arrayBuffer());
+    const des = new Deserializer(result);
+    return des.int32();
   }
 
   public async start(from = 0) {
@@ -65,18 +68,20 @@ export class ServerBlockSource extends EventEmitter implements BlockSource {
         return response;
       } catch (err: any) {
         console.log(err.message);
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 10000));
       }
     }
   }
 
-  public async getBlocks(from: number) {
+  public async getBlocks(from?: number) {
     const url = new URL(`${this.baseUrl}/get-blocks`);
-    url.searchParams.append('from', from.toString());
+    if (from !== undefined) {
+      url.searchParams.append('from', from.toString());
+    }
     const response = await this.awaitSucceed(() => fetch(url.toString(), { headers: { 'Accept-encoding': 'gzip' } }));
     const result = Buffer.from(await response.arrayBuffer());
     const des = new Deserializer(result);
-    this.latestRollupId = des.int32();
+    des.int32();
     return des.deserializeArray(Block.deserialize);
   }
 

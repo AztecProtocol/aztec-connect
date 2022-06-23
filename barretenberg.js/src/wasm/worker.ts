@@ -1,3 +1,4 @@
+/* eslint-disable require-await */
 import { Subject, Observable } from 'threads/observable';
 import { expose, Transfer } from 'threads/worker';
 import { BarretenbergWasm } from '.';
@@ -12,21 +13,21 @@ const worker = {
     await wasm.init(module, initial);
   },
 
-  transferToHeap(buffer: Uint8Array, offset: number) {
+  async transferToHeap(buffer: Uint8Array, offset: number) {
     wasm.transferToHeap(buffer, offset);
   },
 
-  sliceMemory(start: number, end: number) {
+  async sliceMemory(start: number, end: number) {
     const mem = wasm.sliceMemory(start, end);
-    return Promise.resolve(Transfer(mem, [mem.buffer]) as any as Uint8Array);
+    return Transfer(mem, [mem.buffer]) as any as Uint8Array;
   },
 
-  call(name: string, ...args: any) {
-    return Promise.resolve(wasm.call(name, ...args));
+  async call(name: string, ...args: any) {
+    return wasm.call(name, ...args);
   },
 
-  memSize() {
-    return Promise.resolve(wasm.getMemory().length);
+  async memSize() {
+    return wasm.memSize();
   },
 
   logs() {
@@ -43,7 +44,7 @@ const worker = {
     await wasm.acquire();
   },
 
-  release() {
+  async release() {
     wasm.release();
   },
 };

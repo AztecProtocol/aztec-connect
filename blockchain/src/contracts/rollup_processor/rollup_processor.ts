@@ -6,7 +6,7 @@ import { computeInteractionHashes } from '@aztec/barretenberg/note_algorithms';
 import { Timer } from '@aztec/barretenberg/timer';
 import { sliceOffchainTxData } from '@aztec/barretenberg/offchain_tx_data';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
-import { TransactionReceipt, TransactionResponse } from '@ethersproject/abstract-provider';
+import { TransactionReceipt, TransactionResponse, TransactionRequest } from '@ethersproject/abstract-provider';
 import { Web3Provider } from '@ethersproject/providers';
 import createDebug from 'debug';
 import { BytesLike, Contract, Event, utils } from 'ethers';
@@ -156,35 +156,35 @@ export class RollupProcessor {
   }
 
   async pause(options: SendTxOptions = {}) {
-    const { gasLimit } = { ...options };
+    const { gasLimit } = options;
     const rollupProcessor = this.getContractWithSigner(options);
     const tx = await rollupProcessor.pause({ gasLimit }).catch(fixEthersStackTrace);
     return TxHash.fromString(tx.hash);
   }
 
   async unpause(options: SendTxOptions = {}) {
-    const { gasLimit } = { ...options };
+    const { gasLimit } = options;
     const rollupProcessor = this.getContractWithSigner(options);
     const tx = await rollupProcessor.unpause({ gasLimit }).catch(fixEthersStackTrace);
     return TxHash.fromString(tx.hash);
   }
 
   async grantRole(role: BytesLike, address: EthAddress, options: SendTxOptions = {}) {
-    const { gasLimit } = { ...options };
+    const { gasLimit } = options;
     const rollupProcessor = this.getContractWithSigner(options);
     const tx = await rollupProcessor.grantRole(role, address.toString(), { gasLimit });
     return TxHash.fromString(tx.hash);
   }
 
   async revokeRole(role: BytesLike, address: EthAddress, options: SendTxOptions = {}) {
-    const { gasLimit } = { ...options };
+    const { gasLimit } = options;
     const rollupProcessor = this.getContractWithSigner(options);
     const tx = await rollupProcessor.revokeRole(role, address.toString(), { gasLimit });
     return TxHash.fromString(tx.hash);
   }
 
   async setRollupProvider(providerAddress: EthAddress, valid: boolean, options: SendTxOptions = {}) {
-    const { gasLimit } = { ...options };
+    const { gasLimit } = options;
     const rollupProcessor = this.getContractWithSigner(options);
     const tx = await rollupProcessor
       .setRollupProvider(providerAddress.toString(), valid, { gasLimit })
@@ -193,7 +193,7 @@ export class RollupProcessor {
   }
 
   async setDefiBridgeProxy(providerAddress: EthAddress, options: SendTxOptions = {}) {
-    const { gasLimit } = { ...options };
+    const { gasLimit } = options;
     const rollupProcessor = this.getContractWithSigner(options);
     const tx = await rollupProcessor
       .setDefiBridgeProxy(providerAddress.toString(), { gasLimit })
@@ -208,7 +208,7 @@ export class RollupProcessor {
     offchainTxData: BytesLike,
     options: SendTxOptions = {},
   ) {
-    const { gasLimit } = { ...options };
+    const { gasLimit } = options;
     const rollupProcessor = this.getContractWithSigner(options);
     const tx = await rollupProcessor
       .offchainData(rollupId, chunk, totalChunks, offchainTxData, { gasLimit })
@@ -217,7 +217,7 @@ export class RollupProcessor {
   }
 
   async processRollup(encodedProofData: BytesLike, signatures: BytesLike, options: SendTxOptions = {}) {
-    const { gasLimit } = { ...options };
+    const { gasLimit } = options;
     const rollupProcessor = this.getContractWithSigner(options);
     const tx = await rollupProcessor
       .processRollup(encodedProofData, signatures, { gasLimit })
@@ -225,28 +225,28 @@ export class RollupProcessor {
     return TxHash.fromString(tx.hash);
   }
   async setVerifier(address: EthAddress, options: SendTxOptions = {}) {
-    const { gasLimit } = { ...options };
+    const { gasLimit } = options;
     const rollupProcessor = this.getContractWithSigner(options);
     const tx = await rollupProcessor.setVerifier(address.toString(), { gasLimit }).catch(fixEthersStackTrace);
     return TxHash.fromString(tx.hash);
   }
 
   async setThirdPartyContractStatus(flag: boolean, options: SendTxOptions = {}) {
-    const { gasLimit } = { ...options };
+    const { gasLimit } = options;
     const rollupProcessor = this.getContractWithSigner(options);
     const tx = await rollupProcessor.setAllowThirdPartyContracts(flag, { gasLimit });
     return TxHash.fromString(tx.hash);
   }
 
   async setSupportedBridge(bridgeAddress: EthAddress, bridgeGasLimit = 0, options: SendTxOptions = {}) {
-    const { gasLimit } = { ...options };
+    const { gasLimit } = options;
     const rollupProcessor = this.getContractWithSigner(options);
     const tx = await rollupProcessor.setSupportedBridge(bridgeAddress.toString(), bridgeGasLimit, { gasLimit });
     return TxHash.fromString(tx.hash);
   }
 
   async setSupportedAsset(assetAddress: EthAddress, assetGasLimit = 0, options: SendTxOptions = {}) {
-    const { gasLimit } = { ...options };
+    const { gasLimit } = options;
     const rollupProcessor = this.getContractWithSigner(options);
     const tx = await rollupProcessor.setSupportedAsset(assetAddress.toString(), assetGasLimit, {
       gasLimit,
@@ -255,7 +255,7 @@ export class RollupProcessor {
   }
 
   async processAsyncDefiInteraction(interactionNonce: number, options: SendTxOptions = {}) {
-    const { gasLimit } = { ...options };
+    const { gasLimit } = options;
     const rollupProcessor = this.getContractWithSigner(options);
     const tx = await rollupProcessor
       .processAsyncDefiInteraction(interactionNonce, { gasLimit })
@@ -271,34 +271,30 @@ export class RollupProcessor {
   // Deprecated: Used by lots of tests. We now use createRollupTxs() to produce two txs, one with broadcast data,
   // the other with the actual rollup proof.
   async createRollupProofTx(dataBuf: Buffer, signatures: Buffer[], offchainTxData: Buffer[]) {
-    return (await this.createRollupTxs(dataBuf, signatures, offchainTxData)).rollupProofTx;
+    // setting the tx call data limit to 120kb as this function is only used by tests
+    return (await this.createRollupTxs(dataBuf, signatures, offchainTxData, 120 * 1024)).rollupProofTx;
   }
 
   /**
-   * Given the raw "root verifier" data buffer returned by the proof generator, slice off the the broadcast
-   * data and the proof data, encode the broadcast data, create a new buffer ready for a processRollup tx.
+   * The dataBuf argument should be formatted as the rollup broadcast data in encoded form
+   * concatenated with the proof data as provided by the root verifier
    * The given offchainTxData is chunked into multiple offchainData txs.
-   * Openethereum will accept a maximum tx size of 300kb. Pick 280kb to allow for overheads.
    * Returns the txs to be published.
    */
-  async createRollupTxs(dataBuf: Buffer, signatures: Buffer[], offchainTxData: Buffer[], offchainChunkSize = 280000) {
-    const broadcastData = RollupProofData.fromBuffer(dataBuf);
-    const broadcastDataLength = broadcastData.toBuffer().length;
-    const encodedBroadcastData = broadcastData.encode();
-    const proofData = dataBuf.slice(broadcastDataLength);
-    const encodedData = Buffer.concat([encodedBroadcastData, proofData]);
+  async createRollupTxs(dataBuf: Buffer, signatures: Buffer[], offchainTxData: Buffer[], txDataLimit: number) {
+    const broadcastData = RollupProofData.decode(dataBuf);
     const formattedSignatures = solidityFormatSignatures(signatures);
     const rollupProofTxRaw = await this.rollupProcessor.populateTransaction
-      .processRollup(encodedData, formattedSignatures)
+      .processRollup(dataBuf, formattedSignatures)
       .catch(fixEthersStackTrace);
     const rollupProofTx = Buffer.from(rollupProofTxRaw.data!.slice(2), 'hex');
 
     const ocData = Buffer.concat(offchainTxData);
-    const chunks = Math.ceil(ocData.length / offchainChunkSize);
+    const chunks = Math.ceil(ocData.length / txDataLimit);
     // We should always publish at least 1 chunk, even if it's 0 length.
     // We want the log event to be emitted so we can can be sure things are working as intended.
     const ocdChunks = chunks
-      ? Array.from({ length: chunks }).map((_, i) => ocData.slice(i * offchainChunkSize, (i + 1) * offchainChunkSize))
+      ? Array.from({ length: chunks }).map((_, i) => ocData.slice(i * txDataLimit, (i + 1) * txDataLimit))
       : [Buffer.alloc(0)];
 
     const offchainDataTxsRaw = await Promise.all(
@@ -324,15 +320,17 @@ export class RollupProcessor {
   }
 
   public async sendTx(data: Buffer, options: SendTxOptions = {}) {
-    const { signingAddress, gasLimit, nonce } = { ...options };
+    const { signingAddress, gasLimit, nonce, maxFeePerGas, maxPriorityFeePerGas } = options;
     const signer = signingAddress ? this.provider.getSigner(signingAddress.toString()) : this.provider.getSigner(0);
     const from = await signer.getAddress();
-    const txRequest = {
+    const txRequest: TransactionRequest = {
       to: this.rollupContractAddress.toString(),
       from,
       gasLimit,
       data,
       nonce,
+      maxFeePerGas,
+      maxPriorityFeePerGas,
     };
     const txResponse = await signer.sendTransaction(txRequest).catch(fixEthersStackTrace);
     return TxHash.fromString(txResponse.hash);
@@ -344,7 +342,7 @@ export class RollupProcessor {
     proofHash: Buffer = Buffer.alloc(32),
     options: SendTxOptions = {},
   ) {
-    const { gasLimit } = { ...options };
+    const { gasLimit } = options;
     const rollupProcessor = this.getContractWithSigner(options);
     const depositor = await rollupProcessor.signer.getAddress();
     const tx = await rollupProcessor
@@ -364,7 +362,7 @@ export class RollupProcessor {
     proofHash: Buffer = Buffer.alloc(32),
     options: SendTxOptions = {},
   ) {
-    const { gasLimit } = { ...options };
+    const { gasLimit } = options;
     const rollupProcessor = this.getContractWithSigner(options);
     const depositor = await rollupProcessor.signer.getAddress();
     const tx = await rollupProcessor
@@ -392,7 +390,7 @@ export class RollupProcessor {
     proofHash = Buffer.alloc(32),
     options: SendTxOptions = {},
   ) {
-    const { gasLimit } = { ...options };
+    const { gasLimit } = options;
     const rollupProcessor = this.getContractWithSigner(options);
     const depositor = await rollupProcessor.signer.getAddress();
     const tx = await rollupProcessor
@@ -413,7 +411,7 @@ export class RollupProcessor {
   }
 
   async approveProof(proofHash: Buffer, options: SendTxOptions = {}) {
-    const { gasLimit } = { ...options };
+    const { gasLimit } = options;
     const rollupProcessor = this.getContractWithSigner(options);
     const tx = await rollupProcessor.approveProof(proofHash, { gasLimit }).catch(fixEthersStackTrace);
     return TxHash.fromString(tx.hash);
@@ -428,7 +426,7 @@ export class RollupProcessor {
   }
 
   async getThirdPartyContractStatus(options: SendTxOptions = {}) {
-    const { gasLimit } = { ...options };
+    const { gasLimit } = options;
     return await this.rollupProcessor.allowThirdPartyContracts({ gasLimit });
   }
 
@@ -557,14 +555,16 @@ export class RollupProcessor {
             event.getTransaction(),
             event.getBlock(),
             event.getTransactionReceipt(),
-            ...chunkedOcdEvents[i].map(e => e.getTransaction()),
+            Promise.all(chunkedOcdEvents[i].map(e => e.getTransaction())),
+            Promise.all(chunkedOcdEvents[i].map(e => e.getTransactionReceipt())),
           ]);
           return {
             event,
             tx: meta[0],
             block: meta[1],
             receipt: meta[2],
-            offchainDataTxs: meta.slice(3) as TransactionResponse[],
+            offchainDataTxs: meta[3],
+            offchainDataReceipts: meta[4],
           };
         }),
       );
@@ -588,6 +588,7 @@ export class RollupProcessor {
             meta.receipt,
             defiNotesForThisRollup,
             meta.offchainDataTxs,
+            meta.offchainDataReceipts,
           );
         });
       blocks.push(...newBlocks);
@@ -713,6 +714,7 @@ export class RollupProcessor {
     receipt: TransactionReceipt,
     interactionResult: DefiInteractionEvent[],
     offchainDataTxs: TransactionResponse[],
+    offchainDataReceipts: TransactionReceipt[],
   ): Block {
     const rollupAbi = new utils.Interface(abi);
     const parsedRollupTx = rollupAbi.parseTransaction({ data: rollupTx.data });
@@ -722,19 +724,20 @@ export class RollupProcessor {
         .map(parsed => Buffer.from(parsed.args[3].slice(2), 'hex')),
     );
     const [proofData] = parsedRollupTx.args;
-    const rollupProofData = RollupProofData.decode(Buffer.from(proofData.slice(2), 'hex'));
-    const proofIds = rollupProofData.innerProofData.filter(p => !p.isPadding()).map(p => p.proofId);
-    const offchainTxData = sliceOffchainTxData(proofIds, offchainTxDataBuf);
+    const encodedProofBuffer = Buffer.from(proofData.slice(2), 'hex');
+    const rollupProofData = RollupProofData.decode(encodedProofBuffer);
+    const validProofIds = rollupProofData.getNonPaddingProofIds();
+    const offchainTxData = sliceOffchainTxData(validProofIds, offchainTxDataBuf);
 
     return new Block(
       TxHash.fromString(rollupTx.hash),
       new Date(rollupTx.timestamp! * 1000),
       rollupProofData.rollupId,
       rollupProofData.rollupSize,
-      rollupProofData.toBuffer(),
+      encodedProofBuffer,
       offchainTxData,
       interactionResult,
-      receipt.gasUsed.toNumber(),
+      receipt.gasUsed.toNumber() + offchainDataReceipts.reduce((a, r) => a + r.gasUsed.toNumber(), 0),
       BigInt(rollupTx.gasPrice!.toString()),
     );
   }

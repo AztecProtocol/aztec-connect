@@ -2,7 +2,7 @@ import { readFile } from 'fs';
 import isNode from 'detect-node';
 import { promisify } from 'util';
 import { EventEmitter } from 'events';
-import createDebug from 'debug';
+import { createDebugLogger } from '../log';
 import { randomBytes } from '../crypto';
 import { MemoryFifo } from '../fifo';
 
@@ -26,7 +26,7 @@ export class BarretenbergWasm extends EventEmitter {
 
   public static async new(name = 'wasm', initial?: number) {
     const barretenberg = new BarretenbergWasm();
-    barretenberg.on('log', createDebug(`bb:${name}`));
+    barretenberg.on('log', createDebugLogger(`bb:${name}`));
     await barretenberg.init(undefined, initial);
     return barretenberg;
   }
@@ -112,11 +112,15 @@ export class BarretenbergWasm extends EventEmitter {
     }
   }
 
-  public getMemory() {
+  private getMemory() {
     if (this.heap.length === 0) {
       return new Uint8Array(this.memory.buffer);
     }
     return this.heap;
+  }
+
+  public memSize() {
+    return this.getMemory().length;
   }
 
   public sliceMemory(start: number, end: number) {
@@ -136,11 +140,11 @@ export class BarretenbergWasm extends EventEmitter {
    * transferToHeap before the result is read via sliceMemory.
    * acquire() gets a single token from a fifo. The caller must call release() to add the token back.
    */
-  async acquire() {
+  public async acquire() {
     await this.mutexQ.get();
   }
 
-  release() {
+  public release() {
     if (this.mutexQ.length() !== 0) {
       throw new Error('Release called but not acquired.');
     }

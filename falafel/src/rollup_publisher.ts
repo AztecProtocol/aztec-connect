@@ -1,78 +1,70 @@
 import { EthAddress } from '@aztec/barretenberg/address';
-import { Blockchain, EthereumRpc, RollupTxs, TxHash } from '@aztec/barretenberg/blockchain';
+import { Blockchain, EthereumRpc, SendTxOptions, TxHash } from '@aztec/barretenberg/blockchain';
 import { JoinSplitProofData } from '@aztec/barretenberg/client_proofs';
+import { createLogger } from '@aztec/barretenberg/log';
+import { InterruptableSleep } from '@aztec/barretenberg/sleep';
 import { fromBaseUnits } from '@aztec/blockchain';
 import { RollupDao } from './entity';
 import { Metrics } from './metrics';
 import { RollupDb } from './rollup_db';
 
 export class RollupPublisher {
-  private interrupted = false;
-  private interruptPromise = Promise.resolve();
-  private interruptResolve = () => {};
   private ethereumRpc: EthereumRpc;
+  private interruptableSleep = new InterruptableSleep();
 
   constructor(
     private rollupDb: RollupDb,
     private blockchain: Blockchain,
-    private maxProviderGasPrice: bigint,
+    private maxFeePerGas: bigint,
+    private maxPriorityFeePerGas: bigint,
     private gasLimit: number,
+    private callDataLimit: number,
     private metrics: Metrics,
+    private log = createLogger('RollupPublisher'),
   ) {
-    this.interruptPromise = new Promise(resolve => (this.interruptResolve = resolve));
     this.ethereumRpc = new EthereumRpc(blockchain.getProvider());
   }
 
-  private async awaitGasPriceBelowThresholdAndSufficientBalance(rollupTxs: RollupTxs, signerAddress: EthAddress) {
-    while (!this.interrupted) {
-      const { maxFeePerGas } = await this.blockchain.getFeeData();
-
-      if (this.maxProviderGasPrice) {
-        // Wait until gas price is below threshold.
-        if (maxFeePerGas > this.maxProviderGasPrice) {
-          console.log(`Gas price too high at ${maxFeePerGas} wei. Waiting till below ${this.maxProviderGasPrice}...`);
-          await this.sleepOrInterrupted(60000);
-          continue;
-        }
-      }
-
-      // Estimate the total gas for all txs.
+  private async awaitGasPriceBelowThresholdAndSufficientBalance(signerAddress: EthAddress, estimatedGas: number) {
+    while (true) {
+      // Get the previous blocks base fee.
+      const { baseFeePerGas } = await this.ethereumRpc.getBlockByNumber('latest');
+      // We expect to pay roughly the same, plus our priority fee.
+      const estimatedFeePerGas = baseFeePerGas + this.maxPriorityFeePerGas;
       const currentBalance = await this.ethereumRpc.getBalance(signerAddress);
-      const { totalGas, estimateError } = await this.estimateTotalGas(rollupTxs);
-      if (totalGas === undefined) {
-        console.log(`Unable to estimate gas: ${estimateError.message}. Will retry...`);
-        await this.sleepOrInterrupted(60000);
+      // We need to have at least this balance to service our max fee.
+      const requiredBalance = this.maxFeePerGas * BigInt(estimatedGas);
+      // Assuming we just pay the base and priority fee, this would be our cost.
+      const estimatedCost = estimatedFeePerGas * BigInt(estimatedGas);
+
+      this.log(`Signer address: ${signerAddress.toString()}`);
+      this.log(`Signer balance: ${fromBaseUnits(currentBalance, 18, 3)} ETH`);
+      this.log(`Max fee per gas: ${fromBaseUnits(this.maxFeePerGas, 9, 3)} gwei`);
+      this.log(`Estimated fee per gas: ${fromBaseUnits(estimatedFeePerGas, 9, 3)} gwei`);
+      this.log(`Estimated gas: ${estimatedGas}`);
+      this.log(`Required balance: ${fromBaseUnits(requiredBalance, 18, 3)} ETH`);
+      this.log(`Estimated cost: ${fromBaseUnits(estimatedCost, 18, 3)} ETH`);
+
+      // Wait until gas price is below threshold.
+      if (estimatedFeePerGas > this.maxFeePerGas) {
+        this.log(`Gas price too high. Waiting till below max fee per gas...`);
+        await this.interruptableSleep.sleep(60000);
         continue;
       }
 
       // Wait until we have enough funds to send all txs.
-      const required = BigInt(totalGas) * maxFeePerGas;
-      if (currentBalance < required) {
-        console.log(`Insufficient funds. Balance ${currentBalance}, required ${required} wei. Awaiting top up...`);
-        await this.sleepOrInterrupted(60000);
+      if (currentBalance < requiredBalance) {
+        this.log(`Insufficient funds. Awaiting top up...`);
+        await this.interruptableSleep.sleep(60000);
         continue;
       }
 
-      console.log(`Current gas price: ${maxFeePerGas}`);
-      console.log(`Estimated total gas: ${totalGas}`);
-      console.log(`Estimated total cost: ${fromBaseUnits(required, 18, 3)} ETH`);
       break;
     }
   }
 
-  private async estimateTotalGas(rollupTxs: RollupTxs) {
-    const { rollupProofTx, offchainDataTxs } = rollupTxs;
-    const txs = [...offchainDataTxs, rollupProofTx];
-    try {
-      const txsGas = await Promise.all(txs.map(tx => this.blockchain.estimateGas(tx)));
-      return { totalGas: txsGas.reduce((a, g) => a + g, 0) };
-    } catch (err) {
-      return { estimateError: err as Error };
-    }
-  }
-
-  public async publishRollup(rollup: RollupDao) {
-    console.log(`Publishing rollup: ${rollup.id}`);
+  public async publishRollup(rollup: RollupDao, estimatedGas: number) {
+    this.log(`Publishing rollup: ${rollup.id}`);
     const endTimer = this.metrics.publishTimer();
 
     const rollupTxs = await this.createTxData(rollup);
@@ -96,11 +88,8 @@ export class RollupPublisher {
     ];
     const [defaultSignerAddress] = await this.ethereumRpc.getAccounts();
 
-    mainLoop: while (!this.interrupted) {
-      await this.awaitGasPriceBelowThresholdAndSufficientBalance(rollupTxs, defaultSignerAddress);
-      if (this.interrupted) {
-        break;
-      }
+    mainLoop: while (true) {
+      await this.awaitGasPriceBelowThresholdAndSufficientBalance(defaultSignerAddress, estimatedGas);
 
       let nonce = await this.ethereumRpc.getTransactionCount(defaultSignerAddress);
 
@@ -110,11 +99,14 @@ export class RollupPublisher {
         if (success) {
           continue;
         }
-        console.log(`Sending ${name} of size ${tx.length} with nonce ${nonce}...`);
-        txStatuses[i].txHash = await this.sendTx(tx, nonce++);
+        this.log(`Sending ${name} of size ${tx.length} with nonce ${nonce}...`);
+        txStatuses[i].txHash = await this.sendTx(tx, {
+          nonce: nonce++,
+          gasLimit: this.gasLimit,
+          maxFeePerGas: this.maxFeePerGas,
+          maxPriorityFeePerGas: this.maxPriorityFeePerGas,
+        });
       }
-      // If interrupted, one or more txHash will be undefined.
-      if (txStatuses.some(s => s.txHash === undefined)) return false;
 
       // All txs have been sent. Save the last txHash.
       await this.rollupDb.confirmSent(rollup.id, txStatuses[txStatuses.length - 1].txHash!);
@@ -127,22 +119,21 @@ export class RollupPublisher {
         }
 
         const receipt = await this.getTransactionReceipt(txHash!);
-        if (!receipt) return false;
 
         if (receipt.status) {
           txStatuses[i].success = true;
         } else {
-          console.log(`Transaction failed (${name}): ${txHash!.toString()}`);
+          this.log(`Transaction failed (${name}): ${txHash!.toString()}`);
           if (receipt.revertError) {
-            console.log(`Revert Error: ${receipt.revertError.name}(${receipt.revertError.params.join(', ')})`);
+            this.log(`Revert Error: ${receipt.revertError.name}(${receipt.revertError.params.join(', ')})`);
 
             // We no no longer continue trying to publish if contract state changed.
             if (receipt.revertError.name === 'INCORRECT_STATE_HASH') {
-              console.log('Publish failed. Contract state changed underfoot.');
+              this.log('Publish failed. Contract state changed underfoot.');
               return false;
             }
           }
-          await this.sleepOrInterrupted(60000);
+          await this.interruptableSleep.sleep(60000);
 
           // We will loop back around, to resend any unsuccessful txs.
           continue mainLoop;
@@ -151,25 +142,19 @@ export class RollupPublisher {
 
       // All succeeded.
       endTimer();
+      this.log('Rollup successfully published.');
       return true;
     }
-
-    return false;
   }
 
   /**
-   * Calling `interrupt` will cause any in progress call to `publishRollup` to return `false` asap.
-   * Be warned, the call may return false even if the tx subsequently gets successfully mined.
-   * In practice this shouldn't matter, as we'll only ever be calling `interrupt` when we know it's going to fail.
-   * A call to `clearInterrupt` is required before you can continue publishing.
+   * Calling `interrupt` will cause any sleeping part of publishRollup to throw an InterruptError.
    */
   public interrupt() {
-    this.interrupted = true;
-    this.interruptResolve();
+    this.interruptableSleep.interrupt(true);
   }
 
   private async createTxData(rollup: RollupDao) {
-    const proof = rollup.rollupProof.proofData;
     const txs = rollup.rollupProof.txs;
     const offchainTxData = txs.map(tx => tx.offchainTxData);
     const jsTxs = txs.filter(tx => tx.signature);
@@ -181,33 +166,34 @@ export class RollupPublisher {
         signatures.push(tx.signature!);
       }
     }
-    return await this.blockchain.createRollupTxs(proof, signatures, offchainTxData);
+    return await this.blockchain.createRollupTxs(
+      rollup.rollupProof.encodedProofData,
+      signatures,
+      offchainTxData,
+      this.callDataLimit,
+    );
   }
 
-  private async sendTx(txData: Buffer, nonce?: number) {
-    while (!this.interrupted) {
+  private async sendTx(txData: Buffer, options: SendTxOptions) {
+    while (true) {
       try {
-        return await this.blockchain.sendTx(txData, { gasLimit: this.gasLimit, nonce });
+        return await this.blockchain.sendTx(txData, options);
       } catch (err: any) {
-        console.log(err.message.slice(0, 500));
-        console.log('Will retry in 60s...');
-        await this.sleepOrInterrupted(60000);
+        this.log(err.message.slice(0, 500));
+        this.log('Will retry in 60s...');
+        await this.interruptableSleep.sleep(60000);
       }
     }
   }
 
   private async getTransactionReceipt(txHash: TxHash) {
-    while (!this.interrupted) {
+    while (true) {
       try {
         return await this.blockchain.getTransactionReceiptSafe(txHash, 300);
       } catch (err) {
-        console.log(err);
-        await this.sleepOrInterrupted(60000);
+        this.log(err);
+        await this.interruptableSleep.sleep(60000);
       }
     }
-  }
-
-  private async sleepOrInterrupted(ms: number) {
-    await Promise.race([new Promise(resolve => setTimeout(resolve, ms)), this.interruptPromise]);
   }
 }

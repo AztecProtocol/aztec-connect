@@ -12,6 +12,8 @@ import { RollupCreator } from './rollup_creator';
 import { RollupDb } from './rollup_db';
 import { RollupPublisher } from './rollup_publisher';
 import { TxFeeResolver } from './tx_fee_resolver';
+import { fromBaseUnits } from '@aztec/blockchain';
+import { createLogger } from '@aztec/barretenberg/log';
 
 export class RollupPipeline {
   private pipelineCoordinator: PipelineCoordinator;
@@ -27,20 +29,38 @@ export class RollupPipeline {
     rollupBeneficiary: EthAddress,
     publishInterval: number,
     flushAfterIdle: number,
-    maxProviderGasPrice: bigint,
+    maxFeePerGas: bigint,
+    maxPriorityFeePerGas: bigint,
     gasLimit: number,
     numInnerRollupTxs: number,
     numOuterRollupProofs: number,
     bridgeResolver: BridgeResolver,
+    maxCallDataPerRollup: number,
+    private log = createLogger('RollupPipeline'),
   ) {
     const innerRollupSize = 1 << Math.ceil(Math.log2(numInnerRollupTxs));
     const outerRollupSize = 1 << Math.ceil(Math.log2(innerRollupSize * numOuterRollupProofs));
 
-    console.log(
-      `Pipeline inner_txs/outer_txs/rollup_size: ${numInnerRollupTxs}/${numOuterRollupProofs}/${outerRollupSize}`,
-    );
+    this.log('New pipeline...');
+    this.log(`  numInnerRollupTxs: ${numInnerRollupTxs}`);
+    this.log(`  numOuterRollupProofs: ${numOuterRollupProofs}`);
+    this.log(`  rollupSize: ${outerRollupSize}`);
+    this.log(`  publishInterval: ${publishInterval}s`);
+    this.log(`  flushAfterIdle: ${flushAfterIdle}s`);
+    this.log(`  gasLimit: ${gasLimit}`);
+    this.log(`  maxCallDataPerRollup: ${maxCallDataPerRollup}`);
+    this.log(`  maxFeePerGas: ${fromBaseUnits(maxFeePerGas, 9, 2)} gwei`);
+    this.log(`  maxPriorityFeePerGas: ${fromBaseUnits(maxPriorityFeePerGas, 9, 2)} gwei`);
 
-    const rollupPublisher = new RollupPublisher(rollupDb, blockchain, maxProviderGasPrice, gasLimit, metrics);
+    const rollupPublisher = new RollupPublisher(
+      rollupDb,
+      blockchain,
+      maxFeePerGas,
+      maxPriorityFeePerGas,
+      gasLimit,
+      maxCallDataPerRollup,
+      metrics,
+    );
     const rollupAggregator = new RollupAggregator(
       proofGenerator,
       rollupDb,
@@ -76,6 +96,8 @@ export class RollupPipeline {
       publishInterval,
       flushAfterIdle,
       bridgeResolver,
+      maxCallDataPerRollup,
+      gasLimit,
     );
   }
 
@@ -88,7 +110,7 @@ export class RollupPipeline {
   }
 
   public async start() {
-    return this.pipelineCoordinator.start();
+    return await this.pipelineCoordinator.start();
   }
 
   public async stop() {
@@ -112,25 +134,31 @@ export class RollupPipelineFactory {
     private rollupBeneficiary: EthAddress,
     private publishInterval: number,
     private flushAfterIdle: number,
-    private maxProviderGasPrice: bigint,
+    private maxFeePerGas: bigint,
+    private maxPriorityFeePerGas: bigint,
     private gasLimit: number,
     private numInnerRollupTxs: number,
     private numOuterRollupProofs: number,
     private bridgeResolver: BridgeResolver,
+    private maxCallDataPerRollup: number,
   ) {}
 
   public setConf(
     txFeeResolver: TxFeeResolver,
     publishInterval: number,
     flushAfterIdle: number,
-    maxProviderGasPrice: bigint,
+    maxFeePerGas: bigint,
+    maxPriorityFeePerGas: bigint,
     gasLimit: number,
+    rollupBeneficiary: EthAddress,
   ) {
     this.txFeeResolver = txFeeResolver;
     this.publishInterval = publishInterval;
     this.flushAfterIdle = flushAfterIdle;
-    this.maxProviderGasPrice = maxProviderGasPrice;
+    this.maxFeePerGas = maxFeePerGas;
+    this.maxPriorityFeePerGas = maxPriorityFeePerGas;
     this.gasLimit = gasLimit;
+    this.rollupBeneficiary = rollupBeneficiary;
   }
 
   public getRollupSize() {
@@ -139,7 +167,7 @@ export class RollupPipelineFactory {
     return outerRollupSize;
   }
 
-  public async create() {
+  public create() {
     return new RollupPipeline(
       this.proofGenerator,
       this.blockchain,
@@ -151,11 +179,13 @@ export class RollupPipelineFactory {
       this.rollupBeneficiary,
       this.publishInterval,
       this.flushAfterIdle,
-      this.maxProviderGasPrice,
+      this.maxFeePerGas,
+      this.maxPriorityFeePerGas,
       this.gasLimit,
       this.numInnerRollupTxs,
       this.numOuterRollupProofs,
       this.bridgeResolver,
+      this.maxCallDataPerRollup,
     );
   }
 }

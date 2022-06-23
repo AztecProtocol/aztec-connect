@@ -7,10 +7,10 @@ import {
   deployElementBridge,
   deployFeeDistributor,
   deployLidoBridge,
-  deployMockVerifier,
   deployRollupProcessor,
   deployVerifier,
 } from './deployers';
+import { deployAceOfZk } from './deployers/deploy_ace_of_zk';
 
 const gasLimit = 5000000;
 const escapeBlockLower = 2160;
@@ -23,13 +23,14 @@ const LIDO_WSTETH_ADDRESS = '0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0';
 const UNISWAP_ROUTER_ADDRESS = '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D';
 const DAI_PRICE_FEED_ADDRESS = '0x773616E4d11A78F511299002da57A0a94577F1f4';
 const FAST_GAS_PRICE_FEED_ADDRESS = '0x169e633a2d1e6c10dd91238ba11c4a708dfef37c';
+const LIDO_REFERRAL_ADDRESS = '0xA57EC00BdbA2904DA1244Db6fd770e0874f22E42';
 
 const DEFAULT_ADMIN_ROLE = '0x0000000000000000000000000000000000000000000000000000000000000000';
 const EMERGENCY_ROLE = keccak256(toUtf8Bytes('EMERGENCY_ROLE'));
 const OWNER_ROLE = keccak256(toUtf8Bytes('OWNER_ROLE'));
 
-export async function deployMainnet(signer: Signer, { dataTreeSize, roots }: TreeInitData, vk?: string) {
-  const verifier = vk ? await deployVerifier(signer, vk) : await deployMockVerifier(signer);
+export async function deployMainnet(signer: Signer, { dataTreeSize, roots }: TreeInitData, vk: string) {
+  const verifier = await deployVerifier(signer, vk);
   const defiProxy = await deployDefiBridgeProxy(signer);
   const { rollup, proxyAdmin } = await deployRollupProcessor(
     signer,
@@ -53,7 +54,8 @@ export async function deployMainnet(signer: Signer, { dataTreeSize, roots }: Tre
 
   const expiryCutOff = new Date('01 Sept 2022 00:00:00 GMT');
   await deployElementBridge(signer, rollup, ['dai'], expiryCutOff);
-  await deployLidoBridge(signer, rollup);
+  await deployLidoBridge(signer, rollup, LIDO_REFERRAL_ADDRESS);
+  await deployAceOfZk(signer, rollup);
 
   // Transfers ownership of the proxyadmin to the multisig
   await proxyAdmin.transferProxyAdminOwnership(EthAddress.fromString(MULTI_SIG_ADDRESS));
@@ -61,13 +63,13 @@ export async function deployMainnet(signer: Signer, { dataTreeSize, roots }: Tre
   const priceFeeds = [FAST_GAS_PRICE_FEED_ADDRESS, DAI_PRICE_FEED_ADDRESS];
 
   // Grant roles to multisig wallets
-  await rollup.grantRole(DEFAULT_ADMIN_ROLE, MULTI_SIG_ADDRESS);
-  await rollup.grantRole(OWNER_ROLE, MULTI_SIG_ADDRESS);
-  await rollup.grantRole(EMERGENCY_ROLE, EMERGENCY_MULTI_SIG_ADDRESS);
+  await rollup.grantRole(DEFAULT_ADMIN_ROLE, MULTI_SIG_ADDRESS, { gasLimit });
+  await rollup.grantRole(OWNER_ROLE, MULTI_SIG_ADDRESS, { gasLimit });
+  await rollup.grantRole(EMERGENCY_ROLE, EMERGENCY_MULTI_SIG_ADDRESS, { gasLimit });
 
   // Revoke roles from the deployer
-  await rollup.revokeRole(EMERGENCY_ROLE, await signer.getAddress());
-  await rollup.revokeRole(OWNER_ROLE, await signer.getAddress());
+  await rollup.revokeRole(EMERGENCY_ROLE, await signer.getAddress(), { gasLimit });
+  await rollup.revokeRole(OWNER_ROLE, await signer.getAddress(), { gasLimit });
 
   // TODO: Revoking of the default admin role should be done manually with the multi-sig to ensure correct setup
 

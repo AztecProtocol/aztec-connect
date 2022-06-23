@@ -10,7 +10,7 @@ import { filterUndefined } from './filter_undefined';
 export class MigrateAccountController {
   private proofOutput!: ProofOutput;
   private feeProofOutput?: ProofOutput;
-  private txId!: TxId;
+  private txIds: TxId[] = [];
 
   constructor(
     public readonly userId: GrumpkinAddress,
@@ -40,7 +40,7 @@ export class MigrateAccountController {
     this.proofOutput = await this.core.createAccountProof(proofInput, txRefNo);
 
     if (requireFeePayingTx) {
-      const accountRequired = !spendingPublicKey.equals(this.userId);
+      const spendingKeyRequired = !spendingPublicKey.equals(this.userId);
       const feeProofInput = await this.core.createPaymentProofInput(
         this.userId,
         this.fee.assetId,
@@ -50,7 +50,7 @@ export class MigrateAccountController {
         BigInt(0),
         BigInt(0),
         this.userId,
-        accountRequired,
+        spendingKeyRequired,
         undefined,
         spendingPublicKey,
         2,
@@ -64,14 +64,14 @@ export class MigrateAccountController {
     if (!this.proofOutput) {
       throw new Error('Call createProof() first.');
     }
-    [this.txId] = await this.core.sendProofs(filterUndefined([this.proofOutput, this.feeProofOutput]));
-    return this.txId;
+    this.txIds = await this.core.sendProofs(filterUndefined([this.proofOutput, this.feeProofOutput]));
+    return this.txIds[0];
   }
 
   public async awaitSettlement(timeout?: number) {
-    if (!this.txId) {
+    if (!this.txIds.length) {
       throw new Error(`Call ${!this.proofOutput ? 'createProof()' : 'send()'} first.`);
     }
-    await this.core.awaitSettlement(this.txId, timeout);
+    await Promise.all(this.txIds.map(txId => this.core.awaitSettlement(txId, timeout)));
   }
 }

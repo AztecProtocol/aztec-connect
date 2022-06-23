@@ -1,3 +1,1 @@
-module.exports = {
-  ...require('../.eslintrc'),
-};
+../shared-config/.eslintrc.js

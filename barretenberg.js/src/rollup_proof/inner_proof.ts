@@ -6,7 +6,7 @@ export class InnerProofData {
   static LENGTH = InnerProofData.NUM_PUBLIC_INPUTS * 32;
   static PADDING = InnerProofData.fromBuffer(Buffer.alloc(InnerProofData.LENGTH));
 
-  public txId: Buffer;
+  public txId_?: Buffer;
 
   constructor(
     public proofId: ProofId,
@@ -16,9 +16,14 @@ export class InnerProofData {
     public nullifier2: Buffer,
     public publicValue: Buffer,
     public publicOwner: Buffer,
-    public assetId: Buffer,
-  ) {
-    this.txId = createTxId(this.toBuffer());
+    public publicAssetId: Buffer,
+  ) {}
+
+  public get txId(): Buffer {
+    if (!this.txId_) {
+      this.txId_ = createTxId(this.toBuffer());
+    }
+    return this.txId_;
   }
 
   getDepositSigningData() {
@@ -34,7 +39,7 @@ export class InnerProofData {
       this.nullifier2,
       this.publicValue,
       this.publicOwner,
-      this.assetId,
+      this.publicAssetId,
     ]);
   }
 
@@ -58,7 +63,7 @@ export class InnerProofData {
     dataStart += 32;
     const publicOwner = innerPublicInputs.slice(dataStart, dataStart + 32);
     dataStart += 32;
-    const assetId = innerPublicInputs.slice(dataStart, dataStart + 32);
+    const publicAssetId = innerPublicInputs.slice(dataStart, dataStart + 32);
     dataStart += 32;
 
     return new InnerProofData(
@@ -69,7 +74,7 @@ export class InnerProofData {
       nullifier2,
       publicValue,
       publicOwner,
-      assetId,
+      publicAssetId,
     );
   }
 }

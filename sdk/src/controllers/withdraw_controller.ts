@@ -10,7 +10,7 @@ import { filterUndefined } from './filter_undefined';
 export class WithdrawController {
   private proofOutput!: ProofOutput;
   private feeProofOutput?: ProofOutput;
-  private txId!: TxId;
+  private txIds: TxId[] = [];
 
   constructor(
     public readonly userId: GrumpkinAddress,
@@ -31,7 +31,7 @@ export class WithdrawController {
     const privateInput = value + (!requireFeePayingTx ? this.fee.value : BigInt(0));
     const txRefNo = requireFeePayingTx ? createTxRefNo() : 0;
     const spendingPublicKey = this.userSigner.getPublicKey();
-    const accountRequired = !spendingPublicKey.equals(this.userId);
+    const spendingKeyRequired = !spendingPublicKey.equals(this.userId);
 
     const proofInput = await this.core.createPaymentProofInput(
       this.userId,
@@ -42,7 +42,7 @@ export class WithdrawController {
       BigInt(0),
       BigInt(0),
       this.userId,
-      accountRequired,
+      spendingKeyRequired,
       this.recipient,
       spendingPublicKey,
       2,
@@ -60,7 +60,7 @@ export class WithdrawController {
         BigInt(0),
         BigInt(0),
         this.userId,
-        accountRequired,
+        spendingKeyRequired,
         undefined,
         spendingPublicKey,
         2,
@@ -74,14 +74,14 @@ export class WithdrawController {
     if (!this.proofOutput) {
       throw new Error('Call createProof() first.');
     }
-    [this.txId] = await this.core.sendProofs(filterUndefined([this.proofOutput, this.feeProofOutput]));
-    return this.txId;
+    this.txIds = await this.core.sendProofs(filterUndefined([this.proofOutput, this.feeProofOutput]));
+    return this.txIds[0];
   }
 
   public async awaitSettlement(timeout?: number) {
-    if (!this.txId) {
+    if (!this.txIds.length) {
       throw new Error(`Call ${!this.proofOutput ? 'createProof()' : 'send()'} first.`);
     }
-    await this.core.awaitSettlement(this.txId, timeout);
+    await Promise.all(this.txIds.map(txId => this.core.awaitSettlement(txId, timeout)));
   }
 }

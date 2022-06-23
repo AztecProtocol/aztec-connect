@@ -3,6 +3,7 @@ import { PooledFftFactory } from '@aztec/barretenberg/fft';
 import { PooledPippenger } from '@aztec/barretenberg/pippenger';
 import { ServerRollupProvider } from '@aztec/barretenberg/rollup_provider';
 import { BarretenbergWasm, WorkerPool } from '@aztec/barretenberg/wasm';
+import { PooledNoteDecryptor } from '@aztec/barretenberg/note_algorithms';
 import isNode from 'detect-node';
 import { mkdirSync } from 'fs';
 import levelup, { LevelUp } from 'levelup';
@@ -10,9 +11,9 @@ import { createConnection } from 'typeorm';
 import { CoreSdk, CoreSdkOptions } from '../../core_sdk';
 import { DexieDatabase, getOrmConfig, SQLDatabase } from '../../database';
 import { getNumWorkers } from '../get_num_workers';
-import { createLogger } from '@aztec/barretenberg/debug';
+import { createDebugLogger } from '@aztec/barretenberg/log';
 
-const debug = createLogger('bb:create_vanilla_core_sdk');
+const debug = createDebugLogger('bb:create_vanilla_core_sdk');
 
 export function getLevelDb(memoryDb = false, identifier?: string): LevelUp {
   if (isNode) {
@@ -43,8 +44,6 @@ export async function getDb(memoryDb = false, identifier?: string) {
 }
 
 export interface VanillaCoreSdkOptions extends CoreSdkOptions {
-  serverUrl: string;
-  pollInterval?: number;
   memoryDb?: boolean; // node only
   identifier?: string; // node only
   numWorkers?: number;
@@ -60,6 +59,7 @@ export async function createVanillaCoreSdk(options: VanillaCoreSdkOptions) {
   const { numWorkers = getNumWorkers() } = options;
   const wasm = await BarretenbergWasm.new();
   const workerPool = await WorkerPool.new(wasm, numWorkers);
+  const noteDecryptor = new PooledNoteDecryptor(workerPool);
   const pedersen = new PooledPedersen(wasm, workerPool);
   const pippenger = new PooledPippenger(workerPool);
   const fftFactory = new PooledFftFactory(workerPool);
@@ -72,7 +72,17 @@ export async function createVanillaCoreSdk(options: VanillaCoreSdkOptions) {
   const host = new URL(serverUrl);
   const rollupProvider = new ServerRollupProvider(host, pollInterval);
 
-  const coreSdk = new CoreSdk(leveldb, db, rollupProvider, wasm, pedersen, pippenger, fftFactory, workerPool);
+  const coreSdk = new CoreSdk(
+    leveldb,
+    db,
+    rollupProvider,
+    wasm,
+    noteDecryptor,
+    pedersen,
+    pippenger,
+    fftFactory,
+    workerPool,
+  );
   await coreSdk.init(options);
   return coreSdk;
 }

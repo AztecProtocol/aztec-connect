@@ -23,7 +23,11 @@ export class BridgeResolver {
 
   public getFullBridgeGas(bridgeId: bigint) {
     const bridgeConfig = this.getBridgeConfig(bridgeId);
-    return bridgeConfig?.gas ?? this.blockchain.getBridgeGas(bridgeId);
+    return bridgeConfig?.gas ?? this.getFullBridgeGasFromContract(bridgeId);
+  }
+
+  public getFullBridgeGasFromContract(bridgeId: bigint) {
+    return this.blockchain.getBridgeGas(bridgeId);
   }
 
   public setConf(defaultDeFiBatchSize: number, bridgeConfigs: BridgeConfig[]) {

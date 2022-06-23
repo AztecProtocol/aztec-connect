@@ -17,7 +17,7 @@ export class RollupDefiDepositProofData {
   }
 
   get bridgeId() {
-    return BridgeId.fromBuffer(this.proofData.assetId);
+    return BridgeId.fromBuffer(this.proofData.publicAssetId);
   }
 
   get deposit() {

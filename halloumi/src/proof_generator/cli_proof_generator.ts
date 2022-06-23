@@ -17,6 +17,7 @@ export class CliProofGenerator implements ProofGenerator {
   private proc?: ChildProcess;
   private stdout: any;
   private runningPromise?: Promise<void>;
+  private binaryPromise?: Promise<void>;
   private execQueue = new MemoryFifo<() => Promise<void>>();
 
   constructor(
@@ -64,14 +65,14 @@ export class CliProofGenerator implements ProofGenerator {
     return data;
   }
 
-  public async getJoinSplitVk() {
+  public getJoinSplitVk() {
     return this.serialExecute(() => {
       this.proc!.stdin!.write(numToUInt32BE(CommandCodes.GET_JOIN_SPLIT_VK));
       return this.readVector();
     });
   }
 
-  public async getAccountVk() {
+  public getAccountVk() {
     return this.serialExecute(() => {
       this.proc!.stdin!.write(numToUInt32BE(CommandCodes.GET_ACCOUNT_VK));
       return this.readVector();
@@ -90,7 +91,7 @@ export class CliProofGenerator implements ProofGenerator {
       throw new Error('Failed to initialize rollup_cli.');
     }
 
-    this.execQueue.process(fn => fn());
+    this.runningPromise = this.execQueue.process(fn => fn());
     console.log('Proof generator initialized.');
   }
 
@@ -100,6 +101,9 @@ export class CliProofGenerator implements ProofGenerator {
       this.proc.kill('SIGINT');
       this.proc = undefined;
     }
+    if (this.binaryPromise) {
+      await this.binaryPromise;
+    }
     if (this.runningPromise) {
       await this.runningPromise;
     }
@@ -107,14 +111,9 @@ export class CliProofGenerator implements ProofGenerator {
 
   /**
    * TODO: Should signal to the rollup_cli to stop what it's doing and await new work.
-   * This will require the rollup_cli to fork child processes, and for the parent process to terminate the child.
+   * This will require the rollup_cli to fork a child process after producing required proving keys.
    */
-  public interrupt() {}
-
-  /**
-   * TODO: Clear the interrupt flag allowing for continued proof creation.
-   */
-  public clearInterrupt() {}
+  public async interrupt() {}
 
   private async createProofInternal(buffer: Buffer) {
     this.proc!.stdin!.write(buffer);
@@ -145,7 +144,7 @@ export class CliProofGenerator implements ProofGenerator {
     });
   }
 
-  public async createProof(data: Buffer) {
+  public createProof(data: Buffer) {
     return this.serialExecute(() => this.createProofInternal(data));
   }
 
@@ -200,7 +199,7 @@ export class CliProofGenerator implements ProofGenerator {
     });
     rl.on('line', (line: string) => console.log('rollup_cli: ' + line.trim()));
 
-    this.runningPromise = new Promise(resolve => {
+    this.binaryPromise = new Promise(resolve => {
       proc.on('close', (code, signal) => {
         this.proc = undefined;
         if (code !== 0) {

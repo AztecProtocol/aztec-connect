@@ -1,3 +1,4 @@
+import { EthAddress } from '../address';
 import {
   BlockchainStatus,
   blockchainStatusFromJson,
@@ -6,9 +7,11 @@ import {
 } from '../blockchain';
 import { BridgeConfig, bridgeConfigFromJson, BridgeConfigJson, bridgeConfigToJson } from './bridge_config';
 import { BridgeStatus, bridgeStatusFromJson, BridgeStatusJson, bridgeStatusToJson } from './bridge_status';
+import { privacySetsFromJson, privacySetsToJson, PrivacySet, PrivacySetJson } from './privacy_set';
 
 export * from './bridge_config';
 export * from './bridge_status';
+export * from './privacy_set';
 
 export interface RuntimeConfig {
   acceptingTxs: boolean;
@@ -20,11 +23,14 @@ export interface RuntimeConfig {
   maxFeeGasPrice: bigint;
   feeGasPriceMultiplier: number;
   feeRoundUpSignificantFigures: number;
-  maxProviderGasPrice: bigint;
+  maxFeePerGas: bigint;
+  maxPriorityFeePerGas: bigint;
   maxUnsettledTxs: number;
   defaultDeFiBatchSize: number;
   bridgeConfigs: BridgeConfig[];
   feePayingAssetIds: number[];
+  privacySets: { [key: number]: PrivacySet[] };
+  rollupBeneficiary?: EthAddress;
 }
 
 export interface RuntimeConfigJson {
@@ -37,47 +43,68 @@ export interface RuntimeConfigJson {
   maxFeeGasPrice: string;
   feeGasPriceMultiplier: number;
   feeRoundUpSignificantFigures: number;
-  maxProviderGasPrice: string;
+  maxFeePerGas: string;
+  maxPriorityFeePerGas: string;
   maxUnsettledTxs: number;
   defaultDeFiBatchSize: number;
   bridgeConfigs: BridgeConfigJson[];
   feePayingAssetIds: number[];
+  privacySets: { [key: string]: PrivacySetJson[] };
+  rollupBeneficiary?: string;
 }
 
 export const runtimeConfigToJson = ({
   maxFeeGasPrice,
-  maxProviderGasPrice,
+  maxFeePerGas,
+  maxPriorityFeePerGas,
   bridgeConfigs,
+  privacySets,
+  rollupBeneficiary,
   ...rest
 }: RuntimeConfig): RuntimeConfigJson => ({
   ...rest,
   maxFeeGasPrice: maxFeeGasPrice.toString(),
-  maxProviderGasPrice: maxProviderGasPrice.toString(),
+  maxFeePerGas: maxFeePerGas.toString(),
+  maxPriorityFeePerGas: maxPriorityFeePerGas.toString(),
   bridgeConfigs: bridgeConfigs.map(bridgeConfigToJson),
+  privacySets: privacySetsToJson(privacySets),
+  rollupBeneficiary: rollupBeneficiary ? rollupBeneficiary.toString() : undefined,
 });
 
 export const runtimeConfigFromJson = ({
   maxFeeGasPrice,
-  maxProviderGasPrice,
+  maxFeePerGas,
+  maxPriorityFeePerGas,
   bridgeConfigs,
+  privacySets,
+  rollupBeneficiary,
   ...rest
 }: RuntimeConfigJson): RuntimeConfig => ({
   ...rest,
   maxFeeGasPrice: BigInt(maxFeeGasPrice),
-  maxProviderGasPrice: BigInt(maxProviderGasPrice),
+  maxFeePerGas: BigInt(maxFeePerGas),
+  maxPriorityFeePerGas: BigInt(maxPriorityFeePerGas),
   bridgeConfigs: bridgeConfigs.map(bridgeConfigFromJson),
+  privacySets: privacySetsFromJson(privacySets),
+  rollupBeneficiary: rollupBeneficiary ? EthAddress.fromString(rollupBeneficiary) : undefined,
 });
 
 export const partialRuntimeConfigFromJson = ({
   maxFeeGasPrice,
-  maxProviderGasPrice,
+  maxFeePerGas,
+  maxPriorityFeePerGas,
   bridgeConfigs,
+  privacySets,
+  rollupBeneficiary,
   ...rest
 }: Partial<RuntimeConfigJson>): Partial<RuntimeConfig> => ({
   ...rest,
   ...(maxFeeGasPrice !== undefined ? { maxFeeGasPrice: BigInt(maxFeeGasPrice) } : {}),
-  ...(maxProviderGasPrice !== undefined ? { maxProviderGasPrice: BigInt(maxProviderGasPrice) } : {}),
+  ...(maxFeePerGas !== undefined ? { maxFeePerGas: BigInt(maxFeePerGas) } : {}),
+  ...(maxPriorityFeePerGas !== undefined ? { maxPriorityFeePerGas: BigInt(maxPriorityFeePerGas) } : {}),
   ...(bridgeConfigs ? { bridgeConfigs: bridgeConfigs.map(bridgeConfigFromJson) } : {}),
+  ...(privacySets ? { privacySets: privacySetsFromJson(privacySets) } : {}),
+  ...(rollupBeneficiary ? { rollupBeneficiary: EthAddress.fromString(rollupBeneficiary) } : {}),
 });
 
 export interface RollupProviderStatus {

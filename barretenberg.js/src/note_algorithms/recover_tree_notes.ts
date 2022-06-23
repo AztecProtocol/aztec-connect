@@ -1,11 +1,11 @@
 import { GrumpkinAddress } from '../address';
-import { createLogger } from '../debug';
+import { createDebugLogger } from '../log';
 import { Grumpkin } from '../ecc/grumpkin';
 import { DecryptedNote } from './decrypted_note';
 import { NoteAlgorithms } from './note_algorithms';
 import { TreeNote } from './tree_note';
 
-const debug = createLogger('recover_tree_notes');
+const debug = createDebugLogger('recover_tree_notes');
 
 export const recoverTreeNotes = (
   decryptedNotes: (DecryptedNote | undefined)[],

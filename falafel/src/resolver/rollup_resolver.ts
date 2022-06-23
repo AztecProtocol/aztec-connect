@@ -19,7 +19,7 @@ export class RollupResolver {
   }
 
   @Query(() => RollupType, { nullable: true })
-  async rollup(@Arg('id', () => Int) id: number) {
+  rollup(@Arg('id', () => Int) id: number) {
     return this.rollupDb.getRollup(id);
   }
 
@@ -40,63 +40,63 @@ export class RollupResolver {
   }
 
   @FieldResolver()
-  async mined(@Root() { mined }: RollupDao) {
+  mined(@Root() { mined }: RollupDao) {
     return mined;
   }
 
   @FieldResolver()
-  async oldDataRoot(@Root() { rollupProof: { proofData } }: RollupDao) {
-    const rollup = proofData ? RollupProofData.fromBuffer(proofData) : undefined;
+  oldDataRoot(@Root() { rollupProof: { encodedProofData } }: RollupDao) {
+    const rollup = encodedProofData ? RollupProofData.decode(encodedProofData) : undefined;
     return rollup ? rollup.oldDataRoot : undefined;
   }
 
   @FieldResolver()
-  async proofData(@Root() { rollupProof: { proofData } }: RollupDao) {
-    return proofData;
+  proofData(@Root() { rollupProof: { encodedProofData } }: RollupDao) {
+    return encodedProofData ? RollupProofData.decode(encodedProofData).toBuffer() : undefined;
   }
 
   @FieldResolver()
-  async dataRoot(@Root() { rollupProof: { proofData } }: RollupDao) {
-    const rollup = proofData ? RollupProofData.fromBuffer(proofData) : undefined;
+  dataRoot(@Root() { rollupProof: { encodedProofData } }: RollupDao) {
+    const rollup = encodedProofData ? RollupProofData.decode(encodedProofData) : undefined;
     return rollup ? rollup.newDataRoot : undefined;
   }
 
   @FieldResolver()
-  async oldNullifierRoot(@Root() { rollupProof: { proofData } }: RollupDao) {
-    const rollup = proofData ? RollupProofData.fromBuffer(proofData) : undefined;
+  oldNullifierRoot(@Root() { rollupProof: { encodedProofData } }: RollupDao) {
+    const rollup = encodedProofData ? RollupProofData.decode(encodedProofData) : undefined;
     return rollup ? rollup.oldNullRoot : undefined;
   }
 
   @FieldResolver()
-  async nullifierRoot(@Root() { rollupProof: { proofData } }: RollupDao) {
-    const rollup = proofData ? RollupProofData.fromBuffer(proofData) : undefined;
+  nullifierRoot(@Root() { rollupProof: { encodedProofData } }: RollupDao) {
+    const rollup = encodedProofData ? RollupProofData.decode(encodedProofData) : undefined;
     return rollup ? rollup.newNullRoot : undefined;
   }
 
   @FieldResolver()
-  async oldDataRootsRoot(@Root() { rollupProof: { proofData } }: RollupDao) {
-    const rollup = proofData ? RollupProofData.fromBuffer(proofData) : undefined;
+  oldDataRootsRoot(@Root() { rollupProof: { encodedProofData } }: RollupDao) {
+    const rollup = encodedProofData ? RollupProofData.decode(encodedProofData) : undefined;
     return rollup ? rollup.oldDataRootsRoot : undefined;
   }
 
   @FieldResolver()
-  async dataRootsRoot(@Root() { rollupProof: { proofData } }: RollupDao) {
-    const rollup = proofData ? RollupProofData.fromBuffer(proofData) : undefined;
+  dataRootsRoot(@Root() { rollupProof: { encodedProofData } }: RollupDao) {
+    const rollup = encodedProofData ? RollupProofData.decode(encodedProofData) : undefined;
     return rollup ? rollup.newDataRootsRoot : undefined;
   }
 
   @FieldResolver(() => Int)
-  async numTxs(@Root() { rollupProof: { txs } }: RollupDao) {
+  numTxs(@Root() { rollupProof: { txs } }: RollupDao) {
     return txs.length;
   }
 
   @FieldResolver(() => Int)
-  async txs(@Root() { rollupProof }: RollupDao) {
+  txs(@Root() { rollupProof }: RollupDao) {
     return rollupProof?.txs || [];
   }
 
   @Query(() => Int)
-  async totalRollups() {
+  totalRollups() {
     return this.rollupDb.getNumSettledRollups();
   }
 }

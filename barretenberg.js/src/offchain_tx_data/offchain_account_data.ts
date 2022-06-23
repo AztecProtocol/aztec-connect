@@ -23,7 +23,7 @@ export class OffchainAccountData {
 
   static fromBuffer(buf: Buffer) {
     if (buf.length !== OffchainAccountData.SIZE) {
-      throw new Error('Invalid buffer size.');
+      throw new Error(`Invalid buffer size: ${buf.length} != ${OffchainAccountData.SIZE}`);
     }
 
     let dataStart = 0;

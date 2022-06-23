@@ -1,4 +1,5 @@
 import { EthAddress } from '@aztec/barretenberg/address';
+import { createLogger } from '@aztec/barretenberg/log';
 import { HashPath } from '@aztec/barretenberg/merkle_tree';
 import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
@@ -24,6 +25,7 @@ export class RollupAggregator {
     private numOuterRollupProofs: number,
     private rollupBeneficiary: EthAddress,
     private metrics: Metrics,
+    private log = createLogger('RollupAggregator'),
   ) {}
 
   public async aggregateRollupProofs(
@@ -34,7 +36,7 @@ export class RollupAggregator {
     bridgeIds: bigint[],
     assetIds: number[],
   ) {
-    console.log(`Creating root rollup proof with ${innerProofs.length} inner proofs...`);
+    this.log(`Creating root rollup proof with ${innerProofs.length} inner proofs...`);
 
     const rootRollup = await this.createRootRollup(
       innerProofs,
@@ -52,25 +54,26 @@ export class RollupAggregator {
       throw new Error('Failed to create root rollup proof. This should not happen.');
     }
 
-    console.log(`Creating root verifier proof...`);
+    this.log(`Creating root verifier proof...`);
 
-    const rootVerifier = await this.createRootVerifier(rootRollupProofBuf);
+    const rootVerifier = this.createRootVerifier(rootRollupProofBuf);
     const rootVerifierRequest = new RootVerifierProofRequest(rootVerifier);
     const finalProofData = await this.proofGenerator.createProof(rootVerifierRequest.toBuffer());
 
-    if (!finalProofData) {
-      throw new Error('Failed to create valid aggregate rollup.');
-    }
     end();
 
     const rollupProofData = RollupProofData.fromBuffer(finalProofData);
+    const broadcastDataLength = rollupProofData.toBuffer().length;
+    const proofBuffer = finalProofData.slice(broadcastDataLength);
     const rollupProofDao = new RollupProofDao();
     rollupProofDao.id = rollupProofData.rollupHash;
     // TypeOrm is bugged using Buffers as primaries, so there's an internalId that's a string.
     // I've mostly hidden this workaround in the entities but it's needed here.
     rollupProofDao.internalId = rollupProofData.rollupHash.toString('hex');
     rollupProofDao.txs = innerProofs.map(p => p.txs).flat();
-    rollupProofDao.proofData = finalProofData;
+    // we need to add the encoded rollup proof data concatenated with the proof buffer here
+    // just like it exists when taken from chain
+    rollupProofDao.encodedProofData = Buffer.concat([rollupProofData.encode(), proofBuffer]);
     rollupProofDao.rollupSize = this.outerRollupSize;
     rollupProofDao.created = new Date();
     rollupProofDao.dataStartIndex = innerProofs[0].dataStartIndex;
@@ -84,13 +87,11 @@ export class RollupAggregator {
 
     await this.rollupDb.addRollup(rollupDao);
 
-    await this.rollupDb.deleteTxlessRollupProofs();
-
     return rollupDao;
   }
 
-  public interrupt() {
-    // TODO: Interrupt proof creation.
+  public async interrupt() {
+    await this.proofGenerator.interrupt();
   }
 
   private async createRootRollup(
@@ -121,10 +122,11 @@ export class RollupAggregator {
       // Grows the data tree by inserting 0 at last subtree position.
       await worldStateDb.put(RollupTreeId.DATA, BigInt(endIndex), Buffer.alloc(32, 0));
     }
-    
+
     const rootRollup = new RootRollup(
       rollupId,
-      rollupProofs.map(tx => tx.proofData),
+      // the inner proofs are stored in the encoded proof data member of the DAO
+      rollupProofs.map(tx => tx.encodedProofData),
       oldDataRootsRoot,
       newDataRootsRoot,
       oldDataRootsPath,
@@ -140,7 +142,7 @@ export class RollupAggregator {
     return rootRollup;
   }
 
-  private async createRootVerifier(rootRollupProofBuf: Buffer) {
+  private createRootVerifier(rootRollupProofBuf: Buffer) {
     const rootVerifier = new RootVerifier(rootRollupProofBuf);
     return rootVerifier;
   }

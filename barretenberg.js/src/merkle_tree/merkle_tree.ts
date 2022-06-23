@@ -1,9 +1,6 @@
 import { LevelUp, LevelUpChain } from 'levelup';
 import { HashPath } from './hash_path';
 import { Hasher } from './hasher';
-import { createLogger } from '../debug';
-
-const debug = createLogger('bb:merkle_tree');
 
 const MAX_DEPTH = 32;
 
@@ -177,13 +174,12 @@ export class MerkleTree {
     const newRoot = this.hasher.compress(left, right);
     batch.put(newRoot, Buffer.concat([left, right]));
     if (!root.equals(newRoot)) {
-      await batch.del(root);
+      batch.del(root);
     }
     return newRoot;
   }
 
   public async updateElements(index: number, values: Buffer[]) {
-    debug(`update elements at index ${index} with ${values.length} leaves...`);
     const zeroBuf = Buffer.alloc(32, 0);
     return await this.updateLeafHashes(
       index,

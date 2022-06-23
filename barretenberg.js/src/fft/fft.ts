@@ -5,4 +5,5 @@ export interface Fft {
 
 export interface FftFactory {
   createFft(circuitSize: number): Promise<Fft>;
+  destroy(): Promise<void>;
 }

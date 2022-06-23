@@ -1,14 +1,16 @@
 import { Pedersen } from '@aztec/barretenberg/crypto';
-import { createLogger } from '@aztec/barretenberg/debug';
 import { FftFactory } from '@aztec/barretenberg/fft';
+import { createDebugLogger } from '@aztec/barretenberg/log';
+import { NoteDecryptor } from '@aztec/barretenberg/note_algorithms';
 import { Pippenger } from '@aztec/barretenberg/pippenger';
 import { Job, JobQueueTarget } from './job';
 import { JobQueueFftFactoryClient } from './job_queue_fft_factory';
 import { JobQueueInterface } from './job_queue_interface';
+import { JobQueueNoteDecryptorClient } from './job_queue_note_decryptor';
 import { JobQueuePedersenClient } from './job_queue_pedersen';
 import { JobQueuePippengerClient } from './job_queue_pippenger';
 
-const debug = createLogger('aztec:sdk:job_queue_worker');
+const debug = createDebugLogger('aztec:sdk:job_queue_worker');
 
 const backgroundFetchDelay = 500;
 const pingInterval = 1000;
@@ -20,11 +22,19 @@ export class JobQueueWorker {
   private newJobPromise?: Promise<void>;
   private pingTimeout!: NodeJS.Timeout;
 
+  private readonly noteDecryptor: JobQueueNoteDecryptorClient;
   private readonly pedersen: JobQueuePedersenClient;
   private readonly pippenger: JobQueuePippengerClient;
   private readonly fftFactory: JobQueueFftFactoryClient;
 
-  constructor(private jobQueue: JobQueueInterface, pedersen: Pedersen, pippenger: Pippenger, fftFactory: FftFactory) {
+  constructor(
+    private jobQueue: JobQueueInterface,
+    noteDecryptor: NoteDecryptor,
+    pedersen: Pedersen,
+    pippenger: Pippenger,
+    fftFactory: FftFactory,
+  ) {
+    this.noteDecryptor = new JobQueueNoteDecryptorClient(noteDecryptor);
     this.pedersen = new JobQueuePedersenClient(pedersen);
     this.pippenger = new JobQueuePippengerClient(pippenger);
     this.fftFactory = new JobQueueFftFactoryClient(fftFactory);
@@ -100,6 +110,8 @@ export class JobQueueWorker {
 
   private async process({ target, query, args }: Job) {
     switch (target) {
+      case JobQueueTarget.NOTE_DECRYPTOR:
+        return this.noteDecryptor[query](...args);
       case JobQueueTarget.PEDERSEN:
         return this.pedersen[query](...args);
       case JobQueueTarget.PIPPENGER:

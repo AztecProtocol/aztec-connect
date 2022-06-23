@@ -1,7 +1,7 @@
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { assetValueToJson } from '@aztec/barretenberg/asset';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
-import { joinSplitTxToJson, rollupProviderStatusToJson } from '@aztec/barretenberg/rollup_provider';
+import { depositTxToJson, rollupProviderStatusToJson } from '@aztec/barretenberg/rollup_provider';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { EventEmitter } from 'events';
 import { coreUserTxToJson } from '../core_tx';
@@ -17,7 +17,6 @@ import {
   ProofOutputJson,
   proofOutputToJson,
 } from '../proofs';
-import { userDataToJson } from '../user';
 import { CoreSdkInterface } from './core_sdk_interface';
 import { CoreSdkOptions } from './core_sdk_options';
 import { SdkEvent, sdkStatusToJson } from './sdk_status';
@@ -75,37 +74,28 @@ export class CoreSdkServerStub {
     return rollupProviderStatusToJson(status);
   }
 
-  public async isAccountRegistered(accountPublicKey: string) {
-    return this.core.isAccountRegistered(GrumpkinAddress.fromString(accountPublicKey));
+  public async isAccountRegistered(accountPublicKey: string, includePending: boolean) {
+    return await this.core.isAccountRegistered(GrumpkinAddress.fromString(accountPublicKey), includePending);
   }
 
-  public async isRemoteAccountRegistered(accountPublicKey: string) {
-    return this.core.isRemoteAccountRegistered(GrumpkinAddress.fromString(accountPublicKey));
+  public async isAliasRegistered(alias: string, includePending: boolean) {
+    return await this.core.isAliasRegistered(alias, includePending);
   }
 
-  public async isAliasRegistered(alias: string) {
-    return this.core.isAliasRegistered(alias);
-  }
-
-  public async isRemoteAliasRegistered(alias: string) {
-    return this.core.isRemoteAliasRegistered(alias);
-  }
-
-  public async accountExists(accountPublicKey: string, alias: string) {
-    return this.core.accountExists(GrumpkinAddress.fromString(accountPublicKey), alias);
-  }
-
-  public async remoteAccountExists(accountPublicKey: string, alias: string) {
-    return this.core.remoteAccountExists(GrumpkinAddress.fromString(accountPublicKey), alias);
+  public async isAliasRegisteredToAccount(
+    accountPublicKey: string,
+    alias: string,
+    isAliasRegisteredToAccount: boolean,
+  ) {
+    return await this.core.isAliasRegisteredToAccount(
+      GrumpkinAddress.fromString(accountPublicKey),
+      alias,
+      isAliasRegisteredToAccount,
+    );
   }
 
   public async getAccountPublicKey(alias: string) {
     const key = await this.core.getAccountPublicKey(alias);
-    return key?.toString();
-  }
-
-  public async getRemoteUnsettledAccountPublicKey(alias: string) {
-    const key = await this.core.getRemoteUnsettledAccountPublicKey(alias);
     return key?.toString();
   }
 
@@ -119,13 +109,18 @@ export class CoreSdkServerStub {
     return fees.map(assetValueToJson);
   }
 
+  public async getPendingDepositTxs() {
+    const txs = await this.core.getPendingDepositTxs();
+    return txs.map(depositTxToJson);
+  }
+
   public async createDepositProof(
     assetId: number,
     publicInput: string,
     privateOutput: string,
     depositor: string,
     recipient: string,
-    recipientAccountRequired: boolean,
+    recipientSpendingKeyRequired: boolean,
     txRefNo: number,
   ) {
     const proofOutput = await this.core.createDepositProof(
@@ -134,7 +129,7 @@ export class CoreSdkServerStub {
       BigInt(privateOutput),
       EthAddress.fromString(depositor),
       GrumpkinAddress.fromString(recipient),
-      recipientAccountRequired,
+      recipientSpendingKeyRequired,
       txRefNo,
     );
     return proofOutputToJson(proofOutput);
@@ -149,7 +144,7 @@ export class CoreSdkServerStub {
     recipientPrivateOutput: string,
     senderPrivateOutput: string,
     noteRecipient: string | undefined,
-    recipientAccountRequired: boolean,
+    recipientSpendingKeyRequired: boolean,
     publicOwner: string | undefined,
     spendingPublicKey: string,
     allowChain: number,
@@ -163,7 +158,7 @@ export class CoreSdkServerStub {
       BigInt(recipientPrivateOutput),
       BigInt(senderPrivateOutput),
       noteRecipient ? GrumpkinAddress.fromString(noteRecipient) : undefined,
-      recipientAccountRequired,
+      recipientSpendingKeyRequired,
       publicOwner ? EthAddress.fromString(publicOwner) : undefined,
       GrumpkinAddress.fromString(spendingPublicKey),
       allowChain,
@@ -250,16 +245,16 @@ export class CoreSdkServerStub {
     return txIds.map(txId => txId.toString());
   }
 
-  public async awaitSynchronised() {
-    await this.core.awaitSynchronised();
+  public async awaitSynchronised(timeout?: number) {
+    await this.core.awaitSynchronised(timeout);
   }
 
   public async isUserSynching(userId: string) {
-    return this.core.isUserSynching(GrumpkinAddress.fromString(userId));
+    return await this.core.isUserSynching(GrumpkinAddress.fromString(userId));
   }
 
-  public async awaitUserSynchronised(userId: string) {
-    await this.core.awaitUserSynchronised(GrumpkinAddress.fromString(userId));
+  public async awaitUserSynchronised(userId: string, timeout?: number) {
+    await this.core.awaitUserSynchronised(GrumpkinAddress.fromString(userId), timeout);
   }
 
   public async awaitSettlement(txId: string, timeout?: number) {
@@ -279,21 +274,16 @@ export class CoreSdkServerStub {
   }
 
   public async getDefiInteractionNonce(txId: string) {
-    return this.core.getDefiInteractionNonce(TxId.fromString(txId));
+    return await this.core.getDefiInteractionNonce(TxId.fromString(txId));
   }
 
   public async userExists(userId: string) {
-    return this.core.userExists(GrumpkinAddress.fromString(userId));
+    return await this.core.userExists(GrumpkinAddress.fromString(userId));
   }
 
-  public async getUserData(userId: string) {
-    const userData = await this.core.getUserData(GrumpkinAddress.fromString(userId));
-    return userDataToJson(userData);
-  }
-
-  public async getUsersData() {
-    const usersData = await this.core.getUsersData();
-    return usersData.map(userDataToJson);
+  public async getUsers() {
+    const accountPublicKeys = await this.core.getUsers();
+    return accountPublicKeys.map(pk => pk.toString());
   }
 
   public async derivePublicKey(privateKey: Uint8Array) {
@@ -306,13 +296,17 @@ export class CoreSdkServerStub {
     return signature.toString();
   }
 
-  public async addUser(privateKey: Uint8Array, noSync?: boolean) {
-    const userData = await this.core.addUser(Buffer.from(privateKey), noSync);
-    return userDataToJson(userData);
+  public async addUser(accountPrivateKey: Uint8Array, noSync?: boolean) {
+    const accountPublicKey = await this.core.addUser(Buffer.from(accountPrivateKey), noSync);
+    return accountPublicKey.toString();
   }
 
   public async removeUser(userId: string) {
     await this.core.removeUser(GrumpkinAddress.fromString(userId));
+  }
+
+  public async getUserSyncedToRollup(userId: string) {
+    return await this.core.getUserSyncedToRollup(GrumpkinAddress.fromString(userId));
   }
 
   public async getSpendingKeys(userId: string) {
@@ -320,44 +314,53 @@ export class CoreSdkServerStub {
     return keys.map(k => new Uint8Array(k));
   }
 
-  public async getBalances(userId: string, unsafe?: boolean) {
-    const balances = await this.core.getBalances(GrumpkinAddress.fromString(userId), unsafe);
+  public async getBalances(userId: string) {
+    const balances = await this.core.getBalances(GrumpkinAddress.fromString(userId));
     return balances.map(assetValueToJson);
   }
 
-  public async getBalance(userId: string, assetId: number, unsafe?: boolean) {
-    const balance = await this.core.getBalance(GrumpkinAddress.fromString(userId), assetId, unsafe);
+  public async getBalance(userId: string, assetId: number) {
+    const balance = await this.core.getBalance(GrumpkinAddress.fromString(userId), assetId);
     return balance.toString();
   }
 
-  public async getSpendableSum(userId: string, assetId: number, excludePendingNotes?: boolean, unsafe?: boolean) {
+  public async getSpendableSum(
+    userId: string,
+    assetId: number,
+    spendingKeyRequired?: boolean,
+    excludePendingNotes?: boolean,
+  ) {
     const sum = await this.core.getSpendableSum(
       GrumpkinAddress.fromString(userId),
       assetId,
+      spendingKeyRequired,
       excludePendingNotes,
-      unsafe,
     );
     return sum.toString();
   }
 
-  public async getSpendableSums(userId: string, excludePendingNotes?: boolean, unsafe?: boolean) {
-    const sums = await this.core.getSpendableSums(GrumpkinAddress.fromString(userId), excludePendingNotes, unsafe);
+  public async getSpendableSums(userId: string, spendingKeyRequired?: boolean, excludePendingNotes?: boolean) {
+    const sums = await this.core.getSpendableSums(
+      GrumpkinAddress.fromString(userId),
+      spendingKeyRequired,
+      excludePendingNotes,
+    );
     return sums.map(assetValueToJson);
   }
 
   public async getMaxSpendableValue(
     userId: string,
     assetId: number,
-    numNotes?: number,
+    spendingKeyRequired?: boolean,
     excludePendingNotes?: boolean,
-    unsafe?: boolean,
+    numNotes?: number,
   ) {
     const value = await this.core.getMaxSpendableValue(
       GrumpkinAddress.fromString(userId),
       assetId,
-      numNotes,
+      spendingKeyRequired,
       excludePendingNotes,
-      unsafe,
+      numNotes,
     );
     return value.toString();
   }
@@ -366,11 +369,17 @@ export class CoreSdkServerStub {
     userId: string,
     assetId: number,
     value: string,
+    spendingKeyRequired?: boolean,
     excludePendingNotes?: boolean,
-    unsafe?: boolean,
   ) {
     return (
-      await this.core.pickNotes(GrumpkinAddress.fromString(userId), assetId, BigInt(value), excludePendingNotes, unsafe)
+      await this.core.pickNotes(
+        GrumpkinAddress.fromString(userId),
+        assetId,
+        BigInt(value),
+        spendingKeyRequired,
+        excludePendingNotes,
+      )
     ).map(noteToJson);
   }
 
@@ -378,15 +387,15 @@ export class CoreSdkServerStub {
     userId: string,
     assetId: number,
     value: string,
+    spendingKeyRequired?: boolean,
     excludePendingNotes?: boolean,
-    unsafe?: boolean,
   ) {
     const note = await this.core.pickNote(
       GrumpkinAddress.fromString(userId),
       assetId,
       BigInt(value),
+      spendingKeyRequired,
       excludePendingNotes,
-      unsafe,
     );
     return note ? noteToJson(note) : undefined;
   }
@@ -394,10 +403,5 @@ export class CoreSdkServerStub {
   public async getUserTxs(userId: string) {
     const txs = await this.core.getUserTxs(GrumpkinAddress.fromString(userId));
     return txs.map(coreUserTxToJson);
-  }
-
-  public async getRemoteUnsettledPaymentTxs() {
-    const txs = await this.core.getRemoteUnsettledPaymentTxs();
-    return txs.map(joinSplitTxToJson);
   }
 }

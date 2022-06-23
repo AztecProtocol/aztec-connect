@@ -1,6 +1,6 @@
 import { EthereumProvider } from '@aztec/barretenberg/blockchain';
 import { ClientEthereumBlockchain } from '@aztec/blockchain';
-import { enableLogs } from '@aztec/barretenberg/debug';
+import { enableLogs } from '@aztec/barretenberg/log';
 import isNode from 'detect-node';
 import { CoreSdkInterface } from '../core_sdk';
 import {
@@ -13,7 +13,7 @@ import {
 } from '../core_sdk_flavours';
 import { AztecSdk } from './aztec_sdk';
 
-async function createBlockchain(ethereumProvider: EthereumProvider, coreSdk: CoreSdkInterface, confs = 1) {
+async function createBlockchain(ethereumProvider: EthereumProvider, coreSdk: CoreSdkInterface, confs = 3) {
   const { chainId, rollupContractAddress } = await coreSdk.getLocalStatus();
   const {
     blockchainStatus: { assets, bridges },
@@ -105,16 +105,16 @@ export async function createPlainAztecSdk(ethereumProvider: EthereumProvider, op
 export async function createAztecSdk(ethereumProvider: EthereumProvider, options: CreateSdkOptions) {
   switch (options.flavour) {
     case SdkFlavour.HOSTED:
-      return createHostedAztecSdk(ethereumProvider, options);
+      return await createHostedAztecSdk(ethereumProvider, options);
     case SdkFlavour.SHARED_WORKER:
-      return createSharedWorkerSdk(ethereumProvider, options);
+      return await createSharedWorkerSdk(ethereumProvider, options);
     case SdkFlavour.PLAIN:
-      return createPlainAztecSdk(ethereumProvider, options);
+      return await createPlainAztecSdk(ethereumProvider, options);
     default:
       if (isNode) {
-        return createPlainAztecSdk(ethereumProvider, options);
+        return await createPlainAztecSdk(ethereumProvider, options);
       } else {
-        return createHostedAztecSdk(ethereumProvider, options);
+        return await createHostedAztecSdk(ethereumProvider, options);
       }
   }
 }

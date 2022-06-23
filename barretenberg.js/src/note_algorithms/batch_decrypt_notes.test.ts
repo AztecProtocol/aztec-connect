@@ -1,14 +1,15 @@
 import { randomBytes } from 'crypto';
 import { GrumpkinAddress } from '../address';
-import { NoteAlgorithms } from './note_algorithms';
 import { Grumpkin } from '../ecc/grumpkin';
-import { BarretenbergWasm } from '../wasm';
 import { ViewingKey } from '../viewing_key';
+import { BarretenbergWasm, WorkerPool } from '../wasm';
 import { batchDecryptNotes } from './batch_decrypt_notes';
+import { PooledNoteDecryptor, SingleNoteDecryptor } from './note_decryptor';
 
 describe('batch_decypt_notes', () => {
   let grumpkin: Grumpkin;
-  let noteAlgos!: NoteAlgorithms;
+  let noteDecryptor!: PooledNoteDecryptor;
+  let singleNoteDecryptor!: SingleNoteDecryptor;
 
   const createKeyPair = () => {
     const privKey = grumpkin.getRandomFr();
@@ -19,24 +20,39 @@ describe('batch_decypt_notes', () => {
   beforeAll(async () => {
     const wasm = await BarretenbergWasm.new();
     grumpkin = new Grumpkin(wasm);
-    noteAlgos = new NoteAlgorithms(wasm);
+    const pool = await WorkerPool.new(wasm, 4);
+    noteDecryptor = new PooledNoteDecryptor(pool);
+    singleNoteDecryptor = new SingleNoteDecryptor(wasm);
   });
 
   it('batch decrypt multiple viewing keys', async () => {
     const owner = createKeyPair();
     const eph = createKeyPair();
-    const noteBufs = Array(4)
+    const noteBufs = Array(10)
       .fill(0)
       .map(() => randomBytes(72));
     const keys = noteBufs.map(noteBuf => ViewingKey.createFromEphPriv(noteBuf, owner.pubKey, eph.privKey, grumpkin));
     const keysBuf = Buffer.concat(keys.map(k => k.toBuffer()));
-    const decryptedNotes = await batchDecryptNotes(keysBuf, owner.privKey, noteAlgos, grumpkin);
 
-    expect(decryptedNotes.length).toBe(noteBufs.length);
-    decryptedNotes.forEach((decrypted, i) => {
-      expect(decrypted!.noteBuf).toEqual(noteBufs[i]);
-      expect(decrypted!.ephPubKey).toEqual(eph.pubKey);
-    });
+    // SingleNoteDecryptor
+    {
+      const decryptedNotes = await batchDecryptNotes(keysBuf, owner.privKey, singleNoteDecryptor, grumpkin);
+      expect(decryptedNotes.length).toBe(noteBufs.length);
+      decryptedNotes.forEach((decrypted, i) => {
+        expect(decrypted!.noteBuf).toEqual(noteBufs[i]);
+        expect(decrypted!.ephPubKey).toEqual(eph.pubKey);
+      });
+    }
+
+    // PooledNoteDecryptor
+    {
+      const decryptedNotes = await batchDecryptNotes(keysBuf, owner.privKey, noteDecryptor, grumpkin);
+      expect(decryptedNotes.length).toBe(noteBufs.length);
+      decryptedNotes.forEach((decrypted, i) => {
+        expect(decrypted!.noteBuf).toEqual(noteBufs[i]);
+        expect(decrypted!.ephPubKey).toEqual(eph.pubKey);
+      });
+    }
   });
 
   it('batch decrypt owned and unknown viewing keys', async () => {
@@ -51,7 +67,7 @@ describe('batch_decypt_notes', () => {
     // Append an extra random key.
     keys.push(ViewingKey.random());
     const keysBuf = Buffer.concat(keys.map(k => k.toBuffer()));
-    const decryptedNotes = await batchDecryptNotes(keysBuf, owner.privKey, noteAlgos, grumpkin);
+    const decryptedNotes = await batchDecryptNotes(keysBuf, owner.privKey, noteDecryptor, grumpkin);
 
     expect(decryptedNotes.length).toBe(noteBufs.length);
     decryptedNotes.forEach((decrypted, i) => {

@@ -40,6 +40,7 @@ export class WorldStateDb {
 
   public async start() {
     await this.launch();
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.processStdioQueue();
   }
 
@@ -172,6 +173,8 @@ export class WorldStateDb {
       this.proc = undefined;
       if (code) {
         console.log(`db_cli exited with unexpected code ${code}.`);
+        // Should never happen, so process termination is the only sensible response.
+        process.exit(1);
       }
     });
 

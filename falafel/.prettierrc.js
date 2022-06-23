@@ -1,0 +1,1 @@
+../shared-config/.prettierrc.js

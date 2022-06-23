@@ -1,5 +1,6 @@
 import { AliasHash } from '@aztec/barretenberg/account_id';
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
+import { sleep } from '@aztec/barretenberg/sleep';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { randomBytes } from 'crypto';
 import { CoreAccountTx, CoreDefiTx, CorePaymentTx, CoreUserTx } from '../../core_tx';
@@ -16,6 +17,9 @@ import {
   randomSpendingKey,
   randomUser,
 } from './fixtures';
+
+// some of the bulk saving operations take a few seconds to complete
+jest.setTimeout(10000);
 
 export const databaseTestSuite = (
   dbName: string,
@@ -153,7 +157,7 @@ export const databaseTestSuite = (
         const user = randomUser();
         await db.addUser(user);
 
-        const savedUser = await db.getUser(user.id);
+        const savedUser = await db.getUser(user.accountPublicKey);
         expect(savedUser).toEqual(user);
       });
 
@@ -176,7 +180,7 @@ export const databaseTestSuite = (
         const newUser = { ...user, syncedToRollup: user.syncedToRollup + 1 };
         await db.updateUser(newUser);
 
-        const updatedUser = await db.getUser(user.id);
+        const updatedUser = await db.getUser(user.accountPublicKey);
         expect(updatedUser).toEqual(newUser);
       });
 
@@ -184,13 +188,13 @@ export const databaseTestSuite = (
         const user = randomUser();
         await db.addUser(user);
 
-        const newUser = { ...user, id: GrumpkinAddress.random() };
+        const newUser = { ...user, accountPublicKey: GrumpkinAddress.random() };
         await db.updateUser(newUser);
 
-        const oldUser = await db.getUser(user.id);
+        const oldUser = await db.getUser(user.accountPublicKey);
         expect(oldUser).toEqual(user);
 
-        const updatedUser = await db.getUser(newUser.id);
+        const updatedUser = await db.getUser(newUser.accountPublicKey);
         expect(updatedUser).toBeUndefined();
       });
     });
@@ -740,6 +744,19 @@ export const databaseTestSuite = (
         expect(savedKeys).toEqual(expect.arrayContaining([key2, key4]));
       });
 
+      it('writing duplicate spending keys does not error', async () => {
+        const userId = GrumpkinAddress.random();
+        const key1 = randomSpendingKey({ userId });
+        const key2 = { ...randomSpendingKey({ userId }), treeIndex: key1.treeIndex + 1 };
+
+        await db.addSpendingKeys([key1, key2]);
+        await expect(db.addSpendingKeys([key1, key2])).resolves.not.toThrow();
+
+        const savedKeys = await db.getSpendingKeys(userId);
+        expect(savedKeys.length).toBe(2);
+        expect(savedKeys).toEqual(expect.arrayContaining([key1, key2]));
+      });
+
       it('remove all spending keys of given user id', async () => {
         const generateAccountSpendingKeys = async (userId: GrumpkinAddress, numKeys = 3) => {
           const keys: SpendingKey[] = [];
@@ -781,6 +798,35 @@ export const databaseTestSuite = (
 
         const key2 = await db.getSpendingKey(GrumpkinAddress.random(), fullKey);
         expect(key2).toBeUndefined();
+      });
+
+      it('bulk saves spendingKeys', async () => {
+        const keys = Array<SpendingKey>();
+        const numKeys = 500;
+        for (let i = 0; i < numKeys; i++) {
+          keys.push(randomSpendingKey());
+        }
+        await db.addSpendingKeys(keys);
+
+        let [dbKey] = await db.getSpendingKeys(keys[0].userId);
+        expect(dbKey).toEqual(keys[0]);
+
+        [dbKey] = await db.getSpendingKeys(keys[1].userId);
+        expect(dbKey).toEqual(keys[1]);
+
+        [dbKey] = await db.getSpendingKeys(keys[100].userId);
+        expect(dbKey).toEqual(keys[100]);
+
+        [dbKey] = await db.getSpendingKeys(keys[101].userId);
+        expect(dbKey).toEqual(keys[101]);
+
+        [dbKey] = await db.getSpendingKeys(keys[numKeys - 1].userId);
+        expect(dbKey).toEqual(keys[numKeys - 1]);
+
+        await expect(db.addSpendingKeys(keys)).resolves.not.toThrow();
+
+        [dbKey] = await db.getSpendingKeys(keys[numKeys - 1].userId);
+        expect(dbKey).toEqual(keys[numKeys - 1]);
       });
     });
 
@@ -861,37 +907,26 @@ export const databaseTestSuite = (
 
         expect(await db.getKey(name)).toBeUndefined();
       });
-    });
 
-    it('bulk saves spendingKeys', async () => {
-      const keys = Array<SpendingKey>();
-      const numKeys = 1000;
-      for (let i = 0; i < numKeys; i++) {
-        keys.push(randomSpendingKey());
-      }
-      await db.addSpendingKeys(keys);
+      it('adding duplicate key overrides value', async () => {
+        const name = 'secretKey';
+        const key = randomBytes(1000);
+        const key2 = randomBytes(500);
+        await db.addKey(name, key);
 
-      let [dbKey] = await db.getSpendingKeys(keys[0].userId);
-      expect(dbKey).toEqual(keys[0]);
+        await expect(db.addKey(name, key2)).resolves.not.toThrow();
 
-      [dbKey] = await db.getSpendingKeys(keys[1].userId);
-      expect(dbKey).toEqual(keys[1]);
+        expect(await db.getKey(name)).toEqual(key2);
 
-      [dbKey] = await db.getSpendingKeys(keys[100].userId);
-      expect(dbKey).toEqual(keys[100]);
+        await db.deleteKey(name);
 
-      [dbKey] = await db.getSpendingKeys(keys[101].userId);
-      expect(dbKey).toEqual(keys[101]);
-
-      [dbKey] = await db.getSpendingKeys(keys[999].userId);
-      expect(dbKey).toEqual(keys[999]);
+        expect(await db.getKey(name)).toBeUndefined();
+      });
     });
 
     describe('Mutex', () => {
       const name = 'mutex-test';
       const timeout = 10000000;
-
-      const sleep = async (time: number) => new Promise(resolve => setTimeout(resolve, time));
 
       it('acquire and release locks', async () => {
         expect(await db.acquireLock('mutex-1', timeout)).toBe(true);
@@ -914,7 +949,8 @@ export const databaseTestSuite = (
           db.acquireLock(name, timeout),
           db.acquireLock(name, timeout),
         ]);
-        expect(result).toEqual([true, false, false, false]);
+        expect(result.length).toBe(4);
+        expect(result).toEqual(expect.arrayContaining([true, false, false, false]));
       });
 
       it('can acquire again if expired', async () => {
@@ -949,13 +985,13 @@ export const databaseTestSuite = (
         const note = randomNote(undefined, { ownerPubKey: user.accountPublicKey });
         await db.addNote(note);
 
-        const spendingKey = randomSpendingKey({ userId: user.id });
+        const spendingKey = randomSpendingKey({ userId: user.accountPublicKey });
         await db.addSpendingKey(spendingKey);
 
-        const paymentTx = randomPaymentTx({ userId: user.id });
+        const paymentTx = randomPaymentTx({ userId: user.accountPublicKey });
         await db.addPaymentTx(paymentTx);
 
-        const accountTx = randomAccountTx({ userId: user.id });
+        const accountTx = randomAccountTx({ userId: user.accountPublicKey });
         await db.addAccountTx(accountTx);
 
         return { user, note, spendingKey, paymentTx, accountTx };
@@ -967,21 +1003,21 @@ export const databaseTestSuite = (
         const profile0 = await generateUserProfile(user0);
         const profile1 = await generateUserProfile(user1);
 
-        await db.removeUser(user0.id);
+        await db.removeUser(user0.accountPublicKey);
 
-        expect(await db.getUser(user0.id)).toBeUndefined();
-        expect(await db.getNotes(user0.id)).toEqual([]);
+        expect(await db.getUser(user0.accountPublicKey)).toBeUndefined();
+        expect(await db.getNotes(user0.accountPublicKey)).toEqual([]);
         expect(await db.getNote(profile0.note.commitment)).toBeUndefined();
-        expect(await db.getSpendingKeys(user0.id)).toEqual([]);
-        expect(await db.getPaymentTxs(user0.id)).toEqual([]);
-        expect(await db.getAccountTxs(user0.id)).toEqual([]);
+        expect(await db.getSpendingKeys(user0.accountPublicKey)).toEqual([]);
+        expect(await db.getPaymentTxs(user0.accountPublicKey)).toEqual([]);
+        expect(await db.getAccountTxs(user0.accountPublicKey)).toEqual([]);
 
-        expect(await db.getUser(user1.id)).toEqual(profile1.user);
-        expect(await db.getNotes(user1.id)).toEqual([profile1.note]);
+        expect(await db.getUser(user1.accountPublicKey)).toEqual(profile1.user);
+        expect(await db.getNotes(user1.accountPublicKey)).toEqual([profile1.note]);
         expect(await db.getNote(profile1.note.commitment)).toEqual(profile1.note);
-        expect(await db.getSpendingKeys(user1.id)).toEqual([profile1.spendingKey]);
-        expect(await db.getPaymentTxs(user1.id)).toEqual([profile1.paymentTx]);
-        expect(await db.getAccountTxs(user1.id)).toEqual([profile1.accountTx]);
+        expect(await db.getSpendingKeys(user1.accountPublicKey)).toEqual([profile1.spendingKey]);
+        expect(await db.getPaymentTxs(user1.accountPublicKey)).toEqual([profile1.paymentTx]);
+        expect(await db.getAccountTxs(user1.accountPublicKey)).toEqual([profile1.accountTx]);
       });
 
       it('can reset user related data', async () => {
@@ -1015,7 +1051,7 @@ export const databaseTestSuite = (
         expect(await db.getSpendingKey(spendingKey.userId, fullKey)).toBeUndefined();
         expect(await db.getPaymentTx(tx.userId, tx.txId)).toBeUndefined();
         expect(await db.getClaimTx(claim.nullifier)).toBeUndefined();
-        expect(await db.getUser(user.id)).toEqual({
+        expect(await db.getUser(user.accountPublicKey)).toEqual({
           ...user,
           syncedToRollup: -1,
         });
@@ -1047,10 +1083,34 @@ export const databaseTestSuite = (
 
         expect(await db.getAlias(alias.accountPublicKey)).toBeUndefined();
         expect(await db.getNote(note.commitment)).toBeUndefined();
-        expect(await db.getUser(user.id)).toBeUndefined();
+        expect(await db.getUser(user.accountPublicKey)).toBeUndefined();
         expect(await db.getKey(keyName)).toBeUndefined();
         expect(await db.getSpendingKey(spendingKey.userId, fullKey)).toBeUndefined();
         expect(await db.getPaymentTx(tx.userId, tx.txId)).toBeUndefined();
+      });
+    });
+
+    describe('genesis data', () => {
+      it('stores genesis data', async () => {
+        const data = randomBytes(50000);
+        await expect(db.setGenesisData(data)).resolves.not.toThrow();
+        const saved = await db.getGenesisData();
+        expect(saved.equals(data)).toBe(true);
+      });
+      it('stores large genesis data', async () => {
+        const data = randomBytes(21000000);
+        await expect(db.setGenesisData(data)).resolves.not.toThrow();
+        const saved = await db.getGenesisData();
+        expect(saved.equals(data)).toBe(true);
+      });
+      it('returns empty buffer if no genesis data present', async () => {
+        const saved = await db.getGenesisData();
+        expect(saved).not.toBeUndefined();
+        expect(saved.equals(Buffer.alloc(0))).toBe(true);
+        const data = randomBytes(50000);
+        await expect(db.setGenesisData(data)).resolves.not.toThrow();
+        const newSaved = await db.getGenesisData();
+        expect(newSaved.equals(data)).toBe(true);
       });
     });
   });

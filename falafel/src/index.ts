@@ -23,16 +23,20 @@ import { InitHelpers } from '@aztec/barretenberg/environment';
 
 async function main() {
   const { ormConfig, provider, signingAddress, ethConfig } = await getComponents(configurator);
-  const { rollupContractAddress, feeDistributorAddress, priceFeedContractAddresses, apiPrefix, serverAuthToken, port } =
-    configurator.getConfVars();
+  const {
+    rollupContractAddress,
+    priceFeedContractAddresses,
+    apiPrefix,
+    serverAuthToken,
+    port,
+    runtimeConfig: { rollupBeneficiary = signingAddress },
+  } = configurator.getConfVars();
 
   const connection = await createConnection(ormConfig);
   const blockchain = await EthereumBlockchain.new(
     ethConfig,
     rollupContractAddress,
-    feeDistributorAddress,
     priceFeedContractAddresses,
-    // feePayingAssetAddresses,
     provider,
   );
 
@@ -44,13 +48,14 @@ async function main() {
   const worldStateDb = new WorldStateDb();
 
   if (configurator.getRollupContractChanged()) {
-    console.log('Erasing databases...');
+    console.log('Erasing sql database...');
     await rollupDb.eraseDb();
+    console.log('Erasing world state database...');
     worldStateDb.destroy();
   }
 
   await rollupDb.init();
-  const metrics = new Metrics(worldStateDb, rollupDb, blockchain);
+  const metrics = new Metrics(worldStateDb, rollupDb, blockchain, rollupBeneficiary);
   const server = new Server(configurator, signingAddress, blockchain, rollupDb, worldStateDb, metrics, barretenberg);
 
   const shutdown = async () => {

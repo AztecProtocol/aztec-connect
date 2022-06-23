@@ -7,7 +7,6 @@ import {
   AccountProofInputJson,
   joinSplitProofInputFromJson,
   JoinSplitProofInputJson,
-  proofOutputFromJson,
   ProofOutputJson,
 } from '../../proofs';
 import { MemorySerialQueue } from '../../serial_queue';
@@ -44,35 +43,23 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
   }
 
   public async getLocalStatus() {
-    return this.core.getLocalStatus();
+    return await this.core.getLocalStatus();
   }
 
   public async getRemoteStatus() {
-    return this.core.getRemoteStatus();
+    return await this.core.getRemoteStatus();
   }
 
-  public async isAccountRegistered(accountPublicKey: string) {
-    return this.core.isAccountRegistered(accountPublicKey);
+  public async isAccountRegistered(accountPublicKey: string, includePending: boolean) {
+    return await this.core.isAccountRegistered(accountPublicKey, includePending);
   }
 
-  public async isRemoteAccountRegistered(accountPublicKey: string) {
-    return this.core.isRemoteAccountRegistered(accountPublicKey);
+  public async isAliasRegistered(alias: string, includePending: boolean) {
+    return await this.core.isAliasRegistered(alias, includePending);
   }
 
-  public async isAliasRegistered(alias: string) {
-    return this.core.isAliasRegistered(alias);
-  }
-
-  public async isRemoteAliasRegistered(alias: string) {
-    return this.core.isRemoteAliasRegistered(alias);
-  }
-
-  public async accountExists(accountPublicKey: string, alias: string) {
-    return this.core.accountExists(accountPublicKey, alias);
-  }
-
-  public async remoteAccountExists(accountPublicKey: string, alias: string) {
-    return this.core.remoteAccountExists(accountPublicKey, alias);
+  public async isAliasRegisteredToAccount(accountPublicKey: string, alias: string, includePending: boolean) {
+    return await this.core.isAliasRegisteredToAccount(accountPublicKey, alias, includePending);
   }
 
   public async getAccountPublicKey(alias: string) {
@@ -80,17 +67,16 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
     return key?.toString();
   }
 
-  public async getRemoteUnsettledAccountPublicKey(alias: string) {
-    const key = await this.core.getRemoteUnsettledAccountPublicKey(alias);
-    return key?.toString();
-  }
-
   public async getTxFees(assetId: number) {
-    return this.core.getTxFees(assetId);
+    return await this.core.getTxFees(assetId);
   }
 
   public async getDefiFees(bridgeId: string) {
-    return this.core.getDefiFees(bridgeId);
+    return await this.core.getDefiFees(bridgeId);
+  }
+
+  public async getPendingDepositTxs() {
+    return await this.core.getPendingDepositTxs();
   }
 
   public async createDepositProof(
@@ -99,16 +85,16 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
     privateOutput: string,
     depositor: string,
     recipient: string,
-    recipientAccountRequired: boolean,
+    recipientSpendingKeyRequired: boolean,
     txRefNo: number,
   ) {
-    return this.core.createDepositProof(
+    return await this.core.createDepositProof(
       assetId,
       publicInput,
       privateOutput,
       depositor,
       recipient,
-      recipientAccountRequired,
+      recipientSpendingKeyRequired,
       txRefNo,
     );
   }
@@ -122,7 +108,7 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
     recipientPrivateOutput: string,
     senderPrivateOutput: string,
     noteRecipient: string | undefined,
-    recipientAccountRequired: boolean,
+    recipientSpendingKeyRequired: boolean,
     publicOwner: string | undefined,
     spendingPublicKey: string,
     allowChain: number,
@@ -137,7 +123,7 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
       recipientPrivateOutput,
       senderPrivateOutput,
       noteRecipient,
-      recipientAccountRequired,
+      recipientSpendingKeyRequired,
       publicOwner,
       spendingPublicKey,
       allowChain,
@@ -162,7 +148,7 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
     newSpendingPublicKey1?: string,
     newSpendingPublicKey2?: string,
   ) {
-    return this.core.createAccountProofSigningData(
+    return await this.core.createAccountProofSigningData(
       accountPublicKey,
       alias,
       migrate,
@@ -182,8 +168,7 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
     newSpendingPublicKey2: string | undefined,
     newAccountPrivateKey: Uint8Array | undefined,
   ) {
-    // TODO: Uncomment after new accounting system.
-    // await this.checkPermission(userId);
+    await this.checkPermission(userId);
     return this.core.createAccountProofInput(
       userId,
       alias,
@@ -224,16 +209,11 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
   }
 
   public async sendProofs(proofs: ProofOutputJson[]) {
-    // TODO: Add back once new accounting system.
-    // const {
-    //   tx: { userId },
-    // } = proofOutputFromJson(proofs[0]);
-    // await this.checkPermission(userId.toString());
-    return this.core.sendProofs(proofs);
+    return await this.core.sendProofs(proofs);
   }
 
-  public async awaitSynchronised() {
-    await this.core.awaitSynchronised();
+  public async awaitSynchronised(timeout?: number) {
+    await this.core.awaitSynchronised(timeout);
   }
 
   public async isUserSynching(userId: string) {
@@ -241,9 +221,9 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
     return this.core.isUserSynching(userId);
   }
 
-  public async awaitUserSynchronised(userId: string) {
+  public async awaitUserSynchronised(userId: string, timeout?: number) {
     await this.checkPermission(userId);
-    await this.core.awaitUserSynchronised(userId);
+    await this.core.awaitUserSynchronised(userId, timeout);
   }
 
   public async awaitSettlement(txId: string, timeout?: number) {
@@ -263,39 +243,34 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
   }
 
   public async getDefiInteractionNonce(txId: string) {
-    return this.core.getDefiInteractionNonce(txId);
+    return await this.core.getDefiInteractionNonce(txId);
   }
 
   public async userExists(userId: string) {
     return (await this.hasPermission(userId)) && (await this.core.userExists(userId));
   }
 
-  public async getUserData(userId: string) {
-    await this.checkPermission(userId);
-    return this.core.getUserData(userId);
-  }
-
-  public async getUsersData() {
-    const usersData = await this.core.getUsersData();
-    const permissions = await Promise.all(usersData.map(u => this.hasPermission(u.id)));
-    return usersData.filter((_, i) => permissions[i]);
+  public async getUsers() {
+    const accountPublicKeys = await this.core.getUsers();
+    const permissions = await Promise.all(accountPublicKeys.map(pk => this.hasPermission(pk)));
+    return accountPublicKeys.filter((_, i) => permissions[i]);
   }
 
   public async derivePublicKey(privateKey: Uint8Array) {
-    return this.core.derivePublicKey(privateKey);
+    return await this.core.derivePublicKey(privateKey);
   }
 
   public async constructSignature(message: Uint8Array, privateKey: Uint8Array) {
-    return this.core.constructSignature(message, privateKey);
+    return await this.core.constructSignature(message, privateKey);
   }
 
-  public async addUser(privateKey: Uint8Array, noSync?: boolean) {
-    return this.serialQueue.push(async () => {
+  public async addUser(accountPrivateKey: Uint8Array, noSync?: boolean) {
+    return await this.serialQueue.push(async () => {
       let addUserError: Error;
       try {
-        const userData = await this.core.addUser(privateKey, noSync);
-        await this.addPermission(userData.id);
-        return userData;
+        const accountPublicKey = await this.core.addUser(accountPrivateKey, noSync);
+        await this.addPermission(accountPublicKey);
+        return accountPublicKey;
       } catch (e: any) {
         // User probably already exists.
         addUserError = e;
@@ -303,19 +278,18 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
 
       // Get user data.
       // It will throw if the user doesn't exist, which means something went wrong while calling core.addUser().
-      const userId = await this.core.derivePublicKey(privateKey);
-      try {
-        const userData = await this.core.getUserData(userId);
-        await this.addPermission(userId);
-        return userData;
-      } catch (e) {
+      const userId = await this.core.derivePublicKey(accountPrivateKey);
+      if (!(await this.core.userExists(userId))) {
         throw addUserError;
       }
+
+      await this.addPermission(userId);
+      return userId;
     });
   }
 
   public async removeUser(userId: string) {
-    return this.serialQueue.push(async () => {
+    return await this.serialQueue.push(async () => {
       await this.checkPermission(userId);
       const domains = await this.getUserDomains(userId);
       if (domains.length === 1) {
@@ -325,71 +299,77 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
     });
   }
 
+  public async getUserSyncedToRollup(userId: string) {
+    await this.checkPermission(userId);
+    return this.core.getUserSyncedToRollup(userId);
+  }
+
   public async getSpendingKeys(userId: string) {
     await this.checkPermission(userId);
     return this.core.getSpendingKeys(userId);
   }
 
-  public async getBalances(userId: string, unsafe?: boolean) {
+  public async getBalances(userId: string) {
     await this.checkPermission(userId);
-    return this.core.getBalances(userId, unsafe);
+    return this.core.getBalances(userId);
   }
 
-  public async getBalance(userId: string, assetId: number, unsafe?: boolean) {
+  public async getBalance(userId: string, assetId: number) {
     await this.checkPermission(userId);
-    return this.core.getBalance(userId, assetId, unsafe);
+    return this.core.getBalance(userId, assetId);
   }
 
-  public async getSpendableSum(userId: string, assetId: number, excludePendingNotes?: boolean, unsafe?: boolean) {
+  public async getSpendableSum(
+    userId: string,
+    assetId: number,
+    spendingKeyRequired?: boolean,
+    excludePendingNotes?: boolean,
+  ) {
     await this.checkPermission(userId);
-    return this.core.getSpendableSum(userId, assetId, excludePendingNotes, unsafe);
+    return this.core.getSpendableSum(userId, assetId, spendingKeyRequired, excludePendingNotes);
   }
 
-  public async getSpendableSums(userId: string, excludePendingNotes?: boolean, unsafe?: boolean) {
+  public async getSpendableSums(userId: string, spendingKeyRequired?: boolean, excludePendingNotes?: boolean) {
     await this.checkPermission(userId);
-    return this.core.getSpendableSums(userId, excludePendingNotes, unsafe);
+    return this.core.getSpendableSums(userId, spendingKeyRequired, excludePendingNotes);
   }
 
   public async getMaxSpendableValue(
     userId: string,
     assetId: number,
-    numNotes?: number,
+    spendingKeyRequired?: boolean,
     excludePendingNotes?: boolean,
-    unsafe?: boolean,
+    numNotes?: number,
   ) {
     await this.checkPermission(userId);
-    return this.core.getMaxSpendableValue(userId, assetId, numNotes, excludePendingNotes, unsafe);
+    return this.core.getMaxSpendableValue(userId, assetId, spendingKeyRequired, excludePendingNotes, numNotes);
   }
 
   public async pickNotes(
     userId: string,
     assetId: number,
     value: string,
+    spendingKeyRequired?: boolean,
     excludePendingNotes?: boolean,
-    unsafe?: boolean,
   ) {
     await this.checkPermission(userId);
-    return this.core.pickNotes(userId, assetId, value, excludePendingNotes, unsafe);
+    return this.core.pickNotes(userId, assetId, value, spendingKeyRequired, excludePendingNotes);
   }
 
   public async pickNote(
     userId: string,
     assetId: number,
     value: string,
+    spendingKeyRequired?: boolean,
     excludePendingNotes?: boolean,
-    unsafe?: boolean,
   ) {
     await this.checkPermission(userId);
-    return this.core.pickNote(userId, assetId, value, excludePendingNotes, unsafe);
+    return this.core.pickNote(userId, assetId, value, spendingKeyRequired, excludePendingNotes);
   }
 
   public async getUserTxs(userId: string) {
     await this.checkPermission(userId);
     return this.core.getUserTxs(userId);
-  }
-
-  public async getRemoteUnsettledPaymentTxs() {
-    return this.core.getRemoteUnsettledPaymentTxs();
   }
 
   private async checkPermission(userId: string) {
@@ -418,7 +398,7 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
   }
 
   private async getUserDomains(userId: string): Promise<string[]> {
-    return this.leveldb
+    return await this.leveldb
       .get(userId)
       .then(buf => JSON.parse(buf.toString()))
       .catch(() => []);

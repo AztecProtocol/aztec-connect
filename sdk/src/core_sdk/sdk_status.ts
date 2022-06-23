@@ -11,36 +11,39 @@ export enum SdkEvent {
   DESTROYED = 'SDKEVENT_DESTROYED',
 }
 
+type Jsonify<T> = {
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  [P in keyof T]: T[P] extends EthAddress | bigint | Buffer ? string : T[P] extends Object ? Jsonify<T[P]> : T[P];
+};
+
 export interface SdkStatus {
   serverUrl: string;
   chainId: number;
   rollupContractAddress: EthAddress;
+  verifierContractAddress: EthAddress;
   feePayingAssetIds: number[];
+  rollupSize: number;
   syncedToRollup: number;
   latestRollupId: number;
   dataSize: number;
   dataRoot: Buffer;
+  useKeyCache: boolean;
+  proverless: boolean;
+  version: string;
 }
 
-export interface SdkStatusJson {
-  serverUrl: string;
-  chainId: number;
-  rollupContractAddress: string;
-  feePayingAssetIds: number[];
-  syncedToRollup: number;
-  latestRollupId: number;
-  dataSize: number;
-  dataRoot: string;
-}
+export type SdkStatusJson = Jsonify<SdkStatus>;
 
 export const sdkStatusToJson = (status: SdkStatus): SdkStatusJson => ({
   ...status,
   rollupContractAddress: status.rollupContractAddress.toString(),
+  verifierContractAddress: status.verifierContractAddress.toString(),
   dataRoot: status.dataRoot.toString('hex'),
 });
 
 export const sdkStatusFromJson = (json: SdkStatusJson): SdkStatus => ({
   ...json,
   rollupContractAddress: EthAddress.fromString(json.rollupContractAddress),
+  verifierContractAddress: EthAddress.fromString(json.verifierContractAddress),
   dataRoot: Buffer.from(json.dataRoot, 'hex'),
 });

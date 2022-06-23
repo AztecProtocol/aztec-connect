@@ -5,7 +5,13 @@ import { BridgeId } from '../bridge_id';
 import { fetch } from '../iso_fetch';
 import { Tx } from '../rollup_provider';
 import { TxId } from '../tx_id';
-import { accountFromJson, joinSplitTxFromJson, pendingTxFromJson, RollupProvider, txToJson } from './rollup_provider';
+import {
+  depositTxFromJson,
+  pendingTxFromJson,
+  RollupProvider,
+  txToJson,
+  initialWorldStateFromBuffer,
+} from './rollup_provider';
 import { rollupProviderStatusFromJson } from './rollup_provider_status';
 
 export class ServerRollupProvider extends ServerBlockSource implements RollupProvider {
@@ -53,6 +59,12 @@ export class ServerRollupProvider extends ServerBlockSource implements RollupPro
     return nullifiers.map(n => Buffer.from(n, 'hex'));
   }
 
+  async getPendingDepositTxs() {
+    const response = await this.fetch('/get-pending-deposit-txs');
+    const txs = await response.json();
+    return txs.map(depositTxFromJson);
+  }
+
   async clientLog(log: any) {
     await this.fetch('/client-log', log);
   }
@@ -60,9 +72,7 @@ export class ServerRollupProvider extends ServerBlockSource implements RollupPro
   async getInitialWorldState() {
     const response = await this.fetch('/get-initial-world-state');
     const arrBuffer = await response.arrayBuffer();
-    return {
-      initialAccounts: Buffer.from(arrBuffer),
-    };
+    return initialWorldStateFromBuffer(Buffer.from(arrBuffer));
   }
 
   async isAccountRegistered(accountPublicKey: GrumpkinAddress) {
@@ -77,21 +87,12 @@ export class ServerRollupProvider extends ServerBlockSource implements RollupPro
     return +(await response.text()) === 1;
   }
 
-  async accountExists(accountPublicKey: GrumpkinAddress, alias: string) {
-    const response = await this.fetch('/account-exists', { accountPublicKey: accountPublicKey.toString(), alias });
+  async isAliasRegisteredToAccount(accountPublicKey: GrumpkinAddress, alias: string) {
+    const response = await this.fetch('/is-alias-registered-to-account', {
+      accountPublicKey: accountPublicKey.toString(),
+      alias,
+    });
     return +(await response.text()) === 1;
-  }
-
-  async getUnsettledAccounts() {
-    const response = await this.fetch('/get-unsettled-accounts');
-    const accounts = await response.json();
-    return accounts.map(accountFromJson);
-  }
-
-  async getUnsettledPaymentTxs() {
-    const response = await this.fetch('/get-unsettled-payment-txs');
-    const txs = await response.json();
-    return txs.map(joinSplitTxFromJson);
   }
 
   private async fetch(path: string, data?: any) {

@@ -135,17 +135,15 @@ const getPaymentValue = ({
 }: CorePaymentTx) => {
   const value = (() => {
     switch (proofId) {
-      case ProofId.DEPOSIT: {
-        const outputValue = recipientPrivateOutput + senderPrivateOutput;
-        return outputValue || isRecipient ? outputValue : publicValue;
-      }
+      case ProofId.DEPOSIT:
+        return recipientPrivateOutput;
       case ProofId.WITHDRAW:
         return publicValue;
       case ProofId.SEND:
         if (isRecipient || recipientPrivateOutput) {
           return recipientPrivateOutput;
         }
-        return privateInput;
+        return privateInput - senderPrivateOutput;
     }
   })();
   return { assetId, value };
@@ -173,12 +171,10 @@ const getFee = (tx: CoreUserTx) => {
   } = tx;
   const value = (() => {
     switch (proofId) {
-      case ProofId.DEPOSIT: {
-        const outputValue = recipientPrivateOutput + senderPrivateOutput;
-        return outputValue || (isSender && isRecipient) ? publicValue - outputValue : BigInt(0);
-      }
+      case ProofId.DEPOSIT:
+        return publicValue - recipientPrivateOutput;
       case ProofId.WITHDRAW:
-        return privateInput - publicValue;
+        return privateInput - (publicValue + senderPrivateOutput);
       case ProofId.SEND:
         if (!isSender || (!isRecipient && !recipientPrivateOutput)) {
           return BigInt(0);
@@ -212,7 +208,7 @@ const getPrimaryTx = (txs: CoreUserTx[]) =>
   txs.find(tx => tx.proofId === ProofId.SEND && !tx.isSender) ||
   txs.find(tx => !getFee(tx).value);
 
-const toUserTx = (txs: CoreUserTx[], accountRequired: boolean) => {
+const toUserTx = (txs: CoreUserTx[]) => {
   const primaryTx = getPrimaryTx(txs);
   if (!primaryTx) {
     return;
@@ -236,9 +232,6 @@ const toUserTx = (txs: CoreUserTx[], accountRequired: boolean) => {
       return [userDefiTx];
     }
     default: {
-      if (primaryTx.accountRequired !== accountRequired) {
-        return;
-      }
       const value = getPaymentValue(primaryTx);
       return [toUserPaymentTx(primaryTx, value, fee)];
     }
@@ -275,9 +268,9 @@ const bySettledThenCreated = (tx1: UserTx, tx2: UserTx) => {
   return 0;
 };
 
-export const groupUserTxs = (txs: CoreUserTx[], accountRequired = true) => {
+export const groupUserTxs = (txs: CoreUserTx[]) => {
   const txGroups = groupTxsByTxRefNo(txs);
-  return filterUndefined(txGroups.map(txs => toUserTx(txs, accountRequired)))
+  return filterUndefined(txGroups.map(txs => toUserTx(txs)))
     .flat()
     .sort(bySettledThenCreated);
 };
