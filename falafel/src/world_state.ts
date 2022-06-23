@@ -225,7 +225,7 @@ export class WorldState {
     }
     this.log(`Read ${accounts.length} accounts from file.`);
 
-    if (this.worldStateDb.getSize(RollupTreeId.DATA) != 0n) {
+    if (this.worldStateDb.getSize(RollupTreeId.DATA) === 0n) {
       const {
         dataRoot: initDataRoot,
         nullRoot: initNullRoot,
