@@ -29,8 +29,9 @@ export function getGasOverhead(txType: TxType, gasLimit: number) {
     case TxType.TRANSFER:
       return (OffchainJoinSplitData.SIZE + getTxCallData(txType)) * gasPerByte;
     case TxType.WITHDRAW_TO_CONTRACT:
-    case TxType.WITHDRAW_TO_WALLET:
       return gasLimit + (OffchainJoinSplitData.SIZE + getTxCallData(txType)) * gasPerByte;
+    case TxType.WITHDRAW_TO_WALLET:
+      return 2400 + (OffchainJoinSplitData.SIZE + getTxCallData(txType)) * gasPerByte;
   }
 }
 
