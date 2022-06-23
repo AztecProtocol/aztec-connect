@@ -14,8 +14,18 @@ import {
   RollupWithdrawProofData,
 } from '@aztec/barretenberg/rollup_proof';
 
-export function getGasOverhead(txType: TxType, gasLimit: number) {
-  const gasPerByte = 16;
+const CALLDATA_GAS_PER_BYTE = 16;
+const SIGNATURE_CALLDATA_SIZE = 96;
+const DEPOSIT_CONTRACT_GAS_CONSUMPTION = 10500;
+const ETH_WALLET_WITHDRAW_GAS = 2400;
+
+export interface AssetGasLimit {
+  assetId: number;
+  gasLimit: number;
+}
+
+export function getGasOverhead(txType: TxType, assetGasLimit: AssetGasLimit) {
+  const gasPerByte = CALLDATA_GAS_PER_BYTE;
   switch (txType) {
     case TxType.ACCOUNT:
       return (OffchainAccountData.SIZE + getTxCallData(txType)) * gasPerByte;
@@ -25,13 +35,16 @@ export function getGasOverhead(txType: TxType, gasLimit: number) {
       return (OffchainDefiDepositData.SIZE + getTxCallData(txType)) * gasPerByte;
     case TxType.DEPOSIT:
       // 10500 gas signing message construction, ecrecover, and pending deposit storage update.
-      return (OffchainJoinSplitData.SIZE + getTxCallData(txType)) * gasPerByte + 10500;
+      return (OffchainJoinSplitData.SIZE + getTxCallData(txType)) * gasPerByte + DEPOSIT_CONTRACT_GAS_CONSUMPTION;
     case TxType.TRANSFER:
       return (OffchainJoinSplitData.SIZE + getTxCallData(txType)) * gasPerByte;
     case TxType.WITHDRAW_TO_CONTRACT:
-      return gasLimit + (OffchainJoinSplitData.SIZE + getTxCallData(txType)) * gasPerByte;
+      return assetGasLimit.gasLimit + (OffchainJoinSplitData.SIZE + getTxCallData(txType)) * gasPerByte;
     case TxType.WITHDRAW_TO_WALLET:
-      return 2400 + (OffchainJoinSplitData.SIZE + getTxCallData(txType)) * gasPerByte;
+      return (
+        (assetGasLimit.assetId == 0 ? ETH_WALLET_WITHDRAW_GAS : assetGasLimit.gasLimit) +
+        (OffchainJoinSplitData.SIZE + getTxCallData(txType)) * gasPerByte
+      );
   }
 }
 
@@ -45,7 +58,7 @@ export function getTxCallData(txType: TxType) {
       return RollupDefiDepositProofData.ENCODED_LENGTH;
     case TxType.DEPOSIT:
       // 96 bytes for signature on top of the rollup proof data
-      return RollupDepositProofData.ENCODED_LENGTH + 96;
+      return RollupDepositProofData.ENCODED_LENGTH + SIGNATURE_CALLDATA_SIZE;
     case TxType.TRANSFER:
       return RollupSendProofData.ENCODED_LENGTH;
     case TxType.WITHDRAW_TO_CONTRACT:

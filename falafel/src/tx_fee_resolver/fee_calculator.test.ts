@@ -28,7 +28,10 @@ describe('fee calculator', () => {
   let blockchain: Mockify<Blockchain>;
   let feeCalculator: FeeCalculator;
 
-  const getGasOverheadForTxType = (assetId: number, txType: TxType) => getGasOverhead(txType, assets[assetId].gasLimit);
+  const getGasOverheadForTxType = (assetId: number, txType: TxType) => {
+    const assetGasLimit = { assetId, gasLimit: assets[assetId].gasLimit };
+    return getGasOverhead(txType, assetGasLimit);
+  };
 
   beforeEach(() => {
     jest.spyOn(console, 'log').mockImplementation(() => {});

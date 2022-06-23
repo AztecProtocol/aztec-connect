@@ -191,7 +191,10 @@ export class FeeCalculator {
   private getGasOverheadForTxType(assetId: number, txType: TxType) {
     // if the asset is not valid (i.e. it's virtual then quote the fee as if it was ETH),
     // this type of tx is not valid and would be rejected if it were attempted
-    return getGasOverhead(txType, this.getAsset(this.isValidAsset(assetId) ? assetId : 0).gasLimit);
+    const gasAssetId = this.isValidAsset(assetId) ? assetId : 0;
+    const asset = this.getAsset(gasAssetId);
+    const assetGasLimit = { assetId: gasAssetId, gasLimit: asset.gasLimit };
+    return getGasOverhead(txType, assetGasLimit);
   }
 
   // retrieves the highest amount of calldata that any single tx can used based on it's type
