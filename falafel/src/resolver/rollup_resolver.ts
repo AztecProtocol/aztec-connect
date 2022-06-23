@@ -52,7 +52,7 @@ export class RollupResolver {
 
   @FieldResolver()
   proofData(@Root() { rollupProof: { encodedProofData } }: RollupDao) {
-    return encodedProofData ? RollupProofData.decode(encodedProofData) : undefined;
+    return encodedProofData ? RollupProofData.decode(encodedProofData).toBuffer() : undefined;
   }
 
   @FieldResolver()
