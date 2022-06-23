@@ -46,7 +46,7 @@ const signupProgresses = [
   },
   {
     step: LoginStep.CREATE_ACCOUNT,
-    title: 'Creating Registration Proof',
+    title: 'Confirming account key and generating spending key',
   },
 ];
 
@@ -157,8 +157,8 @@ const getStepInfo = ({ loginState: { step, mode, allowToProceed }, explorerUrl }
           <>
             Your alias makes it simple for your friends to send you crypto.
             <br />
-            <br />
-            ⚠️ If you forget your alias, your account cannot be recovered ⚠️
+            <Text size="xl" text="⚠️" />
+            <Text weight="bold" text="If you forget your alias, your account cannot be recovered." />
           </>
         ),
       };
