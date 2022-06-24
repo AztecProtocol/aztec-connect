@@ -10,11 +10,13 @@ interface RecipientSectionProps {
   recipientStr: string;
   isLoading: boolean;
   isValid: boolean;
+  hasWarning?: boolean;
   onChangeValue: (value: string) => void;
 }
 
-const getRecipientInputStatus = (isLoading: boolean, isValid: boolean) => {
+const getRecipientInputStatus = (isLoading: boolean, isValid: boolean, hasWarning: boolean) => {
   if (isLoading) return InputStatus.LOADING;
+  if (hasWarning) return InputStatus.WARNING;
   if (isValid) return InputStatus.SUCCESS;
   return InputStatus.ERROR;
   // TODO: Support warning state - probably if reusing an eth address?
@@ -40,7 +42,7 @@ export function RecipientSection(props: RecipientSectionProps) {
       component={
         <InputWrapper theme={theme}>
           <InputStatusIcon
-            status={getRecipientInputStatus(props.isLoading, props.isValid)}
+            status={getRecipientInputStatus(props.isLoading, props.isValid, !!props.hasWarning)}
             // TODO: why would we want an inactive state?
             inactive={props.recipientStr.length === 0}
           />

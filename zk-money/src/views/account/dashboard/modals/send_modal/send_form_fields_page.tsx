@@ -67,6 +67,7 @@ export const SendFormFieldsPage: React.FunctionComponent<SendProps> = ({
               recipientStr={state.fields.recipientStr}
               isLoading={state.isLoadingRecipient}
               isValid={!!state.recipient}
+              hasWarning={!!feedback.recipient} // TODO: this is an ugly shortcut, we should review how issue severity is passed down
               recipientType={sendMode === SendMode.SEND ? 'L2' : 'L1'}
               message={feedback.recipient}
               onChangeValue={value => {
