@@ -1,6 +1,7 @@
 ```ts
 class GrumpkinAddress {
     private buffer;
+    static SIZE: number;
     static ZERO: GrumpkinAddress;
     constructor(buffer: Buffer);
     static isAddress(address: string): boolean;
@@ -8,7 +9,7 @@ class GrumpkinAddress {
     /**
      * NOT a valid address! Do not use in proofs.
      */
-    static randomAddress(): GrumpkinAddress;
+    static random(): GrumpkinAddress;
     /**
      * A valid address (is a point on the curve).
      */
@@ -18,5 +19,6 @@ class GrumpkinAddress {
     x(): Buffer;
     y(): Buffer;
     toString(): string;
+    toShortString(): string;
 }
 ```
