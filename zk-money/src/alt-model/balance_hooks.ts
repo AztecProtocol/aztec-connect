@@ -72,5 +72,5 @@ export function useMaxSpendableValue(assetId?: number) {
 }
 
 export function useSpendableBalances() {
-  return useAccountState()?.spendableBalances;
+  return useWithoutDust(useAccountState()?.spendableBalances);
 }
