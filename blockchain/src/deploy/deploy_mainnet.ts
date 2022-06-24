@@ -3,6 +3,7 @@ import { TreeInitData } from '@aztec/barretenberg/environment';
 import { Signer } from 'ethers';
 import { keccak256, toUtf8Bytes } from 'ethers/lib/utils';
 import {
+  deployCurveBridge,
   deployDefiBridgeProxy,
   deployElementBridge,
   deployFeeDistributor,
@@ -56,6 +57,7 @@ export async function deployMainnet(signer: Signer, { dataTreeSize, roots }: Tre
   await deployElementBridge(signer, rollup, ['dai'], expiryCutOff);
   await deployLidoBridge(signer, rollup, LIDO_REFERRAL_ADDRESS);
   await deployAceOfZk(signer, rollup);
+  await deployCurveBridge(signer, rollup);
 
   // Transfers ownership of the proxyadmin to the multisig
   await proxyAdmin.transferProxyAdminOwnership(EthAddress.fromString(MULTI_SIG_ADDRESS));

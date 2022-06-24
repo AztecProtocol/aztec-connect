@@ -5,6 +5,7 @@ import {
   deployElementBridge,
   deployFeeDistributor,
   deployLidoBridge,
+  deployCurveBridge,
   deployRollupProcessor,
   deployVerifier,
   elementTokenAddresses,
@@ -48,6 +49,7 @@ export async function deployMainnetE2e(signer: Signer, { dataTreeSize, roots }: 
   const expiryCutOff = new Date('01 Sept 2022 00:00:00 GMT');
   await deployElementBridge(signer, rollup, ['dai', 'lusd3crv-f'], expiryCutOff);
   await deployLidoBridge(signer, rollup);
+  await deployCurveBridge(signer, rollup);
 
   const priceFeeds = [FAST_GAS_PRICE_FEED_ADDRESS, DAI_PRICE_FEED_ADDRESS];
 

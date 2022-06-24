@@ -1,3 +1,4 @@
+export * from './deploy_curve_steth';
 export * from './deploy_defi_bridge_proxy';
 export * from './deploy_dummy_bridge';
 export * from './deploy_element';
