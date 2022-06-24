@@ -1,7 +1,7 @@
 import createDebug from 'debug';
 import { EthAddress, RollupProviderStatus } from '@aztec/sdk';
 import { BridgeFlowAssets, DefiInvestmentType, DefiRecipe, KeyBridgeStat } from './types';
-import lidoLogo from 'images/lido_white.svg';
+import lidoXCurveLogo from 'images/lido_x_curve_logo.svg';
 import lidoMiniLogo from 'images/lido_mini_logo.png';
 import elementFiLogo from 'images/element_fi_logo.svg';
 import elementMiniLogo from 'images/element_mini_logo.png';
@@ -80,8 +80,8 @@ const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
     keyStat3: KeyBridgeStat.NEXT_BATCH,
   },
   {
-    id: 'lido-finance.ETH-to-wStETH',
-    addressId: 2,
+    id: 'lido-staking-x-curve.ETH-to-wStETH',
+    addressId: 5,
     gradient: ['#F29883', '#FDE2B6'],
     openHandleAssetAddress: KMAA.wstETH,
     entryInputAssetAddressA: KMAA.ETH,
@@ -90,14 +90,14 @@ const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
     projectName: 'Lido',
     website: 'https://lido.fi/',
     websiteLabel: 'lido.fi',
-    name: 'Lido Staking',
+    name: 'Lido Staking × Curve',
     investmentType: DefiInvestmentType.STAKING,
     shortDesc: 'Stake zkETH with Lido to earn daily rewards.',
     exitDesc: 'Unstake zkwstETH and get back zkETH',
     longDescription:
       'Stake ETH and receive liquid staked ETH (wstETH), which allows you to earn staking yields without locking assets. Access staking while depositing wstETH to earn yields across decentralized finance products.',
     bannerImg: ethToDaiBanner,
-    logo: lidoLogo,
+    logo: lidoXCurveLogo,
     miniLogo: lidoMiniLogo,
     roiType: 'APR',
     keyStat1: KeyBridgeStat.YIELD,
