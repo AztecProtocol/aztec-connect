@@ -32,9 +32,9 @@ const MODES = [
 function getDescription(sendMode: SendMode) {
   switch (sendMode) {
     case SendMode.SEND:
-      return `Send funds to another user on zk.money via their alias. Transactions are end to end encrypted and fully private.`;
+      return `Send funds to another user on zk.money via their alias. Transactions are end-to-end encrypted and fully private.`;
     case SendMode.WIDTHDRAW:
-      return `Withdraw funds from zk.money to Ethereum to an Ethereum address. Depending on your initial deposit, large withdrawals can carry privacy risks.`;
+      return `Withdraw funds from zk.money to an Ethereum address. Depending on your initial deposit, large withdrawals can carry privacy risks.`;
     default:
       return '';
   }
