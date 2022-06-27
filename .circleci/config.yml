@@ -373,6 +373,20 @@ jobs:
           working_directory: end-to-end
           command: cond_spot_run_tests end-to-end ./src/e2e_migrated_accounts.test.ts
 
+  e2e-migrate-account:
+    docker:
+      - image: aztecprotocol/build-image
+    resource_class: small
+    steps:
+      - checkout
+      - *setup_env
+      - setup_remote_docker:
+          version: 20.10.14
+      - run:
+          name: 'Test'
+          working_directory: end-to-end
+          command: cond_spot_run_tests end-to-end ./src/e2e_migrate_account_and_funds.test.ts
+
   e2e-account:
     docker:
       - image: aztecprotocol/build-image
@@ -779,6 +793,11 @@ workflows:
             - end-to-end
             - hummus
           filters: *tag_filter
+      - e2e-migrate-account:
+          requires:
+            - end-to-end
+            - hummus
+          filters: *tag_filter
       - e2e-account:
           requires:
             - end-to-end
@@ -829,6 +848,7 @@ workflows:
             - e2e-payment
             - e2e-permit
             - e2e-migrated-accounts
+            - e2e-migrate-account
             - e2e-account
             - e2e-defi
             - e2e-element
