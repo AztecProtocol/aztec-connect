@@ -36,7 +36,12 @@ function getAmountInputFeedback(result: SendFormValidationResult, touched: boole
 }
 
 function getRecipientFeedback(result: SendFormValidationResult) {
-  return undefined;
+  if (result.issues?.hasDepositedFromL1AddressBefore) {
+    return 'You have deposited from this address before';
+  }
+  if (result.issues?.hasWithdrawnToL1AddressBefore) {
+    return 'You have withdrawn to this address before';
+  }
 }
 
 function getFooterFeedback(result: SendFormValidationResult) {

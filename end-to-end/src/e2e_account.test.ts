@@ -112,7 +112,7 @@ describe('end-to-end account tests', () => {
       const depositValue = { assetId, value: 0n };
       const fee = (await sdk.getRecoverAccountFees(assetId))[TxSettlementTime.INSTANT];
       const depositor = addresses[0];
-      const controller = sdk.createRecoverAccountController(alias, recoveryPayloads[0], depositValue, fee, depositor);
+      const controller = sdk.createRecoverAccountController(recoveryPayloads[0], depositValue, fee, depositor);
       await controller.createProof();
 
       await controller.depositFundsToContract();
@@ -138,7 +138,6 @@ describe('end-to-end account tests', () => {
       const controller = sdk.createAddSpendingKeyController(
         user0.id,
         thirdPartySigner,
-        alias,
         newSigner.getPublicKey(),
         undefined,
         fee,
@@ -169,7 +168,6 @@ describe('end-to-end account tests', () => {
       const controller = sdk.createMigrateAccountController(
         user0.id,
         newSigner,
-        alias,
         account1.privateKey,
         spendingKey1.publicKey,
         undefined,

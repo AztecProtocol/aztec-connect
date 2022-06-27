@@ -18,6 +18,7 @@ import { getSendFormFeedback } from './send_form_feedback';
 import { useUserIdForAlias } from 'alt-model/alias_hooks';
 import { estimateTxSettlementTimes } from 'alt-model/estimate_settlement_times';
 import { useTransferFeeAmounts, useWithdrawFeeAmounts } from './tx_fee_hooks';
+import { useAccountState } from 'alt-model/account_state';
 
 const debug = createDebug('zm:send_form_hooks');
 
@@ -72,6 +73,7 @@ export function useSendForm(preselectedAssetId?: number) {
   const transactionLimit = isKnownAssetAddressString(targetAssetAddressStr)
     ? config.txAmountLimits[targetAssetAddressStr]
     : undefined;
+  const userTxs = useAccountState()?.txs;
 
   const validationResult = validateSendForm({
     fields,
@@ -84,6 +86,7 @@ export function useSendForm(preselectedAssetId?: number) {
     transactionLimit,
     recipient,
     isLoadingRecipient,
+    userTxs,
   });
   const feedback = getSendFormFeedback(validationResult, touchedFields, attemptedLock);
   const composerState = useMaybeObs(lockedComposer?.stateObs);

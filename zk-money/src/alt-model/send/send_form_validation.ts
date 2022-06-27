@@ -1,4 +1,4 @@
-import { TxSettlementTime } from '@aztec/sdk';
+import { ProofId, TxSettlementTime, UserTx } from '@aztec/sdk';
 import { Amount } from 'alt-model/assets';
 import { AmountFactory } from 'alt-model/assets/amount_factory';
 import { StrOrMax } from 'alt-model/forms/constants';
@@ -28,6 +28,7 @@ interface SendFormValidationInput {
   recipient?: Recipient;
   aliasIsValid?: boolean;
   isLoadingRecipient: boolean;
+  userTxs?: UserTx[];
 }
 
 export interface SendFormDerivedData extends Omit<SendFormValidationInput, 'fields'> {
@@ -45,6 +46,8 @@ interface SendFormValidationResultIssues {
   beyondTransactionLimit?: boolean;
   unrecognisedTargetAmount?: boolean;
   precisionIsTooHigh?: boolean;
+  hasDepositedFromL1AddressBefore?: boolean;
+  hasWithdrawnToL1AddressBefore?: boolean;
 }
 
 export interface SendFormValidationResult {
@@ -65,6 +68,7 @@ export function validateSendForm(input: SendFormValidationInput): SendFormValida
     asset,
     recipient,
     isLoadingRecipient,
+    userTxs,
   } = input;
   if (!amountFactory || !feeAmount || balanceInTargetAsset === undefined || balanceInFeePayingAsset === undefined) {
     return { isLoading: true, state: { ...input } };
@@ -90,6 +94,13 @@ export function validateSendForm(input: SendFormValidationInput): SendFormValida
 
   const precisionIsTooHigh = getPrecisionIsTooHigh(targetAmount);
 
+  const hasDepositedFromL1AddressBefore =
+    recipient?.sendMode === SendMode.WIDTHDRAW &&
+    userTxs?.some(tx => tx.proofId === ProofId.DEPOSIT && tx.publicOwner?.equals(recipient.address));
+  const hasWithdrawnToL1AddressBefore =
+    recipient?.sendMode === SendMode.WIDTHDRAW &&
+    userTxs?.some(tx => tx.proofId === ProofId.WITHDRAW && tx.publicOwner?.equals(recipient.address));
+
   const isInvalid =
     insufficientTargetAssetBalance ||
     insufficientFeePayingAssetBalance ||
@@ -107,6 +118,8 @@ export function validateSendForm(input: SendFormValidationInput): SendFormValida
       beyondTransactionLimit,
       noAmount,
       precisionIsTooHigh,
+      hasDepositedFromL1AddressBefore,
+      hasWithdrawnToL1AddressBefore,
     },
     state: {
       ...input,

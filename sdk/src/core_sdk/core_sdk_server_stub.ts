@@ -194,18 +194,18 @@ export class CoreSdkServerStub {
 
   public async createAccountProofInput(
     userId: string,
-    alias: string,
-    migrate: boolean,
     spendingPublicKey: string,
+    migrate: boolean,
+    newAlias: string,
     newSpendingPublicKey1: string | undefined,
     newSpendingPublicKey2: string | undefined,
     newAccountPrivateKey: Uint8Array | undefined,
   ) {
     const proofInput = await this.core.createAccountProofInput(
       GrumpkinAddress.fromString(userId),
-      alias,
-      migrate,
       GrumpkinAddress.fromString(spendingPublicKey),
+      migrate,
+      newAlias,
       newSpendingPublicKey1 ? GrumpkinAddress.fromString(newSpendingPublicKey1) : undefined,
       newSpendingPublicKey2 ? GrumpkinAddress.fromString(newSpendingPublicKey2) : undefined,
       newAccountPrivateKey ? Buffer.from(newAccountPrivateKey) : undefined,

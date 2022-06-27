@@ -220,7 +220,7 @@ const toUserTx = (txs: CoreUserTx[]) => {
       const depositTx = txs.find(tx => tx.proofId === ProofId.DEPOSIT) as CorePaymentTx;
       const depositValue = depositTx ? getPaymentValue(depositTx) : emptyAssetValue;
       if (depositValue.value) {
-        return [toUserAccountTx(primaryTx, emptyAssetValue), toUserPaymentTx(depositTx, depositValue, fee)];
+        return [toUserPaymentTx(depositTx, depositValue, fee), toUserAccountTx(primaryTx, emptyAssetValue)];
       }
       return [toUserAccountTx(primaryTx, fee)];
     }

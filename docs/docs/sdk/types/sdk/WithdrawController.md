@@ -1,15 +1,15 @@
 ```ts
 class WithdrawController {
-    readonly userId: AccountId;
+    readonly userId: GrumpkinAddress;
     private readonly userSigner;
     readonly assetValue: AssetValue;
     readonly fee: AssetValue;
-    readonly to: EthAddress;
+    readonly recipient: EthAddress;
     private readonly core;
     private proofOutput;
     private feeProofOutput?;
-    private txId;
-    constructor(userId: AccountId, userSigner: Signer, assetValue: AssetValue, fee: AssetValue, to: EthAddress, core: CoreSdkInterface);
+    private txIds;
+    constructor(userId: GrumpkinAddress, userSigner: Signer, assetValue: AssetValue, fee: AssetValue, recipient: EthAddress, core: CoreSdkInterface);
     createProof(): Promise<void>;
     send(): Promise<TxId>;
     awaitSettlement(timeout?: number): Promise<void>;

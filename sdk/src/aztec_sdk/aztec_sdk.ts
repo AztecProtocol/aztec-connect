@@ -446,23 +446,13 @@ export class AztecSdk extends EventEmitter {
   }
 
   public createRecoverAccountController(
-    alias: string,
     recoveryPayload: RecoveryPayload,
     deposit: AssetValue,
     fee: AssetValue,
     depositor: EthAddress,
     provider = this.provider,
   ) {
-    return new RecoverAccountController(
-      alias,
-      recoveryPayload,
-      deposit,
-      fee,
-      depositor,
-      this.core,
-      this.blockchain,
-      provider,
-    );
+    return new RecoverAccountController(recoveryPayload, deposit, fee, depositor, this.core, this.blockchain, provider);
   }
 
   public async getAddSpendingKeyFees(assetId: number) {
@@ -472,20 +462,11 @@ export class AztecSdk extends EventEmitter {
   public createAddSpendingKeyController(
     userId: GrumpkinAddress,
     userSigner: Signer,
-    alias: string,
     spendingPublicKey1: GrumpkinAddress,
     spendingPublicKey2: GrumpkinAddress | undefined,
     fee: AssetValue,
   ) {
-    return new AddSpendingKeyController(
-      userId,
-      userSigner,
-      alias,
-      spendingPublicKey1,
-      spendingPublicKey2,
-      fee,
-      this.core,
-    );
+    return new AddSpendingKeyController(userId, userSigner, spendingPublicKey1, spendingPublicKey2, fee, this.core);
   }
 
   public async getMigrateAccountFees(assetId: number) {
@@ -495,7 +476,6 @@ export class AztecSdk extends EventEmitter {
   public createMigrateAccountController(
     userId: GrumpkinAddress,
     userSigner: Signer,
-    alias: string,
     newAccountPrivateKey: Buffer,
     newSpendingPublicKey: GrumpkinAddress,
     recoveryPublicKey: GrumpkinAddress | undefined,
@@ -504,7 +484,6 @@ export class AztecSdk extends EventEmitter {
     return new MigrateAccountController(
       userId,
       userSigner,
-      alias,
       newAccountPrivateKey,
       newSpendingPublicKey,
       recoveryPublicKey,

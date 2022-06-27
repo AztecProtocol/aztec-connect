@@ -66,27 +66,31 @@ function getPerChainBridgeConfig(chainId: number): BridgeConfig[] {
     case 0xa57ec:
       return [
         {
+          // Element september 16 Dai expiry
           bridgeId: new BridgeId(1, 1, 1, undefined, undefined, 1663361092).toBigInt(),
           numTxs: 25,
           gas: 500000,
           rollupFrequency: 3,
         },
         {
-          bridgeId: new BridgeId(2, 0, 2).toBigInt(),
-          numTxs: 50,
-          gas: 175000,
+          // Ace of ZK
+          bridgeId: new BridgeId(4, 0, 0).toBigInt(),
+          numTxs: 1,
+          gas: 300000,
           rollupFrequency: 3,
         },
         {
-          bridgeId: new BridgeId(3, 2, 0).toBigInt(),
-          numTxs: 50,
+          // Curve stEth, eth -> wstETh
+          bridgeId: new BridgeId(5, 0, 2).toBigInt(),
+          numTxs: 40,
           gas: 250000,
           rollupFrequency: 3,
         },
         {
-          bridgeId: new BridgeId(4, 0, 0).toBigInt(),
-          numTxs: 1,
-          gas: 300000,
+          // Curve stEth, wstEth -> eth
+          bridgeId: new BridgeId(5, 2, 0).toBigInt(),
+          numTxs: 40,
+          gas: 250000,
           rollupFrequency: 3,
         },
       ];

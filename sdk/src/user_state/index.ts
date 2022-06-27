@@ -737,13 +737,13 @@ export class UserState extends EventEmitter {
 
   private async processPendingNote(note: Note) {
     const { ownerPubKey, value } = note.treeNote;
-    if (!ownerPubKey.equals(this.userData.accountPublicKey)) {
+    if (!ownerPubKey.equals(this.userData.accountPublicKey) || !note.allowChain) {
       return;
     }
 
     if (value) {
       await this.db.addNote(note);
-      this.debug(`adding pending note with value: ${value}, allowChain: ${note.allowChain}.`);
+      this.debug(`adding chainable pending note with value: ${value}.`);
     }
 
     return note;

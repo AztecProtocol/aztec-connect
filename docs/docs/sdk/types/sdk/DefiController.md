@@ -1,6 +1,6 @@
 ```ts
 class DefiController {
-    readonly userId: AccountId;
+    readonly userId: GrumpkinAddress;
     private readonly userSigner;
     readonly bridgeId: BridgeId;
     readonly depositValue: AssetValue;
@@ -9,13 +9,14 @@ class DefiController {
     private proofOutput?;
     private jsProofOutput?;
     private feeProofOutput?;
-    private txId?;
-    constructor(userId: AccountId, userSigner: Signer, bridgeId: BridgeId, depositValue: AssetValue, fee: AssetValue, core: CoreSdkInterface);
+    private txIds;
+    constructor(userId: GrumpkinAddress, userSigner: Signer, bridgeId: BridgeId, depositValue: AssetValue, fee: AssetValue, core: CoreSdkInterface);
     createProof(): Promise<void>;
     send(): Promise<TxId>;
     awaitDefiDepositCompletion(timeout?: number): Promise<void>;
     awaitDefiFinalisation(timeout?: number): Promise<void>;
     awaitSettlement(timeout?: number): Promise<void>;
     getInteractionNonce(): Promise<number | undefined>;
+    private getDefiTxId;
 }
 ```

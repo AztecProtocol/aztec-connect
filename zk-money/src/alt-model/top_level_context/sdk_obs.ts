@@ -5,6 +5,8 @@ import { Config } from '../../config';
 
 const debug = createDebug('zm:sdk_obs');
 
+const hostedSdkEnabled = !!localStorage.getItem('hosted_sdk_enabled');
+
 export type SdkObsValue = AztecSdk | undefined;
 export type SdkObs = Obs<SdkObsValue>;
 
@@ -14,9 +16,9 @@ export function createSdkObs(config: Config): SdkObs {
 
   const sdkObs = Obs.input<SdkObsValue>(undefined);
   createAztecSdk(aztecJsonRpcProvider, {
-    serverUrl: config.rollupProviderUrl,
+    serverUrl: hostedSdkEnabled ? config.hostedSdkUrl : config.rollupProviderUrl,
     debug: config.debugFilter,
-    flavour: SdkFlavour.PLAIN, // todo put this back when the hosted sdk works
+    flavour: hostedSdkEnabled ? SdkFlavour.HOSTED : SdkFlavour.PLAIN, // todo put this back when the hosted sdk works
     minConfirmation,
   })
     .then(sdk => {

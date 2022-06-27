@@ -44,13 +44,19 @@ function addressNameToIndex(addressName: string) {
 }
 
 export function akiToKey(mnemonic: string, aki: string) {
-  const [deployTag, walletName, addressName] = aki.split(':');
   const deployTagChild = BIP85.fromMnemonic(mnemonic);
+
+  const [deployTag, walletName, addressName] = aki.split(':');
+  if (!walletName) {
+    return deployTagChild.deriveBIP39(0, 12, deployTagToIndex(deployTag)).toMnemonic();
+  }
+
   const deployTagEntropy = deployTagChild.deriveBIP39(0, 12, deployTagToIndex(deployTag)).toEntropy();
   const walletChild = BIP85.fromEntropy(deployTagEntropy);
   const walletChildMnemonic = walletChild.deriveBIP39(0, 12, walletNameToIndex(walletName)).toMnemonic();
   if (!addressName) {
     return walletChildMnemonic;
   }
+
   return Wallet.fromMnemonic(walletChildMnemonic, `m/44'/60'/0'/0/${addressNameToIndex(addressName)}`).privateKey;
 }

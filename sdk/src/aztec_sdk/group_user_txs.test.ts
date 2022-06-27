@@ -73,16 +73,6 @@ describe('groupUserTxs', () => {
       const accountTx = randomCoreAccountTx({ txRefNo });
       const depositAndFeeTx = createDepositTx({ publicValue: 100n, fee: 20n, txRefNo });
       expect(groupUserTxs([accountTx, depositAndFeeTx])).toEqual([
-        new UserAccountTx(
-          accountTx.txId,
-          accountTx.userId,
-          accountTx.aliasHash,
-          accountTx.newSpendingPublicKey1,
-          accountTx.newSpendingPublicKey2,
-          accountTx.migrated,
-          { assetId: 0, value: 0n },
-          accountTx.created,
-        ),
         new UserPaymentTx(
           depositAndFeeTx.txId,
           depositAndFeeTx.userId,
@@ -92,6 +82,16 @@ describe('groupUserTxs', () => {
           depositAndFeeTx.publicOwner,
           false,
           depositAndFeeTx.created,
+        ),
+        new UserAccountTx(
+          accountTx.txId,
+          accountTx.userId,
+          accountTx.aliasHash,
+          accountTx.newSpendingPublicKey1,
+          accountTx.newSpendingPublicKey2,
+          accountTx.migrated,
+          { assetId: 0, value: 0n },
+          accountTx.created,
         ),
       ]);
     });

@@ -87,9 +87,9 @@ export class RegisterController {
 
     const proofInput = await this.core.createAccountProofInput(
       this.userId,
-      this.alias,
-      false,
       accountPublicKey,
+      false,
+      this.alias,
       this.spendingPublicKey,
       this.recoveryPublicKey,
       undefined,
@@ -133,6 +133,10 @@ export class RegisterController {
   public async send() {
     if (!this.proofOutput) {
       throw new Error('Call createProof() first.');
+    }
+
+    if (!(await this.core.userExists(this.userId))) {
+      throw new Error('Add the user to the sdk first.');
     }
 
     if (!this.depositController) {

@@ -296,8 +296,10 @@ export const ShieldForAliasForm: React.FunctionComponent<DepositFormProps> = ({
             theme="white"
             text="Shield"
             onClick={onSubmit}
-            disabled={!isValidForm(formInputs as any) || status > ShieldStatus.VALIDATE || !risksAccepted}
-            isLoading={status === ShieldStatus.VALIDATE}
+            disabled={
+              submit.value || !isValidForm(formInputs as any) || status > ShieldStatus.VALIDATE || !risksAccepted
+            }
+            isLoading={submit.value}
           />
         </ButtonRoot>
       </InputRow>

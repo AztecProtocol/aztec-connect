@@ -83,9 +83,9 @@ export interface CoreSdkInterface {
 
   createAccountProofInput(
     userId: GrumpkinAddress,
-    alias: string,
-    migrate: boolean,
     spendingPublicKey: GrumpkinAddress,
+    migrate: boolean,
+    newAlias: string | undefined,
     newSpendingPublicKey1: GrumpkinAddress | undefined,
     newSpendingPublicKey2: GrumpkinAddress | undefined,
     newAccountPrivateKey: Buffer | undefined,

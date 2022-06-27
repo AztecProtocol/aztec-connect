@@ -142,18 +142,18 @@ export class CoreSdkDispatch extends EventEmitter implements CoreSdkSerializedIn
 
   public async createAccountProofInput(
     userId: string,
-    alias: string,
-    migrate: boolean,
     spendingPublicKey: string,
+    migrate: boolean,
+    newAlias: string,
     newSpendingPublicKey1: string | undefined,
     newSpendingPublicKey2: string | undefined,
     newAccountPrivateKey: Uint8Array | undefined,
   ) {
     return await this.request('createAccountProofInput', [
       userId,
-      alias,
-      migrate,
       spendingPublicKey,
+      migrate,
+      newAlias,
       newSpendingPublicKey1,
       newSpendingPublicKey2,
       newAccountPrivateKey,
