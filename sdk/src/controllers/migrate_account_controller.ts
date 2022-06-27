@@ -15,7 +15,6 @@ export class MigrateAccountController {
   constructor(
     public readonly userId: GrumpkinAddress,
     private readonly userSigner: Signer,
-    private readonly alias: string,
     public readonly newAccountPrivateKey: Buffer,
     public readonly newSpendingPublicKey: GrumpkinAddress,
     public readonly recoveryPublicKey: GrumpkinAddress | undefined,
@@ -29,9 +28,9 @@ export class MigrateAccountController {
     const spendingPublicKey = this.userSigner.getPublicKey();
     const proofInput = await this.core.createAccountProofInput(
       this.userId,
-      this.alias,
-      true,
       spendingPublicKey,
+      true,
+      undefined,
       this.newSpendingPublicKey,
       this.recoveryPublicKey,
       this.newAccountPrivateKey,
@@ -64,6 +63,12 @@ export class MigrateAccountController {
     if (!this.proofOutput) {
       throw new Error('Call createProof() first.');
     }
+
+    const newAccountPublicKey = await this.core.derivePublicKey(this.newAccountPrivateKey);
+    if (!(await this.core.userExists(newAccountPublicKey))) {
+      throw new Error('Add the new account to the sdk first.');
+    }
+
     this.txIds = await this.core.sendProofs(filterUndefined([this.proofOutput, this.feeProofOutput]));
     return this.txIds[0];
   }

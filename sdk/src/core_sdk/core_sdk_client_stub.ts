@@ -184,18 +184,18 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
 
   public async createAccountProofInput(
     userId: GrumpkinAddress,
-    alias: string,
-    migrate: boolean,
     spendingPublicKey: GrumpkinAddress,
+    migrate: boolean,
+    newAlias: string,
     newSpendingPublicKey1: GrumpkinAddress | undefined,
     newSpendingPublicKey2: GrumpkinAddress | undefined,
     newAccountPrivateKey: Buffer | undefined,
   ) {
     const json = await this.backend.createAccountProofInput(
       userId.toString(),
-      alias,
-      migrate,
       spendingPublicKey.toString(),
+      migrate,
+      newAlias,
       newSpendingPublicKey1 ? newSpendingPublicKey1.toString() : undefined,
       newSpendingPublicKey2 ? newSpendingPublicKey2.toString() : undefined,
       newAccountPrivateKey ? new Uint8Array(newAccountPrivateKey) : undefined,

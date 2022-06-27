@@ -168,6 +168,7 @@ describe('user state', () => {
     userId: GrumpkinAddress,
     userAccountRequired: boolean,
     inputNullifier: Buffer,
+    allowChain: boolean,
   ) => {
     const ephPrivKey = createEphemeralPrivKey();
     const treeNote = TreeNote.createFromEphPriv(
@@ -181,7 +182,7 @@ describe('user state', () => {
     );
     const commitment = noteAlgos.valueNoteCommitment(treeNote);
     const nullifier = Buffer.alloc(0);
-    const note = new Note(treeNote, commitment, nullifier, false, false);
+    const note = new Note(treeNote, commitment, nullifier, allowChain, false);
     const viewingKey = treeNote.createViewingKey(ephPrivKey, grumpkin);
     return { note, viewingKey };
   };
@@ -223,6 +224,7 @@ describe('user state', () => {
     publicValue = 0n,
     publicOwner = EthAddress.ZERO,
     txFee = 0n,
+    allowChain = 0,
     isPadding = false,
     createValidNoteCommitments = true,
     txRefNo = 0,
@@ -243,8 +245,22 @@ describe('user state', () => {
 
     // Output notes
     const notes = [
-      createNote(assetId, outputNoteValue1, newNoteOwner.accountPublicKey, newNoteOwnerAccountRequired, nullifier1),
-      createNote(assetId, outputNoteValue2, proofSender.accountPublicKey, proofSenderAccountRequired, nullifier2),
+      createNote(
+        assetId,
+        outputNoteValue1,
+        newNoteOwner.accountPublicKey,
+        newNoteOwnerAccountRequired,
+        nullifier1,
+        [1, 3].includes(allowChain),
+      ),
+      createNote(
+        assetId,
+        outputNoteValue2,
+        proofSender.accountPublicKey,
+        proofSenderAccountRequired,
+        nullifier2,
+        [2, 3].includes(allowChain),
+      ),
     ];
     const note1Commitment = createValidNoteCommitments ? notes[0].note.commitment : randomBytes(32);
     const note2Commitment = createValidNoteCommitments ? notes[1].note.commitment : randomBytes(32);
@@ -346,6 +362,7 @@ describe('user state', () => {
     outputNoteValue1 = 64n,
     outputNoteValue2 = 36n,
     txFee = 8n,
+    allowChain = 2,
     createValidNoteCommitments = true,
     txRefNo = 0,
   } = {}) =>
@@ -361,6 +378,7 @@ describe('user state', () => {
       outputNoteValue1,
       outputNoteValue2,
       txFee,
+      allowChain,
       createValidNoteCommitments,
       txRefNo,
     });
@@ -426,6 +444,7 @@ describe('user state', () => {
       proofSender.accountPublicKey,
       proofSenderAccountRequired,
       randomBytes(32),
+      true,
     );
     const changeNote = createNote(
       assetId,
@@ -433,6 +452,7 @@ describe('user state', () => {
       proofSender.accountPublicKey,
       proofSenderAccountRequired,
       nullifier2,
+      true,
     );
     const { partialClaimNote, partialStateSecretEphPubKey } = createClaimNote(
       bridgeId,
@@ -491,8 +511,8 @@ describe('user state', () => {
   } = {}) => {
     const assetId = bridgeId.inputAssetIdA;
     const notes = [
-      createNote(assetId, outputValueA, owner.accountPublicKey, accountRequired, nullifier1),
-      createNote(assetId, outputValueB, owner.accountPublicKey, accountRequired, nullifier2),
+      createNote(assetId, outputValueA, owner.accountPublicKey, accountRequired, nullifier1, false),
+      createNote(assetId, outputValueB, owner.accountPublicKey, accountRequired, nullifier2, false),
     ];
     const proofData = new InnerProofData(
       ProofId.DEFI_CLAIM,
@@ -611,7 +631,7 @@ describe('user state', () => {
     expect(db.addNote.mock.calls[0][0]).toMatchObject({
       commitment: jsProof.proofData.noteCommitment2,
       value: jsProof.tx.senderPrivateOutput,
-      allowChain: false,
+      allowChain: true,
       pending: true,
       hashPath: undefined,
     });

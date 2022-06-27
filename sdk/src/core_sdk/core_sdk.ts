@@ -588,16 +588,19 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
 
   public async createAccountProofInput(
     userId: GrumpkinAddress,
-    alias: string,
-    migrate: boolean,
     spendingPublicKey: GrumpkinAddress,
+    migrate: boolean,
+    newAlias: string | undefined,
     newSpendingPublicKey1?: GrumpkinAddress,
     newSpendingPublicKey2?: GrumpkinAddress,
     newAccountPrivateKey?: Buffer,
   ) {
     return await this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
-      const aliasHash = this.computeAliasHash(alias);
+      const aliasHash = newAlias ? this.computeAliasHash(newAlias) : (await this.db.getAlias(userId))?.aliasHash;
+      if (!aliasHash) {
+        throw new Error('Account not registered or not fully synced.');
+      }
       const newAccountPublicKey = newAccountPrivateKey ? await this.derivePublicKey(newAccountPrivateKey) : undefined;
       return await this.accountProofCreator.createProofInput(
         userId,

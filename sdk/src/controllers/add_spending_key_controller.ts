@@ -15,7 +15,6 @@ export class AddSpendingKeyController {
   constructor(
     public readonly userId: GrumpkinAddress,
     private readonly userSigner: Signer,
-    public readonly alias: string,
     public readonly spendingPublicKey1: GrumpkinAddress,
     public readonly spendingPublicKey2: GrumpkinAddress | undefined,
     public readonly fee: AssetValue,
@@ -29,9 +28,9 @@ export class AddSpendingKeyController {
 
     const proofInput = await this.core.createAccountProofInput(
       this.userId,
-      this.alias,
-      false,
       spendingPublicKey,
+      false,
+      undefined,
       this.spendingPublicKey1,
       this.spendingPublicKey2,
       undefined,

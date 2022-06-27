@@ -15,7 +15,6 @@ export class RecoverAccountController {
   private txIds: TxId[] = [];
 
   constructor(
-    public readonly alias: string,
     public readonly recoveryPayload: RecoveryPayload,
     public readonly depositValue: AssetValue,
     public readonly fee: AssetValue,
@@ -89,9 +88,9 @@ export class RecoverAccountController {
 
     const proofInput = await this.core.createAccountProofInput(
       accountPublicKey,
-      this.alias,
-      false,
       recoveryPublicKey,
+      false,
+      undefined,
       trustedThirdPartyPublicKey,
       undefined,
       undefined,
