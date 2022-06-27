@@ -2,7 +2,6 @@ export * from './button';
 export * from './border_box';
 export * from './card_tags';
 export * from './checkbox';
-export * from './click_to_copy';
 export * from './cookies_form';
 export * from './disclaimer_block';
 export * from './dot';
