@@ -144,7 +144,6 @@ describe('end-to-end migrate account and funds tests', () => {
       const migrateController = sdk.createMigrateAccountController(
         oldAccountKeyPair.publicKey,
         oldAccountSigner,
-        aliasToBeKept,
         newAccountKeyPair.privateKey,
         newAccountSpendingKeyPair.publicKey,
         undefined,
