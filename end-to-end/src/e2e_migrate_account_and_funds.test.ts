@@ -136,6 +136,9 @@ describe('end-to-end migrate account and funds tests', () => {
 
     // Rollup 2: Migrate the 'old' user account to the 'new' account
     debug(`migrating account to transfer alias and funds from account 0 to account 1...`);
+    // add the new user to the sdk so we can query user data
+    const newUser = await sdk.addUser(newAccountKeyPair.privateKey);
+    await newUser.awaitSynchronised();
     expect(await sdk.isAccountRegistered(newAccountKeyPair.publicKey)).toBe(false);
 
     {
@@ -171,11 +174,8 @@ describe('end-to-end migrate account and funds tests', () => {
       await transferController.createProof();
       await transferController.send();
 
-      await transferController.awaitSettlement();
+      await Promise.all([migrateController.awaitSettlement(), transferController.awaitSettlement()]);
 
-      // add the new user to the sdk so we can query user data
-      const newUser = await sdk.addUser(newAccountKeyPair.privateKey);
-      await newUser.awaitSynchronised();
       expect(await sdk.isAccountRegistered(newAccountKeyPair.publicKey)).toBe(true);
       expectEqualSpendingKeys(await newUser.getSpendingKeys(), [newAccountSpendingKeyPair.publicKey]);
       expect(await sdk.isAliasRegisteredToAccount(newAccountKeyPair.publicKey!, aliasToBeKept)).toBe(true);
