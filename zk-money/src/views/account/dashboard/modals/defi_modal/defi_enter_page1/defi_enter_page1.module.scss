@@ -19,5 +19,7 @@
 .statsWrapper {
   display: flex;
   flex-direction: row;
-  gap: 160px;
+  gap: 10%;
+  width: 100%;
+  justify-content: space-between;
 }

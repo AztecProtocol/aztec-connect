@@ -16,7 +16,7 @@ function LoadingFallback() {
   return (
     <div className={style.loadingRoot}>
       <Spinner theme={SpinnerTheme.GRADIENT} size="m" />
-      Getting things ready
+      Getting things ready...
     </div>
   );
 }

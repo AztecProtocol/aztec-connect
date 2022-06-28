@@ -63,6 +63,7 @@ const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
     createAdaptor: createElementAdaptor,
     requiresAuxDataOpts: true,
     projectName: 'Element',
+    gradient: ['#2E69C3', '#6ACDE2'],
     website: 'https://element.fi/',
     websiteLabel: 'element.fi',
     name: 'Element Fixed Yield',
@@ -82,7 +83,7 @@ const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
   {
     id: 'lido-staking-x-curve.ETH-to-wStETH',
     addressId: 5,
-    gradient: ['#F29883', '#FDE2B6'],
+    gradient: ['#E97B61', '#F5CB85'],
     openHandleAssetAddress: KMAA.wstETH,
     entryInputAssetAddressA: KMAA.ETH,
     entryOutputAssetAddressA: KMAA.wstETH,

@@ -14,3 +14,9 @@
   align-items: stretch;
   gap: 40px;
 }
+
+@media (max-width: 900px) {
+  .balances {
+    flex-direction: column;
+  }
+}

@@ -64,6 +64,7 @@ export function DefiModal({ recipe, flowDirection, onClose }: DefiModalProps) {
     <Overlay>
       <Modal onClose={onClose}>
         <Card
+          gradient={recipe.gradient}
           headerSize={CardHeaderSize.LARGE}
           cardHeader={
             <DefiModalHeader recipe={recipe} closeDisabled={!canClose} onClose={onClose} onBack={handleBack} />
