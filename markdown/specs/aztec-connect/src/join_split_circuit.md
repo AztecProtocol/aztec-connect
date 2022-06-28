@@ -124,7 +124,7 @@ In the Pseudocode to follow, we use the following function names. See [notes & n
   - Field-friendly, which means the output value only depends on the inputs as field elements, and doesn’t change e.g. when input changes from a to a+r as bit string.
 - `partial_value_note_commit()` - **Partial value note commitment function**. Has the same assumptions as `value_note_commit`. Uses a different generator. Stresses that the data being committed to is _partial_ - a subset of the data committed to by `value_note_commit`.
 - `partial_claim_note_commit()` - **Partial claim note commitment function**. Has the same assumptions as `value_note_commit`. Uses a different generator. Stresses that the data being committed to is _partial_ - a subset of the data committed to by `claim_note_commit` (in the claim circuit).
-- `account_note_commit()` - **Account note ommitment function**, which is assumed to be collision resistant.
+- `account_note_commit()` - **Account note commitment function**, which is assumed to be collision resistant.
 - `compute_nullifier()` - **Nullifier Function**, which we assume can be modeled as a random oracle, and only depends on `account_private_key` $mod r$.
 
 ### Circuit Logic (Pseudocode)
@@ -239,7 +239,6 @@ In the Pseudocode to follow, we use the following function names. See [notes & n
   let input_note_2_value = input_note_2.value; // supersedes input_note_2.value from here on in.
   let output_note_1_value = output_note_1.value;
   let defi_deposit_value = 0;
-
   if (is_defi_deposit) {
     const partial_value_note = {
       secret: partial_claim_note_data.note_secret,

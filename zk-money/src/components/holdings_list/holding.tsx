@@ -47,12 +47,24 @@ export function Holding({ assetValue, onSend, onShield, onGoToEarn }: HoldingPro
 
       <div className={style.buttonsWrapper}>
         {shieldSupported && (
-          <Button size={'s'} className={style.button} onClick={() => onShield?.(asset)} text={'Shield'} />
+          <Button
+            theme={'white'}
+            size={'s'}
+            className={style.button}
+            onClick={() => onShield?.(asset)}
+            text={'Shield'}
+          />
         )}
         {!spendableBalanceIsDust && (
           <>
-            <Button size={'s'} className={style.button} onClick={() => onSend?.(asset)} text={'Send'} />
-            <Button size={'s'} className={style.button} onClick={() => onGoToEarn?.(asset)} text={'Earn'} />
+            <Button theme={'white'} size={'s'} className={style.button} onClick={() => onSend?.(asset)} text={'Send'} />
+            <Button
+              theme={'white'}
+              size={'s'}
+              className={style.button}
+              onClick={() => onGoToEarn?.(asset)}
+              text={'Earn'}
+            />
           </>
         )}
       </div>

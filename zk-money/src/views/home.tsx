@@ -38,7 +38,7 @@ interface HomeProps {
 
 export function Home({ onSignup }: HomeProps) {
   return (
-    <div>
+    <div className={style.homeWrapper}>
       <Banner onShieldNow={onSignup} />
       <FavoriteApps />
       <div className={style.bottomContent}>
@@ -165,26 +165,28 @@ function FavoriteApps() {
   return (
     <div className={style.section}>
       <img src={topWave} className={style.topWave} alt="" />
-      <div className={style.favoriteApps}>
-        <div className={style.sectionTitle}>Your favorite Dapps, made private.</div>
-        <div className={style.subtitle}>
-          Fixed yield. Liquid staking. Money markets. Trading. The universe of Ethereum DeFi is open to you with
-          complete privacy, all via the magic of Aztec Connect.
-        </div>
-        <div className={style.logos}>
-          <img className={style.logo} src={aaveLogo} alt="Aave logo" />
-          <img className={style.logo} src={compoundLogo} alt="Compound logo" />
-          <img className={style.logo} src={uniswapLogo} alt="Uniswap logo" />
-          <img className={style.logo} src={liquityLogo} alt="Liquidity logo" />
-          <img className={style.logo} src={defipulseLogo} alt="DeFi Pulse logo" />
-          <img className={style.logo} src={ribbonLogo} alt="Ribbon logo" />
-          <img className={style.logo} src={mstableLogo} alt="mStable logo" />
-          <img className={style.logo} src={cowswapLogo} alt="CowSwap logo" />
-          <img className={style.logo} src={setLogo} alt="Set logo" />
-          <img className={style.logo} src={tokemakLogo} alt="Tokemak logo" />
-        </div>
-        <div className={style.boxes}>
-          <InfoBoxes />
+      <div className={style.favoriteAppsWrapper}>
+        <div className={style.favoriteApps}>
+          <div className={style.sectionTitle}>Your favorite Dapps, made private.</div>
+          <div className={style.subtitle}>
+            Fixed yield. Liquid staking. Money markets. Trading. The universe of Ethereum DeFi is open to you with
+            complete privacy, all via the magic of Aztec Connect.
+          </div>
+          <div className={style.logos}>
+            <img className={style.logo} src={aaveLogo} alt="Aave logo" />
+            <img className={style.logo} src={compoundLogo} alt="Compound logo" />
+            <img className={style.logo} src={uniswapLogo} alt="Uniswap logo" />
+            <img className={style.logo} src={liquityLogo} alt="Liquidity logo" />
+            <img className={style.logo} src={defipulseLogo} alt="DeFi Pulse logo" />
+            <img className={style.logo} src={ribbonLogo} alt="Ribbon logo" />
+            <img className={style.logo} src={mstableLogo} alt="mStable logo" />
+            <img className={style.logo} src={cowswapLogo} alt="CowSwap logo" />
+            <img className={style.logo} src={setLogo} alt="Set logo" />
+            <img className={style.logo} src={tokemakLogo} alt="Tokemak logo" />
+          </div>
+          <div className={style.boxes}>
+            <InfoBoxes />
+          </div>
         </div>
       </div>
       <img className={style.bottomWave} src={bottomWave} alt="" />

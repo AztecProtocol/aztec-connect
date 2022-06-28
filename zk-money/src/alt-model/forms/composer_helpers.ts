@@ -6,7 +6,7 @@ interface RetryableHost {
   disableRetryableSigning(): void;
 }
 
-const DELAY_BEFORE_ENABLING = 10 * 1000;
+const DELAY_BEFORE_ENABLING = 30 * 1000;
 
 export function createSigningRetryableGenerator(host: RetryableHost) {
   return async function withRetryableSigning<T>(fn: () => Promise<T>): Promise<T> {

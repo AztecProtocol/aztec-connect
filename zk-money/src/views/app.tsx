@@ -37,8 +37,8 @@ import { DefiRecipe, FlowDirection } from 'alt-model/defi/types';
 import { DefiModal } from 'views/account/dashboard/modals/defi_modal';
 import { SelfDismissingIncentiveModal } from 'views/account/dashboard/modals/incentive_modal';
 import { KNOWN_MAINNET_ASSET_ADDRESSES } from 'alt-model/known_assets/known_asset_addresses';
-import './app.css';
 import { AccountStateProvider } from 'alt-model/account_state';
+import './app.css';
 
 interface AppProps {
   config: Config;
@@ -326,6 +326,10 @@ export class AppView extends PureComponent<AppProps, AppState> {
             <TransitionGroup
               style={{
                 margin: shouldCenterContent ? 'auto 0 auto 0' : 'initial',
+                maxWidth: window.location.pathname === '/' ? 'initial' : 'calc(1350px + 20%)',
+                alignSelf: 'center',
+                width: '100%',
+                padding: window.location.pathname === '/' ? 'initial' : '0 10%',
               }}
             >
               <CSSTransition key={window.location.pathname} classNames="fade" timeout={250}>

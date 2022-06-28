@@ -100,7 +100,6 @@ describe('pipeline_coordinator', () => {
       getAdjustedBaseVerificationGas: jest.fn().mockReturnValue(1),
       getUnadjustedBaseVerificationGas: jest.fn().mockReturnValue(1),
       getGasPaidForByFee: jest.fn().mockImplementation((assetId: number, fee: bigint) => fee),
-      getMinTxFee: jest.fn(),
       start: jest.fn(),
       stop: jest.fn(),
       getAdjustedTxGas: jest.fn().mockReturnValue(1000),
@@ -143,10 +142,6 @@ describe('pipeline_coordinator', () => {
       128 * 1024,
       12000000,
     );
-  });
-
-  afterEach(() => {
-    expect(feeResolver.getMinTxFee).not.toBeCalled();
   });
 
   it('should publish a rollup', async () => {

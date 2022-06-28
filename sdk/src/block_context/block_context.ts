@@ -1,9 +1,9 @@
+import { Block, DefiInteractionEvent } from '@aztec/barretenberg/block_source';
+import { Pedersen } from '@aztec/barretenberg/crypto';
 import { MemoryMerkleTree } from '@aztec/barretenberg/merkle_tree';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
-import { Mutex } from 'async-mutex';
 import { WorldStateConstants } from '@aztec/barretenberg/world_state';
-import { Pedersen } from '@aztec/barretenberg/crypto';
-import { Block, DefiInteractionEvent } from '@aztec/barretenberg/block_source';
+import { MemorySerialQueue } from '../serial_queue';
 
 /**
  * Block Context is designed to wrap a block received from the rollup provider
@@ -12,8 +12,8 @@ import { Block, DefiInteractionEvent } from '@aztec/barretenberg/block_source';
  * Requires mutex protection due to the concurrent nature of user states
  */
 export class BlockContext {
+  private serialQueue = new MemorySerialQueue();
   private subtree?: MemoryMerkleTree;
-  private mutex = new Mutex();
   private startIndex?: number;
 
   constructor(
@@ -43,8 +43,7 @@ export class BlockContext {
    * at most once
    */
   public async getBlockSubtreeHashPath(index: number) {
-    const release = await this.mutex.acquire();
-    try {
+    return await this.serialQueue.push(async () => {
       if (!this.subtree) {
         const numNotesInFullRollup = WorldStateConstants.NUM_NEW_DATA_TREE_NOTES_PER_TX * this.rollupSize;
         this.startIndex = this.rollup.dataStartIndex;
@@ -56,9 +55,7 @@ export class BlockContext {
         const allNotes = [...notes, ...Array(numNotesInFullRollup - notes.length).fill(MemoryMerkleTree.ZERO_ELEMENT)];
         this.subtree = await MemoryMerkleTree.new(allNotes, this.pedersen);
       }
-      return this.subtree!.getHashPath(index - this.startIndex!);
-    } finally {
-      release();
-    }
+      return this.subtree.getHashPath(index - this.startIndex!);
+    });
   }
 }

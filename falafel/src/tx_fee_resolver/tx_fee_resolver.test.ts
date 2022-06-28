@@ -20,6 +20,7 @@ describe('tx fee resolver', () => {
   const txsPerRollup = 10;
   const numSignificantFigures = 0;
   const callDataPerRollup = 128 * 1024;
+  const gasLimitPerRollup = 12000000;
   let dateSpy: jest.SpyInstance<number>;
   let gasPriceFeed: Mockify<PriceFeed>;
   let tokenPriceFeed: Mockify<PriceFeed>;
@@ -31,14 +32,17 @@ describe('tx fee resolver', () => {
     {
       address: EthAddress.random(),
       decimals: 18,
+      gasLimit: 30000,
     },
     {
       address: EthAddress.random(),
       decimals: 8,
+      gasLimit: 60000,
     },
     {
       address: EthAddress.random(),
       decimals: 18,
+      gasLimit: 60000,
     },
   ];
 
@@ -93,6 +97,7 @@ describe('tx fee resolver', () => {
       txsPerRollup,
       feePayingAssetIds,
       callDataPerRollup,
+      gasLimitPerRollup,
       numSignificantFigures,
     );
 

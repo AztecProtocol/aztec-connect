@@ -21,7 +21,6 @@ export async function createChocolateCoreSdk(jobQueue: JobQueue, options: Chocol
 
   const leveldb = getLevelDb();
   const db = await getDb();
-  await db.init();
 
   const host = new URL(serverUrl);
   const rollupProvider = new ServerRollupProvider(host, pollInterval);

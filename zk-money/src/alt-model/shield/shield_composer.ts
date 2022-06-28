@@ -115,7 +115,7 @@ export class ShieldComposer {
   private async approveAndAwaitL1AllowanceIfNecessary(controller: DepositController, requiredAmount: Amount) {
     // If an ERC-20 doesn't support permits, an allowance must first be granted as a seperate transaction.
     const targetAssetIsEth = controller.assetValue.assetId === 0;
-    if (!targetAssetIsEth && !controller.hasPermitSupport()) {
+    if (!targetAssetIsEth && !controller.hasPermitSupport() && !this.isDai()) {
       const sufficientAllowanceHasBeenApproved = () =>
         controller.getPublicAllowance().then(allowance => allowance >= requiredAmount.baseUnits);
       if (!(await sufficientAllowanceHasBeenApproved())) {

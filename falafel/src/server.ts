@@ -204,6 +204,7 @@ export class Server {
         feeGasPriceMultiplier,
         feeRoundUpSignificantFigures,
         feePayingAssetIds,
+        gasLimit,
       },
     } = this.configurator.getConfVars();
 
@@ -216,6 +217,7 @@ export class Server {
       numInnerRollupTxs * numOuterRollupProofs,
       feePayingAssetIds,
       rollupCallDataLimit,
+      gasLimit,
       feeRoundUpSignificantFigures,
     );
   }

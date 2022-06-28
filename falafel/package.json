@@ -32,7 +32,6 @@
     "async-mutex": "^0.2.6",
     "bn.js": "^5.0.0",
     "class-validator": "^0.12.2",
-    "dotenv": "^8.2.0",
     "fs-extra": "9.0.1",
     "graphql": "^15.3.0",
     "graphql-playground-middleware-koa": "^1.6.19",
@@ -65,7 +64,6 @@
     "@types/koa-router": "^7.0.42",
     "@types/node": "^12.6.8",
     "@types/request-ip": "^0.0.37",
-    "@types/supertest": "^2.0.8",
     "@typescript-eslint/eslint-plugin": "^5.27.0",
     "@typescript-eslint/parser": "^5.27.0",
     "debug": "^4.1.1",
@@ -73,7 +71,6 @@
     "eslint-config-prettier": "^8.5.0",
     "jest": "^26.6.3",
     "prettier": "^2.0.5",
-    "supertest": "^4.0.2",
     "ts-jest": "^26.5.1",
     "ts-node": "^8.9.1",
     "tsc-watch": "^2.2.1"

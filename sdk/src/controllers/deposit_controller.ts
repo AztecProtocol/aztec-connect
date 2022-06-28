@@ -366,7 +366,7 @@ export class DepositController {
 
     const ethSigner = new Web3Signer(this.provider);
     const signingData = this.getSigningData();
-    this.proofOutput.signature = await ethSigner.signMessage(signingData, this.depositor);
+    this.proofOutput.signature = await ethSigner.signPersonalMessage(signingData, this.depositor);
   }
 
   public isSignatureValid() {

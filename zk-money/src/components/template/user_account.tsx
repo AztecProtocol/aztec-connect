@@ -15,6 +15,12 @@ import { useUserIsSyncing } from 'alt-model/syncing_hooks';
 
 const Root = styled.div`
   position: relative;
+
+  @media (max-width: 1200px) {
+    position: absolute;
+    top: 82px;
+    right: 10%;
+  }
 `;
 
 const UsernameRoot = styled.div`
@@ -33,6 +39,11 @@ const UsernameRoot = styled.div`
 
 const UserName = styled(Text)`
   font-weight: 450;
+  text-overflow: ellipsis;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  max-width: 200px;
 `;
 
 const AvatarRoot = styled.div`

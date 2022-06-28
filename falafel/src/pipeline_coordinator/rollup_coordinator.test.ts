@@ -281,7 +281,6 @@ describe('rollup_coordinator', () => {
     };
 
     feeResolver = {
-      getMinTxFee: jest.fn(),
       start: jest.fn(),
       stop: jest.fn(),
       getGasPaidForByFee: jest.fn().mockImplementation((assetId: number, fee: bigint) => fee),
@@ -314,10 +313,6 @@ describe('rollup_coordinator', () => {
     } as any;
 
     coordinator = newRollupCoordinator(numInnerRollupTxs, numOuterRollupProofs);
-  });
-
-  afterEach(() => {
-    expect(feeResolver.getMinTxFee).not.toBeCalled();
   });
 
   describe('publish time is in the future', () => {

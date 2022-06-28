@@ -24,7 +24,6 @@ export class Alias {
 }
 
 export interface Database extends MutexDatabase {
-  init(): Promise<void>;
   close(): Promise<void>;
   clear(): Promise<void>;
 

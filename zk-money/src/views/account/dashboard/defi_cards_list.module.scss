@@ -1,44 +1,38 @@
 .defiCardsListWrapper {
-  display: grid;
-  grid: auto/repeat(3, 1fr);
+  display: flex;
+  flex-wrap: wrap;
   flex-direction: row;
-  justify-content: space-between;
   align-items: center;
+  justify-content: center;
   justify-items: center;
-  // using 'gap' breaks the grid
-  column-gap: 20px;
-  margin: 0 auto;
+  gap: 20px;
+  border-radius: 20px;
 }
 
 .defiCard {
-  margin-bottom: 50px;
+  height: calc(100% - 40px);
   position: relative;
   width: 100%;
-  height: calc(100% - 50px);
   min-width: 300px;
   max-width: 346px;
   overflow: hidden;
 }
 
 .dummyDefiCard {
-  margin-bottom: 50px;
   background-image: url('../../../images/dummyDefiCardImg.svg');
-  width: 100%;
+  height: 446px;
+  width: 346px;
   background-size: cover;
+  box-shadow: 0px 4px 10px rgb(0 0 0 / 10%);
+  border-radius: 20px;
   background-repeat: no-repeat;
-  height: 100%;
-  position: absolute;
   top: 0px;
   left: 0px;
 }
 
-@media screen and (max-width: 1240px) {
+@media screen and (max-width: 1350px) {
   .hideMinWidth {
     display: none;
-  }
-  .defiCardsListWrapper {
-    justify-content: center;
-    grid: auto/repeat(2, 1fr);
   }
 }
 
@@ -63,7 +57,7 @@
 }
 
 .select {
-  margin-right: 15px;
+  margin-right: 20px;
 }
 
 .noResults {

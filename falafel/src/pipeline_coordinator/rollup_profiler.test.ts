@@ -168,9 +168,6 @@ describe('Profile Rollup', () => {
     jest.spyOn(Date, 'now').mockImplementation(() => getCurrentTime().getTime());
 
     feeResolver = {
-      getMinTxFee: jest.fn().mockImplementation(() => {
-        throw new Error('This should not be called');
-      }),
       start: jest.fn(),
       stop: jest.fn(),
       getGasPaidForByFee: jest.fn().mockImplementation((assetId: number, fee: bigint) => fee),
@@ -200,7 +197,6 @@ describe('Profile Rollup', () => {
   });
 
   afterEach(() => {
-    expect(feeResolver.getMinTxFee).not.toBeCalled();
     expect(feeResolver.getAdjustedBridgeTxGas).not.toBeCalled();
     expect(feeResolver.getTxFees).not.toBeCalled();
     expect(feeResolver.getDefiFees).not.toBeCalled();

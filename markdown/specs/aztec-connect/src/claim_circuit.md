@@ -62,7 +62,7 @@ Recall that all inner circuits must have the **same number of public inputs** as
 - `defi_deposit_value = 0`
 - `defi_root`
 - `backward_link = 0`
-- `allow_claim = 0`
+- `allow_chain = 0`
 
 ##### Private Inputs
 
