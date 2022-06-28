@@ -125,8 +125,6 @@ export class SQLDatabase implements Database {
     this.mutex = this.connection.getRepository(MutexDao);
   }
 
-  async init() {}
-
   async close() {
     await this.connection.close();
   }

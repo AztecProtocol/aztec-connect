@@ -408,47 +408,8 @@ export class DexieDatabase implements Database {
   private userTx!: Dexie.Table<DexieUserTx, Uint8Array>;
   private readonly genesisDataKey = 'genesisData';
 
-  constructor(private dbName = 'hummus', private version = 7) {}
-
-  async init() {
-    try {
-      this.createTables();
-      // Try to do something with indexedDB.
-      // If it fails (with UpgradeError), then the schema has changed significantly that we need to recreate the entire db.
-      await this.getAliases(AliasHash.random());
-      await this.getClaimTx(Buffer.alloc(32));
-      await this.getNotes(GrumpkinAddress.random());
-      await this.getSpendingKeys(GrumpkinAddress.random());
-      await this.getUsers();
-      await this.getUserTxs(GrumpkinAddress.random());
-    } catch (e) {
-      await this.dexie.delete();
-      this.createTables();
-    }
-  }
-
-  private createTables() {
-    this.dexie = new Dexie(this.dbName);
-    this.dexie.version(this.version).stores({
-      alias: '&accountPublicKey, aliasHash',
-      claimTx: '&nullifier, userId',
-      key: '&name',
-      mutex: '&name',
-      note: '&commitment, nullifier, [owner+nullified], [owner+pending]',
-      spendingKey: '&[userId+key], userId',
-      user: '&accountPublicKey',
-      userTx:
-        '&[txId+userId], txId, [txId+proofId], [userId+proofId], proofId, settled, [userId+proofId+interactionNonce]',
-    });
-
-    this.alias = this.dexie.table('alias');
-    this.claimTx = this.dexie.table('claimTx');
-    this.key = this.dexie.table('key');
-    this.mutex = this.dexie.table('mutex');
-    this.note = this.dexie.table('note');
-    this.spendingKey = this.dexie.table('spendingKey');
-    this.user = this.dexie.table('user');
-    this.userTx = this.dexie.table('userTx');
+  constructor(private dbName = 'hummus', private version = 7) {
+    this.createTables();
   }
 
   close() {
@@ -815,5 +776,29 @@ export class DexieDatabase implements Database {
   public async getGenesisData() {
     const data = await this.getKey(this.genesisDataKey);
     return data ?? Buffer.alloc(0);
+  }
+
+  private createTables() {
+    this.dexie = new Dexie(this.dbName);
+    this.dexie.version(this.version).stores({
+      alias: '&accountPublicKey, aliasHash',
+      claimTx: '&nullifier, userId',
+      key: '&name',
+      mutex: '&name',
+      note: '&commitment, nullifier, [owner+nullified], [owner+pending]',
+      spendingKey: '&[userId+key], userId',
+      user: '&accountPublicKey',
+      userTx:
+        '&[txId+userId], txId, [txId+proofId], [userId+proofId], proofId, settled, [userId+proofId+interactionNonce]',
+    });
+
+    this.alias = this.dexie.table('alias');
+    this.claimTx = this.dexie.table('claimTx');
+    this.key = this.dexie.table('key');
+    this.mutex = this.dexie.table('mutex');
+    this.note = this.dexie.table('note');
+    this.spendingKey = this.dexie.table('spendingKey');
+    this.user = this.dexie.table('user');
+    this.userTx = this.dexie.table('userTx');
   }
 }

@@ -69,6 +69,7 @@ enum SdkInitState {
  * of the CoreSdk exist in different processes, that they will not modify state at the same time.
  */
 export class CoreSdk extends EventEmitter implements CoreSdkInterface {
+  private dataVersion = 1;
   private options!: CoreSdkOptions;
   private worldState!: WorldState;
   private userStates: UserState[] = [];
@@ -150,12 +151,14 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
         proverless,
       } = await this.getRemoteStatus();
 
-      // Clear all data if contract changed.
+      // Clear all data if contract changed or dataVersion changed.
       const rca = await this.getLocalRollupContractAddress();
-      if (rca && !rca.equals(rollupContractAddress)) {
+      const localDataVersion = await this.getLocalDataVersion();
+      if ((rca && !rca.equals(rollupContractAddress)) || localDataVersion !== this.dataVersion) {
         debug('Erasing database...');
         await this.leveldb.clear();
         await this.db.clear();
+        await this.setLocalDataVersion(this.dataVersion);
       }
 
       await this.db.addKey('rollupContractAddress', rollupContractAddress.toBuffer());
@@ -777,6 +780,15 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     if (this.initState !== state) {
       throw new Error(`Init state ${this.initState} !== ${state}`);
     }
+  }
+
+  private async setLocalDataVersion(version: number) {
+    await this.db.addKey('dataVersion', Buffer.from([version]));
+  }
+
+  private async getLocalDataVersion() {
+    const result = await this.db.getKey('dataVersion');
+    return result ? result.readInt8() : 0;
   }
 
   private async getLocalRollupContractAddress() {
