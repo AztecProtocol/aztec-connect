@@ -35,6 +35,13 @@
   -moz-text-fill-color: rgba(255, 255, 255, 0);
 }
 
+@mixin max_element_width() {
+  max-width: calc(1350px + 20%);
+  width: 100%;
+  align-self: center;
+  padding: 0px 10%;
+}
+
 @mixin reset_input() {
   margin: 0;
   font-family: inherit !important;

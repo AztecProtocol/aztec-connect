@@ -82,7 +82,7 @@ export function Navbar({ isLoggingIn, isLoggedIn, accountComponent, theme, onCha
                 Wallet
               </Link>
             </div>
-            {accountComponent && <div className={style.accountComponent}>{accountComponent}</div>}
+            {accountComponent}
           </>
         ) : (
           <Link

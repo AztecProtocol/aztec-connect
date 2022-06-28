@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import styled from 'styled-components/macro';
-import { AccountState, WorldState } from '../../app';
+import { AccountState } from '../../app';
 import logo from '../../images/zk_money.svg';
 import logoWhite from '../../images/zk_money_white.svg';
 import { breakpoints, spacings, Theme } from '../../styles';

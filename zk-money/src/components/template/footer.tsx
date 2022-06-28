@@ -47,7 +47,6 @@ const FooterRoot = styled.div`
   margin-top: 80px;
   width: 100%;
   background: ${colours.greyLight};
-  padding: 0 10%;
   font-size: ${fontSizes.m};
   line-height: ${lineHeights.m};
 `;
@@ -56,9 +55,12 @@ const FooterContent = styled.div`
   position: relative;
   display: flex;
   justify-content: space-between;
-  padding: ${spacings.xl} 0;
-  z-index: 1;
   color: black;
+  max-width: calc(1350px + 20%);
+  width: 100%;
+  align-self: center;
+  padding: 0px 10%;
+  margin: 40px auto;
   @media (max-width: ${breakpoints.s}) {
     flex-direction: column;
     padding: ${spacings.s} 0;

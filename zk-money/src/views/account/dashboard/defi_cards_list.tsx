@@ -142,9 +142,7 @@ export const DefiCardsList = ({ onSelect, isLoggedIn }: DefiCardsListProps) => {
             isLoggedIn={isLoggedIn}
           />
         ))}
-        <CardWrapper className={cx(style.defiCard, style.hideMinWidth)}>
-          <div className={style.dummyDefiCard} />
-        </CardWrapper>
+        {!hasFilters && <div className={cx(style.dummyDefiCard, style.hideMinWidth)} />}
       </div>
     </Section>
   );

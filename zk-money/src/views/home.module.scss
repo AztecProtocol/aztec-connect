@@ -1,3 +1,5 @@
+@use '../ui-components/styles/mixins';
+
 @keyframes float {
   0% {
     filter: drop-shadow(0rem 0rem 0.4rem rgba(0, 0, 0, 0.3));
@@ -11,6 +13,11 @@
     filter: drop-shadow(0rem 0rem 0.4rem rgba(0, 0, 0, 0.3));
     transform: translatey(0px);
   }
+}
+
+.homeWrapper {
+  display: flex;
+  flex-direction: column;
 }
 
 .title {
@@ -72,10 +79,10 @@
 .banner {
   display: flex;
   flex-direction: row;
-  grid-gap: 15%;
   gap: 10%;
   height: calc(95vh - 50%);
-  padding: 0 10% 50px 10%;
+  margin-bottom: 50px;
+  @include mixins.max_element_width;
 
   .cardsGraphic {
     width: 420px;
@@ -110,13 +117,22 @@
   }
 }
 
-.favoriteApps {
-  display: flex;
+.favoriteAppsWrapper {
+  width: 100%;
   background: white;
+  display: flex;
+  justify-content: center;
+  margin-top: -7px;
+  padding-top: 50px;
+}
+
+.favoriteApps {
+  background: white;
+  display: flex;
   flex-direction: column;
   color: hsl(222deg, 32%, 18%);
-  margin-top: -7px;
   padding: 50px 10% 0 10%;
+  @include mixins.max_element_width;
 
   .boxes {
     display: flex;
@@ -190,7 +206,8 @@
 
 .bottomContent {
   padding: 0px 10% 0 10%;
-  margin: 50px 0% 190px 0%;
+  margin: 50px 0% 50px 0%;
+  @include mixins.max_element_width;
 
   .number {
     font-size: 24.88px;
@@ -296,7 +313,7 @@
   }
 
   .bottomContent {
-    margin: 100px 0% 190px 0%;
+    margin: 100px 0% 50px 0%;
   }
 }
 
