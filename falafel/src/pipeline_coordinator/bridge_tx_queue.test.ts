@@ -73,7 +73,6 @@ describe('Bridge Tx Queue', () => {
     jest.spyOn(Date, 'now').mockImplementation(() => 1618226000000);
 
     feeResolver = {
-      getMinTxFee: jest.fn(),
       start: jest.fn(),
       stop: jest.fn(),
       getGasPaidForByFee: jest.fn().mockImplementation((assetId: number, fee: bigint) => fee),
@@ -99,10 +98,6 @@ describe('Bridge Tx Queue', () => {
     };
 
     bridgeQ = new BridgeTxQueue(bridgeConfig.bridgeId, feeResolver as any);
-  });
-
-  afterEach(() => {
-    expect(feeResolver.getMinTxFee).not.toBeCalled();
   });
 
   it("single tx that only covers it's own gas does not get returned", () => {

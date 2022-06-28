@@ -19,6 +19,7 @@ export class TxFeeResolver {
     private readonly txsPerRollup: number,
     private readonly feePayingAssetIds: number[],
     callDataPerRollup: number,
+    gasLimitPerRollup: number,
     numSignificantFigures = 2,
     refreshInterval = 5 * 60 * 1000, // 5 mins
     minFeeDuration = refreshInterval * 2, // 10 mins
@@ -32,6 +33,7 @@ export class TxFeeResolver {
       feeGasPriceMultiplier,
       txsPerRollup,
       callDataPerRollup,
+      gasLimitPerRollup,
       numSignificantFigures,
     );
   }
@@ -48,16 +50,12 @@ export class TxFeeResolver {
     return this.feePayingAssetIds.some(id => id === assetId);
   }
 
-  getMinTxFee(txAssetId: number, txType: TxType, feeAssetId: number) {
-    return this.feeCalculator.getMinTxFee(txAssetId, txType, feeAssetId);
-  }
-
   getGasPaidForByFee(assetId: number, fee: bigint) {
     return this.feeCalculator.getGasPaidForByFee(assetId, fee);
   }
 
-  getAdjustedBaseVerificationGas(txType: TxType) {
-    return this.feeCalculator.getAdjustedBaseVerificationGas(txType);
+  getAdjustedBaseVerificationGas(txAssetId: number, txType: TxType) {
+    return this.feeCalculator.getAdjustedBaseVerificationGas(txAssetId, txType);
   }
 
   getUnadjustedBaseVerificationGas() {
@@ -92,9 +90,9 @@ export class TxFeeResolver {
     return this.bridgeResolver.getFullBridgeGasFromContract(bridgeId);
   }
 
-  getTxFees(assetId: number) {
-    const feePayingAsset = this.isFeePayingAsset(assetId) ? assetId : this.defaultFeePayingAsset;
-    return this.feeCalculator.getTxFees(assetId, feePayingAsset);
+  getTxFees(txAssetId: number) {
+    const feePayingAsset = this.isFeePayingAsset(txAssetId) ? txAssetId : this.defaultFeePayingAsset;
+    return this.feeCalculator.getTxFees(txAssetId, feePayingAsset);
   }
 
   getTxCallData(txType: TxType) {
@@ -124,9 +122,9 @@ export class TxFeeResolver {
     const immediateTxGas = defiDepositGas + defiClaimGas + fullBridgeTxGas + emptySlotGas * (this.txsPerRollup - 1);
 
     const values = [
-      { assetId: feeAssetId, value: this.feeCalculator.getTxFeeFromGas(slowTxGas, feeAssetId) },
-      { assetId: feeAssetId, value: this.feeCalculator.getTxFeeFromGas(fastTxGas, feeAssetId) },
-      { assetId: feeAssetId, value: this.feeCalculator.getTxFeeFromGas(immediateTxGas, feeAssetId) },
+      { assetId: feeAssetId, value: this.feeCalculator.getTxFeeFromGas(feeAssetId, slowTxGas) },
+      { assetId: feeAssetId, value: this.feeCalculator.getTxFeeFromGas(feeAssetId, fastTxGas) },
+      { assetId: feeAssetId, value: this.feeCalculator.getTxFeeFromGas(feeAssetId, immediateTxGas) },
     ];
     return values;
   }
