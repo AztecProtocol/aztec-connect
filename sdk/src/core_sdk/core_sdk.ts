@@ -788,7 +788,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
 
   private async getLocalDataVersion() {
     const result = await this.db.getKey('dataVersion');
-    return result ? result.readInt8() : 0;
+    return result ? result.readInt8(0) : 0;
   }
 
   private async getLocalRollupContractAddress() {
