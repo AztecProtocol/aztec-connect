@@ -92,10 +92,10 @@ const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
     websiteLabel: 'lido.fi',
     name: 'Lido Staking × Curve',
     investmentType: DefiInvestmentType.STAKING,
-    shortDesc: 'Stake zkETH with Lido to earn daily rewards.',
-    exitDesc: 'Unstake zkwstETH and get back zkETH',
+    shortDesc: 'Swap ETH for stETH on Curve and earn daily staking rewards. stETH is wrapped into wstETH.',
+    exitDesc: 'Unwrap zkwstETH and swap on Curve to get back zkETH.',
     longDescription:
-      'Stake ETH and receive liquid staked ETH (wstETH), which allows you to earn staking yields without locking assets. Access staking while depositing wstETH to earn yields across decentralized finance products.',
+      'Swap ETH for liquid staked ETH (stETH) on Curve and earn daily staking rewards. stETH is wrapped into wstETH, allowing you to earn staking yields without locking assets.',
     bannerImg: ethToDaiBanner,
     logo: lidoXCurveLogo,
     miniLogo: lidoMiniLogo,
