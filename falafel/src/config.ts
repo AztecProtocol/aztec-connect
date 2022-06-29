@@ -1,6 +1,4 @@
 import { EthereumRpc } from '@aztec/barretenberg/blockchain';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
-import { BridgeConfig } from '@aztec/barretenberg/rollup_provider';
 import { EthereumBlockchainConfig, JsonRpcProvider, WalletProvider } from '@aztec/blockchain';
 import { ConnectionOptions } from 'typeorm';
 import { Configurator, ConfVars } from './configurator';
@@ -74,7 +72,7 @@ export async function getComponents(configurator: Configurator) {
     rollupCallDataLimit,
   } = confVars;
   const ormConfig = getOrmConfig(dbUrl, typeOrmLogging);
-  const { provider, signingAddress, chainId } = await getProvider(ethereumHost, privateKey);
+  const { provider, signingAddress } = await getProvider(ethereumHost, privateKey);
   const ethConfig = getEthereumBlockchainConfig(confVars);
 
   console.log(`Process Id: ${process.pid}`);
