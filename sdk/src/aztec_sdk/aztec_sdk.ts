@@ -28,7 +28,6 @@ import { AztecSdkUser } from './aztec_sdk_user';
 import { groupUserTxs } from './group_user_txs';
 
 export interface AztecSdk {
-  on(event: SdkEvent.UPDATED_USERS, listener: () => void): this;
   on(event: SdkEvent.UPDATED_USER_STATE, listener: (userId: GrumpkinAddress) => void): this;
   on(event: SdkEvent.UPDATED_WORLD_STATE, listener: (syncedToRollup: number, latestRollupId: number) => void): this;
   on(event: SdkEvent.DESTROYED, listener: () => void): this;
