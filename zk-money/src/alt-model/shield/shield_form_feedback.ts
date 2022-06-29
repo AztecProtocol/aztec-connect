@@ -17,11 +17,14 @@ function getAmountInputFeedback(result: ShieldFormValidationResult, touched: boo
   }
   if (result.mustAllowForGas) {
     const gas = result.targetL2OutputAmount?.withBaseUnits(result.reservedForL1GasIfTargetAssetIsEth ?? 0n);
-    return `Please allow ${gas?.format({ layer: 'L1' })} from your L1 balance for covering gas costs.`;
+    return `Please allow ${gas?.format({ layer: 'L1', uniform: true })} from your L1 balance for covering gas costs.`;
   }
   if (result.mustAllowForFee) {
     const fee = result.input.feeAmount;
-    return `Please allow ${fee?.format({ layer: 'L1' })} from your L1 balance for paying the transaction fee.`;
+    return `Please allow ${fee?.format({
+      layer: 'L1',
+      uniform: true,
+    })} from your L1 balance for paying the transaction fee.`;
   }
   if (result.beyondTransactionLimit) {
     const { transactionLimit } = result.input;
@@ -39,8 +42,12 @@ function getAmountInputFeedback(result: ShieldFormValidationResult, touched: boo
         "Couldn't correctly form feedback string for shield form issue named insufficientTargetAssetBalance",
       );
     }
-    return `Transaction requires ${requiredAmount?.format({ layer: 'L1' })}. You have ${balanceAmount?.format({
+    return `Transaction requires ${requiredAmount?.format({
       layer: 'L1',
+      uniform: true,
+    })}. You have ${balanceAmount?.format({
+      layer: 'L1',
+      uniform: true,
     })} available.`;
   }
   if (result.precisionIsTooHigh) {
