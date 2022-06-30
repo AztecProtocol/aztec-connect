@@ -50,3 +50,43 @@
 .lastSegment {
   padding: 0 40px 0 30px;
 }
+
+@media (max-width: 1050px) {
+  .separator {
+    display: none;
+  }
+
+  .segment,
+  .lastSegment {
+    padding: 0;
+  }
+
+  .firstSegment {
+    margin-right: auto;
+    width: 20%;
+  }
+
+  .lastSegment {
+    margin-left: auto;
+    width: 20%;
+  }
+
+  .root {
+    display: flex;
+    justify-content: center;
+    padding: 10px 40px;
+    flex-flow: row wrap;
+    height: initial;
+    gap: 10px 20px;
+  }
+
+  .value {
+    max-width: initial;
+  }
+}
+
+@media (max-width: 900px) {
+  .firstSegment {
+    width: 100%;
+  }
+}

@@ -1,8 +1,43 @@
+.cardHeader {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+.spinner {
+  margin-top: 18px;
+  animation: spin-anim 4s linear infinite;
+}
+
+@keyframes spin-anim {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
 .myBalance {
   display: flex;
   justify-content: center;
   align-items: center;
   flex-basis: 66%;
+}
+
+.amount {
+  font-size: 56px;
+  color: #1f3058;
+  height: 62px;
+  display: flex;
+  gap: 15px;
+}
+
+.informationWrapper {
+  width: 100%;
+  height: 20px;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  padding: 10px 0px;
+  position: relative;
 }
 
 .available {

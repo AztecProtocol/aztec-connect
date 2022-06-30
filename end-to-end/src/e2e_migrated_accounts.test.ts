@@ -104,7 +104,6 @@ describe('end-to-end migrated tests', () => {
     const transferValue = sdk.toBaseUnits(assetId, '0.007');
     const withdrawValue = sdk.toBaseUnits(assetId, '0.0035');
     const depositFees = await sdk.getDepositFees(assetId);
-    const withdrawalFees = await sdk.getWithdrawFees(assetId);
     const transferFees = await sdk.getTransferFees(assetId);
 
     const accounts: GrumpkinAddress[] = [];
@@ -236,6 +235,7 @@ describe('end-to-end migrated tests', () => {
       for (let i = 0; i < 4; i++) {
         const signer = signers[i];
         const recipient = addresses[i];
+        const withdrawalFees = await sdk.getWithdrawFees(assetId, recipient);
 
         debug(
           `withdrawing ${sdk.fromBaseUnits(withdrawValue, true)} from account ${i} to address ${recipient.toString()}`,
@@ -254,7 +254,7 @@ describe('end-to-end migrated tests', () => {
       debug('waiting for withdrawals to settle...');
       await Promise.all(withdrawControllers.map(c => c.awaitSettlement()));
       for (let i = 0; i < 4; i++) {
-        const fee = withdrawalFees[i == 3 ? TxSettlementTime.INSTANT : TxSettlementTime.NEXT_ROLLUP];
+        const fee = withdrawControllers[i].fee;
         expect((await sdk.getBalance(accounts[i], assetId)).value).toBe(
           aztecBalancesBeforeWithdrawals[i].value - withdrawValue.value - fee.value,
         );

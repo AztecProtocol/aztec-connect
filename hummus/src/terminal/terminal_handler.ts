@@ -387,7 +387,7 @@ export class TerminalHandler {
       TxType.DEPOSIT,
       TxType.TRANSFER,
       TxType.WITHDRAW_TO_WALLET,
-      TxType.WITHDRAW_TO_CONTRACT,
+      TxType.WITHDRAW_HIGH_GAS,
     ];
     const txFees = await this.sdk.getTxFees(this.assetId);
     txTypes.forEach(txType => {

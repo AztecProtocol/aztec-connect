@@ -1,8 +1,6 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 
 export enum SdkEvent {
-  // The set of users has changed.
-  UPDATED_USERS = 'SDKEVENT_UPDATED_USERS',
   // A users state has changed.
   UPDATED_USER_STATE = 'SDKEVENT_UPDATED_USER_STATE',
   // The world state has updated. Used for displaying sync progress.

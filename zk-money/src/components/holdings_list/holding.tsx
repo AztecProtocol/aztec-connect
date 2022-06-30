@@ -8,6 +8,7 @@ import { useAmount } from 'alt-model/asset_hooks';
 import style from './holding.module.scss';
 import { Amount } from 'alt-model/assets';
 import { getIsDust } from 'alt-model/assets/asset_helpers';
+import { SkeletonRect } from 'ui-components';
 
 interface HoldingProps {
   assetValue: AssetValue;
@@ -24,8 +25,9 @@ export function Holding({ assetValue, onSend, onShield, onGoToEarn }: HoldingPro
   const spendableBalanceIsDust =
     !spendableAmount || (asset ? getIsDust(spendableAmount.toAssetValue(), asset) : undefined);
   const bulkPrice = useAmountBulkPrice(amount);
-  const bulkPriceStr = bulkPrice ? `$${formatBulkPrice(bulkPrice)}` : '';
   const shieldSupported = SHIELDABLE_ASSET_ADDRESSES.some(x => asset?.address.equals(x));
+  const spendableFormatted =
+    (spendableAmount?.toFloat() ?? 0) > 0 ? spendableAmount?.format({ hideSymbol: true, uniform: true }) : '0';
 
   if (!asset) {
     return null;
@@ -36,14 +38,11 @@ export function Holding({ assetValue, onSend, onShield, onGoToEarn }: HoldingPro
       <ShieldedAssetIcon address={asset.address} />
       <div className={style.assetWrapper}>
         <div className={style.holdingUnits}>{amount.format({ uniform: true })}</div>
-        <div className={style.spendable}>
-          {spendableAmount && spendableAmount?.toFloat() > 0
-            ? spendableAmount?.format({ hideSymbol: true, uniform: true })
-            : '0'}{' '}
-          {'  (Spendable)'}
-        </div>
+        <div className={style.spendable}>{`${spendableFormatted} available`}</div>
       </div>
-      <div className={style.holdingAmount}>{bulkPriceStr}</div>
+      <div className={style.holdingAmount}>
+        {bulkPrice ? `$${formatBulkPrice(bulkPrice)}` : <SkeletonRect sizingContent="$1000.00" />}
+      </div>
 
       <div className={style.buttonsWrapper}>
         {shieldSupported && (

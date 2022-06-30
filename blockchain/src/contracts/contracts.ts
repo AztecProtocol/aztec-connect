@@ -189,6 +189,14 @@ export class Contracts {
     return (await this.provider.getCode(address.toString())) !== '0x';
   }
 
+  public async isEmpty(address: EthAddress) {
+    return (
+      !(await this.isContract(address)) &&
+      (await this.provider.getBalance(address.toString())).toBigInt() == BigInt(0) &&
+      (await this.provider.getTransactionCount(address.toString())) == 0
+    );
+  }
+
   public async getFeeData(): Promise<FeeData> {
     const { maxFeePerGas, maxPriorityFeePerGas, gasPrice } = await this.provider.getFeeData();
     return {

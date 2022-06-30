@@ -73,6 +73,12 @@ export interface Blockchain extends BlockSource, BlockchainStatusSource, Ethereu
 
   isContract(address: EthAddress): Promise<boolean>;
 
+  /**
+   * returns the EIP-161 definition of empty i.e. code == balance == nonce == 0
+   * @param address The address to be queried
+   */
+  isEmpty(address: EthAddress): Promise<boolean>;
+
   getUserProofApprovalStatus(address: EthAddress, txId: Buffer): Promise<boolean>;
 
   estimateGas(data: Buffer): Promise<number>;

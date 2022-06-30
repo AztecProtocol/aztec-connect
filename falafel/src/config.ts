@@ -1,6 +1,4 @@
 import { EthereumRpc } from '@aztec/barretenberg/blockchain';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
-import { BridgeConfig } from '@aztec/barretenberg/rollup_provider';
 import { EthereumBlockchainConfig, JsonRpcProvider, WalletProvider } from '@aztec/blockchain';
 import { ConnectionOptions } from 'typeorm';
 import { Configurator, ConfVars } from './configurator';
@@ -60,54 +58,6 @@ function getOrmConfig(dbUrl?: string, logging = false): ConnectionOptions {
   }
 }
 
-function getPerChainBridgeConfig(chainId: number): BridgeConfig[] {
-  switch (chainId) {
-    case 1:
-    case 0xa57ec:
-      return [
-        {
-          // Element september 16 Dai expiry
-          bridgeId: new BridgeId(1, 1, 1, undefined, undefined, 1663361092).toBigInt(),
-          numTxs: 25,
-          gas: 500000,
-          rollupFrequency: 3,
-        },
-        {
-          // Ace of ZK
-          bridgeId: new BridgeId(4, 0, 0).toBigInt(),
-          numTxs: 1,
-          gas: 300000,
-          rollupFrequency: 3,
-        },
-        {
-          // Curve stEth, eth -> wstETh
-          bridgeId: new BridgeId(5, 0, 2).toBigInt(),
-          numTxs: 40,
-          gas: 250000,
-          rollupFrequency: 3,
-        },
-        {
-          // Curve stEth, wstEth -> eth
-          bridgeId: new BridgeId(5, 2, 0).toBigInt(),
-          numTxs: 40,
-          gas: 250000,
-          rollupFrequency: 3,
-        },
-      ];
-    case 1337:
-      return [
-        {
-          bridgeId: new BridgeId(1, 0, 1).toBigInt(),
-          numTxs: 1,
-          gas: 200000,
-          rollupFrequency: 1,
-        },
-      ];
-    default:
-      return [];
-  }
-}
-
 export async function getComponents(configurator: Configurator) {
   const confVars = configurator.getConfVars();
   const {
@@ -122,10 +72,8 @@ export async function getComponents(configurator: Configurator) {
     rollupCallDataLimit,
   } = confVars;
   const ormConfig = getOrmConfig(dbUrl, typeOrmLogging);
-  const { provider, signingAddress, chainId } = await getProvider(ethereumHost, privateKey);
+  const { provider, signingAddress } = await getProvider(ethereumHost, privateKey);
   const ethConfig = getEthereumBlockchainConfig(confVars);
-  const bridgeConfigs = getPerChainBridgeConfig(chainId);
-  configurator.saveRuntimeConfig({ bridgeConfigs });
 
   console.log(`Process Id: ${process.pid}`);
   console.log(`Database Url: ${dbUrl || 'none (local sqlite)'}`);

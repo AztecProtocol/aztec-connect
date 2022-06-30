@@ -175,7 +175,7 @@ const bridgeConfigs: BridgeConfig[] = [
 ];
 
 const randomInt = (to = 2 ** 32 - 1) => Math.floor(Math.random() * (to + 1));
-const txTypeToProofId = (txType: TxType) => (txType < TxType.WITHDRAW_TO_CONTRACT ? txType + 1 : txType);
+const txTypeToProofId = (txType: TxType) => (txType < TxType.WITHDRAW_HIGH_GAS ? txType + 1 : txType);
 
 const mockTx = (
   id: number,

@@ -1,3 +1,5 @@
+import { toBigIntBE, toBufferBE } from '../bigint_buffer';
+
 export interface BridgeConfig {
   bridgeId: bigint;
   numTxs: number;
@@ -16,10 +18,10 @@ export interface BridgeConfigJson {
 
 export const bridgeConfigToJson = ({ bridgeId, ...rest }: BridgeConfig): BridgeConfigJson => ({
   ...rest,
-  bridgeId: bridgeId.toString(),
+  bridgeId: toBufferBE(bridgeId, 32).toString('hex'),
 });
 
 export const bridgeConfigFromJson = ({ bridgeId, ...rest }: BridgeConfigJson): BridgeConfig => ({
   ...rest,
-  bridgeId: BigInt(bridgeId),
+  bridgeId: toBigIntBE(Buffer.from(bridgeId, 'hex')),
 });

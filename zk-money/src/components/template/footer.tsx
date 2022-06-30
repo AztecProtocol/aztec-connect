@@ -49,6 +49,10 @@ const FooterRoot = styled.div`
   background: ${colours.greyLight};
   font-size: ${fontSizes.m};
   line-height: ${lineHeights.m};
+
+  @media (max-width: 640px) {
+    padding: 10%;
+  }
 `;
 
 const FooterContent = styled.div`

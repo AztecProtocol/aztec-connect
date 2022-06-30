@@ -127,11 +127,11 @@ describe('end-to-end non fee paying asset tests', () => {
 
     // Rollup 2: Withdrawals and transfers.
     {
-      const withdrawalFee = withdrawalFees[TxSettlementTime.NEXT_ROLLUP];
-      const transferFee = transferFees[TxSettlementTime.INSTANT];
-
       // user0 withdraw to address1.
       const recipient = addresses[1];
+      const withdrawalFee = (await sdk.getWithdrawFees(assetId, recipient))[TxSettlementTime.NEXT_ROLLUP];
+      const transferFee = transferFees[TxSettlementTime.INSTANT];
+
       debug(
         `withdrawing ${sdk.fromBaseUnits(withdrawalValue, true)} (fee: ${sdk.fromBaseUnits(
           withdrawalFee,

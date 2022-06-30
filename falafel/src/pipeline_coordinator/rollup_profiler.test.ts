@@ -94,7 +94,7 @@ describe('Profile Rollup', () => {
 
   const getCurrentTime = () => currentTime;
 
-  const txTypeToProofId = (txType: TxType) => (txType < TxType.WITHDRAW_TO_CONTRACT ? txType + 1 : txType);
+  const txTypeToProofId = (txType: TxType) => (txType < TxType.WITHDRAW_HIGH_GAS ? txType + 1 : txType);
 
   const mockTx = (
     id: number,
@@ -222,7 +222,7 @@ describe('Profile Rollup', () => {
       mockTx(0, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
       mockTx(1, { txType: TxType.ACCOUNT, txFeeAssetId: 1 }),
       mockTx(3, { txType: TxType.DEFI_CLAIM, txFeeAssetId: 0 }),
-      mockTx(4, { txType: TxType.WITHDRAW_TO_CONTRACT, txFeeAssetId: 1 }),
+      mockTx(4, { txType: TxType.WITHDRAW_HIGH_GAS, txFeeAssetId: 1 }),
       mockTx(5, { txType: TxType.DEFI_CLAIM, txFeeAssetId: 0 }),
       mockTx(6, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
       mockTx(7, { txType: TxType.WITHDRAW_TO_WALLET, txFeeAssetId: 1 }),
@@ -262,7 +262,7 @@ describe('Profile Rollup', () => {
       mockTx(0, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
       mockTx(1, { txType: TxType.ACCOUNT, txFeeAssetId: 1 }),
       mockTx(3, { txType: TxType.DEFI_CLAIM, txFeeAssetId: 0 }),
-      mockTx(4, { txType: TxType.WITHDRAW_TO_CONTRACT, txFeeAssetId: 0 }),
+      mockTx(4, { txType: TxType.WITHDRAW_HIGH_GAS, txFeeAssetId: 0 }),
       mockTx(5, { txType: TxType.DEFI_CLAIM, txFeeAssetId: 1 }),
       mockTx(6, { txType: TxType.TRANSFER, txFeeAssetId: 0, excessGas: 2 * BASE_GAS }),
       mockTx(7, { txType: TxType.WITHDRAW_TO_WALLET, txFeeAssetId: 0 }),
@@ -303,7 +303,7 @@ describe('Profile Rollup', () => {
       mockTx(0, { txType: TxType.DEPOSIT, txFeeAssetId: 0, excessGas: 7 * BASE_GAS }),
       mockTx(1, { txType: TxType.ACCOUNT, txFeeAssetId: 0 }),
       mockTx(3, { txType: TxType.DEFI_CLAIM, txFeeAssetId: 1 }),
-      mockTx(4, { txType: TxType.WITHDRAW_TO_CONTRACT, txFeeAssetId: 0 }),
+      mockTx(4, { txType: TxType.WITHDRAW_HIGH_GAS, txFeeAssetId: 0 }),
       mockTx(5, { txType: TxType.DEFI_CLAIM, txFeeAssetId: 0 }),
       mockTx(6, { txType: TxType.TRANSFER, txFeeAssetId: 1, excessGas: 2 * BASE_GAS }),
       mockTx(7, { txType: TxType.WITHDRAW_TO_WALLET, txFeeAssetId: 0 }),
@@ -343,7 +343,7 @@ describe('Profile Rollup', () => {
       mockTx(0, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
       mockTx(1, { txType: TxType.ACCOUNT, txFeeAssetId: 1 }),
       mockTx(2, { txType: TxType.DEFI_CLAIM, txFeeAssetId: 0 }),
-      mockTx(3, { txType: TxType.WITHDRAW_TO_CONTRACT, txFeeAssetId: 0 }),
+      mockTx(3, { txType: TxType.WITHDRAW_HIGH_GAS, txFeeAssetId: 0 }),
       mockTx(4, { txType: TxType.DEFI_CLAIM, txFeeAssetId: 0 }),
       mockTx(5, { txType: TxType.TRANSFER, txFeeAssetId: 1 }),
       mockTx(6, { txType: TxType.WITHDRAW_TO_WALLET, txFeeAssetId: 0, excessGas: 2 * BASE_GAS }),

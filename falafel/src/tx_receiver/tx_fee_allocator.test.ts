@@ -54,7 +54,7 @@ const getSingleBridgeCost = (bridgeId: bigint) => {
 
 const getTxGasWithBase = (txType: TxType) => feeConstants[txType] + BASE_GAS;
 
-const txTypeToProofId = (txType: TxType) => (txType < TxType.WITHDRAW_TO_CONTRACT ? txType + 1 : txType);
+const txTypeToProofId = (txType: TxType) => (txType < TxType.WITHDRAW_HIGH_GAS ? txType + 1 : txType);
 
 const toProofData = (buf: Buffer) => {
   return new ProofData(buf);
@@ -196,7 +196,7 @@ describe('Tx Fee Allocator', () => {
       preciselyFundedTx(1, TxType.ACCOUNT, 1),
       preciselyFundedTx(2, TxType.DEPOSIT, 1),
       preciselyFundedTx(3, TxType.TRANSFER, 1),
-      preciselyFundedTx(4, TxType.WITHDRAW_TO_CONTRACT, 1),
+      preciselyFundedTx(4, TxType.WITHDRAW_HIGH_GAS, 1),
       preciselyFundedTx(5, TxType.WITHDRAW_TO_WALLET, 1),
       mockDefiBridgeTx(
         6,
@@ -209,7 +209,7 @@ describe('Tx Fee Allocator', () => {
       TxType.ACCOUNT,
       TxType.DEPOSIT,
       TxType.TRANSFER,
-      TxType.WITHDRAW_TO_CONTRACT,
+      TxType.WITHDRAW_HIGH_GAS,
       TxType.WITHDRAW_TO_WALLET,
       TxType.DEFI_DEPOSIT,
     ]);
@@ -218,7 +218,7 @@ describe('Tx Fee Allocator', () => {
       getTxGasWithBase(TxType.ACCOUNT) +
         getTxGasWithBase(TxType.DEPOSIT) +
         getTxGasWithBase(TxType.TRANSFER) +
-        getTxGasWithBase(TxType.WITHDRAW_TO_CONTRACT) +
+        getTxGasWithBase(TxType.WITHDRAW_HIGH_GAS) +
         getTxGasWithBase(TxType.WITHDRAW_TO_WALLET) +
         getTxGasWithBase(TxType.DEFI_DEPOSIT) +
         getSingleBridgeCost(bridgeConfigs[0].bridgeId),
@@ -228,7 +228,7 @@ describe('Tx Fee Allocator', () => {
       getTxGasWithBase(TxType.ACCOUNT) +
         getTxGasWithBase(TxType.DEPOSIT) +
         getTxGasWithBase(TxType.TRANSFER) +
-        getTxGasWithBase(TxType.WITHDRAW_TO_CONTRACT) +
+        getTxGasWithBase(TxType.WITHDRAW_HIGH_GAS) +
         getTxGasWithBase(TxType.WITHDRAW_TO_WALLET) +
         getTxGasWithBase(TxType.DEFI_DEPOSIT) +
         getSingleBridgeCost(bridgeConfigs[0].bridgeId) +
@@ -242,7 +242,7 @@ describe('Tx Fee Allocator', () => {
       preciselyFundedTx(1, TxType.ACCOUNT, 1),
       preciselyFundedTx(2, TxType.DEPOSIT, NON_FEE_PAYING_ASSET),
       preciselyFundedTx(3, TxType.TRANSFER, 1),
-      preciselyFundedTx(4, TxType.WITHDRAW_TO_CONTRACT, NON_FEE_PAYING_ASSET),
+      preciselyFundedTx(4, TxType.WITHDRAW_HIGH_GAS, NON_FEE_PAYING_ASSET),
       preciselyFundedTx(5, TxType.WITHDRAW_TO_WALLET, 1),
       mockDefiBridgeTx(
         6,
@@ -255,7 +255,7 @@ describe('Tx Fee Allocator', () => {
       TxType.ACCOUNT,
       TxType.DEPOSIT,
       TxType.TRANSFER,
-      TxType.WITHDRAW_TO_CONTRACT,
+      TxType.WITHDRAW_HIGH_GAS,
       TxType.WITHDRAW_TO_WALLET,
       TxType.DEFI_DEPOSIT,
     ]);
@@ -270,7 +270,7 @@ describe('Tx Fee Allocator', () => {
       getTxGasWithBase(TxType.ACCOUNT) +
         getTxGasWithBase(TxType.DEPOSIT) +
         getTxGasWithBase(TxType.TRANSFER) +
-        getTxGasWithBase(TxType.WITHDRAW_TO_CONTRACT) +
+        getTxGasWithBase(TxType.WITHDRAW_HIGH_GAS) +
         getTxGasWithBase(TxType.WITHDRAW_TO_WALLET) +
         getTxGasWithBase(TxType.DEFI_DEPOSIT) +
         getSingleBridgeCost(bridgeConfigs[0].bridgeId) +
@@ -284,7 +284,7 @@ describe('Tx Fee Allocator', () => {
       preciselyFundedTx(1, TxType.ACCOUNT, 1),
       preciselyFundedTx(2, TxType.DEPOSIT, 1),
       mockTx(3, getTxGasWithBase(TxType.TRANSFER) + 13, 1, TxType.TRANSFER),
-      preciselyFundedTx(4, TxType.WITHDRAW_TO_CONTRACT, 1),
+      preciselyFundedTx(4, TxType.WITHDRAW_HIGH_GAS, 1),
       mockTx(5, getTxGasWithBase(TxType.WITHDRAW_TO_WALLET) + 5, 1),
       mockDefiBridgeTx(
         6,
@@ -297,7 +297,7 @@ describe('Tx Fee Allocator', () => {
       TxType.ACCOUNT,
       TxType.DEPOSIT,
       TxType.TRANSFER,
-      TxType.WITHDRAW_TO_CONTRACT,
+      TxType.WITHDRAW_HIGH_GAS,
       TxType.WITHDRAW_TO_WALLET,
       TxType.DEFI_DEPOSIT,
     ]);
@@ -307,7 +307,7 @@ describe('Tx Fee Allocator', () => {
         getTxGasWithBase(TxType.DEPOSIT) +
         getTxGasWithBase(TxType.TRANSFER) +
         13 +
-        getTxGasWithBase(TxType.WITHDRAW_TO_CONTRACT) +
+        getTxGasWithBase(TxType.WITHDRAW_HIGH_GAS) +
         getTxGasWithBase(TxType.WITHDRAW_TO_WALLET) +
         5 +
         getTxGasWithBase(TxType.DEFI_DEPOSIT) +
@@ -318,7 +318,7 @@ describe('Tx Fee Allocator', () => {
       getTxGasWithBase(TxType.ACCOUNT) +
         getTxGasWithBase(TxType.DEPOSIT) +
         getTxGasWithBase(TxType.TRANSFER) +
-        getTxGasWithBase(TxType.WITHDRAW_TO_CONTRACT) +
+        getTxGasWithBase(TxType.WITHDRAW_HIGH_GAS) +
         getTxGasWithBase(TxType.WITHDRAW_TO_WALLET) +
         getTxGasWithBase(TxType.DEFI_DEPOSIT) +
         getSingleBridgeCost(bridgeConfigs[0].bridgeId) +
@@ -350,14 +350,14 @@ describe('Tx Fee Allocator', () => {
       preciselyFundedTx(1, TxType.ACCOUNT, 1, excessGas[0]),
       preciselyFundedTx(2, TxType.DEPOSIT, 1, excessGas[1]),
       preciselyFundedTx(3, TxType.TRANSFER, 1, excessGas[2]),
-      preciselyFundedTx(4, TxType.WITHDRAW_TO_CONTRACT, 1, excessGas[3]),
+      preciselyFundedTx(4, TxType.WITHDRAW_HIGH_GAS, 1, excessGas[3]),
       preciselyFundedTx(5, TxType.WITHDRAW_TO_WALLET, 1, excessGas[4]),
     ];
     const txTypes = [
       TxType.ACCOUNT,
       TxType.DEPOSIT,
       TxType.TRANSFER,
-      TxType.WITHDRAW_TO_CONTRACT,
+      TxType.WITHDRAW_HIGH_GAS,
       TxType.WITHDRAW_TO_WALLET,
     ];
 
@@ -375,7 +375,7 @@ describe('Tx Fee Allocator', () => {
       getTxGasWithBase(TxType.ACCOUNT) +
         getTxGasWithBase(TxType.DEPOSIT) +
         getTxGasWithBase(TxType.TRANSFER) +
-        getTxGasWithBase(TxType.WITHDRAW_TO_CONTRACT) +
+        getTxGasWithBase(TxType.WITHDRAW_HIGH_GAS) +
         getTxGasWithBase(TxType.WITHDRAW_TO_WALLET) +
         totalExcess,
     );
@@ -383,7 +383,7 @@ describe('Tx Fee Allocator', () => {
       getTxGasWithBase(TxType.ACCOUNT) +
         getTxGasWithBase(TxType.DEPOSIT) +
         getTxGasWithBase(TxType.TRANSFER) +
-        getTxGasWithBase(TxType.WITHDRAW_TO_CONTRACT) +
+        getTxGasWithBase(TxType.WITHDRAW_HIGH_GAS) +
         getTxGasWithBase(TxType.WITHDRAW_TO_WALLET),
     );
     expect(validation.hasFeelessTxs).toEqual(false);
@@ -400,7 +400,7 @@ describe('Tx Fee Allocator', () => {
       preciselyFundedTx(1, TxType.ACCOUNT, 1, excessGas[0]),
       preciselyFundedTx(2, TxType.DEPOSIT, 1, excessGas[1]),
       preciselyFundedTx(3, TxType.TRANSFER, 1, excessGas[2]),
-      preciselyFundedTx(4, TxType.WITHDRAW_TO_CONTRACT, 1, excessGas[3]),
+      preciselyFundedTx(4, TxType.WITHDRAW_HIGH_GAS, 1, excessGas[3]),
       preciselyFundedTx(5, TxType.WITHDRAW_TO_WALLET, 1, excessGas[4]),
       mockDefiBridgeTx(
         6,
@@ -416,7 +416,7 @@ describe('Tx Fee Allocator', () => {
       TxType.ACCOUNT,
       TxType.DEPOSIT,
       TxType.TRANSFER,
-      TxType.WITHDRAW_TO_CONTRACT,
+      TxType.WITHDRAW_HIGH_GAS,
       TxType.WITHDRAW_TO_WALLET,
       TxType.DEFI_DEPOSIT,
     ];
@@ -435,7 +435,7 @@ describe('Tx Fee Allocator', () => {
       getTxGasWithBase(TxType.ACCOUNT) +
         getTxGasWithBase(TxType.DEPOSIT) +
         getTxGasWithBase(TxType.TRANSFER) +
-        getTxGasWithBase(TxType.WITHDRAW_TO_CONTRACT) +
+        getTxGasWithBase(TxType.WITHDRAW_HIGH_GAS) +
         getTxGasWithBase(TxType.WITHDRAW_TO_WALLET) +
         getTxGasWithBase(TxType.DEFI_DEPOSIT) +
         getSingleBridgeCost(bridgeConfigs[0].bridgeId) +
@@ -447,7 +447,7 @@ describe('Tx Fee Allocator', () => {
       getTxGasWithBase(TxType.ACCOUNT) +
         getTxGasWithBase(TxType.DEPOSIT) +
         getTxGasWithBase(TxType.TRANSFER) +
-        getTxGasWithBase(TxType.WITHDRAW_TO_CONTRACT) +
+        getTxGasWithBase(TxType.WITHDRAW_HIGH_GAS) +
         getTxGasWithBase(TxType.WITHDRAW_TO_WALLET) +
         getTxGasWithBase(TxType.DEFI_DEPOSIT) +
         getSingleBridgeCost(bridgeConfigs[0].bridgeId) +
@@ -520,7 +520,7 @@ describe('Tx Fee Allocator', () => {
   it('should allocate excess gas to first non-fee paying tx 3', () => {
     const excessGas =
       getTxGasWithBase(TxType.TRANSFER) +
-      getTxGasWithBase(TxType.WITHDRAW_TO_CONTRACT) * 2 +
+      getTxGasWithBase(TxType.WITHDRAW_HIGH_GAS) * 2 +
       getTxGasWithBase(TxType.WITHDRAW_TO_WALLET) +
       101;
     const txs = [
@@ -528,9 +528,9 @@ describe('Tx Fee Allocator', () => {
       preciselyFundedTx(2, TxType.DEPOSIT, 1, excessGas),
       preciselyFundedTx(3, TxType.TRANSFER, 1),
       preciselyFundedTx(4, TxType.TRANSFER, NON_FEE_PAYING_ASSET),
-      preciselyFundedTx(5, TxType.WITHDRAW_TO_CONTRACT, 1),
-      preciselyFundedTx(6, TxType.WITHDRAW_TO_CONTRACT, NON_FEE_PAYING_ASSET),
-      preciselyFundedTx(7, TxType.WITHDRAW_TO_CONTRACT, NON_FEE_PAYING_ASSET),
+      preciselyFundedTx(5, TxType.WITHDRAW_HIGH_GAS, 1),
+      preciselyFundedTx(6, TxType.WITHDRAW_HIGH_GAS, NON_FEE_PAYING_ASSET),
+      preciselyFundedTx(7, TxType.WITHDRAW_HIGH_GAS, NON_FEE_PAYING_ASSET),
       preciselyFundedTx(8, TxType.WITHDRAW_TO_WALLET, 1),
       preciselyFundedTx(9, TxType.WITHDRAW_TO_WALLET, NON_FEE_PAYING_ASSET),
     ];
@@ -539,9 +539,9 @@ describe('Tx Fee Allocator', () => {
       TxType.DEPOSIT,
       TxType.TRANSFER,
       TxType.TRANSFER,
-      TxType.WITHDRAW_TO_CONTRACT,
-      TxType.WITHDRAW_TO_CONTRACT,
-      TxType.WITHDRAW_TO_CONTRACT,
+      TxType.WITHDRAW_HIGH_GAS,
+      TxType.WITHDRAW_HIGH_GAS,
+      TxType.WITHDRAW_HIGH_GAS,
       TxType.WITHDRAW_TO_WALLET,
       TxType.WITHDRAW_TO_WALLET,
     ];
@@ -558,7 +558,7 @@ describe('Tx Fee Allocator', () => {
       getTxGasWithBase(TxType.ACCOUNT) +
         getTxGasWithBase(TxType.DEPOSIT) +
         getTxGasWithBase(TxType.TRANSFER) +
-        getTxGasWithBase(TxType.WITHDRAW_TO_CONTRACT) +
+        getTxGasWithBase(TxType.WITHDRAW_HIGH_GAS) +
         getTxGasWithBase(TxType.WITHDRAW_TO_WALLET) +
         excessGas,
     );
@@ -567,7 +567,7 @@ describe('Tx Fee Allocator', () => {
       getTxGasWithBase(TxType.ACCOUNT) +
         getTxGasWithBase(TxType.DEPOSIT) +
         getTxGasWithBase(TxType.TRANSFER) * 2 +
-        getTxGasWithBase(TxType.WITHDRAW_TO_CONTRACT) * 3 +
+        getTxGasWithBase(TxType.WITHDRAW_HIGH_GAS) * 3 +
         getTxGasWithBase(TxType.WITHDRAW_TO_WALLET) * 2,
     );
     expect(validation.hasFeelessTxs).toEqual(true);
@@ -582,16 +582,16 @@ describe('Tx Fee Allocator', () => {
   it('should allocate excess gas to first non-fee paying tx 4', () => {
     const excessGas =
       getTxGasWithBase(TxType.TRANSFER) +
-      getTxGasWithBase(TxType.WITHDRAW_TO_CONTRACT) * 2 +
+      getTxGasWithBase(TxType.WITHDRAW_HIGH_GAS) * 2 +
       getTxGasWithBase(TxType.WITHDRAW_TO_WALLET);
     const txs = [
       preciselyFundedTx(1, TxType.ACCOUNT, 1),
       preciselyFundedTx(2, TxType.DEPOSIT, 1, excessGas),
       preciselyFundedTx(3, TxType.TRANSFER, 1),
       preciselyFundedTx(4, TxType.TRANSFER, NON_FEE_PAYING_ASSET),
-      preciselyFundedTx(5, TxType.WITHDRAW_TO_CONTRACT, 1),
-      preciselyFundedTx(6, TxType.WITHDRAW_TO_CONTRACT, NON_FEE_PAYING_ASSET),
-      preciselyFundedTx(7, TxType.WITHDRAW_TO_CONTRACT, NON_FEE_PAYING_ASSET),
+      preciselyFundedTx(5, TxType.WITHDRAW_HIGH_GAS, 1),
+      preciselyFundedTx(6, TxType.WITHDRAW_HIGH_GAS, NON_FEE_PAYING_ASSET),
+      preciselyFundedTx(7, TxType.WITHDRAW_HIGH_GAS, NON_FEE_PAYING_ASSET),
       preciselyFundedTx(8, TxType.WITHDRAW_TO_WALLET, 1),
       preciselyFundedTx(9, TxType.WITHDRAW_TO_WALLET, NON_FEE_PAYING_ASSET),
     ];
@@ -600,9 +600,9 @@ describe('Tx Fee Allocator', () => {
       TxType.DEPOSIT,
       TxType.TRANSFER,
       TxType.TRANSFER,
-      TxType.WITHDRAW_TO_CONTRACT,
-      TxType.WITHDRAW_TO_CONTRACT,
-      TxType.WITHDRAW_TO_CONTRACT,
+      TxType.WITHDRAW_HIGH_GAS,
+      TxType.WITHDRAW_HIGH_GAS,
+      TxType.WITHDRAW_HIGH_GAS,
       TxType.WITHDRAW_TO_WALLET,
       TxType.WITHDRAW_TO_WALLET,
     ];
@@ -619,7 +619,7 @@ describe('Tx Fee Allocator', () => {
       getTxGasWithBase(TxType.ACCOUNT) +
         getTxGasWithBase(TxType.DEPOSIT) +
         getTxGasWithBase(TxType.TRANSFER) +
-        getTxGasWithBase(TxType.WITHDRAW_TO_CONTRACT) +
+        getTxGasWithBase(TxType.WITHDRAW_HIGH_GAS) +
         getTxGasWithBase(TxType.WITHDRAW_TO_WALLET) +
         excessGas,
     );
@@ -627,7 +627,7 @@ describe('Tx Fee Allocator', () => {
       getTxGasWithBase(TxType.ACCOUNT) +
         getTxGasWithBase(TxType.DEPOSIT) +
         getTxGasWithBase(TxType.TRANSFER) * 2 +
-        getTxGasWithBase(TxType.WITHDRAW_TO_CONTRACT) * 3 +
+        getTxGasWithBase(TxType.WITHDRAW_HIGH_GAS) * 3 +
         getTxGasWithBase(TxType.WITHDRAW_TO_WALLET) * 2,
     );
     expect(validation.hasFeelessTxs).toEqual(true);

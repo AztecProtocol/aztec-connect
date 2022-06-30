@@ -20,12 +20,13 @@ import { Timer } from '@aztec/barretenberg/timer';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { BarretenbergWasm, WorkerPool } from '@aztec/barretenberg/wasm';
 import { WorldState, WorldStateConstants } from '@aztec/barretenberg/world_state';
+import { BroadcastChannel } from 'broadcast-channel';
 import { EventEmitter } from 'events';
 import { LevelUp } from 'levelup';
 import { BlockContext } from '../block_context/block_context';
 import { CorePaymentTx, createCorePaymentTxForRecipient } from '../core_tx';
 import { Alias, Database } from '../database';
-import { parseGenesisAliasesAndKeys, getUserSpendingKeysFromGenesisData } from '../genesis_state.ts';
+import { getUserSpendingKeysFromGenesisData, parseGenesisAliasesAndKeys } from '../genesis_state.ts';
 import { Note } from '../note';
 import {
   AccountProofCreator,
@@ -37,12 +38,12 @@ import {
 } from '../proofs';
 import { MutexSerialQueue, SerialQueue } from '../serial_queue';
 import { SchnorrSigner } from '../signer';
+import { UserData } from '../user';
 import { UserState, UserStateEvent, UserStateFactory } from '../user_state';
 import { CoreSdkInterface } from './core_sdk_interface';
 import { CoreSdkOptions } from './core_sdk_options';
 import { SdkEvent, SdkStatus } from './sdk_status';
 import { sdkVersion } from './sdk_version';
-import { UserData } from '../user';
 
 const debug = createDebugLogger('bb:core_sdk');
 
@@ -77,6 +78,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   private accountProofCreator!: AccountProofCreator;
   private defiDepositProofCreator!: DefiDepositProofCreator;
   private serialQueue!: SerialQueue;
+  private broadcastChannel = new BroadcastChannel('aztec-sdk');
   private userStateFactory!: UserStateFactory;
   private sdkStatus: SdkStatus = {
     serverUrl: '',
@@ -113,6 +115,12 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     private workerPool?: WorkerPool,
   ) {
     super();
+
+    this.broadcastChannel.onmessage = ({ event, args }) => {
+      if (event === SdkEvent.UPDATED_USER_STATE) {
+        this.emit(SdkEvent.UPDATED_USER_STATE, GrumpkinAddress.fromString(args[0]));
+      }
+    };
   }
 
   /**
@@ -220,6 +228,9 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     await this.db.close();
     await this.workerPool?.destroy();
 
+    // Destroy components.
+    await this.broadcastChannel.close();
+
     this.initState = SdkInitState.DESTROYED;
     this.emit(SdkEvent.DESTROYED);
     this.removeAllListeners();
@@ -315,10 +326,14 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       await this.addInitialUserSpendingKeys([user.accountPublicKey]);
 
       const userState = await this.userStateFactory.createUserState(user);
-      userState.on(UserStateEvent.UPDATED_USER_STATE, id => this.emit(SdkEvent.UPDATED_USER_STATE, id));
+      userState.on(UserStateEvent.UPDATED_USER_STATE, async id => {
+        this.emit(SdkEvent.UPDATED_USER_STATE, id);
+        await this.broadcastChannel.postMessage({
+          event: SdkEvent.UPDATED_USER_STATE,
+          args: [id.toString()],
+        });
+      });
       this.userStates.push(userState);
-
-      this.emit(SdkEvent.UPDATED_USERS);
 
       if (!noSync) {
         // If the sync microtask is sleeping, wake it up to start syncing.
@@ -346,8 +361,6 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       this.userStates = this.userStates.filter(us => us !== userState);
       userState.removeAllListeners();
       await this.db.removeUser(userId);
-
-      this.emit(SdkEvent.UPDATED_USERS);
     });
   }
 
@@ -360,13 +373,13 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     return keys.map(k => k.key);
   }
 
-  public getBalances(userId: GrumpkinAddress) {
-    return Promise.resolve(this.getUserState(userId).getBalances());
+  public async getBalances(userId: GrumpkinAddress) {
+    return await this.getUserState(userId).getBalances();
   }
 
-  public getBalance(userId: GrumpkinAddress, assetId: number) {
+  public async getBalance(userId: GrumpkinAddress, assetId: number) {
     const userState = this.getUserState(userId);
-    return Promise.resolve(userState.getBalance(assetId));
+    return await userState.getBalance(assetId);
   }
 
   public async getSpendableSum(
@@ -823,7 +836,13 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     await this.addInitialUserSpendingKeys(users.map(x => x.accountPublicKey));
     this.userStates = await Promise.all(users.map(u => this.userStateFactory.createUserState(u)));
     this.userStates.forEach(us =>
-      us.on(UserStateEvent.UPDATED_USER_STATE, id => this.emit(SdkEvent.UPDATED_USER_STATE, id)),
+      us.on(UserStateEvent.UPDATED_USER_STATE, async id => {
+        this.emit(SdkEvent.UPDATED_USER_STATE, id);
+        await this.broadcastChannel.postMessage({
+          event: SdkEvent.UPDATED_USER_STATE,
+          args: [id.toString()],
+        });
+      }),
     );
   }
 

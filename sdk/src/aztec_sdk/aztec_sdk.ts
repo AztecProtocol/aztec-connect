@@ -28,7 +28,6 @@ import { AztecSdkUser } from './aztec_sdk_user';
 import { groupUserTxs } from './group_user_txs';
 
 export interface AztecSdk {
-  on(event: SdkEvent.UPDATED_USERS, listener: () => void): this;
   on(event: SdkEvent.UPDATED_USER_STATE, listener: (userId: GrumpkinAddress) => void): this;
   on(event: SdkEvent.UPDATED_WORLD_STATE, listener: (syncedToRollup: number, latestRollupId: number) => void): this;
   on(event: SdkEvent.DESTROYED, listener: () => void): this;
@@ -294,7 +293,9 @@ export class AztecSdk extends EventEmitter {
 
   public async getWithdrawFees(assetId: number, recipient?: EthAddress) {
     const txType =
-      recipient && (await this.isContract(recipient)) ? TxType.WITHDRAW_TO_CONTRACT : TxType.WITHDRAW_TO_WALLET;
+      recipient && ((await this.isContract(recipient)) || (await this.blockchain.isEmpty(recipient)))
+        ? TxType.WITHDRAW_HIGH_GAS
+        : TxType.WITHDRAW_TO_WALLET;
     return this.getTransactionFees(assetId, txType);
   }
 

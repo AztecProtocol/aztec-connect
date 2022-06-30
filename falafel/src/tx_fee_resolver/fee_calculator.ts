@@ -8,7 +8,7 @@ const allTxTypes = [
   TxType.DEPOSIT,
   TxType.TRANSFER,
   TxType.WITHDRAW_TO_WALLET,
-  TxType.WITHDRAW_TO_CONTRACT,
+  TxType.WITHDRAW_HIGH_GAS,
   TxType.ACCOUNT,
   TxType.DEFI_DEPOSIT,
   TxType.DEFI_CLAIM,

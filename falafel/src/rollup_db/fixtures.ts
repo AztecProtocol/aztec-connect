@@ -25,7 +25,7 @@ const txTypeToProofId = (txType: TxType) => {
       return ProofId.DEPOSIT;
     case TxType.TRANSFER:
       return ProofId.SEND;
-    case TxType.WITHDRAW_TO_CONTRACT:
+    case TxType.WITHDRAW_HIGH_GAS:
     case TxType.WITHDRAW_TO_WALLET:
       return ProofId.WITHDRAW;
   }
@@ -41,7 +41,7 @@ export const randomTx = ({
 } = {}) => {
   const proofId = txTypeToProofId(txType);
   const isPublic =
-    txType == TxType.WITHDRAW_TO_CONTRACT || txType == TxType.WITHDRAW_TO_WALLET || txType == TxType.DEPOSIT;
+    txType == TxType.WITHDRAW_HIGH_GAS || txType == TxType.WITHDRAW_TO_WALLET || txType == TxType.DEPOSIT;
   const proofData = new ProofData(
     Buffer.concat([
       numToUInt32BE(proofId, 32),

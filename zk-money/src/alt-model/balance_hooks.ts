@@ -1,4 +1,4 @@
-import type { AssetValue, UserPaymentTx, UserTx } from '@aztec/sdk';
+import type { AssetValue, UserTx } from '@aztec/sdk';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { useEffect, useMemo, useState } from 'react';
 import { listenAccountUpdated } from './event_utils';
@@ -15,8 +15,23 @@ function useWithoutDust(assetValues?: AssetValue[]) {
   );
 }
 
-function filterForPendingShields(txs: UserTx[]): UserPaymentTx[] {
-  return txs.filter((tx): tx is UserPaymentTx => tx.proofId === ProofId.DEPOSIT && !tx.settled);
+function getIncomingPendingValues(txs: UserTx[]): AssetValue[] {
+  const out: AssetValue[] = [];
+  for (const tx of txs) {
+    if (!tx.settled) {
+      switch (tx.proofId) {
+        case ProofId.DEPOSIT: {
+          out.push(tx.value);
+          break;
+        }
+        case ProofId.DEFI_CLAIM: {
+          out.push(tx.outputValueA);
+          break;
+        }
+      }
+    }
+  }
+  return out;
 }
 
 function squashValues(assetValues: AssetValue[]) {
@@ -40,8 +55,7 @@ export function useBalances() {
   const accountState = useAccountState();
   const balances = useMemo(() => {
     if (!accountState) return;
-    const pendingShields = filterForPendingShields(accountState.txs);
-    return squashValues(pendingShields.map(tx => tx.value).concat(accountState.balances));
+    return squashValues(getIncomingPendingValues(accountState.txs).concat(accountState.balances));
   }, [accountState]);
   return useWithoutDust(balances);
 }

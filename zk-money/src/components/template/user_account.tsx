@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { Pages } from 'views/views';
 import { AccountState } from '../../app';
 import closeIcon from '../../images/close.svg';
-import personIcon from '../../images/snowman.svg';
 import { borderRadiuses, breakpoints, colours, fontSizes, spacings, Theme, themeColours } from '../../styles';
 import { Dot } from '../dot';
 import { Loader } from '../loader';
@@ -20,6 +19,11 @@ const Root = styled.div`
     position: absolute;
     top: 82px;
     right: 10%;
+  }
+
+  @media (max-width: 768px) {
+    top: 32px;
+    right: 0%;
   }
 `;
 
@@ -225,9 +229,6 @@ export const UserAccount: React.FunctionComponent<UserAccountProps> = ({ account
       <UsernameRoot onClick={() => setShowDropdown(true)}>
         <StatusRoot>{isSynced ? <Dot size="xs" color="green" /> : <Loader />}</StatusRoot>
         <UserName text={`@${alias}`} size="s" nowrap />
-        <AvatarRoot>
-          <Avatar src={personIcon} />
-        </AvatarRoot>
       </UsernameRoot>
       {showDropdown && (
         <>

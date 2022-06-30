@@ -96,7 +96,6 @@ describe('end-to-end migrate account and funds tests', () => {
     const depositValue = sdk.toBaseUnits(assetId, '0.015');
     const depositFees = await sdk.getDepositFees(assetId);
     const transferFees = await sdk.getTransferFees(assetId);
-    const withdrawFees = await sdk.getWithdrawFees(assetId);
     const aliasToBeKept = randomBytes(10).toString('hex');
 
     // create the keys for both the old and new accounts
@@ -189,6 +188,7 @@ describe('end-to-end migrate account and funds tests', () => {
     // Rollup 3: Now withdraw the funds to the new eth address from the new aztec account
     {
       const balance = await sdk.getBalance(newAccountKeyPair.publicKey, 0);
+      const withdrawFees = await sdk.getWithdrawFees(assetId, newEthAddress);
       const withdrawFee = withdrawFees[TxSettlementTime.INSTANT];
       const actualWithdrawAmount = { assetId: 0, value: balance.value - withdrawFee.value };
       debug(

@@ -30,12 +30,6 @@
   left: 0px;
 }
 
-@media screen and (max-width: 1350px) {
-  .hideMinWidth {
-    display: none;
-  }
-}
-
 .investmentFilterInputs {
   display: flex;
   flex-direction: row;
@@ -60,5 +54,22 @@
   margin-right: 20px;
 }
 
-.noResults {
+@media screen and (max-width: 1350px) {
+  .hideMinWidth {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .investmentFilterInputs {
+    width: 100%;
+    flex-flow: row wrap;
+    justify-content: space-between;
+  }
+
+  .select {
+    gap: 5%;
+    margin: 10px 0;
+    width: 30%;
+  }
 }
