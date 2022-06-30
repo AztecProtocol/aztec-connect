@@ -15,6 +15,7 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  width: 35%;
 }
 
 .holdingUnits {
@@ -39,6 +40,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
+  width: 80px;
   cursor: pointer;
   transition: transform 0.15s cubic-bezier(0.215, 0.61, 0.355, 1);
 }
@@ -51,24 +53,24 @@
   display: flex;
   flex-direction: row;
   gap: 20px;
-  width: 235px;
   position: relative;
   justify-content: flex-end;
+  width: 280px;
   margin-left: auto;
 }
 
 .holdingAmount {
   opacity: 0.7;
   font-size: 18px;
-  margin-left: 10%;
   text-align: center;
 }
 
 @media (max-width: 900px) {
+  .buttonsWrapper {
+    margin-top: 5px;
+  }
+
   .holdingAmount {
     margin-left: auto;
-    margin-bottom: 5px;
-    width: 200px;
-    text-align: right;
   }
 }

@@ -9,19 +9,28 @@
   align-items: center;
   grid-template-columns: 1fr 1px 1fr 1fr 1px 1fr;
   margin-bottom: 30px;
+  position: relative;
 }
 
 .segment,
 .lastSegment {
   display: flex;
   align-items: center;
+}
+
+.segment {
   padding: 0 40px;
+}
+
+.nameWrapper {
+  padding: 0 10px 0 40px;
 }
 
 .lastSegment {
   justify-content: space-between;
   gap: 15px;
   flex-direction: row-reverse;
+  padding: 0 40px 0 10px;
 }
 
 .logo {
@@ -41,11 +50,59 @@
   font-size: 16px;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 10px;
 }
 
 .separator {
   width: 1px;
   height: 28px;
   background-color: #eee;
+}
+
+@media (max-width: 900px) {
+  .separator {
+    display: none;
+  }
+
+  .segment,
+  .lastSegment {
+    padding: 0;
+  }
+
+  .lastSegment {
+    margin-left: auto;
+    margin-top: 10px;
+  }
+
+  .root {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 40px;
+    flex-flow: row wrap;
+    height: initial;
+  }
+
+  .firstSegment {
+    width: 45px;
+  }
+}
+
+@media (max-width: 768px) {
+  .root {
+    flex-flow: column nowrap;
+    align-items: baseline;
+  }
+
+  .apyWrapper {
+    position: absolute;
+    bottom: 10px;
+  }
+
+  .valueWrapper {
+    margin-top: 10px;
+  }
+
+  .logo {
+    height: 28px;
+  }
 }

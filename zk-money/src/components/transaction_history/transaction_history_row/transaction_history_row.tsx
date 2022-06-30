@@ -26,7 +26,7 @@ export function TransactionHistoryRow({ tx }: TransactionHistoryRowProps) {
         <div className={style.fee}>{renderTransactionFeeField(tx)}</div>
       </div>
       <div className={style.separator} />
-      <div className={style.segment}>
+      <div className={cx(style.segment, style.lastSegment)}>
         <div className={style.time}>
           <TransactionTimeField tx={tx} />
         </div>
