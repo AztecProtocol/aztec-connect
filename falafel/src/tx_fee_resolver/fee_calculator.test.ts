@@ -232,18 +232,18 @@ describe('fee calculator', () => {
 
     // for WITHDRAW_TO_WALLET
     // for eth
-    // tx limit based on the rollup gas limit = (((12000000 - 100000) - 67744) / 10032) = 1179, more than 896 therefore not applicable
-    // tx limit based on calldata = ((131072 - 281) / 185) = 706 so this is the limiting factor here
+    // tx limit based on the rollup gas limit = (((12000000 - 100000) - 67744) / 17632) = 671
+    // tx limit based on calldata = ((131072 - 281) / 185) = 706 so the gas limit is the limiting factor
     // unadjusted = 100000 / 896 = 111.607...
-    // adjusted = 100000 / 706 = 141.442...
-    // adjustment value = Math.ceil(adjusted - unadjusted) = 31;
+    // adjusted = 100000 / 671 = 149.031...
+    // adjustment value = Math.ceil(adjusted - unadjusted) = 38;
 
     // final values
     // unadjusted = Math.ceil(100000 / 896) = 112;
-    // adjusted = unadjusted + adjustment = 112 + 31 = 143
+    // adjusted = unadjusted + adjustment = 112 + 38 = 150
     {
-      const adjustmentValue = 31;
-      const adjustedBaseGas = 143;
+      const adjustmentValue = 38;
+      const adjustedBaseGas = 150;
       expect(feeCalculator.getTxGasAdjustmentValue(0, TxType.WITHDRAW_TO_WALLET)).toBe(adjustmentValue);
       expect(feeCalculator.getAdjustedBaseVerificationGas(0, TxType.WITHDRAW_TO_WALLET)).toBe(adjustedBaseGas);
       expect(

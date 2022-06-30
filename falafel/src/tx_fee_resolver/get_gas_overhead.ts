@@ -17,7 +17,7 @@ import {
 const CALLDATA_GAS_PER_BYTE = 16;
 const SIGNATURE_CALLDATA_SIZE = 96;
 const DEPOSIT_CONTRACT_GAS_CONSUMPTION = 10500;
-const ETH_WALLET_WITHDRAW_GAS = 2400;
+const ETH_WALLET_WITHDRAW_GAS = 10000;
 
 export interface AssetGasLimit {
   assetId: number;
