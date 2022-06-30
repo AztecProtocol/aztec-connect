@@ -4,7 +4,7 @@ import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { randomBytes } from 'crypto';
 import { TxDao } from '../entity';
 
-const txTypeToProofId = (txType: TxType) => (txType < TxType.WITHDRAW_TO_CONTRACT ? txType + 1 : txType);
+const txTypeToProofId = (txType: TxType) => (txType < TxType.WITHDRAW_HIGH_GAS ? txType + 1 : txType);
 
 export const mockTx = (txFeeAssetId: number, txType: TxType, txFee: bigint) =>
   ({

@@ -125,6 +125,7 @@ describe('tx receiver', () => {
     blockchain = {
       getBlockchainStatus: jest.fn().mockReturnValue({ assets, allowThirdPartyContracts: false }),
       isContract: jest.fn().mockResolvedValue(false),
+      isEmpty: jest.fn().mockResolvedValue(false),
       getUserPendingDeposit: jest.fn().mockResolvedValue(10n),
       getUserProofApprovalStatus: jest.fn().mockResolvedValue(false),
       validateSignature: jest.fn().mockResolvedValue(true),

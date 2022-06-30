@@ -293,7 +293,9 @@ export class AztecSdk extends EventEmitter {
 
   public async getWithdrawFees(assetId: number, recipient?: EthAddress) {
     const txType =
-      recipient && (await this.isContract(recipient)) ? TxType.WITHDRAW_TO_CONTRACT : TxType.WITHDRAW_TO_WALLET;
+      recipient && ((await this.isContract(recipient)) || (await this.blockchain.isEmpty(recipient)))
+        ? TxType.WITHDRAW_HIGH_GAS
+        : TxType.WITHDRAW_TO_WALLET;
     return this.getTransactionFees(assetId, txType);
   }
 

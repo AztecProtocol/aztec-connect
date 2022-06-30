@@ -17,34 +17,55 @@ import {
 const CALLDATA_GAS_PER_BYTE = 16;
 const SIGNATURE_CALLDATA_SIZE = 96;
 const DEPOSIT_CONTRACT_GAS_CONSUMPTION = 10500;
-const ETH_WALLET_WITHDRAW_GAS = 10000;
+const ETH_WITHDRAW_GAS_OVERHEAD = 10000;
 
 export interface AssetGasLimit {
   assetId: number;
   gasLimit: number;
 }
 
+function getWithdrawToWalletGas(assetGasLimit: AssetGasLimit) {
+  const callDataGasCost =
+    (OffchainJoinSplitData.SIZE + getTxCallData(TxType.WITHDRAW_TO_WALLET)) * CALLDATA_GAS_PER_BYTE;
+  // We set the contract overhead for eth to 10000.
+  // This is the total cost of a transfer to a 'cold' account (one that has not been touched in that tx)
+  // For ERC20 tokens, it's the asset's gas limit
+  const contractOverhead = assetGasLimit.assetId == 0 ? ETH_WITHDRAW_GAS_OVERHEAD : assetGasLimit.gasLimit;
+  return callDataGasCost + contractOverhead;
+}
+
+function getWithdrawHighGas(assetGasLimit: AssetGasLimit) {
+  const callDataGasCost =
+    (OffchainJoinSplitData.SIZE + getTxCallData(TxType.WITHDRAW_HIGH_GAS)) * CALLDATA_GAS_PER_BYTE;
+  // We set the contract overhead for eth to 10000 + the eth gas limit.
+  // The 10000 covers the cost of the value transfer.
+  // The gas limit ensures we cover the cost of transferrring to either a contract or an 'empty' account.
+  // An 'empty' account is defined as code == nonce == balance == 0
+  // For ERC20 tokens, it's the asset's gas limit
+  const contractOverhead =
+    assetGasLimit.assetId == 0 ? assetGasLimit.gasLimit + ETH_WITHDRAW_GAS_OVERHEAD : assetGasLimit.gasLimit;
+  return callDataGasCost + contractOverhead;
+}
+
 export function getGasOverhead(txType: TxType, assetGasLimit: AssetGasLimit) {
-  const gasPerByte = CALLDATA_GAS_PER_BYTE;
   switch (txType) {
     case TxType.ACCOUNT:
-      return (OffchainAccountData.SIZE + getTxCallData(txType)) * gasPerByte;
+      return (OffchainAccountData.SIZE + getTxCallData(txType)) * CALLDATA_GAS_PER_BYTE;
     case TxType.DEFI_CLAIM:
-      return (OffchainDefiClaimData.SIZE + getTxCallData(txType)) * gasPerByte;
+      return (OffchainDefiClaimData.SIZE + getTxCallData(txType)) * CALLDATA_GAS_PER_BYTE;
     case TxType.DEFI_DEPOSIT:
-      return (OffchainDefiDepositData.SIZE + getTxCallData(txType)) * gasPerByte;
+      return (OffchainDefiDepositData.SIZE + getTxCallData(txType)) * CALLDATA_GAS_PER_BYTE;
     case TxType.DEPOSIT:
       // 10500 gas signing message construction, ecrecover, and pending deposit storage update.
-      return (OffchainJoinSplitData.SIZE + getTxCallData(txType)) * gasPerByte + DEPOSIT_CONTRACT_GAS_CONSUMPTION;
-    case TxType.TRANSFER:
-      return (OffchainJoinSplitData.SIZE + getTxCallData(txType)) * gasPerByte;
-    case TxType.WITHDRAW_TO_CONTRACT:
-      return assetGasLimit.gasLimit + (OffchainJoinSplitData.SIZE + getTxCallData(txType)) * gasPerByte;
-    case TxType.WITHDRAW_TO_WALLET:
       return (
-        (assetGasLimit.assetId == 0 ? ETH_WALLET_WITHDRAW_GAS : assetGasLimit.gasLimit) +
-        (OffchainJoinSplitData.SIZE + getTxCallData(txType)) * gasPerByte
+        (OffchainJoinSplitData.SIZE + getTxCallData(txType)) * CALLDATA_GAS_PER_BYTE + DEPOSIT_CONTRACT_GAS_CONSUMPTION
       );
+    case TxType.TRANSFER:
+      return (OffchainJoinSplitData.SIZE + getTxCallData(txType)) * CALLDATA_GAS_PER_BYTE;
+    case TxType.WITHDRAW_HIGH_GAS:
+      return getWithdrawHighGas(assetGasLimit);
+    case TxType.WITHDRAW_TO_WALLET:
+      return getWithdrawToWalletGas(assetGasLimit);
   }
 }
 
@@ -61,7 +82,7 @@ export function getTxCallData(txType: TxType) {
       return RollupDepositProofData.ENCODED_LENGTH + SIGNATURE_CALLDATA_SIZE;
     case TxType.TRANSFER:
       return RollupSendProofData.ENCODED_LENGTH;
-    case TxType.WITHDRAW_TO_CONTRACT:
+    case TxType.WITHDRAW_HIGH_GAS:
     case TxType.WITHDRAW_TO_WALLET:
       return RollupWithdrawProofData.ENCODED_LENGTH;
   }

@@ -342,6 +342,10 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     return await this.contracts.isContract(address);
   }
 
+  public async isEmpty(address: EthAddress) {
+    return await this.contracts.isEmpty(address);
+  }
+
   public async estimateGas(data: Buffer) {
     return await this.contracts.estimateGas(data);
   }

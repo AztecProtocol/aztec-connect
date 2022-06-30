@@ -56,7 +56,7 @@ describe('rollup_creator', () => {
   const numInnerRollupTxs = 28;
   const innerRollupSize = 28;
   const outerRollupSize = 2;
-  const txTypeToProofId = (txType: TxType) => (txType < TxType.WITHDRAW_TO_CONTRACT ? txType + 1 : txType);
+  const txTypeToProofId = (txType: TxType) => (txType < TxType.WITHDRAW_HIGH_GAS ? txType + 1 : txType);
 
   const notes = new Map<bigint, Buffer>();
   const hashPaths = new Map<bigint, HashPath>();

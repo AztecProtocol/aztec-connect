@@ -115,7 +115,7 @@ describe('rollup_db', () => {
       TxType.ACCOUNT,
       TxType.DEFI_DEPOSIT,
       TxType.TRANSFER,
-      TxType.WITHDRAW_TO_CONTRACT,
+      TxType.WITHDRAW_HIGH_GAS,
       TxType.ACCOUNT,
       TxType.DEFI_CLAIM,
     ].map(txType => randomTx({ txType }));
@@ -301,7 +301,7 @@ describe('rollup_db', () => {
       TxType.ACCOUNT,
       TxType.DEFI_DEPOSIT,
       TxType.TRANSFER,
-      TxType.WITHDRAW_TO_CONTRACT,
+      TxType.WITHDRAW_HIGH_GAS,
       TxType.ACCOUNT,
       TxType.DEFI_CLAIM,
     ].map(txType => randomTx({ txType }));
@@ -475,7 +475,7 @@ describe('rollup_db', () => {
       TxType.WITHDRAW_TO_WALLET,
       TxType.DEPOSIT,
       TxType.ACCOUNT,
-      TxType.WITHDRAW_TO_CONTRACT,
+      TxType.WITHDRAW_HIGH_GAS,
       TxType.DEPOSIT,
       TxType.DEFI_DEPOSIT,
       TxType.TRANSFER,

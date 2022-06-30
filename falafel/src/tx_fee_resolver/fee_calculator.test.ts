@@ -85,7 +85,7 @@ describe('fee calculator', () => {
   });
 
   it('returns the correct max call data value', () => {
-    // a deposit uses the mose call data
+    // a deposit uses the most call data
     const expectedMaxCallData = getTxCallData(TxType.DEPOSIT);
     expect(feeCalculator.getMaxTxCallData()).toBe(expectedMaxCallData);
   });
@@ -93,7 +93,7 @@ describe('fee calculator', () => {
   it('returns the correct max gas value', () => {
     // a withdraw tx for the second asset (DAI) will use the most gas
     const unadjustedBaseGas = Math.ceil(verificationGas / txsPerRollup);
-    const txGasOverhead = getGasOverheadForTxType(1, TxType.WITHDRAW_TO_CONTRACT);
+    const txGasOverhead = getGasOverheadForTxType(1, TxType.WITHDRAW_HIGH_GAS);
     const expectedMaxGas = unadjustedBaseGas + txGasOverhead;
     expect(feeCalculator.getMaxUnadjustedGas()).toBe(expectedMaxGas);
   });
@@ -137,16 +137,16 @@ describe('fee calculator', () => {
     // verification gas above is 100000
     // call data size of deposits is 281 so a maximum of 465 deposits can fit into a rollup based on call data, this is less than the 896 slots available
     // call data size of transfers is 129 so a maximum of 1016 txs can fit into a rollup based on call data, but this is more than the 896 slots available
-    // call data size of withdraw_to_wallet is 185 so a maximum of 707 txs can fit into a rollup on call data. the same is true for withdraw_to_contract
+    // call data size of withdraw_to_wallet is 185 so a maximum of 707 txs can fit into a rollup on call data. the same is true for withdraw_high_gas
     // however, there are further limitations for these txs because of the gas limit per rollup
     // the asset gas limits configured above are 30000 for eth and 60000 for asset 1 (Dai)
-    // the wallet withdraw gas value for eth is 2400
+    // the wallet withdraw gas value for eth is 10000
     // for eth:
-    // withdraw_to_wallet consumes 10032 (including the 2400 withdraw gas limit for eth)
-    // withdraw_to_contract consumes 37632 (including the 30000 gas limit)
+    // withdraw_to_wallet consumes 17632 (including the 10000 withdraw gas for eth)
+    // withdraw_high_gas consumes 47632 (including the 30000 gas limit and 10000 gas value for eth withdraws)
     // for dai:
     // withdraw_to_wallet consumes 67632 (including the 60000 gas limit)
-    // withdraw_to_contract consumes 67632 (including the 60000 gas limit)
+    // withdraw_high_gas consumes 67632 (including the 60000 gas limit)
 
     // calculations for determining the number of txs that can fit into the rollup first reduce the available resource by
     // a worst case consumer of that resource e.g. for call data
@@ -288,29 +288,29 @@ describe('fee calculator', () => {
     }
 
     {
-      // for WITHDRAW_TO_CONTRACT
+      // for WITHDRAW_HIGH_GAS
       // for eth
-      // tx limit based on the rollup gas limit = (((12000000 - 100000) - 67744) / 37632) = 314
+      // tx limit based on the rollup gas limit = (((12000000 - 100000) - 67744) / 47632) = 248
       // tx limit based on calldata = ((131072 - 281) / 185) = 707 so this is not the limiting factor here
       // unadjusted = 100000 / 896 = 111.607...
-      // adjusted = 100000 / 314 = 318.471..
-      // adjustment value = Math.ceil(adjusted - unadjusted) = 207
+      // adjusted = 100000 / 248 = 403.225..
+      // adjustment value = Math.ceil(adjusted - unadjusted) = 292
       // final values
       // unadjusted = Math.ceil(100000 / 896) = 112;
-      // adjusted = unadjusted + adjustment = 112 + 207 = 319
-      const adjustmentValue = 207;
-      const adjustedBaseGas = 319;
-      expect(feeCalculator.getTxGasAdjustmentValue(0, TxType.WITHDRAW_TO_CONTRACT)).toBe(adjustmentValue);
-      expect(feeCalculator.getAdjustedBaseVerificationGas(0, TxType.WITHDRAW_TO_CONTRACT)).toBe(adjustedBaseGas);
+      // adjusted = unadjusted + adjustment = 112 + 292 = 319
+      const adjustmentValue = 292;
+      const adjustedBaseGas = 404;
+      expect(feeCalculator.getTxGasAdjustmentValue(0, TxType.WITHDRAW_HIGH_GAS)).toBe(adjustmentValue);
+      expect(feeCalculator.getAdjustedBaseVerificationGas(0, TxType.WITHDRAW_HIGH_GAS)).toBe(adjustedBaseGas);
       expect(
-        feeCalculator.getAdjustedBaseVerificationGas(0, TxType.WITHDRAW_TO_CONTRACT) -
+        feeCalculator.getAdjustedBaseVerificationGas(0, TxType.WITHDRAW_HIGH_GAS) -
           feeCalculator.getUnadjustedBaseVerificationGas(),
       ).toBe(adjustmentValue);
-      const expectedFullAdjustedGas = adjustedBaseGas + getGasOverheadForTxType(0, TxType.WITHDRAW_TO_CONTRACT);
-      expect(feeCalculator.getAdjustedTxGas(0, TxType.WITHDRAW_TO_CONTRACT)).toBe(expectedFullAdjustedGas);
+      const expectedFullAdjustedGas = adjustedBaseGas + getGasOverheadForTxType(0, TxType.WITHDRAW_HIGH_GAS);
+      expect(feeCalculator.getAdjustedTxGas(0, TxType.WITHDRAW_HIGH_GAS)).toBe(expectedFullAdjustedGas);
       expect(
-        feeCalculator.getAdjustedTxGas(0, TxType.WITHDRAW_TO_CONTRACT) -
-          feeCalculator.getUnadjustedTxGas(0, TxType.WITHDRAW_TO_CONTRACT),
+        feeCalculator.getAdjustedTxGas(0, TxType.WITHDRAW_HIGH_GAS) -
+          feeCalculator.getUnadjustedTxGas(0, TxType.WITHDRAW_HIGH_GAS),
       ).toBe(adjustmentValue);
     }
 
@@ -326,17 +326,17 @@ describe('fee calculator', () => {
       // adjusted = unadjusted + adjustment = 112 + 464 = 576
       const adjustmentValue = 464;
       const adjustedBaseGas = 576;
-      expect(feeCalculator.getTxGasAdjustmentValue(1, TxType.WITHDRAW_TO_CONTRACT)).toBe(adjustmentValue);
-      expect(feeCalculator.getAdjustedBaseVerificationGas(1, TxType.WITHDRAW_TO_CONTRACT)).toBe(adjustedBaseGas);
+      expect(feeCalculator.getTxGasAdjustmentValue(1, TxType.WITHDRAW_HIGH_GAS)).toBe(adjustmentValue);
+      expect(feeCalculator.getAdjustedBaseVerificationGas(1, TxType.WITHDRAW_HIGH_GAS)).toBe(adjustedBaseGas);
       expect(
-        feeCalculator.getAdjustedBaseVerificationGas(1, TxType.WITHDRAW_TO_CONTRACT) -
+        feeCalculator.getAdjustedBaseVerificationGas(1, TxType.WITHDRAW_HIGH_GAS) -
           feeCalculator.getUnadjustedBaseVerificationGas(),
       ).toBe(adjustmentValue);
-      const expectedFullAdjustedGas = adjustedBaseGas + getGasOverheadForTxType(1, TxType.WITHDRAW_TO_CONTRACT);
-      expect(feeCalculator.getAdjustedTxGas(1, TxType.WITHDRAW_TO_CONTRACT)).toBe(expectedFullAdjustedGas);
+      const expectedFullAdjustedGas = adjustedBaseGas + getGasOverheadForTxType(1, TxType.WITHDRAW_HIGH_GAS);
+      expect(feeCalculator.getAdjustedTxGas(1, TxType.WITHDRAW_HIGH_GAS)).toBe(expectedFullAdjustedGas);
       expect(
-        feeCalculator.getAdjustedTxGas(1, TxType.WITHDRAW_TO_CONTRACT) -
-          feeCalculator.getUnadjustedTxGas(1, TxType.WITHDRAW_TO_CONTRACT),
+        feeCalculator.getAdjustedTxGas(1, TxType.WITHDRAW_HIGH_GAS) -
+          feeCalculator.getUnadjustedTxGas(1, TxType.WITHDRAW_HIGH_GAS),
       ).toBe(adjustmentValue);
     }
   });

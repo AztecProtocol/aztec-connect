@@ -17,7 +17,10 @@ export async function getTxTypeFromProofData(proofData: ProofData, blockchain: B
   }
 
   const { publicOwner } = new JoinSplitProofData(proofData);
-  return (await blockchain.isContract(publicOwner)) ? TxType.WITHDRAW_TO_CONTRACT : TxType.WITHDRAW_TO_WALLET;
+  if ((await blockchain.isContract(publicOwner)) || (await blockchain.isEmpty(publicOwner))) {
+    return TxType.WITHDRAW_HIGH_GAS;
+  }
+  return TxType.WITHDRAW_TO_WALLET;
 }
 
 /**

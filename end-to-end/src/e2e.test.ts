@@ -98,7 +98,6 @@ describe('end-to-end tests', () => {
     const transferValue = sdk.toBaseUnits(assetId, '0.007');
     const withdrawalValues = [sdk.toBaseUnits(assetId, '0.008'), sdk.toBaseUnits(assetId, '0.003')];
     const depositFees = await sdk.getDepositFees(assetId);
-    const withdrawalFees = await sdk.getWithdrawFees(assetId);
     const transferFees = await sdk.getTransferFees(assetId);
 
     expect((await sdk.getBalance(userIds[0], assetId)).value).toBe(0n);
@@ -170,11 +169,12 @@ describe('end-to-end tests', () => {
 
     // Rollup 2: Withdrawals and transfers.
     {
+      // User 1 and user 2 withdraw to address 2.
+      const recipient = addresses[2];
+      const withdrawalFees = await sdk.getWithdrawFees(assetId, recipient);
       const withdrawalFee = withdrawalFees[TxSettlementTime.NEXT_ROLLUP];
       const transferFee = transferFees[TxSettlementTime.INSTANT];
 
-      // User 1 and user 2 withdraw to address 2.
-      const recipient = addresses[2];
       const withdrawControllers = await asyncMap(userIds, async (userId, i) => {
         debug(
           `withdrawing ${sdk.fromBaseUnits(withdrawalValues[i], true)} (fee: ${sdk.fromBaseUnits(
