@@ -24,24 +24,38 @@ export function useAssetUnitPrices(assetIds?: number[]) {
   return useMaybeObs(obs);
 }
 
-export function useAggregatedAssetsBulkPrice(assetValues?: AssetValue[]) {
+export function useAggregatedAssetsBulkPrice(assetValues?: AssetValue[]): {
+  bulkPrice: bigint;
+  loading: boolean;
+  firstPriceReady: boolean;
+} {
   const rpStatus = useRollupProviderStatus();
 
   const assetIds = useMemo(() => assetValues?.map(x => x.assetId), [assetValues]);
   const unitPrices = useAssetUnitPrices(assetIds);
 
-  if (!assetValues) return undefined;
+  if (!assetValues) return { bulkPrice: 0n, loading: true, firstPriceReady: false };
+  if (assetValues.length === 0) return { bulkPrice: 0n, loading: false, firstPriceReady: true };
 
   let aggregatedBulkPrice = 0n;
+  let loadingPricesCount = 0;
+  let pricesCount = 0;
   assetValues?.forEach(({ assetId, value }) => {
+    pricesCount++;
     const unitPrice = unitPrices?.[assetId];
-    const asset = rpStatus?.blockchainStatus.assets[assetId];
-    if (unitPrice !== undefined && asset !== undefined) {
+    const asset = rpStatus.blockchainStatus.assets[assetId];
+    if (unitPrice !== undefined) {
       aggregatedBulkPrice += convertToBulkPrice(value, asset.decimals, unitPrice);
+    } else {
+      loadingPricesCount++;
     }
   });
 
-  return aggregatedBulkPrice;
+  return {
+    bulkPrice: aggregatedBulkPrice,
+    loading: loadingPricesCount > 0,
+    firstPriceReady: loadingPricesCount < pricesCount,
+  };
 }
 
 export function useAmountBulkPrice(amount?: Amount) {

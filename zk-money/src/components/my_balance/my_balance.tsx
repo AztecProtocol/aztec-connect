@@ -1,31 +1,7 @@
 import { formatBulkPrice } from 'app';
-import styled from 'styled-components/macro';
-import { Card, CardHeaderSize, Hyperlink, InteractiveTooltip } from 'ui-components';
+import { Card, CardHeaderSize, Hyperlink, InteractiveTooltip, SkeletonRect, useUniqueId } from 'ui-components';
 import { useTotalValuation, useTotalSpendableValuation } from '../../alt-model/total_account_valuation_hooks';
-import { gradients } from '../../styles';
 import style from './my_balance.module.scss';
-
-const Amount = styled.h1`
-  font-size: 56px;
-  height: 62px;
-  background-color: ${gradients.primary.from};
-  background-image: linear-gradient(134.14deg, ${gradients.primary.from} 18.37%, ${gradients.primary.to} 82.04%);
-  background-size: 100%;
-  background-clip: text;
-  -webkit-background-clip: text;
-  -moz-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  -moz-text-fill-color: transparent;
-`;
-
-const InformationWrapper = styled.div`
-  width: 100%;
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  padding: 10px 0px;
-  position: relative;
-`;
 
 function TooltipContent() {
   return (
@@ -41,27 +17,72 @@ function TooltipContent() {
   );
 }
 
+function GradientSpinner() {
+  const id = useUniqueId();
+  return (
+    <svg
+      width={25}
+      height={25}
+      className={style.spinner}
+      viewBox="0 0 25 25"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <linearGradient id={`${id}`} x1="5" y1="20" x2="20" y2="5" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#944AF2" />
+        <stop offset="1" stop-color="#448FFF" />
+      </linearGradient>
+      <path
+        opacity={0.2}
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M12.5 25C19.404 25 25 19.404 25 12.5S19.404 0 12.5 0 0 5.596 0 12.5 5.596 25 12.5 25Zm0-4a8.5 8.5 0 1 0 0-17 8.5 8.5 0 0 0 0 17Z"
+        fill={`url(#${id})`}
+      />
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M3.237 20.893A12.468 12.468 0 0 0 12.5 25C19.404 25 25 19.404 25 12.5 25 5.836 19.785.39 13.214.02v4.01a8.5 8.5 0 1 1-7.648 13.387l-2.33 3.476Z"
+        fill={`url(#${id})`}
+      />
+    </svg>
+  );
+}
+
 export function MyBalance() {
-  const totalValuation = useTotalValuation();
-  const totalValuationStr = totalValuation !== undefined && formatBulkPrice(totalValuation);
-  const totalSpendableValuation = useTotalSpendableValuation();
-  const totalSpendableValuationStr = totalSpendableValuation !== undefined && formatBulkPrice(totalSpendableValuation);
+  const { bulkPrice: totalValuation, loading, firstPriceReady } = useTotalValuation();
+  const { bulkPrice: totalSpendableValuation } = useTotalSpendableValuation();
 
   return (
     <Card
       className={style.myBalance}
-      cardHeader={'Net Worth'}
+      cardHeader={<div className={style.cardHeader}>Net Worth</div>}
       cardContent={
         <div className={style.balanceWrapper}>
           <div className={style.amountWrapper}>
-            <Amount>{totalValuationStr ? `$${totalValuationStr}` : 'Loading...'}</Amount>
+            <h1 className={style.amount}>
+              {firstPriceReady ? (
+                <>
+                  {`$${formatBulkPrice(totalValuation)}`}
+                  {loading && <GradientSpinner />}
+                </>
+              ) : (
+                <SkeletonRect sizingContent="$1000.00" />
+              )}
+            </h1>
           </div>
-          <InformationWrapper>
-            <h2 className={style.available}>
-              {totalSpendableValuationStr ? `Available $${totalSpendableValuationStr}` : 'Loading...'}
-            </h2>
+          <div className={style.informationWrapper}>
+            <div>
+              <h2 className={style.available}>
+                {firstPriceReady ? (
+                  `$${formatBulkPrice(totalSpendableValuation)} available`
+                ) : (
+                  <SkeletonRect sizingContent="$1000.00 available" />
+                )}
+              </h2>
+            </div>
             <InteractiveTooltip content={<TooltipContent />} />
-          </InformationWrapper>
+          </div>
         </div>
       }
       headerSize={CardHeaderSize.LARGE}

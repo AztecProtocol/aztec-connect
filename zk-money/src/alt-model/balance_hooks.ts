@@ -1,4 +1,4 @@
-import type { AssetValue, UserPaymentTx, UserTx } from '@aztec/sdk';
+import type { AssetValue, UserTx } from '@aztec/sdk';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { useEffect, useMemo, useState } from 'react';
 import { listenAccountUpdated } from './event_utils';

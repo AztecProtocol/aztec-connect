@@ -10,7 +10,7 @@ import { useDefaultCountDownData } from '../bridge_count_down/bridge_count_down_
 
 import { DefiRecipe, KeyBridgeStat } from 'alt-model/defi/types';
 import { baseUnitsToFloat, PRICE_DECIMALS } from 'app';
-import { SkeletonRect } from './skeleton_rect';
+import { SkeletonRect } from 'ui-components';
 
 const formatter = new Intl.NumberFormat('en-GB', { notation: 'compact' });
 
