@@ -25,6 +25,7 @@ function useUnfinalisedAsyncDefiAsyncPresentValues() {
           const poller = interactionPresentValuePollerCache.get([
             recipe.id,
             BigInt(tx.interactionResult.interactionNonce),
+            tx.depositValue.value,
           ]);
           obsList.push(poller?.obs ?? Obs.constant(undefined));
         }
@@ -38,12 +39,17 @@ function useUnfinalisedAsyncDefiAsyncPresentValues() {
 export function useTotalValuation() {
   const balances = useBalances();
   const unfinalisedPresentValues = useUnfinalisedAsyncDefiAsyncPresentValues();
+  const presentValuesAreLoading = !unfinalisedPresentValues || Object.values(unfinalisedPresentValues).some(x => !x);
   const combinedAssetValues = useMemo(() => {
     if (balances && unfinalisedPresentValues) {
       return unfinalisedPresentValues.filter((x): x is AssetValue => !!x).concat(balances);
     }
   }, [balances, unfinalisedPresentValues]);
-  return useAggregatedAssetsBulkPrice(combinedAssetValues);
+  const aggregationState = useAggregatedAssetsBulkPrice(combinedAssetValues);
+  return {
+    ...aggregationState,
+    loading: aggregationState.loading || presentValuesAreLoading,
+  };
 }
 
 export function useTotalSpendableValuation() {

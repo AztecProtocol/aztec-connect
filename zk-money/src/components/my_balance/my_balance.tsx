@@ -29,8 +29,8 @@ function GradientSpinner() {
       xmlns="http://www.w3.org/2000/svg"
     >
       <linearGradient id={`${id}`} x1="5" y1="20" x2="20" y2="5" gradientUnits="userSpaceOnUse">
-        <stop stop-color="#944AF2" />
-        <stop offset="1" stop-color="#448FFF" />
+        <stop stopColor="#944AF2" />
+        <stop offset="1" stopColor="#448FFF" />
       </linearGradient>
       <path
         opacity={0.2}

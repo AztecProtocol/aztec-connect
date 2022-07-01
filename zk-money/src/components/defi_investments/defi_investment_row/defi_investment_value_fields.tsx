@@ -7,10 +7,17 @@ import type {
 import { useInteractionPresentValue } from 'alt-model/defi/defi_info_hooks';
 import { useAmount } from 'alt-model/top_level_context';
 import { ShieldedAssetIcon } from 'components/shielded_asset_icon';
-import { UserDefiInteractionResultState, UserDefiTx } from '@aztec/sdk';
+import { EthAddress, UserDefiInteractionResultState, UserDefiTx } from '@aztec/sdk';
+import { SkeletonRect } from 'ui-components';
 
 function ValueField({ amount }: { amount?: Amount }) {
-  if (!amount) return <>Loading...</>;
+  if (!amount)
+    return (
+      <>
+        <SkeletonRect sizingContent={<ShieldedAssetIcon size="s" address={EthAddress.ZERO} />} />
+        <SkeletonRect sizingContent="1.000000 zkETH" />
+      </>
+    );
   return (
     <>
       <ShieldedAssetIcon size="s" address={amount.address} />
@@ -35,7 +42,7 @@ function ClosableValueField({ position }: { position: DefiPosition_Interactable 
 }
 
 function InteractionPresentValueField({ position }: { position: DefiPosition_NonInteractable }) {
-  const output = useInteractionPresentValue(position.recipe, position.tx.interactionResult.interactionNonce);
+  const output = useInteractionPresentValue(position.recipe, position.tx);
   const amount = useAmount(output);
   return <ValueField amount={amount} />;
 }
