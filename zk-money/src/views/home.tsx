@@ -5,8 +5,8 @@ import yieldLogo from 'images/yield_logo.svg';
 import privateShieldLogo from 'images/private_shield_logo.svg';
 import privateSendLogo from 'images/private_send_logo.svg';
 
-import topWave from 'images/wave_top.svg';
-import bottomWave from 'images/wave_bottom.svg';
+import { ReactComponent as TopWave } from 'images/wave_top.svg';
+import { ReactComponent as BottomWave } from 'images/wave_bottom.svg';
 import aaveLogo from 'images/aave_logo.svg';
 import compoundLogo from 'images/compound_logo.svg';
 import cowswapLogo from 'images/cowswap_logo.svg';
@@ -164,7 +164,7 @@ function Banner({ onShieldNow }: { onShieldNow: () => void }) {
 function FavoriteApps() {
   return (
     <div className={style.section}>
-      <img src={topWave} className={style.topWave} alt="" />
+      <TopWave className={style.topWave} />
       <div className={style.favoriteAppsWrapper}>
         <div className={style.favoriteApps}>
           <div className={style.sectionTitle}>Your favorite Dapps, made private.</div>
@@ -189,7 +189,7 @@ function FavoriteApps() {
           </div>
         </div>
       </div>
-      <img className={style.bottomWave} src={bottomWave} alt="" />
+      <BottomWave className={style.bottomWave} />
     </div>
   );
 }
