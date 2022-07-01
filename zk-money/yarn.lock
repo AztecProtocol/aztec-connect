@@ -76,6 +76,14 @@
     "@aztec/barretenberg" "2.1.0-testnet.29"
     "@ethersproject/providers" "^5.6.5"
 
+"@aztec/bridge-clients@0.1.48":
+  version "0.1.48"
+  resolved "https://registry.yarnpkg.com/@aztec/bridge-clients/-/bridge-clients-0.1.48.tgz#8058ebf47565bf74372cae66c7889ab83e734215"
+  integrity sha512-amYuljTAAw7cFnb81Oi0XNAhlrhzqWeljvrI9eP24u9oRBnZm+PqbkN88kaoI2DYjNbkXEuPmQ1tj2EEi4G3wg==
+  dependencies:
+    "@aztec/barretenberg" "2.1.0-testnet.29"
+    "@ethersproject/providers" "^5.6.5"
+
 "@aztec/sdk@file:../sdk/dest":
   version "2.0.16"
   dependencies:

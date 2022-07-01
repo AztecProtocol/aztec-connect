@@ -1,6 +1,7 @@
 import type { DefiPosition } from 'alt-model/defi/open_position_hooks';
 import { useDefaultExpectedAssetYield, useCurrentAssetYield } from 'alt-model/defi/defi_info_hooks';
 import { DefiInvestmentType, DefiRecipe } from 'alt-model/defi/types';
+import { SkeletonRect } from 'ui-components';
 
 const percentageFormatter = new Intl.NumberFormat('en-GB', { style: 'percent', maximumFractionDigits: 1 });
 
@@ -13,10 +14,10 @@ function Apy({
   investmentType: DefiInvestmentType;
   roiType: string;
 }) {
-  if (expectedYield === undefined) return <></>;
-  const yieldStr = percentageFormatter.format(expectedYield / 100);
   const typeStr = investmentType === DefiInvestmentType.FIXED_YIELD ? 'Fixed' : 'Variable';
+  if (expectedYield === undefined) return <SkeletonRect sizingContent={`${typeStr}: 1.23% ${roiType}`} />;
 
+  const yieldStr = percentageFormatter.format(expectedYield / 100);
   return (
     <>
       {typeStr}: {yieldStr} {roiType}

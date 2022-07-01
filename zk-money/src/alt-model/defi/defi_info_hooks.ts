@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { BridgeId } from '@aztec/sdk';
+import { BridgeId, UserDefiTx } from '@aztec/sdk';
 import { DefiRecipe, FlowDirection } from './types';
 import { useAmount, useBridgeDataAdaptorsMethodCaches } from 'alt-model/top_level_context';
 import { useMaybeObs } from 'app/util';
@@ -85,11 +85,12 @@ export function useExpectedOutput(
   return useMaybeObs(poller?.obs);
 }
 
-export function useInteractionPresentValue(recipe: DefiRecipe, interactionNonce?: number) {
+export function useInteractionPresentValue(recipe: DefiRecipe, tx: UserDefiTx) {
   const { interactionPresentValuePollerCache } = useBridgeDataAdaptorsMethodCaches();
+  const { interactionNonce } = tx.interactionResult;
   const poller =
     interactionNonce !== undefined
-      ? interactionPresentValuePollerCache.get([recipe.id, BigInt(interactionNonce)])
+      ? interactionPresentValuePollerCache.get([recipe.id, BigInt(interactionNonce), tx.depositValue.value])
       : undefined;
   return useMaybeObs(poller?.obs);
 }

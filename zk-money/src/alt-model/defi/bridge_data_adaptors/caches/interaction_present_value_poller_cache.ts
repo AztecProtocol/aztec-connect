@@ -9,7 +9,7 @@ const debug = createDebug('zm:interaction_present_value_poller_cache');
 const POLL_INTERVAL = 5 * 60 * 1000;
 
 export function createInteractionPresentValuePollerCache(adaptorCache: BridgeDataAdaptorCache) {
-  return new LazyInitDeepCacheMap(([recipeId, interactionNonce]: [string, bigint]) => {
+  return new LazyInitDeepCacheMap(([recipeId, interactionNonce, inputValue]: [string, bigint, bigint]) => {
     const adaptor = adaptorCache.get(recipeId);
     if (!adaptor) return undefined;
 
@@ -18,7 +18,7 @@ export function createInteractionPresentValuePollerCache(adaptorCache: BridgeDat
     }
     const pollObs = Obs.constant(async () => {
       try {
-        const values = await adaptor.getInteractionPresentValue!(interactionNonce);
+        const values = await adaptor.getInteractionPresentValue!(interactionNonce, inputValue);
         return { assetId: Number(values[0].assetId), value: values[0].amount };
       } catch (err) {
         debug({ recipeId, interactionNonce }, err);
