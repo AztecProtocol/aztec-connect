@@ -19,8 +19,10 @@ const config = {
       url: 'https://goerli.infura.io/v3/6a04b7c89c5b421faefde663f787aa35',
     },
     hardhat: {
-      blockGasLimit: 15000000,
-      hardfork: 'london',
+      forking: {
+        url: "https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35",
+        blockNumber: 14728000,
+      }
     },
   },
   paths: {

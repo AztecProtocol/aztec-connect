@@ -103,7 +103,8 @@ export class TxReceiver {
 
       const txDaos: TxDao[] = [];
       for (let i = 0; i < txs.length; ++i) {
-        const txDao = await this.validateTx(txs[i], txTypes[i]);
+        const prevTxTime = i == 0 ? undefined : txDaos[i - 1].created;
+        const txDao = await this.validateTx(txs[i], txTypes[i], prevTxTime);
         txDaos.push(txDao);
       }
 
@@ -116,7 +117,7 @@ export class TxReceiver {
     }
   }
 
-  private async validateTx({ proof, offchainTxData, depositSignature }: Tx, txType: TxType) {
+  private async validateTx({ proof, offchainTxData, depositSignature }: Tx, txType: TxType, previousTxTime?: Date) {
     this.validateAsset(proof);
 
     if (proof.proofId === ProofId.DEPOSIT) {
@@ -143,6 +144,17 @@ export class TxReceiver {
 
     const dataRootsIndex = await this.rollupDb.getDataRootsIndex(proof.noteTreeRoot);
 
+    // When txs are provided to us in a batch it's possible that they are chained
+    // we need to ensure that each tx in the chain has a timestamp that is greater than the previous
+    // It's improbable that they would be given the same time but this should ensure it doesn't happen
+    const getNextTxTime = () => {
+      const currentTime = new Date();
+      if (!previousTxTime || currentTime.getTime() > previousTxTime.getTime()) {
+        return currentTime;
+      }
+      return new Date(previousTxTime.getTime() + 1);
+    };
+
     return new TxDao({
       id: proof.txId,
       proofData: proof.rawProofData,
@@ -151,7 +163,7 @@ export class TxReceiver {
       nullifier1: toBigIntBE(proof.nullifier1) ? proof.nullifier1 : undefined,
       nullifier2: toBigIntBE(proof.nullifier2) ? proof.nullifier2 : undefined,
       dataRootsIndex,
-      created: new Date(),
+      created: getNextTxTime(),
       txType,
       excessGas: 0, // provided later
     });

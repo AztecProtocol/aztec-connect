@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@aztec/bridge-clients": "0.1.48",
+    "@aztec/bridge-clients": "0.1.49",
     "@aztec/sdk": "file:../sdk/dest",
     "@walletconnect/web3-provider": "^1.3.6",
     "broadcast-channel": "^4.2.0",

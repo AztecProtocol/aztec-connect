@@ -7,7 +7,7 @@ export interface Block {
 }
 
 export class EthereumRpc {
-  constructor(private provider: EthereumProvider) {}
+  constructor(protected provider: EthereumProvider) {}
 
   public async getChainId() {
     const result = await this.provider.request({ method: 'eth_chainId' });
