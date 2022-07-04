@@ -86,7 +86,12 @@ describe('tx receiver', () => {
     return mockTx({ proofId: ProofId.ACCOUNT, offchainTxData: offchainTxData.toBuffer() });
   };
 
-  const mockDefiDepositTx = ({ bridgeId = new BridgeId(0, 0, 1), defiDepositValue = 1n, txFee = 1n } = {}) => {
+  const mockDefiDepositTx = ({
+    bridgeId = new BridgeId(0, 0, 1),
+    defiDepositValue = 1n,
+    txFee = 1n,
+    allowChain = 0,
+  } = {}) => {
     const partialState = randomBytes(32);
     const partialStateSecretEphPubKey = GrumpkinAddress.random();
     const viewingKey = ViewingKey.random();
@@ -104,6 +109,7 @@ describe('tx receiver', () => {
       bridgeId,
       defiDepositValue,
       txFee,
+      allowChain,
     });
   };
 
@@ -364,6 +370,27 @@ describe('tx receiver', () => {
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
     });
 
+    it('reject a defi deposit tx with allow chain note 1', async () => {
+      const txs = [mockDefiDepositTx({ allowChain: 1 })];
+
+      await expect(() => txReceiver.receiveTxs(txs)).rejects.toThrow('Cannot chain from a defi deposit tx.');
+      expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
+    });
+
+    it('reject a defi deposit tx with allow chain note 2', async () => {
+      const txs = [mockDefiDepositTx({ allowChain: 2 })];
+
+      await expect(() => txReceiver.receiveTxs(txs)).rejects.toThrow('Cannot chain from a defi deposit tx.');
+      expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
+    });
+
+    it('reject a defi deposit tx with allow chain both notes', async () => {
+      const txs = [mockDefiDepositTx({ allowChain: 3 })];
+
+      await expect(() => txReceiver.receiveTxs(txs)).rejects.toThrow('Cannot chain from a defi deposit tx.');
+      expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
+    });
+
     it('reject a defi deposit tx with identical input assets', async () => {
       const bridgeId = new BridgeId(0, 1, 2, 1);
       const txs = [mockDefiDepositTx({ bridgeId })];
@@ -462,6 +489,34 @@ describe('tx receiver', () => {
         expect.objectContaining({ id: tx0.proof.txId }),
         expect.objectContaining({ id: tx1.proof.txId }),
       ]);
+    });
+
+    it('chained txs never have the same date', async () => {
+      // setup a mock new Date() so that the same date is always returned
+      // but if a specific date is constructed via an argument then return this
+      const mockDate = new Date(1466424490000);
+      const realDate = global.Date;
+      const spy = jest.spyOn(global, 'Date').mockImplementation((...args): any => {
+        // if an argument is given construct a date as normal, otherwise return our mock date
+        if (args.length) {
+          return new realDate(...args);
+        }
+        return mockDate;
+      });
+
+      const tx0 = mockTx({ allowChain: 1 });
+      const tx1 = mockTx({ backwardLink: tx0.proof.noteCommitment1, allowChain: 2 });
+      const tx2 = mockTx({ backwardLink: tx1.proof.noteCommitment2 });
+
+      // the mock date constructor above will give all txs the same time but this should be correct for
+      await txReceiver.receiveTxs([tx0, tx1, tx2]);
+      expect(rollupDb.addTxs).toHaveBeenCalledTimes(1);
+      const txDaos = rollupDb.addTxs.mock.calls[0][0];
+      expect(txDaos[0].created.getTime()).toBe(1466424490000);
+      expect(txDaos[1].created.getTime()).toBe(1466424490001);
+      expect(txDaos[2].created.getTime()).toBe(1466424490002);
+
+      spy.mockRestore();
     });
 
     it('accept a tx chained from an unsettled tx', async () => {
