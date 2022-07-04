@@ -28,6 +28,26 @@
     threads "1.7.0"
     tslib "^2.0.0"
 
+"@aztec/barretenberg@2.1.26":
+  version "2.1.26"
+  resolved "https://registry.yarnpkg.com/@aztec/barretenberg/-/barretenberg-2.1.26.tgz#a804d8da2ffc74b0dce5d9b8c8fcb51f8aa63b2d"
+  integrity sha512-c1fLII0yMLNZR7tLbT9WDQNTIKDNPeKWYECPqxHP3BaUK6CyLbC5o7vXjYZPxy7nSjrCLvMDg8VGpvSUNp3F/g==
+  dependencies:
+    "@types/detect-node" "^2.0.0"
+    "@types/levelup" "^4.3.0"
+    buffer-browserify "^0.2.5"
+    debug "^4.1.1"
+    detect-node "^2.0.4"
+    fs-extra "10.0.0"
+    is-node "^1.0.2"
+    levelup "^5.0.0"
+    memdown "^6.0.0"
+    node-fetch "2.6.1"
+    promise-readable "^5.0.4"
+    sha3 "^2.1.3"
+    threads "1.7.0"
+    tslib "^2.0.0"
+
 "@aztec/barretenberg@file:../barretenberg.js/dest":
   version "2.0.0"
   dependencies:
@@ -76,13 +96,13 @@
     "@aztec/barretenberg" "2.1.0-testnet.29"
     "@ethersproject/providers" "^5.6.5"
 
-"@aztec/bridge-clients@0.1.48":
-  version "0.1.48"
-  resolved "https://registry.yarnpkg.com/@aztec/bridge-clients/-/bridge-clients-0.1.48.tgz#8058ebf47565bf74372cae66c7889ab83e734215"
-  integrity sha512-amYuljTAAw7cFnb81Oi0XNAhlrhzqWeljvrI9eP24u9oRBnZm+PqbkN88kaoI2DYjNbkXEuPmQ1tj2EEi4G3wg==
+"@aztec/bridge-clients@0.1.49":
+  version "0.1.49"
+  resolved "https://registry.yarnpkg.com/@aztec/bridge-clients/-/bridge-clients-0.1.49.tgz#2c32d02cff2e5662e754d6599974cca976cb453f"
+  integrity sha512-s6UEumpcFch0jv8tmt/jYxwk3AuXf/y7kaWIfY1xYZMYgQhjdmdkq8CnfrAfx17eUvP1ZO1ifAPJvGWhWUlI6g==
   dependencies:
-    "@aztec/barretenberg" "2.1.0-testnet.29"
-    "@ethersproject/providers" "^5.6.5"
+    "@aztec/barretenberg" "2.1.26"
+    "@ethersproject/providers" "^5.6.8"
 
 "@aztec/sdk@file:../sdk/dest":
   version "2.0.16"
@@ -2045,7 +2065,7 @@
     bech32 "1.1.4"
     ws "7.4.6"
 
-"@ethersproject/providers@^5.6.5":
+"@ethersproject/providers@^5.6.5", "@ethersproject/providers@^5.6.8":
   version "5.6.8"
   resolved "https://registry.yarnpkg.com/@ethersproject/providers/-/providers-5.6.8.tgz#22e6c57be215ba5545d3a46cf759d265bb4e879d"
   integrity sha512-Wf+CseT/iOJjrGtAOf3ck9zS7AgPmr2fZ3N97r4+YXN3mBePTG2/bJ8DApl9mVwYL+RpYbNxMEkEp4mPGdwG/w==
