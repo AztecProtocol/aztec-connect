@@ -306,6 +306,10 @@ export class TxReceiver {
     let proofApproval = await this.blockchain.getUserProofApprovalStatus(publicOwner, txId.toBuffer());
     if (!proofApproval && depositSignature) {
       const message = txId.toDepositSigningData();
+      const lastByte = depositSignature[depositSignature.length - 1];
+      if (lastByte == 0 || lastByte == 1) {
+        depositSignature[depositSignature.length - 1] = lastByte + 27;
+      }
       proofApproval = this.blockchain.validateSignature(publicOwner, depositSignature, message);
     }
     if (!proofApproval) {
