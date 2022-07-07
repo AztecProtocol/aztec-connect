@@ -684,13 +684,11 @@ export class RollupProcessor {
         args: { rollupId, chunk, totalChunks, sender },
       } = this.contract.interface.parseLog(e);
       const key = `${rollupId}:${sender}`;
-      if (!a[key]) {
+      if (!a[key] || a[key].length != totalChunks) {
         a[key] = Array.from({ length: totalChunks });
       }
       // Store by chunk index. Copes with chunks being re-published.
-      if (!a[key][chunk]) {
-        a[key][chunk] = e;
-      }
+      a[key][chunk] = e;
       return a;
     }, {});
     // Finally, for each rollup log, lookup the offchain events for the rollup id from the same sender.
