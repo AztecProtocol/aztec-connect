@@ -19,16 +19,6 @@ const PROD_EXPLORER_URL = 'https://aztec-connect-prod-explorer.aztec.network/';
 
 async function rootRender() {
   try {
-    // TODO: remove this check for launch
-    // (similar change required in home.tsx & incentive_modal.tsx)
-    const isDevSite = window.location.hostname === 'aztec-connect-dev.zk.money';
-    if (!isDevSite && !localStorage.getItem('unlock_prod')) {
-      return (
-        <BrowserRouter>
-          <AppInitFailed reason={{ type: 'unlaunched' }} explorerUrl={PROD_EXPLORER_URL} />
-        </BrowserRouter>
-      );
-    }
     const supportStatusProm = getSupportStatus();
     const { config, initialRollupProviderStatus } = await getEnvironment();
     const supportStatus = await supportStatusProm;

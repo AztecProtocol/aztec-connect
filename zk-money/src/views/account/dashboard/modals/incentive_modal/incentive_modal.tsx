@@ -41,13 +41,9 @@ interface SelfDismissingIncentiveModalProps {
   buttonLabel: string;
 }
 
-// TODO: Only show incentive modals once we have gone live
-// (similar change required in home.tsx & src/index.tsx)
-const hasGoneLive = false;
-
 export function useShouldShowIncentiveModal(instanceName: string) {
   const storageKey = `incentive_modal_was_closed:${instanceName}`;
-  const [shouldShow, setShouldShow] = useState(() => hasGoneLive && !localStorage.getItem(storageKey));
+  const [shouldShow, setShouldShow] = useState(() => !localStorage.getItem(storageKey));
   const markAsShown = () => {
     localStorage.setItem(storageKey, 'true');
     setShouldShow(false);

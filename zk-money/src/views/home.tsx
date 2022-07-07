@@ -116,11 +116,6 @@ export function Home({ onSignup }: HomeProps) {
   );
 }
 
-// TODO: remove this check as part of launch
-// (similar change required in incentive_modal.tsx & src/index.tsx)
-const isDevSite = window.location.hostname === 'aztec-connect-dev.zk.money';
-const shieldDisabled = !isDevSite && !localStorage.getItem('unlock_prod');
-
 function Banner({ onShieldNow }: { onShieldNow: () => void }) {
   return (
     <div className={style.banner}>
@@ -135,13 +130,7 @@ function Banner({ onShieldNow }: { onShieldNow: () => void }) {
           zk.money is your portal to using Ethereum DeFi services with full privacy and up to 100x cost savings. Shield
           funds to start accessing!
         </div>
-        <Button
-          text={shieldDisabled ? 'Coming soon' : 'Shield Now'}
-          onClick={onShieldNow}
-          className={style.shieldButton}
-          theme="gradient"
-          disabled={shieldDisabled}
-        />
+        <Button text="Shield Now" onClick={onShieldNow} className={style.shieldButton} theme="gradient" />
         <div className={style.links}>
           <Hyperlink
             theme="white"
