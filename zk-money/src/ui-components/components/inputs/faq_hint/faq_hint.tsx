@@ -1,4 +1,4 @@
-import { Link } from 'components';
+import { Link } from 'ui-components';
 import { useUniqueId } from 'ui-components/util';
 import style from './faq_hint.module.scss';
 

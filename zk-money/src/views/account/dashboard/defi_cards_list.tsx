@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
-import { Select, Section, SectionTitle, SearchInput, CardWrapper } from 'ui-components';
+import { Section, SectionTitle, SearchInput } from 'ui-components';
 import { Obs, useMaybeObs } from 'app/util';
-import { DefiCard } from '../../../components';
+import { DefiCard, Select } from 'components';
 import { DefiInvestmentType, DefiRecipe } from '../../../alt-model/defi/types';
 import { useBridgeDataAdaptorsMethodCaches, useDefiRecipes } from 'alt-model/top_level_context';
 import style from './defi_cards_list.module.scss';

@@ -1,13 +1,28 @@
 import { Link, useLocation } from 'react-router-dom';
-import { isSafari } from 'device_support';
 import { bindStyle } from '../../../util/classnames';
-import { ReactComponent as Logo } from '../../../images/zk_money.svg';
-import { Pages } from 'views/views';
+import { ReactComponent as Logo } from 'ui-components/images/zk_money.svg';
+import { ReactComponent as MobileNavbarEarn } from 'images/mobile_navbar_earn.svg';
+import { ReactComponent as MobileNavbarLogIn } from 'images/mobile_navbar_log_in.svg';
+import { ReactComponent as MobileNavbarTrade } from 'images/mobile_navbar_trade.svg';
+import { ReactComponent as MobileNavbarWallet } from 'images/mobile_navbar_wallet.svg';
 import zkMoneyLogoWhite from 'images/zk_money_white.svg';
 import zkMoneyLogo from 'images/zk_money.svg';
 import style from './navbar.module.scss';
 
 const cx = bindStyle(style);
+
+const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+enum Pages {
+  HOME = '/',
+  SIGNIN = '/signin',
+  SIGNUP = '/signup',
+  DASHBOARD = '/dashboard',
+  EARN = '/earn',
+  SEND = '/send',
+  TRADE = '/trade',
+  BALANCE = '/balance',
+}
 
 export enum Theme {
   GRADIENT = 'GRADIENT',
@@ -30,12 +45,13 @@ interface NavbarProps {
 interface LinkItem {
   url: string;
   label: string;
+  mobileImage: JSX.Element;
   disabled?: boolean;
 }
 
 const LINKS: LinkItem[] = [
-  { url: Pages.EARN, label: 'Earn' },
-  { url: Pages.TRADE, label: 'Trade' },
+  { url: Pages.EARN, label: 'Earn', mobileImage: <MobileNavbarEarn className={style.mobileImage} /> },
+  { url: Pages.TRADE, label: 'Trade', mobileImage: <MobileNavbarTrade className={style.mobileImage} /> },
 ];
 
 function getLogo(theme: Theme | undefined) {
@@ -65,6 +81,7 @@ export function Navbar({ isLoggingIn, isLoggedIn, accountComponent, theme, onCha
               gradient: theme === Theme.GRADIENT,
             })}
           >
+            {link.mobileImage}
             {link.label}
           </Link>
         ))}
@@ -79,6 +96,7 @@ export function Navbar({ isLoggingIn, isLoggedIn, accountComponent, theme, onCha
                   gradient: theme === Theme.GRADIENT,
                 })}
               >
+                <MobileNavbarWallet className={style.mobileImage} />
                 Wallet
               </Link>
             </div>
@@ -93,6 +111,7 @@ export function Navbar({ isLoggingIn, isLoggedIn, accountComponent, theme, onCha
               gradient: theme === Theme.GRADIENT,
             })}
           >
+            <MobileNavbarLogIn className={style.mobileImage} />
             Log In
           </Link>
         )}

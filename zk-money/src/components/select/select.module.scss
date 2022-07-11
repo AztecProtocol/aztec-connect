@@ -5,6 +5,10 @@
   font-size: 16px;
   height: 40px;
   cursor: pointer;
+
+  @media (max-width: 480px) {
+    margin: 0;
+  }
 }
 
 .innerFrame {
@@ -13,10 +17,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
 }
 
 .value {
-  margin-left: 10px;
   white-space: nowrap;
 }
 

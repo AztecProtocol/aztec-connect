@@ -10,7 +10,7 @@ import {
   WalletId,
   wallets,
 } from '../../app';
-import { Dot, Select, Text, TextButton, Tooltip } from '../../components';
+import { Dot, LegacySelect, Text, TextButton, Tooltip } from 'components';
 import errorIcon from '../../images/exclamation_mark.svg';
 import { spacings, systemStates } from '../../styles';
 
@@ -94,7 +94,7 @@ export const WalletSelect: React.FunctionComponent<WalletSelectInputProps> = ({
 
   const walletId = providerState?.walletId;
   const walletSelect = (
-    <Select
+    <LegacySelect
       className={className}
       trigger={<TextButton text={`(${ethAddress ? 'Change' : 'Connect'})`} size="xs" nowrap />}
       items={wallets.map(({ id, name, icon }) => ({

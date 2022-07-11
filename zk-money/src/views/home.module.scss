@@ -409,10 +409,35 @@
   }
 }
 
-@media (max-width: 600px) {
-  .favoriteApps {
-    .logos {
-      grid: auto/repeat(1, 1fr);
+@media (max-width: 480px) {
+  .title {
+    font-size: 32px;
+  }
+
+  .banner {
+    .text {
+      gap: 20px;
+    }
+  }
+
+  .subtitle {
+    font-size: 14px;
+  }
+
+  .banner {
+    .cardsGraphic {
+      width: 150px;
+      margin-bottom: 15px;
+    }
+  }
+
+  .bottomContent {
+    .step {
+      gap: 25px;
+    }
+
+    .description {
+      font-size: 14px;
     }
   }
 }

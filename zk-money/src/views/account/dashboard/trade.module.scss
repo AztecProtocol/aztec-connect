@@ -41,3 +41,17 @@
     width: 75%;
   }
 }
+
+@media (max-width: 480px) {
+  .underConstructionWrapper {
+    width: 100%;
+
+    .image {
+      height: 200px;
+    }
+
+    .title {
+      margin-top: 20px;
+    }
+  }
+}

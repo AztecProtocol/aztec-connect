@@ -1,6 +1,6 @@
 import { bindStyle } from 'ui-components/util/classnames';
-import { MetamaskIcon, WalletConnectIcon } from '../../icons';
-import downArrow from '../../../images/down_arrow.svg';
+import { MetamaskIcon, WalletConnectIcon } from 'ui-components/components/icons';
+import downArrow from 'ui-components/images/down_arrow.svg';
 import style from './wallet_account_indicator.module.scss';
 import { Dropdown, DropdownOption } from 'components/dropdown';
 import { WalletId } from 'app';

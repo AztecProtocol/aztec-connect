@@ -1,6 +1,6 @@
 import type { DefiRecipe } from 'alt-model/defi/types';
 import { useState } from 'react';
-import { Toggle } from 'ui-components';
+import { Toggle } from 'components';
 import { TokenList } from './token_list';
 import style from './holdings_list.module.scss';
 import { DefiInvestments } from 'components/defi_investments';

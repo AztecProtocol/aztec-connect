@@ -73,3 +73,14 @@
     width: 30%;
   }
 }
+
+@media (max-width: 480px) {
+  .investmentFilterInputs {
+    gap: 10px;
+  }
+
+  .select {
+    margin: 0;
+    width: 100%;
+  }
+}

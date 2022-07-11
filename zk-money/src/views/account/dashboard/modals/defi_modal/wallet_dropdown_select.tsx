@@ -1,6 +1,6 @@
 import { useApp } from 'alt-model';
 import { WalletId, wallets } from 'app';
-import { Select } from 'components';
+import { LegacySelect } from 'components';
 import style from './wallet_dropdown_select.module.scss';
 
 const ITEMS = (window.ethereum ? wallets : wallets.filter(w => w.id !== WalletId.METAMASK)).map(wallet => ({
@@ -11,7 +11,7 @@ const ITEMS = (window.ethereum ? wallets : wallets.filter(w => w.id !== WalletId
 export function WalletDropdownSelect() {
   const { userSession } = useApp();
   return (
-    <Select
+    <LegacySelect
       className={style.select}
       items={ITEMS}
       onSelect={id => userSession?.changeWallet(id)}

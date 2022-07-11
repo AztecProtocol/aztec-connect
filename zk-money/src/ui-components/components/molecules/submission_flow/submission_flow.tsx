@@ -1,4 +1,4 @@
-import style from './submission_flow.module.css';
+import style from './submission_flow.module.scss';
 import { bindStyle } from '../../../util/classnames';
 import React from 'react';
 import { StepStatusIndicator, StepStatus } from '../../atoms';

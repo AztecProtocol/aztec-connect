@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import styled from 'styled-components/macro';
-import { Button, Select, ShieldedAssetIcon, Text } from '../components';
+import { Button, LegacySelect, ShieldedAssetIcon, Text } from '../components';
 import { borderRadiuses, colours, defaultTextColour, fontSizes, inputSizes, spacings, themeColours } from '../styles';
 import arrowDownGradient from '../images/arrow_down_gradient.svg';
 import { formatValueAsBulkPrice, formatBaseUnits, toBaseUnits } from '../app';
@@ -122,7 +122,7 @@ export const ShieldSelect: React.FunctionComponent<ShieldSelectProps> = ({ onSub
             ~ settles in 6 hours
           </Text>
           <SelectWrapper>
-            <Select
+            <LegacySelect
               items={items ?? []}
               trigger={
                 <Selection>

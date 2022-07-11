@@ -3,9 +3,8 @@ import type { StrOrMax } from 'alt-model/forms/constants';
 import { assetIsSupportedForShielding } from 'alt-model/shield/shieldable_assets';
 import { useState, useMemo } from 'react';
 import { Dropdown, DropdownOption } from 'components/dropdown';
-import { ShieldedAssetIcon } from 'components';
-import { AmountInput } from 'ui-components';
-import downArrow from '../../../images/down_arrow.svg';
+import { ShieldedAssetIcon, AmountInput } from 'components';
+import downArrow from 'ui-components/images/down_arrow.svg';
 import style from './amount_selection.module.scss';
 import { bindStyle } from 'ui-components/util/classnames';
 

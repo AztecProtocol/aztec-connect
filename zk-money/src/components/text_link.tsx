@@ -2,7 +2,7 @@ import React from 'react';
 import styled, { css } from 'styled-components/macro';
 import { colours, defaultTextColour } from '../styles';
 import { Text, TextColour, TextProps } from './text';
-import { Link } from './link';
+import { Link } from 'ui-components';
 
 type HoverEffect = 'underline';
 

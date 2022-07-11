@@ -151,6 +151,10 @@
   transition: initial;
 }
 
+.mobileImage {
+  display: none;
+}
+
 @media (max-width: 768px) {
   .accountRoot {
     gap: 30px;
@@ -168,5 +172,50 @@
 
   .link {
     width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .accountRoot {
+    position: fixed;
+    bottom: 0px;
+    width: 100%;
+    background-color: #fffffff8;
+    border-top: 1px solid #dfdfdf;
+    z-index: 1;
+    right: 0;
+    height: 50px;
+    padding: 5px 10px 0 10px;
+
+    .link {
+      color: #20293e;
+      text-align: center;
+      font-size: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 7px 0;
+      gap: 5px;
+      height: 100%;
+      justify-content: space-between;
+    }
+  }
+
+  .navLink {
+    padding: 10px 0 0 0;
+  }
+
+  .navLink.gradient.active::before {
+    background: initial;
+  }
+
+  .navLink.white.active::before {
+    background: initial;
+  }
+
+  .mobileImage {
+    fill: #5a5a5a;
+    display: block;
+    width: 20px;
   }
 }

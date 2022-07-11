@@ -3,7 +3,7 @@ import { InputTheme } from 'components';
 import { SplitSection } from '../sections/split_section';
 import { AmountSection } from 'views/account/dashboard/modals/sections/amount_section';
 import { TxGasSection } from 'views/account/dashboard/modals/sections/gas_section';
-import { Toggle } from 'ui-components';
+import { Toggle } from 'components';
 import { DescriptionSection, RecipientSection } from '../sections';
 import { PrivacyInformationSection } from '../sections/privacy_information_section';
 import { TransactionSettlementTimeInformationSection } from '../sections/settlement_time_information_section';

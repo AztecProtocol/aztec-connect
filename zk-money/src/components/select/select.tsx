@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { bindStyle } from 'ui-components/util/classnames';
 import { Dropdown, DropdownOption } from 'components/dropdown';
-import { GradientDisclosureIcon } from '../../icons/gradient_disclosure_icon';
-import { CloseMiniIcon } from '../../icons/close_mini_icon';
+import { GradientDisclosureIcon } from 'ui-components/components/icons/gradient_disclosure_icon';
+import { CloseMiniIcon } from 'ui-components/components/icons/close_mini_icon';
 import style from './select.module.scss';
 
 const cx = bindStyle(style);

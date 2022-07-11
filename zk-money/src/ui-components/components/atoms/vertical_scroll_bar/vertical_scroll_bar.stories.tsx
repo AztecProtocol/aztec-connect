@@ -1,6 +1,4 @@
 import { ComponentStory, ComponentMeta } from '@storybook/react';
-import { useState } from 'react';
-
 import { VerticalScrollBar } from './vertical_scroll_bar';
 
 export default {

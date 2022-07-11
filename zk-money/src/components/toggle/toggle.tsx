@@ -1,7 +1,7 @@
 import styled from 'styled-components/macro';
 import { GradientBorder } from 'ui-components';
-import { Text } from '../../../../components';
-import { borderRadiuses } from '../../../../styles';
+import { Text } from '../text';
+import { borderRadiuses } from '../../styles';
 
 const Root = styled.div<{ height: number }>`
   user-select: none;

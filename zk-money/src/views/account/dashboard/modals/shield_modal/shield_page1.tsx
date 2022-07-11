@@ -3,16 +3,15 @@ import type { StrOrMax } from 'alt-model/forms/constants';
 import { TxSettlementTime } from '@aztec/sdk';
 import { useState } from 'react';
 import { WalletId, wallets } from 'app';
-import { InputTheme } from 'components';
+import { InputTheme, WalletAccountIndicator } from 'components';
 import { AmountSection, TxGasSection, RecipientSection } from 'views/account/dashboard/modals/sections';
 import { RemoteAsset } from 'alt-model/types';
 import { TransactionSettlementTimeInformationSection } from '../sections/settlement_time_information_section';
 import { SplitSection } from '../sections/split_section';
 import { useProviderState, useApp } from 'alt-model';
-import { WalletAccountIndicator } from 'ui-components';
-import style from './shield.module.scss';
 import { ShieldPrivacySection } from './shield_privacy_section';
 import { FooterSection } from '../sections/footer_section';
+import style from './shield.module.scss';
 
 interface ShieldPage1Props {
   fields: ShieldFormFields;

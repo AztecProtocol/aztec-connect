@@ -1,9 +1,9 @@
 import type { RemoteAsset } from 'alt-model/types';
 import { getAssetPreferredFractionalDigits } from 'alt-model/known_assets/known_asset_display_data';
-import { formatBaseUnits } from '../../../../app';
-import { Input } from '../../../../components';
+import { formatBaseUnits } from 'app';
+import { Input } from 'components';
 import { MAX_MODE, StrOrMax } from 'alt-model/forms/constants';
-import { bindStyle } from '../../../util/classnames';
+import { bindStyle } from 'ui-components/util/classnames';
 import style from './amount_input.module.scss';
 
 const cx = bindStyle(style);

@@ -1,6 +1,6 @@
 import type { RemoteAsset } from 'alt-model/types';
 import type { StrOrMax } from 'alt-model/forms/constants';
-import { AmountSelection } from 'ui-components';
+import { AmountSelection } from 'components';
 import { MiniL1BalanceIndicator, MiniL2BalanceIndicator } from './mini_balance_indicators';
 import { InputAnnotation } from './types';
 import { InputSection } from '../input_section';

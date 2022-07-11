@@ -1,7 +1,8 @@
 import { useApp, useProviderState } from 'alt-model';
 import { WalletId, wallets } from 'app';
 import { useState } from 'react';
-import { StepStatus, WalletAccountIndicator } from 'ui-components';
+import { WalletAccountIndicator } from 'components';
+import { StepStatus } from 'ui-components';
 import { SubmissionItemPrompt } from '../submission_item_prompt';
 
 function ConnectWalletPrompt() {

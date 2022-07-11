@@ -66,7 +66,7 @@ interface SelectItem {
   disabled?: boolean;
 }
 
-interface SelectProps {
+interface LegacySelectProps {
   trigger: React.ReactNode;
   items: SelectItem[];
   onSelect(id: any): void;
@@ -74,7 +74,7 @@ interface SelectProps {
   position?: DropdownPosition;
 }
 
-export const Select: React.FunctionComponent<SelectProps> = ({
+export const LegacySelect: React.FunctionComponent<LegacySelectProps> = ({
   trigger,
   className,
   items,

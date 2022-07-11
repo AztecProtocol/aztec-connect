@@ -3,7 +3,7 @@ import { TxSettlementTime } from '@aztec/sdk';
 import React from 'react';
 import styled from 'styled-components/macro';
 import { fromBaseUnits, TxFee } from '../../app';
-import { Input, InputTheme, InputWrapper, Select, ShieldedAssetIcon, Text } from '../../components';
+import { Input, InputTheme, InputWrapper, LegacySelect, ShieldedAssetIcon, Text } from '../../components';
 import { fontSizes, spacings } from '../../styles';
 import { formatTime } from './settled_time';
 
@@ -53,7 +53,7 @@ export const FeeSelect: React.FunctionComponent<FeeSelectProps> = ({
   fees,
   onSelect,
 }) => (
-  <Select
+  <LegacySelect
     trigger={
       <InputWrapper theme={inputTheme}>
         <InputIconRoot>

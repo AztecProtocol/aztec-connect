@@ -50,24 +50,6 @@ const UserName = styled(Text)`
   max-width: 200px;
 `;
 
-const AvatarRoot = styled.div`
-  display: none;
-
-  @media (max-width: ${breakpoints.s}) {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    background: ${colours.grey};
-    border-radius: 100%;
-  }
-`;
-
-const Avatar = styled.img`
-  height: 24px;
-`;
-
 const SyncStatusRoot = styled.div`
   display: flex;
   align-items: center;
