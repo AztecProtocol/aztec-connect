@@ -214,8 +214,18 @@ export class RollupProofData {
   }
 
   getTotalDefiDeposit(assetId: number) {
-    const index = this.assetIds.indexOf(assetId);
-    return index < 0 ? BigInt(0) : this.defiDepositSums[index];
+    return this.bridgeIds
+      .map((bridgeId, i) => {
+        if (
+          BridgeId.fromBuffer(bridgeId).inputAssetIdA === assetId ||
+          BridgeId.fromBuffer(bridgeId).inputAssetIdB === assetId
+        ) {
+          return this.defiDepositSums[i];
+        } else {
+          return BigInt(0);
+        }
+      })
+      .reduce((acc, val) => acc + val, BigInt(0));
   }
 
   getTotalFees(assetId: number) {
