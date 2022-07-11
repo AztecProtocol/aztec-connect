@@ -49,3 +49,13 @@ export const purchaseAssets = async (
     originalBalances,
   };
 };
+
+const ethTransferGas = 21000n;
+const ethDepositGas = 60000n;
+export const ethTransferCost = (gasPriceGwei: number) => {
+  return ethTransferGas * (BigInt(gasPriceGwei) * 10n ** 9n);
+};
+
+export const ethDepositCost = (gasPriceGwei: number) => {
+  return ethDepositGas * (BigInt(gasPriceGwei) * 10n ** 9n);
+};

@@ -155,7 +155,7 @@ describe('end-to-end async defi tests', () => {
     await Promise.all(tokenDepositControllers.map(controller => controller.awaitSettlement()));
 
     // Ensure the time is before the first expiry.
-    const startTime = new Date('Sat Jan 01 2022').getTime() / 1000;
+    const startTime = new Date('Fri Jul 01 2022').getTime() / 1000;
     debug(`setting blockchain time to ${formatTime(startTime)}...`);
     await setBlockchainTime(startTime, provider);
 

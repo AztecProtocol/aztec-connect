@@ -1,4 +1,4 @@
-import { AztecSdk, toBaseUnits, TxId, WalletProvider, TxSettlementTime } from '@aztec/sdk';
+import { AztecSdk, TxId, WalletProvider, TxSettlementTime } from '@aztec/sdk';
 import { Agent, EthAddressAndNonce, UserData } from './agent';
 
 /**
@@ -8,11 +8,10 @@ import { Agent, EthAddressAndNonce, UserData } from './agent';
 export class ManualPaymentAgent {
   private agent: Agent;
   private userA!: UserData;
-  private userB!: UserData;
   private txIDs: TxId[] = [];
 
   constructor(
-    fundingAccount: EthAddressAndNonce,
+    private fundingAccount: EthAddressAndNonce,
     private sdk: AztecSdk,
     provider: WalletProvider,
     private id: number,
@@ -21,20 +20,37 @@ export class ManualPaymentAgent {
     this.agent = new Agent(fundingAccount, sdk, provider, id);
   }
 
-  public static getRequiredFunding() {
-    return toBaseUnits('0.01', 18);
+  public static async create(
+    fundingAccount: EthAddressAndNonce,
+    sdk: AztecSdk,
+    provider: WalletProvider,
+    id: number,
+    maxTransfers: number,
+  ) {
+    const agent = new ManualPaymentAgent(fundingAccount, sdk, provider, id, maxTransfers);
+    await agent.init();
+    return agent;
   }
-
-  /**
-   * Create userA and userB, and funds userA with ETH from the fundingAddress.
-   * This should be called sequentially by the AgentManager, to ensure each L1 tx has a sequential nonce.
-   * Once userA has their own funds we no longer need to worry about nonce races within the run() context.
-   */
   public async init() {
     this.userA = await this.agent.createUser();
-    this.userB = await this.agent.createUser();
-    await this.agent.fundEthAddress(this.userA, ManualPaymentAgent.getRequiredFunding());
-    await (await this.agent.sendDeposit(this.userA, await this.calcDeposit()))?.awaitSettlement();
+  }
+
+  public async getFundingRequirement() {
+    const fundsAvailable = await this.agent.calculateFundsAlreadyInAztec(this.userA, 0, true);
+    const requiredDeposit = await this.calcDeposit();
+    const depositFee = (await this.sdk.getDepositFees(0))[TxSettlementTime.INSTANT];
+    const fundingRequirement = requiredDeposit - fundsAvailable;
+    return fundingRequirement > 0n ? fundingRequirement + depositFee.value : 0n;
+  }
+
+  public async start() {
+    const requiredDeposit = await this.getFundingRequirement();
+    if (requiredDeposit <= 0n) {
+      return;
+    }
+    await (
+      await this.agent.sendDeposit(this.fundingAccount.address, this.userA, requiredDeposit, 0, true)
+    )?.awaitSettlement();
   }
 
   public async run() {
@@ -47,18 +63,16 @@ export class ManualPaymentAgent {
    */
   private async calcDeposit() {
     const transferFee = (await this.sdk.getTransferFees(0))[TxSettlementTime.INSTANT];
-    const ethDepositFee = (await this.sdk.getWithdrawFees(0))[TxSettlementTime.INSTANT];
-    const ethWithdrawFee = (await this.sdk.getWithdrawFees(0))[TxSettlementTime.INSTANT];
     const transfers = BigInt(this.maxTransfers);
-    return ethDepositFee.value + ethWithdrawFee.value + transferFee.value * transfers;
+    return transferFee.value * transfers + transfers;
   }
 
   public async transfer() {
     const assetInfo = this.sdk.getAssetInfo(0);
     const value = 1n;
     const sender = this.userA;
-    const recipient = this.userB;
-    console.log(`agent ${this.id} transferring ${value} ${assetInfo.name} from userA to userB...`);
+    const recipient = this.userA;
+    console.log(`agent ${this.id} transferring ${value} ${assetInfo.name}...`);
     const fee = (await this.sdk.getTransferFees(0))[TxSettlementTime.INSTANT];
     const controller = this.sdk.createTransferController(
       sender.user.id,

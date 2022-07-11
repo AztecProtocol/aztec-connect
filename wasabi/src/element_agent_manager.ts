@@ -11,11 +11,15 @@ import {
 } from './bridges';
 import { ElementAgent } from './element_agent';
 import { ManualPaymentAgent } from './manual_payment_agent';
-import { purchaseAssets } from './assets';
+import { ethDepositCost, ethTransferCost, purchaseAssets } from './assets';
 import { EthAddressAndNonce } from './agent';
+import { asyncMap } from './async_map';
 
 export class ElementAgentManager {
   private elementConfig: AgentElementConfig[] = [];
+  private elementAgents: ElementAgent[] = [];
+  private manualAgent!: ManualPaymentAgent;
+  private fundingAccount!: EthAddressAndNonce;
 
   public constructor(
     private sdk: AztecSdk,
@@ -27,13 +31,12 @@ export class ElementAgentManager {
     private assets: number[],
   ) {}
 
-  public async run() {
+  public async init() {
     const fundingNonce = await this.ethereumRpc.getTransactionCount(this.fundingAddress);
-    const fundingAccount: EthAddressAndNonce = { address: this.fundingAddress, nonce: fundingNonce };
+    this.fundingAccount = { address: this.fundingAddress, nonce: fundingNonce };
 
     // need a manual agent for manually flushing tranches
-    const manualAgent = new ManualPaymentAgent(fundingAccount, this.sdk, this.provider, this.numAgents, 2);
-    await manualAgent.init();
+    this.manualAgent = await ManualPaymentAgent.create(this.fundingAccount, this.sdk, this.provider, this.numAgents, 2);
 
     // retrieve the element config, telling us the assets and expiry details
     this.elementConfig = await retrieveElementConfig(this.sdk, this.provider, this.assets);
@@ -44,6 +47,29 @@ export class ElementAgentManager {
       }),
     );
 
+    // create the agents
+    this.elementAgents = await asyncMap(Array.from({ length: this.numAgents }), async (_, i) => {
+      return await ElementAgent.create(
+        this.fundingAccount,
+        this.sdk,
+        this.provider,
+        i,
+        this.numTxsPerAgent,
+        this.elementConfig,
+        ELEMENT_CHECKPOINTS,
+      );
+    });
+  }
+
+  public async getRequiredFunds(gasPriceWei: number) {
+    const requiredFundings = await asyncMap(this.elementAgents, async agent => {
+      const agentFunding = await agent.getRequiredFunding();
+      return ethTransferCost(gasPriceWei) + ethDepositCost(gasPriceWei) + agentFunding;
+    });
+    return requiredFundings.reduce((p, c) => p + c, 0n) + (await this.manualAgent.getFundingRequirement());
+  }
+
+  public async run() {
     // get the assets requirements and purchase the assets
     const assetRequirements = await getAssetRequirementsForElement(this.sdk, this.provider, this.assets);
     const acquiredAssets = await purchaseAssets(
@@ -54,8 +80,10 @@ export class ElementAgentManager {
       10n ** 9n,
     );
 
+    await this.manualAgent.start();
+
     // now that all assets have been purchased, update the nonce of the funding account
-    fundingAccount.nonce = await this.ethereumRpc.getTransactionCount(this.fundingAddress);
+    this.fundingAccount.nonce = await this.ethereumRpc.getTransactionCount(this.fundingAddress);
 
     // update the configuration with the purchased quantities
     for (const asset of acquiredAssets.usableBalances) {
@@ -66,20 +94,6 @@ export class ElementAgentManager {
       const quantityPerAgentPerExpiry = asset.value / BigInt(expiriesForAsset.length * this.numAgents);
       expiriesForAsset.forEach(x => (x.assetQuantity = quantityPerAgentPerExpiry));
     }
-
-    // create the agents
-    const elementAgents = Array.from({ length: this.numAgents }).map(
-      (_, i) =>
-        new ElementAgent(
-          fundingAccount,
-          this.sdk,
-          this.provider,
-          i,
-          this.numTxsPerAgent,
-          this.elementConfig,
-          ELEMENT_CHECKPOINTS,
-        ),
-    );
 
     // create an ordered array of time checkpoints that we will use for agent orchestration
     const latestTrancheExpiry = this.elementConfig[this.elementConfig.length - 1].expiry!;
@@ -92,11 +106,12 @@ export class ElementAgentManager {
     }
     console.log('using expiry checkpoints', checkpoints);
     // start the agents
-    const runPromises = elementAgents.map(a => a.run());
+    this.elementAgents.forEach(x => x.updateAssetQuantites(this.elementConfig));
+    const runPromises = this.elementAgents.map(a => a.run());
 
     // this function will cause us to wait until all agents have completed the current batch of deposits
     const waitOnCheckpoint = async () => {
-      while (elementAgents.some(a => !a.isOnCheckpoint())) {
+      while (this.elementAgents.some(a => !a.isOnCheckpoint())) {
         await new Promise<void>(resolve => setTimeout(() => resolve(), 10000));
       }
     };
@@ -113,7 +128,7 @@ export class ElementAgentManager {
       const bridgeData = await createElementBridgeData(this.sdk, this.provider);
       const interactionNonces = new Set<number>();
       // get all of the agent controllers
-      for (const controller of elementAgents.flatMap(a => a.controllers)) {
+      for (const controller of this.elementAgents.flatMap(a => a.controllers)) {
         const nonce = await controller.getInteractionNonce();
         if (nonce === undefined) {
           continue;
@@ -133,10 +148,10 @@ export class ElementAgentManager {
       // the first to generate the claims
       // the second to flush them through the system
       console.log('submitting first flush');
-      const firstTx = await manualAgent.transfer();
+      const firstTx = await this.manualAgent.transfer();
       await this.sdk.awaitSettlement(firstTx);
       console.log('submitting second flush');
-      const secondTx = await manualAgent.transfer();
+      const secondTx = await this.manualAgent.transfer();
       await this.sdk.awaitSettlement(secondTx);
     };
 
@@ -151,12 +166,12 @@ export class ElementAgentManager {
       // all agents on checkpoint, set the time and trigger the agents
       console.log(`agent manager checkpoint reached`);
       await setChainTime(checkpoints[i] + 1);
-      elementAgents.forEach(a => a.triggerNextCheckpoint());
+      this.elementAgents.forEach(a => a.triggerNextCheckpoint());
     }
     // finalise the outstanding nonces
     await finaliseRemainingNonces();
     console.log('nonces finalised, triggering final checkpoint');
-    elementAgents.forEach(a => a.triggerNextCheckpoint());
+    this.elementAgents.forEach(a => a.triggerNextCheckpoint());
     await Promise.all(runPromises);
     // now have a look at the final balances
     for (let i = 0; i < acquiredAssets.originalBalances.length; i++) {

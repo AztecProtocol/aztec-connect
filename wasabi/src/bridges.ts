@@ -5,10 +5,10 @@ import { ChainProperties } from '@aztec/bridge-clients/client-dest/src/client/el
 
 export const BALANCER_ADDRESS = '0xBA12222222228d8Ba445958a75a0704d566BF2C8';
 export const UNISWAP_BRIDGE_ADDRESS_ID = 1;
-export const ELEMENT_BRIDGE_ADDRESS_ID = 2;
+export const ELEMENT_BRIDGE_ADDRESS_ID = 1;
 
-export const ELEMENT_CHECKPOINTS = [1644604852, 1651275535];
-export const ELEMENT_START_TIME = 1640995200;
+export const ELEMENT_CHECKPOINTS = [1663361092];
+export const ELEMENT_START_TIME = 1657015486;
 
 export interface BridgeSpec {
   inputAsset: number;
@@ -43,8 +43,9 @@ export const formatTime = (unixTimeInSeconds: number) => {
   return new Date(unixTimeInSeconds * 1000).toISOString().slice(0, 19).replace('T', ' ');
 };
 
+// map of assetId to quantity that should be purchased
 export const assetSpecs: { [key: number]: bigint } = {
-  4: 10n ** 9n,
+  1: 10n ** 9n,
   3: 10n ** 5n,
   5: 10n ** 3n,
   6: 10n ** 5n,

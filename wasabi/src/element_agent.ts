@@ -33,8 +33,32 @@ export class ElementAgent {
   ) {
     this.agent = new Agent(fundingAccount, sdk, provider, id);
     this.state = ElementState.RUNNING;
+  }
 
-    for (const config of this.elementConfig) {
+  public static async create(
+    fundingAccount: EthAddressAndNonce,
+    sdk: AztecSdk,
+    provider: WalletProvider,
+    id: number,
+    numDepositsPerExpiry: number,
+    elementConfig: AgentElementConfig[],
+    expiryCheckpoints: number[],
+  ) {
+    const agent = new ElementAgent(
+      fundingAccount,
+      sdk,
+      provider,
+      id,
+      numDepositsPerExpiry,
+      elementConfig,
+      expiryCheckpoints,
+    );
+    await agent.init();
+    return agent;
+  }
+
+  public updateAssetQuantites(elementConfig: AgentElementConfig[]) {
+    for (const config of elementConfig) {
       const assetValueIndex = this.originalAssetValues.findIndex(x => x.assetId == config.assetId);
       if (assetValueIndex == -1) {
         this.originalAssetValues.push({ assetId: config.assetId, value: config.assetQuantity });
@@ -44,8 +68,12 @@ export class ElementAgent {
     }
   }
 
-  public static getRequiredFunding() {
-    return toBaseUnits('0.1', 18);
+  public async init() {
+    this.user = await this.agent.createUser();
+  }
+
+  public async getRequiredFunding() {
+    return await Promise.resolve(toBaseUnits('0.1', 18));
   }
 
   public isOnCheckpoint() {
@@ -64,10 +92,20 @@ export class ElementAgent {
   }
 
   private async makeAllDeposits() {
-    await (await this.agent.sendDeposit(this.user!, await this.calcEthDeposit()))?.awaitSettlement();
+    await (
+      await this.agent.sendDeposit(this.user!.address, this.user!, await this.calcEthDeposit())
+    )?.awaitSettlement();
     const depositControllers = [];
     for (const assetValue of this.originalAssetValues) {
-      const controller = await this.agent.sendDeposit(this.user!, assetValue.value, assetValue.assetId);
+      const controller = await this.agent.sendDeposit(
+        this.user!.address,
+        this.user!,
+        assetValue.value,
+        assetValue.assetId,
+        false,
+        undefined,
+        { userId: this.user!.user.id, signer: this.user!.signer },
+      );
       depositControllers.push(controller);
     }
     await this.agent.awaitBulkSettlement(depositControllers);
@@ -79,12 +117,10 @@ export class ElementAgent {
 
   public async run() {
     try {
-      this.user = await this.agent.createUser();
-
-      const deposit = ElementAgent.getRequiredFunding();
-      await this.agent.fundEthAddress(this.user, deposit);
+      const deposit = await this.getRequiredFunding();
+      await this.agent.fundEthAddress(this.user!, deposit);
       for (const config of this.elementConfig) {
-        await this.agent.fundEthAddress(this.user, config.assetQuantity, config.assetId);
+        await this.agent.fundEthAddress(this.user!, config.assetQuantity, config.assetId);
       }
       await this.makeAllDeposits();
       console.log(`agent ${this.id} aztec deposits completed!`);
@@ -146,7 +182,7 @@ export class ElementAgent {
       const asset = this.sdk.getAssetInfo(assetValue.assetId);
       const originalBalance = assetValue.value;
       console.log(
-        `agent ${this.id}, asset ${asset.name} original balance ${originalBalance}, final balance ${balance}`,
+        `agent ${this.id} asset ${asset.name} original balance ${originalBalance}, final balance ${balance.value}`,
       );
     }
   }
