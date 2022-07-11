@@ -330,13 +330,14 @@ export class RollupCoordinator {
     // to publish. e.g. There are not enough resources left, to include an instant tx of any type.
     const outOfGas = gasRemainingTillGasLimit < this.feeResolver.getMaxUnadjustedGas();
     const outOfCallData = callDataRemaining < this.feeResolver.getMaxTxCallData();
-    const shouldPublish = flush || isProfitable || timedout || outOfGas || outOfCallData;
+    const outOfSlots = txsToRollup.length == this.totalSlots;
+    const shouldPublish = flush || isProfitable || timedout || outOfGas || outOfCallData || outOfSlots;
 
     if (!shouldPublish) {
       return rollupProfile;
     }
 
-    this.printRollupState(rollupProfile, timedout, flush, outOfGas || outOfCallData);
+    this.printRollupState(rollupProfile, timedout, flush, outOfGas || outOfCallData || outOfSlots);
 
     // Track txs currently being processed. Gives clients a view into what's being processed.
     this.processedTxs = [...txsToRollup];
