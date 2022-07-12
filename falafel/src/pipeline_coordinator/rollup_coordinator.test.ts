@@ -10,6 +10,7 @@ import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { randomBytes } from 'crypto';
 import { BridgeResolver } from '../bridge';
 import { TxDao } from '../entity/tx';
+import { Metrics } from '../metrics';
 import { RollupAggregator } from '../rollup_aggregator';
 import { RollupCreator } from '../rollup_creator';
 import { RollupPublisher } from '../rollup_publisher';
@@ -122,6 +123,7 @@ describe('rollup_coordinator', () => {
   let feeResolver: Mockify<TxFeeResolver>;
   let bridgeResolver: Mockify<BridgeResolver>;
   let coordinator: RollupCoordinator;
+  let metrics: Mockify<Metrics>;
 
   const newRollupCoordinator = (
     numInnerRollupTxs: number,
@@ -143,6 +145,7 @@ describe('rollup_coordinator', () => {
       defiInteractionNotes,
       maxGasForRollup_,
       callDataPerRollup_,
+      metrics as any,
       () => {},
     );
 
@@ -310,6 +313,11 @@ describe('rollup_coordinator', () => {
     bridgeResolver = {
       getBridgeConfigs: jest.fn().mockReturnValue(bridgeConfigs),
       defaultDefiBatchSize: 5,
+    } as any;
+
+    metrics = {
+      rollupPublished: jest.fn().mockResolvedValue(true),
+      recordRollupMetrics: jest.fn(),
     } as any;
 
     coordinator = newRollupCoordinator(numInnerRollupTxs, numOuterRollupProofs);

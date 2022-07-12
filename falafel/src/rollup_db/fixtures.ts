@@ -108,6 +108,7 @@ export const randomRollup = (rollupId: number, rollupProof: RollupProofDao) =>
     rollupProof,
     created: new Date(),
     assetMetrics: [],
+    bridgeMetrics: [],
   });
 
 export const randomClaim = () =>

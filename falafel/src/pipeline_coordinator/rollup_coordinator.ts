@@ -10,6 +10,7 @@ import { RollupAggregator } from '../rollup_aggregator';
 import { RollupCreator } from '../rollup_creator';
 import { RollupPublisher } from '../rollup_publisher';
 import { TxFeeResolver } from '../tx_fee_resolver';
+import { Metrics } from '../metrics';
 import { BridgeTxQueue, createDefiRollupTx, createRollupTx, RollupTx, RollupResources } from './bridge_tx_queue';
 import { PublishTimeManager, RollupTimeouts } from './publish_time_manager';
 import { profileRollup, RollupProfile } from './rollup_profiler';
@@ -33,6 +34,7 @@ export class RollupCoordinator {
     private defiInteractionNotes: DefiInteractionNote[] = [],
     private maxGasForRollup: number,
     private maxCallDataForRollup: number,
+    private metrics: Metrics,
     private log = console.log,
   ) {
     this.totalSlots = this.numOuterRollupProofs * this.numInnerRollupTxs;
@@ -312,6 +314,9 @@ export class RollupCoordinator {
       return rollupProfile;
     }
 
+    const bridgeConfigs = this.bridgeResolver.getBridgeConfigs();
+    this.metrics.recordRollupMetrics(txsToRollup, rollupProfile, bridgeConfigs);
+
     // Profitable if gasBalance is equal or above what's needed.
     const isProfitable = rollupProfile.gasBalance >= 0;
 
@@ -380,6 +385,13 @@ export class RollupCoordinator {
     );
 
     rollupProfile.published = await this.rollupPublisher.publishRollup(rollupDao, rollupProfile.totalGas);
+
+    // calc & store published rollup's bridge metrics
+    if (rollupProfile.published) {
+      this.metrics
+        .rollupPublished(rollupProfile, rollupDao.rollupProof?.txs, rollupDao.id)
+        .catch(err => this.log('Error when registering published rollup metrics', err));
+    }
 
     return rollupProfile;
   }

@@ -14,6 +14,7 @@ import { TxDao } from '../entity';
 import { createDebugLogger, createLogger } from '@aztec/barretenberg/log';
 import { InterruptError } from '@aztec/barretenberg/errors';
 import { RollupProfile, emptyProfile } from './rollup_profiler';
+import { Metrics } from '../metrics';
 
 export class PipelineCoordinator {
   private flush = false;
@@ -41,6 +42,7 @@ export class PipelineCoordinator {
     private bridgeResolver: BridgeResolver,
     private maxCallDataPerRollup: number,
     private maxGasPerRollup: number,
+    private metrics: Metrics,
   ) {
     this.publishTimeManager = new PublishTimeManager(this.publishInterval, this.bridgeResolver);
     this.nextRollupProfile = emptyProfile(this.numInnerRollupTxs * this.numOuterRollupProofs);
@@ -168,6 +170,7 @@ export class PipelineCoordinator {
       defiInteractionNotes,
       this.maxGasPerRollup,
       this.maxCallDataPerRollup,
+      this.metrics,
     );
   }
 

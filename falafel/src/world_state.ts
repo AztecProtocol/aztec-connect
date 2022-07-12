@@ -15,6 +15,7 @@ import { WorldStateConstants } from '@aztec/barretenberg/world_state';
 import { RollupTreeId, WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { fromBaseUnits } from '@aztec/blockchain';
 import { AccountDao, AssetMetricsDao, ClaimDao, RollupDao, RollupProofDao, TxDao } from './entity';
+import { BridgeMetricsDao } from './entity';
 import { getTxTypeFromInnerProofData } from './get_tx_type';
 import { Metrics } from './metrics';
 import { createDefiRollupTx } from './pipeline_coordinator/bridge_tx_queue';
@@ -81,7 +82,7 @@ export class WorldState {
     private noteAlgo: NoteAlgorithms,
     private metrics: Metrics,
     private txFeeResolver: TxFeeResolver,
-    private expireTxPoolAfter = 60,
+    private expireTxPoolAfter = 60 * 1000,
     private log = createLogger('WorldState'),
   ) {
     this.txPoolProfile = {
@@ -170,7 +171,6 @@ export class WorldState {
         pendingBridgeStats: [...pendingBridgeStats.values()],
         pendingTxCount: pendingTransactionsNotInRollup.length,
       };
-
       this.txPoolProfileValidUntil = new Date(Date.now() + this.expireTxPoolAfter);
     }
 
@@ -554,6 +554,7 @@ export class WorldState {
 
     if (rollupProof) {
       // Our rollup. Confirm mined and track settlement times.
+      const bridgeMetrics = await this.getBridgeMetrics(rollupProof, rollup.rollupId);
       const txIds = rollupProof.txs.map(tx => tx.id);
       const rollupDao = await this.rollupDb.confirmMined(
         rollup.rollupId,
@@ -564,6 +565,7 @@ export class WorldState {
         block.interactionResult,
         txIds,
         assetMetrics,
+        bridgeMetrics,
         subtreeRoot,
       );
 
@@ -594,6 +596,8 @@ export class WorldState {
         created: created,
       });
 
+      const bridgeMetrics = await this.getBridgeMetrics(rollupProofDao, rollup.rollupId);
+
       const rollupDao = new RollupDao({
         id: rollup.rollupId,
         dataRoot: rollup.newDataRoot,
@@ -605,6 +609,7 @@ export class WorldState {
         gasPrice: toBufferBE(block.gasPrice, 32),
         gasUsed: block.gasUsed,
         assetMetrics,
+        bridgeMetrics,
         subtreeRoot,
       });
 
@@ -639,6 +644,33 @@ export class WorldState {
       assetMetrics.totalFees += rollup.getTotalFees(assetId);
       result.push(assetMetrics);
     }
+    return result;
+  }
+
+  private async getBridgeMetrics(rollupProof: RollupProofDao, rollupId: number) {
+    const result: BridgeMetricsDao[] = [];
+    const bridgeTxNum = new Map<bigint, number>();
+    // count transactions for bridge
+    for (const tx of rollupProof.txs.filter(({ txType }) => txType === TxType.DEFI_DEPOSIT)) {
+      const { bridgeId } = OffchainDefiDepositData.fromBuffer(tx.offchainTxData);
+      const num = bridgeTxNum.get(bridgeId.toBigInt()) || 0;
+      bridgeTxNum.set(bridgeId.toBigInt(), num + 1);
+    }
+
+    // register metrics for defi bridge usage
+    for (const [bridgeId, numTxs] of bridgeTxNum.entries()) {
+      const storedMetrics = await this.rollupDb.getBridgeMetricsForRollup(bridgeId, rollupId);
+      const bridgeMetrics = storedMetrics
+        ? storedMetrics
+        : new BridgeMetricsDao({
+            rollupId,
+            bridgeId,
+          });
+      bridgeMetrics.numTxs = numTxs;
+      bridgeMetrics.totalNumTxs = (bridgeMetrics.totalNumTxs || 0) + numTxs;
+      result.push(bridgeMetrics);
+    }
+
     return result;
   }
 

@@ -6,7 +6,7 @@ import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { serializeBufferArrayToVector } from '@aztec/barretenberg/serialize';
 import { WorldStateConstants } from '@aztec/barretenberg/world_state';
 import { Connection, In, IsNull, LessThan, MoreThanOrEqual, Not, Repository } from 'typeorm';
-import { AccountDao, AssetMetricsDao, ClaimDao, RollupDao, RollupProofDao, TxDao } from '../entity';
+import { AccountDao, AssetMetricsDao, BridgeMetricsDao, ClaimDao, RollupDao, RollupProofDao, TxDao } from '../entity';
 import { getNewAccountDaos } from './tx_dao_to_account_dao';
 
 export type RollupDb = {
@@ -20,6 +20,7 @@ export class TypeOrmRollupDb implements RollupDb {
   private accountRep: Repository<AccountDao>;
   private claimRep: Repository<ClaimDao>;
   private assetMetricsRep: Repository<AssetMetricsDao>;
+  private bridgeMetricsRep: Repository<BridgeMetricsDao>;
 
   constructor(private connection: Connection, private initialDataRoot: Buffer = WorldStateConstants.EMPTY_DATA_ROOT) {
     this.txRep = this.connection.getRepository(TxDao);
@@ -28,6 +29,7 @@ export class TypeOrmRollupDb implements RollupDb {
     this.accountRep = this.connection.getRepository(AccountDao);
     this.claimRep = this.connection.getRepository(ClaimDao);
     this.assetMetricsRep = this.connection.getRepository(AssetMetricsDao);
+    this.bridgeMetricsRep = this.connection.getRepository(BridgeMetricsDao);
   }
 
   public async addTx(txDao: TxDao) {
@@ -205,11 +207,28 @@ export class TypeOrmRollupDb implements RollupDb {
   }
 
   public async getRollup(id: number) {
-    return await this.rollupRep.findOne({ id }, { relations: ['rollupProof', 'rollupProof.txs', 'assetMetrics'] });
+    return await this.rollupRep.findOne(
+      { id },
+      { relations: ['rollupProof', 'rollupProof.txs', 'assetMetrics', 'bridgeMetrics'] },
+    );
   }
 
   public async getAssetMetrics(assetId: number) {
     return await this.assetMetricsRep.findOne({ assetId }, { order: { rollupId: 'DESC' } });
+  }
+
+  public async getBridgeMetricsForRollup(bridgeId: bigint, rollupId: number) {
+    return await this.bridgeMetricsRep.findOne({ bridgeId, rollupId });
+  }
+
+  public async getLastBridgeMetrics(bridgeId: bigint) {
+    return await this.bridgeMetricsRep.findOne({ bridgeId }, { order: { rollupId: 'DESC' } });
+  }
+
+  public async addBridgeMetrics(bridgeMetrics: BridgeMetricsDao[]) {
+    await this.connection.transaction(async transactionalEntityManager => {
+      await transactionalEntityManager.save<BridgeMetricsDao>(bridgeMetrics);
+    });
   }
 
   /**
@@ -293,6 +312,7 @@ export class TypeOrmRollupDb implements RollupDb {
     interactionResult: DefiInteractionNote[],
     txIds: Buffer[],
     assetMetrics: AssetMetricsDao[],
+    bridgeMetrics: BridgeMetricsDao[],
     subtreeRoot: Buffer,
   ) {
     await this.connection.transaction(async transactionalEntityManager => {
@@ -307,6 +327,7 @@ export class TypeOrmRollupDb implements RollupDb {
       };
       await transactionalEntityManager.update<RollupDao>(this.rollupRep.target, { id }, dao);
       await transactionalEntityManager.insert<AssetMetricsDao>(this.assetMetricsRep.target, assetMetrics);
+      await transactionalEntityManager.save<BridgeMetricsDao>(bridgeMetrics);
     });
     return (await this.getRollup(id))!;
   }

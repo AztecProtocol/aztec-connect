@@ -259,6 +259,8 @@ describe('world_state', () => {
         rollupStore[rollupDao.id] = rollupDao;
       }),
       getAssetMetrics: jest.fn().mockReturnValue(undefined),
+      getBridgeMetricsForRollup: jest.fn(),
+      getLastBridgeMetrics: jest.fn(),
       getRollup: jest.fn().mockImplementation((id: number) => rollupStore[id]),
       getPendingTxs: jest.fn().mockImplementation(() => {
         return pendingTxs;

@@ -3,7 +3,7 @@ import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { TxHash, TxType } from '@aztec/barretenberg/blockchain';
 import { randomBytes } from 'crypto';
 import { Connection, createConnection } from 'typeorm';
-import { AccountDao, AssetMetricsDao, ClaimDao, RollupDao, RollupProofDao, TxDao } from '../entity';
+import { AccountDao, AssetMetricsDao, BridgeMetricsDao, ClaimDao, RollupDao, RollupProofDao, TxDao } from '../entity';
 import { RollupDb, TypeOrmRollupDb } from './';
 import { randomAccountTx, randomClaim, randomRollup, randomRollupProof, randomTx } from './fixtures';
 import { txDaoToAccountDao } from './tx_dao_to_account_dao';
@@ -16,7 +16,7 @@ describe('rollup_db', () => {
     connection = await createConnection({
       type: 'sqlite',
       database: ':memory:',
-      entities: [TxDao, RollupProofDao, RollupDao, AccountDao, ClaimDao, AssetMetricsDao],
+      entities: [TxDao, RollupProofDao, RollupDao, AccountDao, ClaimDao, AssetMetricsDao, BridgeMetricsDao],
       dropSchema: true,
       synchronize: true,
       logging: false,
@@ -230,7 +230,7 @@ describe('rollup_db', () => {
       const rollupProof = randomRollupProof([tx2], 1);
       const rollup = randomRollup(0, rollupProof);
       await rollupDb.addRollup(rollup);
-      await rollupDb.confirmMined(rollup.id, 0, 0n, new Date(), TxHash.random(), [], [tx2.id], [], randomBytes(32));
+      await rollupDb.confirmMined(rollup.id, 0, 0n, new Date(), TxHash.random(), [], [tx2.id], [], [], randomBytes(32));
     }
 
     const nullifiers = await rollupDb.getUnsettledNullifiers();
@@ -390,6 +390,7 @@ describe('rollup_db', () => {
       [],
       [tx0.id, tx1.id],
       [],
+      [],
       randomBytes(32),
     );
 
@@ -441,7 +442,7 @@ describe('rollup_db', () => {
 
     expect(await rollupDb.getUnsettledTxCount()).toBe(1);
 
-    await rollupDb.confirmMined(rollup.id, 0, 0n, new Date(), TxHash.random(), [], [tx0.id], [], randomBytes(32));
+    await rollupDb.confirmMined(rollup.id, 0, 0n, new Date(), TxHash.random(), [], [tx0.id], [], [], randomBytes(32));
 
     expect(await rollupDb.getUnsettledTxCount()).toBe(0);
   });
@@ -462,7 +463,7 @@ describe('rollup_db', () => {
     await rollupDb.addRollup(rollup0);
     await rollupDb.addRollup(rollup1);
 
-    await rollupDb.confirmMined(rollup0.id, 0, 0n, new Date(), TxHash.random(), [], [tx0.id], [], randomBytes(32));
+    await rollupDb.confirmMined(rollup0.id, 0, 0n, new Date(), TxHash.random(), [], [tx0.id], [], [], randomBytes(32));
 
     const unsettledTxs = await rollupDb.getUnsettledTxs();
     expect(unsettledTxs.length).toBe(2);
@@ -609,7 +610,18 @@ describe('rollup_db', () => {
     const rollup = randomRollup(0, rollupProof0);
     await rollupDb.addRollup(rollup);
     const settledTxIds = rollupProof0.txs.map(tx => tx.id);
-    await rollupDb.confirmMined(rollup.id, 0, 0n, new Date(), TxHash.random(), [], settledTxIds, [], randomBytes(32));
+    await rollupDb.confirmMined(
+      rollup.id,
+      0,
+      0n,
+      new Date(),
+      TxHash.random(),
+      [],
+      settledTxIds,
+      [],
+      [],
+      randomBytes(32),
+    );
 
     const expectedAccounts = [txs[8], txs[5], txs[0]].map(txDaoToAccountDao);
     expect(await rollupDb.getUnsettledAccounts()).toEqual(expectedAccounts);

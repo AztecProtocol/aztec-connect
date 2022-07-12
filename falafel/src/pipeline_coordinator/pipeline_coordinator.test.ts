@@ -13,6 +13,7 @@ import { RollupPublisher } from '../rollup_publisher';
 import { TxFeeResolver } from '../tx_fee_resolver';
 import { TxType } from '@aztec/barretenberg/blockchain';
 import { BridgeResolver } from '../bridge';
+import { Metrics } from '../metrics';
 
 type Mockify<T> = {
   [P in keyof T]: jest.Mock;
@@ -31,6 +32,7 @@ describe('pipeline_coordinator', () => {
   let noteAlgo: Mockify<NoteAlgorithms>;
   let feeResolver: Mockify<TxFeeResolver>;
   let bridgeResolver: Mockify<BridgeResolver>;
+  let metrics: Mockify<Metrics>;
   let coordinator: PipelineCoordinator;
 
   const mockRollup = () => ({ id: 0, interactionResult: Buffer.alloc(0), mined: moment() });
@@ -125,6 +127,11 @@ describe('pipeline_coordinator', () => {
       commitDefiInteractionNote: jest.fn(),
     } as any;
 
+    metrics = {
+      recordRollupMetrics: jest.fn(),
+      rollupPublished: jest.fn().mockResolvedValue(true),
+    } as any;
+
     coordinator = new PipelineCoordinator(
       rollupCreator as any,
       rollupAggregator as any,
@@ -141,6 +148,7 @@ describe('pipeline_coordinator', () => {
       bridgeResolver as any,
       128 * 1024,
       12000000,
+      metrics as any,
     );
   });
 

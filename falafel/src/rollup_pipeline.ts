@@ -98,6 +98,7 @@ export class RollupPipeline {
       bridgeResolver,
       maxCallDataPerRollup,
       gasLimit,
+      metrics,
     );
   }
 

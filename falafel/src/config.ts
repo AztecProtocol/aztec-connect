@@ -4,6 +4,7 @@ import { ConnectionOptions } from 'typeorm';
 import { Configurator, ConfVars } from './configurator';
 import { AccountDao } from './entity/account';
 import { AssetMetricsDao } from './entity/asset_metrics';
+import { BridgeMetricsDao } from './entity';
 import { ClaimDao } from './entity/claim';
 import { RollupDao } from './entity/rollup';
 import { RollupProofDao } from './entity/rollup_proof';
@@ -33,7 +34,7 @@ async function getProvider(ethereumHost: string, privateKey: Buffer) {
 }
 
 function getOrmConfig(dbUrl?: string, logging = false): ConnectionOptions {
-  const entities = [TxDao, RollupProofDao, RollupDao, AccountDao, ClaimDao, AssetMetricsDao];
+  const entities = [TxDao, RollupProofDao, RollupDao, AccountDao, ClaimDao, AssetMetricsDao, BridgeMetricsDao];
   if (!dbUrl) {
     return {
       type: 'sqlite',

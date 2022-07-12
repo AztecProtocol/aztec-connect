@@ -1,0 +1,59 @@
+import { Column, Entity, ManyToOne, PrimaryColumn } from 'typeorm';
+import { RollupDao } from './rollup';
+import { bigintTransformer } from './transformer';
+
+@Entity({ name: 'bridge_metrics' })
+export class BridgeMetricsDao {
+  public constructor(init?: Partial<BridgeMetricsDao>) {
+    Object.assign(this, init);
+  }
+
+  @PrimaryColumn()
+  public rollupId!: number;
+
+  @PrimaryColumn('text', { transformer: [bigintTransformer] })
+  public bridgeId!: bigint;
+
+  // number of transactions for bridge in rollup
+  @Column({ nullable: true })
+  public numTxs?: number;
+
+  // total number of transactions for bridge
+  @Column({ nullable: true })
+  public totalNumTxs?: number;
+
+  // gas accrued in rollup for bridge
+  @Column('text', { transformer: [bigintTransformer] })
+  public gas = BigInt(0);
+
+  // total gas accrued for bridge
+  @Column('text', { transformer: [bigintTransformer] })
+  public totalGas = BigInt(0);
+
+  // gas price when rollup mined
+  @Column('text', { transformer: [bigintTransformer] })
+  public gasPrice!: bigint;
+
+  // fees collected in USD for bridge in rollup
+  @Column({ nullable: true })
+  public usdFees?: number;
+
+  // total fees collected in USD for bridge
+  @Column({ nullable: true })
+  public totalUsdFees?: number;
+
+  // cost for bridge in USD for rollup
+  @Column({ nullable: true })
+  public usdCost?: number;
+
+  // total cost for bridge in USD
+  @Column({ nullable: true })
+  public totalUsdCost?: number;
+
+  // total number of times the bridge has been called by Aztec publishing rollups
+  @Column({ nullable: true })
+  public totalAztecCalls?: number;
+
+  @ManyToOne(() => RollupDao, rollup => rollup.id, { onDelete: 'CASCADE' })
+  public rollup!: RollupDao;
+}
