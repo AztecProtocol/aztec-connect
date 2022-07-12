@@ -329,7 +329,9 @@ export class UserSession extends EventEmitter {
     // Attempt to log in with unknown pubKey.
     if (!isRegistered) {
       // TODO - show a signup link in error message.
-      throw new Error('Account not registered.');
+      throw new Error(
+        'Account not registered. Please check you are using the same Ethereum wallet that you used to register your account.',
+      );
     }
 
     // TODO - different aliases might have the same accountPublicKey
