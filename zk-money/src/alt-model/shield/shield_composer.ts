@@ -136,7 +136,7 @@ export class ShieldComposer {
   private async depositAndAwaitConfirmation(controller: DepositController, requiredAmount: Amount) {
     await this.walletAccountEnforcer.ensure();
     this.stateObs.setPrompt(`Please make a deposit of ${requiredAmount.format({ layer: 'L1' })} from your wallet.`);
-    const expireIn = 60n * 5n; // 5 minutes
+    const expireIn = 60n * 60n * 24n; // 24 hours
     const deadline = BigInt(Math.floor(Date.now() / 1000)) + expireIn;
     if (this.isDai()) {
       await this.withRetryableSigning(() => controller.depositFundsToContractWithNonStandardPermit(deadline));
