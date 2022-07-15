@@ -17,7 +17,8 @@ const gasLimit = 5000000;
 const escapeBlockLower = 2160;
 const escapeBlockUpper = 2400;
 
-const MULTI_SIG_ADDRESS = '0xE298a76986336686CC3566469e3520d23D1a8aaD';
+const MAIN_MULTI_SIG_ADDRESS = '0xE298a76986336686CC3566469e3520d23D1a8aaD';
+const DEV_NET_TEMP_MULTI_SIG_ADDRESS = '0x7095057A08879e09DC1c0a85520e3160A0F67C96';
 const EMERGENCY_MULTI_SIG_ADDRESS = '0x23f8008159C0427458b948c3DD7795c6DBE8236F';
 const DAI_ADDRESS = '0x6b175474e89094c44da98b954eedeac495271d0f';
 const LIDO_WSTETH_ADDRESS = '0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0';
@@ -58,6 +59,8 @@ export async function deployMainnet(signer: Signer, { dataTreeSize, roots }: Tre
   await deployLidoBridge(signer, rollup, LIDO_REFERRAL_ADDRESS);
   await deployAceOfZk(signer, rollup);
   await deployCurveBridge(signer, rollup);
+
+  const MULTI_SIG_ADDRESS = (await signer.getChainId()) == 1 ? MAIN_MULTI_SIG_ADDRESS : DEV_NET_TEMP_MULTI_SIG_ADDRESS;
 
   // Transfers ownership of the proxyadmin to the multisig
   await proxyAdmin.transferProxyAdminOwnership(EthAddress.fromString(MULTI_SIG_ADDRESS));
