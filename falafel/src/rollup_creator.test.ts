@@ -1,6 +1,7 @@
 import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { TxType } from '@aztec/barretenberg/blockchain';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { InterruptError } from '@aztec/barretenberg/errors';
 import { HashPath } from '@aztec/barretenberg/merkle_tree';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
@@ -116,6 +117,7 @@ describe('rollup_creator', () => {
 
     proofGenerator = {
       createProof: jest.fn().mockReturnValue(() => Buffer.alloc(32, 0)),
+      interrupt: jest.fn(),
     } as any;
 
     metrics = {
@@ -536,6 +538,20 @@ describe('rollup_creator', () => {
       const rollup = request.txRollup;
       expect(rollup.assetIds.map(buf => buf.readUInt32BE(28))).toEqual([0, 1]);
       expect([...rootAssets.values()]).toEqual([0, 1]);
+    });
+
+    it('should throw if interrupted', async () => {
+      const txs = [
+        mockTx(1, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockTx(2, { txType: TxType.TRANSFER, txFeeAssetId: NON_FEE_PAYING_ASSET }),
+        mockTx(3, { txType: TxType.TRANSFER, txFeeAssetId: 1 }),
+        mockTx(4, { txType: TxType.TRANSFER, txFeeAssetId: NON_FEE_PAYING_ASSET + 1 }),
+      ];
+      const rootAssets = new Set<number>();
+      await rollupCreator.interrupt();
+      await expect(rollupCreator.createRollup(txs, [], rootAssets, true)).rejects.toThrow(
+        new InterruptError('Interrupted.'),
+      );
     });
   });
 });

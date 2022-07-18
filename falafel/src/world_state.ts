@@ -181,7 +181,7 @@ export class WorldState {
     flushQueue ? this.blockQueue.end() : this.blockQueue.cancel();
     await this.runningPromise;
     await this.blockchain.stop();
-    await this.pipeline?.stop();
+    await this.pipeline?.stop(false);
     this.worldStateDb.stop();
   }
 
@@ -314,7 +314,7 @@ export class WorldState {
    * Called to purge all received, unsettled txs, and reset the rollup pipeline.
    */
   public async resetPipeline() {
-    await this.pipeline?.stop();
+    await this.pipeline?.stop(true);
     await this.worldStateDb.rollback();
     await this.rollupDb.deleteUnsettledRollups();
     await this.rollupDb.deleteOrphanedRollupProofs();
@@ -326,7 +326,7 @@ export class WorldState {
    * Called to restart the pipeline. e.g. If configuration changes and we want a new pipeline immediately.
    */
   public async restartPipeline() {
-    await this.pipeline?.stop();
+    await this.pipeline?.stop(true);
     await this.worldStateDb.rollback();
     this.startNewPipeline();
   }
@@ -347,7 +347,7 @@ export class WorldState {
    * Starts a new pipeline.
    */
   private async handleBlock(block: Block) {
-    await this.pipeline?.stop();
+    await this.pipeline?.stop(false);
     await this.updateDbs(block);
     this.startNewPipeline();
   }
@@ -363,16 +363,19 @@ export class WorldState {
 
     this.log(`Processing rollup ${rollupId}: ${rollupHash.toString('hex')}...`);
 
-    if (
+    const rollupIsOurs =
       newDataRoot.equals(this.worldStateDb.getRoot(RollupTreeId.DATA)) &&
       newNullRoot.equals(this.worldStateDb.getRoot(RollupTreeId.NULL)) &&
       newDataRootsRoot.equals(this.worldStateDb.getRoot(RollupTreeId.ROOT)) &&
-      newDefiRoot.equals(this.worldStateDb.getRoot(RollupTreeId.DEFI))
-    ) {
+      newDefiRoot.equals(this.worldStateDb.getRoot(RollupTreeId.DEFI));
+
+    if (rollupIsOurs) {
       // This must be the rollup we just published. Commit the world state.
+      this.log(`Rollup ${rollupId} was ours, committing our world state`);
       await this.worldStateDb.commit();
     } else {
       // Someone elses rollup. Discard any of our world state modifications and update world state with new rollup.
+      this.log(`Rollup ${rollupId} was not ours, taking new world state from received rollup`);
       await this.worldStateDb.rollback();
       await this.addRollupToWorldState(decodedRollupProofData);
     }
@@ -381,7 +384,9 @@ export class WorldState {
 
     await this.confirmOrAddRollupToDb(decodedRollupProofData, offchainTxData, block);
 
-    await this.purgeInvalidTxs();
+    if (!rollupIsOurs) {
+      await this.purgeInvalidTxs();
+    }
 
     this.printState();
     end();
@@ -394,6 +399,7 @@ export class WorldState {
       return;
     }
     await this.rollupDb.deleteTxsById(txsToPurge);
+    this.log(`Purged ${txsToPurge.length} txs from pool`);
   }
 
   private async validateTxs(txs: TxDao[]) {
@@ -554,6 +560,7 @@ export class WorldState {
 
     if (rollupProof) {
       // Our rollup. Confirm mined and track settlement times.
+      this.log(`Confirmed mining of our rollup ${rollup.rollupId}`);
       const bridgeMetrics = await this.getBridgeMetrics(rollupProof, rollup.rollupId);
       const txIds = rollupProof.txs.map(tx => tx.id);
       const rollupDao = await this.rollupDb.confirmMined(
@@ -583,6 +590,7 @@ export class WorldState {
 
       await this.metrics.rollupReceived(rollupDao);
     } else {
+      this.log(`Adding rollup ${rollup.rollupId} from someone else`);
       // Not a rollup we created. Add or replace rollup.
       const txs = rollup.innerProofData
         .filter(tx => !tx.isPadding())

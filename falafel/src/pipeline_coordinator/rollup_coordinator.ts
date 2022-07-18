@@ -14,11 +14,21 @@ import { Metrics } from '../metrics';
 import { BridgeTxQueue, createDefiRollupTx, createRollupTx, RollupTx, RollupResources } from './bridge_tx_queue';
 import { PublishTimeManager, RollupTimeouts } from './publish_time_manager';
 import { profileRollup, RollupProfile } from './rollup_profiler';
+import { RollupDao } from '../entity';
+import { InterruptError } from '@aztec/barretenberg/errors';
+
+enum RollupCoordinatorState {
+  BUILDING,
+  PUBLISHING,
+  INTERRUPTED,
+}
 
 export class RollupCoordinator {
   private processedTxs: RollupTx[] = [];
   private bridgeQueues = new Map<bigint, BridgeTxQueue>();
   private totalSlots: number;
+  private state = RollupCoordinatorState.BUILDING;
+  private interrupted = false;
 
   constructor(
     private publishTimeManager: PublishTimeManager,
@@ -44,11 +54,19 @@ export class RollupCoordinator {
     return this.processedTxs.map(rollupTx => rollupTx.tx);
   }
 
-  public async interrupt() {
-    this.processedTxs = [];
+  public async interrupt(shouldThrowIfFailToStop: boolean) {
+    if (shouldThrowIfFailToStop) {
+      // if we are not in the BUILDING state then interrupts can't take place
+      // notify of this if we have been asked to do so
+      if (this.state != RollupCoordinatorState.BUILDING) {
+        throw new Error(`Rollup already ${RollupCoordinatorState[this.state].toLowerCase()}`);
+      }
+    }
+
+    this.interrupted = true;
     await this.rollupCreator.interrupt();
     await this.rollupAggregator.interrupt();
-    this.rollupPublisher.interrupt();
+    this.processedTxs = [];
   }
 
   public async processPendingTxs(pendingTxs: TxDao[], flush = false): Promise<RollupProfile> {
@@ -57,6 +75,7 @@ export class RollupCoordinator {
 
     const { txs, bridgeIds, assetIds } = this.getNextTxsToRollup(pendingTxs, flush);
 
+    this.checkpoint();
     return await this.aggregateAndPublish(txs, bridgeIds, assetIds, rollupTimeouts, flush);
   }
 
@@ -384,7 +403,7 @@ export class RollupCoordinator {
       [...assetIds],
     );
 
-    rollupProfile.published = await this.rollupPublisher.publishRollup(rollupDao, rollupProfile.totalGas);
+    rollupProfile.published = await this.checkpointAndPublish(rollupDao, rollupProfile);
 
     // calc & store published rollup's bridge metrics
     if (rollupProfile.published) {
@@ -402,6 +421,19 @@ export class RollupCoordinator {
     }
 
     return rollupProfile;
+  }
+
+  private checkpoint() {
+    if (this.interrupted) {
+      this.state = RollupCoordinatorState.INTERRUPTED;
+      throw new InterruptError('Interrupted.');
+    }
+  }
+
+  private async checkpointAndPublish(rollupDao: RollupDao, rollupProfile: RollupProfile) {
+    this.checkpoint();
+    this.state = RollupCoordinatorState.PUBLISHING;
+    return await this.rollupPublisher.publishRollup(rollupDao, rollupProfile.totalGas);
   }
 
   private printRollupState(rollupProfile: RollupProfile, timeout: boolean, flush: boolean, limit: boolean) {

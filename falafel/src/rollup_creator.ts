@@ -1,5 +1,6 @@
 import { toBigIntBE, toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
+import { InterruptError } from '@aztec/barretenberg/errors';
 import { createLogger } from '@aztec/barretenberg/log';
 import { HashPath } from '@aztec/barretenberg/merkle_tree';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
@@ -13,6 +14,8 @@ import { RollupDb } from './rollup_db';
 import { TxFeeResolver } from './tx_fee_resolver';
 
 export class RollupCreator {
+  private interrupted = false;
+
   constructor(
     private rollupDb: RollupDb,
     private worldStateDb: WorldStateDb,
@@ -39,6 +42,7 @@ export class RollupCreator {
     this.log(`Creating proof for tx rollup ${rollup.rollupHash.toString('hex')} with ${txs.length} txs...`);
     const end = this.metrics.txRollupTimer();
     const txRollupRequest = new TxRollupProofRequest(rollup);
+    this.checkpoint();
     const proof = await this.proofGenerator.createProof(txRollupRequest.toBuffer());
     this.log(`Tx rollup proof received: ${proof.length} bytes`);
     end();
@@ -58,7 +62,14 @@ export class RollupCreator {
   }
 
   public async interrupt() {
+    this.interrupted = true;
     await this.proofGenerator.interrupt();
+  }
+
+  private checkpoint() {
+    if (this.interrupted) {
+      throw new InterruptError('Interrupted.');
+    }
   }
 
   public async createRollup(
@@ -98,6 +109,9 @@ export class RollupCreator {
     for (let i = 0; i < proofs.length; ++i) {
       const proof = proofs[i];
       const tx = txs[i];
+      // check for an interrupt request with each loop
+      // for large rollups this loop can take some time
+      this.checkpoint();
 
       if (proof.proofId !== ProofId.ACCOUNT) {
         const assetId = proof.feeAssetId;

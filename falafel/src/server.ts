@@ -189,7 +189,10 @@ export class Server {
       rollupBeneficiary,
     );
     this.metrics.rollupBeneficiary = rollupBeneficiary;
+  }
 
+  public async restartPipeline() {
+    this.log('Restarting pipeline...');
     await this.worldState.restartPipeline();
   }
 

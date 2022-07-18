@@ -2,7 +2,7 @@ import { EthAddress } from '@aztec/barretenberg/address';
 import { Blockchain, EthereumRpc, SendTxOptions, TxHash } from '@aztec/barretenberg/blockchain';
 import { JoinSplitProofData } from '@aztec/barretenberg/client_proofs';
 import { createLogger } from '@aztec/barretenberg/log';
-import { InterruptableSleep } from '@aztec/barretenberg/sleep';
+import { sleep } from '@aztec/barretenberg/sleep';
 import { fromBaseUnits } from '@aztec/blockchain';
 import { RollupDao } from './entity';
 import { Metrics } from './metrics';
@@ -10,7 +10,6 @@ import { RollupDb } from './rollup_db';
 
 export class RollupPublisher {
   private ethereumRpc: EthereumRpc;
-  private interruptableSleep = new InterruptableSleep();
 
   constructor(
     private rollupDb: RollupDb,
@@ -48,14 +47,14 @@ export class RollupPublisher {
       // Wait until gas price is below threshold.
       if (estimatedFeePerGas > this.maxFeePerGas) {
         this.log(`Gas price too high. Waiting till below max fee per gas...`);
-        await this.interruptableSleep.sleep(60000);
+        await sleep(60000);
         continue;
       }
 
       // Wait until we have enough funds to send all txs.
       if (currentBalance < requiredBalance) {
         this.log(`Insufficient funds. Awaiting top up...`);
-        await this.interruptableSleep.sleep(60000);
+        await sleep(60000);
         continue;
       }
 
@@ -133,7 +132,7 @@ export class RollupPublisher {
               return false;
             }
           }
-          await this.interruptableSleep.sleep(60000);
+          await sleep(60000);
 
           // We will loop back around, to resend any unsuccessful txs.
           continue mainLoop;
@@ -145,13 +144,6 @@ export class RollupPublisher {
       this.log('Rollup successfully published.');
       return true;
     }
-  }
-
-  /**
-   * Calling `interrupt` will cause any sleeping part of publishRollup to throw an InterruptError.
-   */
-  public interrupt() {
-    this.interruptableSleep.interrupt(true);
   }
 
   private async createTxData(rollup: RollupDao) {
@@ -181,7 +173,7 @@ export class RollupPublisher {
       } catch (err: any) {
         this.log(err.message.slice(0, 500));
         this.log('Will retry in 60s...');
-        await this.interruptableSleep.sleep(60000);
+        await sleep(60000);
       }
     }
   }
@@ -192,7 +184,7 @@ export class RollupPublisher {
         return await this.blockchain.getTransactionReceiptSafe(txHash, 300);
       } catch (err) {
         this.log(err);
-        await this.interruptableSleep.sleep(60000);
+        await sleep(60000);
       }
     }
   }

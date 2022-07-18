@@ -143,6 +143,11 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     ctx.status = 200;
   });
 
+  router.get('/restart', recordMetric, validateAuth, async (ctx: Koa.Context) => {
+    await server.restartPipeline();
+    ctx.status = 200;
+  });
+
   router.patch('/runtime-config', recordMetric, validateAuth, async (ctx: Koa.Context) => {
     const stream = new PromiseReadable(ctx.req);
     const runtimeConfig = partialRuntimeConfigFromJson(JSON.parse((await stream.readAll()) as string));

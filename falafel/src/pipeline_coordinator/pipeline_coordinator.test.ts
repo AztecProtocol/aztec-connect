@@ -76,7 +76,6 @@ describe('pipeline_coordinator', () => {
 
     rollupPublisher = {
       publishRollup: jest.fn().mockResolvedValue(true),
-      interrupt: jest.fn(),
     };
 
     claimProofCreator = {
@@ -170,22 +169,32 @@ describe('pipeline_coordinator', () => {
     expect(coordinator.getNextPublishTime().baseTimeout?.timeout).toEqual(moment().add(10, 's').toDate());
     coordinator.start().catch(console.log);
     await new Promise(resolve => setTimeout(resolve, 100));
-    await coordinator.stop();
+    await coordinator.stop(false);
     expect(coordinator.getNextPublishTime().baseTimeout?.timeout).toEqual(moment().add(10, 's').toDate());
   });
 
   it('cannot start when it has already started', async () => {
     coordinator.start().catch(console.log);
-    await expect(async () => await coordinator.start()).rejects.toThrow();
-    await coordinator.stop();
+    await new Promise(resolve => setTimeout(resolve, 100));
+    await expect(async () => await coordinator.start()).rejects.toEqual(
+      new Error('Pipeline coordinator is already running.'),
+    );
+    await coordinator.stop(false);
   });
 
-  it('should interrupt all helpers when it is stop', async () => {
+  it('should interrupt all helpers when it is stopped with throw flag not set', async () => {
     coordinator.start().catch(console.log);
     await new Promise(resolve => setTimeout(resolve, 100));
-    await coordinator.stop();
+    await expect(coordinator.stop(false)).resolves.not.toThrow();
     expect(rollupCreator.interrupt).toHaveBeenCalledTimes(1);
     expect(rollupAggregator.interrupt).toHaveBeenCalledTimes(1);
-    expect(rollupPublisher.interrupt).toHaveBeenCalledTimes(1);
+  });
+
+  it('should interrupt all helpers when it is stopped with throw flag set and has not published', async () => {
+    coordinator.start().catch(console.log);
+    await new Promise(resolve => setTimeout(resolve, 100));
+    await expect(coordinator.stop(true)).resolves.not.toThrow();
+    expect(rollupCreator.interrupt).toHaveBeenCalledTimes(1);
+    expect(rollupAggregator.interrupt).toHaveBeenCalledTimes(1);
   });
 });

@@ -2,6 +2,7 @@ import { toBigIntBE, toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { TxType } from '@aztec/barretenberg/blockchain';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
+import { InterruptError } from '@aztec/barretenberg/errors';
 import { HashPath } from '@aztec/barretenberg/merkle_tree';
 import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
@@ -280,7 +281,6 @@ describe('rollup_coordinator', () => {
 
     rollupPublisher = {
       publishRollup: jest.fn().mockResolvedValue(true),
-      interrupt: jest.fn(),
     };
 
     feeResolver = {
@@ -1967,23 +1967,45 @@ describe('rollup_coordinator', () => {
 
   describe('interrupt', () => {
     it('should interrupt all helpers', async () => {
-      await coordinator.interrupt();
+      await coordinator.interrupt(false);
       expect(rollupCreator.interrupt).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.interrupt).toHaveBeenCalledTimes(1);
-      expect(rollupPublisher.interrupt).toHaveBeenCalledTimes(1);
     });
 
-    it('should not aggregate and publish if rollupCreator is interrupted', async () => {
+    it('should not aggregate and publish if rollupCreator interrupted', async () => {
       rollupCreator.create.mockImplementation(() => {
         throw new Error('Creator Error');
       });
       const pendingTxs = [...Array(numInnerRollupTxs * numOuterRollupProofs)].map((_, i) => mockTx(i));
-      try {
-        await coordinator.processPendingTxs(pendingTxs);
-      } catch (err) {
-        expect(err).toBeDefined();
-        expect(err.message).toBe('Creator Error');
-      }
+      await expect(coordinator.processPendingTxs(pendingTxs)).rejects.toEqual(new Error('Creator Error'));
+    });
+
+    it('should throw if interrupting published pipeline with flag set', async () => {
+      const pendingTxs = [...Array(numInnerRollupTxs * numOuterRollupProofs)].map((_, i) => mockTx(i));
+      const profile = await coordinator.processPendingTxs(pendingTxs);
+      expect(profile.published).toBe(true);
+      await expect(coordinator.interrupt(true)).rejects.toEqual(new Error('Rollup already publishing'));
+    });
+
+    it('should not throw if interrupting published pipeline with flag not set', async () => {
+      const pendingTxs = [...Array(numInnerRollupTxs * numOuterRollupProofs)].map((_, i) => mockTx(i));
+      const profile = await coordinator.processPendingTxs(pendingTxs);
+      expect(profile.published).toBe(true);
+      await expect(coordinator.interrupt(false)).resolves.not.toThrow();
+    });
+
+    it('should throw if interrupting interrupted pipeline with flag set', async () => {
+      const pendingTxs = [...Array(numInnerRollupTxs * numOuterRollupProofs)].map((_, i) => mockTx(i));
+      await coordinator.interrupt(true);
+      await expect(coordinator.processPendingTxs(pendingTxs)).rejects.toEqual(new InterruptError('Interrupted.'));
+      await expect(coordinator.interrupt(true)).rejects.toEqual(new Error('Rollup already interrupted'));
+    });
+
+    it('should not throw if interrupting interrupted pipeline with flag not set', async () => {
+      const pendingTxs = [...Array(numInnerRollupTxs * numOuterRollupProofs)].map((_, i) => mockTx(i));
+      await coordinator.interrupt(true);
+      await expect(coordinator.processPendingTxs(pendingTxs)).rejects.toEqual(new InterruptError('Interrupted.'));
+      await expect(coordinator.interrupt(false)).resolves.not.toThrow();
     });
 
     it('should not publish if rollupAggregator is interrupted', async () => {
@@ -1992,25 +2014,15 @@ describe('rollup_coordinator', () => {
       });
 
       const pendingTxs = [...Array(numInnerRollupTxs * numOuterRollupProofs)].map((_, i) => mockTx(i));
-      try {
-        await coordinator.processPendingTxs(pendingTxs);
-      } catch (err) {
-        expect(err).toBeDefined();
-        expect(err.message).toBe('Aggregator Error');
-      }
+      await expect(coordinator.processPendingTxs(pendingTxs)).rejects.toEqual(new Error('Aggregator Error'));
     });
 
-    it('should not throw if rollupPublisher is interrupted', async () => {
+    it('should not publish if rollupPublisher is interrupted', async () => {
       rollupPublisher.publishRollup.mockImplementation(() => {
         throw new Error('Publisher Error');
       });
       const pendingTxs = [...Array(numInnerRollupTxs * numOuterRollupProofs)].map((_, i) => mockTx(i));
-      try {
-        await coordinator.processPendingTxs(pendingTxs);
-      } catch (err) {
-        expect(err).toBeDefined();
-        expect(err.message).toBe('Publisher Error');
-      }
+      await expect(coordinator.processPendingTxs(pendingTxs)).rejects.toEqual(new Error('Publisher Error'));
     });
   });
 

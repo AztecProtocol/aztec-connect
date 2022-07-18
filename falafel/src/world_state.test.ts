@@ -49,19 +49,19 @@ const EMPTY_BUFFER = Buffer.alloc(32);
 const nextRollupId = 2;
 const getNextRollupId = () => nextRollupId;
 
-const buildRollupProofData = () => {
+const buildRollupProofData = (isOurs: boolean) => {
   const proof = new RollupProofData(
     nextRollupId,
     1,
     0,
     EMPTY_BUFFER,
-    roots[RollupTreeId.DATA],
+    isOurs ? roots[RollupTreeId.DATA] : randomBytes(32),
     EMPTY_BUFFER,
-    roots[RollupTreeId.NULL],
+    isOurs ? roots[RollupTreeId.NULL] : randomBytes(32),
     EMPTY_BUFFER,
-    roots[RollupTreeId.ROOT],
+    isOurs ? roots[RollupTreeId.ROOT] : randomBytes(32),
     EMPTY_BUFFER,
-    roots[RollupTreeId.DEFI],
+    isOurs ? roots[RollupTreeId.DEFI] : randomBytes(32),
     Array.from({ length: RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK }).map(() => EMPTY_BUFFER), // bridgeIds
     Array.from({ length: RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK }).map(() => 0n), // defiDepositSums
     Array.from({ length: RollupProofData.NUMBER_OF_ASSETS }).map(() => 1 << 30), // assetIds value 1 << 30 is an invalid asset ID
@@ -75,8 +75,8 @@ const buildRollupProofData = () => {
   return proof;
 };
 
-const createDummyBlock = () => {
-  const rollupProofData = buildRollupProofData();
+const createDummyBlock = (isOurs = true) => {
+  const rollupProofData = buildRollupProofData(isOurs);
   const block = new Block(
     TxHash.random(),
     new Date(),
@@ -367,7 +367,7 @@ describe('world_state', () => {
     // nullifier 1 is already present
     const index = toBigIntBE(nullifier1).toString();
     nullifiers[index] = toBufferBE(1n, 32);
-    blockchain.emit('block', createDummyBlock());
+    blockchain.emit('block', createDummyBlock(false));
     await worldState.stop(true);
     expect(rollupDb.deleteTxsById).toHaveBeenCalledTimes(1);
     expect(rollupDb.deleteTxsById).toHaveBeenCalledWith([txDao.id]);
@@ -386,7 +386,7 @@ describe('world_state', () => {
     // nullifier 2 is already present
     const index = toBigIntBE(nullifier2).toString();
     nullifiers[index] = toBufferBE(1n, 32);
-    blockchain.emit('block', createDummyBlock());
+    blockchain.emit('block', createDummyBlock(false));
     await worldState.stop(true);
     expect(rollupDb.deleteTxsById).toHaveBeenCalledTimes(1);
     expect(rollupDb.deleteTxsById).toHaveBeenCalledWith([txDao.id]);
@@ -407,7 +407,7 @@ describe('world_state', () => {
     // load these into pending txs
     pendingTxs = [txDao1, txDao2];
     // don't put the nullifiers into the tree
-    blockchain.emit('block', createDummyBlock());
+    blockchain.emit('block', createDummyBlock(false));
     await worldState.stop(true);
     expect(rollupDb.deleteTxsById).toHaveBeenCalledTimes(0);
   });
@@ -429,7 +429,7 @@ describe('world_state', () => {
     // set a pending deposit lower than this tx is trying to spend
     pendingDeposits[buildPendingDepositKey(publicAssetId, publicOwner)] = 5000n;
     // don't put the nullifiers into the tree
-    blockchain.emit('block', createDummyBlock());
+    blockchain.emit('block', createDummyBlock(false));
     await worldState.stop(true);
     expect(rollupDb.deleteTxsById).toHaveBeenCalledTimes(1);
     expect(rollupDb.deleteTxsById).toHaveBeenCalledWith([txDao.id]);
@@ -453,7 +453,7 @@ describe('world_state', () => {
     // set a pending deposit that should mean txs 3 and 4 are discarded
     pendingDeposits[buildPendingDepositKey(publicAssetId, publicOwner)] = 29999n;
     // don't put the nullifiers into the tree
-    blockchain.emit('block', createDummyBlock());
+    blockchain.emit('block', createDummyBlock(false));
     await worldState.stop(true);
     expect(rollupDb.deleteTxsById).toHaveBeenCalledTimes(1);
     expect(rollupDb.deleteTxsById).toHaveBeenCalledWith(pendingTxs.slice(2).map(tx => tx.id));
@@ -490,7 +490,7 @@ describe('world_state', () => {
     pendingDeposits[buildPendingDepositKey(publicAssetId1, publicOwner1)] = 29999n;
     pendingDeposits[buildPendingDepositKey(publicAssetId2, publicOwner2)] = 39999n;
     // don't put the nullifiers into the tree
-    blockchain.emit('block', createDummyBlock());
+    blockchain.emit('block', createDummyBlock(false));
     await worldState.stop(true);
     expect(rollupDb.deleteTxsById).toHaveBeenCalledTimes(1);
     expect(rollupDb.deleteTxsById).toHaveBeenCalledWith([
@@ -532,7 +532,7 @@ describe('world_state', () => {
     pendingDeposits[buildPendingDepositKey(publicAssetId1, publicOwner1)] = 29999n;
     pendingDeposits[buildPendingDepositKey(publicAssetId2, publicOwner2)] = 19999n;
     // don't put the nullifiers into the tree
-    blockchain.emit('block', createDummyBlock());
+    blockchain.emit('block', createDummyBlock(false));
     await worldState.stop(true);
     expect(rollupDb.deleteTxsById).toHaveBeenCalledTimes(1);
     expect(rollupDb.deleteTxsById).toHaveBeenCalledWith([txs1[2], txs1[4], txs2[1], txs2[2], txs2[4]].map(tx => tx.id));
@@ -565,7 +565,7 @@ describe('world_state', () => {
     // set a pending deposit that should mean txs 3 and 4 are discarded
     pendingDeposits[buildPendingDepositKey(publicAssetId1, publicOwner1)] = 29999n;
     // don't put the nullifiers into the tree
-    blockchain.emit('block', createDummyBlock());
+    blockchain.emit('block', createDummyBlock(false));
     await worldState.stop(true);
     expect(rollupDb.deleteTxsById).toHaveBeenCalledTimes(1);
     expect(rollupDb.deleteTxsById).toHaveBeenCalledWith([txs1[2], txs1[4], chainedTx].map(tx => tx.id));
@@ -598,7 +598,7 @@ describe('world_state', () => {
     // set a pending deposit that should mean txs 3 and 4 are discarded
     pendingDeposits[buildPendingDepositKey(publicAssetId1, publicOwner1)] = 29999n;
     // don't put the nullifiers into the tree
-    blockchain.emit('block', createDummyBlock());
+    blockchain.emit('block', createDummyBlock(false));
     await worldState.stop(true);
     expect(rollupDb.deleteTxsById).toHaveBeenCalledTimes(1);
     expect(rollupDb.deleteTxsById).toHaveBeenCalledWith([txs1[2], txs1[4], chainedTx].map(tx => tx.id));
@@ -679,7 +679,7 @@ describe('world_state', () => {
     // set a pending deposit that should mean txs 3 and 4 are discarded
     pendingDeposits[buildPendingDepositKey(publicAssetId1, publicOwner1)] = 29999n;
     // don't put the nullifiers into the tree
-    blockchain.emit('block', createDummyBlock());
+    blockchain.emit('block', createDummyBlock(false));
     await worldState.stop(true);
     expect(rollupDb.deleteTxsById).toHaveBeenCalledTimes(1);
     expect(rollupDb.deleteTxsById).toHaveBeenCalledWith(
