@@ -52,6 +52,10 @@
 
 .amount {
   width: 180px;
+  gap: 5px;
+  display: flex;
+  flex-direction: column;
+  padding: 5px 0;
 }
 
 .l1AssetIcon {
@@ -67,7 +71,7 @@
   display: flex;
   flex-direction: row;
   justify-content: space-between;
-  height: 40px;
+  min-height: 40px;
   width: 100%;
   border-radius: 10px;
   margin-top: 10px;
@@ -80,4 +84,8 @@
   font-size: 16px;
   font-weight: 500;
   text-align: right;
+}
+
+.conversionValue {
+  font-size: 14px;
 }

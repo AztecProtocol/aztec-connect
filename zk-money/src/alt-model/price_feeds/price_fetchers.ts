@@ -6,14 +6,16 @@ import { BigNumber, Contract } from 'ethers';
 
 const debug = createDebug('zm:price_fetchers');
 
-function getAssetPriceFeedAddressStr(address: EthAddress) {
-  switch (address.toString()) {
+function getAssetPriceFeedAddressStr(addressStr: string) {
+  switch (addressStr) {
     case S.ETH:
       return '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419';
     case S.DAI:
       return '0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9';
     case S.renBTC:
       return '0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c';
+    case S.stETH:
+      return '0xcfe54b5cd566ab89272946f602d76ea879cab4a8';
   }
 }
 const ABI = ['function latestAnswer() public view returns(int256)'];
@@ -32,7 +34,7 @@ function createDefaultPriceFetcher(priceFeedContractAddressStr: string, provider
 }
 
 function createWstEthPriceFetcher(provider: Provider) {
-  const stETHPriceFetcher = createDefaultPriceFetcher('0xcfe54b5cd566ab89272946f602d76ea879cab4a8', provider);
+  const stETHPriceFetcher = createDefaultPriceFetcher(S.stETH, provider);
   if (!stETHPriceFetcher) return;
 
   const wstETHContract = new Contract(
@@ -53,13 +55,12 @@ function createWstEthPriceFetcher(provider: Provider) {
   };
 }
 
-export function createAssetPriceFetcher(address: EthAddress, provider: Provider) {
-  const addressStr = address.toString();
+export function createAssetPriceFetcher(addressStr: string, provider: Provider) {
   switch (addressStr) {
     case S.wstETH:
       return createWstEthPriceFetcher(provider);
     default:
-      const priceFeedContractAddressStr = getAssetPriceFeedAddressStr(address);
+      const priceFeedContractAddressStr = getAssetPriceFeedAddressStr(addressStr);
       if (!priceFeedContractAddressStr) return;
       return createDefaultPriceFetcher(priceFeedContractAddressStr, provider);
   }

@@ -4,7 +4,7 @@ import { useAmountFactory, useRemoteAssets } from './top_level_context';
 
 export function useAsset(assetId: number) {
   const assets = useRemoteAssets();
-  return assets?.[assetId];
+  return assets[assetId];
 }
 
 export function useAmount(assetValue?: AssetValue) {

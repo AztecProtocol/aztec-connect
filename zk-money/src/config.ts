@@ -1,5 +1,5 @@
 import { getRollupProviderStatus } from '@aztec/sdk';
-import { KNOWN_MAINNET_ASSET_ADDRESS_STRS as S, PerKnownAddress } from 'alt-model/known_assets/known_asset_addresses';
+import { KNOWN_MAINNET_ASSET_ADDRESS_STRS as S } from 'alt-model/known_assets/known_asset_addresses';
 import { toBaseUnits } from './app/units';
 
 export interface Config {
@@ -9,7 +9,7 @@ export interface Config {
   chainId: number;
   ethereumHost: string;
   mainnetEthereumHost: string;
-  txAmountLimits: PerKnownAddress<bigint>;
+  txAmountLimits: Record<string, bigint>;
   sessionTimeout: number;
   debugFilter: string;
 }

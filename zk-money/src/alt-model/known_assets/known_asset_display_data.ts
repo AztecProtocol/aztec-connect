@@ -55,7 +55,11 @@ export function getAssetIconGradient(address: EthAddress) {
 }
 
 export function getAssetPreferredFractionalDigits(address: EthAddress) {
-  switch (address.toString()) {
+  return getAssetPreferredFractionalDigitsFromStr(address.toString());
+}
+
+export function getAssetPreferredFractionalDigitsFromStr(addressStr: string) {
+  switch (addressStr) {
     case S.ETH:
       return 6;
     case S.DAI:
@@ -63,6 +67,7 @@ export function getAssetPreferredFractionalDigits(address: EthAddress) {
     case S.renBTC:
       return 8;
     case S.wstETH:
+    case S.stETH:
       return 6;
   }
 }
