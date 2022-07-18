@@ -1,0 +1,76 @@
+{
+  "name": "asado",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@testing-library/jest-dom": "^5.16.4",
+    "@testing-library/react": "^13.3.0",
+    "@testing-library/user-event": "^13.5.0",
+    "@types/jest": "^27.5.2",
+    "@types/node": "^16.11.43",
+    "@types/react": "^18.0.14",
+    "@types/react-dom": "^18.0.6",
+    "node-sass": "^7.0.1",
+    "nodemon": "^2.0.19",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.3.0",
+    "react-scripts": "5.0.1",
+    "sass": "^1.53.0",
+    "styled-components": "^5.3.5",
+    "typescript": "^4.7.4",
+    "web-vitals": "^2.1.4"
+  },
+  "scripts": {
+    "start": "nodemon --watch ../zk-money/src/ui-components --exec \"npm run storybook\" -e ts,tsx,mdx,scss,css",
+    "storybook": "npm run refresh-files && start-storybook -p 6006 -s public",
+    "build-storybook": "npm run refresh-files && build-storybook -s public",
+    "refresh-files": "npm run clean && npm run copy-components && npm run copy-images",
+    "clean": "rm -rf ./src/ui-components && rm -rf ./src/images",
+    "copy-components": "cp -r ../zk-money/src/ui-components ./src/ui-components/",
+    "copy-images": "cp -r ../zk-money/src/images ./src/images"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ],
+    "overrides": [
+      {
+        "files": [
+          "**/*.stories.*"
+        ],
+        "rules": {
+          "import/no-anonymous-default-export": "off"
+        }
+      }
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "@storybook/addon-actions": "^6.5.9",
+    "@storybook/addon-essentials": "^6.5.9",
+    "@storybook/addon-interactions": "^6.5.9",
+    "@storybook/addon-links": "^6.5.9",
+    "@storybook/builder-webpack5": "^6.5.9",
+    "@storybook/manager-webpack5": "^6.5.9",
+    "@storybook/node-logger": "^6.5.9",
+    "@storybook/preset-create-react-app": "^4.1.2",
+    "@storybook/react": "^6.5.9",
+    "@storybook/testing-library": "0.0.13",
+    "babel-plugin-named-exports-order": "0.0.2",
+    "prop-types": "^15.8.1",
+    "webpack": "^5.73.0"
+  }
+}
