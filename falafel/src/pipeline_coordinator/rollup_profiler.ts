@@ -81,14 +81,14 @@ export function profileRollup(
       }
     }
     if (!txIndex) {
-      rollupProfile.earliestTx = tx.tx.created;
-      rollupProfile.latestTx = tx.tx.created;
+      rollupProfile.earliestTx = new Date(tx.tx.created);
+      rollupProfile.latestTx = new Date(tx.tx.created);
     } else {
       if (tx.tx.created.getTime() < rollupProfile.earliestTx.getTime()) {
-        rollupProfile.earliestTx = tx.tx.created;
+        rollupProfile.earliestTx = new Date(tx.tx.created);
       }
       if (tx.tx.created.getTime() > rollupProfile.latestTx.getTime()) {
-        rollupProfile.latestTx = tx.tx.created;
+        rollupProfile.latestTx = new Date(tx.tx.created);
       }
     }
     // here we use the unadjusted tx gas as we are trying to accumulate the real gas consumption of the rollup
@@ -115,8 +115,8 @@ export function profileRollup(
           numTxs: 0,
           gasThreshold: bridgeGasCost,
           gasAccrued: 0,
-          earliestTx: tx.tx.created,
-          latestTx: tx.tx.created,
+          earliestTx: new Date(tx.tx.created),
+          latestTx: new Date(tx.tx.created),
         };
         bridgeProfiles.set(bridgeId, bridgeProfile);
         // we are going to incur the cost of the bridge here so reduce our gas balance
@@ -131,11 +131,11 @@ export function profileRollup(
       // add this back onto the gas balance for the rollup
       rollupProfile.gasBalance += gasTowardsBridge;
 
-      if (bridgeProfile.earliestTx > tx.tx.created) {
-        bridgeProfile.earliestTx = tx.tx.created;
+      if (bridgeProfile.earliestTx.getTime() > tx.tx.created.getTime()) {
+        bridgeProfile.earliestTx = new Date(tx.tx.created);
       }
-      if (bridgeProfile.latestTx < tx.tx.created) {
-        bridgeProfile.latestTx = tx.tx.created;
+      if (bridgeProfile.latestTx.getTime() < tx.tx.created.getTime()) {
+        bridgeProfile.latestTx = new Date(tx.tx.created);
       }
     }
   }

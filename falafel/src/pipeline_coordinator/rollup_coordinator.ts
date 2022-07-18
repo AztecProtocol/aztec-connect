@@ -339,10 +339,8 @@ export class RollupCoordinator {
     // Profitable if gasBalance is equal or above what's needed.
     const isProfitable = rollupProfile.gasBalance >= 0;
 
-    // If any tx in this rollup is older than the deadline, then we've timedout and should publish.
-    const timedout = rollupTimeouts.baseTimeout
-      ? rollupProfile.earliestTx.getTime() <= rollupTimeouts.baseTimeout.timeout.getTime()
-      : false;
+    // If any tx in this rollup is older than it's deadline, then we've timedout and should publish.
+    const deadline = this.rollupHasDeadlined(txsToRollup, rollupProfile, rollupTimeouts);
 
     // The amount of L1 gas remaining until we breach the gasLimit.
     const gasRemainingTillGasLimit = this.maxGasForRollup - rollupProfile.totalGas;
@@ -355,13 +353,13 @@ export class RollupCoordinator {
     const outOfGas = gasRemainingTillGasLimit < this.feeResolver.getMaxUnadjustedGas();
     const outOfCallData = callDataRemaining < this.feeResolver.getMaxTxCallData();
     const outOfSlots = txsToRollup.length == this.totalSlots;
-    const shouldPublish = flush || isProfitable || timedout || outOfGas || outOfCallData || outOfSlots;
+    const shouldPublish = flush || isProfitable || deadline || outOfGas || outOfCallData || outOfSlots;
 
     if (!shouldPublish) {
       return rollupProfile;
     }
 
-    this.printRollupState(rollupProfile, timedout, flush, outOfGas || outOfCallData || outOfSlots);
+    this.printRollupState(rollupProfile, deadline, flush, outOfGas || outOfCallData || outOfSlots);
 
     // Track txs currently being processed. Gives clients a view into what's being processed.
     this.processedTxs = [...txsToRollup];
@@ -452,5 +450,38 @@ export class RollupCoordinator {
       this.log(`RollupCoordinator:   numTxs: ${bp.numTxs}`);
       this.log(`RollupCoordinator:   gas balance: ${bp.gasAccrued - bp.gasThreshold}`);
     }
+  }
+
+  private rollupHasDeadlined(rollupTxs: RollupTx[], rollupProfile: RollupProfile, rollupTimeouts: RollupTimeouts) {
+    // can't be deadlined if no txs
+    if (!rollupProfile.totalTxs) {
+      return false;
+    }
+    // can't be deadlined if no base timeout
+    if (!rollupTimeouts.baseTimeout) {
+      return false;
+    }
+
+    // for each bridge, test the earliest tx time against the appropriate bridge timeout
+    for (const bp of rollupProfile.bridgeProfiles.values()) {
+      const timeout = rollupTimeouts.bridgeTimeouts.get(bp.bridgeId);
+      if (!timeout) {
+        continue;
+      }
+      if (bp.earliestTx.getTime() < timeout.timeout.getTime()) {
+        return true;
+      }
+    }
+
+    // do we have a non defi tx that has timed out
+    const nonDefis = rollupTxs.filter(tx => tx.tx.txType != TxType.DEFI_DEPOSIT);
+    for (const tx of nonDefis) {
+      if (tx.tx.created.getTime() < rollupTimeouts.baseTimeout.timeout.getTime()) {
+        return true;
+      }
+    }
+
+    // no txs have deadlined
+    return false;
   }
 }

@@ -228,12 +228,13 @@ describe('rollup_coordinator', () => {
       ]),
     } as any as TxDao);
 
-  const mockDefiBridgeTx = (id: number, gas: number, bridgeId: bigint, assetId = 0) =>
+  const mockDefiBridgeTx = (id: number, gas: number, bridgeId: bigint, assetId = 0, creationTime?: Date) =>
     mockTx(id, {
       txType: TxType.DEFI_DEPOSIT,
       excessGas: gas - (DEFI_TX_PLUS_BASE_GAS + feeResolver.getSingleBridgeTxGas(bridgeId)),
       txFeeAssetId: assetId,
       bridgeId,
+      creationTime,
     });
 
   const expectProcessedTxIds = (txIds: number[]) => {
@@ -1449,8 +1450,6 @@ describe('rollup_coordinator', () => {
       expect(rp.published).toBe(false);
       expectProcessedTxIds([]);
 
-      // rollups are not created until shouldPublish=true, then we process
-      // all txs at once in parallel
       expect(rollupCreator.create).toHaveBeenCalledTimes(0);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(0);
@@ -1463,7 +1462,7 @@ describe('rollup_coordinator', () => {
       // and set current time just after the timeout
       currentTime = new Date('2021-06-20T12:00:01+01:00');
 
-      // run again, with no pending txs and we will publish
+      // run again, with the new timeouts
       rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
       expectProcessedTxIds([...Array(numInnerRollupTxs)].map((_, i) => i));
@@ -1475,7 +1474,7 @@ describe('rollup_coordinator', () => {
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
 
-    it('should publish a rollup after the rollup timeout 2', async () => {
+    it('should publish a rollup after the rollup timeout 3', async () => {
       // from above - let currentTime = new Date('2021-06-20T11:45:00+01:00');
       // mockTx default creation time to new Date(new Date('2021-06-20T11:43:00+01:00').getTime() + id)
 
@@ -1486,7 +1485,6 @@ describe('rollup_coordinator', () => {
       expect(rp.published).toBe(false);
       expectProcessedTxIds([]);
 
-      // txs have been rolled up but not published
       expect(rollupCreator.create).toHaveBeenCalledTimes(0);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(0);
@@ -1499,7 +1497,50 @@ describe('rollup_coordinator', () => {
       // and set current time just after the timeout
       currentTime = new Date('2021-06-20T12:00:01+01:00');
 
-      // run again, with no pending txs and we will publish
+      // run again, with the pending txs and we will publish
+      rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(true);
+      expectProcessedTxIds([...Array(numInnerRollupTxs)].map((_, i) => i));
+
+      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual(Array(numberOfBridgeCalls).fill(0n));
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+    });
+
+    it('should publish a rollup after the rollup timeout if any tx is timedout', async () => {
+      // from above - let currentTime = new Date('2021-06-20T11:45:00+01:00');
+      // mockTx default creation time to new Date(new Date('2021-06-20T11:43:00+01:00').getTime() + id)
+
+      const pendingTxs = [...Array(numInnerRollupTxs)].map((_, i) => {
+        if (i == numInnerRollupTxs - 1) {
+          // set 1 tx to before '2021-06-20T11:00:00+01:00'
+          return mockTx(i, {
+            txType: TxType.TRANSFER,
+            txFeeAssetId: 0,
+            creationTime: new Date('2021-06-20T10:59:00+01:00'),
+          });
+        }
+        return mockTx(i, { txType: TxType.TRANSFER, txFeeAssetId: 0 });
+      });
+      let rp = await coordinator.processPendingTxs([]);
+      expect(rp.published).toBe(false);
+      expectProcessedTxIds([]);
+
+      expect(rollupCreator.create).toHaveBeenCalledTimes(0);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(0);
+
+      // set the rollup timeout to the following
+      rollupTimeouts = {
+        ...rollupTimeouts,
+        baseTimeout: { timeout: new Date('2021-06-20T11:00:00+01:00'), rollupNumber: 1 },
+      };
+      // and set current time after the timeout
+      currentTime = new Date('2021-06-20T12:00:01+01:00');
+
+      // run again, with the pending txs and we will publish
       rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
       expectProcessedTxIds([...Array(numInnerRollupTxs)].map((_, i) => i));
@@ -1570,7 +1611,7 @@ describe('rollup_coordinator', () => {
       // and set current time just after the timeout
       currentTime = new Date('2021-06-20T12:00:01+01:00');
 
-      // run again and we should have published it
+      // run again and we should have published it, but only the non-defi
       rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
       expectProcessedTxIds([0]);
@@ -1579,6 +1620,152 @@ describe('rollup_coordinator', () => {
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual(Array(numberOfBridgeCalls).fill(0n));
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+    });
+
+    it('defi txs are not compared against rollup timeout', async () => {
+      // from above - let currentTime = new Date('2021-06-20T11:45:00+01:00');
+
+      // in this test we will
+      // 1. set the rollup timeout to be 12:00:00
+      // 2. set the bridge timeout to be 06:00:00
+      // 3. add a regular tx to the pool at time 12:15:00
+      // 4. add a bridge tx to the pool at time 06:30:00 that covers the full bridge cost
+      // 5. set the current time to be 12:35:00
+      // 6. check that a rollup is not produced as neither tx times out based on their appropriate timeouts
+      // 7. set the bridge timeout to 12:00:00 (the same as the rollup timeout, after the time of the bridge tx)
+      // 8. check that a rollup is produced
+      // set the rollup timeout
+      const rollupTimeout = new Date('2021-06-20T12:00:00+01:00');
+      const bridgeTimeout = new Date('2021-06-20T06:00:00+01:00');
+
+      // the regular tx
+      const pendingTxs = [
+        mockDefiBridgeTx(
+          0,
+          DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeConfigs[2].bridgeId),
+          bridgeConfigs[2].bridgeId,
+          0,
+          new Date('2021-06-20T06:30:00+01:00'),
+        ),
+        mockTx(1, { txType: TxType.TRANSFER, txFeeAssetId: 0, creationTime: new Date('2021-06-20T12:15:00+01:00') }),
+      ];
+
+      // set the rollup timeout to the following
+      rollupTimeouts = {
+        ...rollupTimeouts,
+        baseTimeout: { timeout: rollupTimeout, rollupNumber: 1 },
+        bridgeTimeouts: new Map<bigint, RollupTimeout>([
+          [bridgeConfigs[2].bridgeId, { timeout: bridgeTimeout, rollupNumber: 1 }],
+        ]),
+      };
+      // and set current time after the rollup timeout
+      currentTime = new Date('2021-06-20T12:35:00+01:00');
+
+      // shouldn't publish now
+      let rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(false);
+
+      // change the timeouts so that the bridge timeout is the same as the rollup timeout
+      rollupTimeouts = {
+        ...rollupTimeouts,
+        baseTimeout: { timeout: rollupTimeout, rollupNumber: 1 },
+        bridgeTimeouts: new Map<bigint, RollupTimeout>([
+          [bridgeConfigs[2].bridgeId, { timeout: rollupTimeout, rollupNumber: 1 }],
+        ]),
+      };
+
+      // run again and we should have published the rollup as the defi tx is now older than the bridge timeout
+      rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(true);
+      expectProcessedTxIds([0, 1]);
+
+      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
+        bridgeConfigs[2].bridgeId,
+        ...Array(numberOfBridgeCalls - 1).fill(0n),
+      ]);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+    });
+
+    it('defi txs are not counted against rollup timeout 2', async () => {
+      // from above - let currentTime = new Date('2021-06-20T11:45:00+01:00');
+
+      // this test differs from the one above in that we have 2 bridge txs.
+      // the first has a timestamp before the rollup timeout but does not cover the cost
+      // the second has a timestamp after the rollup and completes the batch cost
+
+      // in this test we will
+      // 1. set the rollup timeout to be 12:00:00
+      // 2. set the bridge timeout to be 06:00:00
+      // 3. add a regular tx to the pool at time 12:15:00
+      // 4. add a bridge tx to the pool at time 06:30:00
+      // 5. add a second bridge tx to the pool that completes the bridge cost at time 12:20:00
+      // 5. set the current time to be 12:35:00
+      // 6. check that a rollup is not produced as no txs time out based on their appropriate timeouts
+      // 7. set the bridge timeout to 12:00:00 (the same as the rollup timeout, after the time of the first bridge tx)
+      // 8. check that a rollup is produced
+      // set the rollup timeout
+      const rollupTimeout = new Date('2021-06-20T12:00:00+01:00');
+      const bridgeTimeout = new Date('2021-06-20T06:00:00+01:00');
+
+      // the regular tx
+      const pendingTxs = [
+        mockDefiBridgeTx(
+          0,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[5].bridgeId),
+          bridgeConfigs[5].bridgeId,
+          0,
+          new Date('2021-06-20T06:30:00+01:00'),
+        ),
+        mockTx(1, { txType: TxType.TRANSFER, txFeeAssetId: 0, creationTime: new Date('2021-06-20T12:15:00+01:00') }),
+        mockDefiBridgeTx(
+          2,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[5].bridgeId),
+          bridgeConfigs[5].bridgeId,
+          0,
+          new Date('2021-06-20T12:20:00+01:00'),
+        ),
+      ];
+
+      // set the rollup timeout to the following
+      rollupTimeouts = {
+        ...rollupTimeouts,
+        baseTimeout: { timeout: rollupTimeout, rollupNumber: 1 },
+        bridgeTimeouts: new Map<bigint, RollupTimeout>([
+          [bridgeConfigs[5].bridgeId, { timeout: bridgeTimeout, rollupNumber: 1 }],
+        ]),
+      };
+      // and set current time after the rollup timeout
+      currentTime = new Date('2021-06-20T12:35:00+01:00');
+
+      // shouldn't publish now
+      let rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(false);
+
+      // change the timeouts so that the bridge timeout is the same as the rollup timeout
+      rollupTimeouts = {
+        ...rollupTimeouts,
+        baseTimeout: { timeout: rollupTimeout, rollupNumber: 1 },
+        bridgeTimeouts: new Map<bigint, RollupTimeout>([
+          [bridgeConfigs[5].bridgeId, { timeout: rollupTimeout, rollupNumber: 1 }],
+        ]),
+      };
+
+      // run again and we should have published it
+      rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(true);
+      expectProcessedTxIds([0, 1, 2]);
+
+      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
+        bridgeConfigs[5].bridgeId,
+        ...Array(numberOfBridgeCalls - 1).fill(0n),
+      ]);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
 
@@ -1628,15 +1815,73 @@ describe('rollup_coordinator', () => {
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
 
-    it('should only timeout defi tx on a bridge timeout', async () => {
+    it('should publish non-timed out regular txs with timed out bridge', async () => {
       // from above - let currentTime = new Date('2021-06-20T11:45:00+01:00');
       // mockTx default creation time to new Date(new Date('2021-06-20T11:43:00+01:00').getTime() + id)
 
       const pendingTxs = [
+        mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
         mockDefiBridgeTx(
           1,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[2].bridgeId),
-          bridgeConfigs[2].bridgeId,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[1].bridgeId),
+          bridgeConfigs[1].bridgeId,
+          0,
+          new Date('2021-06-20T10:43:00+01:00'),
+        ),
+      ];
+      let rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(false);
+      expectProcessedTxIds([]);
+
+      expect(rollupCreator.create).toHaveBeenCalledTimes(0);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(0);
+
+      // set both timeouts to 11:00:00
+      // current ime is 11:45:00
+      // the payment tx time is 11:43:00
+      // only the bridge tx is timedout
+      rollupTimeouts = {
+        ...rollupTimeouts,
+        baseTimeout: { timeout: new Date('2021-06-20T11:00:00+01:00'), rollupNumber: 1 },
+        bridgeTimeouts: new Map<bigint, RollupTimeout>([
+          [bridgeConfigs[1].bridgeId, { timeout: new Date('2021-06-20T11:00:00+01:00'), rollupNumber: 1 }],
+        ]),
+      };
+
+      // we shoul dhave pubished all txs
+      rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(true);
+      expectProcessedTxIds([0, 1]);
+
+      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
+        bridgeConfigs[1].bridgeId,
+        ...Array(numberOfBridgeCalls - 1).fill(0n),
+      ]);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+    });
+
+    it('all bridge txs ahould be included in timed out bridge', async () => {
+      // from above - let currentTime = new Date('2021-06-20T11:45:00+01:00');
+      // mockTx default creation time to new Date(new Date('2021-06-20T11:43:00+01:00').getTime() + id)
+
+      // bridgeConfigs[1] needs 10 txs to be profitable
+      const pendingTxs = [
+        mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockDefiBridgeTx(
+          1,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[1].bridgeId),
+          bridgeConfigs[1].bridgeId, // this tx wil have timed out
+        ),
+        mockDefiBridgeTx(
+          2,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[1].bridgeId),
+          bridgeConfigs[1].bridgeId,
+          0,
+          new Date('2021-06-20T12:10:00+01:00'), // this tx hasn't timed out
         ),
       ];
       let rp = await coordinator.processPendingTxs(pendingTxs);
@@ -1652,11 +1897,134 @@ describe('rollup_coordinator', () => {
         ...rollupTimeouts,
         baseTimeout: { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 },
         bridgeTimeouts: new Map<bigint, RollupTimeout>([
-          [bridgeConfigs[2].bridgeId, { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 }],
+          [bridgeConfigs[1].bridgeId, { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 }],
         ]),
       };
       // and set current time just after the timeout
-      currentTime = new Date('2021-06-20T12:00:01+01:00');
+      currentTime = new Date('2021-06-20T12:11:01+01:00');
+
+      // run again and we should have published it
+      rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(true);
+      expectProcessedTxIds([0, 1, 2]);
+
+      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
+        bridgeConfigs[1].bridgeId,
+        ...Array(numberOfBridgeCalls - 1).fill(0n),
+      ]);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+    });
+
+    it('should only timeout defi tx on a bridge timeout', async () => {
+      // from above - let currentTime = new Date('2021-06-20T11:45:00+01:00');
+      // mockTx default creation time to new Date(new Date('2021-06-20T11:43:00+01:00').getTime() + id)
+
+      const pendingTxs = [
+        mockDefiBridgeTx(
+          1,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[2].bridgeId),
+          bridgeConfigs[2].bridgeId,
+          0,
+          new Date('2021-06-20T11:43:00+01:00'),
+        ),
+      ];
+
+      // set the rollup timeout and bridge timeouts to the following
+      // the bridge timeout is earlier than the bridge tx time, so it has not timed out
+      // the rollup timeout is later than the bridge tx time
+      rollupTimeouts = {
+        ...rollupTimeouts,
+        baseTimeout: { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 },
+        bridgeTimeouts: new Map<bigint, RollupTimeout>([
+          [bridgeConfigs[2].bridgeId, { timeout: new Date('2021-06-20T11:00:00+01:00'), rollupNumber: 1 }],
+        ]),
+      };
+      // and set current time just after the rollup timeout
+      currentTime = new Date('2021-06-20T12:30:01+01:00');
+
+      let rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(false);
+      expectProcessedTxIds([]);
+
+      expect(rollupCreator.create).toHaveBeenCalledTimes(0);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(0);
+
+      // now set the rollup timeout and bridge timeouts to the following
+      // the bridge timeout is later than the bridge tx time, so it has timed out
+      // the rollup timeout is later than the bridge tx time
+      rollupTimeouts = {
+        ...rollupTimeouts,
+        baseTimeout: { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 },
+        bridgeTimeouts: new Map<bigint, RollupTimeout>([
+          [bridgeConfigs[2].bridgeId, { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 }],
+        ]),
+      };
+
+      // run again and we should have published it
+      rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(true);
+      expectProcessedTxIds([1]);
+
+      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
+        bridgeConfigs[2].bridgeId,
+        ...Array(numberOfBridgeCalls - 1).fill(0n),
+      ]);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+    });
+
+    it('should only timeout defi tx on a bridge timeout even if bridge is fully paid for', async () => {
+      // from above - let currentTime = new Date('2021-06-20T11:45:00+01:00');
+      // mockTx default creation time to new Date(new Date('2021-06-20T11:43:00+01:00').getTime() + id)
+
+      // the defi tx pays the full bridge cost
+      const pendingTxs = [
+        mockDefiBridgeTx(
+          1,
+          DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeConfigs[2].bridgeId),
+          bridgeConfigs[2].bridgeId,
+          0,
+          new Date('2021-06-20T11:43:00+01:00'),
+        ),
+      ];
+
+      // set the rollup timeout and bridge timeouts to the following
+      // the bridge timeout is earlier than the bridge tx time, so it has not timed out
+      // the rollup timeout is later than the bridge tx time
+      rollupTimeouts = {
+        ...rollupTimeouts,
+        baseTimeout: { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 },
+        bridgeTimeouts: new Map<bigint, RollupTimeout>([
+          [bridgeConfigs[2].bridgeId, { timeout: new Date('2021-06-20T11:00:00+01:00'), rollupNumber: 1 }],
+        ]),
+      };
+      // and set current time just after the rollup timeout
+      currentTime = new Date('2021-06-20T12:30:01+01:00');
+
+      let rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(false);
+      expectProcessedTxIds([]);
+
+      expect(rollupCreator.create).toHaveBeenCalledTimes(0);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(0);
+
+      // now set the rollup timeout and bridge timeouts to the following
+      // the bridge timeout is later than the bridge tx time, so it not timed out
+      // the rollup timeout is later than the bridge tx time
+      rollupTimeouts = {
+        ...rollupTimeouts,
+        baseTimeout: { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 },
+        bridgeTimeouts: new Map<bigint, RollupTimeout>([
+          [bridgeConfigs[2].bridgeId, { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 }],
+        ]),
+      };
 
       // run again and we should have published it
       rp = await coordinator.processPendingTxs(pendingTxs);
@@ -1731,11 +2099,20 @@ describe('rollup_coordinator', () => {
       // mockTx default creation time to new Date(new Date('2021-06-20T11:43:00+01:00').getTime() + id)
 
       const pendingTxs = [
-        mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0, creationTime: new Date('2021-06-20T11:43:00+01:00') }),
         mockDefiBridgeTx(
           1,
           DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[2].bridgeId),
           bridgeConfigs[2].bridgeId,
+          0,
+          new Date('2021-06-20T11:43:00+01:00'),
+        ),
+        mockDefiBridgeTx(
+          2,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[1].bridgeId),
+          bridgeConfigs[1].bridgeId,
+          0,
+          new Date('2021-06-20T11:43:00+01:00'),
         ),
       ];
       let rp = await coordinator.processPendingTxs(pendingTxs);
@@ -1750,7 +2127,9 @@ describe('rollup_coordinator', () => {
       rollupTimeouts = {
         ...rollupTimeouts,
         baseTimeout: { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 },
-        bridgeTimeouts: new Map<bigint, RollupTimeout>(),
+        bridgeTimeouts: new Map<bigint, RollupTimeout>([
+          [bridgeConfigs[1].bridgeId, { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 }],
+        ]),
       };
       // and set current time just after the timeout
       currentTime = new Date('2021-06-20T12:00:01+01:00');
@@ -1758,12 +2137,71 @@ describe('rollup_coordinator', () => {
       // run again and we should have published it
       rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
-      expectProcessedTxIds([0]);
+      expectProcessedTxIds([0, 2]);
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual(Array(numberOfBridgeCalls).fill(0n));
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
+        bridgeConfigs[1].bridgeId,
+        ...Array(numberOfBridgeCalls - 1).fill(0n),
+      ]);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not timeout bridge txs where the bridge is not timed out', async () => {
+      // from above - let currentTime = new Date('2021-06-20T11:45:00+01:00');
+      // mockTx default creation time to new Date(new Date('2021-06-20T11:43:00+01:00').getTime() + id)
+
+      const pendingTxs = [
+        mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0, creationTime: new Date('2021-06-20T11:43:00+01:00') }),
+        mockDefiBridgeTx(
+          1,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[2].bridgeId),
+          bridgeConfigs[2].bridgeId,
+          0,
+          new Date('2021-06-20T11:43:00+01:00'),
+        ),
+        mockDefiBridgeTx(
+          2,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[1].bridgeId),
+          bridgeConfigs[1].bridgeId,
+          0,
+          new Date('2021-06-20T11:43:00+01:00'),
+        ),
+      ];
+      let rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(false);
+      expectProcessedTxIds([]);
+
+      expect(rollupCreator.create).toHaveBeenCalledTimes(0);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(0);
+
+      // set the rollup timeout and bridge timeouts to the following (no timeout for bridge [2])
+      rollupTimeouts = {
+        ...rollupTimeouts,
+        baseTimeout: { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 },
+        bridgeTimeouts: new Map<bigint, RollupTimeout>([
+          [bridgeConfigs[1].bridgeId, { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 }],
+          [bridgeConfigs[2].bridgeId, { timeout: new Date('2021-06-20T11:00:00+01:00'), rollupNumber: 1 }],
+        ]),
+      };
+      // and set current time just after the timeout
+      currentTime = new Date('2021-06-20T12:00:01+01:00');
+
+      // run again and we should have published it
+      rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(true);
+      expectProcessedTxIds([0, 2]);
+
+      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
+        bridgeConfigs[1].bridgeId,
+        ...Array(numberOfBridgeCalls - 1).fill(0n),
+      ]);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
 
