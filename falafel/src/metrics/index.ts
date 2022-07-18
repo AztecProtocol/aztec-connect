@@ -3,7 +3,6 @@ import { fromBaseUnits } from '@aztec/blockchain';
 import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { BridgeId } from '@aztec/barretenberg/bridge_id';
-import { OffchainDefiDepositData } from '@aztec/barretenberg/offchain_tx_data';
 import { EthAddress } from '@aztec/barretenberg/address';
 import { PublicClient } from 'coinbase-pro';
 import client, { Counter, Gauge, Histogram } from 'prom-client';
@@ -12,6 +11,9 @@ import { RollupProfile } from '../pipeline_coordinator/rollup_profiler';
 import { TxDao, BridgeMetricsDao, RollupDao } from '../entity';
 import { RollupTx } from '../pipeline_coordinator/bridge_tx_queue';
 import { BridgeConfig } from '@aztec/barretenberg/rollup_provider';
+import { TxFeeResolver } from '../tx_fee_resolver';
+import { DefiDepositProofData } from '@aztec/barretenberg/client_proofs/proof_data/defi_deposit_proof_data';
+import { BridgeResolver } from '../bridge';
 
 export class Metrics {
   private receiveTxDuration: Histogram<string>;
@@ -40,6 +42,8 @@ export class Metrics {
   private bridgeRollupTxGauge: Gauge<string>;
   private rollupTransactions: Gauge<string>;
   private rollupGasBalance: Gauge<string>;
+  private rollupBridgeDepositValue: Gauge<string>;
+  private totalBridgeDepositValue: Gauge<string>;
 
   private httpEndpointCounter: Counter<string>;
   private txReceivedCounter: Counter<string>;
@@ -240,6 +244,18 @@ export class Metrics {
       help: 'Rollup gas balance',
     });
 
+    this.rollupBridgeDepositValue = new Gauge({
+      name: 'bridge_deposit_value',
+      help: 'Bridge Deposit Value',
+      labelNames: ['bridgeId'],
+    });
+
+    this.totalBridgeDepositValue = new Gauge({
+      name: 'total_bridge_deposit_value',
+      help: 'Total Bridge Deposit Value',
+      labelNames: ['bridgeId'],
+    });
+
     this.receiveTxDuration = new Histogram({
       name: 'tx_received_duration_seconds',
       help: 'Time to process received transaction',
@@ -411,25 +427,21 @@ export class Metrics {
     this.rollupGasBalance.set(rollupProfile.gasBalance);
 
     const bridgeStats: Record<string, { txNum: number; gasAcc: number }> = {};
-    for (const tx of txs.filter(({ tx }) => tx.txType === TxType.DEFI_DEPOSIT)) {
-      if (tx.bridgeId) {
-        const bridgeConfig = bridgeConfigs.find(({ bridgeId: configBridgeId }) => tx.bridgeId === configBridgeId);
-        if (bridgeConfig) {
-          this.recordBridgeRollupTxNum(bridgeConfig.numTxs, tx.bridgeId);
-          this.recordBridgeRollupGas(bridgeConfig.gas, tx.bridgeId);
-        }
-        const offchainData = OffchainDefiDepositData.fromBuffer(tx.tx.offchainTxData);
-        const strBridgeId = BridgeId.fromBigInt(tx.bridgeId).toString();
-        const gasAcc = Number(offchainData.txFee / BigInt(10 ** 9));
-        if (bridgeStats[strBridgeId]) {
-          bridgeStats[strBridgeId].txNum += 1;
-          bridgeStats[strBridgeId].gasAcc += gasAcc;
-        } else {
-          bridgeStats[strBridgeId] = {
-            txNum: 1,
-            gasAcc,
-          };
-        }
+    for (const bp of rollupProfile.bridgeProfiles.values()) {
+      const bridgeConfig = bridgeConfigs.find(({ bridgeId: configBridgeId }) => bp.bridgeId === configBridgeId);
+      if (bridgeConfig) {
+        this.recordBridgeRollupTxNum(bridgeConfig.numTxs, bp.bridgeId);
+        this.recordBridgeRollupGas(bridgeConfig.gas, bp.bridgeId);
+      }
+      const strBridgeId = BridgeId.fromBigInt(bp.bridgeId).toString();
+      if (bridgeStats[strBridgeId]) {
+        bridgeStats[strBridgeId].txNum += bp.numTxs;
+        bridgeStats[strBridgeId].gasAcc += bp.gasAccrued;
+      } else {
+        bridgeStats[strBridgeId] = {
+          txNum: bp.numTxs,
+          gasAcc: bp.gasAccrued,
+        };
       }
     }
 
@@ -440,29 +452,61 @@ export class Metrics {
     }
   }
 
-  async rollupPublished(rollupProfile: RollupProfile, txs: TxDao[] = [], rollupId: number) {
+  async rollupPublished(
+    rollupProfile: RollupProfile,
+    txs: TxDao[],
+    rollupId: number,
+    feeResolver: TxFeeResolver,
+    bridgeResolver: BridgeResolver,
+  ) {
     const result: BridgeMetricsDao[] = [];
     const ethUsdTicker = await this.coinbaseClient.getProductTicker('ETH-USD');
     const ethUsdPrice = Number(ethUsdTicker.price);
     const gasPrice = await this.blockchain.getGasPriceFeed().price();
+    const status = this.blockchain.getBlockchainStatus();
 
     // calculate total fees made from each defi deposit tx
-    const feesAccrued = txs
-      .filter(tx => tx.txType === TxType.DEFI_DEPOSIT)
-      .reduce<Record<string, bigint>>((acc, tx) => {
-        const offchainData = OffchainDefiDepositData.fromBuffer(tx.offchainTxData);
-        acc[offchainData.bridgeId.toString()] =
-          (acc[offchainData.bridgeId.toString()] || BigInt(0)) + offchainData.txFee;
-        return acc;
-      }, {});
+    const valueMappings: { [key: string]: { feeInWei: bigint; depositValue: bigint } } = {};
+    for (const tx of txs.filter(tx => tx.txType === TxType.DEFI_DEPOSIT)) {
+      const proofData = DefiDepositProofData.fromBuffer(tx.proofData);
+      const strBridgeId = proofData.bridgeId.toString();
+      const depositValue = proofData.defiDepositValue;
+      const singleBridgeGas = feeResolver.getSingleBridgeTxGas(proofData.bridgeId.toBigInt()) + tx.excessGas;
+      const fullBridgeGas = feeResolver.getFullBridgeGas(proofData.bridgeId.toBigInt());
+      const gasTowardsBridge = Math.min(singleBridgeGas, fullBridgeGas);
+      const feeInWei = feeResolver.getTxFeeFromGas(0, gasTowardsBridge);
+      if (!valueMappings[strBridgeId]) {
+        valueMappings[strBridgeId] = { depositValue, feeInWei };
+      } else {
+        valueMappings[strBridgeId].depositValue += depositValue;
+        valueMappings[strBridgeId].feeInWei += feeInWei;
+      }
+    }
 
     const calcUsd = (num: number) => {
-      return (num * Number(gasPrice / BigInt(10 ** 9)) * ethUsdPrice) / 10 ** 9;
+      return (num * Number(gasPrice / 10n ** 9n) * ethUsdPrice) / 10 ** 9;
+    };
+
+    const getDecimals = (bridgeId: BridgeId) => {
+      if (bridgeId.inputAssetIdA < status.assets.length) {
+        return status.assets[bridgeId.inputAssetIdA].decimals;
+      }
+      if (bridgeId.inputAssetIdB !== undefined && bridgeId.inputAssetIdB < status.assets.length) {
+        return status.assets[bridgeId.inputAssetIdB].decimals;
+      }
+      return 0;
     };
 
     if (rollupProfile.bridgeProfiles.size) {
       for (const bridgeProfile of rollupProfile.bridgeProfiles.values()) {
         const { bridgeId, gasAccrued } = bridgeProfile;
+        const bridgeCallData = BridgeId.fromBigInt(bridgeId);
+        const assetDecimals = getDecimals(bridgeCallData);
+
+        const strBridgeId = bridgeCallData.toString();
+        const feeInWei = valueMappings[strBridgeId]?.feeInWei ?? 0n;
+        const totalDeposit = valueMappings[strBridgeId]?.depositValue ?? 0n;
+
         const previous = await this.rollupDb.getLastBridgeMetrics(bridgeId);
         const bridgeMetrics = previous || new BridgeMetricsDao();
         bridgeMetrics.bridgeId = bridgeId;
@@ -472,22 +516,31 @@ export class Metrics {
         bridgeMetrics.totalAztecCalls = (bridgeMetrics.totalAztecCalls || 0) + 1;
         bridgeMetrics.gasPrice = gasPrice;
 
-        const usdCost = calcUsd(gasAccrued);
-        const usdFees = calcUsd(Number(feesAccrued[BridgeId.fromBigInt(bridgeId).toString()] / BigInt(10 ** 9)));
+        const usdCostOfExecutingBridge = calcUsd(bridgeProfile.gasThreshold);
+        const usdFees = (Number(feeInWei / 10n ** 9n) * ethUsdPrice) / 10 ** 9;
 
-        bridgeMetrics.usdCost = usdCost;
-        bridgeMetrics.totalUsdCost = (bridgeMetrics.totalUsdCost || 0) + usdCost;
+        bridgeMetrics.usdCost = usdCostOfExecutingBridge;
+        bridgeMetrics.totalUsdCost = (bridgeMetrics.totalUsdCost || 0) + usdCostOfExecutingBridge;
         bridgeMetrics.usdFees = usdFees;
         bridgeMetrics.totalUsdFees = (bridgeMetrics.totalUsdFees || 0) + usdFees;
+        bridgeMetrics.depositValue = totalDeposit;
+        bridgeMetrics.totalDepositValue = (bridgeMetrics.totalDepositValue || 0n) + totalDeposit;
         result.push(bridgeMetrics);
 
-        const bridgeLabel = BridgeId.fromBigInt(bridgeId).toString();
+        const bridgeLabel =
+          bridgeResolver.getBridgeDescription(bridgeId) ||
+          `${bridgeCallData.addressId} - ${bridgeCallData.inputAssetIdA} - ${bridgeCallData.auxData}`;
         this.bridgeRollupGasAcc.labels(bridgeLabel).set(gasAccrued);
         this.bridgeTotalGasAccCounter.labels(bridgeLabel).inc(gasAccrued);
         this.bridgeTotalAztecCallsCounter.labels(bridgeLabel).inc();
-        this.bridgeRollupUsdCost.labels(bridgeLabel).set(usdCost);
-        this.bridgetotalUsdCost.labels(bridgeLabel).inc(usdCost);
+        this.bridgeRollupUsdCost.labels(bridgeLabel).set(usdCostOfExecutingBridge);
+        this.bridgetotalUsdCost.labels(bridgeLabel).inc(usdCostOfExecutingBridge);
         this.bridgeRollupUsdFees.labels(bridgeLabel).set(usdFees);
+
+        const totalDepositValue = +fromBaseUnits(totalDeposit, assetDecimals);
+        this.rollupBridgeDepositValue.labels(bridgeLabel).set(totalDepositValue);
+        this.totalBridgeDepositValue.labels(bridgeLabel).inc(totalDepositValue);
+
         this.bridgeTotalUsdFees.labels(bridgeLabel).inc(usdFees);
       }
       try {

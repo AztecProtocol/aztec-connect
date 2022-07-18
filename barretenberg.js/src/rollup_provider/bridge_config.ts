@@ -7,6 +7,7 @@ export interface BridgeConfig {
   // e.g. The gas for a single tx is gas / numTxs. This can then be converted to a fee in whichever asset.
   gas: number;
   rollupFrequency: number;
+  description?: string;
 }
 
 export interface BridgeConfigJson {
@@ -14,6 +15,7 @@ export interface BridgeConfigJson {
   numTxs: number;
   rollupFrequency: number;
   gas: number;
+  description?: string;
 }
 
 export const bridgeConfigToJson = ({ bridgeId, ...rest }: BridgeConfig): BridgeConfigJson => ({

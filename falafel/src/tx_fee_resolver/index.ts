@@ -128,4 +128,8 @@ export class TxFeeResolver {
     ];
     return values;
   }
+
+  getTxFeeFromGas(feeAssetId: number, gas: number) {
+    return this.feeCalculator.getTxFeeFromGas(feeAssetId, gas);
+  }
 }

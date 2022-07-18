@@ -171,6 +171,7 @@ describe('Profile Rollup', () => {
       start: jest.fn(),
       stop: jest.fn(),
       getGasPaidForByFee: jest.fn().mockImplementation((assetId: number, fee: bigint) => fee),
+      getTxFeeFromGas: jest.fn().mockImplementation((assetId: number, gas: bigint) => gas),
       getAdjustedTxGas: jest.fn().mockImplementation((assetId: number, txType: TxType) => {
         return adjustedGasValues[assetId][txType];
       }),

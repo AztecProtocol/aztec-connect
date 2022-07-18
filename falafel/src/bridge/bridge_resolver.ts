@@ -47,4 +47,9 @@ export class BridgeResolver {
       throw new Error('Cannot get gas. Unrecognised DeFi-bridge');
     }
   }
+
+  public getBridgeDescription(bridgeId: bigint) {
+    const bridgeConfig = this.getBridgeConfig(bridgeId);
+    return bridgeConfig?.description;
+  }
 }

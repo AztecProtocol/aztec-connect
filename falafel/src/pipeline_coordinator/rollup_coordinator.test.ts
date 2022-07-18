@@ -287,6 +287,7 @@ describe('rollup_coordinator', () => {
       start: jest.fn(),
       stop: jest.fn(),
       getGasPaidForByFee: jest.fn().mockImplementation((assetId: number, fee: bigint) => fee),
+      getTxFeeFromGas: jest.fn().mockImplementation((assetId: number, gas: bigint) => gas),
       getUnadjustedBaseVerificationGas: jest.fn().mockReturnValue(BASE_GAS),
       getAdjustedBaseVerificationGas: jest.fn().mockReturnValue(BASE_GAS),
       getAdjustedTxGas: jest.fn().mockImplementation((_, txType: TxType) => {
@@ -312,6 +313,7 @@ describe('rollup_coordinator', () => {
 
     bridgeResolver = {
       getBridgeConfigs: jest.fn().mockReturnValue(bridgeConfigs),
+      getBridgeDescription: jest.fn().mockReturnValue(undefined),
       defaultDefiBatchSize: 5,
     } as any;
 

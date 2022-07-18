@@ -109,6 +109,7 @@ describe('Tx Fee Allocator', () => {
 
     feeResolver = {
       getGasPaidForByFee: jest.fn().mockImplementation((assetId: number, fee: bigint) => toGas(fee)),
+      getTxFeeFromGas: jest.fn().mockImplementation((assetId: number, gas: bigint) => gas),
       getAdjustedTxGas: jest.fn().mockImplementation((assetId: number, txType: TxType) => {
         return getTxGasWithBase(txType);
       }),

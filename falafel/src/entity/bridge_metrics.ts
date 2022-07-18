@@ -54,6 +54,14 @@ export class BridgeMetricsDao {
   @Column({ nullable: true })
   public totalAztecCalls?: number;
 
+  // total deposit value for this rollup
+  @Column('text', { transformer: [bigintTransformer] })
+  public depositValue = BigInt(0);
+
+  // total deposit value for this bridge
+  @Column('text', { transformer: [bigintTransformer] })
+  public totalDepositValue = BigInt(0);
+
   @ManyToOne(() => RollupDao, rollup => rollup.id, { onDelete: 'CASCADE' })
   public rollup!: RollupDao;
 }

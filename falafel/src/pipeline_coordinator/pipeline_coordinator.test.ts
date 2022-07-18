@@ -102,6 +102,7 @@ describe('pipeline_coordinator', () => {
       getAdjustedBaseVerificationGas: jest.fn().mockReturnValue(1),
       getUnadjustedBaseVerificationGas: jest.fn().mockReturnValue(1),
       getGasPaidForByFee: jest.fn().mockImplementation((assetId: number, fee: bigint) => fee),
+      getTxFeeFromGas: jest.fn().mockImplementation((assetId: number, gas: bigint) => gas),
       start: jest.fn(),
       stop: jest.fn(),
       getAdjustedTxGas: jest.fn().mockReturnValue(1000),

@@ -152,6 +152,7 @@ describe('tx receiver', () => {
       getAdjustedBridgeTxGas: jest.fn().mockReturnValue(0),
       getAdjustedTxGas: jest.fn().mockReturnValue(0),
       getGasPaidForByFee: jest.fn().mockReturnValue(0),
+      getTxFeeFromGas: jest.fn().mockReturnValue(0),
     } as any;
 
     const metrics = {

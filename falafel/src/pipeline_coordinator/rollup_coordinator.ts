@@ -388,9 +388,17 @@ export class RollupCoordinator {
 
     // calc & store published rollup's bridge metrics
     if (rollupProfile.published) {
-      this.metrics
-        .rollupPublished(rollupProfile, rollupDao.rollupProof?.txs, rollupDao.id)
-        .catch(err => this.log('Error when registering published rollup metrics', err));
+      try {
+        await this.metrics.rollupPublished(
+          rollupProfile,
+          rollupDao.rollupProof?.txs ?? [],
+          rollupDao.id,
+          this.feeResolver,
+          this.bridgeResolver,
+        );
+      } catch (err) {
+        this.log('Error when registering published rollup metrics', err);
+      }
     }
 
     return rollupProfile;
@@ -407,7 +415,8 @@ export class RollupCoordinator {
     this.log(`RollupCoordinator:   estimated L1 gas: ${rollupProfile.totalGas}`);
     this.log(`RollupCoordinator:   calldata: ${rollupProfile.totalCallData} bytes`);
     for (const bp of rollupProfile.bridgeProfiles.values()) {
-      this.log(`RollupCoordinator: Defi bridge published: ${bp.bridgeId.toString()}`);
+      const bridgeDescription = this.bridgeResolver.getBridgeDescription(bp.bridgeId);
+      this.log(`RollupCoordinator: Defi bridge published: ${bridgeDescription || bp.bridgeId.toString()}`);
       this.log(`RollupCoordinator:   numTxs: ${bp.numTxs}`);
       this.log(`RollupCoordinator:   gas balance: ${bp.gasAccrued - bp.gasThreshold}`);
     }

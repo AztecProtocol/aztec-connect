@@ -76,6 +76,7 @@ describe('Bridge Tx Queue', () => {
       start: jest.fn(),
       stop: jest.fn(),
       getGasPaidForByFee: jest.fn().mockImplementation((assetId: number, fee: bigint) => fee),
+      getTxFeeFromGas: jest.fn().mockImplementation((assetId: number, gas: bigint) => gas),
       getUnadjustedTxGas: jest.fn().mockImplementation(() => {
         return BASE_GAS + DEFI_DEPOSIT_GAS;
       }),
