@@ -23,15 +23,15 @@ export class BridgeMetricsDao {
   public totalNumTxs?: number;
 
   // gas accrued in rollup for bridge
-  @Column('text', { transformer: [bigintTransformer] })
+  @Column('text', { transformer: [bigintTransformer], default: '0' })
   public gas = BigInt(0);
 
   // total gas accrued for bridge
-  @Column('text', { transformer: [bigintTransformer] })
+  @Column('text', { transformer: [bigintTransformer], default: '0' })
   public totalGas = BigInt(0);
 
   // gas price when rollup mined
-  @Column('text', { transformer: [bigintTransformer] })
+  @Column('text', { transformer: [bigintTransformer], default: '0' })
   public gasPrice!: bigint;
 
   // fees collected in USD for bridge in rollup
@@ -55,11 +55,11 @@ export class BridgeMetricsDao {
   public totalAztecCalls?: number;
 
   // total deposit value for this rollup
-  @Column('text', { transformer: [bigintTransformer] })
+  @Column('text', { transformer: [bigintTransformer], default: '0' })
   public depositValue = BigInt(0);
 
   // total deposit value for this bridge
-  @Column('text', { transformer: [bigintTransformer] })
+  @Column('text', { transformer: [bigintTransformer], default: '0' })
   public totalDepositValue = BigInt(0);
 
   @ManyToOne(() => RollupDao, rollup => rollup.id, { onDelete: 'CASCADE' })
