@@ -1,5 +1,7 @@
 export * from './gradient_border';
 export * from './section_title';
+export * from './toast';
+export * from './toast_group';
 export * from './section';
 export * from './tooltip';
 export * from './info_tooltip';

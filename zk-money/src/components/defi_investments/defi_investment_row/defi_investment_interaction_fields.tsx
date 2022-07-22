@@ -16,8 +16,8 @@ import {
 } from './helpers';
 import { TxId, UserDefiInteractionResultState, UserDefiTx } from '@aztec/sdk';
 import { useAsset } from 'alt-model/asset_hooks';
-import style from './defi_investment_interaction_fields.module.scss';
 import { Button } from 'components';
+import style from './defi_investment_interaction_fields.module.scss';
 
 const dateFormatter = new Intl.DateTimeFormat('default', { day: 'numeric', month: 'short', year: '2-digit' });
 

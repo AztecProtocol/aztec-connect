@@ -17,6 +17,7 @@ import {
   UserSessionEvent,
 } from './user_session';
 import { WalletId, wallets } from './wallet_providers';
+import { ToastsObs } from 'alt-model/top_level_context/toasts_obs';
 
 const debug = createDebug('zm:app');
 
@@ -55,6 +56,7 @@ export class App extends EventEmitter {
     private readonly config: Config,
     private readonly assets: CutdownAsset[],
     private readonly sdkObs: SdkObs,
+    private readonly toastsObs: ToastsObs,
     initialLoginMode: LoginMode,
   ) {
     super();
@@ -165,6 +167,7 @@ export class App extends EventEmitter {
       this.assets,
       this.config,
       this.sdkObs,
+      this.toastsObs,
       this.requiredNetwork,
       this.loginMode,
       this.db,

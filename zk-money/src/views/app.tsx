@@ -29,10 +29,12 @@ import { getActionFromUrl, getLoginModeFromUrl, getUrlFromAction, getUrlFromLogi
 import { UserAccount } from '../components/template/user_account';
 import { NavigateFunction, Route, Routes } from 'react-router-dom';
 import { SdkObs } from 'alt-model/top_level_context/sdk_obs';
+import { ToastsObs } from 'alt-model/top_level_context/toasts_obs';
 import { TransitionGroup, CSSTransition } from 'react-transition-group';
 import { Balance } from './account/dashboard/balance';
 import { Earn } from './account/dashboard/earn';
 import { Trade } from './account/dashboard/trade';
+import { Toasts } from './toasts';
 import { DefiRecipe, FlowDirection } from 'alt-model/defi/types';
 import { DefiModal } from 'views/account/dashboard/modals/defi_modal';
 import { SelfDismissingIncentiveModal } from 'views/account/dashboard/modals/incentive_modal';
@@ -43,6 +45,7 @@ import './app.css';
 interface AppProps {
   config: Config;
   sdkObs: SdkObs;
+  toastsObs: ToastsObs;
   path: string;
   navigate: NavigateFunction;
 }
@@ -88,7 +91,7 @@ export class AppView extends PureComponent<AppProps, AppState> {
 
     const loginMode = getLoginModeFromUrl(path);
 
-    this.app = new App(config, LEGACY_APP_ASSETS, props.sdkObs, loginMode);
+    this.app = new App(config, LEGACY_APP_ASSETS, props.sdkObs, props.toastsObs, loginMode);
 
     this.state = {
       action: initialAction,
@@ -394,6 +397,7 @@ export class AppView extends PureComponent<AppProps, AppState> {
             {activeDefiModal && (
               <DefiModal onClose={() => this.setState({ activeDefiModal: undefined })} {...activeDefiModal} />
             )}
+            <Toasts />
           </AccountStateProvider>
         </AppContext.Provider>
       </Template>

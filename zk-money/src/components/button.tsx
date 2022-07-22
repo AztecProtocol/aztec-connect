@@ -102,6 +102,7 @@ const StyledButton = styled(TextLink)<StyledButtonProps>`
         `;
       case 'gradient':
         return `
+          background: white;
           &:before {
             background: ${parentBackground || colours.white};
           }

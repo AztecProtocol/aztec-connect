@@ -11,6 +11,7 @@ import { TopLevelContext, TopLevelContextValue } from './top_level_context';
 import { createGasPricePoller } from 'alt-model/gas/gas_price_obs';
 import { AmountFactory } from 'alt-model/assets/amount_factory';
 import { RollupProviderStatus } from '@aztec/sdk';
+import { ToastsObs } from './toasts_obs';
 
 function createTopLevelContextValue(
   config: Config,
@@ -18,6 +19,7 @@ function createTopLevelContextValue(
 ): TopLevelContextValue {
   const stableEthereumProvider = new JsonRpcProvider(config.ethereumHost);
   const sdkObs = createSdkObs(config);
+  const toastsObs = new ToastsObs();
   const remoteStatusPoller = createSdkRemoteStatusPoller(sdkObs, initialRollupProviderStatus);
   const remoteStatusObs = remoteStatusPoller.obs;
   const remoteAssetsObs = createRemoteAssetsObs(remoteStatusObs);
@@ -40,6 +42,7 @@ function createTopLevelContextValue(
     config,
     stableEthereumProvider,
     sdkObs,
+    toastsObs,
     remoteStatusPoller,
     remoteAssetsObs,
     amountFactory,

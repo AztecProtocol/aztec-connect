@@ -1,0 +1,49 @@
+@use '../../../styles/mixins.scss';
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes slide-in {
+  from {
+    transform: translateY(20px);
+  }
+  to {
+    transform: translateY(0px);
+  }
+}
+
+.toast {
+  @include mixins.shadow_border;
+  border-radius: 20px;
+  line-height: 26px;
+  color: black;
+  padding: 20px 40px;
+  max-inline-size: min(50ch, 90vw);
+  will-change: transform;
+  background-color: white;
+  animation: fade-in 0.3s ease, slide-in 0.3s ease;
+  position: relative;
+}
+
+.heavy {
+  order: 1;
+}
+
+.closeButton {
+  top: 0;
+  right: 4px;
+  position: absolute;
+  padding: 10px;
+  cursor: pointer;
+}
+
+.buttons {
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+  margin-top: 20px;
+  justify-content: right;
+}

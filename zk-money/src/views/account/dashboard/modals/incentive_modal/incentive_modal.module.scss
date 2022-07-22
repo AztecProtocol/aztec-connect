@@ -82,8 +82,17 @@
 
 @media (max-width: 1050px) {
   .incentiveModalWrapper {
-    overflow: scroll;
-    height: 650px;
+    height: 575px;
+  }
+
+  .incentiveModal {
+    width: 70vw !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .incentiveModalWrapper {
+    height: 600px;
   }
 
   .button {
@@ -91,7 +100,11 @@
   }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 650px) {
+  .incentiveModalWrapper {
+    overflow: scroll;
+  }
+
   .gift {
     display: none;
   }

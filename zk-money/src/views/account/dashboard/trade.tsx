@@ -1,4 +1,4 @@
-import { Button } from 'components';
+import { Button } from 'ui-components';
 import style from './trade.module.scss';
 
 const underContruction = (
@@ -46,12 +46,15 @@ export function Trade() {
         Stay tuned for updates on when your favourite dexes will be available on zk.money.
       </div>
       <Button
-        href="https://medium.com/aztec-protocol/dollars-and-sense-cheap-privacy-with-aztec-connect-f35db037a04"
-        target="_blank"
+        onClick={() =>
+          window.open(
+            'https://medium.com/aztec-protocol/dollars-and-sense-cheap-privacy-with-aztec-connect-f35db037a04',
+            '_blank',
+          )
+        }
         className={style.button}
-      >
-        Read More
-      </Button>
+        text={'Read More'}
+      />
     </div>
   );
 }

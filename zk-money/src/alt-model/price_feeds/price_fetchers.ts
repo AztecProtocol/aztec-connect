@@ -1,6 +1,5 @@
 import type { Provider } from '@ethersproject/providers';
 import createDebug from 'debug';
-import { EthAddress } from '@aztec/sdk';
 import { KNOWN_MAINNET_ASSET_ADDRESS_STRS as S } from '../known_assets/known_asset_addresses';
 import { BigNumber, Contract } from 'ethers';
 

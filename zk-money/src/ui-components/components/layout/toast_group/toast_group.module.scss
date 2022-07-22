@@ -1,0 +1,11 @@
+.toastGroup {
+  position: fixed;
+  inset-block-end: 0;
+  padding-block-end: 5vh;
+  gap: 20px;
+  right: 40px;
+  display: flex;
+  z-index: 1;
+  justify-items: center;
+  flex-direction: column;
+}

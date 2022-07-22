@@ -21,6 +21,7 @@ import { UserAccount } from './user_account';
 import { WalletId, wallets } from './wallet_providers';
 import { toBaseUnits } from './units';
 import { KNOWN_MAINNET_ASSET_ADDRESS_STRS } from 'alt-model/known_assets/known_asset_addresses';
+import { ToastsObs } from 'alt-model/top_level_context/toasts_obs';
 
 const debug = createDebug('zm:user_session');
 
@@ -118,13 +119,13 @@ export class UserSession extends EventEmitter {
 
   private readonly accountProofDepositAssetId = 0;
   private readonly accountProofMinDeposit: bigint;
-
   private readonly debounceCheckAliasWait = 600;
 
   constructor(
     private readonly assets: CutdownAsset[],
     private readonly config: Config,
     private readonly sdkObs: SdkObs,
+    private readonly toastsObs: ToastsObs,
     private readonly requiredNetwork: Network,
     initialLoginMode: LoginMode,
     private readonly db: Database,
@@ -234,7 +235,21 @@ export class UserSession extends EventEmitter {
     this.emitSystemMessage('Connecting to rollup provider...');
 
     try {
+      const SETUP_SESSION_TIMEOUT = 5e3;
+      const timeoutId = setTimeout(() => {
+        this.toastsObs.addToast({
+          text: 'Connecting to the rollup provider is taking longer than expected. Please follow the troubleshooting guide.',
+          isClosable: true,
+          primaryButton: {
+            text: 'Go to guide',
+            onClick: () => {
+              window.open('https://docs.aztec.network/zk-money/troubleshooting', '_blank');
+            },
+          },
+        });
+      }, SETUP_SESSION_TIMEOUT);
       await this.setupSession(false);
+      clearTimeout(timeoutId);
     } catch (e) {
       return this.abort(`Something went wrong. This shouldn't happen.`);
     }
@@ -328,7 +343,12 @@ export class UserSession extends EventEmitter {
 
     // Attempt to log in with unknown pubKey.
     if (!isRegistered) {
+      // https://github.com/AztecProtocol/aztec2-internal/pull/1179 => should appear as a toast
       // TODO - show a signup link in error message.
+      this.toastsObs.addToast({
+        text: 'Account not registered. Please check you are using the same Ethereum wallet that you used to register your account',
+        isClosable: true,
+      });
       throw new Error('Account not registered.');
     }
 

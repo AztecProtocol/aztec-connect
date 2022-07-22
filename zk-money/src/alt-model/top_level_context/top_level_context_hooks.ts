@@ -21,6 +21,11 @@ export function useRemoteAssets() {
   return useObs(remoteAssetsObs);
 }
 
+export function useToasts() {
+  const { toastsObs } = useTopLevelContext();
+  return useObs(toastsObs);
+}
+
 export function useRemoteAssetForId(assetId: number) {
   return useRemoteAssets()?.find(x => x.id === assetId);
 }

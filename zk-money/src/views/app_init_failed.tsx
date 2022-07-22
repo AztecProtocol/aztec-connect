@@ -8,6 +8,7 @@ import { Home } from 'views/home';
 import { SupportStatus } from 'device_support';
 import { UnsupportedPopup } from './unsupported_popup';
 import { SelfDismissingIncentiveModal } from './account/dashboard/modals/incentive_modal';
+import { Toasts } from './toasts';
 
 const FALAFEL_UNREACHABLE_MSG = {
   type: MessageType.ERROR,
@@ -38,6 +39,7 @@ export function AppInitFailed({ reason, explorerUrl }: AppInitFailedProps) {
       {showingReason && reason.type === 'unsupported' && (
         <UnsupportedPopup onClose={handleClosePopup} supportStatus={reason.supportStatus} />
       )}
+      <Toasts />
       <SelfDismissingIncentiveModal instanceName="failure" buttonLabel="Shield now" onButtonClick={handleInteraction} />
     </Template>
   );

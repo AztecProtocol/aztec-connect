@@ -1,8 +1,7 @@
 import React, { useLayoutEffect, useState } from 'react';
 import styled from 'styled-components/macro';
 import { SystemMessage } from '../../app';
-import { breakpoints, colours, gradients, spacings, Theme } from '../../styles';
-import { CookiesForm, isCookieAccepted } from '../cookies_form';
+import { colours, gradients, Theme } from '../../styles';
 import { SystemMessagePopup } from './system_message_popup';
 import { ContentWrapper } from './content_wrapper';
 import { Footer } from './footer';
@@ -54,38 +53,14 @@ const Background = styled.div<BackgroundProps>`
 `;
 interface ContentRootProps {
   fullWidth: boolean;
-  extraFooterSpace: boolean;
 }
 
 const ContentRoot = styled(ContentWrapper)<ContentRootProps>`
-  ${({ extraFooterSpace }) => extraFooterSpace && 'padding-bottom: 160px;'}
   min-height: 100vh;
   display: flex;
   flex-direction: column;
 
   ${({ fullWidth }) => fullWidth && 'width: 100%; max-width: initial;'}
-
-  @media (max-width: ${breakpoints.m}) {
-    ${({ extraFooterSpace }) => extraFooterSpace && 'padding-bottom: 216px;'}
-  }
-`;
-
-const CookiesFormRoot = styled.div`
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: ${spacings.xl};
-  display: flex;
-  justify-content: center;
-  z-index: 9;
-
-  @media (max-width: ${breakpoints.l}) {
-    bottom: ${spacings.l};
-  }
-
-  @media (max-width: ${breakpoints.m}) {
-    bottom: ${spacings.m};
-  }
 `;
 
 interface TemplateProps {
@@ -103,7 +78,6 @@ export const Template: React.FunctionComponent<TemplateProps> = ({
   isLoading = false,
   explorerUrl,
 }) => {
-  const [withCookie, setWithCookie] = useState(!isCookieAccepted());
   const [isResizing, setResizing] = useState(false);
 
   useLayoutEffect(() => {
@@ -123,20 +97,13 @@ export const Template: React.FunctionComponent<TemplateProps> = ({
   return (
     <>
       <Root theme={theme}>
-        <ContentRoot fullWidth={fullWidth} extraFooterSpace={withCookie && theme === Theme.GRADIENT}>
-          {!isLoading && children}
-        </ContentRoot>
+        <ContentRoot fullWidth={fullWidth}>{!isLoading && children}</ContentRoot>
         {!isLoading && (
           <>
             <Footer explorerUrl={explorerUrl} />
             {!!systemMessage?.message && (
               <SystemMessagePopup message={systemMessage.message} type={systemMessage.type} />
             )}
-            <CookiesFormRoot>
-              <ContentWrapper>
-                <CookiesForm theme={theme} onClose={() => setWithCookie(false)} />
-              </ContentWrapper>
-            </CookiesFormRoot>
           </>
         )}
       </Root>

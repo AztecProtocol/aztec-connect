@@ -1,3 +1,4 @@
+import { createContext, useContext } from 'react';
 import type { Config } from 'config';
 import type { Provider } from '@ethersproject/providers';
 import type { BridgeDataAdaptorsMethodCaches } from 'alt-model/defi/bridge_data_adaptors/caches/bridge_data_adaptors_method_caches';
@@ -8,12 +9,13 @@ import type { RemoteAssetsObs } from './remote_assets_obs';
 import type { AmountFactory } from 'alt-model/assets/amount_factory';
 import type { PriceFeedPollerCache } from 'alt-model/price_feeds';
 import type { GasPricePoller } from 'alt-model/gas/gas_price_obs';
-import { createContext, useContext } from 'react';
+import { ToastsObs } from './toasts_obs';
 
 export interface TopLevelContextValue {
   config: Config;
   stableEthereumProvider: Provider;
   sdkObs: SdkObs;
+  toastsObs: ToastsObs;
   remoteStatusPoller: RemoteStatusPoller;
   remoteAssetsObs: RemoteAssetsObs;
   amountFactory: AmountFactory;
