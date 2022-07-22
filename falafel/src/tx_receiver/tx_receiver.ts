@@ -195,6 +195,17 @@ export class TxReceiver {
     if (!(await this.accountVerifier.verifyProof(proof.rawProofData))) {
       throw new Error('Account proof verification failed.');
     }
+
+    // if the second nullifier is non-zero then this is attempting to register
+    // a new account public key. check that the key does not already exist
+    if (!proof.nullifier2.equals(Buffer.alloc(32)) && (await this.rollupDb.isAccountRegistered(accountPublicKey))) {
+      throw new Error('Account key already registered');
+    }
+    // if the first nullifier is non-zero then this is attempting to register
+    // a new alias. check that the alias does not already exist in this case
+    if (!proof.nullifier1.equals(Buffer.alloc(32)) && (await this.rollupDb.isAliasRegistered(aliasHash))) {
+      throw new Error('Alias already registered');
+    }
   }
 
   private async validateDefiDepositProof(proofData: ProofData, offchainTxData: Buffer) {

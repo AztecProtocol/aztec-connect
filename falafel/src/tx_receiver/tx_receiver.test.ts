@@ -77,13 +77,18 @@ describe('tx receiver', () => {
     depositSignature: proofId === ProofId.DEPOSIT ? randomBytes(32) : undefined,
   });
 
-  const mockAccountTx = () => {
+  const mockAccountTx = (create = true, migrate = false) => {
     const accountPublicKey = GrumpkinAddress.random();
     const aliasHash = AliasHash.random();
     const spendingPublicKey1 = randomBytes(32);
     const spendingPublicKey2 = randomBytes(32);
     const offchainTxData = new OffchainAccountData(accountPublicKey, aliasHash, spendingPublicKey1, spendingPublicKey2);
-    return mockTx({ proofId: ProofId.ACCOUNT, offchainTxData: offchainTxData.toBuffer() });
+    return mockTx({
+      proofId: ProofId.ACCOUNT,
+      offchainTxData: offchainTxData.toBuffer(),
+      nullifier1: create ? randomBytes(32) : Buffer.alloc(32),
+      nullifier2: create || migrate ? randomBytes(32) : Buffer.alloc(32),
+    });
   };
 
   const mockDefiDepositTx = ({
@@ -126,6 +131,8 @@ describe('tx receiver', () => {
       getUnsettledTxs: jest.fn().mockResolvedValue([]),
       getDataRootsIndex: jest.fn().mockResolvedValue(0),
       addTxs: jest.fn(),
+      isAccountRegistered: jest.fn().mockResolvedValue(false),
+      isAliasRegistered: jest.fn().mockResolvedValue(false),
     } as any;
 
     blockchain = {
@@ -332,7 +339,7 @@ describe('tx receiver', () => {
       noteAlgo.accountNoteCommitment.mockReturnValueOnce(txs[0].proof.noteCommitment2);
       accountVerifier.verifyProof.mockResolvedValue(false);
 
-      await expect(() => txReceiver.receiveTxs(txs)).rejects.toThrow('Account proof verification failed.');
+      await expect(txReceiver.receiveTxs(txs)).rejects.toThrow('Account proof verification failed.');
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
     });
 
@@ -341,15 +348,57 @@ describe('tx receiver', () => {
       noteAlgo.accountNoteCommitment.mockReturnValueOnce(txs[0].proof.noteCommitment1);
       noteAlgo.accountNoteCommitment.mockReturnValueOnce(randomBytes(32));
 
-      await expect(() => txReceiver.receiveTxs(txs)).rejects.toThrow('Invalid offchain account data.');
+      await expect(txReceiver.receiveTxs(txs)).rejects.toThrow('Invalid offchain account data.');
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
 
       noteAlgo.accountNoteCommitment.mockReset();
 
       noteAlgo.accountNoteCommitment.mockReturnValue(randomBytes(32));
 
-      await expect(() => txReceiver.receiveTxs(txs)).rejects.toThrow('Invalid offchain account data.');
+      await expect(txReceiver.receiveTxs(txs)).rejects.toThrow('Invalid offchain account data.');
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
+    });
+
+    it('rejects an account tx that attempts to re-register an account public key', async () => {
+      const accountTx = mockAccountTx();
+      noteAlgo.accountNoteCommitment.mockReturnValueOnce(accountTx.proof.noteCommitment1);
+      noteAlgo.accountNoteCommitment.mockReturnValueOnce(accountTx.proof.noteCommitment2);
+      rollupDb.isAccountRegistered.mockResolvedValueOnce(true);
+      await expect(txReceiver.receiveTxs([accountTx])).rejects.toThrow('Account key already registered');
+      expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
+    });
+
+    it('accepts an account tx that attempts to neither create or migrate an account', async () => {
+      const accountTx = mockAccountTx(false, false);
+      noteAlgo.accountNoteCommitment.mockReturnValueOnce(accountTx.proof.noteCommitment1);
+      noteAlgo.accountNoteCommitment.mockReturnValueOnce(accountTx.proof.noteCommitment2);
+      // ensure the call to isAccountRegistered returns true
+      rollupDb.isAccountRegistered.mockResolvedValueOnce(true);
+      await expect(txReceiver.receiveTxs([accountTx])).resolves.toEqual([accountTx.proof.txId]);
+      expect(rollupDb.addTxs).toHaveBeenCalledTimes(1);
+      expect(rollupDb.addTxs).toHaveBeenCalledWith([expect.objectContaining({ id: accountTx.proof.txId })]);
+    });
+
+    it('rejects an account tx that attempts to create a previously created alias', async () => {
+      const accountTx = mockAccountTx();
+      noteAlgo.accountNoteCommitment.mockReturnValueOnce(accountTx.proof.noteCommitment1);
+      noteAlgo.accountNoteCommitment.mockReturnValueOnce(accountTx.proof.noteCommitment2);
+      // ensure the call to isAliasRegistered returns true
+      rollupDb.isAliasRegistered.mockResolvedValueOnce(true);
+      await expect(txReceiver.receiveTxs([accountTx])).rejects.toThrow('Alias already registered');
+      expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
+    });
+
+    it('accepts an account tx that attempts to migrate a previously created alias', async () => {
+      // create an account migration tx
+      const accountTx = mockAccountTx(false);
+      noteAlgo.accountNoteCommitment.mockReturnValueOnce(accountTx.proof.noteCommitment1);
+      noteAlgo.accountNoteCommitment.mockReturnValueOnce(accountTx.proof.noteCommitment2);
+      // ensure the call to isAliasRegistered returns true
+      rollupDb.isAliasRegistered.mockResolvedValueOnce(true);
+      await expect(txReceiver.receiveTxs([accountTx])).resolves.toEqual([accountTx.proof.txId]);
+      expect(rollupDb.addTxs).toHaveBeenCalledTimes(1);
+      expect(rollupDb.addTxs).toHaveBeenCalledWith([expect.objectContaining({ id: accountTx.proof.txId })]);
     });
   });
 
