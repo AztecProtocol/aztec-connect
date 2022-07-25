@@ -20,10 +20,12 @@ export function ToastGroup(props: ToastGroupProps) {
           key={`toast-${index}-${toast.key ?? 0}`}
           index={index}
           onCloseToast={props.onCloseToast}
+          autocloseInMs={toast.autocloseInMs}
           isHeavy={toast.isHeavy}
           isClosable={toast.isClosable}
           primaryButton={toast.primaryButton}
           secondaryButton={toast.secondaryButton}
+          type={toast.type}
           text={toast.text}
         />
       ))}

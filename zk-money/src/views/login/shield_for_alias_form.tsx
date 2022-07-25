@@ -202,7 +202,7 @@ export const ShieldForAliasForm: React.FunctionComponent<DepositFormProps> = ({
     const failed = submit.messageType === MessageType.ERROR;
     return (
       <ProgressRoot>
-        <Progress steps={submissionSteps} currentStep={status} active={!failed} failed={failed} />
+        <Progress steps={submissionSteps} currentStep={status} />
         {failed && (
           <RetryButtonWrapper>
             <TextButton text="Retry" onClick={() => onSubmit(true)} />

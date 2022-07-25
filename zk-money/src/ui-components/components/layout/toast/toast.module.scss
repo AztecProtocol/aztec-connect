@@ -1,4 +1,5 @@
 @use '../../../styles/mixins.scss';
+@use '../../../styles/colors.scss';
 
 @keyframes fade-in {
   from {
@@ -20,12 +21,16 @@
   border-radius: 20px;
   line-height: 26px;
   color: black;
-  padding: 20px 40px;
-  max-inline-size: min(50ch, 90vw);
+  padding: 20px 25px;
+  max-width: 625px;
   will-change: transform;
   background-color: white;
   animation: fade-in 0.3s ease, slide-in 0.3s ease;
   position: relative;
+}
+
+.text {
+  padding: 0 20px 0 0;
 }
 
 .heavy {
@@ -34,7 +39,7 @@
 
 .closeButton {
   top: 0;
-  right: 4px;
+  right: 15px;
   position: absolute;
   padding: 10px;
   cursor: pointer;
@@ -46,4 +51,12 @@
   gap: 20px;
   margin-top: 20px;
   justify-content: right;
+}
+
+.error {
+  border: 4px solid colors.$error;
+}
+
+.warning {
+  border: 4px solid colors.$warning;
 }

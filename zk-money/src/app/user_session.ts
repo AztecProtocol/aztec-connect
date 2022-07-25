@@ -12,7 +12,7 @@ import { AccountUtils } from './account_utils';
 import { formatAliasInput, getAliasError } from './alias';
 import { Database } from './database';
 import { EthAccount } from './eth_account';
-import { MessageType, SystemMessage, ValueAvailability } from './form';
+import { MessageType, ValueAvailability } from './form';
 import { createSigningKeys, KeyVault } from './key_vault';
 import { Network } from './networks';
 import { Provider, ProviderEvent, ProviderState, ProviderStatus } from './provider';
@@ -22,6 +22,8 @@ import { WalletId, wallets } from './wallet_providers';
 import { toBaseUnits } from './units';
 import { KNOWN_MAINNET_ASSET_ADDRESS_STRS } from 'alt-model/known_assets/known_asset_addresses';
 import { ToastsObs } from 'alt-model/top_level_context/toasts_obs';
+import { getRollupProviderTimeoutToast } from 'views/toasts/toast_configurations';
+import { ToastType } from 'ui-components';
 
 const debug = createDebug('zm:user_session');
 
@@ -87,7 +89,6 @@ export enum UserSessionEvent {
   UPDATED_WORLD_STATE = 'UPDATED_WORLD_STATE',
   UPDATED_USER_ACCOUNT_DATA = 'UPDATED_USER_ACCOUNT_DATA',
   UPDATED_SHIELD_FOR_ALIAS_FORM = 'UPDATED_SHIELD_FOR_ALIAS_FORM',
-  UPDATED_SYSTEM_MESSAGE = 'UPDATED_SYSTEM_MESSAGE',
   SESSION_CLOSED = 'SESSION_CLOSED',
   SESSION_OPEN = 'SESSION_OPEN',
 }
@@ -98,7 +99,6 @@ export interface UserSession {
   on(event: UserSessionEvent.UPDATED_PROVIDER_STATE, listener: (state: ProviderState) => void): this;
   on(event: UserSessionEvent.UPDATED_WORLD_STATE, listener: (state: WorldState) => void): this;
   on(event: UserSessionEvent.UPDATED_USER_ACCOUNT_DATA, listener: () => void): this;
-  on(event: UserSessionEvent.UPDATED_SYSTEM_MESSAGE, listener: (message: SystemMessage) => void): this;
   on(event: UserSessionEvent.SESSION_CLOSED, listener: () => void): this;
 }
 
@@ -189,8 +189,8 @@ export class UserSession extends EventEmitter {
     );
   }
 
-  async close(message = '', messageType = MessageType.TEXT, clearSession = true) {
-    this.emitSystemMessage(message, messageType);
+  async close(message = '', toastType = ToastType.NORMAL, clearSession = true) {
+    this.emitSystemMessage(message, toastType);
     if (clearSession) {
       this.clearLinkedAccountSession();
     }
@@ -237,16 +237,7 @@ export class UserSession extends EventEmitter {
     try {
       const SETUP_SESSION_TIMEOUT = 5e3;
       const timeoutId = setTimeout(() => {
-        this.toastsObs.addToast({
-          text: 'Connecting to the rollup provider is taking longer than expected. Please follow the troubleshooting guide.',
-          isClosable: true,
-          primaryButton: {
-            text: 'Go to guide',
-            onClick: () => {
-              window.open('https://docs.aztec.network/zk-money/troubleshooting', '_blank');
-            },
-          },
-        });
+        this.toastsObs.addToast(getRollupProviderTimeoutToast());
       }, SETUP_SESSION_TIMEOUT);
       await this.setupSession(false);
       clearTimeout(timeoutId);
@@ -257,7 +248,7 @@ export class UserSession extends EventEmitter {
     if (this.provider!.chainId !== this.requiredNetwork.chainId) {
       this.emitSystemMessage(
         `Please switch your wallet's network to ${this.requiredNetwork.network}...`,
-        MessageType.WARNING,
+        ToastType.WARNING,
       );
       while (this.provider!.chainId !== this.requiredNetwork.chainId) {
         await new Promise(resolve => setTimeout(resolve, 500));
@@ -279,7 +270,7 @@ export class UserSession extends EventEmitter {
       }
     } catch (e) {
       this.disconnectWallet();
-      this.emitSystemMessage(e.message, MessageType.ERROR);
+      this.emitSystemMessage(e.message, ToastType.ERROR);
     }
   }
 
@@ -298,7 +289,7 @@ export class UserSession extends EventEmitter {
   private async signupWithWallet() {
     await this.ensureIsntContractWallet();
 
-    this.emitSystemMessage('Please sign the message in your wallet to create a new account...', MessageType.WARNING);
+    this.emitSystemMessage('Please sign the message in your wallet to create a new account...', ToastType.WARNING);
 
     try {
       this.keyVault = await KeyVault.create(this.provider!, this.sdk);
@@ -329,7 +320,7 @@ export class UserSession extends EventEmitter {
   private async loginWithWallet() {
     await this.ensureIsntContractWallet();
 
-    this.emitSystemMessage('Please sign the message in your wallet to login...', MessageType.WARNING);
+    this.emitSystemMessage('Please sign the message in your wallet to login...', ToastType.WARNING);
 
     try {
       this.keyVault = await KeyVault.create(this.provider!, this.sdk);
@@ -345,11 +336,9 @@ export class UserSession extends EventEmitter {
     if (!isRegistered) {
       // https://github.com/AztecProtocol/aztec2-internal/pull/1179 => should appear as a toast
       // TODO - show a signup link in error message.
-      this.toastsObs.addToast({
-        text: 'Account not registered. Please check you are using the same Ethereum wallet that you used to register your account',
-        isClosable: true,
-      });
-      throw new Error('Account not registered.');
+      throw new Error(
+        'Account not registered. Please check you are using the same Ethereum wallet that you used to register your account',
+      );
     }
 
     // TODO - different aliases might have the same accountPublicKey
@@ -360,6 +349,19 @@ export class UserSession extends EventEmitter {
       // Log in to previously logged in account.
       this.updateLoginState({ alias });
       this.toStep(LoginStep.INIT_ACCOUNT);
+    }
+  }
+
+  messageTypeToToastType(messageType?: MessageType) {
+    switch (messageType) {
+      case MessageType.ERROR:
+        return ToastType.ERROR;
+      case MessageType.TEXT:
+        return ToastType.NORMAL;
+      case MessageType.WARNING:
+        return ToastType.WARNING;
+      default:
+        return ToastType.NORMAL;
     }
   }
 
@@ -380,7 +382,7 @@ export class UserSession extends EventEmitter {
     const { chainId, ethereumHost } = this.config;
     this.provider = new Provider(walletId, { chainId, ethereumHost });
     this.provider.on(ProviderEvent.LOG_MESSAGE, (message: string, type: MessageType) =>
-      this.emitSystemMessage(message, type),
+      this.emitSystemMessage(message, this.messageTypeToToastType(type)),
     );
     this.provider.on(ProviderEvent.UPDATED_PROVIDER_STATE, this.handleProviderStateChange);
 
@@ -432,7 +434,7 @@ export class UserSession extends EventEmitter {
 
     const error = getAliasError(aliasInput);
     if (error) {
-      this.emitSystemMessage(error, MessageType.ERROR);
+      this.emitSystemMessage(error, ToastType.ERROR);
       return this.updateLoginState({
         alias: aliasInput,
         aliasAvailability: ValueAvailability.INVALID,
@@ -450,18 +452,18 @@ export class UserSession extends EventEmitter {
 
     const error = getAliasError(aliasInput);
     if (error) {
-      return this.emitSystemMessage(!isNewAlias ? 'Incorrect alias.' : error, MessageType.ERROR);
+      return this.emitSystemMessage(!isNewAlias ? 'Incorrect alias.' : error, ToastType.ERROR);
     }
 
     const alias = formatAliasInput(aliasInput);
     if (isNewAlias) {
       if (await this.sdk.isAliasRegistered(alias, true)) {
-        return this.emitSystemMessage('This alias has been taken.', MessageType.ERROR);
+        return this.emitSystemMessage('This alias has been taken.', ToastType.ERROR);
       }
     } else {
       const { accountPublicKey } = this.keyVault;
       if (!(await this.sdk.isAliasRegisteredToAccount(accountPublicKey, alias, true))) {
-        return this.emitSystemMessage('Incorrect alias.', MessageType.ERROR);
+        return this.emitSystemMessage('Incorrect alias.', ToastType.ERROR);
       }
     }
 
@@ -492,7 +494,7 @@ export class UserSession extends EventEmitter {
     if (!this.shieldForAliasForm.locked) return;
 
     if (!this.provider?.account) {
-      this.emitSystemMessage('Wallet disconnected.', MessageType.ERROR);
+      this.emitSystemMessage('Wallet disconnected.', ToastType.ERROR);
       return;
     }
 
@@ -508,7 +510,7 @@ export class UserSession extends EventEmitter {
       this.shieldForAliasForm.destroy();
     } catch (e) {
       debug(e);
-      this.emitSystemMessage('Failed to send the proofs. Please try again later.', MessageType.ERROR);
+      this.emitSystemMessage('Failed to send the proofs. Please try again later.', ToastType.ERROR);
       return;
     }
 
@@ -560,7 +562,7 @@ export class UserSession extends EventEmitter {
       }
     } catch (e) {
       debug(e);
-      this.emitSystemMessage(e.message, MessageType.ERROR);
+      this.emitSystemMessage(e.message, ToastType.ERROR);
       await this.destroy();
     }
   }
@@ -656,7 +658,7 @@ export class UserSession extends EventEmitter {
       this.shieldForAliasForm.on(AccountFormEvent.UPDATED_FORM_VALUES, (values: ShieldFormValues) => {
         const { message, messageType } = values.submit;
         if (message !== undefined) {
-          this.emit(UserSessionEvent.UPDATED_SYSTEM_MESSAGE, { message, type: messageType });
+          this.emitSystemMessage(message, this.messageTypeToToastType(messageType));
         }
       });
     }
@@ -751,7 +753,7 @@ export class UserSession extends EventEmitter {
           `Please switch your wallet's account to ${signerAddress.toString().slice(0, 6)}...${signerAddress
             .toString()
             .slice(-4)}.`,
-          MessageType.WARNING,
+          ToastType.WARNING,
         );
         await new Promise(resolve => setTimeout(resolve, 1000));
         if (this.destroyed) {
@@ -761,7 +763,7 @@ export class UserSession extends EventEmitter {
 
       this.emitSystemMessage(
         'Please sign the message in your wallet to create your Aztec Privacy Key...',
-        MessageType.WARNING,
+        ToastType.WARNING,
       );
       const newKeyVault = await KeyVault.create(this.provider!, this.sdk);
       isSameKey = accountPublicKey.equals(newKeyVault.accountPublicKey);
@@ -785,7 +787,7 @@ export class UserSession extends EventEmitter {
         `Please switch your wallet's account to ${signerAddress.toString().slice(0, 6)}...${signerAddress
           .toString()
           .slice(-4)}.`,
-        MessageType.WARNING,
+        ToastType.WARNING,
       );
       await new Promise(resolve => setTimeout(resolve, 1000));
       if (this.destroyed) {
@@ -795,7 +797,7 @@ export class UserSession extends EventEmitter {
 
     this.emitSystemMessage(
       'Please sign the message in your wallet to create your Aztec Spending Key...',
-      MessageType.WARNING,
+      ToastType.WARNING,
     );
     const { publicKey } = await createSigningKeys(this.provider!, this.sdk);
     this.clearSystemMessage();
@@ -896,19 +898,19 @@ export class UserSession extends EventEmitter {
     this.shieldForAliasForm?.changeEthAccount(ethAccount);
   }
 
-  private toStep(step: LoginStep, message = '', messageType = MessageType.TEXT) {
+  private toStep(step: LoginStep, message = '', toastType = ToastType.NORMAL) {
     this.updateLoginState({ step });
-    this.emitSystemMessage(message, messageType);
+    this.emitSystemMessage(message, toastType);
   }
 
-  private async abort(message = '', messageType = MessageType.ERROR) {
+  private async abort(message = '', toastType = ToastType.ERROR) {
     const { step } = this.loginState;
     switch (step) {
       case LoginStep.CONNECT_WALLET:
         this.updateLoginState({ walletId: undefined });
         break;
     }
-    this.emitSystemMessage(message, messageType);
+    this.emitSystemMessage(message, toastType);
     this.emit(UserSessionEvent.SESSION_CLOSED);
     await this.destroy();
   }
@@ -924,11 +926,21 @@ export class UserSession extends EventEmitter {
   }
 
   private clearSystemMessage() {
-    this.emitSystemMessage('');
+    this.toastsObs.removeToastByKey('system-message');
   }
 
-  private emitSystemMessage(message = '', type = MessageType.TEXT) {
-    this.emit(UserSessionEvent.UPDATED_SYSTEM_MESSAGE, { message, type });
+  private emitSystemMessage(text = '', type = ToastType.NORMAL) {
+    if (text.length === 0) {
+      this.clearSystemMessage();
+      return;
+    }
+    this.toastsObs.addOrReplaceToast({
+      text,
+      type,
+      isClosable: false,
+      autocloseInMs: 20e3,
+      key: 'system-message',
+    });
   }
 
   private async awaitUserSynchronised(userId: GrumpkinAddress) {

@@ -1,6 +1,6 @@
 @use '../../../styles/mixins';
 @use '../../../styles/spacings';
-@use '../../../styles/gradients';
+@use '../../../styles/colors';
 @use '../../../styles/breakpoints';
 
 .headerRoot {
@@ -27,9 +27,9 @@
     101.14deg,
     white 0%,
     white 33.333%,
-    gradients.$primary_from 66.666%,
-    gradients.$primary_from 69%,
-    gradients.$primary_to 82%
+    colors.$gradient_from 66.666%,
+    colors.$gradient_from 69%,
+    colors.$gradient_to 82%
   );
   background-size: 300% 300%;
   overflow: initial;

@@ -4,10 +4,8 @@ import {
   LoginMode,
   LoginState,
   LoginStep,
-  MessageType,
   ProviderState,
   ShieldFormValues,
-  SystemMessage,
   Wallet,
   WalletId,
   WorldState,
@@ -68,7 +66,6 @@ interface LoginProps {
   shieldForAliasForm?: ShieldFormValues;
   availableWallets: Wallet[];
   explorerUrl: string;
-  systemMessage: SystemMessage;
   setAlias: (alias: string) => void;
   onSelectWallet: (walletId: WalletId) => void;
   onRestart?: () => void;
@@ -210,7 +207,6 @@ export const Login: React.FunctionComponent<LoginProps> = props => {
     providerState,
     shieldForAliasForm,
     availableWallets,
-    systemMessage,
     setAlias,
     onSelectWallet,
     onRestart,
@@ -221,7 +217,6 @@ export const Login: React.FunctionComponent<LoginProps> = props => {
   } = props;
   const { step, mode, walletId, alias, aliasAvailability, allowToProceed } = loginState;
   const { stepNo, title, description, footnote } = getStepInfo(props);
-  const { message, type: messageType } = systemMessage;
 
   return (
     <LoginTemplate
@@ -274,15 +269,7 @@ export const Login: React.FunctionComponent<LoginProps> = props => {
                 : mode === LoginMode.LOGIN
                 ? loginProgresses
                 : signupProgresses;
-            return (
-              <InitDataForm
-                currentStep={step}
-                worldState={worldState}
-                steps={steps}
-                active={!message || messageType !== MessageType.ERROR}
-                failed={!!message && messageType === MessageType.ERROR}
-              />
-            );
+            return <InitDataForm currentStep={step} worldState={worldState} steps={steps} />;
           }
         }
       })()}

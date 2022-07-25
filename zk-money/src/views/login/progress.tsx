@@ -1,7 +1,6 @@
 import React from 'react';
 import styled from 'styled-components/macro';
-import { Dot, Loader, LoaderTheme, PaddedBlock, Text } from '../../components';
-import errorIcon from '../../images/exclamation_mark.svg';
+import { Dot, PaddedBlock, Text } from '../../components';
 import { borderRadiuses, spacings } from '../../styles';
 
 export interface Step {
@@ -31,10 +30,6 @@ const IconRoot = styled.div`
   flex-shrink: 0;
 `;
 
-const Icon = styled.img`
-  height: 20px;
-`;
-
 interface StepNameProps {
   active: boolean;
 }
@@ -49,24 +44,16 @@ const StepName = styled(Text)<StepNameProps>`
 interface ProgressProps {
   currentStep: string | number;
   steps: Step[];
-  active: boolean;
-  failed: boolean;
 }
 
-export const Progress: React.FunctionComponent<ProgressProps> = ({ currentStep, steps, active, failed }) => (
+export const Progress: React.FunctionComponent<ProgressProps> = ({ currentStep, steps }) => (
   <Root>
     {steps.map(({ step, title }) => {
-      const isCurrentStep = step === currentStep;
       return (
         <StepRoot key={step}>
-          <StepName size={isCurrentStep && active ? 'm' : 's'} active={step <= currentStep}>
-            {title}
-          </StepName>
-          <IconRoot>
-            {isCurrentStep && active && <Loader theme={LoaderTheme.WHITE} />}
-            {isCurrentStep && failed && <Icon src={errorIcon} />}
-            {step < currentStep && <Dot color="white" size="xs" />}
-          </IconRoot>
+          <StepName active={step <= currentStep}>{title}</StepName>
+          {/* We could (should?) display a loader or an alert when there's an error */}
+          <IconRoot>{step < currentStep && <Dot color="white" size="xs" />}</IconRoot>
         </StepRoot>
       );
     })}

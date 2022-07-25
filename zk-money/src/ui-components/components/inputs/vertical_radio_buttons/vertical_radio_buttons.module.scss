@@ -1,5 +1,5 @@
 @use '../../../styles/mixins.scss';
-@use '../../../styles/gradients';
+@use '../../../styles/colors';
 
 .root {
   display: flex;
@@ -50,9 +50,9 @@
   border-radius: 5px;
   background: linear-gradient(
     101.14deg,
-    gradients.$primary_from 11.12%,
-    gradients.$primary_to 58.22%,
-    gradients.$primary_to 58.22%
+    colors.$gradient_from 11.12%,
+    colors.$gradient_to 58.22%,
+    colors.$gradient_to 58.22%
   );
 }
 

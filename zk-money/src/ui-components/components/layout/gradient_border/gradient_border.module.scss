@@ -1,9 +1,9 @@
-@use '../../../styles/gradients.scss';
+@use '../../../styles/colors.scss';
 
 .root {
   padding: 1px;
   width: 100%;
-  background: linear-gradient(134.14deg, gradients.$primary_from 18.37%, gradients.$primary_to 82.04%);
+  background: linear-gradient(134.14deg, colors.$gradient_from 18.37%, colors.$gradient_to 82.04%);
 }
 
 .content {

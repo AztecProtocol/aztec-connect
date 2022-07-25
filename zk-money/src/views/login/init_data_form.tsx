@@ -7,17 +7,9 @@ interface InitDataFormProps {
   currentStep: LoginStep;
   worldState: WorldState;
   steps: Step[];
-  active: boolean;
-  failed: boolean;
 }
 
-export const InitDataForm: React.FunctionComponent<InitDataFormProps> = ({
-  currentStep,
-  worldState,
-  steps,
-  active,
-  failed,
-}) => {
+export const InitDataForm: React.FunctionComponent<InitDataFormProps> = ({ currentStep, worldState, steps }) => {
   const stepsWithStatus = steps.map(({ step, title }) => {
     let titleText = title;
     if (currentStep === LoginStep.SYNC_DATA && step === LoginStep.SYNC_DATA) {
@@ -30,5 +22,5 @@ export const InitDataForm: React.FunctionComponent<InitDataFormProps> = ({
       title: titleText,
     };
   });
-  return <Progress currentStep={currentStep} steps={stepsWithStatus} active={active} failed={failed} />;
+  return <Progress currentStep={currentStep} steps={stepsWithStatus} />;
 };

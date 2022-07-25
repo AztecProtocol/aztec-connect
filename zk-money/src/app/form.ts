@@ -4,11 +4,6 @@ export enum MessageType {
   ERROR,
 }
 
-export interface SystemMessage {
-  message: string;
-  type: MessageType;
-}
-
 export enum FormStatus {
   ACTIVE,
   LOCKED,

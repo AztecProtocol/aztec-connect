@@ -1,8 +1,6 @@
 import React, { useLayoutEffect, useState } from 'react';
 import styled from 'styled-components/macro';
-import { SystemMessage } from '../../app';
 import { colours, gradients, Theme } from '../../styles';
-import { SystemMessagePopup } from './system_message_popup';
 import { ContentWrapper } from './content_wrapper';
 import { Footer } from './footer';
 import { debounce } from 'lodash';
@@ -10,7 +8,6 @@ import { isSafari } from 'device_support';
 import { Pages } from 'views/views';
 
 export * from './content_wrapper';
-export * from './system_message_popup';
 
 interface RootProps {
   theme: Theme;
@@ -66,7 +63,6 @@ const ContentRoot = styled(ContentWrapper)<ContentRootProps>`
 interface TemplateProps {
   theme: Theme;
   children: React.ReactNode;
-  systemMessage?: SystemMessage;
   isLoading?: boolean;
   explorerUrl: string;
 }
@@ -74,7 +70,6 @@ interface TemplateProps {
 export const Template: React.FunctionComponent<TemplateProps> = ({
   theme,
   children,
-  systemMessage,
   isLoading = false,
   explorerUrl,
 }) => {
@@ -98,14 +93,7 @@ export const Template: React.FunctionComponent<TemplateProps> = ({
     <>
       <Root theme={theme}>
         <ContentRoot fullWidth={fullWidth}>{!isLoading && children}</ContentRoot>
-        {!isLoading && (
-          <>
-            <Footer explorerUrl={explorerUrl} />
-            {!!systemMessage?.message && (
-              <SystemMessagePopup message={systemMessage.message} type={systemMessage.type} />
-            )}
-          </>
-        )}
+        {!isLoading && <Footer explorerUrl={explorerUrl} />}
       </Root>
       <Background isResizing={isResizing} theme={theme} isSafari={isSafari} />
     </>

@@ -6,7 +6,6 @@ import Cookie from 'js-cookie';
 import { Config } from '../config';
 import { ShieldFormValues } from './account_forms';
 import { Database } from './database';
-import { SystemMessage } from './form';
 import { chainIdToNetwork, Network } from './networks';
 import {
   initialLoginState,
@@ -32,7 +31,6 @@ export enum AppEvent {
   SESSION_OPEN = 'SESSION_OPEN',
   UPDATED_LOGIN_STATE = 'UPDATED_LOGIN_STATE',
   UPDATED_USER_SESSION_DATA = 'UPDATED_USER_SESSION_DATA',
-  UPDATED_SYSTEM_MESSAGE = 'UPDATED_SYSTEM_MESSAGE',
 }
 
 export interface App {
@@ -40,7 +38,6 @@ export interface App {
   on(event: AppEvent.SESSION_OPEN, listener: () => void): this;
   on(event: AppEvent.UPDATED_LOGIN_STATE, listener: (state: LoginState) => void): this;
   on(event: AppEvent.UPDATED_USER_SESSION_DATA, listener: () => void): this;
-  on(event: AppEvent.UPDATED_SYSTEM_MESSAGE, listener: (message: SystemMessage) => void): this;
 }
 
 export class App extends EventEmitter {
@@ -194,9 +191,6 @@ export class App extends EventEmitter {
             this.emit(AppEvent.UPDATED_LOGIN_STATE, ...args);
             break;
           }
-          case UserSessionEvent.UPDATED_SYSTEM_MESSAGE:
-            this.emit(AppEvent.UPDATED_SYSTEM_MESSAGE, ...args);
-            break;
           default:
             this.emit(AppEvent.UPDATED_USER_SESSION_DATA);
         }

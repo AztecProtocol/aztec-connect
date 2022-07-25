@@ -3,12 +3,12 @@ import { TopLevelContext } from 'alt-model/top_level_context/top_level_context';
 import React, { useContext, useEffect } from 'react';
 import { Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { Template } from '../components';
-import { getCookiesToast } from 'components/cookies_toast';
 import { Config } from '../config';
 import { PageTransitionHandler } from '../page_transition_handler';
-import { Theme } from '../styles';
 import { AppView } from './app';
 import { appPaths } from './views';
+import { getCookiesToast } from './toasts/toast_configurations';
+import { Theme } from '../styles';
 
 export const getIsCookieAccepted = () => Cookie.get('accepted') === 'true';
 

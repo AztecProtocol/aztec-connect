@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Button, ButtonTheme } from 'ui-components';
 import { CloseMiniIcon } from 'ui-components/components/icons';
 import { bindStyle } from 'ui-components/util/classnames';
@@ -6,10 +7,12 @@ import style from './toast.module.scss';
 const cx = bindStyle(style);
 
 export interface ToastContent {
-  key?: string;
   text: string;
+  key?: string;
+  type?: ToastType;
   primaryButton?: ToastButton;
   secondaryButton?: ToastButton;
+  autocloseInMs?: number;
   isClosable?: boolean;
   isHeavy?: boolean;
 }
@@ -19,13 +22,21 @@ export interface ToastButton {
   onClick: () => void;
 }
 
+export enum ToastType {
+  NORMAL = 'NORMAL',
+  WARNING = 'WARNING',
+  ERROR = 'ERROR',
+}
+
 export interface ToastProps {
-  index: number;
   text: string;
+  index?: number;
   primaryButton?: ToastButton;
   secondaryButton?: ToastButton;
   isHeavy?: boolean;
+  type?: ToastType;
   isClosable?: boolean;
+  autocloseInMs?: number;
   onCloseToast?: (index: number) => void;
 }
 
@@ -34,9 +45,32 @@ export function Toast(props: ToastProps) {
   const hasSecondaryButton = !!props.secondaryButton;
   const hasButtons = hasPrimaryButton || hasSecondaryButton;
 
+  const handleCloseToast = () => {
+    if (props.onCloseToast && props.index !== undefined) {
+      props.onCloseToast(props.index);
+    }
+  };
+
+  useEffect(() => {
+    if (!props.autocloseInMs) {
+      return;
+    }
+
+    setTimeout(() => {
+      handleCloseToast();
+    }, props.autocloseInMs);
+  }, []);
+
   return (
-    <div className={cx(style.toast, props.isHeavy && style.heavy)}>
-      {props.text}
+    <div
+      className={cx(
+        style.toast,
+        props.isHeavy && style.heavy,
+        props.type === ToastType.ERROR && style.error,
+        props.type === ToastType.WARNING && style.warning,
+      )}
+    >
+      <div className={style.text}>{props.text}</div>
       {hasButtons && (
         <div className={style.buttons}>
           {props.secondaryButton && (
@@ -56,7 +90,7 @@ export function Toast(props: ToastProps) {
           className={style.closeButton}
           onClick={e => {
             e.preventDefault();
-            props.onCloseToast && props.onCloseToast(props.index);
+            handleCloseToast();
           }}
         >
           <CloseMiniIcon />

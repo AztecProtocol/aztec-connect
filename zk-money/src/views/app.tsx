@@ -13,9 +13,7 @@ import {
   LoginMode,
   LoginState,
   LoginStep,
-  MessageType,
   Provider,
-  SystemMessage,
   WalletId,
   WorldState,
 } from '../app';
@@ -58,7 +56,6 @@ interface AppState {
   providerState?: ProviderState;
   accountState?: AccountState;
   shieldForAliasForm?: ShieldFormValues;
-  systemMessage: SystemMessage;
   isLoading: boolean;
   sdk?: AztecSdk | undefined;
   provider?: Provider | undefined;
@@ -103,10 +100,6 @@ export class AppView extends PureComponent<AppProps, AppState> {
       activeDefiModal: undefined,
       // path will be removed once we are able to add router to ui-components
       path: '/',
-      systemMessage: {
-        message: '',
-        type: MessageType.TEXT,
-      },
       isLoading: true,
     };
   }
@@ -119,7 +112,6 @@ export class AppView extends PureComponent<AppProps, AppState> {
     this.app.on(AppEvent.SESSION_OPEN, () => this.channel.postMessage({ name: CrossTabEvent.LOGGED_IN }));
     this.app.on(AppEvent.UPDATED_LOGIN_STATE, this.onLoginStateChange);
     this.app.on(AppEvent.UPDATED_USER_SESSION_DATA, this.onUserSessionDataChange);
-    this.app.on(AppEvent.UPDATED_SYSTEM_MESSAGE, this.onSystemMessageChange);
     this.channel.onmessage = async msg => {
       switch (msg.name) {
         case CrossTabEvent.LOGGED_IN:
@@ -170,7 +162,7 @@ export class AppView extends PureComponent<AppProps, AppState> {
 
   private handleUrlChange = async (path: string) => {
     const action = getActionFromUrl(path);
-    this.setState({ action, systemMessage: { message: '', type: MessageType.TEXT } });
+    this.setState({ action });
 
     switch (action) {
       case AppAction.LOGIN: {
@@ -220,10 +212,6 @@ export class AppView extends PureComponent<AppProps, AppState> {
     });
   };
 
-  private onSystemMessageChange = (systemMessage: SystemMessage) => {
-    this.setState({ systemMessage });
-  };
-
   private onSessionClosed = () => {
     const { action } = this.state;
     if (action === AppAction.ACCOUNT) {
@@ -245,7 +233,7 @@ export class AppView extends PureComponent<AppProps, AppState> {
   };
 
   private handleRestart = () => {
-    this.setState({ systemMessage: { message: '', type: MessageType.TEXT } }, () => this.app.logout());
+    this.app.logout();
   };
 
   private handleOpenDefiEnterModal = (recipe: DefiRecipe) => {
@@ -260,7 +248,7 @@ export class AppView extends PureComponent<AppProps, AppState> {
     if (!this.app.hasSession()) {
       return;
     }
-    this.setState({ systemMessage: { message: '', type: MessageType.TEXT } }, () => this.app.logout());
+    this.app.logout();
   };
 
   private getTheme = () => {
@@ -283,7 +271,6 @@ export class AppView extends PureComponent<AppProps, AppState> {
       providerState,
       worldState,
       shieldForAliasForm,
-      systemMessage,
       isLoading,
       activeDefiModal,
     } = this.state;
@@ -291,7 +278,7 @@ export class AppView extends PureComponent<AppProps, AppState> {
     const { step } = loginState;
     const theme = this.getTheme();
     const processingAction = this.app.isProcessingAction();
-    const allowReset = action !== AppAction.ACCOUNT && (!processingAction || systemMessage.type === MessageType.ERROR);
+    const allowReset = action !== AppAction.ACCOUNT && !processingAction;
     const isLoggedIn = step === LoginStep.DONE;
 
     const shouldCenterContent =
@@ -304,7 +291,7 @@ export class AppView extends PureComponent<AppProps, AppState> {
     ) : undefined;
 
     return (
-      <Template theme={theme} systemMessage={systemMessage} isLoading={isLoading} explorerUrl={config.explorerUrl}>
+      <Template theme={theme} isLoading={isLoading} explorerUrl={config.explorerUrl}>
         <AppContext.Provider
           value={{
             config,
@@ -349,7 +336,6 @@ export class AppView extends PureComponent<AppProps, AppState> {
                           availableWallets={this.app.availableWallets}
                           shieldForAliasForm={shieldForAliasForm}
                           explorerUrl={config.explorerUrl}
-                          systemMessage={systemMessage}
                           setAlias={this.app.setAlias}
                           onSelectWallet={this.handleConnectWallet}
                           onSelectAlias={this.app.confirmAlias}
