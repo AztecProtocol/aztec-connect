@@ -36,7 +36,7 @@ All are field elements. The first $(12 + 2n_B + 2n_A)$ public inputs are the fol
 9. `new_data_roots_root`
 10. `old_defi_root = 0`
 11. `new_defi_root`
-12. `defi_bridge_ids` (size: $n_B$)
+12. `defi_bridge_call_datas` (size: $n_B$)
 13. `defi_bridge_deposits` (size: $n_B$)
 14. `asset_ids` (size: $n_A$)
 15. `total_tx_fees` (size: $n_A$)
@@ -74,7 +74,7 @@ The following inputs are private to reduce proof size:
 - `NonMembershipUpdate` **Nullifier Update Function** checks a nullifier is not in a nullifier set given its root, then inserts the nullifier and validates the correctness of the associated merkle root update
 - `BatchUpdate` **Batch Update Function** inserts a set of compressed note commitments into the note tree and validates the corretness of the associated merkle root update
   Update - inserts a single leaf into the root tree and validates the corretness of the associated merkle root update
-- `ProcessDefiDeposit` **Processes Defi Deposit** ensures that if a given inner proof is a defi deposit proof, it has a valid bridge id that matches one of the input bridge ids to the rollup. Further, it also adds the `defi_interaction_nonce` in the encrypted claim note of a defi deposit proof.
+- `ProcessDefiDeposit` **Processes Defi Deposit** ensures that if a given inner proof is a defi deposit proof, it has a valid bridge call data that matches one of the input bridge call datas to the rollup. Further, it also adds the `defi_interaction_nonce` in the encrypted claim note of a defi deposit proof.
 - `ProcessClaim` **Process Claims** checks if the claim proof is using the correct defi root.
 
 ### Circuit Logic (Pseudocode)
@@ -93,7 +93,7 @@ The following inputs are private to reduce proof size:
    1. Validate `NonMembershipUpdate(`$\text{null\_root}_{2i + 1}$, $\text{null\_root}_{2i+2}$`, nullifier_2_i)`
    1. Validate `Membership(old_data_roots_root, data_roots_indices[i], data_roots_pths[i], data_tree_root_i)`
    1. If `pub_inputs.PROOF_ID = DEFI_DEPOSIT` then `ProcessDefiDeposit`:
-      - Check `pub_inputs.ASSET_ID` matches _only_ one (say `k`th) bridge id in `bridge_ids`
+      - Check `pub_inputs.ASSET_ID` matches _only_ one (say `k`th) bridge call data in `bridge_call_datas`
       - Update `defi_bridge_deposits[k] += pub_inputs.PUBLIC_OUTPUT`
       - Update `encrypted_claim_note += (defi_interaction_nonce * rollup_id + k) * G_j`, `k ⋹ 0, 1, 2, 3`
    1. Validate `ProcessClaim(pub_inputs, new_defi_root)`
@@ -137,7 +137,7 @@ The following inputs are private to reduce proof size:
     ❌ `merkle_root`
     ❌ `tx_fee`
     ❌ `asset_id`
-    ❌ `bridge_id`
+    ❌ `bridge_call_data`
     ❌ `defi_deposit_value`
     ❌ `defi_root`
     ❌ `backward_link`

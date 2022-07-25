@@ -1,6 +1,6 @@
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetValue } from '@aztec/barretenberg/asset';
-import { BridgeId, validateBridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeCallData, validateBridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { CoreSdkInterface } from '../core_sdk';
 import { ProofOutput } from '../proofs';
@@ -17,7 +17,7 @@ export class DefiController {
   constructor(
     public readonly userId: GrumpkinAddress,
     private readonly userSigner: Signer,
-    public readonly bridgeId: BridgeId,
+    public readonly bridgeCallData: BridgeCallData,
     public readonly depositValue: AssetValue,
     public readonly fee: AssetValue,
     private readonly core: CoreSdkInterface,
@@ -26,13 +26,13 @@ export class DefiController {
       throw new Error('Deposit value must be greater than 0.');
     }
 
-    if (depositValue.assetId !== bridgeId.inputAssetIdA) {
-      throw new Error(`Incorrect deposit asset. Expect ${bridgeId.inputAssetIdA}. Got ${depositValue.assetId}.`);
+    if (depositValue.assetId !== bridgeCallData.inputAssetIdA) {
+      throw new Error(`Incorrect deposit asset. Expect ${bridgeCallData.inputAssetIdA}. Got ${depositValue.assetId}.`);
     }
 
-    validateBridgeId(bridgeId);
+    validateBridgeCallData(bridgeCallData);
 
-    if (bridgeId.inputAssetIdB === fee.assetId) {
+    if (bridgeCallData.inputAssetIdB === fee.assetId) {
       throw new Error('Fee paying asset must be the first input asset.');
     }
   }
@@ -41,7 +41,7 @@ export class DefiController {
     const spendingPublicKey = this.userSigner.getPublicKey();
     const spendingKeyRequired = !spendingPublicKey.equals(this.userId);
     const { assetId, value } = this.depositValue;
-    const hasTwoAssets = this.bridgeId.numInputAssets === 2;
+    const hasTwoAssets = this.bridgeCallData.numInputAssets === 2;
     const requireFeePayingTx = !!this.fee.value && this.fee.assetId !== assetId;
     const privateInput = value + (!requireFeePayingTx ? this.fee.value : BigInt(0));
     const note1 = hasTwoAssets
@@ -57,7 +57,7 @@ export class DefiController {
     let requireJoinSplitTx = !!changeValue || (hasTwoAssets && notes.length > 1);
     let joinSplitTargetNote = requireJoinSplitTx ? 1 : 0;
     if (hasTwoAssets) {
-      const secondAssetId = this.bridgeId.inputAssetIdB!;
+      const secondAssetId = this.bridgeCallData.inputAssetIdB!;
       const excludePendingNotes = requireJoinSplitTx || notes.some(n => n.pending);
       const note2 = await this.core.pickNote(
         this.userId,
@@ -93,7 +93,7 @@ export class DefiController {
     if (!requireJoinSplitTx) {
       const proofInput = await this.core.createDefiProofInput(
         this.userId,
-        this.bridgeId,
+        this.bridgeCallData,
         value,
         notes,
         spendingPublicKey,
@@ -104,7 +104,7 @@ export class DefiController {
       // Create a join split tx to generate an output note with the exact value for the defi deposit plus fee.
       // When depositing two different input assets, this tx should pay for the fee if it's fee-paying asset.
       {
-        const changeNoteAssetId = joinSplitTargetNote === 2 ? this.bridgeId.inputAssetIdB! : assetId;
+        const changeNoteAssetId = joinSplitTargetNote === 2 ? this.bridgeCallData.inputAssetIdB! : assetId;
         const noteValue = joinSplitTargetNote === 2 ? value : privateInput;
         const proofInput = await this.core.createPaymentProofInput(
           this.userId,
@@ -136,7 +136,7 @@ export class DefiController {
         }
         const proofInput = await this.core.createDefiProofInput(
           this.userId,
-          this.bridgeId,
+          this.bridgeCallData,
           value,
           inputNotes,
           spendingPublicKey,

@@ -1,7 +1,7 @@
 import { EthAddress, GrumpkinAddress } from '../address';
 import { AssetValue } from '../asset';
 import { BlockSource } from '../block_source';
-import { BridgeId } from '../bridge_id';
+import { BridgeCallData } from '../bridge_call_data';
 import { TxId } from '../tx_id';
 import { RollupProviderStatus } from './rollup_provider_status';
 
@@ -120,7 +120,7 @@ export interface RollupProvider extends BlockSource {
   sendTxs(txs: Tx[]): Promise<TxId[]>;
   getStatus(): Promise<RollupProviderStatus>;
   getTxFees(assetId: number): Promise<AssetValue[][]>;
-  getDefiFees(bridgeId: BridgeId): Promise<AssetValue[]>;
+  getDefiFees(bridgeCallData: BridgeCallData): Promise<AssetValue[]>;
   getPendingTxs(): Promise<PendingTx[]>;
   getPendingNoteNullifiers(): Promise<Buffer[]>;
   getPendingDepositTxs(): Promise<DepositTx[]>;

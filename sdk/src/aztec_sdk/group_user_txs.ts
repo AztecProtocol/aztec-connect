@@ -1,5 +1,5 @@
 import { AssetValue } from '@aztec/barretenberg/asset';
-import { virtualAssetIdFlag } from '@aztec/barretenberg/bridge_id';
+import { virtualAssetIdFlag } from '@aztec/barretenberg/bridge_call_data';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { CoreAccountTx, CoreDefiTx, CorePaymentTx, CoreUserTx } from '../core_tx';
@@ -55,7 +55,7 @@ const toUserDefiTx = (tx: CoreDefiTx, fee: AssetValue) => {
   const {
     txId,
     userId,
-    bridgeId,
+    bridgeCallData,
     depositValue,
     created,
     settled,
@@ -71,8 +71,8 @@ const toUserDefiTx = (tx: CoreDefiTx, fee: AssetValue) => {
   return new UserDefiTx(
     txId,
     userId,
-    bridgeId,
-    { assetId: bridgeId.inputAssetIdA, value: depositValue },
+    bridgeCallData,
+    { assetId: bridgeCallData.inputAssetIdA, value: depositValue },
     fee,
     created,
     settled,
@@ -84,14 +84,18 @@ const toUserDefiTx = (tx: CoreDefiTx, fee: AssetValue) => {
       outputValueA:
         outputValueA !== undefined
           ? {
-              assetId: bridgeId.firstOutputVirtual ? interactionNonce! + virtualAssetIdFlag : bridgeId.outputAssetIdA,
+              assetId: bridgeCallData.firstOutputVirtual
+                ? interactionNonce! + virtualAssetIdFlag
+                : bridgeCallData.outputAssetIdA,
               value: outputValueA,
             }
           : undefined,
       outputValueB:
-        outputValueB !== undefined && bridgeId.outputAssetIdB !== undefined
+        outputValueB !== undefined && bridgeCallData.outputAssetIdB !== undefined
           ? {
-              assetId: bridgeId.secondOutputVirtual ? interactionNonce! + virtualAssetIdFlag : bridgeId.outputAssetIdB,
+              assetId: bridgeCallData.secondOutputVirtual
+                ? interactionNonce! + virtualAssetIdFlag
+                : bridgeCallData.outputAssetIdB,
               value: outputValueB,
             }
           : undefined,
@@ -106,7 +110,7 @@ const toUserDefiClaimTx = (
   {
     txId,
     userId,
-    bridgeId,
+    bridgeCallData,
     depositValue,
     interactionResult: { success, outputValueA, outputValueB, claimSettled, finalised },
   }: UserDefiTx,
@@ -115,7 +119,7 @@ const toUserDefiClaimTx = (
     claimTxId,
     txId,
     userId,
-    bridgeId,
+    bridgeCallData,
     depositValue,
     success!,
     outputValueA!,
@@ -155,8 +159,8 @@ const getFee = (tx: CoreUserTx) => {
   }
 
   if (tx.proofId === ProofId.DEFI_DEPOSIT) {
-    const { bridgeId, txFee } = tx;
-    return { assetId: bridgeId.inputAssetIdA, value: txFee };
+    const { bridgeCallData, txFee } = tx;
+    return { assetId: bridgeCallData.inputAssetIdA, value: txFee };
   }
 
   const {

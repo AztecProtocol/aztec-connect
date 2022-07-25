@@ -1,4 +1,4 @@
-import type { DefiSettlementTime, BridgeId } from '@aztec/sdk';
+import type { DefiSettlementTime, BridgeCallData } from '@aztec/sdk';
 import type { AmountFactory } from 'alt-model/assets/amount_factory';
 import type { DefiComposerPayload } from './defi_composer';
 import type { RemoteAsset } from 'alt-model/types';
@@ -21,7 +21,7 @@ interface DefiFormValidationInput {
   feeAmounts?: (Amount | undefined)[];
   balanceInFeePayingAsset?: bigint;
   transactionLimit?: bigint;
-  bridgeId?: BridgeId;
+  bridgeCallData?: BridgeCallData;
 }
 
 export interface DefiFormValidationResult {

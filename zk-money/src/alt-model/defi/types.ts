@@ -39,7 +39,7 @@ export type BridgeFlowAssets =
 export interface DefiRecipe {
   id: string;
   gradient?: string[];
-  addressId: number;
+  bridgeAddressId: number;
   address: EthAddress;
   flow: BridgeFlowAssets;
   openHandleAsset?: RemoteAsset;

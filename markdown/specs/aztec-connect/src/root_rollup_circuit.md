@@ -31,7 +31,7 @@ The first pubic input is a SHA256 hash (reduced modulo the BN254 group order) of
 1. `new_root_root`
 1. `old_defi_root`
 1. `new_defi_root`
-1. `bridge_ids` (size is `NUM_BRIDGE_CALLS_PER_BLOCK`)
+1. `bridge_call_datas` (size is `NUM_BRIDGE_CALLS_PER_BLOCK`)
 1. `defi_deposit_sums` (size is `NUM_BRIDGE_CALLS_PER_BLOCK`)
 1. `encrypted_defi_interaction_notes` (size is `NUM_BRIDGE_CALLS_PER_BLOCK`)
 1. `previous_defi_interaction_hash`
@@ -65,7 +65,7 @@ The `rollup_benficiary` is just added to the circuit to ensure the proof constru
 2. For $i=2,..,M$, check that `new_data_root`$_{i-1}$=`old_data_root`$_i$.
 3. Validate `Update(old_data_roots_root, new_data_roots_root, rollup_id, new_data_root_M)`
 4. Validate that the `new_defi_root` of each real inner rollup proof is equal to the input `new_defi_root` to the root rollup
-5. Validate that the `bridge_ids` in each real inner rollup proof match the input `bridge_ids` to the root rollup
+5. Validate that the `bridge_call_datas` in each real inner rollup proof match the input `bridge_call_datas` to the root rollup
 6. Accumulate defi deposits across inner rollup proofs
 7. Add the input `defi_interaction_notes` in the `defi_tree` and compute `previous_defi_interaction_hash := Hash(defi_interaction_notes)`
 8. Range constrain that `rollup_beneficiary` is an ethereum address,

@@ -1,5 +1,5 @@
 import createDebug from 'debug';
-import { BridgeId, DefiSettlementTime } from '@aztec/sdk';
+import { BridgeCallData, DefiSettlementTime } from '@aztec/sdk';
 import { useAmountFactory, useSdk } from 'alt-model/top_level_context';
 import { useMemo, useState } from 'react';
 import { useTrackedFieldChangeHandlers } from 'alt-model/form_fields_hooks';
@@ -33,11 +33,11 @@ function getInteractionAssets(recipe: DefiRecipe, mode: FlowDirection) {
   }
 }
 
-function useDefiFormBridgeId(recipe: DefiRecipe, { inA, outA }: BridgeInteractionAssets) {
+function useDefiFormBridgeCallData(recipe: DefiRecipe, { inA, outA }: BridgeInteractionAssets) {
   const auxData = useDefaultAuxDataOption(recipe.id);
   return useMemo(() => {
     if (auxData === undefined) return undefined;
-    return new BridgeId(recipe.addressId, inA.id, outA.id, undefined, undefined, Number(auxData));
+    return new BridgeCallData(recipe.bridgeAddressId, inA.id, outA.id, undefined, undefined, Number(auxData));
   }, [auxData, recipe, inA, outA]);
 }
 
@@ -57,8 +57,8 @@ export function useDefiForm(recipe: DefiRecipe, mode: FlowDirection) {
   const amountFactory = useAmountFactory();
   const interactionAssets = getInteractionAssets(recipe, mode);
   const depositAsset = interactionAssets.inA;
-  const bridgeId = useDefiFormBridgeId(recipe, interactionAssets);
-  const feeAmounts = useDefiFeeAmounts(bridgeId);
+  const bridgeCallData = useDefiFormBridgeCallData(recipe, interactionAssets);
+  const feeAmounts = useDefiFeeAmounts(bridgeCallData);
   const feeAmount = feeAmounts?.[fields.speed];
   const balanceInTargetAsset = useMaxSpendableValue(depositAsset.id);
   const balanceInFeePayingAsset = useMaxSpendableValue(feeAmount?.id);
@@ -75,7 +75,7 @@ export function useDefiForm(recipe: DefiRecipe, mode: FlowDirection) {
     balanceInTargetAsset,
     balanceInFeePayingAsset,
     transactionLimit,
-    bridgeId,
+    bridgeCallData,
   });
 
   const feedback = getDefiFormFeedback(validationResult, touchedFields, attemptedLock);
@@ -84,8 +84,8 @@ export function useDefiForm(recipe: DefiRecipe, mode: FlowDirection) {
   const lockedComposerPayload = lockedComposer?.payload;
 
   const rpStatus = useRollupProviderStatus();
-  const bridgeIdNum = bridgeId?.toBigInt();
-  const bridgeStatus = rpStatus?.bridgeStatus.find(x => x.bridgeId === bridgeIdNum);
+  const bridgeCallDataNum = bridgeCallData?.toBigInt();
+  const bridgeStatus = rpStatus?.bridgeStatus.find(x => x.bridgeCallData === bridgeCallDataNum);
   const { instantSettlementTime, nextSettlementTime, batchSettlementTime } = estimateDefiSettlementTimes(
     rpStatus,
     bridgeStatus,
@@ -101,13 +101,13 @@ export function useDefiForm(recipe: DefiRecipe, mode: FlowDirection) {
       debug('Attempted to recreate DefiComposer');
       return;
     }
-    if (!validationResult.validPayload || !sdk || !awaitCorrectProvider || !userId || !bridgeId) {
+    if (!validationResult.validPayload || !sdk || !awaitCorrectProvider || !userId || !bridgeCallData) {
       debug('Attempted to create DefiComposer with incomplete dependencies', {
         validationResult,
         sdk,
         awaitCorrectProvider,
         userId,
-        bridgeId,
+        bridgeCallData,
       });
       return;
     }
@@ -115,7 +115,7 @@ export function useDefiForm(recipe: DefiRecipe, mode: FlowDirection) {
       sdk,
       awaitCorrectProvider,
       userId,
-      bridgeId,
+      bridgeCallData,
     });
     setLockedComposer(composer);
   };

@@ -26,7 +26,7 @@ The inputs for the join-split circuit are all elements of the field $\mathbb{F}_
 1. `old_data_tree_root`
 1. `tx_fee`
 1. `tx_fee_asset_id`
-1. `bridge_id`
+1. `bridge_call_data`
 1. `defi_deposit_value`
 1. `defi_root` // Note: this will not be used by the circuit, but is included so that the number of public inputs is uniform across base-level circuits.
 1. `backward_link`
@@ -87,7 +87,7 @@ The inputs for the join-split circuit are all elements of the field $\mathbb{F}_
 
   partial_claim_note_data: {
     deposit_value,
-    bridge_id_data: {
+    bridge_call_data_local: {
       bridge_address_id,
       input_asset_id_a,
       input_asset_id_b,
@@ -250,7 +250,7 @@ In the Pseudocode to follow, we use the following function names. See [notes & n
 
     const partial_claim_note = {
       deposit_value: partial_claim_note_data.deposit_value,
-      bridge_id: partial_claim_note_data.bridge_id_data.to_field(),
+      bridge_call_data: partial_claim_note_data.bridge_call_data_local.to_field(),
       partial_value_note_commitment,
       input_nullifier: partial_claim_note_data.input_nullifier,
     }
@@ -262,20 +262,20 @@ In the Pseudocode to follow, we use the following function names. See [notes & n
 
     require(defi_deposit_value > 0);
 
-    const { bridge_id_data } = partial_claim_note_data;
-    const bridge_id = bridge_id_data.to_field();
+    const { bridge_call_data_local } = partial_claim_note_data;
+    const bridge_call_data = bridge_call_data_local.to_field();
 
-    require(bridge_id_data.input_asset_id_a == input_note_1.asset_id);
+    require(bridge_call_data_local.input_asset_id_a == input_note_1.asset_id);
 
     if (input_note_2_in_use && (input_note_1.asset_id != input_note_2.asset_id)) {
       require(defi_deposit_value == input_note_2.value);
-      require(bridge_id_data.config.second_input_in_use);
+      require(bridge_call_data_local.config.second_input_in_use);
       input_note_2_value = 0; // set to 0 for the 'conservation of value' equations below.
     }
 
-    if (bridge_id_data.config.second_input_in_use) {
+    if (bridge_call_data_local.config.second_input_in_use) {
       require(input_note_2_in_use);
-      require(input_note_2.asset_id == bridge_id_data.input_asset_id_b);
+      require(input_note_2.asset_id == bridge_call_data_local.input_asset_id_b);
     }
 
     output_note_1_value = 0; // set to 0, since the partial claim note replaces it.
@@ -371,7 +371,7 @@ In the Pseudocode to follow, we use the following function names. See [notes & n
   old_data_tree_root,
   tx_fee,
   asset_id,
-  bridge_id,
+  bridge_call_data,
   defi_deposit_value,
   defi_root,
   backward_link,

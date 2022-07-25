@@ -7,14 +7,14 @@ import { useAsset } from '../context';
 
 export function DefiDepositDetails({ tx }: { tx: Tx }) {
   const onchainDefiDepositData = OffchainDefiDepositData.fromBuffer(Buffer.from(tx.offchainTxData, 'hex'));
-  const { bridgeId, depositValue } = onchainDefiDepositData;
-  const asset = useAsset(bridgeId.inputAssetIdA);
+  const { bridgeCallData, depositValue } = onchainDefiDepositData;
+  const asset = useAsset(bridgeCallData.inputAssetIdA);
   const assetIcon = getAssetIcon(asset);
-  const protocolName = getBridgeProtocolName(bridgeId.addressId);
+  const protocolName = getBridgeProtocolName(bridgeCallData.bridgeAddressId);
   return (
     <>
       <InfoRow title="BRIDGE ADDRESS">
-        <Value text={bridgeId.addressId.toString()} monospace />
+        <Value text={bridgeCallData.bridgeAddressId.toString()} monospace />
       </InfoRow>
       {protocolName && (
         <InfoRow title="PROTOCOL">

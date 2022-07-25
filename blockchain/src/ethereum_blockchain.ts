@@ -10,7 +10,7 @@ import {
 } from '@aztec/barretenberg/blockchain';
 import { Block } from '@aztec/barretenberg/block_source';
 import { createLogger } from '@aztec/barretenberg/log';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { InitHelpers } from '@aztec/barretenberg/environment';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { Timer } from '@aztec/barretenberg/timer';
@@ -362,11 +362,11 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     return await this.contracts.getFeeData();
   }
 
-  public getBridgeGas(bridgeId: bigint) {
-    const { addressId } = BridgeId.fromBigInt(bridgeId);
-    const { gasLimit } = this.status.bridges.find(bridge => bridge.id == addressId) || {};
+  public getBridgeGas(bridgeCallData: bigint) {
+    const { bridgeAddressId } = BridgeCallData.fromBigInt(bridgeCallData);
+    const { gasLimit } = this.status.bridges.find(bridge => bridge.id == bridgeAddressId) || {};
     if (!gasLimit) {
-      throw new Error(`Failed to retrieve bridge cost for bridge ${bridgeId.toString()}`);
+      throw new Error(`Failed to retrieve bridge cost for bridge ${bridgeCallData.toString()}`);
     }
     return gasLimit;
   }

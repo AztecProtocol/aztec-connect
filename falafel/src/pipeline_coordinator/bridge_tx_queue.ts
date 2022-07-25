@@ -10,13 +10,13 @@ export interface RollupTx {
   excessGas: number;
   fee: AssetValue;
   tx: TxDao;
-  bridgeId?: bigint;
+  bridgeCallData?: bigint;
 }
 
 export interface RollupResources {
   gasUsed: number;
   callDataUsed: number;
-  bridgeIds: bigint[];
+  bridgeCallDatas: bigint[];
   assetIds: Set<number>;
 }
 
@@ -28,7 +28,7 @@ export function createRollupTx(rawTx: TxDao, proof: ProofData): RollupTx {
       assetId: proof.feeAssetId,
       value: toBigIntBE(proof.txFee),
     },
-    bridgeId: undefined,
+    bridgeCallData: undefined,
   };
 }
 
@@ -40,7 +40,7 @@ export function createDefiRollupTx(rawTx: TxDao, proof: DefiDepositProofData): R
       assetId: proof.txFeeAssetId,
       value: proof.txFee,
     },
-    bridgeId: proof.bridgeId.toBigInt(),
+    bridgeCallData: proof.bridgeCallData.toBigInt(),
   };
 }
 
@@ -56,7 +56,7 @@ export class BridgeTxQueue {
   private txQueue: RollupTx[] = [];
 
   constructor(
-    private readonly bridgeId: bigint,
+    private readonly bridgeCallData: bigint,
     private readonly feeResolver: TxFeeResolver,
     private readonly bridgeTimeout?: RollupTimeout,
   ) {}
@@ -86,7 +86,7 @@ export class BridgeTxQueue {
     // this figure holds the total gas used by the selected txs, including the verification gas, the defi deposit gas and the bridge interaction gas
     // start off with the bridge interaction gas and add on the gas for each tx
     // we need to get the bridge gas usage from the contract as this is not overridden by subsidy
-    let totalGasUsedByTxs = this.feeResolver.getFullBridgeGasFromContract(this.bridgeId);
+    let totalGasUsedByTxs = this.feeResolver.getFullBridgeGasFromContract(this.bridgeCallData);
     // this figure holds the total calldata used by the selected txs
     let totalCallDataUsedByTxs = 0;
     for (let i = 0; i < this.txQueue.length && txsToConsider.length < maxRemainingTransactions; i++) {
@@ -110,12 +110,12 @@ export class BridgeTxQueue {
       // here we accumulate the amount of gas on the tx that is attributable to the bridge
       // i.e. we are not counting the gas that would be used by the verifier etc.
       // all we are trying to test here is 'do we have enough gas to run the bridge interaction'
-      gasFromTxs += this.feeResolver.getSingleBridgeTxGas(this.bridgeId) + tx.excessGas;
+      gasFromTxs += this.feeResolver.getSingleBridgeTxGas(this.bridgeCallData) + tx.excessGas;
       totalGasUsedByTxs = newGasUsedValue;
       totalCallDataUsedByTxs = newCallDataUsed;
     }
     // this full bridge gas is used to determine profitability so we need the value that includes subsidy
-    const fullBridgeGas = this.feeResolver.getFullBridgeGas(this.bridgeId);
+    const fullBridgeGas = this.feeResolver.getFullBridgeGas(this.bridgeCallData);
     if (gasFromTxs >= fullBridgeGas) {
       this.txQueue.splice(0, txsToConsider.length);
       return {
@@ -124,7 +124,7 @@ export class BridgeTxQueue {
           gasUsed: totalGasUsedByTxs,
           callDataUsed: totalCallDataUsedByTxs,
           assetIds: newAssets,
-          bridgeIds: [this.bridgeId],
+          bridgeCallDatas: [this.bridgeCallData],
         },
       } as BridgeQueueResult;
     }
@@ -134,7 +134,7 @@ export class BridgeTxQueue {
         gasUsed: 0,
         callDataUsed: 0,
         assetIds: new Set<number>(),
-        bridgeIds: [],
+        bridgeCallDatas: [],
       },
     } as BridgeQueueResult;
   }

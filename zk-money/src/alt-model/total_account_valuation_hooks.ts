@@ -20,7 +20,7 @@ function useUnfinalisedAsyncDefiAsyncPresentValues() {
         tx.interactionResult.state === UserDefiInteractionResultState.AWAITING_FINALISATION &&
         tx.interactionResult.interactionNonce !== undefined
       ) {
-        const recipe = recipes.find(recipeMatcher(tx.bridgeId));
+        const recipe = recipes.find(recipeMatcher(tx.bridgeCallData));
         if (recipe) {
           const poller = interactionPresentValuePollerCache.get([
             recipe.id,

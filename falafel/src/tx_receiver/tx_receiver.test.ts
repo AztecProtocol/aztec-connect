@@ -2,7 +2,7 @@ import { AliasHash } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { Blockchain } from '@aztec/barretenberg/blockchain';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { AccountVerifier, JoinSplitVerifier, ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
 import { randomBytes } from '@aztec/barretenberg/crypto';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
@@ -47,7 +47,7 @@ describe('tx receiver', () => {
     publicAssetId = 0,
     txFee = 1n,
     txFeeAssetId = 0,
-    bridgeId = BridgeId.ZERO,
+    bridgeCallData = BridgeCallData.ZERO,
     defiDepositValue = 0n,
     backwardLink = Buffer.alloc(32),
     allowChain = 0,
@@ -66,7 +66,7 @@ describe('tx receiver', () => {
         randomBytes(32), // noteTreeRoot
         toBufferBE(txFee, 32),
         numToUInt32BE(txFeeAssetId, 32),
-        bridgeId.toBuffer(),
+        bridgeCallData.toBuffer(),
         toBufferBE(defiDepositValue, 32),
         randomBytes(32), // defiRoot
         backwardLink,
@@ -87,7 +87,7 @@ describe('tx receiver', () => {
   };
 
   const mockDefiDepositTx = ({
-    bridgeId = new BridgeId(0, 0, 1),
+    bridgeCallData = new BridgeCallData(0, 0, 1),
     defiDepositValue = 1n,
     txFee = 1n,
     allowChain = 0,
@@ -96,7 +96,7 @@ describe('tx receiver', () => {
     const partialStateSecretEphPubKey = GrumpkinAddress.random();
     const viewingKey = ViewingKey.random();
     const offchainTxData = new OffchainDefiDepositData(
-      bridgeId,
+      bridgeCallData,
       partialState,
       partialStateSecretEphPubKey,
       defiDepositValue,
@@ -106,7 +106,7 @@ describe('tx receiver', () => {
     return mockTx({
       proofId: ProofId.DEFI_DEPOSIT,
       offchainTxData: offchainTxData.toBuffer(),
-      bridgeId,
+      bridgeCallData,
       defiDepositValue,
       txFee,
       allowChain,
@@ -393,18 +393,18 @@ describe('tx receiver', () => {
     });
 
     it('reject a defi deposit tx with identical input assets', async () => {
-      const bridgeId = new BridgeId(0, 1, 2, 1);
-      const txs = [mockDefiDepositTx({ bridgeId })];
+      const bridgeCallData = new BridgeCallData(0, 1, 2, 1);
+      const txs = [mockDefiDepositTx({ bridgeCallData })];
 
-      await expect(() => txReceiver.receiveTxs(txs)).rejects.toThrow('Invalid bridge id');
+      await expect(() => txReceiver.receiveTxs(txs)).rejects.toThrow('Invalid bridge call data');
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
     });
 
     it('reject a defi deposit tx with identical output assets', async () => {
-      const bridgeId = new BridgeId(0, 1, 2, 3, 2);
-      const txs = [mockDefiDepositTx({ bridgeId })];
+      const bridgeCallData = new BridgeCallData(0, 1, 2, 3, 2);
+      const txs = [mockDefiDepositTx({ bridgeCallData })];
 
-      await expect(() => txReceiver.receiveTxs(txs)).rejects.toThrow('Invalid bridge id');
+      await expect(() => txReceiver.receiveTxs(txs)).rejects.toThrow('Invalid bridge call data');
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
     });
 
@@ -430,11 +430,11 @@ describe('tx receiver', () => {
       const partialState = randomBytes(32);
       const partialStateSecretEphPubKey = GrumpkinAddress.random();
       const viewingKey = ViewingKey.random();
-      const bridgeId = new BridgeId(0, 1, 2);
+      const bridgeCallData = new BridgeCallData(0, 1, 2);
       const defiDepositValue = 1n;
       const txFee = 2n;
       const offchainTxData = new OffchainDefiDepositData(
-        bridgeId,
+        bridgeCallData,
         partialState,
         partialStateSecretEphPubKey,
         defiDepositValue,
@@ -446,7 +446,7 @@ describe('tx receiver', () => {
         const tx = mockTx({
           proofId: ProofId.DEFI_DEPOSIT,
           offchainTxData: offchainTxData.toBuffer(),
-          bridgeId: new BridgeId(0, 1, 0), // <--
+          bridgeCallData: new BridgeCallData(0, 1, 0), // <--
           defiDepositValue,
           txFee,
         });
@@ -457,7 +457,7 @@ describe('tx receiver', () => {
         const tx = mockTx({
           proofId: ProofId.DEFI_DEPOSIT,
           offchainTxData: offchainTxData.toBuffer(),
-          bridgeId,
+          bridgeCallData,
           defiDepositValue: defiDepositValue + 1n, // <--
           txFee,
         });
@@ -468,7 +468,7 @@ describe('tx receiver', () => {
         const tx = mockTx({
           proofId: ProofId.DEFI_DEPOSIT,
           offchainTxData: offchainTxData.toBuffer(),
-          bridgeId,
+          bridgeCallData,
           defiDepositValue,
           txFee: txFee + 1n, // <--
         });

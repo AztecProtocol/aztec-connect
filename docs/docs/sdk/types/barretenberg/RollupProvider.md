@@ -3,7 +3,7 @@ interface RollupProvider extends BlockSource {
     sendTxs(txs: Tx[]): Promise<TxId[]>;
     getStatus(): Promise<RollupProviderStatus>;
     getTxFees(assetId: number): Promise<AssetValue[][]>;
-    getDefiFees(bridgeId: BridgeId): Promise<AssetValue[]>;
+    getDefiFees(bridgeCallData: BridgeCallData): Promise<AssetValue[]>;
     getPendingTxs(): Promise<PendingTx[]>;
     getPendingNoteNullifiers(): Promise<Buffer[]>;
     getPendingDepositTxs(): Promise<DepositTx[]>;

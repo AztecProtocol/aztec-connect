@@ -8,7 +8,7 @@ import { setupTestRollupProcessor } from './fixtures/setup_upgradeable_test_roll
 import { RollupProcessor } from './rollup_processor';
 import { EthAddress } from '@aztec/barretenberg/address';
 import { Asset, TxHash } from '@aztec/barretenberg/blockchain';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { computeInteractionHashes, DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { WorldStateConstants } from '@aztec/barretenberg/world_state';
@@ -19,10 +19,10 @@ import { Web3Signer } from '../../signer';
 
 const parseInteractionEventResultFromLog = (log: LogDescription) => {
   const {
-    args: { bridgeId, nonce, totalInputValue, totalOutputValueA, totalOutputValueB, result, errorReason },
+    args: { encodedBridgeCallData, nonce, totalInputValue, totalOutputValueA, totalOutputValueB, result, errorReason },
   } = log;
   return new DefiInteractionEvent(
-    BridgeId.fromBigInt(BigInt(bridgeId)),
+    BridgeCallData.fromBigInt(BigInt(encodedBridgeCallData)),
     nonce.toNumber(),
     BigInt(totalInputValue),
     BigInt(totalOutputValueA),
@@ -128,7 +128,7 @@ describe('rollup_processor: reentry', () => {
 
   it('should be able to reenter process async defi interaction from rollup', async () => {
     // When using async. Recall that events and storage updates might not be the same order.
-    const bridgeId = new BridgeId(bridgeAddressId, 0, 0);
+    const bridgeCallData = new BridgeCallData(bridgeAddressId, 0, 0);
 
     // Add no operation to stack, calldata just used to have some bytes
     await reentryBridge.addAction(
@@ -142,7 +142,7 @@ describe('rollup_processor: reentry', () => {
     );
 
     const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
-      defiInteractionData: [new DefiInteractionData(bridgeId, amount)],
+      defiInteractionData: [new DefiInteractionData(bridgeCallData, amount)],
     });
 
     const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
@@ -164,15 +164,15 @@ describe('rollup_processor: reentry', () => {
 
       const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
         rollupId: 1,
-        defiInteractionData: [new DefiInteractionData(bridgeId, amount)],
+        defiInteractionData: [new DefiInteractionData(bridgeCallData, amount)],
       });
 
       const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
       const txHash = await rollupProcessor.sendTx(tx);
 
       const interactions = [
-        new DefiInteractionEvent(bridgeId, 0, amount, amount, 0n, true, Buffer.alloc(0)),
-        new DefiInteractionEvent(bridgeId, 32, amount, amount, 0n, true, Buffer.alloc(0)),
+        new DefiInteractionEvent(bridgeCallData, 0, amount, amount, 0n, true, Buffer.alloc(0)),
+        new DefiInteractionEvent(bridgeCallData, 32, amount, amount, 0n, true, Buffer.alloc(0)),
       ];
       const interactionsStorage = [interactions[1], interactions[0]];
       await expectResult(interactions, interactionsStorage, txHash);
@@ -181,7 +181,7 @@ describe('rollup_processor: reentry', () => {
 
   it('should be able to reenter process async defi interaction from async defi interaction inside rollup', async () => {
     // When using async. Recall that events and storage updates might not be the same order.
-    const bridgeId = new BridgeId(bridgeAddressId, 0, 0);
+    const bridgeCallData = new BridgeCallData(bridgeAddressId, 0, 0);
 
     // Add no operation to stack, calldata just used to have some bytes
     await reentryBridge.addAction(0, true, true, true, '0x', amount, 0);
@@ -196,7 +196,10 @@ describe('rollup_processor: reentry', () => {
     );
 
     const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
-      defiInteractionData: [new DefiInteractionData(bridgeId, amount), new DefiInteractionData(bridgeId, amount)],
+      defiInteractionData: [
+        new DefiInteractionData(bridgeCallData, amount),
+        new DefiInteractionData(bridgeCallData, amount),
+      ],
     });
 
     const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
@@ -218,16 +221,16 @@ describe('rollup_processor: reentry', () => {
 
       const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
         rollupId: 1,
-        defiInteractionData: [new DefiInteractionData(bridgeId, amount)],
+        defiInteractionData: [new DefiInteractionData(bridgeCallData, amount)],
       });
 
       const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
       const txHash = await rollupProcessor.sendTx(tx);
 
       const interactions = [
-        new DefiInteractionEvent(bridgeId, 0, amount, amount, 0n, true, Buffer.alloc(0)),
-        new DefiInteractionEvent(bridgeId, 1, amount, amount, 0n, true, Buffer.alloc(0)),
-        new DefiInteractionEvent(bridgeId, 32, amount, amount, 0n, true, Buffer.alloc(0)),
+        new DefiInteractionEvent(bridgeCallData, 0, amount, amount, 0n, true, Buffer.alloc(0)),
+        new DefiInteractionEvent(bridgeCallData, 1, amount, amount, 0n, true, Buffer.alloc(0)),
+        new DefiInteractionEvent(bridgeCallData, 32, amount, amount, 0n, true, Buffer.alloc(0)),
       ];
       const interactionsStorage = [interactions[2], interactions[0], interactions[1]];
       await expectResult(interactions, interactionsStorage, txHash);
@@ -236,7 +239,7 @@ describe('rollup_processor: reentry', () => {
 
   it('should revert when reenter processRollup from async defi interaction inside rollup', async () => {
     // When using async. Recall that events and storage updates might not be the same order.
-    const bridgeId = new BridgeId(bridgeAddressId, 0, 0);
+    const bridgeCallData = new BridgeCallData(bridgeAddressId, 0, 0);
 
     // Add processRollup action inside an async operation
     await reentryBridge.addAction(
@@ -250,7 +253,7 @@ describe('rollup_processor: reentry', () => {
     );
 
     const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
-      defiInteractionData: [new DefiInteractionData(bridgeId, amount)],
+      defiInteractionData: [new DefiInteractionData(bridgeCallData, amount)],
     });
 
     const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
@@ -271,7 +274,7 @@ describe('rollup_processor: reentry', () => {
 
       const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
         rollupId: 1,
-        defiInteractionData: [new DefiInteractionData(bridgeId, amount)],
+        defiInteractionData: [new DefiInteractionData(bridgeCallData, amount)],
       });
 
       const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
@@ -279,7 +282,15 @@ describe('rollup_processor: reentry', () => {
 
       // Notice, there will never be an event for the "inner" async, because it will fail before emitting the event.
       const interactions = [
-        new DefiInteractionEvent(bridgeId, 32, amount, 0n, 0n, false, formatCustomErrorMsg('LOCKED_NO_REENTER()')),
+        new DefiInteractionEvent(
+          bridgeCallData,
+          32,
+          amount,
+          0n,
+          0n,
+          false,
+          formatCustomErrorMsg('LOCKED_NO_REENTER()'),
+        ),
       ];
       const interactionsStorage = interactions;
       await expectResult(interactions, interactionsStorage, txHash);
@@ -301,16 +312,16 @@ describe('rollup_processor: reentry', () => {
     // Add action to stack
     await reentryBridge.addAction(0, false, false, false, calldata, amount, 0);
 
-    const bridgeId = new BridgeId(bridgeAddressId, 0, 0);
+    const bridgeCallData = new BridgeCallData(bridgeAddressId, 0, 0);
 
     const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
-      defiInteractionData: [new DefiInteractionData(bridgeId, amount)],
+      defiInteractionData: [new DefiInteractionData(bridgeCallData, amount)],
     });
 
     const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
     const txHash = await rollupProcessor.sendTx(tx);
     const interactions = [
-      new DefiInteractionEvent(bridgeId, 0, amount, 0n, 0n, false, formatCustomErrorMsg('LOCKED_NO_REENTER()')),
+      new DefiInteractionEvent(bridgeCallData, 0, amount, 0n, 0n, false, formatCustomErrorMsg('LOCKED_NO_REENTER()')),
     ];
     await expectResult(interactions, interactions, txHash);
   });
@@ -351,16 +362,16 @@ describe('rollup_processor: reentry', () => {
 
     await reentryBridge.addAction(0, false, false, false, calldata, amount, 0);
 
-    const bridgeId = new BridgeId(bridgeAddressId, 0, 0);
+    const bridgeCallData = new BridgeCallData(bridgeAddressId, 0, 0);
 
     const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
-      defiInteractionData: [new DefiInteractionData(bridgeId, amount)],
+      defiInteractionData: [new DefiInteractionData(bridgeCallData, amount)],
     });
 
     const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
     const txHash = await rollupProcessor.sendTx(tx);
     const interactions = [
-      new DefiInteractionEvent(bridgeId, 0, amount, 0n, 0n, false, formatCustomErrorMsg('LOCKED_NO_REENTER()')),
+      new DefiInteractionEvent(bridgeCallData, 0, amount, 0n, 0n, false, formatCustomErrorMsg('LOCKED_NO_REENTER()')),
     ];
     await expectResult(interactions, interactions, txHash);
 
@@ -405,16 +416,16 @@ describe('rollup_processor: reentry', () => {
 
     await reentryBridge.addAction(0, false, false, false, calldata, amount, 0);
 
-    const bridgeId = new BridgeId(bridgeAddressId, 0, 0);
+    const bridgeCallData = new BridgeCallData(bridgeAddressId, 0, 0);
 
     const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
-      defiInteractionData: [new DefiInteractionData(bridgeId, amount)],
+      defiInteractionData: [new DefiInteractionData(bridgeCallData, amount)],
     });
 
     const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
     const txHash = await rollupProcessor.sendTx(tx);
     const interactions = [
-      new DefiInteractionEvent(bridgeId, 0, amount, 0n, 0n, false, formatCustomErrorMsg('LOCKED_NO_REENTER()')),
+      new DefiInteractionEvent(bridgeCallData, 0, amount, 0n, 0n, false, formatCustomErrorMsg('LOCKED_NO_REENTER()')),
     ];
     await expectResult(interactions, interactions, txHash);
 
@@ -435,16 +446,16 @@ describe('rollup_processor: reentry', () => {
     // Add action to stack
     await reentryBridge.addAction(0, false, false, false, calldata, amount, 0);
 
-    const bridgeId = new BridgeId(bridgeAddressId, 0, 0);
+    const bridgeCallData = new BridgeCallData(bridgeAddressId, 0, 0);
 
     const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
-      defiInteractionData: [new DefiInteractionData(bridgeId, amount)],
+      defiInteractionData: [new DefiInteractionData(bridgeCallData, amount)],
     });
 
     const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
     const txHash = await rollupProcessor.sendTx(tx);
     const interactions = [
-      new DefiInteractionEvent(bridgeId, 0, amount, 0n, 0n, false, formatCustomErrorMsg('LOCKED_NO_REENTER()')),
+      new DefiInteractionEvent(bridgeCallData, 0, amount, 0n, 0n, false, formatCustomErrorMsg('LOCKED_NO_REENTER()')),
     ];
     await expectResult(interactions, interactions, txHash);
   });
@@ -467,16 +478,16 @@ describe('rollup_processor: reentry', () => {
       0,
     );
 
-    const bridgeId = new BridgeId(bridgeAddressId, 0, 0);
+    const bridgeCallData = new BridgeCallData(bridgeAddressId, 0, 0);
 
     const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
-      defiInteractionData: [new DefiInteractionData(bridgeId, amount)],
+      defiInteractionData: [new DefiInteractionData(bridgeCallData, amount)],
     });
 
     const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
     const txHash = await rollupProcessor.sendTx(tx);
     const interactions = [
-      new DefiInteractionEvent(bridgeId, 0, amount, 0n, 0n, false, formatCustomErrorMsg('LOCKED_NO_REENTER()')),
+      new DefiInteractionEvent(bridgeCallData, 0, amount, 0n, 0n, false, formatCustomErrorMsg('LOCKED_NO_REENTER()')),
     ];
     await expectResult(interactions, interactions, txHash);
   });
@@ -492,16 +503,16 @@ describe('rollup_processor: reentry', () => {
       0,
     );
 
-    const bridgeId = new BridgeId(bridgeAddressId, 0, 0);
+    const bridgeCallData = new BridgeCallData(bridgeAddressId, 0, 0);
 
     const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
-      defiInteractionData: [new DefiInteractionData(bridgeId, amount)],
+      defiInteractionData: [new DefiInteractionData(bridgeCallData, amount)],
     });
 
     const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
     const txHash = await rollupProcessor.sendTx(tx);
     const interactions = [
-      new DefiInteractionEvent(bridgeId, 0, amount, 0n, 0n, false, formatCustomErrorMsg('LOCKED_NO_REENTER()')),
+      new DefiInteractionEvent(bridgeCallData, 0, amount, 0n, 0n, false, formatCustomErrorMsg('LOCKED_NO_REENTER()')),
     ];
     await expectResult(interactions, interactions, txHash);
   });
@@ -521,10 +532,10 @@ describe('rollup_processor: reentry', () => {
     // Add action to stack
     await reentryBridge.addAction(0, true, true, false, calldata, amount, 0);
 
-    const bridgeId = new BridgeId(bridgeAddressId, 0, 0);
+    const bridgeCallData = new BridgeCallData(bridgeAddressId, 0, 0);
 
     const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
-      defiInteractionData: [new DefiInteractionData(bridgeId, amount)],
+      defiInteractionData: [new DefiInteractionData(bridgeCallData, amount)],
     });
 
     const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
@@ -571,10 +582,10 @@ describe('rollup_processor: reentry', () => {
 
     await reentryBridge.addAction(0, true, true, false, calldata, amount, 0);
 
-    const bridgeId = new BridgeId(bridgeAddressId, 0, 0);
+    const bridgeCallData = new BridgeCallData(bridgeAddressId, 0, 0);
 
     const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
-      defiInteractionData: [new DefiInteractionData(bridgeId, amount)],
+      defiInteractionData: [new DefiInteractionData(bridgeCallData, amount)],
     });
 
     const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
@@ -626,10 +637,10 @@ describe('rollup_processor: reentry', () => {
 
     await reentryBridge.addAction(0, true, true, false, calldata, amount, 0);
 
-    const bridgeId = new BridgeId(bridgeAddressId, 0, 0);
+    const bridgeCallData = new BridgeCallData(bridgeAddressId, 0, 0);
 
     const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
-      defiInteractionData: [new DefiInteractionData(bridgeId, amount)],
+      defiInteractionData: [new DefiInteractionData(bridgeCallData, amount)],
     });
 
     const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
@@ -656,10 +667,10 @@ describe('rollup_processor: reentry', () => {
     // Add action to stack
     await reentryBridge.addAction(0, true, true, false, calldata, amount, 0);
 
-    const bridgeId = new BridgeId(bridgeAddressId, 0, 0);
+    const bridgeCallData = new BridgeCallData(bridgeAddressId, 0, 0);
 
     const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
-      defiInteractionData: [new DefiInteractionData(bridgeId, amount)],
+      defiInteractionData: [new DefiInteractionData(bridgeCallData, amount)],
     });
 
     const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
@@ -683,10 +694,10 @@ describe('rollup_processor: reentry', () => {
     // Add action to stack
     await reentryBridge.addAction(0, true, true, false, calldata, amount, 0);
 
-    const bridgeId = new BridgeId(bridgeAddressId, 0, 0);
+    const bridgeCallData = new BridgeCallData(bridgeAddressId, 0, 0);
 
     const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
-      defiInteractionData: [new DefiInteractionData(bridgeId, amount)],
+      defiInteractionData: [new DefiInteractionData(bridgeCallData, amount)],
     });
 
     const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
@@ -708,10 +719,10 @@ describe('rollup_processor: reentry', () => {
       0,
     );
 
-    const bridgeId = new BridgeId(bridgeAddressId, 0, 0);
+    const bridgeCallData = new BridgeCallData(bridgeAddressId, 0, 0);
 
     const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
-      defiInteractionData: [new DefiInteractionData(bridgeId, amount)],
+      defiInteractionData: [new DefiInteractionData(bridgeCallData, amount)],
     });
 
     const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
@@ -740,10 +751,10 @@ describe('rollup_processor: reentry', () => {
     expect(await rollupProcessor.setSupportedBridge(EthAddress.fromString(asyncReenter.address), 5000000));
     const bridgeAddressId = (await rollupProcessor.getSupportedBridges()).length;
 
-    const bridgeId = new BridgeId(bridgeAddressId, 0, 0);
+    const bridgeCallData = new BridgeCallData(bridgeAddressId, 0, 0);
 
     const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
-      defiInteractionData: [new DefiInteractionData(bridgeId, amount)],
+      defiInteractionData: [new DefiInteractionData(bridgeCallData, amount)],
     });
 
     const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
@@ -753,7 +764,7 @@ describe('rollup_processor: reentry', () => {
 
     await asyncReenter.setValues(0, 1000);
 
-    await expect(rollupProcessor.processAsyncDefiInteraction(0)).rejects.toThrow('INVALID_BRIDGE_ID()');
+    await expect(rollupProcessor.processAsyncDefiInteraction(0)).rejects.toThrow('INVALID_BRIDGE_CALL_DATA()');
   });
 
   it('failing async will revert and not "spend" the interactionNonce', async () => {
@@ -765,10 +776,10 @@ describe('rollup_processor: reentry', () => {
     expect(await rollupProcessor.setSupportedBridge(EthAddress.fromString(failingBridge.address), 1000000));
     const bridgeAddressId = (await rollupProcessor.getSupportedBridges()).length;
 
-    const bridgeId = new BridgeId(bridgeAddressId, 0, 0);
+    const bridgeCallData = new BridgeCallData(bridgeAddressId, 0, 0);
 
     const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
-      defiInteractionData: [new DefiInteractionData(bridgeId, amount)],
+      defiInteractionData: [new DefiInteractionData(bridgeCallData, amount)],
     });
 
     const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
@@ -776,19 +787,23 @@ describe('rollup_processor: reentry', () => {
     const interactions: DefiInteractionEvent[] = [];
     await expectResult(interactions, interactions, txHash);
 
-    expect((await rollupProcessor.contract.pendingDefiInteractions(0)).bridgeId.toNumber()).toBe(bridgeAddressId);
+    expect((await rollupProcessor.contract.pendingDefiInteractions(0)).encodedBridgeCallData.toNumber()).toBe(
+      bridgeAddressId,
+    );
 
     const assetBalance = await assets[0].balanceOf(rollupProcessor.address);
 
     expect(await rollupProcessor.processAsyncDefiInteraction(0));
     expect(await assets[0].balanceOf(rollupProcessor.address)).toBe(assetBalance);
 
-    expect((await rollupProcessor.contract.pendingDefiInteractions(0)).bridgeId.toNumber()).toBe(bridgeAddressId);
+    expect((await rollupProcessor.contract.pendingDefiInteractions(0)).encodedBridgeCallData.toNumber()).toBe(
+      bridgeAddressId,
+    );
 
     await failingBridge.setComplete(true, 0);
     expect(await rollupProcessor.processAsyncDefiInteraction(0));
 
-    expect((await rollupProcessor.contract.pendingDefiInteractions(0)).bridgeId.toNumber()).toBe(0);
+    expect((await rollupProcessor.contract.pendingDefiInteractions(0)).encodedBridgeCallData.toNumber()).toBe(0);
     expect(await assets[0].balanceOf(rollupProcessor.address)).toBe(assetBalance + amount);
   });
 });

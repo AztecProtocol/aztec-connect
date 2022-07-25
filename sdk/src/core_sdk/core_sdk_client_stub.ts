@@ -1,6 +1,6 @@
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { assetValueFromJson } from '@aztec/barretenberg/asset';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { SchnorrSignature } from '@aztec/barretenberg/crypto';
 import { depositTxFromJson, rollupProviderStatusFromJson } from '@aztec/barretenberg/rollup_provider';
 import { TxId } from '@aztec/barretenberg/tx_id';
@@ -94,8 +94,8 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
     return txFees.map(fees => fees.map(assetValueFromJson));
   }
 
-  public async getDefiFees(bridgeId: BridgeId) {
-    const fees = await this.backend.getDefiFees(bridgeId.toString());
+  public async getDefiFees(bridgeCallData: BridgeCallData) {
+    const fees = await this.backend.getDefiFees(bridgeCallData.toString());
     return fees.map(assetValueFromJson);
   }
 
@@ -210,14 +210,14 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
 
   public async createDefiProofInput(
     userId: GrumpkinAddress,
-    bridgeId: BridgeId,
+    bridgeCallData: BridgeCallData,
     depositValue: bigint,
     inputNotes: Note[],
     spendingPublicKey: GrumpkinAddress,
   ) {
     const json = await this.backend.createDefiProofInput(
       userId.toString(),
-      bridgeId.toString(),
+      bridgeCallData.toString(),
       depositValue.toString(),
       inputNotes.map(n => noteToJson(n)),
       spendingPublicKey.toString(),

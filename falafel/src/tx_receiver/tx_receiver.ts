@@ -1,7 +1,7 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { Blockchain, TxType } from '@aztec/barretenberg/blockchain';
-import { BridgeId, validateBridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeCallData, validateBridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import {
   AccountVerifier,
   DefiDepositProofData,
@@ -202,23 +202,25 @@ export class TxReceiver {
       throw new Error('Cannot chain from a defi deposit tx.');
     }
 
-    const { bridgeId, defiDepositValue, txFee } = new DefiDepositProofData(proofData);
+    const { bridgeCallData, defiDepositValue, txFee } = new DefiDepositProofData(proofData);
     try {
-      validateBridgeId(bridgeId);
+      validateBridgeCallData(bridgeCallData);
     } catch (e) {
-      throw new Error(`Invalid bridge id - ${e.message}`);
+      throw new Error(`Invalid bridge call data - ${e.message}`);
     }
 
-    const bridgeConfig = this.bridgeResolver.getBridgeConfig(bridgeId.toBigInt());
+    const bridgeConfig = this.bridgeResolver.getBridgeConfig(bridgeCallData.toBigInt());
     const blockchainStatus = this.blockchain.getBlockchainStatus();
     if (!blockchainStatus.allowThirdPartyContracts && !bridgeConfig) {
-      this.log(`Unrecognised Defi bridge: ${bridgeId.toString()}`);
+      this.log(`Unrecognised Defi bridge: ${bridgeCallData.toString()}`);
       throw new Error('Unrecognised Defi-bridge.');
     }
 
     const offchainData = OffchainDefiDepositData.fromBuffer(offchainTxData);
-    if (!bridgeId.equals(offchainData.bridgeId)) {
-      throw new Error(`Wrong bridgeId in offchain data. Expect ${bridgeId}. Got ${offchainData.bridgeId}.`);
+    if (!bridgeCallData.equals(offchainData.bridgeCallData)) {
+      throw new Error(
+        `Wrong bridgeCallData in offchain data. Expect ${bridgeCallData}. Got ${offchainData.bridgeCallData}.`,
+      );
     }
     if (defiDepositValue !== offchainData.depositValue) {
       throw new Error(
@@ -287,12 +289,12 @@ export class TxReceiver {
         break;
       }
       case ProofId.DEFI_DEPOSIT: {
-        const bridgeId = BridgeId.fromBuffer(proof.bridgeId);
-        if (!bridgeId.firstOutputVirtual) {
-          validateNonVirtualAssetId(bridgeId.outputAssetIdA);
+        const bridgeCallData = BridgeCallData.fromBuffer(proof.bridgeCallData);
+        if (!bridgeCallData.firstOutputVirtual) {
+          validateNonVirtualAssetId(bridgeCallData.outputAssetIdA);
         }
-        if (bridgeId.secondOutputInUse && !bridgeId.secondOutputVirtual) {
-          validateNonVirtualAssetId(bridgeId.outputAssetIdB!);
+        if (bridgeCallData.secondOutputInUse && !bridgeCallData.secondOutputVirtual) {
+          validateNonVirtualAssetId(bridgeCallData.outputAssetIdB!);
         }
         break;
       }

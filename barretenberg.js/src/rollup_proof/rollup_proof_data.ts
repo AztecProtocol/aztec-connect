@@ -6,7 +6,7 @@ import { encodeInnerProof } from './encode_inner_proof';
 import { InnerProofData } from './inner_proof';
 import { RollupDepositProofData, RollupWithdrawProofData } from '.';
 import { toBigIntBE, toBufferBE } from '../bigint_buffer';
-import { BridgeId } from '../bridge_id';
+import { BridgeCallData } from '../bridge_call_data';
 
 export enum RollupProofDataFields {
   ROLLUP_ID,
@@ -56,9 +56,9 @@ const parseHeaderInputs = (proofData: Buffer) => {
   const newDefiRoot = proofData.slice(RollupProofDataOffsets.NEW_DEFI_ROOT, RollupProofDataOffsets.NEW_DEFI_ROOT + 32);
 
   let startIndex = 11 * 32;
-  const bridgeIds: Buffer[] = [];
+  const bridgeCallDatas: Buffer[] = [];
   for (let i = 0; i < RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK; ++i) {
-    bridgeIds.push(proofData.slice(startIndex, startIndex + 32));
+    bridgeCallDatas.push(proofData.slice(startIndex, startIndex + 32));
     startIndex += 32;
   }
 
@@ -107,7 +107,7 @@ const parseHeaderInputs = (proofData: Buffer) => {
     newDataRootsRoot,
     oldDefiRoot,
     newDefiRoot,
-    bridgeIds,
+    bridgeCallDatas,
     defiDepositSums,
     assetIds,
     totalTxFees,
@@ -138,7 +138,7 @@ export class RollupProofData {
     public newDataRootsRoot: Buffer,
     public oldDefiRoot: Buffer,
     public newDefiRoot: Buffer,
-    public bridgeIds: Buffer[],
+    public bridgeCallDatas: Buffer[],
     public defiDepositSums: bigint[],
     public assetIds: number[],
     public totalTxFees: bigint[],
@@ -148,8 +148,8 @@ export class RollupProofData {
     public numRollupTxs: number,
     public innerProofData: InnerProofData[],
   ) {
-    if (bridgeIds.length !== RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK) {
-      throw new Error(`Expect bridgeIds to be an array of size ${RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK}.`);
+    if (bridgeCallDatas.length !== RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK) {
+      throw new Error(`Expect bridgeCallDatas to be an array of size ${RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK}.`);
     }
     if (defiDepositSums.length !== RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK) {
       throw new Error(`Expect defiDepositSums to be an array of size ${RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK}.`);
@@ -185,7 +185,7 @@ export class RollupProofData {
       this.newDataRootsRoot,
       this.oldDefiRoot,
       this.newDefiRoot,
-      ...this.bridgeIds,
+      ...this.bridgeCallDatas,
       ...this.defiDepositSums.map(v => toBufferBE(v, 32)),
       ...this.assetIds.map(a => numToUInt32BE(a, 32)),
       ...this.totalTxFees.map(a => toBufferBE(a, 32)),
@@ -214,11 +214,11 @@ export class RollupProofData {
   }
 
   getTotalDefiDeposit(assetId: number) {
-    return this.bridgeIds
-      .map((bridgeId, i) => {
+    return this.bridgeCallDatas
+      .map((bridgeCallData, i) => {
         if (
-          BridgeId.fromBuffer(bridgeId).inputAssetIdA === assetId ||
-          BridgeId.fromBuffer(bridgeId).inputAssetIdB === assetId
+          BridgeCallData.fromBuffer(bridgeCallData).inputAssetIdA === assetId ||
+          BridgeCallData.fromBuffer(bridgeCallData).inputAssetIdB === assetId
         ) {
           return this.defiDepositSums[i];
         } else {
@@ -255,7 +255,7 @@ export class RollupProofData {
       this.newDataRootsRoot,
       this.oldDefiRoot,
       this.newDefiRoot,
-      ...this.bridgeIds,
+      ...this.bridgeCallDatas,
       ...this.defiDepositSums.map(v => toBufferBE(v, 32)),
       ...this.assetIds.map(a => numToUInt32BE(a, 32)),
       ...this.totalTxFees.map(a => toBufferBE(a, 32)),
@@ -313,7 +313,7 @@ export class RollupProofData {
       newDataRootsRoot,
       oldDefiRoot,
       newDefiRoot,
-      bridgeIds,
+      bridgeCallDatas,
       defiDepositSums,
       assetIds,
       totalTxFees,
@@ -347,7 +347,7 @@ export class RollupProofData {
       newDataRootsRoot,
       oldDefiRoot,
       newDefiRoot,
-      bridgeIds,
+      bridgeCallDatas,
       defiDepositSums,
       assetIds,
       totalTxFees,
@@ -364,7 +364,7 @@ export class RollupProofData {
     numTxs: number,
     dataStartIndex = 0,
     innerProofData?: InnerProofData[],
-    bridgeIds: BridgeId[] = [],
+    bridgeCallDatas: BridgeCallData[] = [],
   ) {
     const ipd =
       innerProofData === undefined
@@ -383,10 +383,12 @@ export class RollupProofData {
       Buffer.alloc(32),
       Buffer.alloc(32),
       Buffer.alloc(32),
-      bridgeIds
+      bridgeCallDatas
         .map(b => b.toBuffer())
         .concat(
-          new Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK - bridgeIds.length).fill(0).map(() => Buffer.alloc(32)),
+          new Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK - bridgeCallDatas.length)
+            .fill(0)
+            .map(() => Buffer.alloc(32)),
         ),
       new Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK).fill(BigInt(0)),
       new Array(RollupProofData.NUMBER_OF_ASSETS).fill(0),
@@ -412,7 +414,7 @@ export class RollupProofData {
       newDataRootsRoot,
       oldDefiRoot,
       newDefiRoot,
-      bridgeIds,
+      bridgeCallDatas,
       defiDepositSums,
       assetIds,
       totalTxFees,
@@ -453,7 +455,7 @@ export class RollupProofData {
       newDataRootsRoot,
       oldDefiRoot,
       newDefiRoot,
-      bridgeIds,
+      bridgeCallDatas,
       defiDepositSums,
       assetIds,
       totalTxFees,

@@ -2,7 +2,7 @@ import moment from 'moment';
 import { useRollupProviderStatus } from 'alt-model';
 import {
   useDefaultAuxDataOption,
-  useDefaultBridgeId,
+  useDefaultBridgeCallData,
   useDefaultExpectedAssetYield,
   useDefaultLiquidity,
 } from 'alt-model/defi/defi_info_hooks';
@@ -25,10 +25,10 @@ function LiquidityValue(props: { recipe: DefiRecipe }) {
 }
 
 function BatchSizeValue(props: { recipe: DefiRecipe }) {
-  const bridgeId = useDefaultBridgeId(props.recipe)?.toBigInt();
+  const bridgeCallData = useDefaultBridgeCallData(props.recipe)?.toBigInt();
   const rpStatus = useRollupProviderStatus();
-  if (!rpStatus?.bridgeStatus || !bridgeId) return <SkeletonRect sizingContent="25" />;
-  const bridgeStatus = rpStatus.bridgeStatus.find(x => x.bridgeId === bridgeId);
+  if (!rpStatus?.bridgeStatus || !bridgeCallData) return <SkeletonRect sizingContent="25" />;
+  const bridgeStatus = rpStatus.bridgeStatus.find(x => x.bridgeCallData === bridgeCallData);
   return <>{bridgeStatus?.numTxs ?? rpStatus.runtimeConfig.defaultDeFiBatchSize}</>;
 }
 

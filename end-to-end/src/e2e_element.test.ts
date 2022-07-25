@@ -1,7 +1,7 @@
 import { getCurrentBlockTime, MainnetAddresses, setBlockchainTime, TokenStore } from '@aztec/blockchain';
 import {
   AztecSdk,
-  BridgeId,
+  BridgeCallData,
   createAztecSdk,
   DefiSettlementTime,
   EthAddress,
@@ -91,7 +91,7 @@ describe('end-to-end async defi tests', () => {
     };
     const assetSpecs: AssetSpec[] = [daiSpec, lusdSpec].sort((a, b) => a.expiry - b.expiry);
 
-    const elementBridgeId = 1;
+    const elementBridgeCallData = 1;
 
     // Initialise the token store that we will use to acquire the input assets.
     const tokenStore = await TokenStore.create(provider);
@@ -165,16 +165,16 @@ describe('end-to-end async defi tests', () => {
       const toDeposit = await sdk.getBalance(userId, assetId);
       toDeposit.value /= 2n;
       debug(`depositing ${sdk.fromBaseUnits(toDeposit, true)} to element tranche with expiry ${formatTime(expiry)}...`);
-      const bridgeId = new BridgeId(elementBridgeId, assetId, assetId, undefined, undefined, expiry);
+      const bridgeCallData = new BridgeCallData(elementBridgeCallData, assetId, assetId, undefined, undefined, expiry);
       const tokenAssetId = sdk.getAssetIdByAddress(tokenAddress);
       const tokenAssetValue = { assetId: tokenAssetId, value: toDeposit.value };
-      const tokenDepositFee = (await sdk.getDefiFees(bridgeId, userId, tokenAssetValue))[
+      const tokenDepositFee = (await sdk.getDefiFees(bridgeCallData, userId, tokenAssetValue))[
         i === assetSpecs.length - 1 ? DefiSettlementTime.INSTANT : DefiSettlementTime.NEXT_ROLLUP
       ];
       const defiDepositController = sdk.createDefiController(
         userId,
         signer,
-        bridgeId,
+        bridgeCallData,
         tokenAssetValue,
         tokenDepositFee,
       );
@@ -216,8 +216,8 @@ describe('end-to-end async defi tests', () => {
     // This interaction will finalise immediately.
     debug(`depositing to an expired tranche...`);
     const failedDefiController = await (async () => {
-      const bridgeId = new BridgeId(
-        elementBridgeId,
+      const bridgeCallData = new BridgeCallData(
+        elementBridgeCallData,
         lusdSpec.assetId,
         lusdSpec.assetId,
         undefined,
@@ -225,8 +225,10 @@ describe('end-to-end async defi tests', () => {
         1632834462,
       );
       const tokenAssetValue = await sdk.getBalance(userId, lusdSpec.assetId);
-      const tokenDepositFee = (await sdk.getDefiFees(bridgeId, userId, tokenAssetValue))[DefiSettlementTime.INSTANT];
-      const controller = sdk.createDefiController(userId, signer, bridgeId, tokenAssetValue, tokenDepositFee);
+      const tokenDepositFee = (await sdk.getDefiFees(bridgeCallData, userId, tokenAssetValue))[
+        DefiSettlementTime.INSTANT
+      ];
+      const controller = sdk.createDefiController(userId, signer, bridgeCallData, tokenAssetValue, tokenDepositFee);
       await controller.createProof();
       await controller.send();
       return controller;

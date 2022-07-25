@@ -1,6 +1,6 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { Blockchain, BlockchainAsset, PriceFeed } from '@aztec/barretenberg/blockchain';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { EthPriceFeed } from '@aztec/blockchain';
 import { BridgeResolver } from '../bridge';
 import { TxFeeResolver } from './index';
@@ -110,8 +110,8 @@ describe('tx fee resolver', () => {
 
   it('return correct defi fees', () => {
     const assetId = 0;
-    const bridgeId = new BridgeId(0, assetId, 0).toBigInt();
-    const defiFees = txFeeResolver.getDefiFees(bridgeId);
+    const bridgeCallData = new BridgeCallData(0, assetId, 0).toBigInt();
+    const defiFees = txFeeResolver.getDefiFees(bridgeCallData);
     expect(defiFees).toEqual([
       { assetId, value: 16196000000000000n },
       { assetId, value: 12503696000000000000n },

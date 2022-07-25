@@ -8,7 +8,7 @@ import {
   WalletProvider,
 } from '@aztec/sdk';
 import { Agent, EthAddressAndNonce, UserData } from './agent';
-import { AgentElementConfig, buildBridgeId, formatTime, ELEMENT_BRIDGE_ADDRESS_ID } from './bridges';
+import { AgentElementConfig, buildBridgeCallData, formatTime, ELEMENT_BRIDGE_ADDRESS_ID } from './bridges';
 
 export enum ElementState {
   RUNNING,
@@ -171,7 +171,7 @@ export class ElementAgent {
     expiry: number,
     settlementTime: DefiSettlementTime = DefiSettlementTime.DEADLINE,
   ) {
-    return (await this.sdk.getDefiFees(buildBridgeId(ELEMENT_BRIDGE_ADDRESS_ID, assetId, assetId, expiry)))[
+    return (await this.sdk.getDefiFees(buildBridgeCallData(ELEMENT_BRIDGE_ADDRESS_ID, assetId, assetId, expiry)))[
       settlementTime
     ];
   }
@@ -204,7 +204,7 @@ export class ElementAgent {
   }
 
   private async singleDefiDeposit(assetId: number, expiry: number, deposit: bigint) {
-    const bridgeId = buildBridgeId(ELEMENT_BRIDGE_ADDRESS_ID, assetId, assetId, expiry);
+    const bridgeCallData = buildBridgeCallData(ELEMENT_BRIDGE_ADDRESS_ID, assetId, assetId, expiry);
     const fee = await this.getDefiFee(assetId, expiry);
     const inputAssetInfo = this.sdk.getAssetInfo(assetId);
     console.log(
@@ -215,7 +215,7 @@ export class ElementAgent {
     const controller = this.sdk.createDefiController(
       this.user!.user.id,
       this.user!.signer,
-      bridgeId,
+      bridgeCallData,
       { assetId: assetId, value: deposit },
       fee,
     );

@@ -65,11 +65,11 @@ class AztecSdk extends EventEmitter {
     createWithdrawController(userId: GrumpkinAddress, userSigner: Signer, value: AssetValue, fee: AssetValue, to: EthAddress): WithdrawController;
     getTransferFees(assetId: number): Promise<AssetValue[]>;
     createTransferController(userId: GrumpkinAddress, userSigner: Signer, value: AssetValue, fee: AssetValue, recipient: GrumpkinAddress, recipientSpendingKeyRequired?: boolean): TransferController;
-    getDefiFees(bridgeId: BridgeId, userId?: GrumpkinAddress, depositValue?: AssetValue): Promise<{
+    getDefiFees(bridgeCallData: BridgeCallData, userId?: GrumpkinAddress, depositValue?: AssetValue): Promise<{
         value: bigint;
         assetId: number;
     }[]>;
-    createDefiController(userId: GrumpkinAddress, userSigner: Signer, bridgeId: BridgeId, value: AssetValue, fee: AssetValue): DefiController;
+    createDefiController(userId: GrumpkinAddress, userSigner: Signer, bridgeCallData: BridgeCallData, value: AssetValue, fee: AssetValue): DefiController;
     generateAccountRecoveryData(accountPublicKey: GrumpkinAddress, alias: string, trustedThirdPartyPublicKeys: GrumpkinAddress[]): Promise<RecoveryPayload[]>;
     getRegisterFees({ assetId, value: depositValue }: AssetValue): Promise<AssetValue[]>;
     createRegisterController(userId: GrumpkinAddress, alias: string, accountPrivateKey: Buffer, spendingPublicKey: GrumpkinAddress, recoveryPublicKey: GrumpkinAddress | undefined, deposit: AssetValue, fee: AssetValue, depositor: EthAddress, feePayer?: FeePayer, provider?: EthereumProvider): RegisterController;

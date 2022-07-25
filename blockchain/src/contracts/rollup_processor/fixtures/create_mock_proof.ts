@@ -1,7 +1,7 @@
 import { AliasHash } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
 import {
   OffchainAccountData,
@@ -131,7 +131,7 @@ export const createAccountProof = () => {
   return new InnerProofOutput([innerProof], [], [], [offchainTxData.toBuffer()]);
 };
 
-export const createDefiDepositProof = (bridgeId: BridgeId, inputValue: bigint, txFee = 0n) => {
+export const createDefiDepositProof = (bridgeCallData: BridgeCallData, inputValue: bigint, txFee = 0n) => {
   const innerProof = new InnerProofData(
     ProofId.DEFI_DEPOSIT,
     randomLeafHash(),
@@ -143,10 +143,10 @@ export const createDefiDepositProof = (bridgeId: BridgeId, inputValue: bigint, t
     Buffer.alloc(32),
   );
   const totalTxFees: bigint[] = [];
-  totalTxFees[bridgeId.inputAssetIdA] = txFee;
+  totalTxFees[bridgeCallData.inputAssetIdA] = txFee;
 
   const offchainTxData = new OffchainDefiDepositData(
-    bridgeId,
+    bridgeCallData,
     randomBytes(32),
     new GrumpkinAddress(randomBytes(64)),
     inputValue,
@@ -157,7 +157,7 @@ export const createDefiDepositProof = (bridgeId: BridgeId, inputValue: bigint, t
   return new InnerProofOutput([innerProof], [], totalTxFees, [offchainTxData.toBuffer()]);
 };
 
-export const createDefiClaimProof = (bridgeId: BridgeId, txFee = 0n) => {
+export const createDefiClaimProof = (bridgeCallData: BridgeCallData, txFee = 0n) => {
   const innerProof = new InnerProofData(
     ProofId.DEFI_CLAIM,
     randomLeafHash(),
@@ -169,7 +169,7 @@ export const createDefiClaimProof = (bridgeId: BridgeId, txFee = 0n) => {
     Buffer.alloc(32),
   );
   const totalTxFees: bigint[] = [];
-  totalTxFees[bridgeId.inputAssetIdA] = txFee;
+  totalTxFees[bridgeCallData.inputAssetIdA] = txFee;
 
   const offchainTxData = new OffchainDefiClaimData();
 
@@ -193,9 +193,9 @@ export const mergeInnerProofs = (output: InnerProofOutput[]) => {
 };
 
 export class DefiInteractionData {
-  static EMPTY = new DefiInteractionData(BridgeId.ZERO, BigInt(0));
+  static EMPTY = new DefiInteractionData(BridgeCallData.ZERO, BigInt(0));
 
-  constructor(public readonly bridgeId: BridgeId, public readonly totalInputValue: bigint) {}
+  constructor(public readonly bridgeCallData: BridgeCallData, public readonly totalInputValue: bigint) {}
 }
 
 interface RollupProofOptions {
@@ -254,7 +254,7 @@ export const createRollupProof = (
   for (let i = interactionData.length; i < numberOfDefiInteraction; ++i) {
     interactionData[i] = DefiInteractionData.EMPTY;
   }
-  const bridgeIds = interactionData.map(d => d.bridgeId);
+  const bridgeCallDatas = interactionData.map(d => d.bridgeCallData);
   const defiDepositSums = interactionData.map(d => d.totalInputValue);
 
   const interactionNoteCommitments = [...prevInteractionResult];
@@ -267,8 +267,8 @@ export const createRollupProof = (
     switch (proof.proofId) {
       case ProofId.DEFI_DEPOSIT:
       case ProofId.DEFI_CLAIM: {
-        const bridgeId = BridgeId.fromBuffer(proof.publicAssetId);
-        assetIds.add(bridgeId.inputAssetIdA);
+        const bridgeCallData = BridgeCallData.fromBuffer(proof.publicAssetId);
+        assetIds.add(bridgeCallData.inputAssetIdA);
         break;
       }
       case ProofId.ACCOUNT:
@@ -293,7 +293,7 @@ export const createRollupProof = (
     dataRootRoots[rollupId + 1],
     defiRoots[rollupId],
     defiRoots[rollupId + 1],
-    ...bridgeIds.map(id => id.toBuffer()),
+    ...bridgeCallDatas.map(id => id.toBuffer()),
     ...defiDepositSums.map(sum => toBufferBE(sum, 32)),
     ...[...assetIds].map(assetId => numToBuffer(assetId)),
     ...Array(numberOfAssets - assetIds.size).fill(numToBuffer(2 ** 30)),

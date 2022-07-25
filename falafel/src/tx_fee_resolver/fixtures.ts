@@ -21,7 +21,7 @@ export const mockTx = (txFeeAssetId: number, txType: TxType, txFee: bigint) =>
       randomBytes(32), // merkle root
       toBufferBE(txFee, 32),
       numToUInt32BE(txFeeAssetId, 32),
-      randomBytes(32), // bridge id
+      randomBytes(32), // bridge call data
       randomBytes(32), // defi deposit value
       randomBytes(32), // defi root
       randomBytes(32), // propagated input index

@@ -27,7 +27,7 @@ function createRecipe(
 ): DefiRecipe | undefined {
   const closable = !isAsync;
   const expectedYearlyOutDerivedFromExit = closable;
-  const address = status.blockchainStatus.bridges.find(x => x.id === args.addressId)?.address;
+  const address = status.blockchainStatus.bridges.find(x => x.id === args.bridgeAddressId)?.address;
   if (!address) {
     debug(`Could not find remote bridge for recipe '${args.id}'`);
     return;
@@ -57,7 +57,7 @@ const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
   {
     id: 'element-finance.DAI-to-DAI',
     isAsync: true,
-    addressId: 1,
+    bridgeAddressId: 1,
     entryInputAssetAddressA: KMAA.DAI,
     entryOutputAssetAddressA: KMAA.DAI,
     createAdaptor: createElementAdaptor,
@@ -82,7 +82,7 @@ const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
   },
   {
     id: 'lido-staking-x-curve.ETH-to-wStETH',
-    addressId: 5,
+    bridgeAddressId: 5,
     gradient: ['#E97B61', '#F5CB85'],
     openHandleAssetAddress: KMAA.wstETH,
     entryInputAssetAddressA: KMAA.ETH,

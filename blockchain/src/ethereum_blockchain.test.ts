@@ -1,7 +1,7 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { BlockchainAsset, BlockchainBridge, TxHash } from '@aztec/barretenberg/blockchain';
 import { Block } from '@aztec/barretenberg/block_source';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { InitHelpers } from '@aztec/barretenberg/environment';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { randomBytes } from 'crypto';
@@ -205,11 +205,11 @@ describe('ethereum_blockchain', () => {
   it('correctly returns bridge gas', async () => {
     await blockchain.start();
     {
-      const bridge = new BridgeId(1, 0, 0);
+      const bridge = new BridgeCallData(1, 0, 0);
       expect(blockchain.getBridgeGas(bridge.toBigInt())).toEqual(blockchainBridges[0].gasLimit);
     }
     {
-      const bridge = new BridgeId(2, 0, 0);
+      const bridge = new BridgeCallData(2, 0, 0);
       expect(blockchain.getBridgeGas(bridge.toBigInt())).toEqual(blockchainBridges[1].gasLimit);
     }
   });

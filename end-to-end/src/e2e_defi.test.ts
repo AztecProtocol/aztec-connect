@@ -1,7 +1,7 @@
 import {
   AssetValue,
   AztecSdk,
-  BridgeId,
+  BridgeCallData,
   createAztecSdk,
   DefiController,
   DefiSettlementTime,
@@ -80,13 +80,13 @@ describe('end-to-end defi tests', () => {
     const ethAssetId = 0;
     const daiAssetId = 1;
     const btcAssetId = 2;
-    const ethToDaiBridge = new BridgeId(bridgeAddressId, ethAssetId, daiAssetId);
-    const daiToEthBridge = new BridgeId(bridgeAddressId, daiAssetId, ethAssetId);
+    const ethToDaiBridge = new BridgeCallData(bridgeAddressId, ethAssetId, daiAssetId);
+    const daiToEthBridge = new BridgeCallData(bridgeAddressId, daiAssetId, ethAssetId);
     const ethToDaiFees = await sdk.getDefiFees(ethToDaiBridge);
     const daiToEthFees = await sdk.getDefiFees(daiToEthBridge);
 
     const dummyBridgeAddressId = 2;
-    const daiAndEthToBtcBridge = new BridgeId(dummyBridgeAddressId, daiAssetId, btcAssetId, ethAssetId);
+    const daiAndEthToBtcBridge = new BridgeCallData(dummyBridgeAddressId, daiAssetId, btcAssetId, ethAssetId);
 
     // Rollup 1.
     // Account 0 and 1 swap partial ETH to DAI.
@@ -118,7 +118,7 @@ describe('end-to-end defi tests', () => {
           await debugBalance(outputAssetIdA, i);
 
           const [defiTx] = await sdk.getDefiTxs(userIds[i]);
-          expect(defiTx).toMatchObject({ bridgeId: ethToDaiBridge, depositValue, fee });
+          expect(defiTx).toMatchObject({ bridgeCallData: ethToDaiBridge, depositValue, fee });
           expect(defiTx.interactionResult).toMatchObject({
             isAsync: false,
             success: true,
@@ -232,13 +232,13 @@ describe('end-to-end defi tests', () => {
 
         const [defiTx1, defiTx0] = await sdk.getDefiTxs(userIds[0]);
         expect(defiTx0).toMatchObject({
-          bridgeId: daiAndEthToBtcBridge,
+          bridgeCallData: daiAndEthToBtcBridge,
           depositValue: depositDaiEthValue,
           fee: depositDaiEthFee,
         });
         expect(defiTx0.interactionResult).toMatchObject({ isAsync: false, success: true, outputValueB: undefined });
         expect(defiTx1).toMatchObject({
-          bridgeId: daiToEthBridge,
+          bridgeCallData: daiToEthBridge,
           depositValue: depositDaiValues[0],
           fee: depositDaiFee0,
         });
@@ -258,7 +258,7 @@ describe('end-to-end defi tests', () => {
 
         const [defiTx] = await sdk.getDefiTxs(userIds[1]);
         expect(defiTx).toMatchObject({
-          bridgeId: daiToEthBridge,
+          bridgeCallData: daiToEthBridge,
           depositValue: depositDaiValues[1],
           fee: depositDaiFee1,
         });

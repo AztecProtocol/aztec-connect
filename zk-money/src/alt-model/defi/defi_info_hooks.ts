@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { BridgeId, UserDefiTx } from '@aztec/sdk';
+import { BridgeCallData, UserDefiTx } from '@aztec/sdk';
 import { DefiRecipe, FlowDirection } from './types';
 import { useAmount, useBridgeDataAdaptorsMethodCaches } from 'alt-model/top_level_context';
 import { useMaybeObs } from 'app/util';
@@ -18,13 +18,13 @@ export function useDefaultAuxDataOption(recipeId: string) {
   return opts?.[opts?.length - 1];
 }
 
-export function useDefaultBridgeId(recipe: DefiRecipe) {
+export function useDefaultBridgeCallData(recipe: DefiRecipe) {
   const auxData = useDefaultAuxDataOption(recipe.id);
   return useMemo(() => {
-    const { addressId, flow } = recipe;
+    const { bridgeAddressId, flow } = recipe;
     if (auxData === undefined) return undefined;
-    // TODO: use more complete bridge id construction
-    return new BridgeId(addressId, flow.enter.inA.id, flow.enter.outA.id, undefined, undefined, Number(auxData));
+    // TODO: use more complete bridge call data construction
+    return new BridgeCallData(bridgeAddressId, flow.enter.inA.id, flow.enter.outA.id, undefined, undefined, Number(auxData));
   }, [recipe, auxData]);
 }
 

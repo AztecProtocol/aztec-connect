@@ -1,12 +1,12 @@
 import { GrumpkinAddress } from '../address';
 import { toBigIntBE, toBufferBE } from '../bigint_buffer';
-import { BridgeId } from '../bridge_id';
+import { BridgeCallData } from '../bridge_call_data';
 import { numToUInt32BE } from '../serialize';
 import { ViewingKey } from '../viewing_key';
 
 export class OffchainDefiDepositData {
   static EMPTY = new OffchainDefiDepositData(
-    BridgeId.ZERO,
+    BridgeCallData.ZERO,
     Buffer.alloc(32),
     GrumpkinAddress.ZERO,
     BigInt(0),
@@ -16,7 +16,7 @@ export class OffchainDefiDepositData {
   static SIZE = OffchainDefiDepositData.EMPTY.toBuffer().length;
 
   constructor(
-    public readonly bridgeId: BridgeId,
+    public readonly bridgeCallData: BridgeCallData,
     public readonly partialState: Buffer,
     public readonly partialStateSecretEphPubKey: GrumpkinAddress, // the public key from which the partial state's secret may be derived (when combined with a valid account private key).
     public readonly depositValue: bigint,
@@ -38,7 +38,7 @@ export class OffchainDefiDepositData {
     }
 
     let dataStart = 0;
-    const bridgeId = BridgeId.fromBuffer(buf.slice(dataStart, dataStart + 32));
+    const bridgeCallData = BridgeCallData.fromBuffer(buf.slice(dataStart, dataStart + 32));
     dataStart += 32;
     const partialState = buf.slice(dataStart, dataStart + 32);
     dataStart += 32;
@@ -52,7 +52,7 @@ export class OffchainDefiDepositData {
     dataStart += ViewingKey.SIZE;
     const txRefNo = buf.readUInt32BE(dataStart);
     return new OffchainDefiDepositData(
-      bridgeId,
+      bridgeCallData,
       partialState,
       partialStateSecretEphPubKey,
       depositValue,
@@ -64,7 +64,7 @@ export class OffchainDefiDepositData {
 
   toBuffer() {
     return Buffer.concat([
-      this.bridgeId.toBuffer(),
+      this.bridgeCallData.toBuffer(),
       this.partialState,
       this.partialStateSecretEphPubKey.toBuffer(),
       toBufferBE(this.depositValue, 32),

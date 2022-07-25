@@ -13,7 +13,7 @@ enum ProofDataFields {
   NOTE_TREE_ROOT,
   TX_FEE,
   TX_FEE_ASSET_ID,
-  BRIDGE_ID,
+  BRIDGE_CALL_DATA,
   DEFI_DEPOSIT_VALUE,
   DEFI_ROOT,
   BACKWARD_LINK,
@@ -32,7 +32,7 @@ enum ProofDataOffsets {
   NOTE_TREE_ROOT = ProofDataFields.NOTE_TREE_ROOT * 32,
   TX_FEE = ProofDataFields.TX_FEE * 32,
   TX_FEE_ASSET_ID = ProofDataFields.TX_FEE_ASSET_ID * 32,
-  BRIDGE_ID = ProofDataFields.BRIDGE_ID * 32,
+  BRIDGE_CALL_DATA = ProofDataFields.BRIDGE_CALL_DATA * 32,
   DEFI_DEPOSIT_VALUE = ProofDataFields.DEFI_DEPOSIT_VALUE * 32,
   DEFI_ROOT = ProofDataFields.DEFI_ROOT * 32,
   BACKWARD_LINK = ProofDataFields.BACKWARD_LINK * 32,
@@ -67,7 +67,7 @@ export class ProofData {
   public readonly noteTreeRoot: Buffer;
   public readonly txFee: Buffer;
   public readonly txFeeAssetId: Buffer;
-  public readonly bridgeId: Buffer;
+  public readonly bridgeCallData: Buffer;
   public readonly defiDepositValue: Buffer;
   public readonly defiRoot: Buffer;
 
@@ -94,7 +94,7 @@ export class ProofData {
     this.noteTreeRoot = rawProofData.slice(ProofDataOffsets.NOTE_TREE_ROOT, ProofDataOffsets.NOTE_TREE_ROOT + 32);
     this.txFee = rawProofData.slice(ProofDataOffsets.TX_FEE, ProofDataOffsets.TX_FEE + 32);
     this.txFeeAssetId = rawProofData.slice(ProofDataOffsets.TX_FEE_ASSET_ID, ProofDataOffsets.TX_FEE_ASSET_ID + 32);
-    this.bridgeId = rawProofData.slice(ProofDataOffsets.BRIDGE_ID, ProofDataOffsets.BRIDGE_ID + 32);
+    this.bridgeCallData = rawProofData.slice(ProofDataOffsets.BRIDGE_CALL_DATA, ProofDataOffsets.BRIDGE_CALL_DATA + 32);
     this.defiDepositValue = rawProofData.slice(
       ProofDataOffsets.DEFI_DEPOSIT_VALUE,
       ProofDataOffsets.DEFI_DEPOSIT_VALUE + 32,

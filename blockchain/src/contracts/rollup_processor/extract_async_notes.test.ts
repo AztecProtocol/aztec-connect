@@ -1,6 +1,6 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { Asset } from '@aztec/barretenberg/blockchain';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { DefiInteractionNote, packInteractionNotes } from '@aztec/barretenberg/note_algorithms';
 import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { Signer } from 'ethers';
@@ -63,12 +63,12 @@ describe('rollup_processor: extract async notes', () => {
   it('should correctly extract sync and async defi notes', async () => {
     const inputAssetIdA = 1;
     const outputValueA = 7n;
-    const { bridgeId: asyncBridgeId } = await mockAsyncBridge(signers[0], rollupProcessor, assetAddresses, {
+    const { bridgeCallData: asyncBridgeCallData } = await mockAsyncBridge(signers[0], rollupProcessor, assetAddresses, {
       inputAssetIdA,
       outputAssetIdA: 0,
       outputValueA,
     });
-    const syncBridgeId = await mockBridge({
+    const syncBridgeCallData = await mockBridge({
       inputAssetIdA,
       outputAssetIdA: 0,
       outputValueA,
@@ -83,15 +83,15 @@ describe('rollup_processor: extract async notes', () => {
     const asyncBatchSize = numberOfBridgeCalls;
     const syncBatchSize = numberOfBridgeCalls / 2;
 
-    const getDefiDeposits = (count: number, bridgeId: BridgeId) => {
-      return [...Array(count).fill(createDefiDepositProof(bridgeId, defiDepositAmount0))];
+    const getDefiDeposits = (count: number, bridgeCallData: BridgeCallData) => {
+      return [...Array(count).fill(createDefiDepositProof(bridgeCallData, defiDepositAmount0))];
     };
 
     const innerProofOutputs = [
-      mergeInnerProofs(getDefiDeposits(asyncBatchSize, asyncBridgeId)),
-      mergeInnerProofs(getDefiDeposits(asyncBatchSize, asyncBridgeId)),
-      mergeInnerProofs(getDefiDeposits(asyncBatchSize, asyncBridgeId)),
-      mergeInnerProofs(getDefiDeposits(syncBatchSize, syncBridgeId)),
+      mergeInnerProofs(getDefiDeposits(asyncBatchSize, asyncBridgeCallData)),
+      mergeInnerProofs(getDefiDeposits(asyncBatchSize, asyncBridgeCallData)),
+      mergeInnerProofs(getDefiDeposits(asyncBatchSize, asyncBridgeCallData)),
+      mergeInnerProofs(getDefiDeposits(syncBatchSize, syncBridgeCallData)),
       createWithdrawProof(withdrawalAmount, userAAddress, inputAssetIdA),
       createWithdrawProof(withdrawalAmount, userAAddress, inputAssetIdA),
       createWithdrawProof(withdrawalAmount, userAAddress, inputAssetIdA),
@@ -103,8 +103,8 @@ describe('rollup_processor: extract async notes', () => {
       signingAddress: userAAddress,
     });
 
-    const createDefiInteractionData = (count: number, bridgeId: BridgeId) => {
-      return [...Array(count).fill(new DefiInteractionData(bridgeId, defiDepositAmount0))];
+    const createDefiInteractionData = (count: number, bridgeCallData: BridgeCallData) => {
+      return [...Array(count).fill(new DefiInteractionData(bridgeCallData, defiDepositAmount0))];
     };
     let rollupId = 0;
 
@@ -113,7 +113,7 @@ describe('rollup_processor: extract async notes', () => {
       createRollupProof(signers[0], innerProofOutputs[0], {
         rollupId: rollupId++,
         rollupSize: 32,
-        defiInteractionData: createDefiInteractionData(asyncBatchSize, asyncBridgeId),
+        defiInteractionData: createDefiInteractionData(asyncBatchSize, asyncBridgeCallData),
         previousDefiInteractionHash: undefined,
       }),
     );
@@ -121,7 +121,7 @@ describe('rollup_processor: extract async notes', () => {
       createRollupProof(signers[0], innerProofOutputs[1], {
         rollupId: rollupId++,
         rollupSize: 32,
-        defiInteractionData: createDefiInteractionData(asyncBatchSize, asyncBridgeId),
+        defiInteractionData: createDefiInteractionData(asyncBatchSize, asyncBridgeCallData),
         previousDefiInteractionHash: undefined,
       }),
     );
@@ -129,7 +129,7 @@ describe('rollup_processor: extract async notes', () => {
       createRollupProof(signers[0], innerProofOutputs[2], {
         rollupId: rollupId++,
         rollupSize: 32,
-        defiInteractionData: createDefiInteractionData(asyncBatchSize, asyncBridgeId),
+        defiInteractionData: createDefiInteractionData(asyncBatchSize, asyncBridgeCallData),
         previousDefiInteractionHash: undefined,
       }),
     );
@@ -137,7 +137,7 @@ describe('rollup_processor: extract async notes', () => {
       createRollupProof(signers[0], innerProofOutputs[3], {
         rollupId: rollupId++,
         rollupSize: 32,
-        defiInteractionData: createDefiInteractionData(syncBatchSize, syncBridgeId),
+        defiInteractionData: createDefiInteractionData(syncBatchSize, syncBridgeCallData),
         previousDefiInteractionHash: undefined,
       }),
     );
@@ -180,7 +180,8 @@ describe('rollup_processor: extract async notes', () => {
     // the final set will be [96, 97]
     const firstBatchOfNotes = Array.from(
       { length: numberOfBridgeCalls },
-      (_, index) => new DefiInteractionNote(asyncBridgeId, 18 + index, defiDepositAmount0, outputValueA, 0n, true),
+      (_, index) =>
+        new DefiInteractionNote(asyncBridgeCallData, 18 + index, defiDepositAmount0, outputValueA, 0n, true),
     );
     const previousDefiInteractionHash1 = packInteractionNotes(firstBatchOfNotes, numberOfBridgeCalls);
     txProofs.push(
@@ -194,11 +195,13 @@ describe('rollup_processor: extract async notes', () => {
     const secondBatchOfNotes = [
       ...Array.from(
         { length: 14 },
-        (_, index) => new DefiInteractionNote(syncBridgeId, 98 + index, defiDepositAmount0, outputValueA, 0n, true),
+        (_, index) =>
+          new DefiInteractionNote(syncBridgeCallData, 98 + index, defiDepositAmount0, outputValueA, 0n, true),
       ),
       ...Array.from(
         { length: 18 },
-        (_, index) => new DefiInteractionNote(asyncBridgeId, 0 + index, defiDepositAmount0, outputValueA, 0n, true),
+        (_, index) =>
+          new DefiInteractionNote(asyncBridgeCallData, 0 + index, defiDepositAmount0, outputValueA, 0n, true),
       ),
     ];
     const previousDefiInteractionHash2 = packInteractionNotes(secondBatchOfNotes, numberOfBridgeCalls);
@@ -213,7 +216,8 @@ describe('rollup_processor: extract async notes', () => {
     const thirdBatchOfNotes = [
       ...Array.from(
         { length: 2 },
-        (_, index) => new DefiInteractionNote(syncBridgeId, 96 + index, defiDepositAmount0, outputValueA, 0n, true),
+        (_, index) =>
+          new DefiInteractionNote(syncBridgeCallData, 96 + index, defiDepositAmount0, outputValueA, 0n, true),
       ),
     ];
     const previousDefiInteractionHash3 = packInteractionNotes(thirdBatchOfNotes, numberOfBridgeCalls);

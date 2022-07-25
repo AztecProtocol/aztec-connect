@@ -73,17 +73,17 @@ export class RollupCoordinator {
     const rollupTimeouts = this.publishTimeManager.calculateLastTimeouts();
     this.initialiseBridgeQueues(rollupTimeouts);
 
-    const { txs, bridgeIds, assetIds } = this.getNextTxsToRollup(pendingTxs, flush);
+    const { txs, bridgeCallDatas, assetIds } = this.getNextTxsToRollup(pendingTxs, flush);
 
     this.checkpoint();
-    return await this.aggregateAndPublish(txs, bridgeIds, assetIds, rollupTimeouts, flush);
+    return await this.aggregateAndPublish(txs, bridgeCallDatas, assetIds, rollupTimeouts, flush);
   }
 
   private initialiseBridgeQueues(rollupTimeouts: RollupTimeouts) {
     this.bridgeQueues = new Map<bigint, BridgeTxQueue>();
-    for (const { bridgeId } of this.bridgeResolver.getBridgeConfigs()) {
-      const bt = rollupTimeouts.bridgeTimeouts.get(bridgeId);
-      this.bridgeQueues.set(bridgeId, new BridgeTxQueue(bridgeId, this.feeResolver, bt));
+    for (const { bridgeCallData } of this.bridgeResolver.getBridgeConfigs()) {
+      const bt = rollupTimeouts.bridgeTimeouts.get(bridgeCallData);
+      this.bridgeQueues.set(bridgeCallData, new BridgeTxQueue(bridgeCallData, this.feeResolver, bt));
     }
   }
 
@@ -94,7 +94,7 @@ export class RollupCoordinator {
     const resourceConsumption: RollupResources = {
       gasUsed: this.totalSlots * this.feeResolver.getUnadjustedBaseVerificationGas(),
       callDataUsed: 0,
-      bridgeIds: [],
+      bridgeCallDatas: [],
       assetIds: new Set<number>(),
     };
 
@@ -176,7 +176,7 @@ export class RollupCoordinator {
 
     return {
       txs,
-      bridgeIds: resourceConsumption.bridgeIds,
+      bridgeCallDatas: resourceConsumption.bridgeCallDatas,
       assetIds: resourceConsumption.assetIds,
     };
   }
@@ -195,8 +195,8 @@ export class RollupCoordinator {
     const proof = new ProofData(tx.proofData);
     const defiProof = new DefiDepositProofData(proof);
     const rollupTx = createDefiRollupTx(tx, defiProof);
-    const bridgeId = rollupTx.bridgeId!;
-    const bridgeAlreadyPresentInRollup = currentConsumption.bridgeIds.some(id => id === bridgeId);
+    const bridgeCallData = rollupTx.bridgeCallData!;
+    const bridgeAlreadyPresentInRollup = currentConsumption.bridgeCallDatas.some(id => id === bridgeCallData);
     // const txsForRollup: RollupTx[] = [];
 
     const addTxs = (txs: RollupTx[]) => {
@@ -205,8 +205,8 @@ export class RollupCoordinator {
         if (tx.fee.value && this.feeResolver.isFeePayingAsset(tx.fee.assetId)) {
           currentConsumption.assetIds.add(tx.fee.assetId);
         }
-        if (!currentConsumption.bridgeIds.some(id => id === bridgeId)) {
-          currentConsumption.bridgeIds.push(tx.bridgeId!);
+        if (!currentConsumption.bridgeCallDatas.some(id => id === bridgeCallData)) {
+          currentConsumption.bridgeCallDatas.push(tx.bridgeCallData!);
         }
       }
     };
@@ -215,7 +215,7 @@ export class RollupCoordinator {
       let totalGasUsedInRollup = currentConsumption.gasUsed;
       if (!bridgeAlreadyPresentInRollup) {
         // we need the full bridge gas from the contract as this is the value that does not include any subsidy
-        totalGasUsedInRollup += this.feeResolver.getFullBridgeGasFromContract(bridgeId);
+        totalGasUsedInRollup += this.feeResolver.getFullBridgeGasFromContract(bridgeCallData);
       }
       totalGasUsedInRollup += txs.reduce(
         (sum, current) =>
@@ -250,7 +250,7 @@ export class RollupCoordinator {
       return txsForRollup;
     }
 
-    if (currentConsumption.bridgeIds.length === RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK) {
+    if (currentConsumption.bridgeCallDatas.length === RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK) {
       // this rollup doesn't have any txs for this bridge and can't take any more
       return txsForRollup;
     }
@@ -261,12 +261,12 @@ export class RollupCoordinator {
       return txsForRollup;
     }
 
-    let bridgeQueue = this.bridgeQueues.get(bridgeId);
+    let bridgeQueue = this.bridgeQueues.get(bridgeCallData);
 
     if (!bridgeQueue) {
       // We don't have a bridge config for this!!
-      this.bridgeQueues.set(bridgeId, new BridgeTxQueue(bridgeId, this.feeResolver));
-      bridgeQueue = this.bridgeQueues.get(bridgeId)!;
+      this.bridgeQueues.set(bridgeCallData, new BridgeTxQueue(bridgeCallData, this.feeResolver));
+      bridgeQueue = this.bridgeQueues.get(bridgeCallData)!;
     }
 
     //if we are beyond the timeout interval for this bridge then add it straight in
@@ -316,7 +316,7 @@ export class RollupCoordinator {
 
   private async aggregateAndPublish(
     txsToRollup: RollupTx[],
-    bridgeIds: bigint[],
+    bridgeCallDatas: bigint[],
     assetIds: Set<number>,
     rollupTimeouts: RollupTimeouts,
     flush: boolean,
@@ -376,7 +376,7 @@ export class RollupCoordinator {
       async (innerRollupTxs, i) =>
         await this.rollupCreator.createRollup(
           innerRollupTxs.map(rollupTx => rollupTx.tx),
-          bridgeIds,
+          bridgeCallDatas,
           assetIds,
           i == 0,
         ),
@@ -397,7 +397,7 @@ export class RollupCoordinator {
       this.oldDefiRoot,
       this.oldDefiPath,
       this.defiInteractionNotes,
-      bridgeIds.concat(Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK - bridgeIds.length).fill(0n)),
+      bridgeCallDatas.concat(Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK - bridgeCallDatas.length).fill(0n)),
       [...assetIds],
     );
 
@@ -445,8 +445,8 @@ export class RollupCoordinator {
     this.log(`RollupCoordinator:   estimated L1 gas: ${rollupProfile.totalGas}`);
     this.log(`RollupCoordinator:   calldata: ${rollupProfile.totalCallData} bytes`);
     for (const bp of rollupProfile.bridgeProfiles.values()) {
-      const bridgeDescription = this.bridgeResolver.getBridgeDescription(bp.bridgeId);
-      this.log(`RollupCoordinator: Defi bridge published: ${bridgeDescription || bp.bridgeId.toString()}`);
+      const bridgeDescription = this.bridgeResolver.getBridgeDescription(bp.bridgeCallData);
+      this.log(`RollupCoordinator: Defi bridge published: ${bridgeDescription || bp.bridgeCallData.toString()}`);
       this.log(`RollupCoordinator:   numTxs: ${bp.numTxs}`);
       this.log(`RollupCoordinator:   gas balance: ${bp.gasAccrued - bp.gasThreshold}`);
     }
@@ -464,7 +464,7 @@ export class RollupCoordinator {
 
     // for each bridge, test the earliest tx time against the appropriate bridge timeout
     for (const bp of rollupProfile.bridgeProfiles.values()) {
-      const timeout = rollupTimeouts.bridgeTimeouts.get(bp.bridgeId);
+      const timeout = rollupTimeouts.bridgeTimeouts.get(bp.bridgeCallData);
       if (!timeout) {
         continue;
       }

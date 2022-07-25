@@ -4,7 +4,7 @@ import { isDefiDepositTx, numTxTypes } from '@aztec/barretenberg/blockchain';
 import { ProofData } from '@aztec/barretenberg/client_proofs';
 
 export interface BridgeProfile {
-  bridgeId: bigint;
+  bridgeCallData: bigint;
   numTxs: number;
   gasThreshold: number;
   gasAccrued: number;
@@ -102,31 +102,31 @@ export function profileRollup(
     if (!isDefiDepositTx(tx.tx.txType)) {
       // for non-defi txs, we add on any excess
       rollupProfile.gasBalance += tx.excessGas;
-    } else if (!tx.bridgeId) {
-      console.log(`Invalid bridge id encountered on DEFI transaction!`);
+    } else if (!tx.bridgeCallData) {
+      console.log(`Invalid bridge call data encountered on DEFI transaction!`);
     } else {
-      const bridgeId = tx.bridgeId;
-      let bridgeProfile = bridgeProfiles.get(bridgeId);
+      const bridgeCallData = tx.bridgeCallData;
+      let bridgeProfile = bridgeProfiles.get(bridgeCallData);
       if (!bridgeProfile) {
         // thie bridge gas cost needs to include subsidy as it is used to determine profitability
-        const bridgeGasCost = feeResolver.getFullBridgeGas(tx.bridgeId);
+        const bridgeGasCost = feeResolver.getFullBridgeGas(tx.bridgeCallData);
         bridgeProfile = {
-          bridgeId,
+          bridgeCallData,
           numTxs: 0,
           gasThreshold: bridgeGasCost,
           gasAccrued: 0,
           earliestTx: new Date(tx.tx.created),
           latestTx: new Date(tx.tx.created),
         };
-        bridgeProfiles.set(bridgeId, bridgeProfile);
+        bridgeProfiles.set(bridgeCallData, bridgeProfile);
         // we are going to incur the cost of the bridge here so reduce our gas balance
         rollupProfile.gasBalance -= bridgeGasCost;
         // we need to add the total un-subsidised bridge gas cost to the total gas
-        rollupProfile.totalGas += feeResolver.getFullBridgeGasFromContract(tx.bridgeId);
+        rollupProfile.totalGas += feeResolver.getFullBridgeGasFromContract(tx.bridgeCallData);
       }
       bridgeProfile.numTxs++;
       // this is the gas provided above and beyond the gas constant for defi deposits
-      const gasTowardsBridge = feeResolver.getSingleBridgeTxGas(tx.bridgeId) + tx.excessGas;
+      const gasTowardsBridge = feeResolver.getSingleBridgeTxGas(tx.bridgeCallData) + tx.excessGas;
       bridgeProfile.gasAccrued += gasTowardsBridge;
       // add this back onto the gas balance for the rollup
       rollupProfile.gasBalance += gasTowardsBridge;

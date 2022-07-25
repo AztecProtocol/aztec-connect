@@ -71,8 +71,8 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
     return await this.core.getTxFees(assetId);
   }
 
-  public async getDefiFees(bridgeId: string) {
-    return await this.core.getDefiFees(bridgeId);
+  public async getDefiFees(bridgeCallData: string) {
+    return await this.core.getDefiFees(bridgeCallData);
   }
 
   public async getPendingDepositTxs() {
@@ -190,13 +190,13 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
 
   public async createDefiProofInput(
     userId: string,
-    bridgeId: string,
+    bridgeCallData: string,
     depositValue: string,
     inputNotes: NoteJson[],
     spendingPublicKey: string,
   ) {
     await this.checkPermission(userId);
-    return this.core.createDefiProofInput(userId, bridgeId, depositValue, inputNotes, spendingPublicKey);
+    return this.core.createDefiProofInput(userId, bridgeCallData, depositValue, inputNotes, spendingPublicKey);
   }
 
   public async createDefiProof(input: JoinSplitProofInputJson, txRefNo: number) {

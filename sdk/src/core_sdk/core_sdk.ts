@@ -1,7 +1,7 @@
 import { AliasHash } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { AccountProver, JoinSplitProver, ProofId, UnrolledProver } from '@aztec/barretenberg/client_proofs';
 import { Crs } from '@aztec/barretenberg/crs';
 import { Blake2s, Pedersen, randomBytes, Schnorr } from '@aztec/barretenberg/crypto';
@@ -279,8 +279,8 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     return await this.rollupProvider.getTxFees(assetId);
   }
 
-  public async getDefiFees(bridgeId: BridgeId) {
-    return await this.rollupProvider.getDefiFees(bridgeId);
+  public async getDefiFees(bridgeCallData: BridgeCallData) {
+    return await this.rollupProvider.getDefiFees(bridgeCallData);
   }
 
   public async getPendingDepositTxs() {
@@ -639,7 +639,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
 
   public async createDefiProofInput(
     userId: GrumpkinAddress,
-    bridgeId: BridgeId,
+    bridgeCallData: BridgeCallData,
     depositValue: bigint,
     inputNotes: Note[],
     spendingPublicKey: GrumpkinAddress,
@@ -650,7 +650,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       const user = userState.getUserData();
       return await this.defiDepositProofCreator.createProofInput(
         user,
-        bridgeId,
+        bridgeCallData,
         depositValue,
         inputNotes,
         spendingPublicKey,

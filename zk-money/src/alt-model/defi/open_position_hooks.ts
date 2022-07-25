@@ -30,14 +30,14 @@ function aggregatePositions(balances: AssetValue[], defiTxs: UserDefiTx[], recip
     const { state, isAsync } = tx.interactionResult;
     if (state !== UserDefiInteractionResultState.SETTLED) {
       if (isAsync) {
-        const recipe = recipes.find(recipeMatcher(tx.bridgeId));
+        const recipe = recipes.find(recipeMatcher(tx.bridgeCallData));
         if (recipe) positions.push({ type: 'async', tx, recipe });
       } else {
-        const enteringRecipe = recipes.find(recipeMatcher(tx.bridgeId));
+        const enteringRecipe = recipes.find(recipeMatcher(tx.bridgeCallData));
         if (enteringRecipe) {
           positions.push({ type: 'sync-entering', tx, recipe: enteringRecipe });
         } else {
-          const exitingRecipe = recipes.find(exitingRecipeMatcher(tx.bridgeId));
+          const exitingRecipe = recipes.find(exitingRecipeMatcher(tx.bridgeCallData));
           if (exitingRecipe) {
             positions.push({ type: 'sync-exiting', tx, recipe: exitingRecipe });
           }

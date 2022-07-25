@@ -98,7 +98,7 @@ Recall that all inner circuits must have the **same number of public inputs** as
 1. `data_tree_root`
 1. `tx_fee = 0`
 1. `tx_fee_asset_id = 0`
-1. `bridge_id = 0`
+1. `bridge_call_data = 0`
 1. `defi_deposit_value = 0`
 1. `defi_root = 0`
 1. `backward_link = 0`

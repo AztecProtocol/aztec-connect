@@ -75,7 +75,7 @@ Claim notes are created to document the amount a user deposited in the first sta
 Consists of the following:
 
 - `deposit_value`: The value that the user deposited in the first stage of their defi interaction.
-- `bridge_id`: Contains an encoding of the bridge being interacted with.
+- `bridge_call_data`: Contains an encoding of the bridge being interacted with.
 - `value_note_partial_commitment`: See the above 'value note' section.
 - `input_nullifier`: In order to create a claim note, a value note must be nullified as part of the 'defi deposit' join-split transaction. We include that `input_nullifier` here to ensure the claim commitment is unique (which, in turn, will ensure this note's nullifier will be unique).
 - `defi_interaction_nonce`: A unique identifier for a particular defi interaction that took place. This is assigned by the RollupProcessor.sol contract, and emitted as an event.
@@ -83,10 +83,10 @@ Consists of the following:
 
 **partial commitment**
 
-- `pedersen::compress(deposit_value, bridge_id, value_note_partial_commitment, input_nullifier)`
+- `pedersen::compress(deposit_value, bridge_call_data, value_note_partial_commitment, input_nullifier)`
   - Pedersen GeneratorIndex: `CLAIM_NOTE_PARTIAL_COMMITMENT`
   - `allow_zero_inputs = true`
-    - `bridge_id` can be zero.
+    - `bridge_call_data` can be zero.
 
 **complete commitment**
 
@@ -101,16 +101,16 @@ A defi interaction note records the details of a particular defi interaction. It
 
 Consists of the following:
 
-- `bridge_id`: Contains an encoding of the bridge that was interacted with.
+- `bridge_call_data`: Contains an encoding of the bridge that was interacted with.
 - `total_input_value`: The total deposited to the bridge by all users who took part in this defi interaction.
-- `total_output_value_a`: The sum returned by the defi bridge denominated in 'token A'. (The details of 'token A' are contained in the `bridge_id`).
-- `total_output_value_b`: The sum returned by the defi bridge denominated in 'token B'. (The details of 'token B' are contained in the `bridge_id`).
+- `total_output_value_a`: The sum returned by the defi bridge denominated in 'token A'. (The details of 'token A' are contained in the `bridge_call_data`).
+- `total_output_value_b`: The sum returned by the defi bridge denominated in 'token B'. (The details of 'token B' are contained in the `bridge_call_data`).
 - `interaction_nonce`: (a.k.a. defi interaction nonce) A unique identifier for a particular defi interaction that took place. This is assigned by the RollupProcessor.sol contract, and emitted as an event.
 - `interaction_result`: true/false - was the L1 transaction a success?
 
 **commitment**
 
-- `pedersen::compress(bridge_id, total_input_value, total_output_value_a, total_output_value_b, interaction_nonce, interaction_result)`
+- `pedersen::compress(bridge_call_data, total_input_value, total_output_value_a, total_output_value_b, interaction_nonce, interaction_result)`
   - Pedersen GeneratorIndex: `DEFI_INTERACTION_NOTE_COMMITMENT`
   - `allow_zero_inputs = true`
 

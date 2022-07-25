@@ -4,13 +4,13 @@ import { BridgeResolver } from './bridge_resolver';
 
 const bridgeConfigs: BridgeConfig[] = [
   {
-    bridgeId: 1n,
+    bridgeCallData: 1n,
     numTxs: 5,
     gas: 500000,
     rollupFrequency: 2,
   },
   {
-    bridgeId: 2n,
+    bridgeCallData: 2n,
     numTxs: 10,
     gas: 0,
     rollupFrequency: 4,
@@ -27,7 +27,7 @@ describe('Bridge Resolver', () => {
   let blockchain: Mockify<Blockchain>;
   let bridgeResolver: BridgeResolver;
   const defaultDeFiBatchSize = 10;
-  const thirdPartyBridgeId = 123n;
+  const thirdPartyBridgeCallData = 123n;
 
   beforeEach(() => {
     jest.spyOn(console, 'log').mockImplementation(() => {});
@@ -43,8 +43,8 @@ describe('Bridge Resolver', () => {
   });
 
   it('returns correct bridge config', () => {
-    expect(bridgeResolver.getBridgeConfig(bridgeConfigs[0].bridgeId)).toEqual(bridgeConfigs[0]);
-    expect(bridgeResolver.getBridgeConfig(bridgeConfigs[1].bridgeId)).toEqual(bridgeConfigs[1]);
+    expect(bridgeResolver.getBridgeConfig(bridgeConfigs[0].bridgeCallData)).toEqual(bridgeConfigs[0]);
+    expect(bridgeResolver.getBridgeConfig(bridgeConfigs[1].bridgeCallData)).toEqual(bridgeConfigs[1]);
   });
 
   it('returns all bridge configs', () => {
@@ -52,16 +52,16 @@ describe('Bridge Resolver', () => {
   });
 
   it('returns correct full bridge gas', () => {
-    expect(bridgeResolver.getFullBridgeGas(bridgeConfigs[0].bridgeId)).toEqual(bridgeConfigs[0].gas);
-    expect(bridgeResolver.getFullBridgeGas(bridgeConfigs[1].bridgeId)).toEqual(bridgeConfigs[1].gas);
-    expect(bridgeResolver.getFullBridgeGas(thirdPartyBridgeId)).toEqual(DEFAULT_BRIDGE_GAS_LIMIT);
+    expect(bridgeResolver.getFullBridgeGas(bridgeConfigs[0].bridgeCallData)).toEqual(bridgeConfigs[0].gas);
+    expect(bridgeResolver.getFullBridgeGas(bridgeConfigs[1].bridgeCallData)).toEqual(bridgeConfigs[1].gas);
+    expect(bridgeResolver.getFullBridgeGas(thirdPartyBridgeCallData)).toEqual(DEFAULT_BRIDGE_GAS_LIMIT);
   });
 
   it('returns correct single tx gas in the bridge config', () => {
-    expect(bridgeResolver.getMinBridgeTxGas(bridgeConfigs[0].bridgeId)).toEqual(
+    expect(bridgeResolver.getMinBridgeTxGas(bridgeConfigs[0].bridgeCallData)).toEqual(
       bridgeConfigs[0].gas / bridgeConfigs[0].numTxs,
     );
-    expect(bridgeResolver.getMinBridgeTxGas(bridgeConfigs[1].bridgeId)).toEqual(
+    expect(bridgeResolver.getMinBridgeTxGas(bridgeConfigs[1].bridgeCallData)).toEqual(
       bridgeConfigs[1].gas / bridgeConfigs[1].numTxs,
     );
   });
@@ -71,7 +71,9 @@ describe('Bridge Resolver', () => {
     blockchain.getBridgeGas.mockReturnValueOnce(unregisteredBridgeGas);
     blockchain.getBlockchainStatus.mockReturnValueOnce({ allowThirdPartyContracts: true });
 
-    expect(bridgeResolver.getMinBridgeTxGas(thirdPartyBridgeId)).toEqual(unregisteredBridgeGas / defaultDeFiBatchSize);
+    expect(bridgeResolver.getMinBridgeTxGas(thirdPartyBridgeCallData)).toEqual(
+      unregisteredBridgeGas / defaultDeFiBatchSize,
+    );
   });
 
   it('throws for a tx NOT in the bridge config and when the allowThirdPartyContracts flag is FALSE', () => {

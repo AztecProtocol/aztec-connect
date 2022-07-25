@@ -1,7 +1,7 @@
 import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { TxType } from '@aztec/barretenberg/blockchain';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
 import { InterruptError } from '@aztec/barretenberg/errors';
+import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { HashPath } from '@aztec/barretenberg/merkle_tree';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
@@ -41,10 +41,10 @@ const DATA_TREE_SIZE = 99n;
 const ROLLUP_ID = 52;
 const NON_FEE_PAYING_ASSET = 1000;
 
-const buildBridgeId = (addressId: number) => new BridgeId(addressId, 1, 0).toBigInt();
-const BRIDGE_1 = buildBridgeId(1);
-const BRIDGE_2 = buildBridgeId(2);
-const BRIDGE_3 = buildBridgeId(3);
+const buildBridgeCallData = (bridgeAddressId: number) => new BridgeCallData(bridgeAddressId, 1, 0).toBigInt();
+const BRIDGE_1 = buildBridgeCallData(1);
+const BRIDGE_2 = buildBridgeCallData(2);
+const BRIDGE_3 = buildBridgeCallData(3);
 
 describe('rollup_creator', () => {
   let rollupCreator: RollupCreator;
@@ -69,7 +69,7 @@ describe('rollup_creator', () => {
       txFeeAssetId = 0,
       txFee = 0n,
       creationTime = new Date(new Date('2021-06-20T11:43:00+01:00').getTime() + id), // ensures txs are ordered by id
-      bridgeId = new BridgeId(randomInt(), 1, 0).toBigInt(),
+      bridgeCallData = new BridgeCallData(randomInt(), 1, 0).toBigInt(),
       noteCommitment1 = randomBytes(32),
       noteCommitment2 = randomBytes(32),
       backwardLink = Buffer.alloc(32),
@@ -88,7 +88,7 @@ describe('rollup_creator', () => {
         randomBytes(6 * 32),
         toBufferBE(txFee, 32),
         numToUInt32BE(txFeeAssetId, 32),
-        toBufferBE(bridgeId, 32),
+        toBufferBE(bridgeCallData, 32),
         randomBytes(2 * 32),
         backwardLink,
         allowChain,
@@ -364,7 +364,7 @@ describe('rollup_creator', () => {
       const txs = [...Array(numTxs)].map((_, i) =>
         mockTx(i + 1, {
           txType: TxType.DEFI_DEPOSIT,
-          bridgeId: bridges[i],
+          bridgeCallData: bridges[i],
           noteCommitment1: commitments[i],
           txFee: BigInt(fees[i]),
         }),
@@ -381,7 +381,7 @@ describe('rollup_creator', () => {
         ROLLUP_ID * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK,
         fees[0] / 2n,
       ]);
-      expect(rollup.bridgeIds).toEqual(globalBridges.map(x => toBufferBE(x, 32)));
+      expect(rollup.bridgeCallDatas).toEqual(globalBridges.map(x => toBufferBE(x, 32)));
     });
 
     it('should assign the correct nonce to 2 txs for the same bridge', async () => {
@@ -393,7 +393,7 @@ describe('rollup_creator', () => {
       const txs = [...Array(numTxs)].map((_, i) =>
         mockTx(i + 1, {
           txType: TxType.DEFI_DEPOSIT,
-          bridgeId: bridges[i],
+          bridgeCallData: bridges[i],
           noteCommitment1: commitments[i],
           txFee: BigInt(fees[i]),
         }),
@@ -410,7 +410,7 @@ describe('rollup_creator', () => {
         [commitments[0], ROLLUP_ID * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK, fees[0] / 2n],
         [commitments[1], ROLLUP_ID * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK, fees[1] / 2n],
       ]);
-      expect(rollup.bridgeIds).toEqual(globalBridges.map(x => toBufferBE(x, 32)));
+      expect(rollup.bridgeCallDatas).toEqual(globalBridges.map(x => toBufferBE(x, 32)));
     });
 
     it('should assign the correct nonce to 2 txs for different bridges', async () => {
@@ -422,7 +422,7 @@ describe('rollup_creator', () => {
       const txs = [...Array(numTxs)].map((_, i) =>
         mockTx(i + 1, {
           txType: TxType.DEFI_DEPOSIT,
-          bridgeId: bridges[i],
+          bridgeCallData: bridges[i],
           noteCommitment1: commitments[i],
           txFee: BigInt(fees[i]),
         }),
@@ -438,7 +438,7 @@ describe('rollup_creator', () => {
         [commitments[0], ROLLUP_ID * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK, fees[0] / 2n],
         [commitments[1], ROLLUP_ID * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK + 1, fees[1] / 2n],
       ]);
-      expect(rollup.bridgeIds).toEqual(globalBridges.map(x => toBufferBE(x, 32)));
+      expect(rollup.bridgeCallDatas).toEqual(globalBridges.map(x => toBufferBE(x, 32)));
     });
 
     it('should assign the correct nonce to 2 txs for different bridges in different order', async () => {
@@ -450,7 +450,7 @@ describe('rollup_creator', () => {
       const txs = [...Array(numTxs)].map((_, i) =>
         mockTx(i + 1, {
           txType: TxType.DEFI_DEPOSIT,
-          bridgeId: bridges[i],
+          bridgeCallData: bridges[i],
           noteCommitment1: commitments[i],
           txFee: BigInt(fees[i]),
         }),
@@ -467,7 +467,7 @@ describe('rollup_creator', () => {
         [commitments[0], ROLLUP_ID * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK + 1, fees[0] / 2n],
         [commitments[1], ROLLUP_ID * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK, fees[1] / 2n],
       ]);
-      expect(rollup.bridgeIds).toEqual(globalBridges.map(x => toBufferBE(x, 32)));
+      expect(rollup.bridgeCallDatas).toEqual(globalBridges.map(x => toBufferBE(x, 32)));
     });
 
     it('should assign the correct nonce to multiple txs for different bridges in different order', async () => {
@@ -479,7 +479,7 @@ describe('rollup_creator', () => {
       const txs = [...Array(numTxs)].map((_, i) =>
         mockTx(i + 1, {
           txType: TxType.DEFI_DEPOSIT,
-          bridgeId: bridges[i],
+          bridgeCallData: bridges[i],
           noteCommitment1: commitments[i],
           txFee: BigInt(fees[i]),
         }),
@@ -501,7 +501,7 @@ describe('rollup_creator', () => {
         [commitments[6], ROLLUP_ID * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK + 2, fees[6] / 2n],
         [commitments[7], ROLLUP_ID * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK + 1, fees[7] / 2n],
       ]);
-      expect(rollup.bridgeIds).toEqual(globalBridges.map(x => toBufferBE(x, 32)));
+      expect(rollup.bridgeCallDatas).toEqual(globalBridges.map(x => toBufferBE(x, 32)));
     });
 
     it('should add assets to root rollup assets', async () => {

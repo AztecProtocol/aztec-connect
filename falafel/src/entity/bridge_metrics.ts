@@ -12,7 +12,7 @@ export class BridgeMetricsDao {
   public rollupId!: number;
 
   @PrimaryColumn('text', { transformer: [bigintTransformer] })
-  public bridgeId!: bigint;
+  public bridgeId!: bigint; // TODO rename to bridgeCallData
 
   // number of transactions for bridge in rollup
   @Column({ nullable: true })

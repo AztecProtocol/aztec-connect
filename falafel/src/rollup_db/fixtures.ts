@@ -2,7 +2,7 @@ import { AliasHash } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { TxType } from '@aztec/barretenberg/blockchain';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
 import { OffchainAccountData } from '@aztec/barretenberg/offchain_tx_data';
 import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
@@ -115,7 +115,7 @@ export const randomClaim = () =>
   new ClaimDao({
     id: randomBytes(4).readUInt32BE(0),
     nullifier: randomBytes(32),
-    bridgeId: BridgeId.random().toBigInt(),
+    bridgeId: BridgeCallData.random().toBigInt(), // TODO: rename bridgeId to bridgeCallData
     depositValue: toBigIntBE(randomBytes(32)),
     partialState: randomBytes(32),
     partialStateSecretEphPubKey: randomBytes(64),

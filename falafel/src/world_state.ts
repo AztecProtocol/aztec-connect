@@ -54,7 +54,7 @@ const rollupDaoToBlockBuffer = (dao: RollupDao) => {
 };
 
 interface BridgeStat {
-  bridgeId: bigint;
+  bridgeCallData: bigint;
   gasAccrued: number;
 }
 
@@ -155,14 +155,14 @@ export class WorldState {
 
         const defiProof = new DefiDepositProofData(proof);
         const rollupTx = createDefiRollupTx(tx, defiProof);
-        const bridgeId = rollupTx.bridgeId!;
-        const bridgeProfile = pendingBridgeStats.get(bridgeId) || {
-          bridgeId,
+        const bridgeCallData = rollupTx.bridgeCallData!;
+        const bridgeProfile = pendingBridgeStats.get(bridgeCallData) || {
+          bridgeCallData,
           gasAccrued: 0,
         };
-        bridgeProfile.gasAccrued += this.txFeeResolver.getSingleBridgeTxGas(bridgeId) + rollupTx.excessGas;
+        bridgeProfile.gasAccrued += this.txFeeResolver.getSingleBridgeTxGas(bridgeCallData) + rollupTx.excessGas;
 
-        pendingBridgeStats.set(bridgeId, bridgeProfile);
+        pendingBridgeStats.set(bridgeCallData, bridgeProfile);
       }
 
       this.txPoolProfile = {
@@ -487,7 +487,7 @@ export class WorldState {
   }
 
   private async processDefiProofs(rollup: RollupProofData, offchainTxData: Buffer[], block: Block) {
-    const { innerProofData, dataStartIndex, bridgeIds, rollupId } = rollup;
+    const { innerProofData, dataStartIndex, bridgeCallDatas, rollupId } = rollup;
     const { interactionResult } = block;
     let offChainIndex = 0;
     for (let i = 0; i < innerProofData.length; ++i) {
@@ -497,20 +497,27 @@ export class WorldState {
       }
       switch (proofData.proofId) {
         case ProofId.DEFI_DEPOSIT: {
-          const { bridgeId, depositValue, partialState, partialStateSecretEphPubKey, txFee } =
+          const { bridgeCallData, depositValue, partialState, partialStateSecretEphPubKey, txFee } =
             OffchainDefiDepositData.fromBuffer(offchainTxData[offChainIndex]);
           const fee = txFee - (txFee >> BigInt(1));
           const index = dataStartIndex + i * 2;
           const interactionNonce =
-            bridgeIds.findIndex(bridge => bridge.equals(bridgeId.toBuffer())) +
+            bridgeCallDatas.findIndex(bridge => bridge.equals(bridgeCallData.toBuffer())) +
             rollup.rollupId * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK;
           const inputNullifier = proofData.nullifier1;
-          const note = new TreeClaimNote(depositValue, bridgeId, interactionNonce, fee, partialState, inputNullifier);
+          const note = new TreeClaimNote(
+            depositValue,
+            bridgeCallData,
+            interactionNonce,
+            fee,
+            partialState,
+            inputNullifier,
+          );
           const nullifier = this.noteAlgo.claimNoteNullifier(this.noteAlgo.claimNoteCommitment(note));
           const claim = new ClaimDao({
             id: index,
             nullifier,
-            bridgeId: bridgeId.toBigInt(),
+            bridgeId: bridgeCallData.toBigInt(), // TODO: rename bridgeId to bridgeCallData
             depositValue,
             partialState,
             partialStateSecretEphPubKey: partialStateSecretEphPubKey.toBuffer(),
@@ -645,8 +652,8 @@ export class WorldState {
       assetMetrics.totalDefiClaimed += interactionResults.reduce(
         (a, v) =>
           a +
-          (v.bridgeId.outputAssetIdA == assetId ? v.totalOutputValueA : BigInt(0)) +
-          (v.bridgeId.outputAssetIdB == assetId ? v.totalOutputValueB : BigInt(0)),
+          (v.bridgeCallData.outputAssetIdA == assetId ? v.totalOutputValueA : BigInt(0)) +
+          (v.bridgeCallData.outputAssetIdB == assetId ? v.totalOutputValueB : BigInt(0)),
         BigInt(0),
       );
       assetMetrics.totalFees += rollup.getTotalFees(assetId);
@@ -660,19 +667,19 @@ export class WorldState {
     const bridgeTxNum = new Map<bigint, number>();
     // count transactions for bridge
     for (const tx of rollupProof.txs.filter(({ txType }) => txType === TxType.DEFI_DEPOSIT)) {
-      const { bridgeId } = OffchainDefiDepositData.fromBuffer(tx.offchainTxData);
-      const num = bridgeTxNum.get(bridgeId.toBigInt()) || 0;
-      bridgeTxNum.set(bridgeId.toBigInt(), num + 1);
+      const { bridgeCallData } = OffchainDefiDepositData.fromBuffer(tx.offchainTxData);
+      const num = bridgeTxNum.get(bridgeCallData.toBigInt()) || 0;
+      bridgeTxNum.set(bridgeCallData.toBigInt(), num + 1);
     }
 
     // register metrics for defi bridge usage
-    for (const [bridgeId, numTxs] of bridgeTxNum.entries()) {
-      const storedMetrics = await this.rollupDb.getBridgeMetricsForRollup(bridgeId, rollupId);
+    for (const [bridgeCallData, numTxs] of bridgeTxNum.entries()) {
+      const storedMetrics = await this.rollupDb.getBridgeMetricsForRollup(bridgeCallData, rollupId);
       const bridgeMetrics = storedMetrics
         ? storedMetrics
         : new BridgeMetricsDao({
             rollupId,
-            bridgeId,
+            bridgeId: bridgeCallData, // TODO: rename bridgeId to bridgeCallData
           });
       bridgeMetrics.numTxs = numTxs;
       bridgeMetrics.totalNumTxs = (bridgeMetrics.totalNumTxs || 0) + numTxs;

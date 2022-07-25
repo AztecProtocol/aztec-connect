@@ -1,7 +1,7 @@
 import {
   AssetValue,
   AztecSdk,
-  BridgeId,
+  BridgeCallData,
   createAztecSdk,
   DefiSettlementTime,
   EthAddress,
@@ -74,7 +74,7 @@ describe('end-to-end defi tests', () => {
     const bridgeAddressId = 2;
     const ethAssetId = 0;
     const wstETHAssetId = 2;
-    const ethToWstETHBridge = new BridgeId(bridgeAddressId, ethAssetId, wstETHAssetId);
+    const ethToWstETHBridge = new BridgeCallData(bridgeAddressId, ethAssetId, wstETHAssetId);
     const ethToWstETHFees = await sdk.getDefiFees(ethToWstETHBridge);
 
     // Rollup 1.
@@ -110,7 +110,7 @@ describe('end-to-end defi tests', () => {
 
       const [defiTx] = await sdk.getDefiTxs(userIds[0]);
       const expectedInputBalance = shieldValue.value - depositValue.value - fee.value;
-      expect(defiTx).toMatchObject({ bridgeId: ethToWstETHBridge, depositValue, fee });
+      expect(defiTx).toMatchObject({ bridgeCallData: ethToWstETHBridge, depositValue, fee });
       expect(defiTx.interactionResult).toMatchObject({ isAsync: false, success: true });
       expect((await sdk.getBalance(userIds[0], inputAssetIdA)).value).toBe(expectedInputBalance);
       expect((await sdk.getBalance(userIds[0], outputAssetIdA)).value).toBe(
@@ -123,7 +123,7 @@ describe('end-to-end defi tests', () => {
     // Rollup 2.
     // Account 0 swaps wstETH to ETH.
     {
-      const wstETHToEthBridge = new BridgeId(3, wstETHAssetId, ethAssetId);
+      const wstETHToEthBridge = new BridgeCallData(3, wstETHAssetId, ethAssetId);
       const wstETHToEthFees = await sdk.getDefiFees(wstETHToEthBridge);
 
       const { inputAssetIdA, outputAssetIdA } = wstETHToEthBridge;
@@ -159,7 +159,7 @@ describe('end-to-end defi tests', () => {
 
       const [defiTx] = await sdk.getDefiTxs(userIds[0]);
       const expectedInputBalance = inputBalanceBefore.value - depositValue.value;
-      expect(defiTx).toMatchObject({ bridgeId: wstETHToEthBridge, depositValue, fee });
+      expect(defiTx).toMatchObject({ bridgeCallData: wstETHToEthBridge, depositValue, fee });
       expect(defiTx.interactionResult).toMatchObject({ isAsync: false, success: true });
       expect((await sdk.getBalance(userIds[0], inputAssetIdA)).value).toBe(expectedInputBalance);
       expect((await sdk.getBalance(userIds[0], outputAssetIdA)).value).toBe(

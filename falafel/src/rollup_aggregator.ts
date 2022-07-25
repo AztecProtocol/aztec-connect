@@ -36,7 +36,7 @@ export class RollupAggregator {
     oldDefiRoot: Buffer,
     oldDefiPath: HashPath,
     defiInteractionNotes: DefiInteractionNote[],
-    bridgeIds: bigint[],
+    bridgeCallDatas: bigint[],
     assetIds: number[],
   ) {
     this.log(`Creating root rollup proof with ${innerProofs.length} inner proofs...`);
@@ -46,7 +46,7 @@ export class RollupAggregator {
       oldDefiRoot,
       oldDefiPath,
       defiInteractionNotes,
-      bridgeIds,
+      bridgeCallDatas,
       assetIds,
     );
     const end = this.metrics.rootRollupTimer();
@@ -111,7 +111,7 @@ export class RollupAggregator {
     oldDefiRoot: Buffer,
     oldDefiPath: HashPath,
     defiInteractionNotes: DefiInteractionNote[],
-    bridgeIds: bigint[],
+    bridgeCallDatas: bigint[],
     assetIds: number[],
   ) {
     const worldStateDb = this.worldStateDb;
@@ -145,7 +145,7 @@ export class RollupAggregator {
       oldDefiRoot,
       newDefiRoot,
       oldDefiPath,
-      bridgeIds,
+      bridgeCallDatas,
       assetIds.map(id => numToUInt32BE(id, 32)),
       defiInteractionNotes.map(n => n.toBuffer()),
       this.rollupBeneficiary,

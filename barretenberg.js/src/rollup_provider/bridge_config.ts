@@ -1,7 +1,7 @@
 import { toBigIntBE, toBufferBE } from '../bigint_buffer';
 
 export interface BridgeConfig {
-  bridgeId: bigint;
+  bridgeCallData: bigint;
   numTxs: number;
   // The total amount of gas the bridge is expected to use, from which we compute the fees.
   // e.g. The gas for a single tx is gas / numTxs. This can then be converted to a fee in whichever asset.
@@ -11,19 +11,19 @@ export interface BridgeConfig {
 }
 
 export interface BridgeConfigJson {
-  bridgeId: string;
+  bridgeCallData: string;
   numTxs: number;
   rollupFrequency: number;
   gas: number;
   description?: string;
 }
 
-export const bridgeConfigToJson = ({ bridgeId, ...rest }: BridgeConfig): BridgeConfigJson => ({
+export const bridgeConfigToJson = ({ bridgeCallData, ...rest }: BridgeConfig): BridgeConfigJson => ({
   ...rest,
-  bridgeId: toBufferBE(bridgeId, 32).toString('hex'),
+  bridgeCallData: toBufferBE(bridgeCallData, 32).toString('hex'),
 });
 
-export const bridgeConfigFromJson = ({ bridgeId, ...rest }: BridgeConfigJson): BridgeConfig => ({
+export const bridgeConfigFromJson = ({ bridgeCallData, ...rest }: BridgeConfigJson): BridgeConfig => ({
   ...rest,
-  bridgeId: toBigIntBE(Buffer.from(bridgeId, 'hex')),
+  bridgeCallData: toBigIntBE(Buffer.from(bridgeCallData, 'hex')),
 });

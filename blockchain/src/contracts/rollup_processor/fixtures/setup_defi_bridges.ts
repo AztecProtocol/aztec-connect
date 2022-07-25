@@ -1,5 +1,5 @@
 import { EthAddress } from '@aztec/barretenberg/address';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { Signer } from 'ethers';
 import { ethers } from 'hardhat';
 import { RollupProcessor } from '../rollup_processor';
@@ -62,7 +62,14 @@ export const deployMockBridge = async (
   await rollupProcessor.setSupportedBridge(address, bridgeGasLimit);
   const bridgeAddressId = (await rollupProcessor.getSupportedBridges()).length;
 
-  const bridgeId = new BridgeId(bridgeAddressId, inputAssetIdA, outputAssetIdA, inputAssetIdB, outputAssetIdB, auxData);
+  const bridgeCallData = new BridgeCallData(
+    bridgeAddressId,
+    inputAssetIdA,
+    outputAssetIdA,
+    inputAssetIdB,
+    outputAssetIdB,
+    auxData,
+  );
 
   const mint = async (assetAddress: EthAddress, amount: bigint) => {
     if (!amount) return;
@@ -87,7 +94,7 @@ export const deployMockBridge = async (
     await mint(assetAddresses[outputAssetIdB!], returnValueB * BigInt(maxTxs));
   }
 
-  return bridgeId;
+  return bridgeCallData;
 };
 
 export const mockAsyncBridge = async (
@@ -96,11 +103,11 @@ export const mockAsyncBridge = async (
   assetAddresses: EthAddress[],
   params: MockBridgeParams = {},
 ) => {
-  const bridgeId = await deployMockBridge(rollupProvider, rollupProcessor, assetAddresses, {
+  const bridgeCallData = await deployMockBridge(rollupProvider, rollupProcessor, assetAddresses, {
     ...params,
     isAsync: true,
   });
-  const bridgeAddress = await rollupProcessor.getSupportedBridge(bridgeId.addressId);
+  const bridgeAddress = await rollupProcessor.getSupportedBridge(bridgeCallData.bridgeAddressId);
   const bridge = new DefiBridge(bridgeAddress, new EthersAdapter(ethers.provider));
-  return { bridgeId, bridge };
+  return { bridgeCallData, bridge };
 };

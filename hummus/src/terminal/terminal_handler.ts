@@ -2,7 +2,7 @@ import {
   AssetValue,
   AztecSdk,
   AztecSdkUser,
-  BridgeId,
+  BridgeCallData,
   createAztecSdk,
   CreateSdkOptions,
   DefiSettlementTime,
@@ -173,7 +173,7 @@ export class TerminalHandler {
     } else {
       this.printQueue.put(
         'deposit <amount>\n' +
-          'defi <amount> <bridge id> <input asset>\n' +
+          'defi <amount> <bridge call data> <input asset>\n' +
           '     <output asset> [aux data]\n' +
           'withdraw <amount>\n' +
           'transfer <to> <amount>\n' +
@@ -275,11 +275,18 @@ export class TerminalHandler {
     await this.assertRegistered();
     const inputAsset = +inputAssetStr;
     const value = this.sdk.toBaseUnits(inputAsset, valueStr);
-    const bridgeId = new BridgeId(+addressIdStr, inputAsset, +outputAssetStr, undefined, undefined, +auxData);
-    const fee = (await this.sdk.getDefiFees(bridgeId, this.user.id, value))[DefiSettlementTime.INSTANT];
+    const bridgeCallData = new BridgeCallData(
+      +addressIdStr,
+      inputAsset,
+      +outputAssetStr,
+      undefined,
+      undefined,
+      +auxData,
+    );
+    const fee = (await this.sdk.getDefiFees(bridgeCallData, this.user.id, value))[DefiSettlementTime.INSTANT];
     const spendingKey = await this.sdk.generateSpendingKeyPair(this.ethAddress);
     const userSigner = await this.sdk.createSchnorrSigner(spendingKey.privateKey);
-    const controller = this.sdk.createDefiController(this.user.id, userSigner, bridgeId, value, fee);
+    const controller = this.sdk.createDefiController(this.user.id, userSigner, bridgeCallData, value, fee);
     this.printQueue.put(`generating proof...\n`);
     await controller.createProof();
     await controller.send();

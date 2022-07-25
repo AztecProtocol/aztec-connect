@@ -61,7 +61,7 @@ export function DefiEnterPage1({
             speed={fields.speed}
             onChangeSpeed={onChangeSpeed}
             recipe={recipe}
-            bridgeId={validationResult.input.bridgeId}
+            bridgeCallData={validationResult.input.bridgeCallData}
             feeAmounts={validationResult?.feeAmounts}
           />
         }

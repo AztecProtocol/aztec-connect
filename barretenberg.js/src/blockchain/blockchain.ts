@@ -89,5 +89,5 @@ export interface Blockchain extends BlockSource, BlockchainStatusSource, Ethereu
 
   getFeeData(): Promise<FeeData>;
 
-  getBridgeGas(bridgeId: bigint): number;
+  getBridgeGas(bridgeCallData: bigint): number;
 }

@@ -13,7 +13,7 @@ interface ExpectedExitOutputSectionProps {
 }
 
 export function ExpectedExitOutputSection(props: ExpectedExitOutputSectionProps) {
-  const auxData = props.validationResult.input.bridgeId?.auxData;
+  const auxData = props.validationResult.input.bridgeCallData?.auxData;
   const inputValue = props.validationResult.targetDepositAmount?.baseUnits;
   const maybeAuxData = auxData !== undefined ? BigInt(auxData) : undefined;
   const maybeInputValue = (inputValue ?? 0n) > 0n ? inputValue : undefined;

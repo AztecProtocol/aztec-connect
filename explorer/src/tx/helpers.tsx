@@ -62,8 +62,8 @@ export function getAssetIcon(asset?: BlockchainAsset): string | undefined {
   }
 }
 
-export function getBridgeProtocolName(addressId: number) {
-  switch (addressId) {
+export function getBridgeProtocolName(bridgeAddressId: number) {
+  switch (bridgeAddressId) {
     case 1:
       return 'Element Fixed Yield';
     case 2:

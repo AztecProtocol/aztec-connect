@@ -182,8 +182,8 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
   router.post('/defi-fees', recordMetric, async (ctx: Koa.Context) => {
     const stream = new PromiseReadable(ctx.req);
     const data = JSON.parse((await stream.readAll()) as string);
-    const bridgeId = BigInt(data.bridgeId);
-    const defiFees = server.getDefiFees(bridgeId);
+    const bridgeCallData = BigInt(data.bridgeCallData);
+    const defiFees = server.getDefiFees(bridgeCallData);
 
     ctx.set('content-type', 'application/json');
     ctx.body = defiFees.map(assetValueToJson);

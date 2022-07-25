@@ -26,7 +26,7 @@ function getTxTypeLabel(tx: UserTx) {
 
 function DefiRecipeName({ tx }: { tx: UserDefiTx | UserDefiClaimTx }) {
   const recipes = useDefiRecipes();
-  const recipe = recipes?.find(recipeMatcher(tx.bridgeId)) ?? recipes?.find(exitingRecipeMatcher(tx.bridgeId));
+  const recipe = recipes?.find(recipeMatcher(tx.bridgeCallData)) ?? recipes?.find(exitingRecipeMatcher(tx.bridgeCallData));
   return <>{recipe?.name}</>;
 }
 

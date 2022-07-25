@@ -1,4 +1,4 @@
-import { BridgeId, AztecSdk, EthereumProvider, EthAddress, AssetValue } from '@aztec/sdk';
+import { BridgeCallData, AztecSdk, EthereumProvider, EthAddress, AssetValue } from '@aztec/sdk';
 import { ElementBridgeData } from '@aztec/bridge-clients/client-dest/src/client/element/element-bridge-data';
 import { AztecAsset, AztecAssetType } from '@aztec/bridge-clients/client-dest/src/client/bridge-data';
 import { ChainProperties } from '@aztec/bridge-clients/client-dest/src/client/element/element-bridge-data';
@@ -13,30 +13,35 @@ export const ELEMENT_START_TIME = 1657015486;
 export interface BridgeSpec {
   inputAsset: number;
   outputAsset: number;
-  addressId: number;
+  bridgeAddressId: number;
 }
 
 export const bridgeConfigs: BridgeSpec[] = [
   {
-    //bridgeId: '0x0000000000000000000000000000000000000000000000004000000000000001',
+    //bridgeCallData: '0x0000000000000000000000000000000000000000000000004000000000000001',
     inputAsset: 0,
     outputAsset: 1,
-    addressId: UNISWAP_BRIDGE_ADDRESS_ID,
+    bridgeAddressId: UNISWAP_BRIDGE_ADDRESS_ID,
   },
   {
-    //bridgeId: '0x0000000000000000000000000000000000000000000000000000000100000002',
+    //bridgeCallData: '0x0000000000000000000000000000000000000000000000000000000100000002',
     inputAsset: 1,
     outputAsset: 0,
-    addressId: UNISWAP_BRIDGE_ADDRESS_ID,
+    bridgeAddressId: UNISWAP_BRIDGE_ADDRESS_ID,
   },
 ];
 
-export const getBridgeId = (bridgeSpec: BridgeSpec) => {
-  return buildBridgeId(bridgeSpec.addressId, bridgeSpec.inputAsset, bridgeSpec.outputAsset, 0);
+export const getBridgeCallData = (bridgeSpec: BridgeSpec) => {
+  return buildBridgeCallData(bridgeSpec.bridgeAddressId, bridgeSpec.inputAsset, bridgeSpec.outputAsset, 0);
 };
 
-export const buildBridgeId = (addressId: number, inputAsset: number, outputAsset: number, auxData: number) => {
-  return new BridgeId(addressId, inputAsset, outputAsset, undefined, undefined, auxData);
+export const buildBridgeCallData = (
+  bridgeAddressId: number,
+  inputAsset: number,
+  outputAsset: number,
+  auxData: number,
+) => {
+  return new BridgeCallData(bridgeAddressId, inputAsset, outputAsset, undefined, undefined, auxData);
 };
 
 export const formatTime = (unixTimeInSeconds: number) => {

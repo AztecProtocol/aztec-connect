@@ -58,8 +58,8 @@ export class CoreSdkDispatch extends EventEmitter implements CoreSdkSerializedIn
     return await this.request('getTxFees', [assetId]);
   }
 
-  public async getDefiFees(bridgeId: string) {
-    return await this.request('getDefiFees', [bridgeId]);
+  public async getDefiFees(bridgeCallData: string) {
+    return await this.request('getDefiFees', [bridgeCallData]);
   }
 
   public async getPendingDepositTxs() {
@@ -166,12 +166,18 @@ export class CoreSdkDispatch extends EventEmitter implements CoreSdkSerializedIn
 
   public async createDefiProofInput(
     userId: string,
-    bridgeId: string,
+    bridgeCallData: string,
     depositValue: string,
     inputNotes: NoteJson[],
     spendingPublicKey: string,
   ) {
-    return await this.request('createDefiProofInput', [userId, bridgeId, depositValue, inputNotes, spendingPublicKey]);
+    return await this.request('createDefiProofInput', [
+      userId,
+      bridgeCallData,
+      depositValue,
+      inputNotes,
+      spendingPublicKey,
+    ]);
   }
 
   public async createDefiProof(input: JoinSplitProofInputJson, txRefNo: number) {

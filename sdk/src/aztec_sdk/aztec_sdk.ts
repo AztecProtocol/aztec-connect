@@ -1,7 +1,7 @@
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetValue, isVirtualAsset } from '@aztec/barretenberg/asset';
 import { EthereumProvider, Receipt, SendTxOptions, TxHash, TxType } from '@aztec/barretenberg/blockchain';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { randomBytes } from '@aztec/barretenberg/crypto';
 import { retryUntil } from '@aztec/barretenberg/retry';
@@ -324,14 +324,14 @@ export class AztecSdk extends EventEmitter {
     return new TransferController(userId, userSigner, value, fee, recipient, recipientSpendingKeyRequired, this.core);
   }
 
-  public async getDefiFees(bridgeId: BridgeId, userId?: GrumpkinAddress, depositValue?: AssetValue) {
-    if (depositValue && depositValue.assetId !== bridgeId.inputAssetIdA) {
+  public async getDefiFees(bridgeCallData: BridgeCallData, userId?: GrumpkinAddress, depositValue?: AssetValue) {
+    if (depositValue && depositValue.assetId !== bridgeCallData.inputAssetIdA) {
       throw new Error('Inconsistent asset ids.');
     }
 
-    const defiFees = await this.core.getDefiFees(bridgeId);
+    const defiFees = await this.core.getDefiFees(bridgeCallData);
     const { assetId: feeAssetId, value: minDefiFee } = defiFees[0];
-    const requireFeePayingTx = feeAssetId !== bridgeId.inputAssetIdA;
+    const requireFeePayingTx = feeAssetId !== bridgeCallData.inputAssetIdA;
     const requireJoinSplitTx = await (async () => {
       if (!userId || !depositValue) {
         return true;
@@ -340,14 +340,14 @@ export class AztecSdk extends EventEmitter {
       const { value } = depositValue;
       const privateInput = value + (!requireFeePayingTx ? minDefiFee : BigInt(0));
 
-      if (bridgeId.inputAssetIdB === undefined) {
-        const notes = await this.core.pickNotes(userId, bridgeId.inputAssetIdA, privateInput);
+      if (bridgeCallData.inputAssetIdB === undefined) {
+        const notes = await this.core.pickNotes(userId, bridgeCallData.inputAssetIdA, privateInput);
         return notes.reduce((sum, n) => sum + n.value, BigInt(0)) !== privateInput;
       }
 
       return (
-        (await this.core.pickNote(userId, bridgeId.inputAssetIdA, privateInput))?.value !== privateInput ||
-        (await this.core.pickNote(userId, bridgeId.inputAssetIdB, value))?.value !== value
+        (await this.core.pickNote(userId, bridgeCallData.inputAssetIdA, privateInput))?.value !== privateInput ||
+        (await this.core.pickNote(userId, bridgeCallData.inputAssetIdB, value))?.value !== value
       );
     })();
 
@@ -368,11 +368,11 @@ export class AztecSdk extends EventEmitter {
   public createDefiController(
     userId: GrumpkinAddress,
     userSigner: Signer,
-    bridgeId: BridgeId,
+    bridgeCallData: BridgeCallData,
     value: AssetValue,
     fee: AssetValue,
   ) {
-    return new DefiController(userId, userSigner, bridgeId, value, fee, this.core);
+    return new DefiController(userId, userSigner, bridgeCallData, value, fee, this.core);
   }
 
   public async generateAccountRecoveryData(

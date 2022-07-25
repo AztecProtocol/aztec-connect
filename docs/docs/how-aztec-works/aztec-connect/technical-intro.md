@@ -32,7 +32,7 @@ The source of funds for any Aztec Connect transaction is an Aztec shielded asset
 
 #### Batching
 
-Rollup providers are incentivised to batch any transaction with the same `bridgeId`. This reduces the cost of the L1 transaction for similar trades. A `bridgeId` consits of:
+Rollup providers are incentivised to batch any transaction with the same `bridgeCallData`. This reduces the cost of the L1 transaction for similar trades. A `bridgeCallData` consits of:
 
 ## Virtual Assets
 

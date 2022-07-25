@@ -1,6 +1,6 @@
 import { AliasHash } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { TreeNote } from '@aztec/barretenberg/note_algorithms';
 import { TxId } from '@aztec/barretenberg/tx_id';
@@ -232,6 +232,8 @@ const fromDexieAccountTx = ({
     settled ? new Date(settled) : undefined,
   );
 
+// @dev Note: `bridgeId` as is used here is called `bridgeCallData` everywhere else. We kept the old name here in order
+//            to not cause inconsistencies in the database on frontend.
 class DexieDefiTx implements DexieUserTx {
   constructor(
     public txId: Uint8Array,
@@ -259,7 +261,7 @@ const toDexieDefiTx = (tx: CoreDefiTx) =>
     new Uint8Array(tx.txId.toBuffer()),
     new Uint8Array(tx.userId.toBuffer()),
     ProofId.DEFI_DEPOSIT,
-    new Uint8Array(tx.bridgeId.toBuffer()),
+    new Uint8Array(tx.bridgeCallData.toBuffer()),
     tx.depositValue.toString(),
     tx.txFee.toString(),
     tx.txRefNo,
@@ -296,7 +298,7 @@ const fromDexieDefiTx = ({
   new CoreDefiTx(
     new TxId(Buffer.from(txId)),
     new GrumpkinAddress(Buffer.from(userId)),
-    BridgeId.fromBuffer(Buffer.from(bridgeId)),
+    BridgeCallData.fromBuffer(Buffer.from(bridgeId)),
     BigInt(depositValue),
     BigInt(txFee),
     txRefNo,

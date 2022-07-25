@@ -146,7 +146,7 @@ Rollup Header Structure
 | 0x100 - 0x120   | 32        | newDataRootsRoot                         | Root of the tree of data tree roots after rollup block’s state updates                                                                                                       |
 | 0x120 - 0x140   | 32        | oldDefiRoot                              | Root of the defi tree prior to rollup block’s state updates                                                                                                                  |
 | 0x140 - 0x160   | 32        | newDefiRoot                              | Root of the defi tree after rollup block’s state updates                                                                                                                     |
-| 0x160 - 0x560   | 1024      | bridgeIds[NUMBER_OF_BRIDGE_CALLS]        | Size-32 array of bridgeIds for bridges being called in this block. If bridgeId == 0, no bridge is called                                                                     |
+| 0x160 - 0x560   | 1024      | bridgeCallDatas[NUMBER_OF_BRIDGE_CALLS]        | Size-32 array of bridgeCallDatas for bridges being called in this block. If bridgeCallData == 0, no bridge is called                                                                     |
 | 0x560 - 0x960   | 1024      | depositSums[NUMBER_OF_BRIDGE_CALLS]      | Size-32 array of deposit values being sent for bridges being called in this block                                                                                            |
 | 0x960 - 0xb60   | 512       | assetIds[NUMBER_OF_ASSETS]               | Size-16 array of the assetIds for assets being deposited/withdrawn/used to pay fees in this block                                                                            |
 | 0xb60 - 0xd60   | 512       | txFees[NUMBER_OF_ASSETS]                 | Size-16 array of transaction fees paid to the rollup beneficiary, denominated in each assetId                                                                                |
@@ -177,9 +177,9 @@ Alternatively, value can be extracted if the rollup header contains a non-zero v
 
 Anatomy of an Aztec Connect defi transaction
 
-An outbound defi interaction is described by a tuple of a bridgeId and a depositSum (present in the rollup header in the bridgeIds and depositSums arrays).
+An outbound defi interaction is described by a tuple of a bridgeCallData and a depositSum (present in the rollup header in the bridgeCallDatas and depositSums arrays).
 
-A bridgeId uniquely defines the expected inputs/outputs of a defi interaction. It is a uint256 that represents a bit-string containing multiple fields. When unpacked its data is used to create the BridgeData struct:
+A bridgeCallData uniquely defines the expected inputs/outputs of a defi interaction. It is a uint256 that represents a bit-string containing multiple fields. When unpacked its data is used to create the BridgeData struct:
 
 struct BridgeData {
 uint256 bridgeAddressId;
@@ -486,7 +486,7 @@ Compare defiInteractionHash with the prevDefiInteractionHash in the proofData. T
 For each defi interaction data, extract the following values:
 
 solidity
-uint256 bridgeId
+uint256 bridgeCallData
 address bridgeAddress
 uint256[3] memory assetIds
 uint32 numOutputAssets
@@ -494,7 +494,7 @@ uint256 totalInputValue
 
 ```
 
-###### If bridgeId is not zero:
+###### If bridgeCallData is not zero:
 
 - Find the address of each asset id in assetIds from supportedAssets. Except for ethAssetId, its address should be weth, not address(0). assetIds[3] will map to [inputAsset, outputAssetA, outputAssetB].
 - Call getInfo on the bridge contract and check that the response matches the above decoded values.
@@ -504,7 +504,7 @@ uint256 totalInputValue
 - If outputValueA is larger than 0, call transferFrom on outputAssetA to transfer outputValueA from the bridge contract to the rollup contract.
 - If outputValueB is larger than 0 and numOutputAssets is 2, call transferFrom on outputAssetB to transfer outputValueB from the bridge contract to the rollup contract.
 
-###### If bridgeId is zero:
+###### If bridgeCallData is zero:
 
 - Stop processing the rest of the interaction data. Root rollup circuit guarantees that all empty interaction data will be appended to the array.
 
@@ -530,9 +530,9 @@ If interactionResult is false, both outputValueA and outputValueB must be 0. And
 ##### This function will throw if:
 
 - defiInteractionHash and prevDefiInteractionHash are not the same.
-- totalInputValue is 0 and bridgeId is not 0.
-- numOutputAssets is 0 and bridgeId is not 0.
-- Any values extracted from bridgeId doesn’t match the info returned from the bridge contract.
+- totalInputValue is 0 and bridgeCallData is not 0.
+- numOutputAssets is 0 and bridgeCallData is not 0.
+- Any values extracted from bridgeCallData doesn’t match the info returned from the bridge contract.
 - Both outputValueA and outputValueB are 0 and interactionResult is true.
 - outputValueB is larger than 0 and numOutputAssets is 1.
 - Fail to transfer outputValueA or outputValueB from the bridge contract.

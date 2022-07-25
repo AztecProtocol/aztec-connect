@@ -1,7 +1,7 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
-import { BridgeId, virtualAssetIdFlag, virtualAssetIdPlaceholder } from '@aztec/barretenberg/bridge_id';
-import { BitConfig } from '@aztec/barretenberg/bridge_id/bit_config';
+import { BridgeCallData, virtualAssetIdFlag, virtualAssetIdPlaceholder } from '@aztec/barretenberg/bridge_call_data';
+import { BitConfig } from '@aztec/barretenberg/bridge_call_data/bit_config';
 import { Signer } from 'ethers';
 import { ethers } from 'hardhat';
 import { evmSnapshot, evmRevert } from '../../ganache/hardhat_chain_manipulation';
@@ -38,48 +38,48 @@ describe('rollup_processor: defi bridge', () => {
   });
 
   it('revert if two real output assets are the same', async () => {
-    const bridgeId = await mockBridge({
+    const bridgeCallData = await mockBridge({
       outputAssetIdA: 2,
       outputAssetIdB: 2,
     });
     const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
-      defiInteractionData: [new DefiInteractionData(bridgeId, 1n)],
+      defiInteractionData: [new DefiInteractionData(bridgeCallData, 1n)],
     });
     const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
     await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('BRIDGE_WITH_IDENTICAL_OUTPUT_ASSETS');
   });
 
   it('will not revert if two virtual output assets are the same', async () => {
-    const bridgeId = await mockBridge({
+    const bridgeCallData = await mockBridge({
       outputAssetIdA: virtualAssetIdPlaceholder,
       outputAssetIdB: virtualAssetIdPlaceholder,
     });
     const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
-      defiInteractionData: [new DefiInteractionData(bridgeId, 1n)],
+      defiInteractionData: [new DefiInteractionData(bridgeCallData, 1n)],
     });
     const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
     expect(await rollupProcessor.sendTx(tx));
   });
 
   it('revert if two real input assets are the same', async () => {
-    const bridgeId = await mockBridge({
+    const bridgeCallData = await mockBridge({
       inputAssetIdA: 2,
       inputAssetIdB: 2,
     });
     const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
-      defiInteractionData: [new DefiInteractionData(bridgeId, 1n)],
+      defiInteractionData: [new DefiInteractionData(bridgeCallData, 1n)],
     });
     const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
     await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('BRIDGE_WITH_IDENTICAL_INPUT_ASSETS');
   });
 
   it('revert if two virtual input assets are the same', async () => {
-    const bridgeId = await mockBridge({
+    const bridgeCallData = await mockBridge({
       inputAssetIdA: 2 + virtualAssetIdFlag,
       inputAssetIdB: 2 + virtualAssetIdFlag,
     });
     const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
-      defiInteractionData: [new DefiInteractionData(bridgeId, 1n)],
+      defiInteractionData: [new DefiInteractionData(bridgeCallData, 1n)],
     });
     const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
     await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('BRIDGE_WITH_IDENTICAL_INPUT_ASSETS');
@@ -87,73 +87,73 @@ describe('rollup_processor: defi bridge', () => {
 
   it('inconsistent id, second input not in use, but inputAssetIdB > 0', async () => {
     const bridgeAssetId = await rollupProcessor.getSupportedBridgesLength();
-    const bridgeId = new BridgeId(bridgeAssetId, 1, 1, 2, undefined, undefined);
+    const bridgeCallData = new BridgeCallData(bridgeAssetId, 1, 1, 2, undefined, undefined);
     const bitConfig = new BitConfig(false, false);
 
-    const buffer = bridgeId.toBuffer();
+    const buffer = bridgeCallData.toBuffer();
     toBufferBE(bitConfig.toBigInt(), 4).copy(buffer, (256 - 184) / 8, 0, 4);
 
     const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
-      defiInteractionData: [new DefiInteractionData(bridgeId, 1n)],
+      defiInteractionData: [new DefiInteractionData(bridgeCallData, 1n)],
     });
 
     buffer.copy(encodedProofData, 32 * 11, 0, 32);
 
     const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
-    await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('BRIDGE_ID_IS_INCONSISTENT()');
+    await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('INCONSISTENT_BRIDGE_CALL_DATA()');
   });
 
   it.skip('inconsistent id, second input not in use, but outputAssetIdB == eth', async () => {
     const bridgeAssetId = await rollupProcessor.getSupportedBridgesLength();
-    const bridgeId = new BridgeId(bridgeAssetId, 1, 1, 0, 0, undefined);
+    const bridgeCallData = new BridgeCallData(bridgeAssetId, 1, 1, 0, 0, undefined);
     const bitConfig = new BitConfig(false, false);
 
-    const buffer = bridgeId.toBuffer();
+    const buffer = bridgeCallData.toBuffer();
     toBufferBE(bitConfig.toBigInt(), 4).copy(buffer, (256 - 184) / 8, 0, 4);
 
     const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
-      defiInteractionData: [new DefiInteractionData(bridgeId, 1n)],
+      defiInteractionData: [new DefiInteractionData(bridgeCallData, 1n)],
     });
 
     buffer.copy(encodedProofData, 32 * 11, 0, 32);
 
     const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
-    await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('BRIDGE_ID_IS_INCONSISTENT()');
+    await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('INCONSISTENT_BRIDGE_CALL_DATA()');
   });
 
   it('inconsistent id, second output not in use, but outputAssetIdB > 0', async () => {
     const bridgeAssetId = await rollupProcessor.getSupportedBridgesLength();
-    const bridgeId = new BridgeId(bridgeAssetId, 1, 1, undefined, 2, undefined);
+    const bridgeCallData = new BridgeCallData(bridgeAssetId, 1, 1, undefined, 2, undefined);
     const bitConfig = new BitConfig(false, false);
 
-    const buffer = bridgeId.toBuffer();
+    const buffer = bridgeCallData.toBuffer();
     toBufferBE(bitConfig.toBigInt(), 4).copy(buffer, (256 - 184) / 8, 0, 4);
 
     const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
-      defiInteractionData: [new DefiInteractionData(bridgeId, 1n)],
+      defiInteractionData: [new DefiInteractionData(bridgeCallData, 1n)],
     });
 
     buffer.copy(encodedProofData, 32 * 11, 0, 32);
 
     const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
-    await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('BRIDGE_ID_IS_INCONSISTENT()');
+    await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('INCONSISTENT_BRIDGE_CALL_DATA()');
   });
 
   it.skip('inconsistent id, second output not in use, but outputAssetIdB == eth', async () => {
     const bridgeAssetId = await rollupProcessor.getSupportedBridgesLength();
-    const bridgeId = new BridgeId(bridgeAssetId, 1, 1, 0, 0, undefined);
+    const bridgeCallData = new BridgeCallData(bridgeAssetId, 1, 1, 0, 0, undefined);
     const bitConfig = new BitConfig(false, false);
 
-    const buffer = bridgeId.toBuffer();
+    const buffer = bridgeCallData.toBuffer();
     toBufferBE(bitConfig.toBigInt(), 4).copy(buffer, (256 - 184) / 8, 0, 4);
 
     const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
-      defiInteractionData: [new DefiInteractionData(bridgeId, 1n)],
+      defiInteractionData: [new DefiInteractionData(bridgeCallData, 1n)],
     });
 
     buffer.copy(encodedProofData, 32 * 11, 0, 32);
 
     const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
-    await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('BRIDGE_ID_IS_INCONSISTENT()');
+    await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('INCONSISTENT_BRIDGE_CALL_DATA()');
   });
 });

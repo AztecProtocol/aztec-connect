@@ -8,7 +8,7 @@ export * from './user_tx';
 export * from '@aztec/barretenberg/account_id';
 export * from '@aztec/barretenberg/address';
 export * from '@aztec/barretenberg/asset';
-export * from '@aztec/barretenberg/bridge_id';
+export * from '@aztec/barretenberg/bridge_call_data';
 export { ProofId } from '@aztec/barretenberg/client_proofs';
 export * from '@aztec/barretenberg/crypto/schnorr/signature';
 export * from '@aztec/barretenberg/rollup_provider';

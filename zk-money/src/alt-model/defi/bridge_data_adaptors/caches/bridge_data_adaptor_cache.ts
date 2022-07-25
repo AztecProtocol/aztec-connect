@@ -17,7 +17,7 @@ export function createBridgeDataAdaptorCache(
     const isMainnet = config.chainId === 1;
     const recipe = recipes.find(x => x.id === recipeId)!;
     const { rollupContractAddress } = status.blockchainStatus;
-    const blockchainBridge = status.blockchainStatus.bridges.find(bridge => bridge.id === recipe.addressId);
+    const blockchainBridge = status.blockchainStatus.bridges.find(bridge => bridge.id === recipe.bridgeAddressId);
     if (!blockchainBridge) {
       debug("No bridge found for recipe's enter address.");
       return undefined;

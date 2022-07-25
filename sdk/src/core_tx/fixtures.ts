@@ -1,7 +1,7 @@
 import { AliasHash } from '@aztec/barretenberg/account_id';
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { randomBytes } from 'crypto';
@@ -44,7 +44,7 @@ export const randomCoreDefiTx = (tx: Partial<CoreDefiTx> = {}) =>
   new CoreDefiTx(
     tx.txId || TxId.random(),
     tx.userId || GrumpkinAddress.random(),
-    tx.bridgeId || BridgeId.random(),
+    tx.bridgeCallData || BridgeCallData.random(),
     tx.depositValue ?? toBigIntBE(randomBytes(4)),
     tx.txFee ?? toBigIntBE(randomBytes(4)),
     tx.txRefNo || 0,

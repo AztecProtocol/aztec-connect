@@ -1,6 +1,6 @@
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetValue } from '@aztec/barretenberg/asset';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { SchnorrSignature } from '@aztec/barretenberg/crypto';
 import { DepositTx, RollupProviderStatus } from '@aztec/barretenberg/rollup_provider';
 import { TxId } from '@aztec/barretenberg/tx_id';
@@ -39,7 +39,7 @@ export interface CoreSdkInterface {
 
   getTxFees(assetId: number): Promise<AssetValue[][]>;
 
-  getDefiFees(bridgeId: BridgeId): Promise<AssetValue[]>;
+  getDefiFees(bridgeCallData: BridgeCallData): Promise<AssetValue[]>;
 
   getPendingDepositTxs(): Promise<DepositTx[]>;
 
@@ -94,7 +94,7 @@ export interface CoreSdkInterface {
 
   createDefiProofInput(
     userId: GrumpkinAddress,
-    bridgeId: BridgeId,
+    bridgeCallData: BridgeCallData,
     depositValue: bigint,
     inputNotes: Note[],
     spendingPublicKey: GrumpkinAddress,

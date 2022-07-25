@@ -4,7 +4,7 @@ import { ShieldedAssetIcon } from 'components/shielded_asset_icon';
 
 export function DefiTransactionOutputField({ tx }: { tx: UserDefiTx }) {
   const assetValue = tx.interactionResult.outputValueA || {
-    assetId: tx.bridgeId.outputAssetIdA,
+    assetId: tx.bridgeCallData.outputAssetIdA,
     value: 0n,
   };
   const amount = useAmount(assetValue);

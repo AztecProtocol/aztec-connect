@@ -1,6 +1,6 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { Asset, TxHash } from '@aztec/barretenberg/blockchain';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import {
   computeInteractionHashes,
   DefiInteractionNote,
@@ -25,10 +25,10 @@ import { evmSnapshot, evmRevert } from '../../ganache/hardhat_chain_manipulation
 
 const parseInteractionResultFromLog = (log: LogDescription) => {
   const {
-    args: { bridgeId, nonce, totalInputValue, totalOutputValueA, totalOutputValueB, result },
+    args: { encodedBridgeCallData, nonce, totalInputValue, totalOutputValueA, totalOutputValueB, result },
   } = log;
   return new DefiInteractionNote(
-    BridgeId.fromBigInt(BigInt(bridgeId)),
+    BridgeCallData.fromBigInt(BigInt(encodedBridgeCallData)),
     nonce.toNumber(),
     BigInt(totalInputValue),
     BigInt(totalOutputValueA),
@@ -98,16 +98,16 @@ describe('rollup_processor: multi async defi', () => {
     const outputValueB = 7n;
     const numAdditionalInteractions = 3;
     const rollupSize = 32;
-    const bridgeIds: BridgeId[] = [];
+    const bridgeCallDatas: BridgeCallData[] = [];
     for (let i = 0; i < RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK; i++) {
-      const { bridgeId } = await mockAsyncBridge(rollupProvider, rollupProcessor, assetAddresses, {
+      const { bridgeCallData } = await mockAsyncBridge(rollupProvider, rollupProcessor, assetAddresses, {
         inputAssetIdA: 1,
         outputAssetIdA: 0,
         outputAssetIdB: 2,
         outputValueA,
         outputValueB,
       });
-      bridgeIds.push(bridgeId);
+      bridgeCallDatas.push(bridgeCallData);
     }
 
     const initialBalance = 5000n;
@@ -128,12 +128,12 @@ describe('rollup_processor: multi async defi', () => {
       const inputValue = BigInt(i + 1);
       totalInputValue += inputValue;
       const defiDepositProof = createDefiDepositProof(
-        bridgeIds[i % RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK],
+        bridgeCallDatas[i % RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK],
         inputValue,
       );
       defiDepositProofs.push(defiDepositProof);
       defiInteractionData.push(
-        new DefiInteractionData(bridgeIds[i % RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK], inputValue),
+        new DefiInteractionData(bridgeCallDatas[i % RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK], inputValue),
       );
     }
 
@@ -168,7 +168,7 @@ describe('rollup_processor: multi async defi', () => {
       const interactionNonce = i;
       const txHash = await rollupProcessor.processAsyncDefiInteraction(interactionNonce);
       const asyncResult = new DefiInteractionNote(
-        bridgeIds[i % RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK],
+        bridgeCallDatas[i % RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK],
         interactionNonce,
         inputValue,
         outputValueA,

@@ -1,6 +1,6 @@
 import { AssetValue, AztecSdk, DefiSettlementTime, TxSettlementTime, WalletProvider } from '@aztec/sdk';
 import { Agent, AgentFees, EthAddressAndNonce, UserData } from './agent';
-import { bridgeConfigs, BridgeSpec, getBridgeId } from './bridges';
+import { bridgeConfigs, BridgeSpec, getBridgeCallData } from './bridges';
 
 // we need to swap 2 wei as the exchange rate means any less and the return transfer would fail
 const WEI_VALUE_TO_SWAP = 2n;
@@ -125,7 +125,7 @@ export class UniswapAgent {
   }
 
   private async getDefiFees(bridgeSpec: BridgeSpec) {
-    return await this.sdk.getDefiFees(getBridgeId(bridgeSpec));
+    return await this.sdk.getDefiFees(getBridgeCallData(bridgeSpec));
   }
 
   private async getBalance(assetId = 0) {
@@ -133,7 +133,7 @@ export class UniswapAgent {
   }
 
   private async singleDefiSwap(spec: BridgeSpec, maxFee?: bigint, amountToTransfer = 0n) {
-    const bridgeId = getBridgeId(spec);
+    const bridgeCallData = getBridgeCallData(spec);
     const fee = await this.agent.waitForMaxFee(() => this.getDefiFees(spec), DefiSettlementTime.DEADLINE, maxFee);
     if (amountToTransfer == 0n) {
       // the provided amount is zero, transfer everything we have after the fee is paid
@@ -148,7 +148,7 @@ export class UniswapAgent {
       const controller = this.sdk.createDefiController(
         this.user!.user.id,
         this.user!.signer,
-        bridgeId,
+        bridgeCallData,
         { assetId: spec.inputAsset, value: amountToTransfer },
         fee,
       );

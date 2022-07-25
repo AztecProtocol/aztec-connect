@@ -1,6 +1,6 @@
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { assetValueToJson } from '@aztec/barretenberg/asset';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { depositTxToJson, rollupProviderStatusToJson } from '@aztec/barretenberg/rollup_provider';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { EventEmitter } from 'events';
@@ -104,8 +104,8 @@ export class CoreSdkServerStub {
     return txFees.map(fees => fees.map(assetValueToJson));
   }
 
-  public async getDefiFees(bridgeId: string) {
-    const fees = await this.core.getDefiFees(BridgeId.fromString(bridgeId));
+  public async getDefiFees(bridgeCallData: string) {
+    const fees = await this.core.getDefiFees(BridgeCallData.fromString(bridgeCallData));
     return fees.map(assetValueToJson);
   }
 
@@ -220,14 +220,14 @@ export class CoreSdkServerStub {
 
   public async createDefiProofInput(
     userId: string,
-    bridgeId: string,
+    bridgeCallData: string,
     depositValue: string,
     inputNotes: NoteJson[],
     spendingPublicKey: string,
   ) {
     const proofInput = await this.core.createDefiProofInput(
       GrumpkinAddress.fromString(userId),
-      BridgeId.fromString(bridgeId),
+      BridgeCallData.fromString(bridgeCallData),
       BigInt(depositValue),
       inputNotes.map(n => noteFromJson(n)),
       GrumpkinAddress.fromString(spendingPublicKey),

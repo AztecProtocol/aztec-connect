@@ -195,7 +195,7 @@ describe('join_split_proof', () => {
     expect(proofData.noteTreeRoot).toEqual(tree.getRoot());
     expect(joinSplitProofData.txFee).toEqual(txFee);
     expect(joinSplitProofData.txFeeAssetId).toEqual(assetId);
-    expect(proofData.bridgeId).toEqual(Buffer.alloc(32));
+    expect(proofData.bridgeCallData).toEqual(Buffer.alloc(32));
     expect(proofData.defiDepositValue).toEqual(Buffer.alloc(32));
     expect(proofData.defiRoot).toEqual(Buffer.alloc(32));
     expect(proofData.backwardLink).toEqual(Buffer.alloc(32));

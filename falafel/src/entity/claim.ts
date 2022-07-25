@@ -17,7 +17,7 @@ export class ClaimDao {
   public nullifier!: Buffer;
 
   @Column('text', { transformer: [bigintTransformer] })
-  public bridgeId!: bigint;
+  public bridgeId!: bigint; // TODO: rename to bridgeCallData
 
   @Column('text', { transformer: [bigintTransformer] })
   public depositValue!: bigint;

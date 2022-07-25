@@ -1,15 +1,15 @@
 import { createHash } from 'crypto';
 import { toBigIntBE, toBufferBE } from '../bigint_buffer';
-import { BridgeId } from '../bridge_id';
+import { BridgeCallData } from '../bridge_call_data';
 import { randomBytes } from '../crypto';
 import { numToUInt32BE, Deserializer, Serializer } from '../serialize';
 
 export class DefiInteractionNote {
-  static EMPTY = new DefiInteractionNote(BridgeId.ZERO, 0, BigInt(0), BigInt(0), BigInt(0), false);
+  static EMPTY = new DefiInteractionNote(BridgeCallData.ZERO, 0, BigInt(0), BigInt(0), BigInt(0), false);
   static groupModulus = BigInt('21888242871839275222246405745257275088548364400416034343698204186575808495617');
 
   constructor(
-    public readonly bridgeId: BridgeId,
+    public readonly bridgeCallData: BridgeCallData,
     public readonly nonce: number,
     public readonly totalInputValue: bigint,
     public readonly totalOutputValueA: bigint,
@@ -19,8 +19,8 @@ export class DefiInteractionNote {
 
   static deserialize(buffer: Buffer, offset: number) {
     const des = new Deserializer(buffer, offset);
-    const bridgeIdBuffer = des.buffer(32);
-    const bridgeId = BridgeId.fromBuffer(bridgeIdBuffer);
+    const bridgeCallDataBuffer = des.buffer(32);
+    const bridgeCallData = BridgeCallData.fromBuffer(bridgeCallDataBuffer);
     const totalInputValue = des.bigInt();
     const totalOutputValueA = des.bigInt();
     const totalOutputValueB = des.bigInt();
@@ -28,14 +28,21 @@ export class DefiInteractionNote {
     const result = des.bool();
 
     return {
-      elem: new DefiInteractionNote(bridgeId, nonce, totalInputValue, totalOutputValueA, totalOutputValueB, result),
+      elem: new DefiInteractionNote(
+        bridgeCallData,
+        nonce,
+        totalInputValue,
+        totalOutputValueA,
+        totalOutputValueB,
+        result,
+      ),
       adv: des.getOffset() - offset,
     };
   }
 
   static random() {
     return new DefiInteractionNote(
-      BridgeId.random(),
+      BridgeCallData.random(),
       randomBytes(4).readUInt32BE(0),
       toBigIntBE(randomBytes(32)),
       toBigIntBE(randomBytes(32)),
@@ -50,7 +57,7 @@ export class DefiInteractionNote {
 
   toBuffer() {
     const serializer = new Serializer();
-    serializer.buffer(this.bridgeId.toBuffer());
+    serializer.buffer(this.bridgeCallData.toBuffer());
     serializer.bigInt(this.totalInputValue);
     serializer.bigInt(this.totalOutputValueA);
     serializer.bigInt(this.totalOutputValueB);
@@ -71,7 +78,7 @@ export const computeInteractionHashes = (notes: DefiInteractionNote[], padTo = n
     createHash('sha256')
       .update(
         Buffer.concat([
-          note.bridgeId.toBuffer(),
+          note.bridgeCallData.toBuffer(),
           numToUInt32BE(note.nonce, 32),
           toBufferBE(note.totalInputValue, 32),
           toBufferBE(note.totalOutputValueA, 32),

@@ -2,10 +2,10 @@ import { EthAddress } from '@aztec/barretenberg/address';
 import { Asset, TxHash } from '@aztec/barretenberg/blockchain';
 import {
   AUX_DATA_SELECTOR,
-  BridgeId,
+  BridgeCallData,
   virtualAssetIdFlag,
   virtualAssetIdPlaceholder,
-} from '@aztec/barretenberg/bridge_id';
+} from '@aztec/barretenberg/bridge_call_data';
 import {
   computeInteractionHashes,
   DefiInteractionNote,
@@ -28,10 +28,10 @@ const numberOfBridgeCalls = RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK;
 
 const parseInteractionResultFromLog = (log: LogDescription) => {
   const {
-    args: { bridgeId, nonce, totalInputValue, totalOutputValueA, totalOutputValueB, result },
+    args: { encodedBridgeCallData, nonce, totalInputValue, totalOutputValueA, totalOutputValueB, result },
   } = log;
   return new DefiInteractionNote(
-    BridgeId.fromBigInt(BigInt(bridgeId)),
+    BridgeCallData.fromBigInt(BigInt(encodedBridgeCallData)),
     nonce.toNumber(),
     BigInt(totalInputValue),
     BigInt(totalOutputValueA),
@@ -67,13 +67,13 @@ describe('rollup_processor: defi bridge with loans', () => {
   const dummyProof = () => createSendProof(0);
 
   const mockBridge = async (params: MockBridgeParams = {}) => {
-    const bridgeId = await deployMockBridge(rollupProvider, rollupProcessor, assetAddresses, {
+    const bridgeCallData = await deployMockBridge(rollupProvider, rollupProcessor, assetAddresses, {
       ...params,
     });
-    const bridgeAddress = await rollupProcessor.getSupportedBridge(bridgeId.addressId);
+    const bridgeAddress = await rollupProcessor.getSupportedBridge(bridgeCallData.bridgeAddressId);
     const bridge = new DefiBridge(bridgeAddress, new EthersAdapter(ethers.provider));
     const contract = await ethers.getContractAt('MockDefiBridge', bridgeAddress.toString());
-    return { bridgeId, bridge, contract };
+    return { bridgeCallData, bridge, contract };
   };
 
   const expectResult = async (expectedResult: DefiInteractionNote[], txHash: TxHash) => {
@@ -124,7 +124,7 @@ describe('rollup_processor: defi bridge with loans', () => {
     const inputValue = 20n;
     const outputValueA = 10n;
     const outputValueB = 7n;
-    const { bridgeId } = await mockBridge({
+    const { bridgeCallData } = await mockBridge({
       inputAssetIdA: 1,
       outputAssetIdA: 0,
       outputAssetIdB: virtualAssetIdPlaceholder,
@@ -151,7 +151,7 @@ describe('rollup_processor: defi bridge with loans', () => {
     {
       const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
         rollupId: 1,
-        defiInteractionData: [new DefiInteractionData(bridgeId, inputValue)],
+        defiInteractionData: [new DefiInteractionData(bridgeCallData, inputValue)],
       });
       const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
       const txHash = await rollupProcessor.sendTx(tx);
@@ -161,16 +161,16 @@ describe('rollup_processor: defi bridge with loans', () => {
       await expectBalance(2, BigInt(0));
 
       const interactionResult = [
-        new DefiInteractionNote(bridgeId, numberOfBridgeCalls, inputValue, outputValueA, outputValueB, true),
+        new DefiInteractionNote(bridgeCallData, numberOfBridgeCalls, inputValue, outputValueA, outputValueB, true),
       ];
       await expectResult(interactionResult, txHash);
       previousDefiInteractionHash = packInteractionNotes(interactionResult, numberOfBridgeCalls);
     }
 
     // Repay the loan (ETH) and get back collateral (DAI) after subtracting interest
-    // Note that we need a new bridge id as the input and output assets have changed
+    // Note that we need a new bridge call data as the input and output assets have changed
     {
-      const { bridgeId: bridgeId2, contract: bridge2 } = await mockBridge({
+      const { bridgeCallData: bridgeCallData2, contract: bridge2 } = await mockBridge({
         inputAssetIdA: 0,
         outputAssetIdA: 1,
         outputAssetIdB: 2,
@@ -183,7 +183,7 @@ describe('rollup_processor: defi bridge with loans', () => {
 
       const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
         rollupId: 2,
-        defiInteractionData: [new DefiInteractionData(bridgeId2, outputValueA)],
+        defiInteractionData: [new DefiInteractionData(bridgeCallData2, outputValueA)],
         previousDefiInteractionHash,
       });
       const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
@@ -193,7 +193,14 @@ describe('rollup_processor: defi bridge with loans', () => {
       const outputValueDAI = inputValue - (inputValue * BigInt(1)) / BigInt(10);
 
       const interactionResult = [
-        new DefiInteractionNote(bridgeId2, numberOfBridgeCalls * 2, inputValueETH, outputValueDAI, BigInt(0), true),
+        new DefiInteractionNote(
+          bridgeCallData2,
+          numberOfBridgeCalls * 2,
+          inputValueETH,
+          outputValueDAI,
+          BigInt(0),
+          true,
+        ),
       ];
       await expectResult(interactionResult, txHash);
 
@@ -206,7 +213,7 @@ describe('rollup_processor: defi bridge with loans', () => {
   it('process defi interaction data that draws and repays multiple loans', async () => {
     const collateralValue1 = 100n;
     const loanValue1 = 10n;
-    const { bridgeId: bridgeId1 } = await mockBridge({
+    const { bridgeCallData: bridgeCallData1 } = await mockBridge({
       inputAssetIdA: 1,
       outputAssetIdA: 0,
       outputAssetIdB: virtualAssetIdPlaceholder,
@@ -215,7 +222,7 @@ describe('rollup_processor: defi bridge with loans', () => {
 
     const collateralValue2 = 20n;
     const loanValue2 = 4n;
-    const { bridgeId: bridgeId2 } = await mockBridge({
+    const { bridgeCallData: bridgeCallData2 } = await mockBridge({
       inputAssetIdA: 0,
       outputAssetIdA: 2,
       outputAssetIdB: virtualAssetIdPlaceholder,
@@ -244,16 +251,16 @@ describe('rollup_processor: defi bridge with loans', () => {
       const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
         rollupId: 1,
         defiInteractionData: [
-          new DefiInteractionData(bridgeId1, collateralValue1),
-          new DefiInteractionData(bridgeId2, collateralValue2),
+          new DefiInteractionData(bridgeCallData1, collateralValue1),
+          new DefiInteractionData(bridgeCallData2, collateralValue2),
         ],
       });
       const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
       const txHash = await rollupProcessor.sendTx(tx);
 
       const interactionResult = [
-        new DefiInteractionNote(bridgeId1, numberOfBridgeCalls, collateralValue1, loanValue1, 0n, true),
-        new DefiInteractionNote(bridgeId2, numberOfBridgeCalls + 1, collateralValue2, loanValue2, 0n, true),
+        new DefiInteractionNote(bridgeCallData1, numberOfBridgeCalls, collateralValue1, loanValue1, 0n, true),
+        new DefiInteractionNote(bridgeCallData2, numberOfBridgeCalls + 1, collateralValue2, loanValue2, 0n, true),
       ];
       await expectResult(interactionResult, txHash);
 
@@ -263,9 +270,9 @@ describe('rollup_processor: defi bridge with loans', () => {
       previousDefiInteractionHash = packInteractionNotes(interactionResult, numberOfBridgeCalls);
     }
     // Repay the two loans after subtracting 10% and 20% interests respectively
-    // Note that we need new bridge ids as the input and output assets have changed
+    // Note that we need new bridge call datas as the input and output assets have changed
     {
-      const { bridgeId: repayBridgeId1, contract: repayBridge1 } = await mockBridge({
+      const { bridgeCallData: repayBridgeCallData1, contract: repayBridge1 } = await mockBridge({
         inputAssetIdA: 0,
         outputAssetIdA: 1,
         outputValueA: collateralValue1,
@@ -274,7 +281,7 @@ describe('rollup_processor: defi bridge with loans', () => {
       });
       await repayBridge1.recordInterestRate(numberOfBridgeCalls, 10); // interest rate = 10 %
 
-      const { bridgeId: repayBridgeId2, contract: repayBridge2 } = await mockBridge({
+      const { bridgeCallData: repayBridgeCallData2, contract: repayBridge2 } = await mockBridge({
         inputAssetIdA: 2,
         outputAssetIdA: 0,
         outputValueA: collateralValue2,
@@ -286,8 +293,8 @@ describe('rollup_processor: defi bridge with loans', () => {
       const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
         rollupId: 2,
         defiInteractionData: [
-          new DefiInteractionData(repayBridgeId1, loanValue1),
-          new DefiInteractionData(repayBridgeId2, loanValue2),
+          new DefiInteractionData(repayBridgeCallData1, loanValue1),
+          new DefiInteractionData(repayBridgeCallData2, loanValue2),
         ],
         previousDefiInteractionHash,
       });
@@ -298,7 +305,7 @@ describe('rollup_processor: defi bridge with loans', () => {
       const collateralReturned2 = (collateralValue2 * BigInt(8)) / BigInt(10);
       const interactionResult = [
         new DefiInteractionNote(
-          repayBridgeId1,
+          repayBridgeCallData1,
           2 * numberOfBridgeCalls,
           loanValue1,
           collateralReturned1,
@@ -306,7 +313,7 @@ describe('rollup_processor: defi bridge with loans', () => {
           true,
         ),
         new DefiInteractionNote(
-          repayBridgeId2,
+          repayBridgeCallData2,
           2 * numberOfBridgeCalls + 1,
           loanValue2,
           collateralReturned2,

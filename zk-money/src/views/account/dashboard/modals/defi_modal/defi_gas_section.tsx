@@ -1,6 +1,6 @@
 import type { Amount } from 'alt-model/assets';
 import type { DefiRecipe } from 'alt-model/defi/types';
-import { BridgeId, DefiSettlementTime } from '@aztec/sdk';
+import { BridgeCallData, DefiSettlementTime } from '@aztec/sdk';
 import { VerticalRadioButtons, RadioButtonOption } from 'ui-components';
 import { InputSection } from '../sections/input_section';
 import { MiniL2BalanceIndicator } from '../sections/amount_section/mini_balance_indicators';
@@ -17,7 +17,7 @@ function renderInfo(props: DefiGasSectionProps) {
       return (
         <>
           <p>Default speed. Split fees with others doing the same transaction.</p>
-          <DefiGasSaving feeAmount={selectedFeeAmount} bridgeAddressId={props.recipe?.addressId} />
+          <DefiGasSaving feeAmount={selectedFeeAmount} bridgeAddressId={props.recipe?.bridgeAddressId} />
         </>
       );
     case DefiSettlementTime.NEXT_ROLLUP:
@@ -32,14 +32,14 @@ interface DefiGasSectionProps {
   onChangeSpeed: (speed: DefiSettlementTime) => void;
   feeAmounts?: (Amount | undefined)[] | undefined[];
   recipe: DefiRecipe;
-  bridgeId?: BridgeId;
+  bridgeCallData?: BridgeCallData;
 }
 
 export function DefiGasSection(props: DefiGasSectionProps) {
   const { speed, onChangeSpeed, feeAmounts } = props;
   const rpStatus = useRollupProviderStatus();
-  const bridgeIdNum = props.bridgeId?.toBigInt();
-  const bridgeStatus = rpStatus?.bridgeStatus.find(x => x.bridgeId === bridgeIdNum);
+  const bridgeCallDataNum = props.bridgeCallData?.toBigInt();
+  const bridgeStatus = rpStatus?.bridgeStatus.find(x => x.bridgeCallData === bridgeCallDataNum);
   const { instantSettlementTime, nextSettlementTime, batchSettlementTime } = estimateDefiSettlementTimes(
     rpStatus,
     bridgeStatus,

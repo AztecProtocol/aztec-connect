@@ -1,6 +1,6 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
-import { virtualAssetIdFlag } from '@aztec/barretenberg/bridge_id';
+import { virtualAssetIdFlag } from '@aztec/barretenberg/bridge_call_data';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
 import { createDebugLogger } from '@aztec/barretenberg/log';
@@ -450,17 +450,17 @@ export class UserState extends EventEmitter {
       // Owned by the account with a different nonce.
       return;
     }
-    const { bridgeId, partialState, partialStateSecretEphPubKey } = offchainTxData;
+    const { bridgeCallData, partialState, partialStateSecretEphPubKey } = offchainTxData;
     const partialStateSecret = deriveNoteSecret(
       partialStateSecretEphPubKey,
       this.userData.accountPrivateKey,
       this.grumpkin,
     );
     const txId = new TxId(proof.txId);
-    const { rollupId, bridgeIds } = rollupProofData;
+    const { rollupId, bridgeCallDatas } = rollupProofData;
     const interactionNonce =
       RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK * rollupId +
-      bridgeIds.findIndex(bridge => bridge.equals(bridgeId.toBuffer()));
+      bridgeCallDatas.findIndex(bridge => bridge.equals(bridgeCallData.toBuffer()));
     const isAsync = interactionResult.every(n => n.nonce !== interactionNonce);
 
     await this.addClaim(txId, noteCommitment1, partialState, partialStateSecret, interactionNonce);
@@ -509,7 +509,7 @@ export class UserState extends EventEmitter {
     const { created } = blockContext;
     const { defiTxId, userId, partialState, secret, interactionNonce } = claim;
     const { noteCommitment1, noteCommitment2, nullifier2 } = proof;
-    const { bridgeId, depositValue, outputValueA, outputValueB, success } = (await this.db.getDefiTx(defiTxId))!;
+    const { bridgeCallData, depositValue, outputValueA, outputValueB, success } = (await this.db.getDefiTx(defiTxId))!;
     const accountRequired = this.noteAlgos
       .valueNotePartialCommitment(
         secret,
@@ -524,7 +524,7 @@ export class UserState extends EventEmitter {
         const treeNote = new TreeNote(
           userId,
           depositValue,
-          bridgeId.inputAssetIdA,
+          bridgeCallData.inputAssetIdA,
           accountRequired,
           secret,
           Buffer.alloc(32),
@@ -533,11 +533,11 @@ export class UserState extends EventEmitter {
         await this.processSettledNote(noteStartIndex, treeNote, noteCommitment1, blockContext);
       }
 
-      if (bridgeId.numInputAssets === 2) {
+      if (bridgeCallData.numInputAssets === 2) {
         const treeNote = new TreeNote(
           userId,
           depositValue,
-          bridgeId.inputAssetIdB!,
+          bridgeCallData.inputAssetIdB!,
           accountRequired,
           secret,
           Buffer.alloc(32),
@@ -550,7 +550,7 @@ export class UserState extends EventEmitter {
       const treeNote = new TreeNote(
         userId,
         outputValueA,
-        bridgeId.firstOutputVirtual ? virtualAssetIdFlag + interactionNonce : bridgeId.outputAssetIdA,
+        bridgeCallData.firstOutputVirtual ? virtualAssetIdFlag + interactionNonce : bridgeCallData.outputAssetIdA,
         accountRequired,
         secret,
         Buffer.alloc(32),
@@ -562,7 +562,7 @@ export class UserState extends EventEmitter {
       const treeNote = new TreeNote(
         userId,
         outputValueB,
-        bridgeId.secondOutputVirtual ? virtualAssetIdFlag + interactionNonce : bridgeId.outputAssetIdB!,
+        bridgeCallData.secondOutputVirtual ? virtualAssetIdFlag + interactionNonce : bridgeCallData.outputAssetIdB!,
         accountRequired,
         secret,
         Buffer.alloc(32),
@@ -695,12 +695,12 @@ export class UserState extends EventEmitter {
     interactionNonce: number,
     isAsync: boolean,
   ) {
-    const { bridgeId, depositValue, txFee, txRefNo } = offchainTxData;
+    const { bridgeCallData, depositValue, txFee, txRefNo } = offchainTxData;
     const txId = new TxId(proof.txId);
     return new CoreDefiTx(
       txId,
       this.userData.accountPublicKey,
-      bridgeId,
+      bridgeCallData,
       depositValue,
       txFee,
       txRefNo,

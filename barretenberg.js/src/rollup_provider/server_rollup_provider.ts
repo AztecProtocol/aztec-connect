@@ -1,7 +1,7 @@
 import { GrumpkinAddress } from '../address';
 import { assetValueFromJson, AssetValueJson } from '../asset';
 import { ServerBlockSource } from '../block_source';
-import { BridgeId } from '../bridge_id';
+import { BridgeCallData } from '../bridge_call_data';
 import { fetch } from '../iso_fetch';
 import { Tx } from '../rollup_provider';
 import { TxId } from '../tx_id';
@@ -32,8 +32,8 @@ export class ServerRollupProvider extends ServerBlockSource implements RollupPro
     return txFees.map(fees => fees.map(assetValueFromJson));
   }
 
-  async getDefiFees(bridgeId: BridgeId) {
-    const response = await this.fetch('/defi-fees', { bridgeId: bridgeId.toString() });
+  async getDefiFees(bridgeCallData: BridgeCallData) {
+    const response = await this.fetch('/defi-fees', { bridgeCallData: bridgeCallData.toString() });
     const defiFees = (await response.json()) as AssetValueJson[];
     return defiFees.map(assetValueFromJson);
   }

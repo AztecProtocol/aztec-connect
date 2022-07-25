@@ -2,7 +2,7 @@ import { randomBytes } from 'crypto';
 import { AliasHash } from '../../account_id';
 import { EthAddress, GrumpkinAddress } from '../../address';
 import { toBigIntBE } from '../../bigint_buffer';
-import { BridgeId } from '../../bridge_id';
+import { BridgeCallData } from '../../bridge_call_data';
 import { HashPath } from '../../merkle_tree';
 import { ClaimNoteTxData, TreeNote } from '../../note_algorithms';
 import { ProofId } from '../proof_data';
@@ -31,7 +31,7 @@ const randomTreeNote = () =>
   );
 
 const randomClaimNoteTxData = () =>
-  new ClaimNoteTxData(randomBigInt(), BridgeId.random(), randomBytes(32), randomBytes(32));
+  new ClaimNoteTxData(randomBigInt(), BridgeCallData.random(), randomBytes(32), randomBytes(32));
 
 describe('join split tx', () => {
   it('convert join split tx to and from buffer', () => {

@@ -80,7 +80,7 @@ function TicksAndTooltip(props: { txId: TxId; tooltip: string; filledTicks: 1 | 
 
 function AsyncEntering(props: { tx: UserDefiTx }) {
   const estimate = getTimeUntilTransactionEstimation(props.tx.txId.toString());
-  const inputAsset = useAsset(props.tx.bridgeId.inputAssetIdA);
+  const inputAsset = useAsset(props.tx.bridgeCallData.inputAssetIdA);
   const tooltip = estimate
     ? `zk${inputAsset.symbol} deposit settles ${estimate}`
     : `Awaiting zk${inputAsset.symbol} deposit settlement`;
@@ -96,7 +96,7 @@ function AsyncOpen(props: { auxData: number }) {
 function AsyncExiting(props: { tx: UserDefiTx }) {
   const { nextPublishTime } = useRollupProviderStatus();
   const estimate = getTimeUntilNextRollup(nextPublishTime);
-  const outputAsset = useAsset(props.tx.bridgeId.outputAssetIdA);
+  const outputAsset = useAsset(props.tx.bridgeCallData.outputAssetIdA);
   const tooltip = estimate
     ? `zk${outputAsset.symbol} claim settles ${estimate}`
     : `Awaiting zk${outputAsset.symbol} claim settlement`;
@@ -108,7 +108,7 @@ function renderAsyncField(position: DefiPosition_NonInteractable) {
     case UserDefiInteractionResultState.PENDING:
       return <AsyncEntering tx={position.tx} />;
     case UserDefiInteractionResultState.AWAITING_FINALISATION:
-      return <AsyncOpen auxData={position.tx.bridgeId.auxData} />;
+      return <AsyncOpen auxData={position.tx.bridgeCallData.auxData} />;
     case UserDefiInteractionResultState.AWAITING_SETTLEMENT:
       return <AsyncExiting tx={position.tx} />;
     case UserDefiInteractionResultState.SETTLED:
@@ -121,7 +121,7 @@ function renderAsyncField(position: DefiPosition_NonInteractable) {
  */
 function SyncEnteringAwaitingDeposit(props: { tx: UserDefiTx }) {
   const estimate = getTimeUntilTransactionEstimation(props.tx.txId.toString());
-  const inputAsset = useAsset(props.tx.bridgeId.inputAssetIdA);
+  const inputAsset = useAsset(props.tx.bridgeCallData.inputAssetIdA);
   const tooltip = estimate
     ? `zk${inputAsset.symbol} deposit settles ${estimate}`
     : `Awaiting zk${inputAsset.symbol} deposit settlement`;
@@ -131,7 +131,7 @@ function SyncEnteringAwaitingDeposit(props: { tx: UserDefiTx }) {
 function SyncEnteringAwaitingClaim(props: { tx: UserDefiTx }) {
   const { nextPublishTime } = useRollupProviderStatus();
   const estimate = getTimeUntilNextRollup(nextPublishTime);
-  const outputAsset = useAsset(props.tx.bridgeId.outputAssetIdA);
+  const outputAsset = useAsset(props.tx.bridgeCallData.outputAssetIdA);
   const tooltip = estimate
     ? `Investment active. zk${outputAsset.symbol} funds settle ${estimate}.`
     : `Investment active. Awaiting settlement of zk${outputAsset.symbol} funds.`;
@@ -157,7 +157,7 @@ function renderSyncEnteringField(position: DefiPosition_NonInteractable) {
 
 function SyncExitingAwaitingDeposit(props: { tx: UserDefiTx }) {
   const estimate = getTimeUntilTransactionEstimation(props.tx.txId.toString());
-  const asset = useAsset(props.tx.bridgeId.inputAssetIdA);
+  const asset = useAsset(props.tx.bridgeCallData.inputAssetIdA);
   const tooltip = estimate
     ? `zk${asset.symbol} deposit settles ${estimate}`
     : `Awaiting zk${asset.symbol} deposit settlement`;
@@ -167,7 +167,7 @@ function SyncExitingAwaitingDeposit(props: { tx: UserDefiTx }) {
 function SyncExitingAwaitingClaim(props: { tx: UserDefiTx }) {
   const { nextPublishTime } = useRollupProviderStatus();
   const estimate = getTimeUntilNextRollup(nextPublishTime);
-  const outputAsset = useAsset(props.tx.bridgeId.inputAssetIdA);
+  const outputAsset = useAsset(props.tx.bridgeCallData.inputAssetIdA);
   const tooltip = estimate
     ? `zk${outputAsset.symbol} claim settles ${estimate}`
     : `Awaiting settlement of zk${outputAsset.symbol} claim`;

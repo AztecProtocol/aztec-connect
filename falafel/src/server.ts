@@ -243,19 +243,19 @@ export class Server {
 
     const { bridgeConfigs, defaultDeFiBatchSize } = runtimeConfig;
     const thirdPartyBridgeConfigs = txPoolProfile.pendingBridgeStats
-      .filter(({ bridgeId }) => !bridgeConfigs.find(bc => bc.bridgeId === bridgeId))
-      .map(({ bridgeId }) => ({
-        bridgeId,
+      .filter(({ bridgeCallData }) => !bridgeConfigs.find(bc => bc.bridgeCallData === bridgeCallData))
+      .map(({ bridgeCallData }) => ({
+        bridgeCallData,
         numTxs: defaultDeFiBatchSize,
-        gas: this.blockchain.getBridgeGas(bridgeId),
+        gas: this.blockchain.getBridgeGas(bridgeCallData),
         rollupFrequency: 0,
       }));
     const bridgeStatus = [...bridgeConfigs, ...thirdPartyBridgeConfigs].map(
-      ({ bridgeId, numTxs, gas, rollupFrequency }) => {
-        const rt = nextPublish.bridgeTimeouts.get(bridgeId);
-        const stat = txPoolProfile.pendingBridgeStats.find(s => s.bridgeId === bridgeId);
+      ({ bridgeCallData, numTxs, gas, rollupFrequency }) => {
+        const rt = nextPublish.bridgeTimeouts.get(bridgeCallData);
+        const stat = txPoolProfile.pendingBridgeStats.find(s => s.bridgeCallData === bridgeCallData);
         return {
-          bridgeId,
+          bridgeCallData,
           numTxs,
           gasThreshold: gas,
           gasAccrued: stat?.gasAccrued || 0,
@@ -285,8 +285,8 @@ export class Server {
     return this.txFeeResolver.getTxFees(assetId);
   }
 
-  public getDefiFees(bridgeId: bigint) {
-    return this.txFeeResolver.getDefiFees(bridgeId);
+  public getDefiFees(bridgeCallData: bigint) {
+    return this.txFeeResolver.getDefiFees(bridgeCallData);
   }
 
   public async getInitialWorldState(): Promise<InitialWorldState> {

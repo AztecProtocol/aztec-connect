@@ -1,7 +1,7 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { EthereumProvider, EthereumSignature, SendTxOptions, TxHash, RollupTxs } from '@aztec/barretenberg/blockchain';
 import { Block } from '@aztec/barretenberg/block_source';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { computeInteractionHashes } from '@aztec/barretenberg/note_algorithms';
 import { Timer } from '@aztec/barretenberg/timer';
 import { sliceOffchainTxData } from '@aztec/barretenberg/offchain_tx_data';
@@ -634,11 +634,19 @@ export class RollupProcessor {
       // decode the retrieved events into actual defi interaction notes
       const decodedEvents = defiBridgeEvents.map((log: { blockNumber: number; topics: string[]; data: string }) => {
         const {
-          args: { bridgeId, nonce, totalInputValue, totalOutputValueA, totalOutputValueB, result, errorReason },
+          args: {
+            encodedBridgeCallData,
+            nonce,
+            totalInputValue,
+            totalOutputValueA,
+            totalOutputValueB,
+            result,
+            errorReason,
+          },
         } = this.contract.interface.parseLog(log);
 
         return new DefiInteractionEvent(
-          BridgeId.fromBigInt(BigInt(bridgeId)),
+          BridgeCallData.fromBigInt(BigInt(encodedBridgeCallData)),
           +nonce,
           BigInt(totalInputValue),
           BigInt(totalOutputValueA),

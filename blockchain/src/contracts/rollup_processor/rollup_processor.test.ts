@@ -228,14 +228,14 @@ describe('rollup_processor', () => {
 
     // Check event was emitted.
     const receipt = await ethers.provider.getTransactionReceipt(txHash.toString());
-    const bridgeId = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args
+    const bridgeCallData = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args
       .bridgeAddressId;
     const bridgeAddress = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args
       .bridgeAddress;
     const bridgeGasLimit = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args
       .bridgeGasLimit;
     expect(bridgeGasLimit.toNumber()).toBe(gasLimit);
-    expect(bridgeId.toNumber()).toBe(bridgeAddressId);
+    expect(bridgeCallData.toNumber()).toBe(bridgeAddressId);
     expect(bridgeAddress).toBe(bridgeAddr.toString());
 
     const supportedAssetBAddress = await rollupProcessor.getSupportedBridge(bridgeAddressId);
@@ -251,14 +251,14 @@ describe('rollup_processor', () => {
 
     // Check event was emitted.
     const receipt = await ethers.provider.getTransactionReceipt(txHash.toString());
-    const bridgeId = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args
+    const bridgeCallData = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args
       .bridgeAddressId;
     const bridgeAddress = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args
       .bridgeAddress;
     const bridgeGasLimit = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args
       .bridgeGasLimit;
     expect(bridgeGasLimit.toNumber()).toBe(minimumGasLimit);
-    expect(bridgeId.toNumber()).toBe(2);
+    expect(bridgeCallData.toNumber()).toBe(2);
     expect(bridgeAddress).toBe(bridgeAddr.toString());
 
     const supportedAssetBAddress = await rollupProcessor.getSupportedBridge(2);
@@ -273,14 +273,14 @@ describe('rollup_processor', () => {
 
     // Check event was emitted.
     const receipt = await ethers.provider.getTransactionReceipt(txHash.toString());
-    const bridgeId = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args
+    const bridgeCallData = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args
       .bridgeAddressId;
     const bridgeAddress = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args
       .bridgeAddress;
     const bridgeGasLimit = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args
       .bridgeGasLimit;
     expect(bridgeGasLimit.toNumber()).toBe(maximumGasLimit);
-    expect(bridgeId.toNumber()).toBe(2);
+    expect(bridgeCallData.toNumber()).toBe(2);
     expect(bridgeAddress).toBe(bridgeAddr.toString());
 
     const supportedAssetBAddress = await rollupProcessor.getSupportedBridge(2);
@@ -367,7 +367,7 @@ describe('rollup_processor', () => {
   it('should process all proof types and get specified blocks', async () => {
     const inputAssetId = 1;
     const outputValueA = 7n;
-    const bridgeId = await mockBridge({
+    const bridgeCallData = await mockBridge({
       inputAssetIdA: inputAssetId,
       outputAssetIdA: 0,
       outputValueA,
@@ -387,16 +387,16 @@ describe('rollup_processor', () => {
       await createDepositProof(depositAmount, userAAddress, userA, inputAssetId),
       mergeInnerProofs([createAccountProof(), createSendProof(inputAssetId, sendAmount)]),
       mergeInnerProofs([
-        createDefiDepositProof(bridgeId, defiDepositAmount0),
-        createDefiDepositProof(bridgeId, defiDepositAmount1),
+        createDefiDepositProof(bridgeCallData, defiDepositAmount0),
+        createDefiDepositProof(bridgeCallData, defiDepositAmount1),
       ]),
       createWithdrawProof(withdrawalAmount, userAAddress, inputAssetId),
-      createDefiClaimProof(bridgeId),
+      createDefiClaimProof(bridgeCallData),
     ];
 
     const expectedInteractionResult = [
-      new DefiInteractionNote(bridgeId, numberOfBridgeCalls * 2, 12n, outputValueA, 0n, true),
-      new DefiInteractionNote(bridgeId, numberOfBridgeCalls * 2 + 1, 8n, outputValueA, 0n, true),
+      new DefiInteractionNote(bridgeCallData, numberOfBridgeCalls * 2, 12n, outputValueA, 0n, true),
+      new DefiInteractionNote(bridgeCallData, numberOfBridgeCalls * 2 + 1, 8n, outputValueA, 0n, true),
     ];
     const previousDefiInteractionHash = packInteractionNotes(expectedInteractionResult, numberOfBridgeCalls);
 
@@ -412,8 +412,8 @@ describe('rollup_processor', () => {
         defiInteractionData:
           i === 2
             ? [
-                new DefiInteractionData(bridgeId, defiDepositAmount0),
-                new DefiInteractionData(bridgeId, defiDepositAmount1),
+                new DefiInteractionData(bridgeCallData, defiDepositAmount0),
+                new DefiInteractionData(bridgeCallData, defiDepositAmount1),
               ]
             : [],
         previousDefiInteractionHash: i === 3 ? previousDefiInteractionHash : undefined,

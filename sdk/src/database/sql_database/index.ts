@@ -77,7 +77,7 @@ const toCoreDefiTx = (tx: DefiTxDao) =>
   new CoreDefiTx(
     tx.txId,
     tx.userId,
-    tx.bridgeId,
+    tx.bridgeCallData,
     tx.depositValue,
     tx.txFee,
     tx.txRefNo,
