@@ -1,4 +1,5 @@
 import { AztecSdk, createAztecSdk, JsonRpcProvider, SdkEvent, SdkFlavour } from '@aztec/sdk';
+import { chainIdToNetwork } from 'app/networks';
 import { Obs } from 'app/util';
 import createDebug from 'debug';
 import { Config } from '../../config';
@@ -11,7 +12,6 @@ export type SdkObsValue = AztecSdk | undefined;
 export type SdkObs = Obs<SdkObsValue>;
 
 export function createSdkObs(config: Config): SdkObs {
-  const minConfirmation = config.chainId === 1337 ? 1 : undefined; // If not ganache, use the default value.
   const aztecJsonRpcProvider = new JsonRpcProvider(config.ethereumHost);
 
   const sdkObs = Obs.input<SdkObsValue>(undefined);
@@ -19,7 +19,7 @@ export function createSdkObs(config: Config): SdkObs {
     serverUrl: hostedSdkEnabled ? config.hostedSdkUrl : config.rollupProviderUrl,
     debug: config.debugFilter,
     flavour: hostedSdkEnabled ? SdkFlavour.HOSTED : SdkFlavour.PLAIN, // todo put this back when the hosted sdk works
-    minConfirmation,
+    minConfirmation: chainIdToNetwork(config.chainId)?.isFrequent ? 1 : undefined,
   })
     .then(sdk => {
       sdkObs.next(sdk);

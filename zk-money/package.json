@@ -5,6 +5,7 @@
   "dependencies": {
     "@aztec/bridge-clients": "0.1.49",
     "@aztec/sdk": "file:../sdk/dest",
+    "@rainbow-me/rainbowkit": "^0.4.2",
     "@walletconnect/web3-provider": "^1.3.6",
     "broadcast-channel": "^4.2.0",
     "debug": "^4.3.1",
@@ -18,7 +19,8 @@
     "react-dom": "^17.0.2",
     "react-router-dom": "^6.2.1",
     "react-transition-group": "^4.4.2",
-    "styled-components": "^5.2.0"
+    "styled-components": "^5.2.0",
+    "wagmi": "^0.5.9"
   },
   "resolutions": {
     "terser": "4.8.0",

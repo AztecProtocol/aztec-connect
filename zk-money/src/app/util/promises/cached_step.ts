@@ -4,8 +4,13 @@ class Success<T> {
 
 export class CachedStep<T> {
   private success?: Success<T>;
+
   async exec(fn: () => Promise<T>) {
     if (!this.success) this.success = new Success(await fn());
     return this.success.result;
+  }
+
+  clear() {
+    this.success = undefined;
   }
 }

@@ -5,7 +5,8 @@ class MetamaskProvider implements WalletProvider {
   constructor(public ethereumProvider: EthereumProvider) {}
 
   get connected() {
-    return !!window.ethereum.selectedAddress;
+    // `selectedAddress` doesn't exist on wagmi's `Ethereum` type declaration.
+    return !!(window as any).ethereum?.selectedAddress;
   }
 
   async connect() {
@@ -17,5 +18,5 @@ class MetamaskProvider implements WalletProvider {
 
 export const createMetamaskProvider = () => {
   const provider = window.ethereum;
-  return provider?.isMetaMask ? new MetamaskProvider(provider) : undefined;
+  return provider?.isMetaMask ? new MetamaskProvider(provider as unknown as EthereumProvider) : undefined;
 };

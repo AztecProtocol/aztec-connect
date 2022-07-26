@@ -26,11 +26,13 @@ export class AccountProofCreator {
     newSpendingPublicKey2: GrumpkinAddress | undefined,
     spendingKeyExists = true,
   ): Promise<AccountProofInput> {
-    const create = accountPublicKey.equals(spendingPublicKey);
+    // Regarding `!migrate` check: see explanation in `getAccountPathAndIndex`
+    const create = accountPublicKey.equals(spendingPublicKey) && !migrate;
     const merkleRoot = this.worldState.getRoot();
     const { path: accountPath, index: accountIndex } = await this.getAccountPathAndIndex(
       accountPublicKey,
       spendingKeyExists ? spendingPublicKey : accountPublicKey,
+      migrate,
     );
 
     const tx = new AccountTx(
@@ -83,8 +85,20 @@ export class AccountProofCreator {
     return { tx: coreTx, proofData, offchainTxData, outputNotes: [] };
   }
 
-  private async getAccountPathAndIndex(accountPublicKey: GrumpkinAddress, spendingPublicKey: GrumpkinAddress) {
-    if (spendingPublicKey.equals(accountPublicKey)) {
+  private async getAccountPathAndIndex(
+    accountPublicKey: GrumpkinAddress,
+    spendingPublicKey: GrumpkinAddress,
+    migrate: boolean,
+  ) {
+    // migrate flag explanation:
+    // There is a system-wide assumption (enforced at account creation) that a user's registered spending keys and
+    // account keys cannot match, and therefore if a user trys to spend using keys that match, they are performing an
+    // "unregistered" action. I.e. they are spending notes which don't require a registered spending key. Unfortunately
+    // when importing account registrations from the old system we didn't account for the fact that prior to June 2021
+    // users had registrations with no spending keys (only an alias), and such dormant registrations ended up
+    // inheriting their account keys as registered spending keys. In order to allow such accounts to migrate their
+    // aliases, we have an expectional case in we perform the "registered" action instead of the "unregistered" action.
+    if (spendingPublicKey.equals(accountPublicKey) && !migrate) {
       return {
         path: this.worldState.buildZeroHashPath(WorldStateConstants.DATA_TREE_DEPTH),
         index: 0,

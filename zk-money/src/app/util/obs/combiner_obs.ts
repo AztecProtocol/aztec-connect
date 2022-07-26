@@ -17,7 +17,9 @@ export class CombinerObs<TValues extends unknown[]> extends BaseObs<TValues> {
   };
   protected didReceiveFirstListener() {
     this.refresh();
-    const depsUnlistens = this.deps.map(dep => dep.listen(this.refresh));
+    // It is valid for an `Obs` to be repeated in `deps`, therefore we wrap `this.refresh` in an arrow function to
+    // suppress the "already listening" message that would otherwise be logged by the repeated `Obs`.
+    const depsUnlistens = this.deps.map(dep => dep.listen(() => this.refresh()));
     this.unlistenDeps = () => {
       for (const unlisten of depsUnlistens) unlisten();
     };

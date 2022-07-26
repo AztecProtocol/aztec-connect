@@ -8,12 +8,7 @@ import { TopLevelContextProvider } from 'alt-model/top_level_context/top_level_c
 import { ErrorToast } from 'ui-components/components/layout/global_error_toast';
 import { AppInitFailed } from 'views/app_init_failed';
 import { getSupportStatus } from 'device_support';
-
-declare global {
-  interface Window {
-    ethereum: any;
-  }
-}
+import { Toolbox } from 'toolbox';
 
 const PROD_EXPLORER_URL = 'https://aztec-connect-prod-explorer.aztec.network/';
 
@@ -28,6 +23,9 @@ async function rootRender() {
           <AppInitFailed reason={{ type: 'unsupported', supportStatus }} explorerUrl={PROD_EXPLORER_URL} />
         </BrowserRouter>
       );
+    }
+    if (window.location.pathname === '/toolbox') {
+      return <Toolbox config={config} />;
     }
     return (
       <TopLevelContextProvider config={config} initialRollupProviderStatus={initialRollupProviderStatus}>
