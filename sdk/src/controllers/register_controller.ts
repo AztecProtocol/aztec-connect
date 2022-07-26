@@ -11,8 +11,10 @@ import { DepositController } from './deposit_controller';
 import { FeePayer } from './fee_payer';
 
 export class RegisterController {
-  private depositController?: DepositController;
+  private readonly requireFeePayingTx: boolean;
+  private readonly depositController?: DepositController;
   private proofOutput?: ProofOutput;
+  private feeProofOutput?: ProofOutput;
   private txIds: TxId[] = [];
 
   constructor(
@@ -23,20 +25,32 @@ export class RegisterController {
     public readonly recoveryPublicKey: GrumpkinAddress | undefined,
     public readonly depositValue: AssetValue,
     public readonly fee: AssetValue,
-    public readonly depositor: EthAddress,
+    public readonly depositor: EthAddress | undefined,
     public readonly feePayer: FeePayer | undefined,
     private readonly core: CoreSdkInterface,
     blockchain: ClientEthereumBlockchain,
     provider: EthereumProvider,
   ) {
-    if (depositValue.value || fee.value) {
+    const requireSecondAsset = fee.assetId !== depositValue.assetId && fee.value && depositValue.value;
+    if (requireSecondAsset && !feePayer) {
+      throw new Error('Cannot deposit two assets. Fee payer required to pay the fee with private funds.');
+    }
+
+    this.requireFeePayingTx = !!(fee.value && feePayer);
+
+    // Create a deposit controller if depositing non-zero value or paying fee via deposit.
+    if (depositValue.value || (fee.value && !this.requireFeePayingTx)) {
+      if (!depositor) {
+        throw new Error('Depositor not provided.');
+      }
+
       this.depositController = new DepositController(
         depositValue,
-        fee,
+        this.requireFeePayingTx ? { ...fee, value: BigInt(0) } : fee,
         depositor,
-        this.userId,
+        userId,
         true, // recipientSpendingKeyRequired
-        feePayer,
+        undefined, // feePayer
         core,
         blockchain,
         provider,
@@ -83,7 +97,8 @@ export class RegisterController {
     }
 
     const signer = new SchnorrSigner(this.core, accountPublicKey, this.accountPrivateKey);
-    const txRefNo = this.depositController ? createTxRefNo() : 0;
+
+    const txRefNo = this.depositController || this.requireFeePayingTx ? createTxRefNo() : 0;
 
     const proofInput = await this.core.createAccountProofInput(
       this.userId,
@@ -99,6 +114,28 @@ export class RegisterController {
 
     if (this.depositController) {
       await this.depositController.createProof(txRefNo);
+    }
+
+    if (this.requireFeePayingTx) {
+      const { userId, signer } = this.feePayer!;
+      const spendingPublicKey = signer.getPublicKey();
+      const spendingKeyRequired = !spendingPublicKey.equals(userId);
+      const feeProofInput = await this.core.createPaymentProofInput(
+        userId,
+        this.fee.assetId,
+        BigInt(0),
+        BigInt(0),
+        this.fee.value,
+        BigInt(0),
+        BigInt(0),
+        userId,
+        spendingKeyRequired,
+        undefined,
+        spendingPublicKey,
+        2,
+      );
+      feeProofInput.signature = await signer.signMessage(feeProofInput.signingData);
+      this.feeProofOutput = await this.core.createPaymentProof(feeProofInput, txRefNo);
     }
   }
 
@@ -139,12 +176,15 @@ export class RegisterController {
       throw new Error('Add the user to the sdk first.');
     }
 
-    if (!this.depositController) {
-      this.txIds = await this.core.sendProofs([this.proofOutput]);
-    } else {
-      const [feeProofOutput] = this.depositController.getProofs();
-      this.txIds = await this.core.sendProofs([this.proofOutput, feeProofOutput]);
+    const proofs = [this.proofOutput];
+    if (this.depositController) {
+      proofs.push(...this.depositController.getProofs());
     }
+    if (this.feeProofOutput) {
+      proofs.push(this.feeProofOutput);
+    }
+    this.txIds = await this.core.sendProofs(proofs);
+
     return this.txIds[0];
   }
 

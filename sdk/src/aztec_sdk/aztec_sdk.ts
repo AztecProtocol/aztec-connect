@@ -305,8 +305,9 @@ export class AztecSdk extends EventEmitter {
     value: AssetValue,
     fee: AssetValue,
     to: EthAddress,
+    feePayer?: FeePayer,
   ) {
-    return new WithdrawController(userId, userSigner, value, fee, to, this.core);
+    return new WithdrawController(userId, userSigner, value, fee, to, feePayer, this.core);
   }
 
   public async getTransferFees(assetId: number) {
@@ -320,8 +321,18 @@ export class AztecSdk extends EventEmitter {
     fee: AssetValue,
     recipient: GrumpkinAddress,
     recipientSpendingKeyRequired = true,
+    feePayer?: FeePayer,
   ) {
-    return new TransferController(userId, userSigner, value, fee, recipient, recipientSpendingKeyRequired, this.core);
+    return new TransferController(
+      userId,
+      userSigner,
+      value,
+      fee,
+      recipient,
+      recipientSpendingKeyRequired,
+      feePayer,
+      this.core,
+    );
   }
 
   public async getDefiFees(bridgeCallData: BridgeCallData, userId?: GrumpkinAddress, depositValue?: AssetValue) {
@@ -371,8 +382,9 @@ export class AztecSdk extends EventEmitter {
     bridgeCallData: BridgeCallData,
     value: AssetValue,
     fee: AssetValue,
+    feePayer?: FeePayer,
   ) {
-    return new DefiController(userId, userSigner, bridgeCallData, value, fee, this.core);
+    return new DefiController(userId, userSigner, bridgeCallData, value, fee, feePayer, this.core);
   }
 
   public async generateAccountRecoveryData(
@@ -417,7 +429,7 @@ export class AztecSdk extends EventEmitter {
     recoveryPublicKey: GrumpkinAddress | undefined,
     deposit: AssetValue,
     fee: AssetValue,
-    depositor: EthAddress,
+    depositor?: EthAddress,
     feePayer?: FeePayer,
     provider = this.provider,
   ) {
@@ -450,10 +462,20 @@ export class AztecSdk extends EventEmitter {
     recoveryPayload: RecoveryPayload,
     deposit: AssetValue,
     fee: AssetValue,
-    depositor: EthAddress,
+    depositor?: EthAddress,
+    feePayer?: FeePayer,
     provider = this.provider,
   ) {
-    return new RecoverAccountController(recoveryPayload, deposit, fee, depositor, this.core, this.blockchain, provider);
+    return new RecoverAccountController(
+      recoveryPayload,
+      deposit,
+      fee,
+      depositor,
+      feePayer,
+      this.core,
+      this.blockchain,
+      provider,
+    );
   }
 
   public async getAddSpendingKeyFees(assetId: number) {
@@ -466,12 +488,26 @@ export class AztecSdk extends EventEmitter {
     spendingPublicKey1: GrumpkinAddress,
     spendingPublicKey2: GrumpkinAddress | undefined,
     fee: AssetValue,
+    feePayer?: FeePayer,
   ) {
-    return new AddSpendingKeyController(userId, userSigner, spendingPublicKey1, spendingPublicKey2, fee, this.core);
+    return new AddSpendingKeyController(
+      userId,
+      userSigner,
+      spendingPublicKey1,
+      spendingPublicKey2,
+      fee,
+      feePayer,
+      this.core,
+    );
   }
 
   public async getMigrateAccountFees(assetId: number) {
-    return await this.getAccountFee(assetId);
+    const txFees = await this.core.getTxFees(assetId);
+    const [depositFee] = txFees[TxType.DEPOSIT];
+    return txFees[TxType.ACCOUNT].map(({ value, ...rest }) => ({
+      ...rest,
+      value: value ? value + depositFee.value : value,
+    }));
   }
 
   public createMigrateAccountController(
@@ -480,7 +516,11 @@ export class AztecSdk extends EventEmitter {
     newAccountPrivateKey: Buffer,
     newSpendingPublicKey: GrumpkinAddress,
     recoveryPublicKey: GrumpkinAddress | undefined,
+    deposit: AssetValue,
     fee: AssetValue,
+    depositor?: EthAddress,
+    feePayer?: FeePayer,
+    provider = this.provider,
   ) {
     return new MigrateAccountController(
       userId,
@@ -488,8 +528,13 @@ export class AztecSdk extends EventEmitter {
       newAccountPrivateKey,
       newSpendingPublicKey,
       recoveryPublicKey,
+      deposit,
       fee,
+      depositor,
+      feePayer,
       this.core,
+      this.blockchain,
+      provider,
     );
   }
 

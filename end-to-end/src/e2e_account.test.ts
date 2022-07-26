@@ -22,7 +22,7 @@ describe('end-to-end account tests', () => {
 
   beforeAll(async () => {
     debug(`funding initial ETH accounts...`);
-    const initialBalance = 2n * 10n ** 16n; // 0.02
+    const initialBalance = 10n ** 16n; // 0.01
     provider = await createFundedWalletProvider(ETHEREUM_HOST, 2, 1, Buffer.from(PRIVATE_KEY, 'hex'), initialBalance);
     addresses = provider.getAccounts();
 
@@ -67,9 +67,10 @@ describe('end-to-end account tests', () => {
     ]);
     const { recoveryPublicKey } = recoveryPayloads[0];
     {
-      const depositValue = sdk.toBaseUnits(assetId, '0.01');
+      const depositValue = sdk.toBaseUnits(assetId, '0.005');
       // in order to flush this tx through, we will pay for all slots in the rollup
-      const txFee = (await sdk.getRegisterFees(depositValue))[TxSettlementTime.INSTANT];
+      const fee = (await sdk.getRegisterFees(depositValue))[TxSettlementTime.INSTANT];
+      debug(`depositing ${sdk.fromBaseUnits(depositValue, true)} (fee: ${sdk.fromBaseUnits(fee)}) to the account...`);
 
       const controller = sdk.createRegisterController(
         user0.id,
@@ -78,7 +79,7 @@ describe('end-to-end account tests', () => {
         signer0.getPublicKey(),
         recoveryPublicKey,
         depositValue,
-        txFee,
+        fee,
         addresses[0],
       );
 
@@ -111,6 +112,7 @@ describe('end-to-end account tests', () => {
       // Pay the fee from an eth address.
       const depositValue = { assetId, value: 0n };
       const fee = (await sdk.getRecoverAccountFees(assetId))[TxSettlementTime.INSTANT];
+      debug(`depositing ${sdk.fromBaseUnits(depositValue, true)} (fee: ${sdk.fromBaseUnits(fee)}) to new account...`);
       const depositor = addresses[0];
       const controller = sdk.createRecoverAccountController(recoveryPayloads[0], depositValue, fee, depositor);
       await controller.createProof();
@@ -135,6 +137,7 @@ describe('end-to-end account tests', () => {
     const newSigner = await sdk.createSchnorrSigner(randomBytes(32));
     {
       const fee = (await sdk.getAddSpendingKeyFees(assetId))[TxSettlementTime.INSTANT];
+      debug(`paying fee: ${sdk.fromBaseUnits(fee, true)})...`);
       const controller = sdk.createAddSpendingKeyController(
         user0.id,
         thirdPartySigner,
@@ -164,16 +167,25 @@ describe('end-to-end account tests', () => {
     const spendingKey1 = await sdk.generateSpendingKeyPair(addresses[1]);
     const user1 = await sdk.addUser(account1.privateKey);
     {
+      const depositValue = { assetId, value: 0n };
       const fee = (await sdk.getMigrateAccountFees(assetId))[TxSettlementTime.INSTANT];
+      debug(`depositing ${sdk.fromBaseUnits(depositValue, true)} (fee: ${sdk.fromBaseUnits(fee)}) to new account...`);
       const controller = sdk.createMigrateAccountController(
         user0.id,
         newSigner,
         account1.privateKey,
         spendingKey1.publicKey,
         undefined,
+        depositValue,
         fee,
+        addresses[0], // Pay the fee via deposit.
       );
       await controller.createProof();
+
+      await controller.depositFundsToContract();
+      await controller.awaitDepositFundsToContract();
+      await controller.sign();
+
       await controller.send();
       await controller.awaitSettlement();
     }

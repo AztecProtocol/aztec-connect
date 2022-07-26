@@ -83,10 +83,11 @@ describe('defi controller', () => {
     const bridgeCallData = new BridgeCallData(1, assetId, 3);
     const depositValue = { assetId, value: 100n };
     const fee = { assetId, value: 1n };
+    const feePayer = undefined;
     let controller: DefiController;
 
     beforeEach(() => {
-      controller = new DefiController(userId, userSigner, bridgeCallData, depositValue, fee, coreSdk);
+      controller = new DefiController(userId, userSigner, bridgeCallData, depositValue, fee, feePayer, coreSdk);
     });
 
     it('create a defi deposit proof', async () => {
@@ -165,10 +166,11 @@ describe('defi controller', () => {
     const bridgeCallData = new BridgeCallData(1, assetId, 3);
     const depositValue = { assetId, value: 100n };
     const fee = { assetId: feeAssetId, value: 1n };
+    const feePayer = undefined;
     let controller: DefiController;
 
     beforeEach(() => {
-      controller = new DefiController(userId, userSigner, bridgeCallData, depositValue, fee, coreSdk);
+      controller = new DefiController(userId, userSigner, bridgeCallData, depositValue, fee, feePayer, coreSdk);
     });
 
     it('create a defi deposit proof and a fee paying proof', async () => {
@@ -251,10 +253,11 @@ describe('defi controller', () => {
     const bridgeCallData = new BridgeCallData(1, assetId, 3, secondAssetId);
     const depositValue = { assetId, value: 100n };
     const fee = { assetId, value: 1n };
+    const feePayer = undefined;
     let controller: DefiController;
 
     beforeEach(() => {
-      controller = new DefiController(userId, userSigner, bridgeCallData, depositValue, fee, coreSdk);
+      controller = new DefiController(userId, userSigner, bridgeCallData, depositValue, fee, feePayer, coreSdk);
     });
 
     it('create a defi deposit proof', async () => {
@@ -439,10 +442,11 @@ describe('defi controller', () => {
     const bridgeCallData = new BridgeCallData(1, assetId, 3, secondAssetId);
     const depositValue = { assetId, value: 100n };
     const fee = { assetId: feeAssetId, value: 1n };
+    const feePayer = undefined;
     let controller: DefiController;
 
     beforeEach(() => {
-      controller = new DefiController(userId, userSigner, bridgeCallData, depositValue, fee, coreSdk);
+      controller = new DefiController(userId, userSigner, bridgeCallData, depositValue, fee, feePayer, coreSdk);
     });
 
     it('create a defi deposit proof and a fee paying proof', async () => {
@@ -617,40 +621,41 @@ describe('defi controller', () => {
     const bridgeCallData = new BridgeCallData(1, assetId, 3, 4, 5);
     const depositValue = { assetId, value: 100n };
     const fee = { assetId, value: 1n };
+    const feePayer = undefined;
 
-    it('bridge call data cannot have identical input assets', () => {
+    it('bridge id cannot have identical input assets', () => {
       const invalidBridgeCallData = new BridgeCallData(0, assetId, 3, assetId);
-      expect(() => new DefiController(userId, userSigner, invalidBridgeCallData, depositValue, fee, coreSdk)).toThrow(
-        'Identical input assets.',
-      );
+      expect(
+        () => new DefiController(userId, userSigner, invalidBridgeCallData, depositValue, fee, feePayer, coreSdk),
+      ).toThrow('Identical input assets.');
     });
 
-    it('bridge call data cannot have identical output assets', () => {
+    it('bridge id cannot have identical output assets', () => {
       const invalidBridgeCallData = new BridgeCallData(0, assetId, 2, undefined, 2);
-      expect(() => new DefiController(userId, userSigner, invalidBridgeCallData, depositValue, fee, coreSdk)).toThrow(
-        'Identical output assets.',
-      );
+      expect(
+        () => new DefiController(userId, userSigner, invalidBridgeCallData, depositValue, fee, feePayer, coreSdk),
+      ).toThrow('Identical output assets.');
     });
 
     it('deposit value cannot be 0', () => {
       const invalidDepositValue = { assetId, value: 0n };
-      expect(() => new DefiController(userId, userSigner, bridgeCallData, invalidDepositValue, fee, coreSdk)).toThrow(
-        'Deposit value must be greater than 0.',
-      );
+      expect(
+        () => new DefiController(userId, userSigner, bridgeCallData, invalidDepositValue, fee, feePayer, coreSdk),
+      ).toThrow('Deposit value must be greater than 0.');
     });
 
     it('asset of deposit value must be the same as the first input asset', () => {
       const invalidDepositValue = { assetId: assetId + 1, value: 100n };
-      expect(() => new DefiController(userId, userSigner, bridgeCallData, invalidDepositValue, fee, coreSdk)).toThrow(
-        'Incorrect deposit asset.',
-      );
+      expect(
+        () => new DefiController(userId, userSigner, bridgeCallData, invalidDepositValue, fee, feePayer, coreSdk),
+      ).toThrow('Incorrect deposit asset.');
     });
 
     it('fee cannot be paid with second input asset', () => {
       const invalidFee = { assetId: bridgeCallData.inputAssetIdB!, value: 0n };
-      expect(() => new DefiController(userId, userSigner, bridgeCallData, depositValue, invalidFee, coreSdk)).toThrow(
-        'Fee paying asset must be the first input asset.',
-      );
+      expect(
+        () => new DefiController(userId, userSigner, bridgeCallData, depositValue, invalidFee, feePayer, coreSdk),
+      ).toThrow('Fee paying asset must be the first input asset.');
     });
   });
 });

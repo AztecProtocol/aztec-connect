@@ -149,7 +149,10 @@ describe('end-to-end migrate account and funds tests', () => {
         newAccountKeyPair.privateKey,
         newAccountSpendingKeyPair.publicKey,
         undefined,
+        { assetId, value: 0n },
         migrateFee,
+        undefined,
+        { userId: oldAccountKeyPair.publicKey, signer: oldAccountSigner }, // fee payer
       );
       await migrateController.createProof();
       await migrateController.send();
