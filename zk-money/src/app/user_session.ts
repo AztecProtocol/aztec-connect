@@ -337,7 +337,7 @@ export class UserSession extends EventEmitter {
       // https://github.com/AztecProtocol/aztec2-internal/pull/1179 => should appear as a toast
       // TODO - show a signup link in error message.
       throw new Error(
-        'Account not registered. Please check you are using the same Ethereum wallet that you used to register your account',
+        'Account not registered. Please check you are using the same Ethereum wallet that you used to register your account.',
       );
     }
 
