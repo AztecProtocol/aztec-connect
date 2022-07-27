@@ -10,6 +10,7 @@ import {
   deployUniswap,
   deployUniswapBridge,
   deployVerifier,
+  deployCompoundBridge,
 } from './deployers';
 import { deployErc20 } from './deployers/deploy_erc20';
 
@@ -47,6 +48,7 @@ export async function deployDev(signer: Signer, { dataTreeSize, roots }: TreeIni
   await deployUniswapPair(signer, uniswapRouter, asset0, initialTokenSupply, initialEthSupply);
   await deployUniswapBridge(signer, rollup, uniswapRouter);
   await deployDummyBridge(rollup, signer, [asset0, asset1]);
+  await deployCompoundBridge(signer, rollup);
 
   const gasPriceFeedContact = await deployMockPriceFeed(signer, gasPrice);
   const daiPriceFeedContact = await deployMockPriceFeed(signer, daiPrice);
