@@ -1,3 +1,4 @@
+// If you make change that will require a redeploy of the contracts, increment the number in blockchain/.redeploy.
 const initConfig = {
   '1': {
     initRoots: {
