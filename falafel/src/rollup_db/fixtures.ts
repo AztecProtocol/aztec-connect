@@ -38,6 +38,7 @@ export const randomTx = ({
   signature = Buffer.alloc(0),
   accountPublicKey = GrumpkinAddress.random(),
   aliasHash = AliasHash.random(),
+  creationTime = now.add(1, 's').toDate(),
 } = {}) => {
   const proofId = txTypeToProofId(txType);
   const isPublic =
@@ -63,7 +64,7 @@ export const randomTx = ({
     nullifier1: toBigIntBE(proofData.nullifier1) ? proofData.nullifier1 : undefined,
     nullifier2: toBigIntBE(proofData.nullifier2) ? proofData.nullifier2 : undefined,
     dataRootsIndex: 0,
-    created: now.add(1, 's').toDate(),
+    created: creationTime,
     signature: signature.length ? signature : undefined,
     txType,
     excessGas: 50000,

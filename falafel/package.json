@@ -15,7 +15,11 @@
     "start:e2e": "./scripts/start_e2e.sh",
     "start:wasabi": "./scripts/start_wasabi.sh",
     "test:debug": "node --inspect-brk=0.0.0.0:9221 ./node_modules/.bin/jest",
-    "test": "jest"
+    "test": "jest",
+    "falafel_cli": "node ./dest/cli/index.js"
+  },
+  "bin": {
+    "falafel_cli": "./cli/index.js"
   },
   "jest": {
     "transform": {
@@ -33,6 +37,7 @@
     "bn.js": "^5.0.0",
     "class-validator": "^0.12.2",
     "coinbase-pro": "^0.9.0",
+    "commander": "^9.4.0",
     "fs-extra": "9.0.1",
     "graphql": "^15.3.0",
     "graphql-playground-middleware-koa": "^1.6.19",

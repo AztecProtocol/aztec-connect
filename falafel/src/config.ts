@@ -33,7 +33,7 @@ async function getProvider(ethereumHost: string, privateKey: Buffer) {
   return { provider, signingAddress, chainId };
 }
 
-function getOrmConfig(dbUrl?: string, logging = false): ConnectionOptions {
+export function getOrmConfig(dbUrl?: string, logging = false): ConnectionOptions {
   const entities = [TxDao, RollupProofDao, RollupDao, AccountDao, ClaimDao, AssetMetricsDao, BridgeMetricsDao];
   if (!dbUrl) {
     return {
