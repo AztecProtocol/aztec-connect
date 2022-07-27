@@ -13,7 +13,7 @@ export function DefiDepositDetails({ tx }: { tx: Tx }) {
   const protocolName = getBridgeProtocolName(bridgeCallData.bridgeAddressId);
   return (
     <>
-      <InfoRow title="BRIDGE ADDRESS">
+      <InfoRow title="BRIDGE ADDRESS ID">
         <Value text={bridgeCallData.bridgeAddressId.toString()} monospace />
       </InfoRow>
       {protocolName && (
