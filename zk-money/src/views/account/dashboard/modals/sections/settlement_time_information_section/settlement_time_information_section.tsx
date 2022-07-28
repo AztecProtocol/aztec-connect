@@ -55,8 +55,7 @@ export function SettlementTimeInformationSection(props: SettlementTimeInformatio
         <SettlementProgressBar speed={props.speed} remainingSlots={props.remainingSlots} progress={props.progress} />
       }
       buttonLabel="Learn more"
-      // TODO: Update FAQ with more useful info about settlement times
-      helpLink="https://docs.aztec.network/how-aztec-works/faq#fees"
+      helpLink="https://docs.aztec.network/zk-money/fees"
     />
   );
 }

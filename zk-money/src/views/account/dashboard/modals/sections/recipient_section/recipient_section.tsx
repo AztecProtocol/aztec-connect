@@ -19,7 +19,6 @@ const getRecipientInputStatus = (isLoading: boolean, isValid: boolean, hasWarnin
   if (hasWarning) return InputStatus.WARNING;
   if (isValid) return InputStatus.SUCCESS;
   return InputStatus.ERROR;
-  // TODO: Support warning state - probably if reusing an eth address?
 };
 
 function getRecipientPlaceholder(type: RecipientType) {

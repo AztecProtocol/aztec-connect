@@ -1,10 +1,8 @@
 import { SVGProps } from 'react';
-// import { useUniqueId } from '../../util';
+import { useUniqueId } from 'ui-components/util';
 
 export const DoneGradientIcon = (props: SVGProps<SVGSVGElement>) => {
-  // const id = useUniqueId();
-  // TODO: use unique id once hooks are functional
-  const id = 'done-gradient-icon';
+  const id = useUniqueId();
   return (
     <svg width={30} height={30} fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
       <path

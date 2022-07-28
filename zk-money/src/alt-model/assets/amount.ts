@@ -14,11 +14,6 @@ export class Amount {
     return this.info.address;
   }
 
-  get permitSupport() {
-    // TODO
-    return false;
-  }
-
   toFloat() {
     return baseUnitsToFloat(this.baseUnits, this.info.decimals);
   }
