@@ -1,6 +1,6 @@
 import { Obs } from 'app/util';
 import type { IObs } from 'app/util/obs/types';
-import { ToastContent } from 'ui-components';
+import { ToastContent, ToastType } from 'ui-components';
 
 export type ToastsObsValue = ToastContent[];
 
@@ -15,6 +15,16 @@ export class ToastsObs implements IObs<ToastsObsValue> {
 
   addToast(toast: ToastContent) {
     this.obs.next([...this.obs.value, toast]);
+  }
+
+  hasSystemMessage() {
+    const systemMessageToast = this.obs.value.find(t => t.key === 'system-message');
+    return !!systemMessageToast;
+  }
+
+  hasSystemError() {
+    const erroredToast = this.obs.value.find(t => t.type === ToastType.ERROR && t.key === 'system-message');
+    return !!erroredToast;
   }
 
   replaceToast(toast: ToastContent) {

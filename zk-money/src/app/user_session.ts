@@ -938,7 +938,6 @@ export class UserSession extends EventEmitter {
       text,
       type,
       isClosable: false,
-      autocloseInMs: 20e3,
       key: 'system-message',
     });
   }

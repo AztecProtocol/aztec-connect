@@ -30,7 +30,7 @@ export function useAssetUnitPrices(assetIds?: number[]) {
       );
       return Obs.combine(deps).map(prices => mapToObj(assetIds, (_, idx) => prices[idx]));
     }
-  }, [priceFeedPollerCache, assetIds]);
+  }, [priceFeedPollerCache, assets, assetIds]);
   return useMaybeObs(obs);
 }
 

@@ -22,7 +22,7 @@ function AppViewConnector({ config }: { config: Config }) {
     if (!isCookieAccepted) {
       toastsObs.addToast(getCookiesToast(toastsObs));
     }
-  }, [isCookieAccepted]);
+  }, [isCookieAccepted, toastsObs]);
 
   if (appPaths.includes(pathname)) {
     return <AppView config={config} toastsObs={toastsObs} sdkObs={sdkObs} path={pathname} navigate={navigate} />;

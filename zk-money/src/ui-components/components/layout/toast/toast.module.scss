@@ -24,6 +24,7 @@
   padding: 20px 25px;
   max-width: 625px;
   will-change: transform;
+  overflow-wrap: break-word;
   background-color: white;
   animation: fade-in 0.3s ease, slide-in 0.3s ease;
   position: relative;

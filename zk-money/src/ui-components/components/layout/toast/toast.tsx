@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Button, ButtonTheme } from 'ui-components';
 import { CloseMiniIcon } from 'ui-components/components/icons';
 import { bindStyle } from 'ui-components/util/classnames';
@@ -45,21 +45,25 @@ export function Toast(props: ToastProps) {
   const hasSecondaryButton = !!props.secondaryButton;
   const hasButtons = hasPrimaryButton || hasSecondaryButton;
 
-  const handleCloseToast = () => {
+  const handleCloseToastRef = useRef(() => {
     if (props.onCloseToast && props.index !== undefined) {
       props.onCloseToast(props.index);
     }
-  };
+  });
 
   useEffect(() => {
     if (!props.autocloseInMs) {
       return;
     }
 
-    setTimeout(() => {
-      handleCloseToast();
+    const timeoutRef = setTimeout(() => {
+      handleCloseToastRef.current();
     }, props.autocloseInMs);
-  }, []);
+
+    return () => {
+      clearTimeout(timeoutRef);
+    };
+  }, [props.autocloseInMs]);
 
   return (
     <div
@@ -90,7 +94,7 @@ export function Toast(props: ToastProps) {
           className={style.closeButton}
           onClick={e => {
             e.preventDefault();
-            handleCloseToast();
+            handleCloseToastRef.current();
           }}
         >
           <CloseMiniIcon />

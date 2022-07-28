@@ -66,6 +66,8 @@ interface LoginProps {
   shieldForAliasForm?: ShieldFormValues;
   availableWallets: Wallet[];
   explorerUrl: string;
+  isShowingSystemMessage: boolean;
+  isShowingSystemError: boolean;
   setAlias: (alias: string) => void;
   onSelectWallet: (walletId: WalletId) => void;
   onRestart?: () => void;
@@ -207,6 +209,8 @@ export const Login: React.FunctionComponent<LoginProps> = props => {
     providerState,
     shieldForAliasForm,
     availableWallets,
+    isShowingSystemMessage,
+    isShowingSystemError,
     setAlias,
     onSelectWallet,
     onRestart,
@@ -269,7 +273,15 @@ export const Login: React.FunctionComponent<LoginProps> = props => {
                 : mode === LoginMode.LOGIN
                 ? loginProgresses
                 : signupProgresses;
-            return <InitDataForm currentStep={step} worldState={worldState} steps={steps} />;
+            return (
+              <InitDataForm
+                currentStep={step}
+                worldState={worldState}
+                steps={steps}
+                active={!isShowingSystemMessage || !isShowingSystemError}
+                failed={isShowingSystemError}
+              />
+            );
           }
         }
       })()}

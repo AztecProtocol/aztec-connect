@@ -160,8 +160,13 @@ export class AppView extends PureComponent<AppProps, AppState> {
     }
   };
 
+  private cleanSystemMessage = () => {
+    this.props.toastsObs.removeToastByKey('system-message');
+  };
+
   private handleUrlChange = async (path: string) => {
     const action = getActionFromUrl(path);
+    this.cleanSystemMessage();
     this.setState({ action });
 
     switch (action) {
@@ -233,6 +238,7 @@ export class AppView extends PureComponent<AppProps, AppState> {
   };
 
   private handleRestart = () => {
+    this.cleanSystemMessage();
     this.app.logout();
   };
 
@@ -248,6 +254,7 @@ export class AppView extends PureComponent<AppProps, AppState> {
     if (!this.app.hasSession()) {
       return;
     }
+    this.cleanSystemMessage();
     this.app.logout();
   };
 
@@ -274,11 +281,14 @@ export class AppView extends PureComponent<AppProps, AppState> {
       isLoading,
       activeDefiModal,
     } = this.state;
-    const { config } = this.props;
+    const { config, toastsObs } = this.props;
     const { step } = loginState;
+
+    const isShowingSystemMessage = toastsObs.hasSystemMessage();
+    const isShowingSystemError = toastsObs.hasSystemError();
     const theme = this.getTheme();
     const processingAction = this.app.isProcessingAction();
-    const allowReset = action !== AppAction.ACCOUNT && !processingAction;
+    const allowReset = action !== AppAction.ACCOUNT && (!processingAction || isShowingSystemError);
     const isLoggedIn = step === LoginStep.DONE;
 
     const shouldCenterContent =
@@ -337,6 +347,8 @@ export class AppView extends PureComponent<AppProps, AppState> {
                           shieldForAliasForm={shieldForAliasForm}
                           explorerUrl={config.explorerUrl}
                           setAlias={this.app.setAlias}
+                          isShowingSystemMessage={isShowingSystemMessage}
+                          isShowingSystemError={isShowingSystemError}
                           onSelectWallet={this.handleConnectWallet}
                           onSelectAlias={this.app.confirmAlias}
                           onRestart={allowReset && step !== LoginStep.CONNECT_WALLET ? this.handleRestart : undefined}
