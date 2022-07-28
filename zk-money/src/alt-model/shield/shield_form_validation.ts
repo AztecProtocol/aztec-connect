@@ -152,6 +152,7 @@ export function validateShieldForm(input: ShieldFormValidationInputs): ShieldFor
     ? {
         targetOutput: targetL2OutputAmount,
         fee: feeAmount,
+        settlementTime: fields.speed,
         depositor,
         recipientUserId,
       }

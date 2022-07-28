@@ -1,4 +1,4 @@
-import { GrumpkinAddress, AztecSdk, EthAddress, DepositController, TxId, FeePayer } from '@aztec/sdk';
+import { GrumpkinAddress, AztecSdk, EthAddress, DepositController, TxId, FeePayer, TxSettlementTime } from '@aztec/sdk';
 import type { Provider } from '../../app';
 import createDebug from 'debug';
 import { Amount } from 'alt-model/assets';
@@ -9,12 +9,14 @@ import { ShieldComposerPhase, ShieldComposerStateObs } from './shield_composer_s
 import { createSigningKeys, KeyVault } from '../../app/key_vault';
 import { KNOWN_MAINNET_ASSET_ADDRESSES } from 'alt-model/known_assets/known_asset_addresses';
 import { createSigningRetryableGenerator } from 'alt-model/forms/composer_helpers';
+import { normaliseFeeForPrivacy } from '../forms/fee_helpers';
 
 const debug = createDebug('zm:shield_composer');
 
 export type ShieldComposerPayload = Readonly<{
   targetOutput: Amount;
   fee: Amount;
+  settlementTime: TxSettlementTime;
   depositor: EthAddress;
   recipientUserId: GrumpkinAddress;
 }>;
@@ -62,6 +64,10 @@ export class ShieldComposer {
 
       return txId;
     } catch (error) {
+      if (error?.message === 'Insufficient fee.') {
+        await this.showInsufficientFeeMessage();
+        return false;
+      }
       debug('Compose failed with error:', error);
       this.stateObs.error(error?.message?.toString());
       return false;
@@ -135,7 +141,11 @@ export class ShieldComposer {
 
   private async depositAndAwaitConfirmation(controller: DepositController, requiredAmount: Amount) {
     await this.walletAccountEnforcer.ensure();
-    this.stateObs.setPrompt(`Please make a deposit of ${requiredAmount.format({ layer: 'L1' })} from your wallet.`);
+    this.stateObs.setPrompt(
+      `Please make a deposit of ${requiredAmount.format({
+        layer: 'L1',
+      })} from your wallet. Important: It is not recommended to pay a low L1 gas fee. If your deposit takes too long to clear, gas prices might change so much as to cause the rollup provider to reject your shield proof.`,
+    );
     const expireIn = 60n * 60n * 24n; // 24 hours
     const deadline = BigInt(Math.floor(Date.now() / 1000)) + expireIn;
     await this.withRetryableSigning(() => controller.depositFundsToContract(deadline));
@@ -196,5 +206,20 @@ export class ShieldComposer {
     this.stateObs.setPhase(ShieldComposerPhase.SEND_PROOF);
     await this.walletAccountEnforcer.ensure();
     return await controller.send();
+  }
+
+  private async showInsufficientFeeMessage() {
+    const { sdk } = this.deps;
+    const { fee, targetOutput, settlementTime } = this.payload;
+    const latestFees = await sdk.getDepositFees(targetOutput.id);
+    const latestFee = normaliseFeeForPrivacy(latestFees[settlementTime]);
+    const latestFeeAmount = fee.withBaseUnits(latestFee.value);
+    const isPayingFeeWithNotes = targetOutput.id !== fee.id;
+    const layer = isPayingFeeWithNotes ? 'L1' : 'L2';
+    this.stateObs.error(
+      `Gas prices have increased since starting this transaction and the rollup provider has rejected it as result. You can wait for gas prices to go back down and attempt your transaction again, or start the shielding process again at the higher fee. (Latest fee quote: ${latestFeeAmount.format(
+        { layer },
+      )})`,
+    );
   }
 }
