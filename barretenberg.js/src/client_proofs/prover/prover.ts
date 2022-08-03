@@ -100,8 +100,9 @@ export class Prover {
 
     for (let i = 0; i < scalarJobs; ++i) {
       const scalarsPtr = await this.proverCall('prover_get_scalar_multiplication_data', proverPtr, i);
-      const scalars = await this.wasm.sliceMemory(scalarsPtr, scalarsPtr + circuitSize * 32);
-      const result = await this.pippenger.pippengerUnsafe(scalars, 0, circuitSize);
+      const scalarMultSize = await this.proverCall('prover_get_scalar_multiplication_size', proverPtr, i);
+      const scalars = await this.wasm.sliceMemory(scalarsPtr, scalarsPtr + scalarMultSize * 32);
+      const result = await this.pippenger.pippengerUnsafe(scalars, 0, scalarMultSize);
       await this.wasm.transferToHeap(result, 0);
       await this.proverCall('prover_put_scalar_multiplication_data', proverPtr, 0, i);
     }
