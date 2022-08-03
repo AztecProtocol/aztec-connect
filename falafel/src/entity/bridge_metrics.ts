@@ -28,6 +28,10 @@ export class BridgeMetricsDao {
 
   // total gas accrued for bridge
   @Column('text', { transformer: [bigintTransformer], default: '0' })
+  public totalGasAccrued = BigInt(0);
+
+  // total gas cost for bridge
+  @Column('text', { transformer: [bigintTransformer], default: '0' })
   public totalGas = BigInt(0);
 
   // gas price when rollup mined
@@ -35,19 +39,19 @@ export class BridgeMetricsDao {
   public gasPrice!: bigint;
 
   // fees collected in USD for bridge in rollup
-  @Column({ nullable: true })
+  @Column('float', { nullable: true })
   public usdFees?: number;
 
   // total fees collected in USD for bridge
-  @Column({ nullable: true })
+  @Column('float', { nullable: true })
   public totalUsdFees?: number;
 
   // cost for bridge in USD for rollup
-  @Column({ nullable: true })
+  @Column('float', { nullable: true })
   public usdCost?: number;
 
   // total cost for bridge in USD
-  @Column({ nullable: true })
+  @Column('float', { nullable: true })
   public totalUsdCost?: number;
 
   // total number of times the bridge has been called by Aztec publishing rollups

@@ -516,7 +516,8 @@ export class Metrics {
         bridgeMetrics.bridgeId = encodedBridgeCallData;
         bridgeMetrics.rollupId = rollupId;
         bridgeMetrics.gas = BigInt(gasAccrued);
-        bridgeMetrics.totalGas = BigInt(bridgeMetrics.totalGas + BigInt(bridgeProfile.gasThreshold));
+        bridgeMetrics.totalGasAccrued = BigInt(bridgeMetrics.totalGasAccrued || 0) + BigInt(bridgeMetrics.gas);
+        bridgeMetrics.totalGas = BigInt(bridgeMetrics.totalGas || 0) + BigInt(bridgeProfile.gasThreshold);
         bridgeMetrics.totalAztecCalls = (bridgeMetrics.totalAztecCalls || 0) + 1;
         bridgeMetrics.gasPrice = gasPrice;
 
