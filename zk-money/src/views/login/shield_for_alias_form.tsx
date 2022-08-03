@@ -56,6 +56,10 @@ const Root = styled.div`
 const Cols = styled.div`
   display: grid;
   width: 100%;
+  height: 180px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
   grid-template-columns: 3fr 2fr;
   gap: ${spacings.s};
 
@@ -126,19 +130,28 @@ const ButtonRoot = styled(InputCol)`
   width: auto;
 `;
 
-const getAmountInputMessageProps = (form: ShieldFormValues) => {
+const getAmountInputMessageProps = (form: ShieldFormValues, signerAddress?: string) => {
   const { amount, ethAccount, fees, speed, assetState } = form;
-  if (amount.message) return { message: amount.message, type: amount.messageType };
+
+  const addressMismatchMessage =
+    signerAddress !== ethAccount.value.ethAddress?.toString()
+      ? ' \nWarning: you are shielding from a different address than the one used for registering.'
+      : '';
+
+  if (amount.message) {
+    return { message: `${amount.message}${addressMismatchMessage}`, type: amount.messageType };
+  }
 
   const { pendingBalance } = ethAccount.value;
   const txFee = fees.value[speed.value];
   if (pendingBalance > txFee.fee) {
     const { asset } = assetState.value;
+
     return {
       message: `You have ${formatBaseUnits(pendingBalance - txFee.fee, asset.decimals, {
         precision: getAssetPreferredFractionalDigits(asset.address),
         commaSeparated: true,
-      })} ${asset.symbol} pending on the contract, this will be used first. `,
+      })} ${asset.symbol} pending on the contract, this will be used first.${addressMismatchMessage}`,
       type: MessageType.TEXT,
     };
   }
@@ -147,6 +160,7 @@ const getAmountInputMessageProps = (form: ShieldFormValues) => {
 interface DepositFormProps {
   form: ShieldFormValues;
   providerState?: ProviderState;
+  signerAddress?: string;
   onChangeInputs(inputs: Partial<ShieldFormValues>): void;
   onSubmit(isRetry?: boolean): void;
   onChangeWallet(walletId: WalletId): void;
@@ -155,6 +169,7 @@ interface DepositFormProps {
 export const ShieldForAliasForm: React.FunctionComponent<DepositFormProps> = ({
   providerState,
   form,
+  signerAddress,
   onChangeInputs,
   onSubmit,
   onChangeWallet,
@@ -212,7 +227,7 @@ export const ShieldForAliasForm: React.FunctionComponent<DepositFormProps> = ({
     );
   }
 
-  const amountInputMessageProps = getAmountInputMessageProps(form);
+  const amountInputMessageProps = getAmountInputMessageProps(form, signerAddress);
   const txFee = fees.value[speed.value];
 
   return (
@@ -226,6 +241,7 @@ export const ShieldForAliasForm: React.FunctionComponent<DepositFormProps> = ({
               providerState={providerState}
               ethAccount={ethAccount.value}
               message={ethAccount.message}
+              comparisonAddress={signerAddress}
               messageType={ethAccount.messageType}
               onChangeWallet={onChangeWallet}
             />

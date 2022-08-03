@@ -17,6 +17,7 @@ import { ConnectForm } from './connect_form';
 import { ShieldForAliasForm } from './shield_for_alias_form';
 import { InitDataForm } from './init_data_form';
 import { LoginTemplate } from './login_template';
+import { useApp } from 'alt-model';
 
 const PaddedTop = styled.div`
   padding-top: ${spacings.m};
@@ -221,6 +222,7 @@ export const Login: React.FunctionComponent<LoginProps> = props => {
   } = props;
   const { step, mode, walletId, alias, aliasAvailability, allowToProceed } = loginState;
   const { stepNo, title, description, footnote } = getStepInfo(props);
+  const { keyVault } = useApp();
 
   return (
     <LoginTemplate
@@ -260,6 +262,7 @@ export const Login: React.FunctionComponent<LoginProps> = props => {
             return (
               <ShieldForAliasForm
                 providerState={providerState}
+                signerAddress={keyVault?.signerAddress.toString()}
                 form={shieldForAliasForm!}
                 onChangeInputs={onShieldForAliasFormInputsChange}
                 onSubmit={onSubmitShieldForAliasForm}
