@@ -11,6 +11,7 @@ import { Web3Provider } from '@ethersproject/providers';
 import createDebug from 'debug';
 import { BytesLike, Contract, Event, utils } from 'ethers';
 import { abi } from '../../artifacts/contracts/RollupProcessor.sol/RollupProcessor.json';
+import { abi as permitHelperAbi } from '../../artifacts/contracts/periphery/PermitHelper.sol/PermitHelper.json';
 import { decodeErrorFromContract, decodeErrorFromContractByTxHash } from '../decode_error';
 import { DefiInteractionEvent } from '@aztec/barretenberg/block_source/defi_interaction_event';
 import { solidityFormatSignatures } from './solidity_format_signatures';
@@ -29,15 +30,21 @@ export class RollupProcessor {
   static readonly DEFAULT_ERC20_GAS_LIMIT = 55000;
 
   public rollupProcessor: Contract;
+  public permitHelper: Contract;
   private lastQueriedRollupId?: number;
   private lastQueriedRollupBlockNum?: number;
   protected provider: Web3Provider;
   private log = createDebug('bb:rollup_processor');
   // taken from the rollup contract
 
-  constructor(protected rollupContractAddress: EthAddress, private ethereumProvider: EthereumProvider) {
+  constructor(
+    protected rollupContractAddress: EthAddress,
+    private ethereumProvider: EthereumProvider,
+    protected permitHelperAddress: EthAddress = EthAddress.ZERO,
+  ) {
     this.provider = new Web3Provider(ethereumProvider);
     this.rollupProcessor = new Contract(rollupContractAddress.toString(), abi, this.provider);
+    this.permitHelper = new Contract(permitHelperAddress.toString(), permitHelperAbi, this.provider);
   }
 
   get address() {
@@ -97,7 +104,11 @@ export class RollupProcessor {
   }
 
   async defiInteractionHashes() {
-    const res = (await this.rollupProcessor.getDefiInteractionHashes()) as string[];
+    const length = await this.getDefiInteractionHashesLength();
+    const res: string[] = [];
+    for (let i = 0; i < length; i++) {
+      res.push((await this.rollupProcessor.defiInteractionHashes(i)) as string);
+    }
     return res.map(v => Buffer.from(v.slice(2), 'hex'));
   }
 
@@ -106,7 +117,11 @@ export class RollupProcessor {
   }
 
   async asyncDefiInteractionHashes() {
-    const res = (await this.rollupProcessor.getAsyncDefiInteractionHashes()) as string[];
+    const length = await this.getAsyncDefiInteractionHashesLength();
+    const res: string[] = [];
+    for (let i = 0; i < length; i++) {
+      res.push((await this.rollupProcessor.asyncDefiInteractionHashes(i)) as string);
+    }
     return res.map(v => Buffer.from(v.slice(2), 'hex'));
   }
 
@@ -127,16 +142,22 @@ export class RollupProcessor {
   }
 
   async getSupportedBridges() {
-    const [bridgeAddresses, gasLimits]: any[][] = await this.rollupProcessor.getSupportedBridges();
-    return bridgeAddresses.map((a, i) => ({
-      id: i + 1,
-      address: EthAddress.fromString(a),
-      gasLimit: +gasLimits[i],
-    }));
+    const length = await this.getSupportedBridgesLength();
+    const bridges: any[] = [];
+
+    for (let i = 1; i <= length; i++) {
+      bridges.push({
+        id: i,
+        address: await this.getSupportedBridge(i),
+        gasLimit: await this.getBridgeGasLimit(i),
+      });
+    }
+
+    return bridges;
   }
 
   async getBridgeGasLimit(bridgeAddressId: number) {
-    return +(await this.rollupProcessor.getBridgeGasLimit(bridgeAddressId));
+    return +(await this.rollupProcessor.bridgeGasLimits(bridgeAddressId));
   }
 
   async getSupportedAsset(assetId: number) {
@@ -147,12 +168,22 @@ export class RollupProcessor {
     return (await this.rollupProcessor.getSupportedAssetsLength()).toNumber();
   }
 
+  async getAssetGasLimit(assetId: number) {
+    return +(await this.rollupProcessor.assetGasLimits(assetId));
+  }
+
   async getSupportedAssets() {
-    const [assetAddresses, gasLimits]: any[][] = await this.rollupProcessor.getSupportedAssets();
-    return assetAddresses.map((a, i) => ({
-      address: EthAddress.fromString(a),
-      gasLimit: +gasLimits[i],
-    }));
+    const length = await this.getSupportedAssetsLength();
+    const assets: any[] = [];
+
+    for (let i = 1; i <= length; i++) {
+      assets.push({
+        address: await this.getSupportedAsset(i),
+        gasLimit: await this.getAssetGasLimit(i),
+      });
+    }
+
+    return assets;
   }
 
   async pause(options: SendTxOptions = {}) {
@@ -359,24 +390,15 @@ export class RollupProcessor {
     amount: bigint,
     deadline: bigint,
     signature: EthereumSignature,
-    proofHash: Buffer = Buffer.alloc(32),
     options: SendTxOptions = {},
   ) {
     const { gasLimit } = options;
-    const rollupProcessor = this.getContractWithSigner(options);
-    const depositor = await rollupProcessor.signer.getAddress();
-    const tx = await rollupProcessor
-      .depositPendingFundsPermit(
-        assetId,
-        amount,
-        depositor,
-        proofHash,
-        deadline,
-        signature.v,
-        signature.r,
-        signature.s,
-        { gasLimit },
-      )
+    const permitHelper = this.getHelperContractWithSigner(options);
+    const depositor = await permitHelper.signer.getAddress();
+    const tx = await permitHelper
+      .depositPendingFundsPermit(assetId, amount, depositor, deadline, signature.v, signature.r, signature.s, {
+        gasLimit,
+      })
       .catch(fixEthersStackTrace);
     return TxHash.fromString(tx.hash);
   }
@@ -387,18 +409,16 @@ export class RollupProcessor {
     nonce: bigint,
     deadline: bigint,
     signature: EthereumSignature,
-    proofHash = Buffer.alloc(32),
     options: SendTxOptions = {},
   ) {
     const { gasLimit } = options;
-    const rollupProcessor = this.getContractWithSigner(options);
-    const depositor = await rollupProcessor.signer.getAddress();
-    const tx = await rollupProcessor
+    const permitHelper = this.getHelperContractWithSigner(options);
+    const depositor = await permitHelper.signer.getAddress();
+    const tx = await permitHelper
       .depositPendingFundsPermitNonStandard(
         assetId,
         amount,
         depositor,
-        proofHash,
         nonce,
         deadline,
         signature.v,
@@ -748,11 +768,18 @@ export class RollupProcessor {
     );
   }
 
-  protected getContractWithSigner(options: SendTxOptions) {
+  public getContractWithSigner(options: SendTxOptions) {
     const { signingAddress } = options;
     const provider = options.provider ? new Web3Provider(options.provider) : this.provider;
     const ethSigner = provider.getSigner(signingAddress ? signingAddress.toString() : 0);
     return new Contract(this.rollupContractAddress.toString(), abi, ethSigner);
+  }
+
+  public getHelperContractWithSigner(options: SendTxOptions) {
+    const { signingAddress } = options;
+    const provider = options.provider ? new Web3Provider(options.provider) : this.provider;
+    const ethSigner = provider.getSigner(signingAddress ? signingAddress.toString() : 0);
+    return new Contract(this.permitHelperAddress.toString(), permitHelperAbi, ethSigner);
   }
 
   public async estimateGas(data: Buffer) {

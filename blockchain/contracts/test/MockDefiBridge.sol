@@ -126,15 +126,9 @@ contract MockDefiBridge is IDefiBridge {
         interestRates[interactionNonce] = rate;
     }
 
-    function canFinalise(
-        uint256 /*interactionNonce*/
-    ) external pure override returns (bool) {
-        return true;
-    }
-
     function finalise(
         AztecTypes.AztecAsset memory inputAssetA,
-        AztecTypes.AztecAsset memory, /*inputAssetB*/
+        AztecTypes.AztecAsset memory inputAssetB,
         AztecTypes.AztecAsset memory outputAssetA,
         AztecTypes.AztecAsset memory outputAssetB,
         uint256 interactionNonce,
@@ -151,6 +145,7 @@ contract MockDefiBridge is IDefiBridge {
     {
         require(msg.sender == rollupProcessor, 'invalid sender!');
         approveTransfer(inputAssetA, returnInputValue, interactionNonce);
+        approveTransfer(inputAssetB, returnInputValue, interactionNonce);
         approveTransfer(outputAssetA, returnValueA, interactionNonce);
         approveTransfer(outputAssetB, returnValueB, interactionNonce);
 

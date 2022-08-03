@@ -2,7 +2,6 @@ import { bufferToHex } from 'ethereumjs-util';
 import { Contract, Signer } from 'ethers';
 import { ethers } from 'hardhat';
 import { evmSnapshot, evmRevert, setEthBalance } from '../../ganache/hardhat_chain_manipulation';
-import { EthersAdapter } from '../../provider';
 import { createRollupProof, createSendProof, DefiInteractionData } from './fixtures/create_mock_proof';
 import { setupTestRollupProcessor } from './fixtures/setup_upgradeable_test_rollup_processor';
 import { RollupProcessor } from './rollup_processor';
@@ -14,8 +13,6 @@ import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { WorldStateConstants } from '@aztec/barretenberg/world_state';
 import { keccak256, LogDescription, toUtf8Bytes } from 'ethers/lib/utils';
 import { DefiInteractionEvent } from '@aztec/barretenberg/block_source/defi_interaction_event';
-import { createPermitData, createPermitDataNonStandard } from '../../create_permit_data';
-import { Web3Signer } from '../../signer';
 
 const parseInteractionEventResultFromLog = (log: LogDescription) => {
   const {
@@ -69,8 +66,8 @@ describe('rollup_processor: reentry', () => {
   };
 
   const expectResult = async (
-    expectedResultEventOrder: DefiInteractionNote[],
-    expectedResultStorage: DefiInteractionNote[],
+    expectedResultEventOrder: DefiInteractionEvent[],
+    expectedResultStorage: DefiInteractionEvent[],
     txHash: TxHash,
   ) => {
     const receipt = await ethers.provider.getTransactionReceipt(txHash.toString());
@@ -85,9 +82,21 @@ describe('rollup_processor: reentry', () => {
       expect(interactionResult[i]).toEqual(expectedResultEventOrder[i]);
     }
 
+    const cleanedExpectedResultStorage = expectedResultStorage.map(
+      a =>
+        new DefiInteractionNote(
+          a.bridgeCallData,
+          a.nonce,
+          a.totalInputValue,
+          a.totalOutputValueA,
+          a.totalOutputValueB,
+          a.result,
+        ),
+    );
+
     const expectedHashes = computeInteractionHashes([
-      ...expectedResultStorage,
-      ...[...Array(numberOfBridgeCalls - expectedResultStorage.length)].map(() => DefiInteractionNote.EMPTY),
+      ...cleanedExpectedResultStorage,
+      ...[...Array(numberOfBridgeCalls - cleanedExpectedResultStorage.length)].map(() => DefiInteractionNote.EMPTY),
     ]);
     const hashes = await rollupProcessor.defiInteractionHashes();
     const resultHashes = [
@@ -326,113 +335,6 @@ describe('rollup_processor: reentry', () => {
     await expectResult(interactions, interactions, txHash);
   });
 
-  it('should revert when reentering deposit with standard permit from rollup', async () => {
-    const depositAmount = 60n;
-    const chainId = 31337;
-    const asset = assets[1];
-    const depositor = userAddresses[0];
-    const deadline = 0xffffffffn;
-    const nonce = await asset.getUserNonce(depositor);
-    const proofHash = Buffer.alloc(32);
-    const name = asset.getStaticInfo().name;
-    const permitData = createPermitData(
-      name,
-      depositor,
-      rollupProcessor.address,
-      depositAmount,
-      nonce,
-      deadline,
-      asset.getStaticInfo().address,
-      chainId,
-    );
-    const signer = new Web3Signer(new EthersAdapter(ethers.provider));
-    const signature = await signer.signTypedData(permitData, depositor);
-
-    const calldata = getCalldata(
-      'depositPendingFundsPermit(uint256,uint256,address,bytes32,uint256,uint8,bytes32,bytes32)',
-      1,
-      depositAmount,
-      depositor.toString(),
-      proofHash,
-      deadline,
-      signature.v,
-      signature.r,
-      signature.s,
-    );
-
-    await reentryBridge.addAction(0, false, false, false, calldata, amount, 0);
-
-    const bridgeCallData = new BridgeCallData(bridgeAddressId, 0, 0);
-
-    const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
-      defiInteractionData: [new DefiInteractionData(bridgeCallData, amount)],
-    });
-
-    const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
-    const txHash = await rollupProcessor.sendTx(tx);
-    const interactions = [
-      new DefiInteractionEvent(bridgeCallData, 0, amount, 0n, 0n, false, formatCustomErrorMsg('LOCKED_NO_REENTER()')),
-    ];
-    await expectResult(interactions, interactions, txHash);
-
-    expect(await rollupProcessor.getUserPendingDeposit(1, depositor)).toBe(0n);
-    expect(await asset.getUserNonce(depositor)).toBe(nonce);
-  });
-
-  it('should revert when reentering deposit with non-standard permit from rollup', async () => {
-    const depositAmount = 60n;
-    const chainId = 31337;
-    const assetId = 1;
-    const asset = assets[assetId];
-    const depositor = userAddresses[0];
-    const deadline = 0xffffffffn;
-    const proofHash = Buffer.alloc(32);
-    const nonce = await asset.getUserNonce(depositor);
-    const name = asset.getStaticInfo().name;
-    const permitData = createPermitDataNonStandard(
-      name,
-      depositor,
-      rollupProcessor.address,
-      nonce,
-      deadline,
-      asset.getStaticInfo().address,
-      chainId,
-    );
-    const signer = new Web3Signer(new EthersAdapter(ethers.provider));
-    const signature = await signer.signTypedData(permitData, depositor);
-
-    const calldata = getCalldata(
-      'depositPendingFundsPermitNonStandard(uint256,uint256,address,bytes32,uint256,uint256,uint8,bytes32,bytes32)',
-      1,
-      depositAmount,
-      depositor.toString(),
-      proofHash,
-      nonce,
-      deadline,
-      signature.v,
-      signature.r,
-      signature.s,
-    );
-
-    await reentryBridge.addAction(0, false, false, false, calldata, amount, 0);
-
-    const bridgeCallData = new BridgeCallData(bridgeAddressId, 0, 0);
-
-    const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
-      defiInteractionData: [new DefiInteractionData(bridgeCallData, amount)],
-    });
-
-    const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
-    const txHash = await rollupProcessor.sendTx(tx);
-    const interactions = [
-      new DefiInteractionEvent(bridgeCallData, 0, amount, 0n, 0n, false, formatCustomErrorMsg('LOCKED_NO_REENTER()')),
-    ];
-    await expectResult(interactions, interactions, txHash);
-
-    expect(await rollupProcessor.getUserPendingDeposit(assetId, depositor)).toBe(0n);
-    expect(await asset.getUserNonce(depositor)).toBe(nonce);
-  });
-
   it('should revert when reentering set supported bridge from rollup', async () => {
     const owner = userAddresses[0];
     expect(
@@ -544,114 +446,6 @@ describe('rollup_processor: reentry', () => {
     await expectResult(interactions, interactions, txHash);
 
     await expect(rollupProcessor.processAsyncDefiInteraction(0)).rejects.toThrow('LOCKED_NO_REENTER()');
-  });
-
-  it('should revert when reentering deposit with standard permit from async', async () => {
-    const depositAmount = 60n;
-    const chainId = 31337;
-    const asset = assets[1];
-    const depositor = userAddresses[0];
-    const deadline = 0xffffffffn;
-    const nonce = await asset.getUserNonce(depositor);
-    const proofHash = Buffer.alloc(32);
-    const name = asset.getStaticInfo().name;
-    const permitData = createPermitData(
-      name,
-      depositor,
-      rollupProcessor.address,
-      depositAmount,
-      nonce,
-      deadline,
-      asset.getStaticInfo().address,
-      chainId,
-    );
-    const signer = new Web3Signer(new EthersAdapter(ethers.provider));
-    const signature = await signer.signTypedData(permitData, depositor);
-
-    const calldata = getCalldata(
-      'depositPendingFundsPermit(uint256,uint256,address,bytes32,uint256,uint8,bytes32,bytes32)',
-      1,
-      depositAmount,
-      depositor.toString(),
-      proofHash,
-      deadline,
-      signature.v,
-      signature.r,
-      signature.s,
-    );
-
-    await reentryBridge.addAction(0, true, true, false, calldata, amount, 0);
-
-    const bridgeCallData = new BridgeCallData(bridgeAddressId, 0, 0);
-
-    const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
-      defiInteractionData: [new DefiInteractionData(bridgeCallData, amount)],
-    });
-
-    const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
-    const txHash = await rollupProcessor.sendTx(tx);
-
-    const interactions: DefiInteractionEvent[] = [];
-    await expectResult(interactions, interactions, txHash);
-
-    await expect(rollupProcessor.processAsyncDefiInteraction(0)).rejects.toThrow('LOCKED_NO_REENTER()');
-
-    expect(await rollupProcessor.getUserPendingDeposit(1, depositor)).toBe(0n);
-    expect(await asset.getUserNonce(depositor)).toBe(nonce);
-  });
-
-  it('should revert when reentering deposit with non-standard permit from async', async () => {
-    const depositAmount = 60n;
-    const chainId = 31337;
-    const assetId = 1;
-    const asset = assets[assetId];
-    const depositor = userAddresses[0];
-    const deadline = 0xffffffffn;
-    const proofHash = Buffer.alloc(32);
-    const nonce = await asset.getUserNonce(depositor);
-    const name = asset.getStaticInfo().name;
-    const permitData = createPermitDataNonStandard(
-      name,
-      depositor,
-      rollupProcessor.address,
-      nonce,
-      deadline,
-      asset.getStaticInfo().address,
-      chainId,
-    );
-    const signer = new Web3Signer(new EthersAdapter(ethers.provider));
-    const signature = await signer.signTypedData(permitData, depositor);
-
-    const calldata = getCalldata(
-      'depositPendingFundsPermitNonStandard(uint256,uint256,address,bytes32,uint256,uint256,uint8,bytes32,bytes32)',
-      1,
-      depositAmount,
-      depositor.toString(),
-      proofHash,
-      nonce,
-      deadline,
-      signature.v,
-      signature.r,
-      signature.s,
-    );
-
-    await reentryBridge.addAction(0, true, true, false, calldata, amount, 0);
-
-    const bridgeCallData = new BridgeCallData(bridgeAddressId, 0, 0);
-
-    const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
-      defiInteractionData: [new DefiInteractionData(bridgeCallData, amount)],
-    });
-
-    const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
-    const txHash = await rollupProcessor.sendTx(tx);
-    const interactions: DefiInteractionEvent[] = [];
-    await expectResult(interactions, interactions, txHash);
-
-    await expect(rollupProcessor.processAsyncDefiInteraction(0)).rejects.toThrow('LOCKED_NO_REENTER()');
-
-    expect(await rollupProcessor.getUserPendingDeposit(assetId, depositor)).toBe(0n);
-    expect(await asset.getUserNonce(depositor)).toBe(nonce);
   });
 
   it('should revert when reentering set supported bridge from async', async () => {

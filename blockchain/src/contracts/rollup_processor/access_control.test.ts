@@ -24,6 +24,8 @@ describe('rollup_processor_access_control', () => {
   const DEFAULT_ADMIN_ROLE = '0x0000000000000000000000000000000000000000000000000000000000000000';
   const EMERGENCY_ROLE = keccak256(toUtf8Bytes('EMERGENCY_ROLE'));
   const OWNER_ROLE = keccak256(toUtf8Bytes('OWNER_ROLE'));
+  const LISTER_ROLE = keccak256(toUtf8Bytes('LISTER_ROLE'));
+  const RESUME_ROLE = keccak256(toUtf8Bytes('RESUME_ROLE'));
 
   beforeAll(async () => {
     signers = await ethers.getSigners();
@@ -127,24 +129,24 @@ describe('rollup_processor_access_control', () => {
     expect(await rollupProcessor.paused()).toBe(false);
   });
 
-  it('holder of OWNER_ROLE can unpause when paused', async () => {
+  it('holder of RESUME_ROLE can unpause when paused', async () => {
     const userAddress = addresses[0];
     expect(await rollupProcessor.paused()).toBe(false);
     expect(await rollupProcessor.pause({ signingAddress: userAddress }));
     expect(await rollupProcessor.paused()).toBe(true);
 
-    expect(await rollupProcessor.hasRole(OWNER_ROLE, userAddress)).toBe(true);
+    expect(await rollupProcessor.hasRole(RESUME_ROLE, userAddress)).toBe(true);
 
     expect(await rollupProcessor.unpause({ signingAddress: userAddress }));
 
     expect(await rollupProcessor.paused()).toBe(false);
   });
 
-  it('holder of OWNER_ROLE cannot unpause when paused', async () => {
+  it('holder of RESUME_ROLE cannot unpause when unpaused', async () => {
     const userAddress = addresses[0];
     expect(await rollupProcessor.paused()).toBe(false);
 
-    expect(await rollupProcessor.hasRole(OWNER_ROLE, userAddress)).toBe(true);
+    expect(await rollupProcessor.hasRole(RESUME_ROLE, userAddress)).toBe(true);
 
     await expect(rollupProcessor.unpause({ signingAddress: userAddress })).rejects.toThrow('NOT_PAUSED');
 
@@ -160,9 +162,26 @@ describe('rollup_processor_access_control', () => {
     expect(await rollupProcessor.grantRole(EMERGENCY_ROLE, userAddress, { signingAddress: addresses[0] }));
 
     expect(await rollupProcessor.hasRole(EMERGENCY_ROLE, userAddress)).toBe(true);
-    expect(await rollupProcessor.hasRole(OWNER_ROLE, userAddress)).toBe(false);
+    expect(await rollupProcessor.hasRole(RESUME_ROLE, userAddress)).toBe(false);
     await expect(rollupProcessor.unpause({ signingAddress: userAddress })).rejects.toThrow(
-      `AccessControl: account ${userAddress.toString().toLowerCase()} is missing role ${OWNER_ROLE}`,
+      `AccessControl: account ${userAddress.toString().toLowerCase()} is missing role ${RESUME_ROLE}`,
+    );
+
+    expect(await rollupProcessor.paused()).toBe(true);
+  });
+
+  it('holder of only OWNER_ROLE cannot unpause when paused', async () => {
+    const userAddress = addresses[1];
+
+    expect(await rollupProcessor.paused()).toBe(false);
+    expect(await rollupProcessor.pause({ signingAddress: addresses[0] }));
+    expect(await rollupProcessor.paused()).toBe(true);
+    expect(await rollupProcessor.grantRole(OWNER_ROLE, userAddress, { signingAddress: addresses[0] }));
+
+    expect(await rollupProcessor.hasRole(OWNER_ROLE, userAddress)).toBe(true);
+    expect(await rollupProcessor.hasRole(RESUME_ROLE, userAddress)).toBe(false);
+    await expect(rollupProcessor.unpause({ signingAddress: userAddress })).rejects.toThrow(
+      `AccessControl: account ${userAddress.toString().toLowerCase()} is missing role ${RESUME_ROLE}`,
     );
 
     expect(await rollupProcessor.paused()).toBe(true);
@@ -265,9 +284,13 @@ describe('rollup_processor_access_control', () => {
     expect(await rollupProcessor.defiBridgeProxy()).toStrictEqual(defiBridgeProxy);
   });
 
-  it('holder of OWNER_ROLE can set supported asset', async () => {
-    const userAddress = addresses[0];
-    expect(await rollupProcessor.hasRole(OWNER_ROLE, userAddress)).toBe(true);
+  it('holder of LISTER_ROLE can set supported asset', async () => {
+    const userAddress = addresses[1];
+    expect(await rollupProcessor.hasRole(LISTER_ROLE, userAddress)).toBe(false);
+
+    await rollupProcessor.grantRole(LISTER_ROLE, userAddress);
+
+    expect(await rollupProcessor.hasRole(LISTER_ROLE, userAddress)).toBe(true);
 
     const supportedBefore = await rollupProcessor.getSupportedAssets();
 
@@ -277,9 +300,9 @@ describe('rollup_processor_access_control', () => {
     expect(supportedAfter.length).toBe(supportedBefore.length + 1);
   });
 
-  it('holder of OWNER_ROLE can set supported asset', async () => {
+  it('holder of LISTER_ROLE cannot set supported asset to zero', async () => {
     const userAddress = addresses[0];
-    expect(await rollupProcessor.hasRole(OWNER_ROLE, userAddress)).toBe(true);
+    expect(await rollupProcessor.hasRole(LISTER_ROLE, userAddress)).toBe(true);
 
     const supportedBefore = await rollupProcessor.getSupportedAssets();
 
@@ -294,7 +317,7 @@ describe('rollup_processor_access_control', () => {
 
   it('anyone can set supported asset if third party allowed', async () => {
     const userAddress = addresses[1];
-    expect(await rollupProcessor.hasRole(OWNER_ROLE, userAddress)).toBe(false);
+    expect(await rollupProcessor.hasRole(LISTER_ROLE, userAddress)).toBe(false);
 
     expect(await rollupProcessor.getThirdPartyContractStatus()).toBe(false);
     expect(await rollupProcessor.setThirdPartyContractStatus(true, { signingAddress: addresses[0] }));
@@ -307,9 +330,9 @@ describe('rollup_processor_access_control', () => {
     expect(supportedAfter.length).toBe(supportedBefore.length + 1);
   });
 
-  it('non-holder of OWNER_ROLE cannot set supported asset if third party disallowed', async () => {
+  it('non-holder of LISTER_ROLE cannot set supported asset if third party disallowed', async () => {
     const userAddress = addresses[1];
-    expect(await rollupProcessor.hasRole(OWNER_ROLE, userAddress)).toBe(false);
+    expect(await rollupProcessor.hasRole(LISTER_ROLE, userAddress)).toBe(false);
 
     expect(await rollupProcessor.getThirdPartyContractStatus()).toBe(false);
 
@@ -324,9 +347,11 @@ describe('rollup_processor_access_control', () => {
     expect(supportedAfter.length).toBe(supportedBefore.length);
   });
 
-  it('holder of OWNER_ROLE can set supported bridge', async () => {
-    const userAddress = addresses[0];
-    expect(await rollupProcessor.hasRole(OWNER_ROLE, userAddress)).toBe(true);
+  it('holder of LISTER_ROLE can set supported bridge', async () => {
+    const userAddress = addresses[1];
+    expect(await rollupProcessor.hasRole(LISTER_ROLE, userAddress)).toBe(false);
+    await rollupProcessor.grantRole(LISTER_ROLE, userAddress);
+    expect(await rollupProcessor.hasRole(LISTER_ROLE, userAddress)).toBe(true);
 
     const supportedBefore = await rollupProcessor.getSupportedBridges();
 
@@ -336,9 +361,9 @@ describe('rollup_processor_access_control', () => {
     expect(supportedAfter.length).toBe(supportedBefore.length + 1);
   });
 
-  it('holder of OWNER_ROLE cannot set supported bridge to address(0)', async () => {
+  it('holder of LISTER_ROLE cannot set supported bridge to address(0)', async () => {
     const userAddress = addresses[0];
-    expect(await rollupProcessor.hasRole(OWNER_ROLE, userAddress)).toBe(true);
+    expect(await rollupProcessor.hasRole(LISTER_ROLE, userAddress)).toBe(true);
 
     const supportedBefore = await rollupProcessor.getSupportedBridges();
 
@@ -353,7 +378,7 @@ describe('rollup_processor_access_control', () => {
 
   it('anyone can set supported bridge if third party allowed', async () => {
     const userAddress = addresses[1];
-    expect(await rollupProcessor.hasRole(OWNER_ROLE, userAddress)).toBe(false);
+    expect(await rollupProcessor.hasRole(LISTER_ROLE, userAddress)).toBe(false);
 
     expect(await rollupProcessor.getThirdPartyContractStatus()).toBe(false);
     expect(await rollupProcessor.setThirdPartyContractStatus(true, { signingAddress: addresses[0] }));
@@ -366,9 +391,9 @@ describe('rollup_processor_access_control', () => {
     expect(supportedAfter.length).toBe(supportedBefore.length + 1);
   });
 
-  it('non-holder of OWNER_ROLE cannot set supported bridge if third party disallowed', async () => {
+  it('non-holder of LISTER_ROLE cannot set supported bridge if third party disallowed', async () => {
     const userAddress = addresses[1];
-    expect(await rollupProcessor.hasRole(OWNER_ROLE, userAddress)).toBe(false);
+    expect(await rollupProcessor.hasRole(LISTER_ROLE, userAddress)).toBe(false);
 
     expect(await rollupProcessor.getThirdPartyContractStatus()).toBe(false);
 
@@ -433,5 +458,19 @@ describe('rollup_processor_access_control', () => {
     expect(await rollupProcessor.hasRole(DEFAULT_ADMIN_ROLE, userAddress)).toBe(true);
     expect(await rollupProcessor.hasRole(OWNER_ROLE, adminAddress)).toBe(false);
     expect(await rollupProcessor.hasRole(OWNER_ROLE, userAddress)).toBe(true);
+  });
+
+  it('owner of permit helper can kill it', async () => {
+    const permitHelper = rollupProcessor.getHelperContractWithSigner({ signingAddress: addresses[0] });
+    expect(await permitHelper.ROLLUP_PROCESSOR()).toStrictEqual(rollupProcessor.address.toString());
+    expect(await permitHelper.kill());
+    await expect(permitHelper.ROLLUP_PROCESSOR()).rejects.toThrow();
+  });
+
+  it('non owner of permit helper cannot kill it', async () => {
+    const permitHelper = rollupProcessor.getHelperContractWithSigner({ signingAddress: addresses[1] });
+    expect(await permitHelper.ROLLUP_PROCESSOR()).toStrictEqual(rollupProcessor.address.toString());
+    await expect(permitHelper.kill()).rejects.toThrow('Ownable: caller is not the owner');
+    expect(await permitHelper.ROLLUP_PROCESSOR()).toStrictEqual(rollupProcessor.address.toString());
   });
 });

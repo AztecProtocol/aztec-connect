@@ -2,16 +2,12 @@ import { RollupProcessor } from '../rollup_processor';
 import { EthAddress } from '@aztec/barretenberg/address';
 import { EthereumProvider, SendTxOptions } from '@aztec/barretenberg/blockchain';
 import { Contract } from 'ethers';
-import { abi } from '../../../artifacts/contracts/test/TestRollupProcessor.sol/TestRollupProcessor.json';
+import { abi } from '../../../artifacts/contracts/test/TestRollupProcessor.sol/TestUpgradeRollupProcessor.json';
 import { Web3Provider } from '@ethersproject/providers';
 
-export class TestRollupProcessor extends RollupProcessor {
-  constructor(
-    protected rollupContractAddress: EthAddress,
-    provider: EthereumProvider,
-    permitHelperAddress: EthAddress = EthAddress.ZERO,
-  ) {
-    super(rollupContractAddress, provider, permitHelperAddress);
+export class TestUpgradeRollupProcessor extends RollupProcessor {
+  constructor(protected rollupContractAddress: EthAddress, provider: EthereumProvider) {
+    super(rollupContractAddress, provider);
     this.rollupProcessor = new Contract(rollupContractAddress.toString(), abi, this.provider);
   }
 

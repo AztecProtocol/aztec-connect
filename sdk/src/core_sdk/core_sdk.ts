@@ -84,6 +84,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     serverUrl: '',
     chainId: -1,
     rollupContractAddress: EthAddress.ZERO,
+    permitHelperContractAddress: EthAddress.ZERO,
     verifierContractAddress: EthAddress.ZERO,
     feePayingAssetIds: [0],
     rollupSize: -1,
@@ -153,7 +154,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       this.worldState = new WorldState(this.leveldb, this.pedersen);
 
       const {
-        blockchainStatus: { chainId, rollupContractAddress, verifierContractAddress },
+        blockchainStatus: { chainId, rollupContractAddress, permitHelperContractAddress, verifierContractAddress },
         runtimeConfig: { feePayingAssetIds, useKeyCache },
         rollupSize,
         proverless,
@@ -180,6 +181,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
         serverUrl: options.serverUrl,
         chainId,
         rollupContractAddress,
+        permitHelperContractAddress,
         verifierContractAddress,
         feePayingAssetIds,
         rollupSize,

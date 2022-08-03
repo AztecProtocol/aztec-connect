@@ -14,11 +14,18 @@ import {
 import { AztecSdk } from './aztec_sdk';
 
 async function createBlockchain(ethereumProvider: EthereumProvider, coreSdk: CoreSdkInterface, confs = 3) {
-  const { chainId, rollupContractAddress } = await coreSdk.getLocalStatus();
+  const { chainId, rollupContractAddress, permitHelperContractAddress } = await coreSdk.getLocalStatus();
   const {
     blockchainStatus: { assets, bridges },
   } = await coreSdk.getRemoteStatus();
-  const blockchain = new ClientEthereumBlockchain(rollupContractAddress, assets, bridges, ethereumProvider, confs);
+  const blockchain = new ClientEthereumBlockchain(
+    rollupContractAddress,
+    permitHelperContractAddress,
+    assets,
+    bridges,
+    ethereumProvider,
+    confs,
+  );
   const providerChainId = await blockchain.getChainId();
   if (chainId !== providerChainId) {
     throw new Error(`Provider chainId ${providerChainId} does not match rollup provider chainId ${chainId}.`);

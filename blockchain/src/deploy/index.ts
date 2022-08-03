@@ -58,10 +58,11 @@ async function main() {
   console.error(`Initial root root: ${roots.rootsRoot.toString('hex')}`);
 
   const vk = VK ? VK : 'MockVerificationKey';
-  const { rollup, priceFeeds, feeDistributor } = await deploy(chainId, signer, treeInitData, vk);
+  const { rollup, priceFeeds, feeDistributor, permitHelper } = await deploy(chainId, signer, treeInitData, vk);
 
   const envVars = {
     ROLLUP_CONTRACT_ADDRESS: rollup.address,
+    PERMIIT_HELPER_CONTRACT_ADDRESS: permitHelper.address,
     FEE_DISTRIBUTOR_ADDRESS: feeDistributor.address,
     PRICE_FEED_CONTRACT_ADDRESSES: priceFeeds.map(p => p).join(','),
   };

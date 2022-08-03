@@ -172,7 +172,7 @@ export class DepositController {
       if (permitSupport && allowance < value) {
         const { signature, deadline } =
           pendingFundsStatus.permitArgs || (await this.createPermitArgs(value, permitDeadline));
-        return this.blockchain.depositPendingFundsPermit(assetId, value, deadline, signature, undefined, {
+        return this.blockchain.depositPendingFundsPermit(assetId, value, deadline, signature, {
           signingAddress: this.depositor,
           provider: this.provider,
         });
@@ -232,18 +232,10 @@ export class DepositController {
       });
     } else {
       const { signature, deadline, nonce } = await this.createPermitArgsNonStandard(permitDeadline);
-      txHash = await this.blockchain.depositPendingFundsPermitNonStandard(
-        assetId,
-        value,
-        nonce,
-        deadline,
-        signature,
-        undefined,
-        {
-          signingAddress: this.depositor,
-          provider: this.provider,
-        },
-      );
+      txHash = await this.blockchain.depositPendingFundsPermitNonStandard(assetId, value, nonce, deadline, signature, {
+        signingAddress: this.depositor,
+        provider: this.provider,
+      });
     }
 
     this.pendingFundsStatus = {
@@ -441,11 +433,11 @@ export class DepositController {
     const { assetId } = this.publicInput;
     const asset = this.blockchain.getAsset(assetId);
     const nonce = await asset.getUserNonce(this.depositor);
-    const { rollupContractAddress, chainId } = await this.core.getLocalStatus();
+    const { permitHelperContractAddress, chainId } = await this.core.getLocalStatus();
     const permitData = createPermitData(
       asset.getStaticInfo().name,
       this.depositor,
-      rollupContractAddress,
+      permitHelperContractAddress,
       value,
       nonce,
       deadline,
@@ -462,11 +454,11 @@ export class DepositController {
     const { assetId } = this.publicInput;
     const asset = this.blockchain.getAsset(assetId);
     const nonce = await asset.getUserNonce(this.depositor);
-    const { rollupContractAddress, chainId } = await this.core.getLocalStatus();
+    const { permitHelperContractAddress, chainId } = await this.core.getLocalStatus();
     const permitData = createPermitDataNonStandard(
       asset.getStaticInfo().name,
       this.depositor,
-      rollupContractAddress,
+      permitHelperContractAddress,
       nonce,
       deadline,
       asset.getStaticInfo().address,

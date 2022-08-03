@@ -21,13 +21,14 @@ export class ClientEthereumBlockchain {
 
   constructor(
     rollupContractAddress: EthAddress,
+    permitHelperContractAddress: EthAddress,
     assets: BlockchainAsset[],
     private readonly bridges: BlockchainBridge[],
     private readonly ethereumProvider: EthereumProvider,
     public readonly minConfirmations: number,
     private readonly permitSupportAssetIds: number[] = [],
   ) {
-    this.rollupProcessor = new RollupProcessor(rollupContractAddress, ethereumProvider);
+    this.rollupProcessor = new RollupProcessor(rollupContractAddress, ethereumProvider, permitHelperContractAddress);
     this.provider = new Web3Provider(this.ethereumProvider);
     this.assets = assets.map(asset => {
       if (asset.address.equals(EthAddress.ZERO)) {
@@ -101,17 +102,9 @@ export class ClientEthereumBlockchain {
     amount: bigint,
     deadline: bigint,
     signature: EthereumSignature,
-    proofHash?: Buffer,
     options?: SendTxOptions,
   ) {
-    return await this.rollupProcessor.depositPendingFundsPermit(
-      assetId,
-      amount,
-      deadline,
-      signature,
-      proofHash,
-      options,
-    );
+    return await this.rollupProcessor.depositPendingFundsPermit(assetId, amount, deadline, signature, options);
   }
 
   public async depositPendingFundsPermitNonStandard(
@@ -120,7 +113,6 @@ export class ClientEthereumBlockchain {
     nonce: bigint,
     deadline: bigint,
     signature: EthereumSignature,
-    proofHash?: Buffer,
     options?: SendTxOptions,
   ) {
     return await this.rollupProcessor.depositPendingFundsPermitNonStandard(
@@ -129,7 +121,6 @@ export class ClientEthereumBlockchain {
       nonce,
       deadline,
       signature,
-      proofHash,
       options,
     );
   }

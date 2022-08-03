@@ -38,11 +38,12 @@ export class Contracts {
 
   static async fromAddresses(
     rollupContractAddress: EthAddress,
+    permitHelperContractAddress: EthAddress,
     priceFeedContractAddresses: EthAddress[],
     ethereumProvider: EthereumProvider,
     confirmations: number,
   ) {
-    const rollupProcessor = new RollupProcessor(rollupContractAddress, ethereumProvider);
+    const rollupProcessor = new RollupProcessor(rollupContractAddress, ethereumProvider, permitHelperContractAddress);
 
     const assets = [new EthAsset(ethereumProvider)];
 
@@ -100,6 +101,10 @@ export class Contracts {
 
   public getRollupContractAddress() {
     return this.rollupProcessor.address;
+  }
+
+  public getPermitHelperContractAddress() {
+    return EthAddress.fromString(this.rollupProcessor.permitHelper.address);
   }
 
   public async getVerifierContractAddress() {

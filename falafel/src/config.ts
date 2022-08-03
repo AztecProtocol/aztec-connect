@@ -66,6 +66,7 @@ export async function getComponents(configurator: Configurator) {
     ethereumHost,
     privateKey,
     rollupContractAddress,
+    permitHelperContractAddress,
     priceFeedContractAddresses,
     typeOrmLogging,
     dbUrl,
@@ -83,6 +84,7 @@ export async function getComponents(configurator: Configurator) {
   console.log(`Call data limit: ${rollupCallDataLimit}`);
   console.log(`Signing address: ${signingAddress}`);
   console.log(`Rollup contract address: ${rollupContractAddress || 'none'}`);
+  console.log(`Permit Helper contract address: ${permitHelperContractAddress || 'none'}`);
   console.log(`Rollup fee beneficiary: ${rollupBeneficiary || signingAddress}`);
   console.log(`Fee paying asset ids: ${feePayingAssetIds}`);
   console.log(`Price feed addresses: ${priceFeedContractAddresses.map(a => a.toString()).join(',') || 'none'}`);

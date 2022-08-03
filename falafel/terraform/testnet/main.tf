@@ -183,6 +183,10 @@ resource "aws_ecs_task_definition" "falafel" {
         "value": "${data.terraform_remote_state.blockchain.outputs.rollup_contract_address}"
       },
       {
+        "name": "PERMIIT_HELPER_CONTRACT_ADDRESS",
+        "value": "${data.terraform_remote_state.blockchain.outputs.permit_helper_contract_address}"
+      },
+      {
         "name": "FEE_DISTRIBUTOR_ADDRESS",
         "value": "${data.terraform_remote_state.blockchain.outputs.fee_distributor_address}"
       },
