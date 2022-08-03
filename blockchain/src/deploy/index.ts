@@ -62,7 +62,7 @@ async function main() {
 
   const envVars = {
     ROLLUP_CONTRACT_ADDRESS: rollup.address,
-    PERMIIT_HELPER_CONTRACT_ADDRESS: permitHelper.address,
+    PERMIT_HELPER_CONTRACT_ADDRESS: permitHelper.address,
     FEE_DISTRIBUTOR_ADDRESS: feeDistributor.address,
     PRICE_FEED_CONTRACT_ADDRESSES: priceFeeds.map(p => p).join(','),
   };

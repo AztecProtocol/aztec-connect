@@ -79,7 +79,7 @@ function getStartupConfigEnvVars(): Partial<StartupConfig> {
   const {
     DB_URL,
     ROLLUP_CONTRACT_ADDRESS,
-    PERMIIT_HELPER_CONTRACT_ADDRESS,
+    PERMIT_HELPER_CONTRACT_ADDRESS,
     PRICE_FEED_CONTRACT_ADDRESSES,
     ETHEREUM_HOST,
     ETHEREUM_POLL_INTERVAL,
@@ -101,8 +101,8 @@ function getStartupConfigEnvVars(): Partial<StartupConfig> {
     port: PORT ? +PORT : undefined,
     dbUrl: DB_URL,
     rollupContractAddress: ROLLUP_CONTRACT_ADDRESS ? EthAddress.fromString(ROLLUP_CONTRACT_ADDRESS) : undefined,
-    permitHelperContractAddress: PERMIIT_HELPER_CONTRACT_ADDRESS
-      ? EthAddress.fromString(PERMIIT_HELPER_CONTRACT_ADDRESS)
+    permitHelperContractAddress: PERMIT_HELPER_CONTRACT_ADDRESS
+      ? EthAddress.fromString(PERMIT_HELPER_CONTRACT_ADDRESS)
       : undefined,
     priceFeedContractAddresses: PRICE_FEED_CONTRACT_ADDRESSES
       ? PRICE_FEED_CONTRACT_ADDRESSES.split(',').map(EthAddress.fromString)
@@ -233,7 +233,9 @@ export class Configurator {
     return {
       ...conf,
       rollupContractAddress: EthAddress.fromString(conf.rollupContractAddress),
-      permitHelperContractAddress: EthAddress.fromString(conf.permitHelperContractAddress),
+      permitHelperContractAddress: conf.permitHelperContractAddress
+        ? EthAddress.fromString(conf.permitHelperContractAddress)
+        : undefined,
       priceFeedContractAddresses: conf.priceFeedContractAddresses.map(EthAddress.fromString),
       privateKey: Buffer.from(conf.privateKey, 'hex'),
       runtimeConfig: {
@@ -258,7 +260,9 @@ export class Configurator {
     writeJsonSync(path, {
       ...conf,
       rollupContractAddress: conf.rollupContractAddress.toString(),
-      permitHelperContractAddress: conf.permitHelperContractAddress.toString(),
+      permitHelperContractAddress: conf.permitHelperContractAddress
+        ? conf.permitHelperContractAddress.toString()
+        : undefined,
       priceFeedContractAddresses: conf.priceFeedContractAddresses.map(a => a.toString()),
       privateKey: conf.privateKey.toString('hex'),
       runtimeConfig: {
