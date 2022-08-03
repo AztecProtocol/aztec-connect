@@ -1,5 +1,5 @@
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { JoinSplitProver, ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
 import { createDebugLogger } from '@aztec/barretenberg/log';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
@@ -31,12 +31,12 @@ export class DefiDepositProofCreator {
 
   public async createProofInput(
     user: UserData,
-    bridgeId: BridgeId,
+    bridgeCallData: BridgeCallData,
     depositValue: bigint,
     inputNotes: Note[],
     spendingPublicKey: GrumpkinAddress,
   ) {
-    const assetId = bridgeId.inputAssetIdA;
+    const assetId = bridgeCallData.inputAssetIdA;
     const newNoteOwnerAccountRequired = !spendingPublicKey.equals(user.accountPublicKey);
     const proofInput = await this.txFactory.createTx(
       user,
@@ -45,7 +45,7 @@ export class DefiDepositProofCreator {
       inputNotes,
       spendingPublicKey,
       {
-        bridgeId,
+        bridgeCallData,
         defiDepositValue: depositValue,
         newNoteOwner: user.accountPublicKey,
         newNoteOwnerAccountRequired,
@@ -72,21 +72,21 @@ export class DefiDepositProofCreator {
     const txId = new TxId(proofData.txId);
     const {
       outputNotes,
-      claimNote: { value: depositValue, bridgeId, partialStateSecret },
+      claimNote: { value: depositValue, bridgeCallData, partialStateSecret },
       inputNotes,
     } = tx;
     const privateInput =
-      bridgeId.numInputAssets > 1 ? inputNotes[0].value : inputNotes.reduce((sum, n) => sum + n.value, BigInt(0));
+      bridgeCallData.numInputAssets > 1 ? inputNotes[0].value : inputNotes.reduce((sum, n) => sum + n.value, BigInt(0));
     const txFee = privateInput - depositValue;
     const accountRequired = outputNotes[1].accountRequired;
-    const coreTx = new CoreDefiTx(txId, accountPublicKey, bridgeId, depositValue, txFee, txRefNo, new Date());
+    const coreTx = new CoreDefiTx(txId, accountPublicKey, bridgeCallData, depositValue, txFee, txRefNo, new Date());
     const partialState = this.noteAlgos.valueNotePartialCommitment(
       partialStateSecret,
       accountPublicKey,
       accountRequired,
     );
     const offchainTxData = new OffchainDefiDepositData(
-      bridgeId,
+      bridgeCallData,
       partialState,
       partialStateSecretEphPubKey!,
       depositValue,

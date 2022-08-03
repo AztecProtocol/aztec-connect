@@ -13,6 +13,7 @@ import { RollupPublisher } from '../rollup_publisher';
 import { TxFeeResolver } from '../tx_fee_resolver';
 import { TxType } from '@aztec/barretenberg/blockchain';
 import { BridgeResolver } from '../bridge';
+import { Metrics } from '../metrics';
 
 type Mockify<T> = {
   [P in keyof T]: jest.Mock;
@@ -31,6 +32,7 @@ describe('pipeline_coordinator', () => {
   let noteAlgo: Mockify<NoteAlgorithms>;
   let feeResolver: Mockify<TxFeeResolver>;
   let bridgeResolver: Mockify<BridgeResolver>;
+  let metrics: Mockify<Metrics>;
   let coordinator: PipelineCoordinator;
 
   const mockRollup = () => ({ id: 0, interactionResult: Buffer.alloc(0), mined: moment() });
@@ -74,7 +76,6 @@ describe('pipeline_coordinator', () => {
 
     rollupPublisher = {
       publishRollup: jest.fn().mockResolvedValue(true),
-      interrupt: jest.fn(),
     };
 
     claimProofCreator = {
@@ -100,7 +101,7 @@ describe('pipeline_coordinator', () => {
       getAdjustedBaseVerificationGas: jest.fn().mockReturnValue(1),
       getUnadjustedBaseVerificationGas: jest.fn().mockReturnValue(1),
       getGasPaidForByFee: jest.fn().mockImplementation((assetId: number, fee: bigint) => fee),
-      getMinTxFee: jest.fn(),
+      getTxFeeFromGas: jest.fn().mockImplementation((assetId: number, gas: bigint) => gas),
       start: jest.fn(),
       stop: jest.fn(),
       getAdjustedTxGas: jest.fn().mockReturnValue(1000),
@@ -126,6 +127,11 @@ describe('pipeline_coordinator', () => {
       commitDefiInteractionNote: jest.fn(),
     } as any;
 
+    metrics = {
+      recordRollupMetrics: jest.fn(),
+      rollupPublished: jest.fn().mockResolvedValue(true),
+    } as any;
+
     coordinator = new PipelineCoordinator(
       rollupCreator as any,
       rollupAggregator as any,
@@ -142,11 +148,8 @@ describe('pipeline_coordinator', () => {
       bridgeResolver as any,
       128 * 1024,
       12000000,
+      metrics as any,
     );
-  });
-
-  afterEach(() => {
-    expect(feeResolver.getMinTxFee).not.toBeCalled();
   });
 
   it('should publish a rollup', async () => {
@@ -166,22 +169,32 @@ describe('pipeline_coordinator', () => {
     expect(coordinator.getNextPublishTime().baseTimeout?.timeout).toEqual(moment().add(10, 's').toDate());
     coordinator.start().catch(console.log);
     await new Promise(resolve => setTimeout(resolve, 100));
-    await coordinator.stop();
+    await coordinator.stop(false);
     expect(coordinator.getNextPublishTime().baseTimeout?.timeout).toEqual(moment().add(10, 's').toDate());
   });
 
   it('cannot start when it has already started', async () => {
     coordinator.start().catch(console.log);
-    await expect(async () => await coordinator.start()).rejects.toThrow();
-    await coordinator.stop();
+    await new Promise(resolve => setTimeout(resolve, 100));
+    await expect(async () => await coordinator.start()).rejects.toEqual(
+      new Error('Pipeline coordinator is already running.'),
+    );
+    await coordinator.stop(false);
   });
 
-  it('should interrupt all helpers when it is stop', async () => {
+  it('should interrupt all helpers when it is stopped with throw flag not set', async () => {
     coordinator.start().catch(console.log);
     await new Promise(resolve => setTimeout(resolve, 100));
-    await coordinator.stop();
+    await expect(coordinator.stop(false)).resolves.not.toThrow();
     expect(rollupCreator.interrupt).toHaveBeenCalledTimes(1);
     expect(rollupAggregator.interrupt).toHaveBeenCalledTimes(1);
-    expect(rollupPublisher.interrupt).toHaveBeenCalledTimes(1);
+  });
+
+  it('should interrupt all helpers when it is stopped with throw flag set and has not published', async () => {
+    coordinator.start().catch(console.log);
+    await new Promise(resolve => setTimeout(resolve, 100));
+    await expect(coordinator.stop(true)).resolves.not.toThrow();
+    expect(rollupCreator.interrupt).toHaveBeenCalledTimes(1);
+    expect(rollupAggregator.interrupt).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,8 +1,13 @@
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { AfterInsert, AfterLoad, AfterUpdate, Column, Entity, Index, PrimaryColumn } from 'typeorm';
-import { bigintTransformer, bridgeIdTransformer, grumpkinAddressTransformer, txIdTransformer } from './transformer';
+import {
+  bigintTransformer,
+  bridgeCallDataTransformer,
+  grumpkinAddressTransformer,
+  txIdTransformer,
+} from './transformer';
 
 @Entity({ name: 'defiTx' })
 export class DefiTxDao {
@@ -13,8 +18,8 @@ export class DefiTxDao {
   @Column('blob', { transformer: [grumpkinAddressTransformer] })
   public userId!: GrumpkinAddress;
 
-  @Column('blob', { transformer: [bridgeIdTransformer] })
-  public bridgeId!: BridgeId;
+  @Column('blob', { transformer: [bridgeCallDataTransformer] })
+  public bridgeCallData!: BridgeCallData;
 
   @Column('text', { transformer: [bigintTransformer] })
   public depositValue!: bigint;

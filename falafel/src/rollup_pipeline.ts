@@ -98,6 +98,7 @@ export class RollupPipeline {
       bridgeResolver,
       maxCallDataPerRollup,
       gasLimit,
+      metrics,
     );
   }
 
@@ -113,8 +114,8 @@ export class RollupPipeline {
     return await this.pipelineCoordinator.start();
   }
 
-  public async stop() {
-    await this.pipelineCoordinator.stop();
+  public async stop(shouldThrowIfFailToStop: boolean) {
+    await this.pipelineCoordinator.stop(shouldThrowIfFailToStop);
   }
 
   public flushTxs() {

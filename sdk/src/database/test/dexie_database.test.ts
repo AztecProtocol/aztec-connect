@@ -21,7 +21,6 @@ databaseTestSuite('DexieDatabase', createDb, destroyDb);
 describe('dexie database', () => {
   beforeEach(async () => {
     await createDb();
-    await db.init();
   });
 
   afterEach(async () => {

@@ -5,9 +5,11 @@ import { CoreSdkInterface } from '../core_sdk';
 import { ProofOutput } from '../proofs';
 import { Signer } from '../signer';
 import { createTxRefNo } from './create_tx_ref_no';
+import { FeePayer } from './fee_payer';
 import { filterUndefined } from './filter_undefined';
 
 export class TransferController {
+  private readonly requireFeePayingTx: boolean;
   private proofOutput!: ProofOutput;
   private feeProofOutput?: ProofOutput;
   private txIds: TxId[] = [];
@@ -19,18 +21,24 @@ export class TransferController {
     public readonly fee: AssetValue,
     public readonly recipient: GrumpkinAddress,
     public readonly recipientSpendingKeyRequired: boolean,
+    public readonly feePayer: FeePayer = { userId, signer: userSigner },
     private readonly core: CoreSdkInterface,
   ) {
     if (!assetValue.value) {
       throw new Error('Value must be greater than 0.');
     }
+
+    this.requireFeePayingTx =
+      !!fee.value &&
+      (fee.assetId !== assetValue.assetId ||
+        !feePayer.userId.equals(userId) ||
+        !feePayer.signer.getPublicKey().equals(userSigner.getPublicKey()));
   }
 
   public async createProof() {
     const { assetId, value } = this.assetValue;
-    const requireFeePayingTx = this.fee.value && this.fee.assetId !== assetId;
-    const privateInput = value + (!requireFeePayingTx ? this.fee.value : BigInt(0));
-    const txRefNo = requireFeePayingTx ? createTxRefNo() : 0;
+    const privateInput = value + (!this.requireFeePayingTx ? this.fee.value : BigInt(0));
+    const txRefNo = this.requireFeePayingTx ? createTxRefNo() : 0;
     const spendingPublicKey = this.userSigner.getPublicKey();
 
     const proofInput = await this.core.createPaymentProofInput(
@@ -50,23 +58,25 @@ export class TransferController {
     proofInput.signature = await this.userSigner.signMessage(proofInput.signingData);
     this.proofOutput = await this.core.createPaymentProof(proofInput, txRefNo);
 
-    if (requireFeePayingTx) {
-      const spendingKeyRequired = !spendingPublicKey.equals(this.userId);
+    if (this.requireFeePayingTx) {
+      const { userId, signer } = this.feePayer;
+      const spendingPublicKey = signer.getPublicKey();
+      const spendingKeyRequired = !spendingPublicKey.equals(userId);
       const feeProofInput = await this.core.createPaymentProofInput(
-        this.userId,
+        userId,
         this.fee.assetId,
         BigInt(0),
         BigInt(0),
         this.fee.value,
         BigInt(0),
         BigInt(0),
-        this.userId,
+        userId,
         spendingKeyRequired,
         undefined,
         spendingPublicKey,
         2,
       );
-      feeProofInput.signature = await this.userSigner.signMessage(feeProofInput.signingData);
+      feeProofInput.signature = await signer.signMessage(feeProofInput.signingData);
       this.feeProofOutput = await this.core.createPaymentProof(feeProofInput, txRefNo);
     }
   }

@@ -3,6 +3,7 @@
 #include "../byte_array/byte_array.hpp"
 #include "../composers/composers_fwd.hpp"
 #include "../field/field.hpp"
+#include "../plookup/plookup.hpp"
 
 namespace plonk {
 namespace stdlib {

@@ -14,6 +14,20 @@ std::vector<uint32_t> uint<Composer, Native>::constrain_accumulators(Composer* c
                                                                      const uint32_t witness_index,
                                                                      const size_t num_bits) const
 {
+    if constexpr (Composer::type == waffle::PLOOKUP) {
+        // TODO: manage higher bit ranges
+        const auto sequence = plonk::stdlib::plookup::read_sequence_from_table(
+            waffle::PlookupMultiTableId::UINT32_XOR,
+            field_t<Composer>::from_witness_index(context, witness_index),
+            field_t<Composer>::from_witness_index(context, context->zero_idx),
+            true);
+
+        std::vector<uint32_t> out(num_accumulators());
+        for (size_t i = 0; i < num_accumulators(); ++i) {
+            out[i] = sequence[0][num_accumulators() - i - 1].witness_index;
+        }
+        return out;
+    }
     return context->decompose_into_base4_accumulators(witness_index, num_bits);
 }
 
@@ -234,10 +248,10 @@ template <typename Composer, typename Native> uint<Composer, Native> uint<Compos
     if (witness_status == WitnessStatus::NOT_NORMALIZED) {
         weak_normalize();
         /**
-         * constrain_accumulators imposes
+         * constrain_accumulators will do more for PlookupComposer, but in TurboPLONK it just imposes
          * the range constraint that the witness can be expressed in width-many bits.
          *
-         * The strategy for imposing a range constraint on a w is develop a base-4 expansion
+         * The Turbo-only strategy for imposing a range constraint on a w is develop a base-4 expansion
          * of w, storing this in accumulators (just partial sums), and checking that a partial sum of a
          * fixed length actually does reproduce the witness value.
          */

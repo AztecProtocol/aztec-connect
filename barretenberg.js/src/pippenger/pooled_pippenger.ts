@@ -24,12 +24,14 @@ export class PooledPippenger implements Pippenger {
   }
 
   public async pippengerUnsafe(scalars: Uint8Array, from: number, range: number) {
-    const scalarsPerWorker = range / this.pool.length;
+    const scalarsPerWorker = Math.floor(range / this.pool.length);
     const start = new Date().getTime();
     const results = await Promise.all(
       this.pool.map((p, i) => {
-        const subset = scalars.slice(scalarsPerWorker * i * 32, scalarsPerWorker * (i + 1) * 32);
-        return p.pippengerUnsafe(subset, scalarsPerWorker * i, scalarsPerWorker);
+        const rangePerWorker =
+          i < this.pool.length - 1 ? scalarsPerWorker : range - scalarsPerWorker * (this.pool.length - 1);
+        const subset = scalars.slice(scalarsPerWorker * i * 32, (scalarsPerWorker * i + rangePerWorker) * 32);
+        return p.pippengerUnsafe(subset, scalarsPerWorker * i, rangePerWorker);
       }),
     );
     debug(`pippenger run took: ${new Date().getTime() - start}ms`);

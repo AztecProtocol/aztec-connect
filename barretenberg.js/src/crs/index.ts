@@ -7,8 +7,9 @@ export class Crs {
   constructor(public readonly numPoints: number) {}
 
   async download() {
+    // We need (circuitSize + 1) number of g1 points.
     const g1Start = 28;
-    const g1End = g1Start + this.numPoints * 64 - 1;
+    const g1End = g1Start + (this.numPoints + 1) * 64 - 1;
 
     // Download required range of data.
     const response = await fetch('https://aztec-ignition.s3.amazonaws.com/MAIN%20IGNITION/sealed/transcript00.dat', {

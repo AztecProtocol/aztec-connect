@@ -8,12 +8,12 @@ export class BridgeResolver {
     public defaultDeFiBatchSize: number,
   ) {}
 
-  public getBridgeConfig(bridgeId: bigint) {
-    return this.bridgeConfigs.find(bc => bc.bridgeId == bridgeId);
+  public getBridgeConfig(bridgeCallData: bigint) {
+    return this.bridgeConfigs.find(bc => bc.bridgeCallData == bridgeCallData);
   }
 
-  public getBridgeBatchSize(bridgeId: bigint) {
-    const bridgeConfig = this.bridgeConfigs.find(bc => bc.bridgeId == bridgeId);
+  public getBridgeBatchSize(bridgeCallData: bigint) {
+    const bridgeConfig = this.bridgeConfigs.find(bc => bc.bridgeCallData == bridgeCallData);
     return bridgeConfig?.numTxs ?? this.defaultDeFiBatchSize;
   }
 
@@ -21,13 +21,13 @@ export class BridgeResolver {
     return this.bridgeConfigs;
   }
 
-  public getFullBridgeGas(bridgeId: bigint) {
-    const bridgeConfig = this.getBridgeConfig(bridgeId);
-    return bridgeConfig?.gas ?? this.getFullBridgeGasFromContract(bridgeId);
+  public getFullBridgeGas(bridgeCallData: bigint) {
+    const bridgeConfig = this.getBridgeConfig(bridgeCallData);
+    return bridgeConfig?.gas ?? this.getFullBridgeGasFromContract(bridgeCallData);
   }
 
-  public getFullBridgeGasFromContract(bridgeId: bigint) {
-    return this.blockchain.getBridgeGas(bridgeId);
+  public getFullBridgeGasFromContract(bridgeCallData: bigint) {
+    return this.blockchain.getBridgeGas(bridgeCallData);
   }
 
   public setConf(defaultDeFiBatchSize: number, bridgeConfigs: BridgeConfig[]) {
@@ -35,16 +35,21 @@ export class BridgeResolver {
     this.bridgeConfigs = bridgeConfigs;
   }
 
-  public getMinBridgeTxGas(bridgeId: bigint) {
-    const bridgeConfig = this.getBridgeConfig(bridgeId)!;
+  public getMinBridgeTxGas(bridgeCallData: bigint) {
+    const bridgeConfig = this.getBridgeConfig(bridgeCallData)!;
     const blockchainStatus = this.blockchain.getBlockchainStatus();
     if (blockchainStatus.allowThirdPartyContracts || bridgeConfig) {
-      const bridgeGas = this.getFullBridgeGas(bridgeId);
+      const bridgeGas = this.getFullBridgeGas(bridgeCallData);
       const numBridgeTxs = bridgeConfig ? bridgeConfig.numTxs : this.defaultDeFiBatchSize;
       const requiredGas = bridgeGas / numBridgeTxs;
       return bridgeGas % numBridgeTxs ? requiredGas + 1 : requiredGas;
     } else {
       throw new Error('Cannot get gas. Unrecognised DeFi-bridge');
     }
+  }
+
+  public getBridgeDescription(encodedBridgeCallData: bigint) {
+    const bridgeConfig = this.getBridgeConfig(encodedBridgeCallData);
+    return bridgeConfig?.description;
   }
 }

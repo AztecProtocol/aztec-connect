@@ -26,6 +26,7 @@ function deploy(chainId: number, signer: Signer, treeInitData: TreeInitData, vk:
     case 0xa57ec:
       return deployMainnet(signer, treeInitData, vk);
     case 0xe2e:
+    case 0x7a69:
       return deployMainnetE2e(signer, treeInitData, vk);
     default:
       return deployDev(signer, treeInitData, vk);

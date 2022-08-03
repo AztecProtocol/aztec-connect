@@ -143,7 +143,7 @@ describe('account proof', () => {
     expect(accountProof.noteTreeRoot).toEqual(merkleRoot);
     expect(accountProof.txFee).toEqual(Buffer.alloc(32));
     expect(accountProof.txFeeAssetId).toEqual(Buffer.alloc(32));
-    expect(accountProof.bridgeId).toEqual(Buffer.alloc(32));
+    expect(accountProof.bridgeCallData).toEqual(Buffer.alloc(32));
     expect(accountProof.defiDepositValue).toEqual(Buffer.alloc(32));
     expect(accountProof.defiRoot).toEqual(Buffer.alloc(32));
   });

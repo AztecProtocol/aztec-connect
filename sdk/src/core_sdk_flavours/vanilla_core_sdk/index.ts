@@ -67,7 +67,6 @@ export async function createVanillaCoreSdk(options: VanillaCoreSdkOptions) {
 
   const leveldb = getLevelDb(memoryDb, identifier);
   const db = await getDb(memoryDb, identifier);
-  await db.init();
 
   const host = new URL(serverUrl);
   const rollupProvider = new ServerRollupProvider(host, pollInterval);

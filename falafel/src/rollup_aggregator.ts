@@ -1,4 +1,5 @@
 import { EthAddress } from '@aztec/barretenberg/address';
+import { InterruptError } from '@aztec/barretenberg/errors';
 import { createLogger } from '@aztec/barretenberg/log';
 import { HashPath } from '@aztec/barretenberg/merkle_tree';
 import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
@@ -17,6 +18,8 @@ import { Metrics } from './metrics';
 import { RollupDb } from './rollup_db';
 
 export class RollupAggregator {
+  private interrupted = false;
+
   constructor(
     private proofGenerator: ProofGenerator,
     private rollupDb: RollupDb,
@@ -33,7 +36,7 @@ export class RollupAggregator {
     oldDefiRoot: Buffer,
     oldDefiPath: HashPath,
     defiInteractionNotes: DefiInteractionNote[],
-    bridgeIds: bigint[],
+    bridgeCallDatas: bigint[],
     assetIds: number[],
   ) {
     this.log(`Creating root rollup proof with ${innerProofs.length} inner proofs...`);
@@ -43,11 +46,12 @@ export class RollupAggregator {
       oldDefiRoot,
       oldDefiPath,
       defiInteractionNotes,
-      bridgeIds,
+      bridgeCallDatas,
       assetIds,
     );
     const end = this.metrics.rootRollupTimer();
     const rootRollupRequest = new RootRollupProofRequest(rootRollup);
+    this.checkpoint();
     const rootRollupProofBuf = await this.proofGenerator.createProof(rootRollupRequest.toBuffer());
 
     if (!rootRollupProofBuf) {
@@ -58,6 +62,7 @@ export class RollupAggregator {
 
     const rootVerifier = this.createRootVerifier(rootRollupProofBuf);
     const rootVerifierRequest = new RootVerifierProofRequest(rootVerifier);
+    this.checkpoint();
     const finalProofData = await this.proofGenerator.createProof(rootVerifierRequest.toBuffer());
 
     end();
@@ -91,7 +96,14 @@ export class RollupAggregator {
   }
 
   public async interrupt() {
+    this.interrupted = true;
     await this.proofGenerator.interrupt();
+  }
+
+  private checkpoint() {
+    if (this.interrupted) {
+      throw new InterruptError('Interrupted');
+    }
   }
 
   private async createRootRollup(
@@ -99,7 +111,7 @@ export class RollupAggregator {
     oldDefiRoot: Buffer,
     oldDefiPath: HashPath,
     defiInteractionNotes: DefiInteractionNote[],
-    bridgeIds: bigint[],
+    bridgeCallDatas: bigint[],
     assetIds: number[],
   ) {
     const worldStateDb = this.worldStateDb;
@@ -133,7 +145,7 @@ export class RollupAggregator {
       oldDefiRoot,
       newDefiRoot,
       oldDefiPath,
-      bridgeIds,
+      bridgeCallDatas,
       assetIds.map(id => numToUInt32BE(id, 32)),
       defiInteractionNotes.map(n => n.toBuffer()),
       this.rollupBeneficiary,

@@ -50,7 +50,9 @@ template <typename settings> class KateCommitmentScheme : public CommitmentSchem
 
 extern template class KateCommitmentScheme<unrolled_standard_settings>;
 extern template class KateCommitmentScheme<unrolled_turbo_settings>;
+extern template class KateCommitmentScheme<unrolled_plookup_settings>;
 extern template class KateCommitmentScheme<standard_settings>;
 extern template class KateCommitmentScheme<turbo_settings>;
+extern template class KateCommitmentScheme<plookup_settings>;
 
 } // namespace waffle

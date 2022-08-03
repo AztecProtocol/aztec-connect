@@ -33,6 +33,11 @@ verification_key::verification_key(verification_key_data&& data, std::shared_ptr
         std::copy(turbo_polynomial_manifest, turbo_polynomial_manifest + 20, std::back_inserter(polynomial_manifest));
         break;
     };
+    case ComposerType::PLOOKUP: {
+        std::copy(
+            plookup_polynomial_manifest, plookup_polynomial_manifest + 34, std::back_inserter(polynomial_manifest));
+        break;
+    };
     default: {
         throw_or_abort("Received invalid composer type");
     }

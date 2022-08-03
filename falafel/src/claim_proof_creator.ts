@@ -1,6 +1,6 @@
 import { TxType } from '@aztec/barretenberg/blockchain';
 import { DefiInteractionEvent } from '@aztec/barretenberg/block_source/defi_interaction_event';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { ProofData } from '@aztec/barretenberg/client_proofs';
 import { TreeClaimNote } from '@aztec/barretenberg/note_algorithms';
 import { OffchainDefiClaimData } from '@aztec/barretenberg/offchain_tx_data';
@@ -98,13 +98,14 @@ export class ClaimProofCreator {
     interactionEvent: DefiInteractionEvent,
     interactionNoteIndex: number,
   ) {
-    const { id, depositValue, bridgeId, partialState, inputNullifier, interactionNonce, fee } = claim;
+    // TODO: rename bridgeId to bridgeCallData
+    const { id, depositValue, bridgeId: bridgeCallData, partialState, inputNullifier, interactionNonce, fee } = claim;
     console.log(`Creating claim proof for note ${id} using interaction with nonce ${interactionNonce}...`);
     const claimNoteIndex = id;
     const claimNotePath = await this.worldStateDb.getHashPath(RollupTreeId.DATA, BigInt(claimNoteIndex));
     const claimNote = new TreeClaimNote(
       depositValue,
-      BridgeId.fromBigInt(bridgeId),
+      BridgeCallData.fromBigInt(bridgeCallData),
       interactionNonce,
       fee,
       partialState,

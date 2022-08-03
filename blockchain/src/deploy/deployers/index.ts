@@ -1,3 +1,4 @@
+export * from './deploy_curve_steth';
 export * from './deploy_defi_bridge_proxy';
 export * from './deploy_dummy_bridge';
 export * from './deploy_element';
@@ -8,3 +9,4 @@ export * from './deploy_mock_price_feed';
 export * from './deploy_rollup_processor';
 export * from './deploy_uniswap';
 export * from './deploy_verifier';
+export * from './deploy_compound';

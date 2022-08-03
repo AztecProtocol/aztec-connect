@@ -33,11 +33,17 @@ template <typename program_settings> class VerifierBase {
 extern template class VerifierBase<unrolled_standard_verifier_settings>;
 extern template class VerifierBase<unrolled_turbo_verifier_settings>;
 extern template class VerifierBase<standard_verifier_settings>;
+extern template class VerifierBase<unrolled_plookup_verifier_settings>;
 extern template class VerifierBase<turbo_verifier_settings>;
+extern template class VerifierBase<plookup_verifier_settings>;
+extern template class VerifierBase<generalized_permutation_verifier_settings>;
 
 typedef VerifierBase<unrolled_standard_verifier_settings> UnrolledVerifier;
 typedef VerifierBase<unrolled_turbo_verifier_settings> UnrolledTurboVerifier;
 typedef VerifierBase<standard_verifier_settings> Verifier;
 typedef VerifierBase<turbo_verifier_settings> TurboVerifier;
+typedef VerifierBase<plookup_verifier_settings> PlookupVerifier;
+typedef VerifierBase<unrolled_plookup_verifier_settings> UnrolledPlookupVerifier;
+typedef VerifierBase<generalized_permutation_verifier_settings> GenPermVerifier;
 
 } // namespace waffle

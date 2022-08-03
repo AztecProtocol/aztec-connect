@@ -4,6 +4,8 @@
 #include <stdlib/primitives/packed_byte_array/packed_byte_array.hpp>
 #include <stdlib/primitives/byte_array/byte_array.hpp>
 
+#include "sha256_plookup.hpp"
+
 namespace waffle {
 class StandardComposer;
 class TurboComposer;
@@ -33,5 +35,8 @@ extern template packed_byte_array<waffle::TurboComposer> sha256(const packed_byt
 extern template byte_array<waffle::StandardComposer> sha256_block(const byte_array<waffle::StandardComposer>& input);
 extern template packed_byte_array<waffle::StandardComposer> sha256(
     const packed_byte_array<waffle::StandardComposer>& input);
+extern template packed_byte_array<waffle::PlookupComposer> sha256(
+    const packed_byte_array<waffle::PlookupComposer>& input);
+
 } // namespace stdlib
 } // namespace plonk

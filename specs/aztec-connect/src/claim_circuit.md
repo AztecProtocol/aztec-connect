@@ -17,7 +17,7 @@ Here's a very brief summary of the defi interaction process:
 - They submit a 'defi deposit' of 1 ETH.
   - A join-split proof is generated in 'defi deposit' mode, which spends the 1 ETH and creates a partial claim note (see the diagrams or the join-split markdown file).
 - The rollup provider bundles (sums) the user's request to deposit 1 ETH into uniswap with the requests of any other users who wanted to deposit ETH to uniswap. User costs are amortised this way.
-- The rollup provider is able to assign a `bridge_id` to each 'bundle', and with knowledge of this `bridge_id` and the `total_input_value` being deposited, the rollup provider can 'complete' each user's partial claim note. I.e. the rollup provider creates a completed 'claim note' for each user. This claim note can be used later in the process to withdraw DAI via the claim circuit.
+- The rollup provider is able to assign a `bridge_call_data` to each 'bundle', and with knowledge of this `bridge_call_data` and the `total_input_value` being deposited, the rollup provider can 'complete' each user's partial claim note. I.e. the rollup provider creates a completed 'claim note' for each user. This claim note can be used later in the process to withdraw DAI via the claim circuit.
 - This bundled (summed) deposit of X ETH is sent to a 'Defi Bridge Contract' - a contract specifically designed to perform swaps between Aztec Connect users and Uniswap.
 - The Defi Bridge Contract sends the `total_input_value = X` ETH to Uniswap (along with some parameters which we won't go into here), and receives back Y DAI.
 - The rollup contract emits an event which says "X ETH was swapped for Y DAI, and here is a 'defi interaction nonce' which represents this interaction".
@@ -57,12 +57,12 @@ Recall that all inner circuits must have the **same number of public inputs** as
 - `asset_id = 0`
 - `data_root`
 - `claim_note.fee`
-- `claim_note_data.bridge_id_data.input_asset_id`
-- `claim_note.bridge_id`
+- `claim_note_data.bridge_call_data_local.input_asset_id`
+- `claim_note.bridge_call_data`
 - `defi_deposit_value = 0`
 - `defi_root`
 - `backward_link = 0`
-- `allow_claim = 0`
+- `allow_chain = 0`
 
 ##### Private Inputs
 
@@ -71,7 +71,7 @@ Recall that all inner circuits must have the **same number of public inputs** as
 - ```
   claim_note: {
       deposit_value,
-      bridge_id,    // actually a public input
+      bridge_call_data,    // actually a public input
       defi_interaction_nonce,
       fee,          // actually a public input
       value_note_partial_commitment,
@@ -81,7 +81,7 @@ Recall that all inner circuits must have the **same number of public inputs** as
 - `defi_interaction_note_path`
 - ```
   defi_interaction_note: {
-      bridge_id,
+      bridge_call_data,
       defi_interaction_nonce,
       total_input_value,
       total_output_value_a,
@@ -99,10 +99,10 @@ _Note: for Pedersen commitments, different generators are used for different typ
 
 Computed vars:
 
-- Extract data from the `claim_note.bridge_id`:
+- Extract data from the `claim_note.bridge_call_data`:
 
   - ```
-    bridge_id_data = {
+    bridge_call_data_local = {
         bridge_address_id, // represents a defi bridge contract address
         input_asset_id_a,
         input_asset_id_b,     // if virtual, is the defi_interaction nonce from when a loan/LP position was opened
@@ -115,7 +115,7 @@ Computed vars:
     }
     ```
 
-- The same data is also currently extracted from the `defi_interaction_note.bridge_id`. This is redundant, but we'll only need to remove these extra constraints if we ever approach the next power of 2.
+- The same data is also currently extracted from the `defi_interaction_note.bridge_call_data`. This is redundant, but we'll only need to remove these extra constraints if we ever approach the next power of 2.
 - Extract config data from `bit_config`:
   - ```
     bit_config = {
@@ -129,14 +129,14 @@ Computed vars:
     ```
 - ```
   claim_note.commitment = pedersen(
-      pedersen(deposit_value, bridge_id, value_note_partial_commitment, input_nullifier),
+      pedersen(deposit_value, bridge_call_data, value_note_partial_commitment, input_nullifier),
       defi_interaction_nonce,
       fee,
   )
   ```
 - ```
   defi_interaction_note.commitment = pedersen(
-      bridge_id,
+      bridge_call_data,
       total_input_value,
       total_output_value_a,
       total_output_value_b,
@@ -164,7 +164,7 @@ Checks:
 - `require(deposit_value <= total_input_value)`
 - `require(output_value_a <= total_output_value_a)`
 - `require(output_value_b <= total_output_value_b)`
-- `require(claim_note.bridge_id == defi_interaction_note.bridge_id)`
+- `require(claim_note.bridge_call_data == defi_interaction_note.bridge_call_data)`
 - `require(claim_note.defi_interaction_nonce == defi_interaction_note.defi_interaction_nonce)`
 - Check claim note exists in the data tree using `data_root, claim_note_path, claim_note_index, claim_note.commitment`.
 - Check defi interaction note exists in the data tree using `defi_root, defi_interaction_note_path, defi_interaction_nonce`.

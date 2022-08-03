@@ -3,7 +3,7 @@ import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { TxHash } from '@aztec/barretenberg/blockchain';
 import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { Mutex } from 'async-mutex';
-import { AssetMetricsDao, AccountDao, ClaimDao, RollupDao, RollupProofDao, TxDao } from '../entity';
+import { AssetMetricsDao, BridgeMetricsDao, AccountDao, ClaimDao, RollupDao, RollupProofDao, TxDao } from '../entity';
 import { RollupDb } from './rollup_db';
 
 export class SyncRollupDb {
@@ -164,6 +164,7 @@ export class SyncRollupDb {
     interactionResult: DefiInteractionNote[],
     txIds: Buffer[],
     assetMetrics: AssetMetricsDao[],
+    bridgeMetrics: BridgeMetricsDao[],
     subtreeRoot: Buffer,
   ) {
     return this.synchronise(() =>
@@ -176,6 +177,7 @@ export class SyncRollupDb {
         interactionResult,
         txIds,
         assetMetrics,
+        bridgeMetrics,
         subtreeRoot,
       ),
     );
@@ -229,6 +231,18 @@ export class SyncRollupDb {
 
   public getAssetMetrics(assetId: number) {
     return this.synchronise(() => this.rollupDb.getAssetMetrics(assetId));
+  }
+
+  public addBridgeMetrics(bridgeMetrics: BridgeMetricsDao[]) {
+    return this.synchronise(() => this.rollupDb.addBridgeMetrics(bridgeMetrics));
+  }
+
+  public getBridgeMetricsForRollup(bridgeCallData: bigint, rollupId: number) {
+    return this.synchronise(() => this.rollupDb.getBridgeMetricsForRollup(bridgeCallData, rollupId));
+  }
+
+  public getLastBridgeMetrics(bridgeCallData: bigint) {
+    return this.synchronise(() => this.rollupDb.getLastBridgeMetrics(bridgeCallData));
   }
 
   private async synchronise<T>(fn: () => Promise<T>) {

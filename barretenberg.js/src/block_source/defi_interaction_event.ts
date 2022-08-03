@@ -1,14 +1,14 @@
 import { DefiInteractionNote } from '../note_algorithms';
 import { toBigIntBE } from '../bigint_buffer';
-import { BridgeId } from '../bridge_id';
+import { BridgeCallData } from '../bridge_call_data';
 import { randomBytes } from '../crypto';
 import { Deserializer, Serializer } from '../serialize';
 
 export class DefiInteractionEvent {
-  static EMPTY = new DefiInteractionEvent(BridgeId.ZERO, 0, BigInt(0), BigInt(0), BigInt(0), false);
+  static EMPTY = new DefiInteractionEvent(BridgeCallData.ZERO, 0, BigInt(0), BigInt(0), BigInt(0), false);
 
   constructor(
-    public readonly bridgeId: BridgeId,
+    public readonly bridgeCallData: BridgeCallData,
     public readonly nonce: number,
     public readonly totalInputValue: bigint,
     public readonly totalOutputValueA: bigint,
@@ -19,8 +19,8 @@ export class DefiInteractionEvent {
 
   static deserialize(buffer: Buffer, offset: number) {
     const des = new Deserializer(buffer, offset);
-    const bridgeIdBuffer = des.buffer(32);
-    const bridgeId = BridgeId.fromBuffer(bridgeIdBuffer);
+    const bridgeCallDataBuffer = des.buffer(32);
+    const bridgeCallData = BridgeCallData.fromBuffer(bridgeCallDataBuffer);
     const totalInputValue = des.bigInt();
     const totalOutputValueA = des.bigInt();
     const totalOutputValueB = des.bigInt();
@@ -30,7 +30,7 @@ export class DefiInteractionEvent {
 
     return {
       elem: new DefiInteractionEvent(
-        bridgeId,
+        bridgeCallData,
         nonce,
         totalInputValue,
         totalOutputValueA,
@@ -44,7 +44,7 @@ export class DefiInteractionEvent {
 
   static random() {
     return new DefiInteractionEvent(
-      BridgeId.random(),
+      BridgeCallData.random(),
       randomBytes(4).readUInt32BE(0),
       toBigIntBE(randomBytes(32)),
       toBigIntBE(randomBytes(32)),
@@ -59,7 +59,7 @@ export class DefiInteractionEvent {
 
   toBuffer() {
     const serializer = new Serializer();
-    serializer.buffer(this.bridgeId.toBuffer());
+    serializer.buffer(this.bridgeCallData.toBuffer());
     serializer.bigInt(this.totalInputValue);
     serializer.bigInt(this.totalOutputValueA);
     serializer.bigInt(this.totalOutputValueB);
@@ -75,7 +75,7 @@ export class DefiInteractionEvent {
 
   toDefiInteractionNote() {
     return new DefiInteractionNote(
-      this.bridgeId,
+      this.bridgeCallData,
       this.nonce,
       this.totalInputValue,
       this.totalOutputValueA,

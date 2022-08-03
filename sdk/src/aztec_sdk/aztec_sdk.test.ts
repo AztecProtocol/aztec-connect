@@ -1,5 +1,5 @@
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { ClientEthereumBlockchain } from '@aztec/blockchain';
 import { CoreSdk } from '../core_sdk';
 import { AztecSdk } from './aztec_sdk';
@@ -49,8 +49,8 @@ describe('aztec sdk', () => {
     const userId = GrumpkinAddress.random();
 
     it('return fees for a bridge without specifying deposit value', async () => {
-      const bridgeId = new BridgeId(0, assetId, 3);
-      expect(await sdk.getDefiFees(bridgeId)).toEqual([
+      const bridgeCallData = new BridgeCallData(0, assetId, 3);
+      expect(await sdk.getDefiFees(bridgeCallData)).toEqual([
         { assetId, value: 10n + 5n },
         { assetId, value: 20n + 5n },
         { assetId, value: 30n + 5n },
@@ -58,8 +58,8 @@ describe('aztec sdk', () => {
     });
 
     it('return fees for a bridge whose input asset is not a fee paying asset', async () => {
-      const bridgeId = new BridgeId(0, noneFeePayingAssetId, 3);
-      expect(await sdk.getDefiFees(bridgeId)).toEqual([
+      const bridgeCallData = new BridgeCallData(0, noneFeePayingAssetId, 3);
+      expect(await sdk.getDefiFees(bridgeCallData)).toEqual([
         { assetId, value: 10n + 5n * 2n },
         { assetId, value: 20n + 5n * 2n },
         { assetId, value: 30n + 5n * 2n },
@@ -72,8 +72,8 @@ describe('aztec sdk', () => {
       // Found two notes that sum to (deposit + fee === 100n + 10n).
       core.pickNotes.mockResolvedValue([{ value: 50n }, { value: 60n }]);
 
-      const bridgeId = new BridgeId(0, assetId, 3);
-      expect(await sdk.getDefiFees(bridgeId, userId, depositValue)).toEqual([
+      const bridgeCallData = new BridgeCallData(0, assetId, 3);
+      expect(await sdk.getDefiFees(bridgeCallData, userId, depositValue)).toEqual([
         { assetId, value: 10n },
         { assetId, value: 20n + 5n },
         { assetId, value: 30n + 5n },
@@ -86,8 +86,8 @@ describe('aztec sdk', () => {
       // Found two notes whose sum is larger than (deposit + fee === 100n + 10n).
       core.pickNotes.mockResolvedValue([{ value: 50n }, { value: 61n }]);
 
-      const bridgeId = new BridgeId(0, assetId, 3);
-      expect(await sdk.getDefiFees(bridgeId, userId, depositValue)).toEqual([
+      const bridgeCallData = new BridgeCallData(0, assetId, 3);
+      expect(await sdk.getDefiFees(bridgeCallData, userId, depositValue)).toEqual([
         { assetId, value: 10n + 5n },
         { assetId, value: 20n + 5n },
         { assetId, value: 30n + 5n },
@@ -100,8 +100,8 @@ describe('aztec sdk', () => {
       // Found two notes that sum to (deposit === 100n).
       core.pickNotes.mockResolvedValue([{ value: 40n }, { value: 60n }]);
 
-      const bridgeId = new BridgeId(0, noneFeePayingAssetId, 3);
-      expect(await sdk.getDefiFees(bridgeId, userId, depositValue)).toEqual([
+      const bridgeCallData = new BridgeCallData(0, noneFeePayingAssetId, 3);
+      expect(await sdk.getDefiFees(bridgeCallData, userId, depositValue)).toEqual([
         { assetId, value: 10n + 5n },
         { assetId, value: 20n + 5n * 2n },
         { assetId, value: 30n + 5n * 2n },
@@ -114,8 +114,8 @@ describe('aztec sdk', () => {
       // Found two notes whose sum is larger than (deposit === 100n).
       core.pickNotes.mockResolvedValue([{ value: 40n }, { value: 61n }]);
 
-      const bridgeId = new BridgeId(0, noneFeePayingAssetId, 3);
-      expect(await sdk.getDefiFees(bridgeId, userId, depositValue)).toEqual([
+      const bridgeCallData = new BridgeCallData(0, noneFeePayingAssetId, 3);
+      expect(await sdk.getDefiFees(bridgeCallData, userId, depositValue)).toEqual([
         { assetId, value: 10n + 5n * 2n },
         { assetId, value: 20n + 5n * 2n },
         { assetId, value: 30n + 5n * 2n },
@@ -130,8 +130,8 @@ describe('aztec sdk', () => {
       core.pickNote.mockResolvedValueOnce({ value: 110n });
       core.pickNote.mockResolvedValueOnce({ value: 100n });
 
-      const bridgeId = new BridgeId(0, assetId, 3, 4);
-      expect(await sdk.getDefiFees(bridgeId, userId, depositValue)).toEqual([
+      const bridgeCallData = new BridgeCallData(0, assetId, 3, 4);
+      expect(await sdk.getDefiFees(bridgeCallData, userId, depositValue)).toEqual([
         { assetId, value: 10n },
         { assetId, value: 20n + 5n },
         { assetId, value: 30n + 5n },
@@ -146,8 +146,8 @@ describe('aztec sdk', () => {
       core.pickNote.mockResolvedValueOnce({ value: 111n });
       core.pickNote.mockResolvedValueOnce({ value: 100n });
 
-      const bridgeId = new BridgeId(0, assetId, 3, 4);
-      expect(await sdk.getDefiFees(bridgeId, userId, depositValue)).toEqual([
+      const bridgeCallData = new BridgeCallData(0, assetId, 3, 4);
+      expect(await sdk.getDefiFees(bridgeCallData, userId, depositValue)).toEqual([
         { assetId, value: 10n + 5n },
         { assetId, value: 20n + 5n },
         { assetId, value: 30n + 5n },
@@ -162,8 +162,8 @@ describe('aztec sdk', () => {
       core.pickNote.mockResolvedValueOnce({ value: 111n });
       core.pickNote.mockResolvedValueOnce({ value: 100n });
 
-      const bridgeId = new BridgeId(0, noneFeePayingAssetId, 3, 4);
-      expect(await sdk.getDefiFees(bridgeId, userId, depositValue)).toEqual([
+      const bridgeCallData = new BridgeCallData(0, noneFeePayingAssetId, 3, 4);
+      expect(await sdk.getDefiFees(bridgeCallData, userId, depositValue)).toEqual([
         { assetId, value: 10n + 5n * 2n },
         { assetId, value: 20n + 5n * 2n },
         { assetId, value: 30n + 5n * 2n },

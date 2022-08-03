@@ -21,7 +21,7 @@ export class RootRollup {
     public oldDefiRoot: Buffer,
     public newDefiRoot: Buffer,
     public oldDefiPath: HashPath,
-    public bridgeIds: bigint[],
+    public bridgeCallDatas: bigint[],
     public assetIds: Buffer[],
     public defiInteractionNotes: Buffer[],
     public rollupBeneficiary: EthAddress,
@@ -38,7 +38,7 @@ export class RootRollup {
       this.oldDefiRoot,
       this.newDefiRoot,
       this.oldDefiPath.toBuffer(),
-      serializeBufferArrayToVector(this.bridgeIds.map(b => toBufferBE(b, 32))),
+      serializeBufferArrayToVector(this.bridgeCallDatas.map(b => toBufferBE(b, 32))),
       serializeBufferArrayToVector(this.assetIds),
       serializeBufferArrayToVector(this.defiInteractionNotes),
       this.rollupBeneficiary.toBuffer32(),
@@ -65,8 +65,8 @@ export class RootRollup {
     const oldDefiPath = HashPath.deserialize(buf, offset);
     offset += oldDataRootsPath.adv;
 
-    const bridgeIds = deserializeArrayFromVector(deserializeBigInt, buf, offset);
-    offset += bridgeIds.adv;
+    const bridgeCallDatas = deserializeArrayFromVector(deserializeBigInt, buf, offset);
+    offset += bridgeCallDatas.adv;
 
     const assetIds = deserializeArrayFromVector(deserializeField, buf, offset);
     offset += assetIds.adv;
@@ -85,7 +85,7 @@ export class RootRollup {
       oldDefiRoot.elem,
       newDefiRoot.elem,
       oldDefiPath.elem,
-      bridgeIds.elem,
+      bridgeCallDatas.elem,
       assetIds.elem,
       defiInteractionNotes.elem,
       new EthAddress(rollupBeneficiary.elem),

@@ -1,6 +1,8 @@
 #include "sha256.hpp"
+#include "sha256_plookup.hpp"
 #include <plonk/composer/standard_composer.hpp>
 #include <plonk/composer/turbo_composer.hpp>
+#include <plonk/composer/plookup_composer.hpp>
 #include <stdlib/primitives/bit_array/bit_array.hpp>
 
 namespace plonk {
@@ -137,6 +139,9 @@ template <typename Composer> byte_array<Composer> sha256_block(const byte_array<
 
 template <typename Composer> packed_byte_array<Composer> sha256(const packed_byte_array<Composer>& input)
 {
+    if constexpr (Composer::type == waffle::ComposerType::PLOOKUP) {
+        return sha256_plookup::sha256(input);
+    }
     typedef field_t<Composer> field_pt;
     typedef uint32<Composer> uint32;
 
@@ -180,5 +185,6 @@ template byte_array<waffle::StandardComposer> sha256_block(const byte_array<waff
 template packed_byte_array<waffle::StandardComposer> sha256(const packed_byte_array<waffle::StandardComposer>& input);
 template byte_array<waffle::TurboComposer> sha256_block(const byte_array<waffle::TurboComposer>& input);
 template packed_byte_array<waffle::TurboComposer> sha256(const packed_byte_array<waffle::TurboComposer>& input);
+template packed_byte_array<waffle::PlookupComposer> sha256(const packed_byte_array<waffle::PlookupComposer>& input);
 } // namespace stdlib
 } // namespace plonk

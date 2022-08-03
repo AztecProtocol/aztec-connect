@@ -1,4 +1,5 @@
 #include "pedersen.hpp"
+#include "pedersen_plookup.hpp"
 #include <crypto/pedersen/pedersen.hpp>
 #include <ecc/curves/grumpkin/grumpkin.hpp>
 
@@ -464,6 +465,10 @@ field_t<C> pedersen<C>::compress_unsafe(const field_t& in_left,
                                         const size_t hash_index,
                                         const bool validate_input_is_in_field)
 {
+    if constexpr (C::type == waffle::ComposerType::PLOOKUP) {
+        return pedersen_plookup<C>::compress(in_left, in_right);
+    }
+
     std::vector<point> accumulators;
     generator_index_t index_1 = { hash_index, 0 };
     generator_index_t index_2 = { hash_index, 1 };
@@ -474,6 +479,10 @@ field_t<C> pedersen<C>::compress_unsafe(const field_t& in_left,
 
 template <typename C> point<C> pedersen<C>::commit(const std::vector<field_t>& inputs, const size_t hash_index)
 {
+    if constexpr (C::type == waffle::ComposerType::PLOOKUP) {
+        return pedersen_plookup<C>::commit(inputs);
+    }
+
     std::vector<point> to_accumulate;
     for (size_t i = 0; i < inputs.size(); ++i) {
         generator_index_t index = { hash_index, i };
@@ -484,6 +493,11 @@ template <typename C> point<C> pedersen<C>::commit(const std::vector<field_t>& i
 
 template <typename C> field_t<C> pedersen<C>::compress(const std::vector<field_t>& inputs, const size_t hash_index)
 {
+    if (C::type == waffle::ComposerType::PLOOKUP) {
+        // TODO handle hash index in plookup. This is a tricky problem but
+        // we can defer solving it until we migrate to UltraPlonk
+        return pedersen_plookup<C>::compress(inputs);
+    }
     return commit(inputs, hash_index).x;
 }
 
@@ -492,6 +506,9 @@ template <typename C> field_t<C> pedersen<C>::compress(const std::vector<field_t
 // hash the base layer of our merkle trees)
 template <typename C> field_t<C> pedersen<C>::compress(const byte_array& input)
 {
+    if constexpr (C::type == waffle::ComposerType::PLOOKUP) {
+        return pedersen_plookup<C>::compress(packed_byte_array(input));
+    }
     const size_t num_bytes = input.size();
     const size_t bytes_per_element = 31;
     size_t num_elements = (num_bytes % bytes_per_element != 0) + (num_bytes / bytes_per_element);
@@ -520,6 +537,7 @@ template <typename C> field_t<C> pedersen<C>::compress(const byte_array& input)
 
 template class pedersen<waffle::StandardComposer>;
 template class pedersen<waffle::TurboComposer>;
+template class pedersen<waffle::PlookupComposer>;
 
 } // namespace stdlib
 } // namespace plonk

@@ -1,6 +1,6 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { Asset } from '@aztec/barretenberg/blockchain';
-import { virtualAssetIdFlag } from '@aztec/barretenberg/bridge_id';
+import { virtualAssetIdFlag } from '@aztec/barretenberg/bridge_call_data';
 import { Signer } from 'ethers';
 import { ethers } from 'hardhat';
 import { evmSnapshot, evmRevert } from '../../ganache/hardhat_chain_manipulation';

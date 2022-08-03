@@ -35,7 +35,7 @@ export class TxRollup {
     public dataRootsIndicies: number[],
 
     public newDefiRoot: Buffer,
-    public bridgeIds: Buffer[],
+    public bridgeCallDatas: Buffer[],
 
     public assetIds: Buffer[],
   ) {
@@ -65,7 +65,7 @@ export class TxRollup {
       serializeBufferArrayToVector(this.dataRootsIndicies.map(index => numToUInt32BE(index, 4))),
 
       this.newDefiRoot,
-      serializeBufferArrayToVector(this.bridgeIds),
+      serializeBufferArrayToVector(this.bridgeCallDatas),
 
       serializeBufferArrayToVector(this.assetIds),
     ]);
@@ -106,8 +106,8 @@ export class TxRollup {
 
     const newDefiRoot = deserializeField(buf, offset);
     offset += newDefiRoot.adv;
-    const bridgeIds = deserializeArrayFromVector(deserializeField, buf, offset);
-    offset += bridgeIds.adv;
+    const bridgeCallDatas = deserializeArrayFromVector(deserializeField, buf, offset);
+    offset += bridgeCallDatas.adv;
 
     const assetIds = deserializeArrayFromVector(deserializeField, buf, offset);
 
@@ -127,7 +127,7 @@ export class TxRollup {
       dataRootsPaths.elem,
       dataRootsIndicies.elem,
       newDefiRoot.elem,
-      bridgeIds.elem,
+      bridgeCallDatas.elem,
       assetIds.elem,
     );
   }

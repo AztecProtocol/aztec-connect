@@ -32,7 +32,7 @@ describe('RollupProofData', () => {
     const assetIds = [...Array(RollupProofData.NUMBER_OF_ASSETS)].map(() => 0);
     const totalTxFees = [...Array(RollupProofData.NUMBER_OF_ASSETS)].map(() => BigInt(0));
     totalTxFees.push(BigInt(0));
-    const bridgeIds = [...Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK)].map(() => randomBytes(32));
+    const bridgeCallDatas = [...Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK)].map(() => randomBytes(32));
     const defiDepositSums = [...Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK)].map(() => BigInt(0));
     const defiInteractionNotes = [...Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK)].map(() => randomBytes(64));
 
@@ -50,7 +50,7 @@ describe('RollupProofData', () => {
           randomBytes(32),
           randomBytes(32),
           randomBytes(32),
-          bridgeIds,
+          bridgeCallDatas,
           defiDepositSums,
           assetIds,
           totalTxFees,
@@ -63,11 +63,11 @@ describe('RollupProofData', () => {
     ).toThrow();
   });
 
-  it('should throw if the number of bridgeIds is wrong', () => {
+  it('should throw if the number of bridgeCallDatas is wrong', () => {
     const assetIds = [...Array(RollupProofData.NUMBER_OF_ASSETS)].map(() => 0);
     const totalTxFees = [...Array(RollupProofData.NUMBER_OF_ASSETS)].map(() => BigInt(0));
-    const bridgeIds = [...Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK)].map(() => randomBytes(32));
-    bridgeIds.push(randomBytes(32));
+    const bridgeCallDatas = [...Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK)].map(() => randomBytes(32));
+    bridgeCallDatas.push(randomBytes(32));
     const defiDepositSums = [...Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK)].map(() => BigInt(0));
     const defiInteractionNotes = [...Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK)].map(() => randomBytes(64));
 
@@ -85,7 +85,7 @@ describe('RollupProofData', () => {
           randomBytes(32),
           randomBytes(32),
           randomBytes(32),
-          bridgeIds,
+          bridgeCallDatas,
           defiDepositSums,
           assetIds,
           totalTxFees,

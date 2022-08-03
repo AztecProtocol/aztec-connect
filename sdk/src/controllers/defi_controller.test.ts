@@ -1,6 +1,6 @@
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetValue } from '@aztec/barretenberg/asset';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { randomBytes } from 'crypto';
 import { CoreSdkInterface } from '../core_sdk';
@@ -12,7 +12,7 @@ type Mockify<T> = {
 
 interface MockDefiProof {
   txId: TxId;
-  bridgeId: BridgeId;
+  bridgeCallData: BridgeCallData;
   depositValue: bigint;
 }
 
@@ -57,7 +57,9 @@ describe('defi controller', () => {
       pickNote: jest.fn().mockResolvedValue(undefined),
       createDefiProofInput: jest
         .fn()
-        .mockImplementation((...args): MockDefiProof => ({ txId: defiTxId, bridgeId: args[1], depositValue: args[2] })),
+        .mockImplementation(
+          (...args): MockDefiProof => ({ txId: defiTxId, bridgeCallData: args[1], depositValue: args[2] }),
+        ),
       createDefiProof: jest.fn().mockImplementation((proofInput, txRefNo) => ({ txRefNo, ...proofInput })),
       createPaymentProofInput: jest.fn().mockImplementation(
         (...args): MockPaymentProof => ({
@@ -78,13 +80,14 @@ describe('defi controller', () => {
 
   describe('deposit one asset', () => {
     const assetId = 0;
-    const bridgeId = new BridgeId(1, assetId, 3);
+    const bridgeCallData = new BridgeCallData(1, assetId, 3);
     const depositValue = { assetId, value: 100n };
     const fee = { assetId, value: 1n };
+    const feePayer = undefined;
     let controller: DefiController;
 
     beforeEach(() => {
-      controller = new DefiController(userId, userSigner, bridgeId, depositValue, fee, coreSdk);
+      controller = new DefiController(userId, userSigner, bridgeCallData, depositValue, fee, feePayer, coreSdk);
     });
 
     it('create a defi deposit proof', async () => {
@@ -102,7 +105,7 @@ describe('defi controller', () => {
           { assetId, value: 40n },
           { assetId, value: 61n },
         ]);
-        expectSendProofs([{ txId: defiTxId, bridgeId, depositValue: 100n }]);
+        expectSendProofs([{ txId: defiTxId, bridgeCallData, depositValue: 100n }]);
       }
 
       // Found one note that has the value of depositValue + fee.
@@ -113,7 +116,7 @@ describe('defi controller', () => {
         await controller.send();
 
         expectDefiInputNotes([{ assetId, value: 101n }]);
-        expectSendProofs([{ txId: defiTxId, bridgeId, depositValue: 100n }]);
+        expectSendProofs([{ txId: defiTxId, bridgeCallData, depositValue: 100n }]);
       }
     });
 
@@ -132,7 +135,7 @@ describe('defi controller', () => {
         expectDefiInputNotes([{ assetId, value: 101n }]);
         expectSendProofs([
           { txId: paymentTxId, assetId, privateInput: 101n, outputNoteValue: 101n },
-          { txId: defiTxId, bridgeId, depositValue: 100n },
+          { txId: defiTxId, bridgeCallData, depositValue: 100n },
         ]);
       }
 
@@ -147,7 +150,7 @@ describe('defi controller', () => {
         expectDefiInputNotes([{ assetId, value: 101n }]);
         expectSendProofs([
           { txId: paymentTxId, assetId, privateInput: 101n, outputNoteValue: 101n },
-          { txId: defiTxId, bridgeId, depositValue: 100n },
+          { txId: defiTxId, bridgeCallData, depositValue: 100n },
         ]);
       }
     });
@@ -160,13 +163,14 @@ describe('defi controller', () => {
   describe('deposit one non fee paying asset', () => {
     const assetId = 0;
     const feeAssetId = 2;
-    const bridgeId = new BridgeId(1, assetId, 3);
+    const bridgeCallData = new BridgeCallData(1, assetId, 3);
     const depositValue = { assetId, value: 100n };
     const fee = { assetId: feeAssetId, value: 1n };
+    const feePayer = undefined;
     let controller: DefiController;
 
     beforeEach(() => {
-      controller = new DefiController(userId, userSigner, bridgeId, depositValue, fee, coreSdk);
+      controller = new DefiController(userId, userSigner, bridgeCallData, depositValue, fee, feePayer, coreSdk);
     });
 
     it('create a defi deposit proof and a fee paying proof', async () => {
@@ -185,7 +189,7 @@ describe('defi controller', () => {
           { assetId, value: 60n },
         ]);
         expectSendProofs([
-          { txId: defiTxId, bridgeId, depositValue: 100n },
+          { txId: defiTxId, bridgeCallData, depositValue: 100n },
           { txId: paymentTxId, assetId: feeAssetId, privateInput: 1n, outputNoteValue: 0n },
         ]);
       }
@@ -199,7 +203,7 @@ describe('defi controller', () => {
 
         expectDefiInputNotes([{ assetId, value: 100n }]);
         expectSendProofs([
-          { txId: defiTxId, bridgeId, depositValue: 100n },
+          { txId: defiTxId, bridgeCallData, depositValue: 100n },
           { txId: paymentTxId, assetId: feeAssetId, privateInput: 1n, outputNoteValue: 0n },
         ]);
       }
@@ -220,7 +224,7 @@ describe('defi controller', () => {
         expectDefiInputNotes([{ assetId, value: 100n }]);
         expectSendProofs([
           { txId: paymentTxId, assetId, privateInput: 100n, outputNoteValue: 100n },
-          { txId: defiTxId, bridgeId, depositValue: 100n },
+          { txId: defiTxId, bridgeCallData, depositValue: 100n },
           { txId: paymentTxId, assetId: feeAssetId, privateInput: 1n, outputNoteValue: 0n },
         ]);
       }
@@ -236,7 +240,7 @@ describe('defi controller', () => {
         expectDefiInputNotes([{ assetId, value: 100n }]);
         expectSendProofs([
           { txId: paymentTxId, assetId, privateInput: 100n, outputNoteValue: 100n },
-          { txId: defiTxId, bridgeId, depositValue: 100n },
+          { txId: defiTxId, bridgeCallData, depositValue: 100n },
           { txId: paymentTxId, assetId: feeAssetId, privateInput: 1n, outputNoteValue: 0n },
         ]);
       }
@@ -246,13 +250,14 @@ describe('defi controller', () => {
   describe('deposit two assets', () => {
     const assetId = 0;
     const secondAssetId = 2;
-    const bridgeId = new BridgeId(1, assetId, 3, secondAssetId);
+    const bridgeCallData = new BridgeCallData(1, assetId, 3, secondAssetId);
     const depositValue = { assetId, value: 100n };
     const fee = { assetId, value: 1n };
+    const feePayer = undefined;
     let controller: DefiController;
 
     beforeEach(() => {
-      controller = new DefiController(userId, userSigner, bridgeId, depositValue, fee, coreSdk);
+      controller = new DefiController(userId, userSigner, bridgeCallData, depositValue, fee, feePayer, coreSdk);
     });
 
     it('create a defi deposit proof', async () => {
@@ -269,7 +274,7 @@ describe('defi controller', () => {
           { assetId, value: 101n },
           { assetId: secondAssetId, value: 100n },
         ]);
-        expectSendProofs([{ txId: defiTxId, bridgeId, depositValue: 100n }]);
+        expectSendProofs([{ txId: defiTxId, bridgeCallData, depositValue: 100n }]);
       }
     });
 
@@ -293,7 +298,7 @@ describe('defi controller', () => {
         ]);
         expectSendProofs([
           { txId: paymentTxId, assetId, privateInput: 101n, outputNoteValue: 101n },
-          { txId: defiTxId, bridgeId, depositValue: 100n },
+          { txId: defiTxId, bridgeCallData, depositValue: 100n },
         ]);
       }
 
@@ -316,7 +321,7 @@ describe('defi controller', () => {
         ]);
         expectSendProofs([
           { txId: paymentTxId, assetId, privateInput: 101n, outputNoteValue: 101n },
-          { txId: defiTxId, bridgeId, depositValue: 100n },
+          { txId: defiTxId, bridgeCallData, depositValue: 100n },
         ]);
       }
 
@@ -335,7 +340,7 @@ describe('defi controller', () => {
         ]);
         expectSendProofs([
           { txId: paymentTxId, assetId, privateInput: 101n, outputNoteValue: 101n },
-          { txId: defiTxId, bridgeId, depositValue: 100n },
+          { txId: defiTxId, bridgeCallData, depositValue: 100n },
         ]);
       }
     });
@@ -356,7 +361,7 @@ describe('defi controller', () => {
         ]);
         expectSendProofs([
           { txId: paymentTxId, assetId: secondAssetId, privateInput: 100n, outputNoteValue: 100n },
-          { txId: defiTxId, bridgeId, depositValue: 100n },
+          { txId: defiTxId, bridgeCallData, depositValue: 100n },
         ]);
       }
 
@@ -379,7 +384,7 @@ describe('defi controller', () => {
         ]);
         expectSendProofs([
           { txId: paymentTxId, assetId: secondAssetId, privateInput: 100n, outputNoteValue: 100n },
-          { txId: defiTxId, bridgeId, depositValue: 100n },
+          { txId: defiTxId, bridgeCallData, depositValue: 100n },
         ]);
       }
     });
@@ -434,13 +439,14 @@ describe('defi controller', () => {
     const assetId = 0;
     const secondAssetId = 2;
     const feeAssetId = 4;
-    const bridgeId = new BridgeId(1, assetId, 3, secondAssetId);
+    const bridgeCallData = new BridgeCallData(1, assetId, 3, secondAssetId);
     const depositValue = { assetId, value: 100n };
     const fee = { assetId: feeAssetId, value: 1n };
+    const feePayer = undefined;
     let controller: DefiController;
 
     beforeEach(() => {
-      controller = new DefiController(userId, userSigner, bridgeId, depositValue, fee, coreSdk);
+      controller = new DefiController(userId, userSigner, bridgeCallData, depositValue, fee, feePayer, coreSdk);
     });
 
     it('create a defi deposit proof and a fee paying proof', async () => {
@@ -457,7 +463,7 @@ describe('defi controller', () => {
         { assetId: secondAssetId, value: 100n },
       ]);
       expectSendProofs([
-        { txId: defiTxId, bridgeId, depositValue: 100n },
+        { txId: defiTxId, bridgeCallData, depositValue: 100n },
         { txId: paymentTxId, assetId: feeAssetId, privateInput: 1n, outputNoteValue: 0n },
       ]);
     });
@@ -482,7 +488,7 @@ describe('defi controller', () => {
         ]);
         expectSendProofs([
           { txId: paymentTxId, assetId, privateInput: 100n, outputNoteValue: 100n },
-          { txId: defiTxId, bridgeId, depositValue: 100n },
+          { txId: defiTxId, bridgeCallData, depositValue: 100n },
           { txId: paymentTxId, assetId: feeAssetId, privateInput: 1n, outputNoteValue: 0n },
         ]);
       }
@@ -506,7 +512,7 @@ describe('defi controller', () => {
         ]);
         expectSendProofs([
           { txId: paymentTxId, assetId, privateInput: 100n, outputNoteValue: 100n },
-          { txId: defiTxId, bridgeId, depositValue: 100n },
+          { txId: defiTxId, bridgeCallData, depositValue: 100n },
           { txId: paymentTxId, assetId: feeAssetId, privateInput: 1n, outputNoteValue: 0n },
         ]);
       }
@@ -526,7 +532,7 @@ describe('defi controller', () => {
         ]);
         expectSendProofs([
           { txId: paymentTxId, assetId, privateInput: 100n, outputNoteValue: 100n },
-          { txId: defiTxId, bridgeId, depositValue: 100n },
+          { txId: defiTxId, bridgeCallData, depositValue: 100n },
           { txId: paymentTxId, assetId: feeAssetId, privateInput: 1n, outputNoteValue: 0n },
         ]);
       }
@@ -548,7 +554,7 @@ describe('defi controller', () => {
         ]);
         expectSendProofs([
           { txId: paymentTxId, assetId: secondAssetId, privateInput: 100n, outputNoteValue: 100n },
-          { txId: defiTxId, bridgeId, depositValue: 100n },
+          { txId: defiTxId, bridgeCallData, depositValue: 100n },
           { txId: paymentTxId, assetId: feeAssetId, privateInput: 1n, outputNoteValue: 0n },
         ]);
       }
@@ -572,7 +578,7 @@ describe('defi controller', () => {
         ]);
         expectSendProofs([
           { txId: paymentTxId, assetId: secondAssetId, privateInput: 100n, outputNoteValue: 100n },
-          { txId: defiTxId, bridgeId, depositValue: 100n },
+          { txId: defiTxId, bridgeCallData, depositValue: 100n },
           { txId: paymentTxId, assetId: feeAssetId, privateInput: 1n, outputNoteValue: 0n },
         ]);
       }
@@ -612,43 +618,44 @@ describe('defi controller', () => {
 
   describe('cannot be created from invalid args', () => {
     const assetId = 0;
-    const bridgeId = new BridgeId(1, assetId, 3, 4, 5);
+    const bridgeCallData = new BridgeCallData(1, assetId, 3, 4, 5);
     const depositValue = { assetId, value: 100n };
     const fee = { assetId, value: 1n };
+    const feePayer = undefined;
 
     it('bridge id cannot have identical input assets', () => {
-      const invalidBridgeId = new BridgeId(0, assetId, 3, assetId);
-      expect(() => new DefiController(userId, userSigner, invalidBridgeId, depositValue, fee, coreSdk)).toThrow(
-        'Identical input assets.',
-      );
+      const invalidBridgeCallData = new BridgeCallData(0, assetId, 3, assetId);
+      expect(
+        () => new DefiController(userId, userSigner, invalidBridgeCallData, depositValue, fee, feePayer, coreSdk),
+      ).toThrow('Identical input assets.');
     });
 
     it('bridge id cannot have identical output assets', () => {
-      const invalidBridgeId = new BridgeId(0, assetId, 2, undefined, 2);
-      expect(() => new DefiController(userId, userSigner, invalidBridgeId, depositValue, fee, coreSdk)).toThrow(
-        'Identical output assets.',
-      );
+      const invalidBridgeCallData = new BridgeCallData(0, assetId, 2, undefined, 2);
+      expect(
+        () => new DefiController(userId, userSigner, invalidBridgeCallData, depositValue, fee, feePayer, coreSdk),
+      ).toThrow('Identical output assets.');
     });
 
     it('deposit value cannot be 0', () => {
       const invalidDepositValue = { assetId, value: 0n };
-      expect(() => new DefiController(userId, userSigner, bridgeId, invalidDepositValue, fee, coreSdk)).toThrow(
-        'Deposit value must be greater than 0.',
-      );
+      expect(
+        () => new DefiController(userId, userSigner, bridgeCallData, invalidDepositValue, fee, feePayer, coreSdk),
+      ).toThrow('Deposit value must be greater than 0.');
     });
 
     it('asset of deposit value must be the same as the first input asset', () => {
       const invalidDepositValue = { assetId: assetId + 1, value: 100n };
-      expect(() => new DefiController(userId, userSigner, bridgeId, invalidDepositValue, fee, coreSdk)).toThrow(
-        'Incorrect deposit asset.',
-      );
+      expect(
+        () => new DefiController(userId, userSigner, bridgeCallData, invalidDepositValue, fee, feePayer, coreSdk),
+      ).toThrow('Incorrect deposit asset.');
     });
 
     it('fee cannot be paid with second input asset', () => {
-      const invalidFee = { assetId: bridgeId.inputAssetIdB!, value: 0n };
-      expect(() => new DefiController(userId, userSigner, bridgeId, depositValue, invalidFee, coreSdk)).toThrow(
-        'Fee paying asset must be the first input asset.',
-      );
+      const invalidFee = { assetId: bridgeCallData.inputAssetIdB!, value: 0n };
+      expect(
+        () => new DefiController(userId, userSigner, bridgeCallData, depositValue, invalidFee, feePayer, coreSdk),
+      ).toThrow('Fee paying asset must be the first input asset.');
     });
   });
 });

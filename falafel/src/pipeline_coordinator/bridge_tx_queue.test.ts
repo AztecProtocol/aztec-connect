@@ -8,7 +8,7 @@ import { TxFeeResolver } from '../tx_fee_resolver';
 import { BridgeTxQueue, RollupTx } from './bridge_tx_queue';
 
 const bridgeConfig: BridgeConfig = {
-  bridgeId: 1n,
+  bridgeCallData: 1n,
   numTxs: 5,
   gas: 500000,
   rollupFrequency: 2,
@@ -24,7 +24,7 @@ type Mockify<T> = {
   [P in keyof T]: jest.Mock;
 };
 
-const mockTx = (id: number, txType: TxType, txFeeAssetId: number, bridgeId: bigint) =>
+const mockTx = (id: number, txType: TxType, txFeeAssetId: number, bridgeCallData: bigint) =>
   ({
     id,
     txType,
@@ -34,7 +34,7 @@ const mockTx = (id: number, txType: TxType, txFeeAssetId: number, bridgeId: bigi
       randomBytes(32),
       randomBytes(7 * 32),
       numToUInt32BE(txFeeAssetId, 32),
-      toBufferBE(bridgeId, 32),
+      toBufferBE(bridgeCallData, 32),
       randomBytes(3 * 32),
       Buffer.alloc(32),
       numToUInt32BE(2, 32),
@@ -45,11 +45,11 @@ const createRollupTx = (
   id: number,
   txType: TxType,
   txFeeAssetId: number,
-  bridgeId: bigint,
+  bridgeCallData: bigint,
   excessGas: number,
   txFee = BigInt(1 + excessGas),
 ): RollupTx => {
-  const tx = mockTx(id, txType, txFeeAssetId, bridgeId);
+  const tx = mockTx(id, txType, txFeeAssetId, bridgeCallData);
   return {
     tx,
     excessGas,
@@ -57,7 +57,7 @@ const createRollupTx = (
       assetId: txFeeAssetId,
       value: txFee,
     },
-    bridgeId,
+    bridgeCallData,
   };
 };
 
@@ -73,10 +73,10 @@ describe('Bridge Tx Queue', () => {
     jest.spyOn(Date, 'now').mockImplementation(() => 1618226000000);
 
     feeResolver = {
-      getMinTxFee: jest.fn(),
       start: jest.fn(),
       stop: jest.fn(),
       getGasPaidForByFee: jest.fn().mockImplementation((assetId: number, fee: bigint) => fee),
+      getTxFeeFromGas: jest.fn().mockImplementation((assetId: number, gas: bigint) => gas),
       getUnadjustedTxGas: jest.fn().mockImplementation(() => {
         return BASE_GAS + DEFI_DEPOSIT_GAS;
       }),
@@ -98,15 +98,11 @@ describe('Bridge Tx Queue', () => {
       getMaxUnadjustedGas: jest.fn(),
     };
 
-    bridgeQ = new BridgeTxQueue(bridgeConfig.bridgeId, feeResolver as any);
-  });
-
-  afterEach(() => {
-    expect(feeResolver.getMinTxFee).not.toBeCalled();
+    bridgeQ = new BridgeTxQueue(bridgeConfig.bridgeCallData, feeResolver as any);
   });
 
   it("single tx that only covers it's own gas does not get returned", () => {
-    const rollupTx = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
+    const rollupTx = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
     bridgeQ.addDefiTx(rollupTx);
     const txsForRollup = bridgeQ.getTxsToRollup(10, new Set(), 10, 100000, 1000);
     expect(txsForRollup).toBeTruthy();
@@ -116,7 +112,13 @@ describe('Bridge Tx Queue', () => {
   });
 
   it('single tx that covers the full bridge cost is returned', () => {
-    const rollupTx = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, getAllOtherBridgeSlotsGas());
+    const rollupTx = createRollupTx(
+      1,
+      TxType.DEFI_DEPOSIT,
+      0,
+      bridgeConfig.bridgeCallData,
+      getAllOtherBridgeSlotsGas(),
+    );
     bridgeQ.addDefiTx(rollupTx);
     const txsForRollup = bridgeQ.getTxsToRollup(10, new Set(), 10, 1000000, 1000);
     expect(txsForRollup).toBeTruthy();
@@ -128,11 +130,11 @@ describe('Bridge Tx Queue', () => {
   });
 
   it('multiple txs that cover the bridge cost are returned', () => {
-    const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx3 = createRollupTx(3, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx4 = createRollupTx(4, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx5 = createRollupTx(5, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
+    const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx3 = createRollupTx(3, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx4 = createRollupTx(4, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx5 = createRollupTx(5, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
     bridgeQ.addDefiTx(rollupTx1);
     bridgeQ.addDefiTx(rollupTx2);
     bridgeQ.addDefiTx(rollupTx3);
@@ -150,11 +152,17 @@ describe('Bridge Tx Queue', () => {
   });
 
   it('multiple txs are returned even with a single high fee tx', () => {
-    const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx3 = createRollupTx(3, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, getAllOtherBridgeSlotsGas());
-    const rollupTx4 = createRollupTx(4, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx5 = createRollupTx(5, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
+    const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx3 = createRollupTx(
+      3,
+      TxType.DEFI_DEPOSIT,
+      0,
+      bridgeConfig.bridgeCallData,
+      getAllOtherBridgeSlotsGas(),
+    );
+    const rollupTx4 = createRollupTx(4, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx5 = createRollupTx(5, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
     bridgeQ.addDefiTx(rollupTx1);
     bridgeQ.addDefiTx(rollupTx2);
     bridgeQ.addDefiTx(rollupTx3);
@@ -173,11 +181,17 @@ describe('Bridge Tx Queue', () => {
 
   it('number of returned txs is limited to max slots', () => {
     {
-      const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-      const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-      const rollupTx3 = createRollupTx(3, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, getAllOtherBridgeSlotsGas());
-      const rollupTx4 = createRollupTx(4, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 220000);
-      const rollupTx5 = createRollupTx(5, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 320000);
+      const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+      const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+      const rollupTx3 = createRollupTx(
+        3,
+        TxType.DEFI_DEPOSIT,
+        0,
+        bridgeConfig.bridgeCallData,
+        getAllOtherBridgeSlotsGas(),
+      );
+      const rollupTx4 = createRollupTx(4, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 220000);
+      const rollupTx5 = createRollupTx(5, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 320000);
       bridgeQ.addDefiTx(rollupTx1);
       bridgeQ.addDefiTx(rollupTx2);
       bridgeQ.addDefiTx(rollupTx3);
@@ -195,11 +209,17 @@ describe('Bridge Tx Queue', () => {
       );
     }
     {
-      const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-      const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-      const rollupTx3 = createRollupTx(3, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, getAllOtherBridgeSlotsGas());
-      const rollupTx4 = createRollupTx(4, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 220000);
-      const rollupTx5 = createRollupTx(5, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 320000);
+      const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+      const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+      const rollupTx3 = createRollupTx(
+        3,
+        TxType.DEFI_DEPOSIT,
+        0,
+        bridgeConfig.bridgeCallData,
+        getAllOtherBridgeSlotsGas(),
+      );
+      const rollupTx4 = createRollupTx(4, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 220000);
+      const rollupTx5 = createRollupTx(5, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 320000);
       bridgeQ.addDefiTx(rollupTx1);
       bridgeQ.addDefiTx(rollupTx2);
       bridgeQ.addDefiTx(rollupTx3);
@@ -220,11 +240,17 @@ describe('Bridge Tx Queue', () => {
 
   it('number of returned txs is limited to gas remaining', () => {
     {
-      const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-      const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-      const rollupTx3 = createRollupTx(3, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, getAllOtherBridgeSlotsGas());
-      const rollupTx4 = createRollupTx(4, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 220000);
-      const rollupTx5 = createRollupTx(5, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 320000);
+      const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+      const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+      const rollupTx3 = createRollupTx(
+        3,
+        TxType.DEFI_DEPOSIT,
+        0,
+        bridgeConfig.bridgeCallData,
+        getAllOtherBridgeSlotsGas(),
+      );
+      const rollupTx4 = createRollupTx(4, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 220000);
+      const rollupTx5 = createRollupTx(5, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 320000);
       bridgeQ.addDefiTx(rollupTx1);
       bridgeQ.addDefiTx(rollupTx2);
       bridgeQ.addDefiTx(rollupTx3);
@@ -244,11 +270,17 @@ describe('Bridge Tx Queue', () => {
     }
 
     {
-      const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-      const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-      const rollupTx3 = createRollupTx(3, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, getAllOtherBridgeSlotsGas());
-      const rollupTx4 = createRollupTx(4, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 220000);
-      const rollupTx5 = createRollupTx(5, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 320000);
+      const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+      const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+      const rollupTx3 = createRollupTx(
+        3,
+        TxType.DEFI_DEPOSIT,
+        0,
+        bridgeConfig.bridgeCallData,
+        getAllOtherBridgeSlotsGas(),
+      );
+      const rollupTx4 = createRollupTx(4, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 220000);
+      const rollupTx5 = createRollupTx(5, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 320000);
       bridgeQ.addDefiTx(rollupTx1);
       bridgeQ.addDefiTx(rollupTx2);
       bridgeQ.addDefiTx(rollupTx3);
@@ -269,11 +301,17 @@ describe('Bridge Tx Queue', () => {
 
   it('number of returned txs is limited to call data remaining', () => {
     {
-      const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-      const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-      const rollupTx3 = createRollupTx(3, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, getAllOtherBridgeSlotsGas());
-      const rollupTx4 = createRollupTx(4, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 220000);
-      const rollupTx5 = createRollupTx(5, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 320000);
+      const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+      const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+      const rollupTx3 = createRollupTx(
+        3,
+        TxType.DEFI_DEPOSIT,
+        0,
+        bridgeConfig.bridgeCallData,
+        getAllOtherBridgeSlotsGas(),
+      );
+      const rollupTx4 = createRollupTx(4, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 220000);
+      const rollupTx5 = createRollupTx(5, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 320000);
       bridgeQ.addDefiTx(rollupTx1);
       bridgeQ.addDefiTx(rollupTx2);
       bridgeQ.addDefiTx(rollupTx3);
@@ -291,11 +329,17 @@ describe('Bridge Tx Queue', () => {
       );
     }
     {
-      const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-      const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-      const rollupTx3 = createRollupTx(3, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, getAllOtherBridgeSlotsGas());
-      const rollupTx4 = createRollupTx(4, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 220000);
-      const rollupTx5 = createRollupTx(5, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 320000);
+      const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+      const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+      const rollupTx3 = createRollupTx(
+        3,
+        TxType.DEFI_DEPOSIT,
+        0,
+        bridgeConfig.bridgeCallData,
+        getAllOtherBridgeSlotsGas(),
+      );
+      const rollupTx4 = createRollupTx(4, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 220000);
+      const rollupTx5 = createRollupTx(5, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 320000);
       bridgeQ.addDefiTx(rollupTx1);
       bridgeQ.addDefiTx(rollupTx2);
       bridgeQ.addDefiTx(rollupTx3);
@@ -315,11 +359,11 @@ describe('Bridge Tx Queue', () => {
   });
 
   it('multiple txs are not returned if not enough slots', () => {
-    const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx3 = createRollupTx(3, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx4 = createRollupTx(4, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx5 = createRollupTx(5, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
+    const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx3 = createRollupTx(3, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx4 = createRollupTx(4, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx5 = createRollupTx(5, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
     bridgeQ.addDefiTx(rollupTx1);
     bridgeQ.addDefiTx(rollupTx2);
     bridgeQ.addDefiTx(rollupTx3);
@@ -334,11 +378,11 @@ describe('Bridge Tx Queue', () => {
   });
 
   it('multiple txs are not returned if not enough remaining gas for the bridge', () => {
-    const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx3 = createRollupTx(3, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx4 = createRollupTx(4, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx5 = createRollupTx(5, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
+    const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx3 = createRollupTx(3, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx4 = createRollupTx(4, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx5 = createRollupTx(5, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
     bridgeQ.addDefiTx(rollupTx1);
     bridgeQ.addDefiTx(rollupTx2);
     bridgeQ.addDefiTx(rollupTx3);
@@ -353,11 +397,11 @@ describe('Bridge Tx Queue', () => {
   });
 
   it('multiple txs are not returned if not enough remaining gas for the bridge and all txs required for it', () => {
-    const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx3 = createRollupTx(3, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx4 = createRollupTx(4, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx5 = createRollupTx(5, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
+    const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx3 = createRollupTx(3, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx4 = createRollupTx(4, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx5 = createRollupTx(5, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
     bridgeQ.addDefiTx(rollupTx1);
     bridgeQ.addDefiTx(rollupTx2);
     bridgeQ.addDefiTx(rollupTx3);
@@ -372,11 +416,11 @@ describe('Bridge Tx Queue', () => {
   });
 
   it('multiple txs are not returned if not enough remaining call data for all of the txs', () => {
-    const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx3 = createRollupTx(3, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx4 = createRollupTx(4, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx5 = createRollupTx(5, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
+    const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx3 = createRollupTx(3, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx4 = createRollupTx(4, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx5 = createRollupTx(5, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
     bridgeQ.addDefiTx(rollupTx1);
     bridgeQ.addDefiTx(rollupTx2);
     bridgeQ.addDefiTx(rollupTx3);
@@ -392,14 +436,14 @@ describe('Bridge Tx Queue', () => {
 
   it('multiple txs are not limited to bridge size', () => {
     // bridge size here is 5
-    const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx3 = createRollupTx(3, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx4 = createRollupTx(4, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx5 = createRollupTx(5, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx6 = createRollupTx(6, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx7 = createRollupTx(7, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx8 = createRollupTx(8, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
+    const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx3 = createRollupTx(3, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx4 = createRollupTx(4, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx5 = createRollupTx(5, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx6 = createRollupTx(6, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx7 = createRollupTx(7, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx8 = createRollupTx(8, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
     bridgeQ.addDefiTx(rollupTx1);
     bridgeQ.addDefiTx(rollupTx2);
     bridgeQ.addDefiTx(rollupTx3);
@@ -421,16 +465,16 @@ describe('Bridge Tx Queue', () => {
 
   it('multiple txs are not limited to single bridge size', () => {
     // bridge size is 5
-    const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx3 = createRollupTx(3, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx4 = createRollupTx(4, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx5 = createRollupTx(5, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx6 = createRollupTx(6, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx7 = createRollupTx(7, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx8 = createRollupTx(8, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx9 = createRollupTx(9, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx10 = createRollupTx(10, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
+    const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx3 = createRollupTx(3, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx4 = createRollupTx(4, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx5 = createRollupTx(5, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx6 = createRollupTx(6, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx7 = createRollupTx(7, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx8 = createRollupTx(8, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx9 = createRollupTx(9, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx10 = createRollupTx(10, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
     bridgeQ.addDefiTx(rollupTx1);
     bridgeQ.addDefiTx(rollupTx2);
     bridgeQ.addDefiTx(rollupTx3);
@@ -453,14 +497,14 @@ describe('Bridge Tx Queue', () => {
   });
 
   it('txs that cover full bridge cost are ordered by excess gas at front of queue', () => {
-    const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 120000);
-    const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 130000);
-    const rollupTx3 = createRollupTx(3, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 120000);
-    const rollupTx4 = createRollupTx(4, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 130000);
-    const rollupTx5 = createRollupTx(5, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 120000);
-    const rollupTx6 = createRollupTx(6, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 140000);
-    const rollupTx7 = createRollupTx(7, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 120000);
-    const rollupTx8 = createRollupTx(8, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 120000);
+    const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 120000);
+    const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 130000);
+    const rollupTx3 = createRollupTx(3, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 120000);
+    const rollupTx4 = createRollupTx(4, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 130000);
+    const rollupTx5 = createRollupTx(5, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 120000);
+    const rollupTx6 = createRollupTx(6, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 140000);
+    const rollupTx7 = createRollupTx(7, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 120000);
+    const rollupTx8 = createRollupTx(8, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 120000);
     bridgeQ.addDefiTx(rollupTx1);
     bridgeQ.addDefiTx(rollupTx2);
     bridgeQ.addDefiTx(rollupTx3);
@@ -481,16 +525,16 @@ describe('Bridge Tx Queue', () => {
   });
 
   it('queue is depleted with each call', () => {
-    const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx3 = createRollupTx(3, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx4 = createRollupTx(4, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx5 = createRollupTx(5, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx6 = createRollupTx(6, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx7 = createRollupTx(7, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx8 = createRollupTx(8, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx9 = createRollupTx(9, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx10 = createRollupTx(10, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
+    const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx3 = createRollupTx(3, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx4 = createRollupTx(4, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx5 = createRollupTx(5, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx6 = createRollupTx(6, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx7 = createRollupTx(7, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx8 = createRollupTx(8, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx9 = createRollupTx(9, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx10 = createRollupTx(10, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
     bridgeQ.addDefiTx(rollupTx1);
     bridgeQ.addDefiTx(rollupTx2);
     bridgeQ.addDefiTx(rollupTx3);
@@ -528,11 +572,11 @@ describe('Bridge Tx Queue', () => {
   });
 
   it('multiple txs are limited by number of assets', () => {
-    const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 1, bridgeConfig.bridgeId, 0);
-    const rollupTx3 = createRollupTx(3, TxType.DEFI_DEPOSIT, 1, bridgeConfig.bridgeId, 1200000);
-    const rollupTx4 = createRollupTx(4, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx5 = createRollupTx(5, TxType.DEFI_DEPOSIT, 2, bridgeConfig.bridgeId, 0);
+    const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 1, bridgeConfig.bridgeCallData, 0);
+    const rollupTx3 = createRollupTx(3, TxType.DEFI_DEPOSIT, 1, bridgeConfig.bridgeCallData, 1200000);
+    const rollupTx4 = createRollupTx(4, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx5 = createRollupTx(5, TxType.DEFI_DEPOSIT, 2, bridgeConfig.bridgeCallData, 0);
     bridgeQ.addDefiTx(rollupTx1);
     bridgeQ.addDefiTx(rollupTx2);
     bridgeQ.addDefiTx(rollupTx3);
@@ -554,11 +598,17 @@ describe('Bridge Tx Queue', () => {
   });
 
   it('only fee-paying assets count towards the asset limit', () => {
-    const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 1, bridgeConfig.bridgeId, 0);
-    const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, NON_FEE_PAYING_ASSET, bridgeConfig.bridgeId, 1200000);
-    const rollupTx3 = createRollupTx(3, TxType.DEFI_DEPOSIT, 1, bridgeConfig.bridgeId, 1200000);
-    const rollupTx4 = createRollupTx(4, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeId, 0);
-    const rollupTx5 = createRollupTx(5, TxType.DEFI_DEPOSIT, 2, bridgeConfig.bridgeId, 0);
+    const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 1, bridgeConfig.bridgeCallData, 0);
+    const rollupTx2 = createRollupTx(
+      2,
+      TxType.DEFI_DEPOSIT,
+      NON_FEE_PAYING_ASSET,
+      bridgeConfig.bridgeCallData,
+      1200000,
+    );
+    const rollupTx3 = createRollupTx(3, TxType.DEFI_DEPOSIT, 1, bridgeConfig.bridgeCallData, 1200000);
+    const rollupTx4 = createRollupTx(4, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
+    const rollupTx5 = createRollupTx(5, TxType.DEFI_DEPOSIT, 2, bridgeConfig.bridgeCallData, 0);
     bridgeQ.addDefiTx(rollupTx1);
     bridgeQ.addDefiTx(rollupTx2);
     bridgeQ.addDefiTx(rollupTx3);

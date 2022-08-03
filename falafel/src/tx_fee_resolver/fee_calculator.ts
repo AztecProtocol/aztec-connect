@@ -8,7 +8,7 @@ const allTxTypes = [
   TxType.DEPOSIT,
   TxType.TRANSFER,
   TxType.WITHDRAW_TO_WALLET,
-  TxType.WITHDRAW_TO_CONTRACT,
+  TxType.WITHDRAW_HIGH_GAS,
   TxType.ACCOUNT,
   TxType.DEFI_DEPOSIT,
   TxType.DEFI_CLAIM,
@@ -23,40 +23,44 @@ export class FeeCalculator {
     private readonly feeGasPriceMultiplier: number,
     private readonly txsPerRollup: number,
     private readonly callDataPerRollup: number,
+    private readonly gasPerRollup: number,
     private readonly numSignificantFigures = 0,
     private readonly log = createLogger('FeeCalculator'),
   ) {
     this.log('Creating...');
     const txTypes = Object.values(TxType).filter(v => !isNaN(Number(v)));
-    for (let i = 0; i < txTypes.length; i++) {
-      const callData = getTxCallData(i);
-      const adjBase = this.getAdjustedBaseVerificationGas(i);
-      const unadjBase = this.getUnadjustedBaseVerificationGas();
-      const gasOverhead = this.getGasOverheadForTxType(0, i);
-      const maxAdjTxs = this.getMaxAdjustedTxsPerRollup(i);
-      const numAdjTxs = this.getNumAdjustedTxsPerRollup(i);
-      this.log(
-        `  ${TxType[i]} call data: ${callData}, adj/base gas: ${adjBase}/${unadjBase}, ` +
-          `ETH tx gas: ${gasOverhead}, max/quoted txs per rollup: ${maxAdjTxs}/${numAdjTxs}`,
-      );
+    const firstTwoAssets = this.getAssets().slice(0, 2);
+    for (let assetId = 0; assetId < firstTwoAssets.length; assetId++) {
+      const asset = firstTwoAssets[assetId];
+      for (let i = 0; i < txTypes.length; i++) {
+        const callData = getTxCallData(i);
+        const adjBase = this.getAdjustedBaseVerificationGas(assetId, i);
+        const unadjBase = this.getUnadjustedBaseVerificationGas();
+        const gasOverhead = this.getGasOverheadForTxType(assetId, i);
+        const maxAdjTxs = this.getMaxAdjustedTxsPerRollup(assetId, i);
+        const numAdjTxs = this.getNumAdjustedTxsPerRollup(assetId, i);
+        this.log(
+          `  ${TxType[i]} for ${
+            asset.symbol ?? 'N/A'
+          } call data: ${callData}, adj/base gas: ${adjBase}/${unadjBase}, ` +
+            `tx gas: ${gasOverhead}, max/quoted txs per rollup: ${maxAdjTxs}/${numAdjTxs}`,
+        );
+      }
+      this.log(`  -----------------------------------------------------------------------------`);
     }
-  }
-
-  public getMinTxFee(txAssetId: number, txType: TxType, feeAssetId: number) {
-    return this.getFeeConstant(txAssetId, txType, feeAssetId, true) + this.getBaseFee(feeAssetId, txType, true);
   }
 
   public getTxFees(txAssetId: number, feeAssetId: number) {
     return allTxTypes.map(txType => [
       {
         assetId: feeAssetId,
-        value: this.getBaseFee(feeAssetId, txType) + this.getFeeConstant(txAssetId, txType, feeAssetId),
+        value: this.getBaseFee(txAssetId, feeAssetId, txType) + this.getFeeConstant(txAssetId, feeAssetId, txType),
       },
       {
         assetId: feeAssetId,
         value:
           this.getEmptySlotFee(feeAssetId) * BigInt(this.txsPerRollup) +
-          this.getFeeConstant(txAssetId, txType, feeAssetId),
+          this.getFeeConstant(txAssetId, feeAssetId, txType),
       },
     ]);
   }
@@ -75,17 +79,17 @@ export class FeeCalculator {
     return assetId < assets.length;
   }
 
-  public getTxFeeFromGas(gas: number, assetId: number) {
-    return this.toAssetPrice(assetId, gas, false);
+  public getTxFeeFromGas(feeAssetId: number, gas: number) {
+    return this.toAssetPrice(feeAssetId, gas, false);
   }
 
-  public getGasPaidForByFee(assetId: number, fee: bigint) {
-    const assetCostInWei = this.priceTracker.getAssetPrice(assetId);
+  public getGasPaidForByFee(feeAssetId: number, fee: bigint) {
+    const assetCostInWei = this.priceTracker.getAssetPrice(feeAssetId);
     // Our feeGasPriceMultiplier can be accurate to 8 decimal places (e.g. 0.00000001).
     const multiplierPrecision = 10 ** 8;
     const feeGasPriceMultiplier = BigInt(this.feeGasPriceMultiplier * multiplierPrecision);
     const gasPriceInWei = (this.priceTracker.getMinGasPrice() * feeGasPriceMultiplier) / BigInt(multiplierPrecision);
-    const { decimals } = this.getAsset(assetId);
+    const { decimals } = this.getAsset(feeAssetId);
     const scaleFactor = 10n ** BigInt(decimals);
     // the units here are inconsistent, fee is in base units, asset cost in wei is not
     // the result is a number that is 10n ** BigInt(decimals) too large.
@@ -100,8 +104,8 @@ export class FeeCalculator {
   // plus the tx specific adjustment required to account for the potentially reduced number of txs of the given type
   // than can fit into the rollup
   // hence 'adjusted' base gas
-  public getAdjustedBaseVerificationGas(txType: TxType) {
-    return this.getUnadjustedBaseVerificationGas() + this.getTxGasAdjustmentValue(txType);
+  public getAdjustedBaseVerificationGas(txAssetId: number, txType: TxType) {
+    return this.getUnadjustedBaseVerificationGas() + this.getTxGasAdjustmentValue(txAssetId, txType);
   }
 
   // the purpose of this function is to return the gas cost of the verifier
@@ -114,9 +118,9 @@ export class FeeCalculator {
   // this is the calculated adjustment value for a given tx type
   // this is used to adjust the amount of base gas a tx consumes
   // based on the fact that potentially fewer of them can fit into a rollup
-  public getTxGasAdjustmentValue(txType: TxType) {
+  public getTxGasAdjustmentValue(txAssetId: number, txType: TxType) {
     const unadjusted = this.verificationGas / this.txsPerRollup;
-    const numAdjustedTxs = this.getNumAdjustedTxsPerRollup(txType);
+    const numAdjustedTxs = this.getNumAdjustedTxsPerRollup(txAssetId, txType);
     const adjusted = this.verificationGas / numAdjustedTxs;
     const difference = adjusted - unadjusted;
     return Math.ceil(difference);
@@ -125,49 +129,61 @@ export class FeeCalculator {
   // this calculates the number of txs of the given type that can fit into a rollup
   // it is essentially the minimum of the following
   // 1. the maximum number of slots in the rollup
-  // 2. the maximum number of txs of that type that can fit into a single ethereum tx calldata
-  // note the -1 when calculating the number of txs.
-  // this is because we will inevitably need to publish rollups that are not quite 'full' of calldata
-  // as soon as there is not enough calldata available for all of our tx types then we need to publish
+  // 2. the maximum number of txs of that type that can fit into the available ethereum tx calldata
+  // 3. the maximum number of txs of that type that can fit into the available rollup gas limit
+  // note the subtraction of max calldata and max gas when working out items 2 and 3.
+  // this is because we will inevitably need to publish rollups that are not quite 'full' of calldata/gas
+  // as soon as there is not enough calldata/gas available for all of our tx types then we need to publish
   // otherwise we could encounter a situation where a user pays for an instant tx that won't fit
-  // subtracting 1 from the ideal total number of txs should ensure that where we need to publish a rollup
-  // limited by calldata, it will always be profitable
-  private getNumAdjustedTxsPerRollup(txType: TxType) {
+  // by removing this worst case value from the amount available to txs we should prevent
+  // this situation occuring
+  private getNumAdjustedTxsPerRollup(txAssetId: number, txType: TxType) {
     const callDataForTx = getTxCallData(txType);
-    const numTxsAccountingForCallData = Math.floor(this.callDataPerRollup / callDataForTx) - 1;
-    return Math.min(numTxsAccountingForCallData, this.txsPerRollup);
+    const maxCallDataForAnyTx = this.getMaxTxCallData();
+    const callDataAvailableForTxs = this.callDataPerRollup - maxCallDataForAnyTx;
+    const numTxsAccountingForCallData = Math.floor(callDataAvailableForTxs / callDataForTx);
+    const gasForTx = this.getGasOverheadForTxType(txAssetId, txType);
+    const maxGasForAnyTx = this.getMaxUnadjustedGas();
+    const gasAvailableForTxs = this.gasPerRollup - (this.verificationGas + maxGasForAnyTx);
+    const numTxsAccountingForGas = Math.floor(gasAvailableForTxs / gasForTx);
+    return Math.min(numTxsAccountingForCallData, numTxsAccountingForGas, this.txsPerRollup);
   }
 
-  // this calculates the same as above but does not reduce the number by 1 for tx types that have call data restrictions
+  // this calculates the same as above but does not reduce the available gas/calldata
   // this should not be used to compute the fee quoted to users as it could result in unprofitable rollups.
   // effectively this is the max number of txs that will ideally fit into a rollup
-  private getMaxAdjustedTxsPerRollup(txType: TxType) {
+  private getMaxAdjustedTxsPerRollup(txAssetId: number, txType: TxType) {
     const callDataForTx = getTxCallData(txType);
     const numTxsAccountingForCallData = Math.floor(this.callDataPerRollup / callDataForTx);
-    return Math.min(numTxsAccountingForCallData, this.txsPerRollup);
+    const gasForTx = this.getGasOverheadForTxType(txAssetId, txType);
+    const gasAvailableForTxs = this.gasPerRollup - this.verificationGas;
+    const numTxsAccountingForGas = Math.floor(gasAvailableForTxs / gasForTx);
+    return Math.min(numTxsAccountingForCallData, numTxsAccountingForGas, this.txsPerRollup);
   }
 
   // the full gas cost of the tx, including the base gas adjustment
-  public getAdjustedTxGas(assetId: number, txType: TxType) {
-    return this.getAdjustedBaseVerificationGas(txType) + this.getGasOverheadForTxType(assetId, txType);
+  public getAdjustedTxGas(txAssetId: number, txType: TxType) {
+    return this.getAdjustedBaseVerificationGas(txAssetId, txType) + this.getGasOverheadForTxType(txAssetId, txType);
   }
 
   // the full gas cost of the tx, excluding the base gas adjustment
-  public getUnadjustedTxGas(assetId: number, txType: TxType) {
-    return this.getUnadjustedBaseVerificationGas() + this.getGasOverheadForTxType(assetId, txType);
+  public getUnadjustedTxGas(txAssetId: number, txType: TxType) {
+    return this.getUnadjustedBaseVerificationGas() + this.getGasOverheadForTxType(txAssetId, txType);
   }
 
-  private getBaseFee(feeAssetId: number, txType: TxType, minPrice = false) {
-    return this.toAssetPrice(feeAssetId, this.getAdjustedBaseVerificationGas(txType), minPrice);
+  private getBaseFee(txAssetId: number, feeAssetId: number, txType: TxType, minPrice = false) {
+    return this.toAssetPrice(feeAssetId, this.getAdjustedBaseVerificationGas(txAssetId, txType), minPrice);
   }
 
   private getEmptySlotFee(feeAssetId: number, minPrice = false) {
     return this.toAssetPrice(feeAssetId, this.getUnadjustedBaseVerificationGas(), minPrice);
   }
 
-  private toAssetPrice(assetId: number, gas: number, minPrice: boolean) {
-    const price = minPrice ? this.priceTracker.getMinAssetPrice(assetId) : this.priceTracker.getAssetPrice(assetId);
-    const { decimals } = this.getAsset(assetId);
+  private toAssetPrice(feeAssetId: number, gas: number, minPrice: boolean) {
+    const price = minPrice
+      ? this.priceTracker.getMinAssetPrice(feeAssetId)
+      : this.priceTracker.getAssetPrice(feeAssetId);
+    const { decimals } = this.getAsset(feeAssetId);
     if (!price) {
       return 0n;
     }
@@ -175,7 +191,7 @@ export class FeeCalculator {
     return roundUp(costOfGas, this.numSignificantFigures);
   }
 
-  private getFeeConstant(txAssetId: number, txType: TxType, feeAssetId: number, minPrice = false) {
+  private getFeeConstant(txAssetId: number, feeAssetId: number, txType: TxType, minPrice = false) {
     return this.toAssetPrice(feeAssetId, this.getGasOverheadForTxType(txAssetId, txType), minPrice);
   }
 
@@ -188,10 +204,10 @@ export class FeeCalculator {
     return expectedValue > maxValue ? maxValue : expectedValue;
   }
 
-  private getGasOverheadForTxType(assetId: number, txType: TxType) {
+  private getGasOverheadForTxType(txAssetId: number, txType: TxType) {
     // if the asset is not valid (i.e. it's virtual then quote the fee as if it was ETH),
     // this type of tx is not valid and would be rejected if it were attempted
-    const gasAssetId = this.isValidAsset(assetId) ? assetId : 0;
+    const gasAssetId = this.isValidAsset(txAssetId) ? txAssetId : 0;
     const asset = this.getAsset(gasAssetId);
     const assetGasLimit = { assetId: gasAssetId, gasLimit: asset.gasLimit };
     return getGasOverhead(txType, assetGasLimit);
@@ -207,6 +223,6 @@ export class FeeCalculator {
   public getMaxUnadjustedGas() {
     return this.getAssets()
       .flatMap((_, assetId) => allTxTypes.map(txType => ({ assetId, txType })))
-      .reduce((prev, current) => Math.max(prev, this.getAdjustedTxGas(current.assetId, current.txType)), 0);
+      .reduce((prev, current) => Math.max(prev, this.getUnadjustedTxGas(current.assetId, current.txType)), 0);
   }
 }

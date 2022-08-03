@@ -1,5 +1,5 @@
 import { Blockchain, TxType } from '@aztec/barretenberg/blockchain';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { BridgeResolver } from '../bridge';
 import { FeeCalculator } from './fee_calculator';
 import { getTxCallData } from './get_gas_overhead';
@@ -19,6 +19,7 @@ export class TxFeeResolver {
     private readonly txsPerRollup: number,
     private readonly feePayingAssetIds: number[],
     callDataPerRollup: number,
+    gasLimitPerRollup: number,
     numSignificantFigures = 2,
     refreshInterval = 5 * 60 * 1000, // 5 mins
     minFeeDuration = refreshInterval * 2, // 10 mins
@@ -32,6 +33,7 @@ export class TxFeeResolver {
       feeGasPriceMultiplier,
       txsPerRollup,
       callDataPerRollup,
+      gasLimitPerRollup,
       numSignificantFigures,
     );
   }
@@ -48,16 +50,12 @@ export class TxFeeResolver {
     return this.feePayingAssetIds.some(id => id === assetId);
   }
 
-  getMinTxFee(txAssetId: number, txType: TxType, feeAssetId: number) {
-    return this.feeCalculator.getMinTxFee(txAssetId, txType, feeAssetId);
-  }
-
   getGasPaidForByFee(assetId: number, fee: bigint) {
     return this.feeCalculator.getGasPaidForByFee(assetId, fee);
   }
 
-  getAdjustedBaseVerificationGas(txType: TxType) {
-    return this.feeCalculator.getAdjustedBaseVerificationGas(txType);
+  getAdjustedBaseVerificationGas(txAssetId: number, txType: TxType) {
+    return this.feeCalculator.getAdjustedBaseVerificationGas(txAssetId, txType);
   }
 
   getUnadjustedBaseVerificationGas() {
@@ -72,29 +70,29 @@ export class TxFeeResolver {
     return this.feeCalculator.getUnadjustedTxGas(txAssetId, txType);
   }
 
-  getAdjustedBridgeTxGas(txAssetId: number, bridgeId: bigint) {
-    return this.getAdjustedTxGas(txAssetId, TxType.DEFI_DEPOSIT) + this.getSingleBridgeTxGas(bridgeId);
+  getAdjustedBridgeTxGas(txAssetId: number, bridgeCallData: bigint) {
+    return this.getAdjustedTxGas(txAssetId, TxType.DEFI_DEPOSIT) + this.getSingleBridgeTxGas(bridgeCallData);
   }
 
-  getUnadjustedBridgeTxGas(txAssetId: number, bridgeId: bigint) {
-    return this.getUnadjustedTxGas(txAssetId, TxType.DEFI_DEPOSIT) + this.getSingleBridgeTxGas(bridgeId);
+  getUnadjustedBridgeTxGas(txAssetId: number, bridgeCallData: bigint) {
+    return this.getUnadjustedTxGas(txAssetId, TxType.DEFI_DEPOSIT) + this.getSingleBridgeTxGas(bridgeCallData);
   }
 
-  getSingleBridgeTxGas(bridgeId: bigint) {
-    return this.bridgeResolver.getMinBridgeTxGas(bridgeId);
+  getSingleBridgeTxGas(bridgeCallData: bigint) {
+    return this.bridgeResolver.getMinBridgeTxGas(bridgeCallData);
   }
 
-  getFullBridgeGas(bridgeId: bigint) {
-    return this.bridgeResolver.getFullBridgeGas(bridgeId);
+  getFullBridgeGas(bridgeCallData: bigint) {
+    return this.bridgeResolver.getFullBridgeGas(bridgeCallData);
   }
 
-  getFullBridgeGasFromContract(bridgeId: bigint) {
-    return this.bridgeResolver.getFullBridgeGasFromContract(bridgeId);
+  getFullBridgeGasFromContract(bridgeCallData: bigint) {
+    return this.bridgeResolver.getFullBridgeGasFromContract(bridgeCallData);
   }
 
-  getTxFees(assetId: number) {
-    const feePayingAsset = this.isFeePayingAsset(assetId) ? assetId : this.defaultFeePayingAsset;
-    return this.feeCalculator.getTxFees(assetId, feePayingAsset);
+  getTxFees(txAssetId: number) {
+    const feePayingAsset = this.isFeePayingAsset(txAssetId) ? txAssetId : this.defaultFeePayingAsset;
+    return this.feeCalculator.getTxFees(txAssetId, feePayingAsset);
   }
 
   getTxCallData(txType: TxType) {
@@ -109,11 +107,11 @@ export class TxFeeResolver {
     return this.feeCalculator.getMaxUnadjustedGas();
   }
 
-  getDefiFees(bridgeId: bigint) {
-    const { inputAssetIdA: inputAssetId } = BridgeId.fromBigInt(bridgeId);
+  getDefiFees(bridgeCallData: bigint) {
+    const { inputAssetIdA: inputAssetId } = BridgeCallData.fromBigInt(bridgeCallData);
     const feeAssetId = this.isFeePayingAsset(inputAssetId) ? inputAssetId : this.defaultFeePayingAsset;
-    const singleBridgeTxGas = this.getSingleBridgeTxGas(bridgeId);
-    const fullBridgeTxGas = this.getFullBridgeGas(bridgeId);
+    const singleBridgeTxGas = this.getSingleBridgeTxGas(bridgeCallData);
+    const fullBridgeTxGas = this.getFullBridgeGas(bridgeCallData);
     const emptySlotGas = this.getUnadjustedBaseVerificationGas();
 
     // both of these include the base tx gas
@@ -124,10 +122,14 @@ export class TxFeeResolver {
     const immediateTxGas = defiDepositGas + defiClaimGas + fullBridgeTxGas + emptySlotGas * (this.txsPerRollup - 1);
 
     const values = [
-      { assetId: feeAssetId, value: this.feeCalculator.getTxFeeFromGas(slowTxGas, feeAssetId) },
-      { assetId: feeAssetId, value: this.feeCalculator.getTxFeeFromGas(fastTxGas, feeAssetId) },
-      { assetId: feeAssetId, value: this.feeCalculator.getTxFeeFromGas(immediateTxGas, feeAssetId) },
+      { assetId: feeAssetId, value: this.feeCalculator.getTxFeeFromGas(feeAssetId, slowTxGas) },
+      { assetId: feeAssetId, value: this.feeCalculator.getTxFeeFromGas(feeAssetId, fastTxGas) },
+      { assetId: feeAssetId, value: this.feeCalculator.getTxFeeFromGas(feeAssetId, immediateTxGas) },
     ];
     return values;
+  }
+
+  getTxFeeFromGas(feeAssetId: number, gas: number) {
+    return this.feeCalculator.getTxFeeFromGas(feeAssetId, gas);
   }
 }

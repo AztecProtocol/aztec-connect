@@ -2,7 +2,7 @@ import { AliasHash } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { Blockchain } from '@aztec/barretenberg/blockchain';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { AccountVerifier, JoinSplitVerifier, ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
 import { randomBytes } from '@aztec/barretenberg/crypto';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
@@ -47,7 +47,7 @@ describe('tx receiver', () => {
     publicAssetId = 0,
     txFee = 1n,
     txFeeAssetId = 0,
-    bridgeId = BridgeId.ZERO,
+    bridgeCallData = BridgeCallData.ZERO,
     defiDepositValue = 0n,
     backwardLink = Buffer.alloc(32),
     allowChain = 0,
@@ -66,7 +66,7 @@ describe('tx receiver', () => {
         randomBytes(32), // noteTreeRoot
         toBufferBE(txFee, 32),
         numToUInt32BE(txFeeAssetId, 32),
-        bridgeId.toBuffer(),
+        bridgeCallData.toBuffer(),
         toBufferBE(defiDepositValue, 32),
         randomBytes(32), // defiRoot
         backwardLink,
@@ -77,21 +77,31 @@ describe('tx receiver', () => {
     depositSignature: proofId === ProofId.DEPOSIT ? randomBytes(32) : undefined,
   });
 
-  const mockAccountTx = () => {
+  const mockAccountTx = (create = true, migrate = false) => {
     const accountPublicKey = GrumpkinAddress.random();
     const aliasHash = AliasHash.random();
     const spendingPublicKey1 = randomBytes(32);
     const spendingPublicKey2 = randomBytes(32);
     const offchainTxData = new OffchainAccountData(accountPublicKey, aliasHash, spendingPublicKey1, spendingPublicKey2);
-    return mockTx({ proofId: ProofId.ACCOUNT, offchainTxData: offchainTxData.toBuffer() });
+    return mockTx({
+      proofId: ProofId.ACCOUNT,
+      offchainTxData: offchainTxData.toBuffer(),
+      nullifier1: create ? randomBytes(32) : Buffer.alloc(32),
+      nullifier2: create || migrate ? randomBytes(32) : Buffer.alloc(32),
+    });
   };
 
-  const mockDefiDepositTx = ({ bridgeId = new BridgeId(0, 0, 1), defiDepositValue = 1n, txFee = 1n } = {}) => {
+  const mockDefiDepositTx = ({
+    bridgeCallData = new BridgeCallData(0, 0, 1),
+    defiDepositValue = 1n,
+    txFee = 1n,
+    allowChain = 0,
+  } = {}) => {
     const partialState = randomBytes(32);
     const partialStateSecretEphPubKey = GrumpkinAddress.random();
     const viewingKey = ViewingKey.random();
     const offchainTxData = new OffchainDefiDepositData(
-      bridgeId,
+      bridgeCallData,
       partialState,
       partialStateSecretEphPubKey,
       defiDepositValue,
@@ -101,9 +111,10 @@ describe('tx receiver', () => {
     return mockTx({
       proofId: ProofId.DEFI_DEPOSIT,
       offchainTxData: offchainTxData.toBuffer(),
-      bridgeId,
+      bridgeCallData,
       defiDepositValue,
       txFee,
+      allowChain,
     });
   };
 
@@ -120,11 +131,14 @@ describe('tx receiver', () => {
       getUnsettledTxs: jest.fn().mockResolvedValue([]),
       getDataRootsIndex: jest.fn().mockResolvedValue(0),
       addTxs: jest.fn(),
+      isAccountRegistered: jest.fn().mockResolvedValue(false),
+      isAliasRegistered: jest.fn().mockResolvedValue(false),
     } as any;
 
     blockchain = {
       getBlockchainStatus: jest.fn().mockReturnValue({ assets, allowThirdPartyContracts: false }),
       isContract: jest.fn().mockResolvedValue(false),
+      isEmpty: jest.fn().mockResolvedValue(false),
       getUserPendingDeposit: jest.fn().mockResolvedValue(10n),
       getUserProofApprovalStatus: jest.fn().mockResolvedValue(false),
       validateSignature: jest.fn().mockResolvedValue(true),
@@ -145,6 +159,7 @@ describe('tx receiver', () => {
       getAdjustedBridgeTxGas: jest.fn().mockReturnValue(0),
       getAdjustedTxGas: jest.fn().mockReturnValue(0),
       getGasPaidForByFee: jest.fn().mockReturnValue(0),
+      getTxFeeFromGas: jest.fn().mockReturnValue(0),
     } as any;
 
     const metrics = {
@@ -325,7 +340,7 @@ describe('tx receiver', () => {
       noteAlgo.accountNoteCommitment.mockReturnValueOnce(txs[0].proof.noteCommitment2);
       accountVerifier.verifyProof.mockResolvedValue(false);
 
-      await expect(() => txReceiver.receiveTxs(txs)).rejects.toThrow('Account proof verification failed.');
+      await expect(txReceiver.receiveTxs(txs)).rejects.toThrow('Account proof verification failed.');
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
     });
 
@@ -334,15 +349,57 @@ describe('tx receiver', () => {
       noteAlgo.accountNoteCommitment.mockReturnValueOnce(txs[0].proof.noteCommitment1);
       noteAlgo.accountNoteCommitment.mockReturnValueOnce(randomBytes(32));
 
-      await expect(() => txReceiver.receiveTxs(txs)).rejects.toThrow('Invalid offchain account data.');
+      await expect(txReceiver.receiveTxs(txs)).rejects.toThrow('Invalid offchain account data.');
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
 
       noteAlgo.accountNoteCommitment.mockReset();
 
       noteAlgo.accountNoteCommitment.mockReturnValue(randomBytes(32));
 
-      await expect(() => txReceiver.receiveTxs(txs)).rejects.toThrow('Invalid offchain account data.');
+      await expect(txReceiver.receiveTxs(txs)).rejects.toThrow('Invalid offchain account data.');
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
+    });
+
+    it('rejects an account tx that attempts to re-register an account public key', async () => {
+      const accountTx = mockAccountTx();
+      noteAlgo.accountNoteCommitment.mockReturnValueOnce(accountTx.proof.noteCommitment1);
+      noteAlgo.accountNoteCommitment.mockReturnValueOnce(accountTx.proof.noteCommitment2);
+      rollupDb.isAccountRegistered.mockResolvedValueOnce(true);
+      await expect(txReceiver.receiveTxs([accountTx])).rejects.toThrow('Account key already registered');
+      expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
+    });
+
+    it('accepts an account tx that attempts to neither create or migrate an account', async () => {
+      const accountTx = mockAccountTx(false, false);
+      noteAlgo.accountNoteCommitment.mockReturnValueOnce(accountTx.proof.noteCommitment1);
+      noteAlgo.accountNoteCommitment.mockReturnValueOnce(accountTx.proof.noteCommitment2);
+      // ensure the call to isAccountRegistered returns true
+      rollupDb.isAccountRegistered.mockResolvedValueOnce(true);
+      await expect(txReceiver.receiveTxs([accountTx])).resolves.toEqual([accountTx.proof.txId]);
+      expect(rollupDb.addTxs).toHaveBeenCalledTimes(1);
+      expect(rollupDb.addTxs).toHaveBeenCalledWith([expect.objectContaining({ id: accountTx.proof.txId })]);
+    });
+
+    it('rejects an account tx that attempts to create a previously created alias', async () => {
+      const accountTx = mockAccountTx();
+      noteAlgo.accountNoteCommitment.mockReturnValueOnce(accountTx.proof.noteCommitment1);
+      noteAlgo.accountNoteCommitment.mockReturnValueOnce(accountTx.proof.noteCommitment2);
+      // ensure the call to isAliasRegistered returns true
+      rollupDb.isAliasRegistered.mockResolvedValueOnce(true);
+      await expect(txReceiver.receiveTxs([accountTx])).rejects.toThrow('Alias already registered');
+      expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
+    });
+
+    it('accepts an account tx that attempts to migrate a previously created alias', async () => {
+      // create an account migration tx
+      const accountTx = mockAccountTx(false);
+      noteAlgo.accountNoteCommitment.mockReturnValueOnce(accountTx.proof.noteCommitment1);
+      noteAlgo.accountNoteCommitment.mockReturnValueOnce(accountTx.proof.noteCommitment2);
+      // ensure the call to isAliasRegistered returns true
+      rollupDb.isAliasRegistered.mockResolvedValueOnce(true);
+      await expect(txReceiver.receiveTxs([accountTx])).resolves.toEqual([accountTx.proof.txId]);
+      expect(rollupDb.addTxs).toHaveBeenCalledTimes(1);
+      expect(rollupDb.addTxs).toHaveBeenCalledWith([expect.objectContaining({ id: accountTx.proof.txId })]);
     });
   });
 
@@ -363,19 +420,40 @@ describe('tx receiver', () => {
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
     });
 
-    it('reject a defi deposit tx with identical input assets', async () => {
-      const bridgeId = new BridgeId(0, 1, 2, 1);
-      const txs = [mockDefiDepositTx({ bridgeId })];
+    it('reject a defi deposit tx with allow chain note 1', async () => {
+      const txs = [mockDefiDepositTx({ allowChain: 1 })];
 
-      await expect(() => txReceiver.receiveTxs(txs)).rejects.toThrow('Invalid bridge id');
+      await expect(() => txReceiver.receiveTxs(txs)).rejects.toThrow('Cannot chain from a defi deposit tx.');
+      expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
+    });
+
+    it('reject a defi deposit tx with allow chain note 2', async () => {
+      const txs = [mockDefiDepositTx({ allowChain: 2 })];
+
+      await expect(() => txReceiver.receiveTxs(txs)).rejects.toThrow('Cannot chain from a defi deposit tx.');
+      expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
+    });
+
+    it('reject a defi deposit tx with allow chain both notes', async () => {
+      const txs = [mockDefiDepositTx({ allowChain: 3 })];
+
+      await expect(() => txReceiver.receiveTxs(txs)).rejects.toThrow('Cannot chain from a defi deposit tx.');
+      expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
+    });
+
+    it('reject a defi deposit tx with identical input assets', async () => {
+      const bridgeCallData = new BridgeCallData(0, 1, 2, 1);
+      const txs = [mockDefiDepositTx({ bridgeCallData })];
+
+      await expect(() => txReceiver.receiveTxs(txs)).rejects.toThrow('Invalid bridge call data');
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
     });
 
     it('reject a defi deposit tx with identical output assets', async () => {
-      const bridgeId = new BridgeId(0, 1, 2, 3, 2);
-      const txs = [mockDefiDepositTx({ bridgeId })];
+      const bridgeCallData = new BridgeCallData(0, 1, 2, 3, 2);
+      const txs = [mockDefiDepositTx({ bridgeCallData })];
 
-      await expect(() => txReceiver.receiveTxs(txs)).rejects.toThrow('Invalid bridge id');
+      await expect(() => txReceiver.receiveTxs(txs)).rejects.toThrow('Invalid bridge call data');
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
     });
 
@@ -401,11 +479,11 @@ describe('tx receiver', () => {
       const partialState = randomBytes(32);
       const partialStateSecretEphPubKey = GrumpkinAddress.random();
       const viewingKey = ViewingKey.random();
-      const bridgeId = new BridgeId(0, 1, 2);
+      const bridgeCallData = new BridgeCallData(0, 1, 2);
       const defiDepositValue = 1n;
       const txFee = 2n;
       const offchainTxData = new OffchainDefiDepositData(
-        bridgeId,
+        bridgeCallData,
         partialState,
         partialStateSecretEphPubKey,
         defiDepositValue,
@@ -417,7 +495,7 @@ describe('tx receiver', () => {
         const tx = mockTx({
           proofId: ProofId.DEFI_DEPOSIT,
           offchainTxData: offchainTxData.toBuffer(),
-          bridgeId: new BridgeId(0, 1, 0), // <--
+          bridgeCallData: new BridgeCallData(0, 1, 0), // <--
           defiDepositValue,
           txFee,
         });
@@ -428,7 +506,7 @@ describe('tx receiver', () => {
         const tx = mockTx({
           proofId: ProofId.DEFI_DEPOSIT,
           offchainTxData: offchainTxData.toBuffer(),
-          bridgeId,
+          bridgeCallData,
           defiDepositValue: defiDepositValue + 1n, // <--
           txFee,
         });
@@ -439,7 +517,7 @@ describe('tx receiver', () => {
         const tx = mockTx({
           proofId: ProofId.DEFI_DEPOSIT,
           offchainTxData: offchainTxData.toBuffer(),
-          bridgeId,
+          bridgeCallData,
           defiDepositValue,
           txFee: txFee + 1n, // <--
         });
@@ -461,6 +539,34 @@ describe('tx receiver', () => {
         expect.objectContaining({ id: tx0.proof.txId }),
         expect.objectContaining({ id: tx1.proof.txId }),
       ]);
+    });
+
+    it('chained txs never have the same date', async () => {
+      // setup a mock new Date() so that the same date is always returned
+      // but if a specific date is constructed via an argument then return this
+      const mockDate = new Date(1466424490000);
+      const realDate = global.Date;
+      const spy = jest.spyOn(global, 'Date').mockImplementation((...args): any => {
+        // if an argument is given construct a date as normal, otherwise return our mock date
+        if (args.length) {
+          return new realDate(...args);
+        }
+        return mockDate;
+      });
+
+      const tx0 = mockTx({ allowChain: 1 });
+      const tx1 = mockTx({ backwardLink: tx0.proof.noteCommitment1, allowChain: 2 });
+      const tx2 = mockTx({ backwardLink: tx1.proof.noteCommitment2 });
+
+      // the mock date constructor above will give all txs the same time but this should be correct for
+      await txReceiver.receiveTxs([tx0, tx1, tx2]);
+      expect(rollupDb.addTxs).toHaveBeenCalledTimes(1);
+      const txDaos = rollupDb.addTxs.mock.calls[0][0];
+      expect(txDaos[0].created.getTime()).toBe(1466424490000);
+      expect(txDaos[1].created.getTime()).toBe(1466424490001);
+      expect(txDaos[2].created.getTime()).toBe(1466424490002);
+
+      spy.mockRestore();
     });
 
     it('accept a tx chained from an unsettled tx', async () => {

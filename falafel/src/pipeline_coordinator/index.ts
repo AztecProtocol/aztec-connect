@@ -14,6 +14,7 @@ import { TxDao } from '../entity';
 import { createDebugLogger, createLogger } from '@aztec/barretenberg/log';
 import { InterruptError } from '@aztec/barretenberg/errors';
 import { RollupProfile, emptyProfile } from './rollup_profiler';
+import { Metrics } from '../metrics';
 
 export class PipelineCoordinator {
   private flush = false;
@@ -41,6 +42,7 @@ export class PipelineCoordinator {
     private bridgeResolver: BridgeResolver,
     private maxCallDataPerRollup: number,
     private maxGasPerRollup: number,
+    private metrics: Metrics,
   ) {
     this.publishTimeManager = new PublishTimeManager(this.publishInterval, this.bridgeResolver);
     this.nextRollupProfile = emptyProfile(this.numInnerRollupTxs * this.numOuterRollupProofs);
@@ -92,6 +94,7 @@ export class PipelineCoordinator {
     };
 
     return (this.runningPromise = fn().catch(err => {
+      this.running = false;
       if (err instanceof InterruptError) {
         this.log('Pipeline interrupted.');
       } else {
@@ -102,17 +105,30 @@ export class PipelineCoordinator {
 
   /**
    * Interrupts any current rollup generation, stops monitoring for txs, and blocks until fully stopped.
+   * If the rollup can't be interrupted and/or it goes through to successful publish then behaviour
+   * depends on the should throw flag. If shouldThrowIfFailToStop == true the caller will be notified immediately that
+   * the attempt to interrupt was not successful. If false, then we will try and interrupt, wait until the pipeline has
+   * completed and return without throwing
    */
-  public async stop() {
+  public async stop(shouldThrowIfFailToStop: boolean) {
     if (!this.running) {
       await this.runningPromise;
+      // if we have been told to throw and the rollup is already published then we should throw
+      // as it has not been possible to interrupt successfully
+      if (shouldThrowIfFailToStop && this.nextRollupProfile.published) {
+        throw new Error(`Pipeline already finished`);
+      }
       return;
     }
 
-    this.running = false;
     this.claimProofCreator.interrupt();
-    await this.rollupCoordinator?.interrupt();
+    await this.rollupCoordinator?.interrupt(shouldThrowIfFailToStop);
     await this.runningPromise;
+    // if we have been told to throw and the rollup is already published then we should throw
+    // as it has not been possible to interrupt successfully
+    if (shouldThrowIfFailToStop && this.nextRollupProfile.published) {
+      throw new Error(`Pipeline already finished`);
+    }
   }
 
   /**
@@ -168,6 +184,7 @@ export class PipelineCoordinator {
       defiInteractionNotes,
       this.maxGasPerRollup,
       this.maxCallDataPerRollup,
+      this.metrics,
     );
   }
 

@@ -77,7 +77,7 @@ const toCoreDefiTx = (tx: DefiTxDao) =>
   new CoreDefiTx(
     tx.txId,
     tx.userId,
-    tx.bridgeId,
+    tx.bridgeCallData,
     tx.depositValue,
     tx.txFee,
     tx.txRefNo,
@@ -124,8 +124,6 @@ export class SQLDatabase implements Database {
     this.spendingKeyRep = this.connection.getRepository(SpendingKeyDao);
     this.mutex = this.connection.getRepository(MutexDao);
   }
-
-  async init() {}
 
   async close() {
     await this.connection.close();

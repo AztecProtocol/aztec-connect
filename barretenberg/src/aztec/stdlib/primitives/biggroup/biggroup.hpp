@@ -157,6 +157,7 @@ template <class Composer, class Fq, class Fr, class NativeGroup> class element {
     // compute a multi-scalar-multiplication by creating a precomputed lookup table for each point,
     // splitting each scalar multiplier up into a 4-bit sliding window wNAF.
     // more efficient than batch_mul if num_points < 4
+    // only works with Plookup!
     // template <size_t max_num_bits = 0>
     // static element wnaf_batch_mul(const std::vector<element>& points, const std::vector<Fr>& scalars);
     static element batch_mul(const std::vector<element>& points,

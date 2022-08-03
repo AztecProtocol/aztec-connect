@@ -22,7 +22,7 @@ pragma solidity >=0.8.4;
    | 0x100 - 0x120   | 32               | newDataRootsRoot                 | Root of the tree of data tree roots after rollup block's state updates |
    | 0x120 - 0x140   | 32               | oldDefiRoot                      | Root of the defi tree prior to rollup block's state updates |
    | 0x140 - 0x160   | 32               | newDefiRoot                      | Root of the defi tree after rollup block's state updates |
-   | 0x160 - 0x560   | 1024             | bridgeIds[NUMBER_OF_BRIDGE_CALLS]   | Size-32 array of bridgeIds for bridges being called in this block. If bridgeId == 0, no bridge is called |
+   | 0x160 - 0x560   | 1024             | encodedBridgeCallDatas[NUMBER_OF_BRIDGE_CALLS]   | Size-32 array of encodedBridgeCallDatas for bridges being called in this block. If encodedBridgeCallData == 0, no bridge is called |
    | 0x560 - 0x960   | 1024             | depositSums[NUMBER_OF_BRIDGE_CALLS] | Size-32 array of deposit values being sent for bridges being called in this block |
    | 0x960 - 0xb60   | 512              | assetIds[NUMBER_OF_ASSETS]         | Size-16 array of the assetIds for assets being deposited/withdrawn/used to pay fees in this block |
    | 0xb60 - 0xd60   | 512              | txFees[NUMBER_OF_ASSETS]           | Size-16 array of transaction fees paid to the rollup beneficiary, denominated in each assetId |
@@ -81,8 +81,8 @@ contract Decoder {
     // i.e. ROLLUP_HEADER_LENGTH - 24
     uint256 internal constant ENCODED_PROOF_DATA_LENGTH_OFFSET = 4520;
 
-    // offset we add to `proofData` to point to the bridgeIds
-    uint256 internal constant BRIDGE_IDS_OFFSET = 0x180;
+    // offset we add to `proofData` to point to the encodedBridgeCallDatas
+    uint256 internal constant BRIDGE_CALL_DATAS_OFFSET = 0x180;
 
     // offset we add to `proofData` to point to prevDefiInteractionhash
     uint256 internal constant PREVIOUS_DEFI_INTERACTION_HASH_OFFSET = 4480; // ROLLUP_HEADER_LENGTH - 0x40
@@ -693,7 +693,7 @@ contract Decoder {
         uint256 idx
     ) internal pure returns (uint256 assetId) {
         assembly {
-            assetId := mload(add(add(add(proofData, BRIDGE_IDS_OFFSET), mul(0x40, NUMBER_OF_BRIDGE_CALLS)), mul(0x20, idx)))
+            assetId := mload(add(add(add(proofData, BRIDGE_CALL_DATAS_OFFSET), mul(0x40, NUMBER_OF_BRIDGE_CALLS)), mul(0x20, idx)))
             // validate assetId is a uint32!
             if gt(assetId, 0xffffffff) {
                 revert(0, 0)

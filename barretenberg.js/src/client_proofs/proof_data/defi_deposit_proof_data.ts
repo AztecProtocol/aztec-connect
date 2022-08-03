@@ -1,5 +1,5 @@
 import { toBigIntBE } from '../../bigint_buffer';
-import { BridgeId } from '../../bridge_id';
+import { BridgeCallData } from '../../bridge_call_data';
 import { ProofData } from './proof_data';
 import { ProofId } from './proof_id';
 
@@ -22,8 +22,8 @@ export class DefiDepositProofData {
     return this.proofData.feeAssetId;
   }
 
-  get bridgeId() {
-    return BridgeId.fromBuffer(this.proofData.bridgeId);
+  get bridgeCallData() {
+    return BridgeCallData.fromBuffer(this.proofData.bridgeCallData);
   }
 
   get defiDepositValue() {

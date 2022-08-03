@@ -5,9 +5,11 @@ import { CoreSdkInterface } from '../core_sdk';
 import { ProofOutput } from '../proofs';
 import { Signer } from '../signer';
 import { createTxRefNo } from './create_tx_ref_no';
+import { FeePayer } from './fee_payer';
 import { filterUndefined } from './filter_undefined';
 
 export class AddSpendingKeyController {
+  private readonly requireFeePayingTx: boolean;
   private proofOutput!: ProofOutput;
   private feeProofOutput?: ProofOutput;
   private txIds: TxId[] = [];
@@ -15,23 +17,24 @@ export class AddSpendingKeyController {
   constructor(
     public readonly userId: GrumpkinAddress,
     private readonly userSigner: Signer,
-    public readonly alias: string,
     public readonly spendingPublicKey1: GrumpkinAddress,
     public readonly spendingPublicKey2: GrumpkinAddress | undefined,
     public readonly fee: AssetValue,
+    public readonly feePayer: FeePayer = { userId, signer: userSigner },
     private readonly core: CoreSdkInterface,
-  ) {}
+  ) {
+    this.requireFeePayingTx = !!fee.value;
+  }
 
   public async createProof() {
-    const requireFeePayingTx = this.fee.value;
-    const txRefNo = requireFeePayingTx ? createTxRefNo() : 0;
+    const txRefNo = this.requireFeePayingTx ? createTxRefNo() : 0;
     const spendingPublicKey = this.userSigner.getPublicKey();
 
     const proofInput = await this.core.createAccountProofInput(
       this.userId,
-      this.alias,
-      false,
       spendingPublicKey,
+      false,
+      undefined,
       this.spendingPublicKey1,
       this.spendingPublicKey2,
       undefined,
@@ -39,23 +42,25 @@ export class AddSpendingKeyController {
     proofInput.signature = await this.userSigner.signMessage(proofInput.signingData);
     this.proofOutput = await this.core.createAccountProof(proofInput, txRefNo);
 
-    if (requireFeePayingTx) {
-      const spendingKeyRequired = !spendingPublicKey.equals(this.userId);
+    if (this.requireFeePayingTx) {
+      const { userId, signer } = this.feePayer;
+      const spendingPublicKey = signer.getPublicKey();
+      const spendingKeyRequired = !spendingPublicKey.equals(userId);
       const feeProofInput = await this.core.createPaymentProofInput(
-        this.userId,
+        userId,
         this.fee.assetId,
         BigInt(0),
         BigInt(0),
         this.fee.value,
         BigInt(0),
         BigInt(0),
-        this.userId,
+        userId,
         spendingKeyRequired,
         undefined,
         spendingPublicKey,
         2,
       );
-      feeProofInput.signature = await this.userSigner.signMessage(feeProofInput.signingData);
+      feeProofInput.signature = await signer.signMessage(feeProofInput.signingData);
       this.feeProofOutput = await this.core.createPaymentProof(feeProofInput, txRefNo);
     }
   }

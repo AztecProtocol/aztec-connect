@@ -19,7 +19,7 @@ import {
 } from './fixtures';
 
 // some of the bulk saving operations take a few seconds to complete
-jest.setTimeout(10000);
+jest.setTimeout(30 * 1000);
 
 export const databaseTestSuite = (
   dbName: string,
@@ -31,7 +31,6 @@ export const databaseTestSuite = (
 
     beforeEach(async () => {
       db = await createDb();
-      await db.init();
     });
 
     afterEach(async () => {
@@ -1097,12 +1096,14 @@ export const databaseTestSuite = (
         const saved = await db.getGenesisData();
         expect(saved.equals(data)).toBe(true);
       });
+
       it('stores large genesis data', async () => {
         const data = randomBytes(21000000);
         await expect(db.setGenesisData(data)).resolves.not.toThrow();
         const saved = await db.getGenesisData();
         expect(saved.equals(data)).toBe(true);
       });
+
       it('returns empty buffer if no genesis data present', async () => {
         const saved = await db.getGenesisData();
         expect(saved).not.toBeUndefined();

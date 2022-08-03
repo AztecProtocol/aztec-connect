@@ -44,9 +44,9 @@ export class TxFeeAllocator {
       const tx = txs[i];
       const txAssetId = tx.proof.feeAssetId;
       if (txTypes[i] === TxType.DEFI_DEPOSIT) {
-        const { bridgeId } = new DefiDepositProofData(tx.proof);
+        const { bridgeCallData } = new DefiDepositProofData(tx.proof);
         // this call return BASE_TX_GAS + constants[DEFI_DEPOSIT] + BRIDGE_TX_GAS
-        gasRequired += this.txFeeResolver.getAdjustedBridgeTxGas(txAssetId, bridgeId.toBigInt());
+        gasRequired += this.txFeeResolver.getAdjustedBridgeTxGas(txAssetId, bridgeCallData.toBigInt());
         // this call return BASE_TX_GAS + constants[DEFI_CLAIM]
         gasRequired += this.txFeeResolver.getAdjustedTxGas(txAssetId, TxType.DEFI_CLAIM);
       } else {
@@ -81,9 +81,9 @@ export class TxFeeAllocator {
         const gasProvidedThisTx = this.txFeeResolver.getGasPaidForByFee(txFeeAssetId, fee);
         if (txTypes[i] === TxType.DEFI_DEPOSIT) {
           // discount the gas required for the Deposit base cost, call data and bridge tx. also discount the claim base cost and call data
-          const { bridgeId } = new DefiDepositProofData(tx.proof);
+          const { bridgeCallData } = new DefiDepositProofData(tx.proof);
           // this call return BASE_TX_GAS + constants[DEFI_DEPOSIT] + BRIDGE_TX_GAS
-          const gasCostDeposit = this.txFeeResolver.getAdjustedBridgeTxGas(txFeeAssetId, bridgeId.toBigInt());
+          const gasCostDeposit = this.txFeeResolver.getAdjustedBridgeTxGas(txFeeAssetId, bridgeCallData.toBigInt());
           // this call return BASE_TX_GAS + constants[DEFI_CLAIM]
           const gasCostClaim = this.txFeeResolver.getAdjustedTxGas(txFeeAssetId, TxType.DEFI_CLAIM);
           // this gives us the excess to apply first to the bridge and then to the verification
@@ -104,10 +104,10 @@ export class TxFeeAllocator {
       const txType = txTypes[i];
       if (txType === TxType.DEFI_DEPOSIT) {
         // discount the gas required for the Deposit base cost, call data and bridge tx. also discount the claim base cost and call data
-        const { bridgeId } = new DefiDepositProofData(tx.proof);
-        const { inputAssetIdA: inputAssetId } = bridgeId;
+        const { bridgeCallData } = new DefiDepositProofData(tx.proof);
+        const { inputAssetIdA: inputAssetId } = bridgeCallData;
         // this call return BASE_TX_GAS + constants[DEFI_DEPOSIT] + BRIDGE_TX_GAS
-        const gasCostDeposit = this.txFeeResolver.getAdjustedBridgeTxGas(inputAssetId, bridgeId.toBigInt());
+        const gasCostDeposit = this.txFeeResolver.getAdjustedBridgeTxGas(inputAssetId, bridgeCallData.toBigInt());
         // this call return BASE_TX_GAS + constants[DEFI_CLAIM]
         const gasCostClaim = this.txFeeResolver.getAdjustedTxGas(inputAssetId, TxType.DEFI_CLAIM);
         providedGas -= gasCostDeposit + gasCostClaim;

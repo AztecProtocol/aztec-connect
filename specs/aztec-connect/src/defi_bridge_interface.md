@@ -74,7 +74,7 @@ Initiate a DeFi interaction and inform the rollup contract of the proceeds. If t
 
 In the unfortunate event when both output values are zeros, this function should throw so that the rollup contract could refund `inputValue` back to the users.
 
-[^1]: Bridge id is a 250-bit concatenation of the following data (starting at the most significant bit position):
+[^1]: BridgeCallData is a 250-bit concatenation of the following data (starting at the most significant bit position):
 
 | bit position | bit length | definition        | description                                                                         |
 | ------------ | ---------- | ----------------- | ----------------------------------------------------------------------------------- |

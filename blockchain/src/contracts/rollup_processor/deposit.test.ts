@@ -1,6 +1,6 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { Asset, EthereumSignature } from '@aztec/barretenberg/blockchain';
-import { virtualAssetIdFlag } from '@aztec/barretenberg/bridge_id';
+import { virtualAssetIdFlag } from '@aztec/barretenberg/bridge_call_data';
 import { toBuffer } from 'ethereumjs-util';
 import { Signer } from 'ethers';
 import { keccak256, toUtf8Bytes } from 'ethers/lib/utils';

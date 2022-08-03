@@ -23,9 +23,9 @@ contract ReentryBridge is IDefiBridge {
     error INVALID_ASSET_ADDRESS();
     error INVALID_LINKED_TOKEN_ADDRESS();
     error INVALID_LINKED_BRIDGE_ADDRESS();
-    error INVALID_BRIDGE_ID();
+    error INVALID_BRIDGE_CALL_DATA();
     error INVALID_BRIDGE_ADDRESS();
-    error BRIDGE_ID_IS_INCONSISTENT();
+    error INCONSISTENT_BRIDGE_CALL_DATA();
     error BRIDGE_WITH_IDENTICAL_INPUT_ASSETS(uint256 inputAssetId);
     error BRIDGE_WITH_IDENTICAL_OUTPUT_ASSETS(uint256 outputAssetId);
     error ZERO_TOTAL_INPUT_VALUE();

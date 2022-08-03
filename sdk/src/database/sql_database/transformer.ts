@@ -1,6 +1,6 @@
 import { AliasHash } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { ValueTransformer } from 'typeorm';
 
@@ -29,7 +29,7 @@ export const ethAddressTransformer: ValueTransformer = {
   from: (dbValue?: Buffer) => (dbValue ? new EthAddress(dbValue) : undefined),
 };
 
-export const bridgeIdTransformer: ValueTransformer = {
-  to: (entityValue?: BridgeId) => entityValue?.toBuffer(),
-  from: (dbValue?: Buffer) => (dbValue ? BridgeId.fromBuffer(dbValue) : undefined),
+export const bridgeCallDataTransformer: ValueTransformer = {
+  to: (entityValue?: BridgeCallData) => entityValue?.toBuffer(),
+  from: (dbValue?: Buffer) => (dbValue ? BridgeCallData.fromBuffer(dbValue) : undefined),
 };

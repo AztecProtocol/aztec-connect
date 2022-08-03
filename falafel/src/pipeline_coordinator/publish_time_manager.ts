@@ -41,7 +41,7 @@ export class PublishTimeManager {
         timeout: bridgeTimeout,
         rollupNumber: rollupNum,
       };
-      bridgeTimeouts.set(bc.bridgeId, bt);
+      bridgeTimeouts.set(bc.bridgeCallData, bt);
     }
     return bridgeTimeouts;
   }

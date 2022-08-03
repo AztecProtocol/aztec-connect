@@ -1,5 +1,5 @@
 import { EthAddress } from '@aztec/barretenberg/address';
-import { BridgeId, virtualAssetIdFlag, virtualAssetIdPlaceholder } from '@aztec/barretenberg/bridge_id';
+import { BridgeCallData, virtualAssetIdFlag, virtualAssetIdPlaceholder } from '@aztec/barretenberg/bridge_call_data';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { createTxRefNo } from '../controllers/create_tx_ref_no';
@@ -73,16 +73,6 @@ describe('groupUserTxs', () => {
       const accountTx = randomCoreAccountTx({ txRefNo });
       const depositAndFeeTx = createDepositTx({ publicValue: 100n, fee: 20n, txRefNo });
       expect(groupUserTxs([accountTx, depositAndFeeTx])).toEqual([
-        new UserAccountTx(
-          accountTx.txId,
-          accountTx.userId,
-          accountTx.aliasHash,
-          accountTx.newSpendingPublicKey1,
-          accountTx.newSpendingPublicKey2,
-          accountTx.migrated,
-          { assetId: 0, value: 0n },
-          accountTx.created,
-        ),
         new UserPaymentTx(
           depositAndFeeTx.txId,
           depositAndFeeTx.userId,
@@ -92,6 +82,16 @@ describe('groupUserTxs', () => {
           depositAndFeeTx.publicOwner,
           false,
           depositAndFeeTx.created,
+        ),
+        new UserAccountTx(
+          accountTx.txId,
+          accountTx.userId,
+          accountTx.aliasHash,
+          accountTx.newSpendingPublicKey1,
+          accountTx.newSpendingPublicKey2,
+          accountTx.migrated,
+          { assetId: 0, value: 0n },
+          accountTx.created,
         ),
       ]);
     });
@@ -358,16 +358,16 @@ describe('groupUserTxs', () => {
   });
 
   describe('defi tx', () => {
-    const bridgeId = BridgeId.ZERO;
-    const garbageBridgeId = new BridgeId(0, garbageAssetId, 0);
+    const bridgeCallData = BridgeCallData.ZERO;
+    const garbageBridgeCallData = new BridgeCallData(0, garbageAssetId, 0);
 
     it('recover defi tx', () => {
-      const defiTx = randomCoreDefiTx({ bridgeId });
+      const defiTx = randomCoreDefiTx({ bridgeCallData });
       expect(groupUserTxs([defiTx])).toEqual([
         new UserDefiTx(
           defiTx.txId,
           defiTx.userId,
-          bridgeId,
+          bridgeCallData,
           { assetId: 0, value: defiTx.depositValue },
           { assetId: 0, value: defiTx.txFee },
           defiTx.created,
@@ -388,7 +388,7 @@ describe('groupUserTxs', () => {
 
     it('recover deposited defi tx', () => {
       const defiTx = randomCoreDefiTx({
-        bridgeId,
+        bridgeCallData,
         success: true,
         outputValueA: 123n,
         settled: new Date(),
@@ -399,7 +399,7 @@ describe('groupUserTxs', () => {
         new UserDefiTx(
           defiTx.txId,
           defiTx.userId,
-          bridgeId,
+          bridgeCallData,
           { assetId: 0, value: defiTx.depositValue },
           { assetId: 0, value: defiTx.txFee },
           defiTx.created,
@@ -409,7 +409,7 @@ describe('groupUserTxs', () => {
             isAsync: true,
             interactionNonce: 45,
             success: true,
-            outputValueA: { assetId: bridgeId.outputAssetIdA, value: 123n },
+            outputValueA: { assetId: bridgeCallData.outputAssetIdA, value: 123n },
             outputValueB: undefined,
             claimSettled: undefined,
             finalised: undefined,
@@ -419,9 +419,9 @@ describe('groupUserTxs', () => {
     });
 
     it('assign correct asset id for virtual output assets', () => {
-      const bridgeId = new BridgeId(0, 0, virtualAssetIdPlaceholder, 2, virtualAssetIdPlaceholder);
+      const bridgeCallData = new BridgeCallData(0, 0, virtualAssetIdPlaceholder, 2, virtualAssetIdPlaceholder);
       const defiTx = randomCoreDefiTx({
-        bridgeId,
+        bridgeCallData,
         success: true,
         outputValueA: 23n,
         outputValueB: 45n,
@@ -433,7 +433,7 @@ describe('groupUserTxs', () => {
         new UserDefiTx(
           defiTx.txId,
           defiTx.userId,
-          bridgeId,
+          bridgeCallData,
           { assetId: 0, value: defiTx.depositValue },
           { assetId: 0, value: defiTx.txFee },
           defiTx.created,
@@ -453,9 +453,9 @@ describe('groupUserTxs', () => {
     });
 
     it('recover finalised defi tx with pending claim', () => {
-      const bridgeId = new BridgeId(0, 0, 1, 2, 3);
+      const bridgeCallData = new BridgeCallData(0, 0, 1, 2, 3);
       const defiTx = randomCoreDefiTx({
-        bridgeId,
+        bridgeCallData,
         success: true,
         outputValueA: 23n,
         outputValueB: 45n,
@@ -469,7 +469,7 @@ describe('groupUserTxs', () => {
           undefined,
           defiTx.txId,
           defiTx.userId,
-          bridgeId,
+          bridgeCallData,
           { assetId: 0, value: defiTx.depositValue },
           true,
           { assetId: 1, value: 23n },
@@ -480,7 +480,7 @@ describe('groupUserTxs', () => {
         new UserDefiTx(
           defiTx.txId,
           defiTx.userId,
-          bridgeId,
+          bridgeCallData,
           { assetId: 0, value: defiTx.depositValue },
           { assetId: 0, value: defiTx.txFee },
           defiTx.created,
@@ -501,9 +501,9 @@ describe('groupUserTxs', () => {
 
     it('recover settled defi tx and settled claim tx', () => {
       const claimTxId = TxId.random();
-      const bridgeId = new BridgeId(0, 0, 1, undefined, virtualAssetIdPlaceholder);
+      const bridgeCallData = new BridgeCallData(0, 0, 1, undefined, virtualAssetIdPlaceholder);
       const defiTx = randomCoreDefiTx({
-        bridgeId,
+        bridgeCallData,
         success: true,
         outputValueA: 23n,
         outputValueB: 45n,
@@ -519,10 +519,10 @@ describe('groupUserTxs', () => {
           claimTxId,
           defiTx.txId,
           defiTx.userId,
-          bridgeId,
+          bridgeCallData,
           { assetId: 0, value: defiTx.depositValue },
           true,
-          { assetId: bridgeId.outputAssetIdA, value: 23n },
+          { assetId: bridgeCallData.outputAssetIdA, value: 23n },
           { assetId: virtualAssetIdFlag + 678, value: 45n },
           defiTx.finalised!,
           defiTx.claimSettled!,
@@ -530,7 +530,7 @@ describe('groupUserTxs', () => {
         new UserDefiTx(
           defiTx.txId,
           defiTx.userId,
-          bridgeId,
+          bridgeCallData,
           { assetId: 0, value: defiTx.depositValue },
           { assetId: 0, value: defiTx.txFee },
           defiTx.created,
@@ -540,7 +540,7 @@ describe('groupUserTxs', () => {
             isAsync: true,
             interactionNonce: 678,
             success: true,
-            outputValueA: { assetId: bridgeId.outputAssetIdA, value: 23n },
+            outputValueA: { assetId: bridgeCallData.outputAssetIdA, value: 23n },
             outputValueB: { assetId: virtualAssetIdFlag + 678, value: 45n },
             claimSettled: defiTx.claimSettled,
             finalised: defiTx.finalised,
@@ -557,12 +557,12 @@ describe('groupUserTxs', () => {
         recipientPrivateOutput: 10n,
         txRefNo,
       });
-      const defiTx = randomCoreDefiTx({ bridgeId, txFee: 0n, txRefNo });
+      const defiTx = randomCoreDefiTx({ bridgeCallData, txFee: 0n, txRefNo });
       expect(groupUserTxs([jsTx, defiTx])).toEqual([
         new UserDefiTx(
           defiTx.txId,
           defiTx.userId,
-          bridgeId,
+          bridgeCallData,
           { assetId: 0, value: defiTx.depositValue },
           { assetId: 0, value: 20n },
           defiTx.created,
@@ -583,13 +583,13 @@ describe('groupUserTxs', () => {
 
     it('recover defi tx with fee paying tx', () => {
       const txRefNo = createTxRefNo();
-      const defiTx = randomCoreDefiTx({ bridgeId: garbageBridgeId, txFee: 0n, txRefNo });
+      const defiTx = randomCoreDefiTx({ bridgeCallData: garbageBridgeCallData, txFee: 0n, txRefNo });
       const feeTx = createFeeTx(20n, txRefNo);
       expect(groupUserTxs([defiTx, feeTx])).toEqual([
         new UserDefiTx(
           defiTx.txId,
           defiTx.userId,
-          garbageBridgeId,
+          garbageBridgeCallData,
           { assetId: garbageAssetId, value: defiTx.depositValue },
           { assetId: 0, value: 20n },
           defiTx.created,
@@ -617,13 +617,13 @@ describe('groupUserTxs', () => {
         recipientPrivateOutput: 10n,
         txRefNo,
       });
-      const defiTx = randomCoreDefiTx({ bridgeId: garbageBridgeId, txFee: 0n, txRefNo });
+      const defiTx = randomCoreDefiTx({ bridgeCallData: garbageBridgeCallData, txFee: 0n, txRefNo });
       const feeTx = createFeeTx(20n, txRefNo);
       expect(groupUserTxs([jsTx, defiTx, feeTx])).toEqual([
         new UserDefiTx(
           defiTx.txId,
           defiTx.userId,
-          garbageBridgeId,
+          garbageBridgeCallData,
           { assetId: garbageAssetId, value: defiTx.depositValue },
           { assetId: 0, value: 20n },
           defiTx.created,

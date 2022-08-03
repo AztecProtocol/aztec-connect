@@ -1,5 +1,5 @@
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { TxId } from '@aztec/barretenberg/tx_id';
 
@@ -9,7 +9,7 @@ export class CoreDefiTx {
   constructor(
     public readonly txId: TxId,
     public readonly userId: GrumpkinAddress,
-    public readonly bridgeId: BridgeId,
+    public readonly bridgeCallData: BridgeCallData,
     public readonly depositValue: bigint,
     public readonly txFee: bigint,
     public readonly txRefNo: number,
@@ -30,7 +30,7 @@ export interface CoreDefiTxJson {
   proofId: number;
   txId: string;
   userId: string;
-  bridgeId: string;
+  bridgeCallData: string;
   depositValue: string;
   txFee: string;
   txRefNo: number;
@@ -50,7 +50,7 @@ export const coreDefiTxToJson = (tx: CoreDefiTx): CoreDefiTxJson => ({
   ...tx,
   txId: tx.txId.toString(),
   userId: tx.userId.toString(),
-  bridgeId: tx.bridgeId.toString(),
+  bridgeCallData: tx.bridgeCallData.toString(),
   depositValue: tx.depositValue.toString(),
   txFee: tx.txFee.toString(),
   outputValueA: tx.outputValueA?.toString(),
@@ -62,7 +62,7 @@ export const coreDefiTxFromJson = (json: CoreDefiTxJson) =>
   new CoreDefiTx(
     TxId.fromString(json.txId),
     GrumpkinAddress.fromString(json.userId),
-    BridgeId.fromString(json.bridgeId),
+    BridgeCallData.fromString(json.bridgeCallData),
     BigInt(json.depositValue),
     BigInt(json.txFee),
     json.txRefNo,

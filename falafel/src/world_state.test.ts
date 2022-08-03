@@ -2,7 +2,7 @@ import { EthAddress } from '@aztec/barretenberg/address';
 import { toBigIntBE, toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { Blockchain, TxHash, TxType } from '@aztec/barretenberg/blockchain';
 import { Block } from '@aztec/barretenberg/block_source';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
@@ -49,20 +49,20 @@ const EMPTY_BUFFER = Buffer.alloc(32);
 const nextRollupId = 2;
 const getNextRollupId = () => nextRollupId;
 
-const buildRollupProofData = () => {
+const buildRollupProofData = (isOurs: boolean) => {
   const proof = new RollupProofData(
     nextRollupId,
     1,
     0,
     EMPTY_BUFFER,
-    roots[RollupTreeId.DATA],
+    isOurs ? roots[RollupTreeId.DATA] : randomBytes(32),
     EMPTY_BUFFER,
-    roots[RollupTreeId.NULL],
+    isOurs ? roots[RollupTreeId.NULL] : randomBytes(32),
     EMPTY_BUFFER,
-    roots[RollupTreeId.ROOT],
+    isOurs ? roots[RollupTreeId.ROOT] : randomBytes(32),
     EMPTY_BUFFER,
-    roots[RollupTreeId.DEFI],
-    Array.from({ length: RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK }).map(() => EMPTY_BUFFER), // bridgeIds
+    isOurs ? roots[RollupTreeId.DEFI] : randomBytes(32),
+    Array.from({ length: RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK }).map(() => EMPTY_BUFFER), // bridgeCallDatas
     Array.from({ length: RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK }).map(() => 0n), // defiDepositSums
     Array.from({ length: RollupProofData.NUMBER_OF_ASSETS }).map(() => 1 << 30), // assetIds value 1 << 30 is an invalid asset ID
     Array.from({ length: RollupProofData.NUMBER_OF_ASSETS }).map(() => 0n), // totalTxFees
@@ -75,8 +75,8 @@ const buildRollupProofData = () => {
   return proof;
 };
 
-const createDummyBlock = () => {
-  const rollupProofData = buildRollupProofData();
+const createDummyBlock = (isOurs = true) => {
+  const rollupProofData = buildRollupProofData(isOurs);
   const block = new Block(
     TxHash.random(),
     new Date(),
@@ -137,37 +137,37 @@ const DEFAULT_DEFI_BATCH_SIZE = 10;
 
 const bridgeConfigs: BridgeConfig[] = [
   {
-    bridgeId: 1n,
+    bridgeCallData: 1n,
     numTxs: 5,
     gas: 1000000,
     rollupFrequency: 2,
   },
   {
-    bridgeId: 2n,
+    bridgeCallData: 2n,
     numTxs: 10,
     gas: 5000000,
     rollupFrequency: 3,
   },
   {
-    bridgeId: 3n,
+    bridgeCallData: 3n,
     numTxs: 3,
     gas: 90000,
     rollupFrequency: 4,
   },
   {
-    bridgeId: 4n,
+    bridgeCallData: 4n,
     numTxs: 6,
     gas: 3000000,
     rollupFrequency: 1,
   },
   {
-    bridgeId: 5n,
+    bridgeCallData: 5n,
     numTxs: 2,
     gas: 8000000,
     rollupFrequency: 7,
   },
   {
-    bridgeId: 6n,
+    bridgeCallData: 6n,
     numTxs: 20,
     gas: 3000000,
     rollupFrequency: 8,
@@ -175,7 +175,7 @@ const bridgeConfigs: BridgeConfig[] = [
 ];
 
 const randomInt = (to = 2 ** 32 - 1) => Math.floor(Math.random() * (to + 1));
-const txTypeToProofId = (txType: TxType) => (txType < TxType.WITHDRAW_TO_CONTRACT ? txType + 1 : txType);
+const txTypeToProofId = (txType: TxType) => (txType < TxType.WITHDRAW_HIGH_GAS ? txType + 1 : txType);
 
 const mockTx = (
   id: number,
@@ -184,7 +184,7 @@ const mockTx = (
     txFeeAssetId = 0,
     excessGas = 0,
     creationTime = new Date(new Date('2021-06-20T11:43:00+01:00').getTime() + id), // ensures txs are ordered by id
-    bridgeId = new BridgeId(randomInt(), 1, 0).toBigInt(),
+    bridgeCallData = new BridgeCallData(randomInt(), 1, 0).toBigInt(),
     noteCommitment1 = randomBytes(32),
     noteCommitment2 = randomBytes(32),
     backwardLink = Buffer.alloc(32),
@@ -203,17 +203,17 @@ const mockTx = (
       randomBytes(6 * 32),
       toBufferBE(0n, 32),
       numToUInt32BE(txFeeAssetId, 32),
-      toBufferBE(bridgeId, 32),
+      toBufferBE(bridgeCallData, 32),
       randomBytes(3 * 32),
       backwardLink,
       allowChain,
     ]),
   } as any as TxDao);
 
-const getSingleBridgeCost = (bridgeId: bigint) => {
-  const bridgeConfig = bridgeConfigs.find(bc => bc.bridgeId === bridgeId);
+const getSingleBridgeCost = (bridgeCallData: bigint) => {
+  const bridgeConfig = bridgeConfigs.find(bc => bc.bridgeCallData === bridgeCallData);
   if (!bridgeConfig) {
-    throw new Error(`Requested cost for invalid bridge ID: ${bridgeId.toString()}`);
+    throw new Error(`Requested cost for invalid bridgeCallData: ${bridgeCallData.toString()}`);
   }
   const { gas, numTxs } = bridgeConfig;
   const single = gas / numTxs;
@@ -231,12 +231,12 @@ describe('world_state', () => {
   let txFeeResolver: Mockify<TxFeeResolver>;
   let pipeline: Mockify<RollupPipeline>;
 
-  const mockDefiBridgeTx = (id: number, gas: number, bridgeId: bigint, assetId = 0) =>
+  const mockDefiBridgeTx = (id: number, gas: number, bridgeCallData: bigint, assetId = 0) =>
     mockTx(id, {
       txType: TxType.DEFI_DEPOSIT,
-      excessGas: gas - (DEFI_TX_PLUS_BASE_GAS + txFeeResolver.getSingleBridgeTxGas(bridgeId)),
+      excessGas: gas - (DEFI_TX_PLUS_BASE_GAS + txFeeResolver.getSingleBridgeTxGas(bridgeCallData)),
       txFeeAssetId: assetId,
-      bridgeId,
+      bridgeCallData,
     });
 
   let pendingTxs: TxDao[] = [];
@@ -259,6 +259,8 @@ describe('world_state', () => {
         rollupStore[rollupDao.id] = rollupDao;
       }),
       getAssetMetrics: jest.fn().mockReturnValue(undefined),
+      getBridgeMetricsForRollup: jest.fn(),
+      getLastBridgeMetrics: jest.fn(),
       getRollup: jest.fn().mockImplementation((id: number) => rollupStore[id]),
       getPendingTxs: jest.fn().mockImplementation(() => {
         return pendingTxs;
@@ -315,14 +317,14 @@ describe('world_state', () => {
     } as Mockify<Metrics>;
 
     txFeeResolver = {
-      getSingleBridgeTxGas: jest.fn().mockImplementation((bridgeId: bigint) => {
-        const bridgeConfig = bridgeConfigs.find(b => b.bridgeId === bridgeId);
+      getSingleBridgeTxGas: jest.fn().mockImplementation((bridgeCallData: bigint) => {
+        const bridgeConfig = bridgeConfigs.find(b => b.bridgeCallData === bridgeCallData);
         const gas = bridgeConfig?.gas ?? DEFAULT_BRIDGE_GAS_LIMIT;
         const numTxs = bridgeConfig?.numTxs ?? DEFAULT_DEFI_BATCH_SIZE;
         return gas / numTxs;
       }),
-      getFullBridgeGas: jest.fn().mockImplementation((bridgeId: bigint) => {
-        const bridgeConfig = bridgeConfigs.find(b => b.bridgeId === bridgeId);
+      getFullBridgeGas: jest.fn().mockImplementation((bridgeCallData: bigint) => {
+        const bridgeConfig = bridgeConfigs.find(b => b.bridgeCallData === bridgeCallData);
         return bridgeConfig?.gas ?? DEFAULT_BRIDGE_GAS_LIMIT;
       }),
     } as Mockify<TxFeeResolver>;
@@ -365,7 +367,7 @@ describe('world_state', () => {
     // nullifier 1 is already present
     const index = toBigIntBE(nullifier1).toString();
     nullifiers[index] = toBufferBE(1n, 32);
-    blockchain.emit('block', createDummyBlock());
+    blockchain.emit('block', createDummyBlock(false));
     await worldState.stop(true);
     expect(rollupDb.deleteTxsById).toHaveBeenCalledTimes(1);
     expect(rollupDb.deleteTxsById).toHaveBeenCalledWith([txDao.id]);
@@ -384,7 +386,7 @@ describe('world_state', () => {
     // nullifier 2 is already present
     const index = toBigIntBE(nullifier2).toString();
     nullifiers[index] = toBufferBE(1n, 32);
-    blockchain.emit('block', createDummyBlock());
+    blockchain.emit('block', createDummyBlock(false));
     await worldState.stop(true);
     expect(rollupDb.deleteTxsById).toHaveBeenCalledTimes(1);
     expect(rollupDb.deleteTxsById).toHaveBeenCalledWith([txDao.id]);
@@ -405,7 +407,7 @@ describe('world_state', () => {
     // load these into pending txs
     pendingTxs = [txDao1, txDao2];
     // don't put the nullifiers into the tree
-    blockchain.emit('block', createDummyBlock());
+    blockchain.emit('block', createDummyBlock(false));
     await worldState.stop(true);
     expect(rollupDb.deleteTxsById).toHaveBeenCalledTimes(0);
   });
@@ -427,7 +429,7 @@ describe('world_state', () => {
     // set a pending deposit lower than this tx is trying to spend
     pendingDeposits[buildPendingDepositKey(publicAssetId, publicOwner)] = 5000n;
     // don't put the nullifiers into the tree
-    blockchain.emit('block', createDummyBlock());
+    blockchain.emit('block', createDummyBlock(false));
     await worldState.stop(true);
     expect(rollupDb.deleteTxsById).toHaveBeenCalledTimes(1);
     expect(rollupDb.deleteTxsById).toHaveBeenCalledWith([txDao.id]);
@@ -451,7 +453,7 @@ describe('world_state', () => {
     // set a pending deposit that should mean txs 3 and 4 are discarded
     pendingDeposits[buildPendingDepositKey(publicAssetId, publicOwner)] = 29999n;
     // don't put the nullifiers into the tree
-    blockchain.emit('block', createDummyBlock());
+    blockchain.emit('block', createDummyBlock(false));
     await worldState.stop(true);
     expect(rollupDb.deleteTxsById).toHaveBeenCalledTimes(1);
     expect(rollupDb.deleteTxsById).toHaveBeenCalledWith(pendingTxs.slice(2).map(tx => tx.id));
@@ -488,7 +490,7 @@ describe('world_state', () => {
     pendingDeposits[buildPendingDepositKey(publicAssetId1, publicOwner1)] = 29999n;
     pendingDeposits[buildPendingDepositKey(publicAssetId2, publicOwner2)] = 39999n;
     // don't put the nullifiers into the tree
-    blockchain.emit('block', createDummyBlock());
+    blockchain.emit('block', createDummyBlock(false));
     await worldState.stop(true);
     expect(rollupDb.deleteTxsById).toHaveBeenCalledTimes(1);
     expect(rollupDb.deleteTxsById).toHaveBeenCalledWith([
@@ -530,7 +532,7 @@ describe('world_state', () => {
     pendingDeposits[buildPendingDepositKey(publicAssetId1, publicOwner1)] = 29999n;
     pendingDeposits[buildPendingDepositKey(publicAssetId2, publicOwner2)] = 19999n;
     // don't put the nullifiers into the tree
-    blockchain.emit('block', createDummyBlock());
+    blockchain.emit('block', createDummyBlock(false));
     await worldState.stop(true);
     expect(rollupDb.deleteTxsById).toHaveBeenCalledTimes(1);
     expect(rollupDb.deleteTxsById).toHaveBeenCalledWith([txs1[2], txs1[4], txs2[1], txs2[2], txs2[4]].map(tx => tx.id));
@@ -563,7 +565,7 @@ describe('world_state', () => {
     // set a pending deposit that should mean txs 3 and 4 are discarded
     pendingDeposits[buildPendingDepositKey(publicAssetId1, publicOwner1)] = 29999n;
     // don't put the nullifiers into the tree
-    blockchain.emit('block', createDummyBlock());
+    blockchain.emit('block', createDummyBlock(false));
     await worldState.stop(true);
     expect(rollupDb.deleteTxsById).toHaveBeenCalledTimes(1);
     expect(rollupDb.deleteTxsById).toHaveBeenCalledWith([txs1[2], txs1[4], chainedTx].map(tx => tx.id));
@@ -596,7 +598,7 @@ describe('world_state', () => {
     // set a pending deposit that should mean txs 3 and 4 are discarded
     pendingDeposits[buildPendingDepositKey(publicAssetId1, publicOwner1)] = 29999n;
     // don't put the nullifiers into the tree
-    blockchain.emit('block', createDummyBlock());
+    blockchain.emit('block', createDummyBlock(false));
     await worldState.stop(true);
     expect(rollupDb.deleteTxsById).toHaveBeenCalledTimes(1);
     expect(rollupDb.deleteTxsById).toHaveBeenCalledWith([txs1[2], txs1[4], chainedTx].map(tx => tx.id));
@@ -677,7 +679,7 @@ describe('world_state', () => {
     // set a pending deposit that should mean txs 3 and 4 are discarded
     pendingDeposits[buildPendingDepositKey(publicAssetId1, publicOwner1)] = 29999n;
     // don't put the nullifiers into the tree
-    blockchain.emit('block', createDummyBlock());
+    blockchain.emit('block', createDummyBlock(false));
     await worldState.stop(true);
     expect(rollupDb.deleteTxsById).toHaveBeenCalledTimes(1);
     expect(rollupDb.deleteTxsById).toHaveBeenCalledWith(
@@ -708,13 +710,13 @@ describe('world_state', () => {
     txPoolProfile = await worldState.getTxPoolProfile();
     expect(txPoolProfile.pendingTxCount).toBe(1);
 
-    const bridgeId1 = bridgeConfigs[0].bridgeId;
+    const bridgeCallData1 = bridgeConfigs[0].bridgeCallData;
     pendingTxs = [
       buildTxDao({
         proofId: ProofId.DEPOSIT,
         id: 1,
       }),
-      mockDefiBridgeTx(2, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId1), bridgeId1),
+      mockDefiBridgeTx(2, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallData1), bridgeCallData1),
     ];
 
     // wait for internal loop.
@@ -723,7 +725,7 @@ describe('world_state', () => {
     txPoolProfile = await worldState.getTxPoolProfile();
     expect(txPoolProfile.pendingTxCount).toBe(2);
     expect(txPoolProfile.pendingBridgeStats).toEqual([
-      { bridgeId: bridgeId1, gasAccrued: bridgeConfigs[0].gas / bridgeConfigs[0].numTxs },
+      { bridgeCallData: bridgeCallData1, gasAccrued: bridgeConfigs[0].gas / bridgeConfigs[0].numTxs },
     ]);
 
     // check all txs are accrued while the bridge is pending
@@ -732,9 +734,9 @@ describe('world_state', () => {
         proofId: ProofId.DEPOSIT,
         id: 1,
       }),
-      mockDefiBridgeTx(2, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId1), bridgeId1),
-      mockDefiBridgeTx(3, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId1), bridgeId1),
-      mockDefiBridgeTx(4, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId1), bridgeId1),
+      mockDefiBridgeTx(2, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallData1), bridgeCallData1),
+      mockDefiBridgeTx(3, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallData1), bridgeCallData1),
+      mockDefiBridgeTx(4, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallData1), bridgeCallData1),
     ];
 
     processedTxs = [
@@ -742,7 +744,7 @@ describe('world_state', () => {
         proofId: ProofId.DEPOSIT,
         id: 1,
       }),
-      mockDefiBridgeTx(2, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeId1), bridgeId1),
+      mockDefiBridgeTx(2, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallData1), bridgeCallData1),
     ];
 
     // wait for internal loop.
@@ -751,7 +753,7 @@ describe('world_state', () => {
     txPoolProfile = await worldState.getTxPoolProfile();
     expect(txPoolProfile.pendingTxCount).toBe(2);
     expect(txPoolProfile.pendingBridgeStats).toEqual([
-      { bridgeId: bridgeId1, gasAccrued: (bridgeConfigs[0].gas / bridgeConfigs[0].numTxs) * 2 },
+      { bridgeCallData: bridgeCallData1, gasAccrued: (bridgeConfigs[0].gas / bridgeConfigs[0].numTxs) * 2 },
     ]);
   });
 });

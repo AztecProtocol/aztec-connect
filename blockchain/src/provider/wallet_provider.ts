@@ -28,9 +28,9 @@ export class WalletProvider implements EthereumProvider {
     return this.addEthersWallet(new Wallet(privateKey, new Web3Provider(this.provider)));
   }
 
-  public addAccountsFromMnemonic(mnemonic: string, num: number) {
+  public addAccountsFromMnemonic(mnemonic: string, num: number, bip32Account = 0) {
     for (let i = 0; i < num; ++i) {
-      this.addAccountFromMnemonicAndPath(mnemonic, `m/44'/60'/0'/0/${i}`);
+      this.addAccountFromMnemonicAndPath(mnemonic, `m/44'/60'/${bip32Account}'/0/${i}`);
     }
   }
 

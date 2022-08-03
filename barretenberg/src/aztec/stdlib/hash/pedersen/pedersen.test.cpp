@@ -1,4 +1,5 @@
 #include "pedersen.hpp"
+#include "pedersen_plookup.hpp"
 #include <crypto/pedersen/pedersen.hpp>
 #include <ecc/curves/grumpkin/grumpkin.hpp>
 #include <numeric/random/engine.hpp>
@@ -437,6 +438,7 @@ template <typename Composer> class stdlib_pedersen : public testing::Test {
 
 typedef testing::Types<waffle::StandardComposer,
                        waffle::TurboComposer //,
+                       // waffle::PlookupComposer
                        >
     ComposerTypes;
 
@@ -483,3 +485,101 @@ TYPED_TEST(stdlib_pedersen, compress_constants)
 };
 
 } // namespace test_stdlib_pedersen
+
+// PLOOKUP REMNANTS BELOW HERE
+
+// TEST(stdlib_pedersen, test_pedersen_plookup)
+// {
+//     typedef stdlib::field_t<waffle::PlookupComposer> field_pt;
+//     typedef stdlib::witness_t<waffle::PlookupComposer> witness_pt;
+
+//     waffle::PlookupComposer composer = waffle::PlookupComposer();
+
+//     fr left_in = fr::random_element();
+//     fr right_in = fr::random_element();
+
+//     field_pt left = witness_pt(&composer, left_in);
+//     field_pt right = witness_pt(&composer, right_in);
+
+//     field_pt result = stdlib::pedersen<waffle::PlookupComposer>::compress(left, right);
+
+//     fr expected = crypto::pedersen::sidon::compress_native(left_in, right_in);
+
+//     EXPECT_EQ(result.get_value(), expected);
+
+//     auto prover = composer.create_prover();
+
+//     printf("composer gates = %zu\n", composer.get_num_gates());
+//     auto verifier = composer.create_verifier();
+
+//     waffle::plonk_proof proof = prover.construct_proof();
+
+//     bool proof_result = verifier.verify_proof(proof);
+//     EXPECT_EQ(proof_result, true);
+// }
+
+// TEST(stdlib_pedersen, test_compress_many_plookup)
+// {
+//     typedef stdlib::field_t<waffle::PlookupComposer> field_pt;
+//     typedef stdlib::witness_t<waffle::PlookupComposer> witness_pt;
+
+//     waffle::PlookupComposer composer = waffle::PlookupComposer();
+
+//     std::vector<fr> input_values{
+//         fr::random_element(), fr::random_element(), fr::random_element(),
+//         fr::random_element(), fr::random_element(), fr::random_element(),
+//     };
+//     std::vector<field_pt> inputs;
+//     for (const auto& input : input_values) {
+//         inputs.emplace_back(witness_pt(&composer, input));
+//     }
+
+//     field_pt result = stdlib::pedersen<waffle::PlookupComposer>::compress(inputs);
+
+//     auto t0 = crypto::pedersen::sidon::compress_native(input_values[0], input_values[1]);
+//     auto t1 = crypto::pedersen::sidon::compress_native(input_values[2], input_values[3]);
+//     auto t2 = crypto::pedersen::sidon::compress_native(input_values[4], input_values[5]);
+//     auto t3 = crypto::pedersen::sidon::compress_native(0, 0);
+
+//     auto t4 = crypto::pedersen::sidon::compress_native(t0, t1);
+//     auto t5 = crypto::pedersen::sidon::compress_native(t2, t3);
+
+//     auto expected = crypto::pedersen::sidon::compress_native(t4, t5);
+
+//     EXPECT_EQ(result.get_value(), expected);
+
+//     auto prover = composer.create_prover();
+
+//     printf("composer gates = %zu\n", composer.get_num_gates());
+//     auto verifier = composer.create_verifier();
+
+//     waffle::plonk_proof proof = prover.construct_proof();
+
+//     bool proof_result = verifier.verify_proof(proof);
+//     EXPECT_EQ(proof_result, true);
+// }
+
+// TEST(stdlib_pedersen, test_sidon_compress_constants)
+// {
+//     typedef stdlib::field_t<waffle::PlookupComposer> field_pt;
+//     typedef stdlib::witness_t<waffle::PlookupComposer> witness_pt;
+
+//     waffle::PlookupComposer composer = waffle::PlookupComposer();
+
+//     std::vector<barretenberg::fr> inputs;
+//     std::vector<plonk::stdlib::field_t<waffle::PlookupComposer>> witness_inputs;
+
+//     for (size_t i = 0; i < 8; ++i) {
+//         inputs.push_back(barretenberg::fr::random_element());
+//         if (i % 2 == 1) {
+//             witness_inputs.push_back(witness_pt(&composer, inputs[i]));
+//         } else {
+//             witness_inputs.push_back(field_pt(&composer, inputs[i]));
+//         }
+//     }
+
+//     barretenberg::fr expected = crypto::pedersen::sidon::compress_native(inputs);
+//     auto result = stdlib::pedersen<waffle::PlookupComposer>::compress(witness_inputs);
+
+//     EXPECT_EQ(result.get_value(), expected);
+// }

@@ -52,6 +52,7 @@ template <typename ComposerContext> class pedersen {
 
 extern template class pedersen<waffle::StandardComposer>;
 extern template class pedersen<waffle::TurboComposer>;
+extern template class pedersen<waffle::PlookupComposer>;
 
 } // namespace stdlib
 } // namespace plonk

@@ -1,7 +1,7 @@
 import { AliasHash } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { AccountProver, JoinSplitProver, ProofId, UnrolledProver } from '@aztec/barretenberg/client_proofs';
 import { Crs } from '@aztec/barretenberg/crs';
 import { Blake2s, Pedersen, randomBytes, Schnorr } from '@aztec/barretenberg/crypto';
@@ -20,12 +20,13 @@ import { Timer } from '@aztec/barretenberg/timer';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { BarretenbergWasm, WorkerPool } from '@aztec/barretenberg/wasm';
 import { WorldState, WorldStateConstants } from '@aztec/barretenberg/world_state';
+import { BroadcastChannel } from 'broadcast-channel';
 import { EventEmitter } from 'events';
 import { LevelUp } from 'levelup';
 import { BlockContext } from '../block_context/block_context';
 import { CorePaymentTx, createCorePaymentTxForRecipient } from '../core_tx';
 import { Alias, Database } from '../database';
-import { parseGenesisAliasesAndKeys, getUserSpendingKeysFromGenesisData } from '../genesis_state.ts';
+import { getUserSpendingKeysFromGenesisData, parseGenesisAliasesAndKeys } from '../genesis_state.ts';
 import { Note } from '../note';
 import {
   AccountProofCreator,
@@ -37,12 +38,12 @@ import {
 } from '../proofs';
 import { MutexSerialQueue, SerialQueue } from '../serial_queue';
 import { SchnorrSigner } from '../signer';
+import { UserData } from '../user';
 import { UserState, UserStateEvent, UserStateFactory } from '../user_state';
 import { CoreSdkInterface } from './core_sdk_interface';
 import { CoreSdkOptions } from './core_sdk_options';
 import { SdkEvent, SdkStatus } from './sdk_status';
 import { sdkVersion } from './sdk_version';
-import { UserData } from '../user';
 
 const debug = createDebugLogger('bb:core_sdk');
 
@@ -69,6 +70,7 @@ enum SdkInitState {
  * of the CoreSdk exist in different processes, that they will not modify state at the same time.
  */
 export class CoreSdk extends EventEmitter implements CoreSdkInterface {
+  private dataVersion = 1;
   private options!: CoreSdkOptions;
   private worldState!: WorldState;
   private userStates: UserState[] = [];
@@ -76,6 +78,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   private accountProofCreator!: AccountProofCreator;
   private defiDepositProofCreator!: DefiDepositProofCreator;
   private serialQueue!: SerialQueue;
+  private broadcastChannel = new BroadcastChannel('aztec-sdk');
   private userStateFactory!: UserStateFactory;
   private sdkStatus: SdkStatus = {
     serverUrl: '',
@@ -112,6 +115,12 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     private workerPool?: WorkerPool,
   ) {
     super();
+
+    this.broadcastChannel.onmessage = ({ event, args }) => {
+      if (event === SdkEvent.UPDATED_USER_STATE) {
+        this.emit(SdkEvent.UPDATED_USER_STATE, GrumpkinAddress.fromString(args[0]));
+      }
+    };
   }
 
   /**
@@ -150,12 +159,14 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
         proverless,
       } = await this.getRemoteStatus();
 
-      // Clear all data if contract changed.
+      // Clear all data if contract changed or dataVersion changed.
       const rca = await this.getLocalRollupContractAddress();
-      if (rca && !rca.equals(rollupContractAddress)) {
+      const localDataVersion = await this.getLocalDataVersion();
+      if ((rca && !rca.equals(rollupContractAddress)) || localDataVersion !== this.dataVersion) {
         debug('Erasing database...');
         await this.leveldb.clear();
         await this.db.clear();
+        await this.setLocalDataVersion(this.dataVersion);
       }
 
       await this.db.addKey('rollupContractAddress', rollupContractAddress.toBuffer());
@@ -217,6 +228,9 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     await this.db.close();
     await this.workerPool?.destroy();
 
+    // Destroy components.
+    await this.broadcastChannel.close();
+
     this.initState = SdkInitState.DESTROYED;
     this.emit(SdkEvent.DESTROYED);
     this.removeAllListeners();
@@ -265,8 +279,8 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     return await this.rollupProvider.getTxFees(assetId);
   }
 
-  public async getDefiFees(bridgeId: BridgeId) {
-    return await this.rollupProvider.getDefiFees(bridgeId);
+  public async getDefiFees(bridgeCallData: BridgeCallData) {
+    return await this.rollupProvider.getDefiFees(bridgeCallData);
   }
 
   public async getPendingDepositTxs() {
@@ -312,10 +326,14 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       await this.addInitialUserSpendingKeys([user.accountPublicKey]);
 
       const userState = await this.userStateFactory.createUserState(user);
-      userState.on(UserStateEvent.UPDATED_USER_STATE, id => this.emit(SdkEvent.UPDATED_USER_STATE, id));
+      userState.on(UserStateEvent.UPDATED_USER_STATE, async id => {
+        this.emit(SdkEvent.UPDATED_USER_STATE, id);
+        await this.broadcastChannel.postMessage({
+          event: SdkEvent.UPDATED_USER_STATE,
+          args: [id.toString()],
+        });
+      });
       this.userStates.push(userState);
-
-      this.emit(SdkEvent.UPDATED_USERS);
 
       if (!noSync) {
         // If the sync microtask is sleeping, wake it up to start syncing.
@@ -343,8 +361,6 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       this.userStates = this.userStates.filter(us => us !== userState);
       userState.removeAllListeners();
       await this.db.removeUser(userId);
-
-      this.emit(SdkEvent.UPDATED_USERS);
     });
   }
 
@@ -357,13 +373,13 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     return keys.map(k => k.key);
   }
 
-  public getBalances(userId: GrumpkinAddress) {
-    return Promise.resolve(this.getUserState(userId).getBalances());
+  public async getBalances(userId: GrumpkinAddress) {
+    return await this.getUserState(userId).getBalances();
   }
 
-  public getBalance(userId: GrumpkinAddress, assetId: number) {
+  public async getBalance(userId: GrumpkinAddress, assetId: number) {
     const userState = this.getUserState(userId);
-    return Promise.resolve(userState.getBalance(assetId));
+    return await userState.getBalance(assetId);
   }
 
   public async getSpendableSum(
@@ -588,16 +604,19 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
 
   public async createAccountProofInput(
     userId: GrumpkinAddress,
-    alias: string,
-    migrate: boolean,
     spendingPublicKey: GrumpkinAddress,
+    migrate: boolean,
+    newAlias: string | undefined,
     newSpendingPublicKey1?: GrumpkinAddress,
     newSpendingPublicKey2?: GrumpkinAddress,
     newAccountPrivateKey?: Buffer,
   ) {
     return await this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
-      const aliasHash = this.computeAliasHash(alias);
+      const aliasHash = newAlias ? this.computeAliasHash(newAlias) : (await this.db.getAlias(userId))?.aliasHash;
+      if (!aliasHash) {
+        throw new Error('Account not registered or not fully synced.');
+      }
       const newAccountPublicKey = newAccountPrivateKey ? await this.derivePublicKey(newAccountPrivateKey) : undefined;
       return await this.accountProofCreator.createProofInput(
         userId,
@@ -620,7 +639,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
 
   public async createDefiProofInput(
     userId: GrumpkinAddress,
-    bridgeId: BridgeId,
+    bridgeCallData: BridgeCallData,
     depositValue: bigint,
     inputNotes: Note[],
     spendingPublicKey: GrumpkinAddress,
@@ -631,7 +650,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       const user = userState.getUserData();
       return await this.defiDepositProofCreator.createProofInput(
         user,
-        bridgeId,
+        bridgeCallData,
         depositValue,
         inputNotes,
         spendingPublicKey,
@@ -776,6 +795,15 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     }
   }
 
+  private async setLocalDataVersion(version: number) {
+    await this.db.addKey('dataVersion', Buffer.from([version]));
+  }
+
+  private async getLocalDataVersion() {
+    const result = await this.db.getKey('dataVersion');
+    return result ? result.readInt8(0) : 0;
+  }
+
   private async getLocalRollupContractAddress() {
     const result = await this.db.getKey('rollupContractAddress');
     return result ? new EthAddress(result) : undefined;
@@ -808,7 +836,13 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     await this.addInitialUserSpendingKeys(users.map(x => x.accountPublicKey));
     this.userStates = await Promise.all(users.map(u => this.userStateFactory.createUserState(u)));
     this.userStates.forEach(us =>
-      us.on(UserStateEvent.UPDATED_USER_STATE, id => this.emit(SdkEvent.UPDATED_USER_STATE, id)),
+      us.on(UserStateEvent.UPDATED_USER_STATE, async id => {
+        this.emit(SdkEvent.UPDATED_USER_STATE, id);
+        await this.broadcastChannel.postMessage({
+          event: SdkEvent.UPDATED_USER_STATE,
+          args: [id.toString()],
+        });
+      }),
     );
   }
 

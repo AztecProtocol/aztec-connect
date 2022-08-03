@@ -228,7 +228,10 @@ template <typename program_settings> bool VerifierBase<program_settings>::verify
 
 template class VerifierBase<unrolled_standard_verifier_settings>;
 template class VerifierBase<unrolled_turbo_verifier_settings>;
+template class VerifierBase<unrolled_plookup_verifier_settings>;
 template class VerifierBase<standard_verifier_settings>;
 template class VerifierBase<turbo_verifier_settings>;
+template class VerifierBase<plookup_verifier_settings>;
+template class VerifierBase<generalized_permutation_verifier_settings>;
 
 } // namespace waffle

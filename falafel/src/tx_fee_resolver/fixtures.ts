@@ -4,7 +4,7 @@ import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { randomBytes } from 'crypto';
 import { TxDao } from '../entity';
 
-const txTypeToProofId = (txType: TxType) => (txType < TxType.WITHDRAW_TO_CONTRACT ? txType + 1 : txType);
+const txTypeToProofId = (txType: TxType) => (txType < TxType.WITHDRAW_HIGH_GAS ? txType + 1 : txType);
 
 export const mockTx = (txFeeAssetId: number, txType: TxType, txFee: bigint) =>
   ({
@@ -21,7 +21,7 @@ export const mockTx = (txFeeAssetId: number, txType: TxType, txFee: bigint) =>
       randomBytes(32), // merkle root
       toBufferBE(txFee, 32),
       numToUInt32BE(txFeeAssetId, 32),
-      randomBytes(32), // bridge id
+      randomBytes(32), // bridge call data
       randomBytes(32), // defi deposit value
       randomBytes(32), // defi root
       randomBytes(32), // propagated input index

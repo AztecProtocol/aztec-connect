@@ -1,6 +1,6 @@
 import { AliasHash } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { JoinSplitTx, ProofId } from '@aztec/barretenberg/client_proofs';
 import { randomBytes } from '@aztec/barretenberg/crypto';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
@@ -32,7 +32,7 @@ export class JoinSplitTxFactory {
       outputNoteValue2 = BigInt(0),
       newNoteOwner = accountPublicKey,
       newNoteOwnerAccountRequired = true,
-      bridgeId = BridgeId.ZERO,
+      bridgeCallData = BridgeCallData.ZERO,
       defiDepositValue = BigInt(0),
       allowChain = 0,
     } = {},
@@ -95,7 +95,7 @@ export class JoinSplitTxFactory {
 
     const claimNote =
       proofId === ProofId.DEFI_DEPOSIT
-        ? this.createClaimNote(bridgeId, defiDepositValue, accountPublicKey, inputNoteNullifiers[0])
+        ? this.createClaimNote(bridgeCallData, defiDepositValue, accountPublicKey, inputNoteNullifiers[0])
         : { note: ClaimNoteTxData.EMPTY, ephPubKey: undefined };
 
     const propagatedInputIndex = 1 + inputNotes.findIndex(n => n.allowChain);
@@ -181,10 +181,15 @@ export class JoinSplitTxFactory {
     return { note, viewingKey };
   }
 
-  private createClaimNote(bridgeId: BridgeId, value: bigint, owner: GrumpkinAddress, inputNullifier: Buffer) {
+  private createClaimNote(
+    bridgeCallData: BridgeCallData,
+    value: bigint,
+    owner: GrumpkinAddress,
+    inputNullifier: Buffer,
+  ) {
     const { ephPrivKey, ephPubKey } = this.createEphemeralKeyPair();
     const noteSecret = deriveNoteSecret(owner, ephPrivKey, this.grumpkin);
-    const note = new ClaimNoteTxData(value, bridgeId, noteSecret, inputNullifier);
+    const note = new ClaimNoteTxData(value, bridgeCallData, noteSecret, inputNullifier);
     // ephPubKey is returned for the defi deposit use case, where we'd like to avoid creating a viewing key for the
     // partial claim note's partialState, since all we want to transmit is the ephPubKey (which we can do via offchain tx data).
     return { note, ephPubKey };

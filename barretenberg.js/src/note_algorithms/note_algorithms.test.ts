@@ -1,6 +1,6 @@
 import { AliasHash } from '../account_id';
 import { GrumpkinAddress } from '../address';
-import { BridgeId } from '../bridge_id';
+import { BridgeCallData } from '../bridge_call_data';
 import { Blake2s } from '../crypto';
 import { Grumpkin } from '../ecc/grumpkin';
 import { BarretenbergWasm } from '../wasm';
@@ -40,8 +40,8 @@ describe('compute_nullifier', () => {
   });
 
   it('should commit to claim note and compute its nullifier', () => {
-    const bridgeId = BridgeId.fromBigInt(BigInt(456));
-    const claimNoteTxData = new ClaimNoteTxData(BigInt(100), bridgeId, noteSecret, dummyNullifier);
+    const bridgeCallData = BridgeCallData.fromBigInt(BigInt(456));
+    const claimNoteTxData = new ClaimNoteTxData(BigInt(100), bridgeCallData, noteSecret, dummyNullifier);
     const accountRequired = false;
     const partialState = noteAlgos.valueNotePartialCommitment(
       claimNoteTxData.partialStateSecret,
@@ -50,7 +50,7 @@ describe('compute_nullifier', () => {
     );
     const inputNote = new TreeClaimNote(
       claimNoteTxData.value,
-      claimNoteTxData.bridgeId,
+      claimNoteTxData.bridgeCallData,
       0,
       BigInt(0),
       partialState,
@@ -62,8 +62,8 @@ describe('compute_nullifier', () => {
   });
 
   it('should create correct commitment for defi interaction note', () => {
-    const bridgeId = BridgeId.fromBigInt(BigInt(456));
-    const note = new DefiInteractionNote(bridgeId, 1, BigInt(123), BigInt(456), BigInt(789), true);
+    const bridgeCallData = BridgeCallData.fromBigInt(BigInt(456));
+    const note = new DefiInteractionNote(bridgeCallData, 1, BigInt(123), BigInt(456), BigInt(789), true);
     const commitment = noteAlgos.defiInteractionNoteCommitment(note);
     expect(commitment.toString('hex')).toEqual('0196130e904cada31725bd8b7bb73de20eda978c92a2e05cd735429df1c88a47');
   });

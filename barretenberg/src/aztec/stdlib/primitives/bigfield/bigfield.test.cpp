@@ -21,6 +21,14 @@ namespace test_stdlib_bigfield {
 using namespace barretenberg;
 using namespace plonk;
 
+/* A note regarding Plookup:
+   stdlib_bigfield_plookup tests were present when this file was standardized
+   to be more proving system-agnostic. Those tests are commented out  below, but modified
+   in the following ways:
+     - pbigfield_t was replaced by bn254::fq_ct;
+     - pwitness_t  was replaced by bn254::witness_ct.
+*/
+
 namespace {
 auto& engine = numeric::random::get_debug_engine();
 }
@@ -759,7 +767,11 @@ template <typename Composer> class stdlib_bigfield : public testing::Test {
 };
 
 // Define types for which the above tests will be constructed.
-typedef testing::Types<waffle::StandardComposer, waffle::TurboComposer> ComposerTypes;
+typedef testing::Types<waffle::StandardComposer,
+                       waffle::TurboComposer //,
+                                             //    waffle::PlookupComposer
+                       >
+    ComposerTypes;
 // Define the suite of tests.
 TYPED_TEST_SUITE(stdlib_bigfield, ComposerTypes);
 
@@ -871,4 +883,91 @@ TYPED_TEST(stdlib_bigfield, quotient_completeness_regression)
 //     EXPECT_EQ(proof_result, true);
 // }
 
+// // PLOOKUP TESTS
+// TEST(stdlib_bigfield_plookup, test_mul)
+// {
+//     waffle::PlookupComposer composer = waffle::PlookupComposer();
+//     size_t num_repetitions = 1;
+//     for (size_t i = 0; i < num_repetitions; ++i) {
+//         fq inputs[3]{ fq::random_element(), fq::random_element(), fq::random_element() };
+//         fq_ct a(
+//             witness_ct(&composer, barretenberg::fr(uint256_t(inputs[0]).slice(0,
+//             fq_ct::NUM_LIMB_BITS * 2))), witness_ct(&composer,
+//                        barretenberg::fr(
+//                            uint256_t(inputs[0]).slice(fq_ct::NUM_LIMB_BITS * 2, fq_ct::NUM_LIMB_BITS *
+//                            4))));
+//         fq_ct b(
+//             witness_ct(&composer, barretenberg::fr(uint256_t(inputs[1]).slice(0,
+//             fq_ct::NUM_LIMB_BITS * 2))), witness_ct(&composer,
+//                        barretenberg::fr(
+//                            uint256_t(inputs[1]).slice(fq_ct::NUM_LIMB_BITS * 2, fq_ct::NUM_LIMB_BITS *
+//                            4))));
+//         std::cout << "starting mul" << std::endl;
+//         uint64_t before = composer.get_num_gates();
+//         fq_ct c = a * b;
+//         uint64_t after = composer.get_num_gates();
+//         if (i == num_repetitions - 1) {
+//             std::cout << "num gates per mul = " << after - before << std::endl;
+//         }
+
+//         fq expected = (inputs[0] * inputs[1]);
+//         expected = expected.from_montgomery_form();
+//         uint512_t result = c.get_value();
+
+//         EXPECT_EQ(result.lo.data[0], expected.data[0]);
+//         EXPECT_EQ(result.lo.data[1], expected.data[1]);
+//         EXPECT_EQ(result.lo.data[2], expected.data[2]);
+//         EXPECT_EQ(result.lo.data[3], expected.data[3]);
+//         EXPECT_EQ(result.hi.data[0], 0ULL);
+//         EXPECT_EQ(result.hi.data[1], 0ULL);
+//         EXPECT_EQ(result.hi.data[2], 0ULL);
+//         EXPECT_EQ(result.hi.data[3], 0ULL);
+//     }
+//     composer.process_range_lists();
+//     waffle::PlookupProver prover = composer.create_prover();
+//     waffle::PlookupVerifier verifier = composer.create_verifier();
+//     waffle::plonk_proof proof = prover.construct_proof();
+//     bool proof_result = verifier.verify_proof(proof);
+//     EXPECT_EQ(proof_result, true);
+// }
+
+// TEST(stdlib_bigfield_plookup, test_sqr)
+// {
+//     waffle::PlookupComposer composer = waffle::PlookupComposer();
+//     size_t num_repetitions = 10;
+//     for (size_t i = 0; i < num_repetitions; ++i) {
+//         fq inputs[3]{ fq::random_element(), fq::random_element(), fq::random_element() };
+//         fq_ct a(
+//             witness_ct(&composer, barretenberg::fr(uint256_t(inputs[0]).slice(0,
+//             fq_ct::NUM_LIMB_BITS * 2))), witness_ct(&composer,
+//                        barretenberg::fr(
+//                            uint256_t(inputs[0]).slice(fq_ct::NUM_LIMB_BITS * 2, fq_ct::NUM_LIMB_BITS *
+//                            4))));
+//         uint64_t before = composer.get_num_gates();
+//         fq_ct c = a.sqr();
+//         uint64_t after = composer.get_num_gates();
+//         if (i == num_repetitions - 1) {
+//             std::cout << "num gates per sqr = " << after - before << std::endl;
+//         }
+
+//         fq expected = (inputs[0].sqr());
+//         expected = expected.from_montgomery_form();
+//         uint512_t result = c.get_value();
+
+//         EXPECT_EQ(result.lo.data[0], expected.data[0]);
+//         EXPECT_EQ(result.lo.data[1], expected.data[1]);
+//         EXPECT_EQ(result.lo.data[2], expected.data[2]);
+//         EXPECT_EQ(result.lo.data[3], expected.data[3]);
+//         EXPECT_EQ(result.hi.data[0], 0ULL);
+//         EXPECT_EQ(result.hi.data[1], 0ULL);
+//         EXPECT_EQ(result.hi.data[2], 0ULL);
+//         EXPECT_EQ(result.hi.data[3], 0ULL);
+//     }
+//     composer.process_range_lists();
+//     waffle::PlookupProver prover = composer.create_prover();
+//     waffle::PlookupVerifier verifier = composer.create_verifier();
+//     waffle::plonk_proof proof = prover.construct_proof();
+//     bool proof_result = verifier.verify_proof(proof);
+//     EXPECT_EQ(proof_result, true);
+// }
 } // namespace test_stdlib_bigfield

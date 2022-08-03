@@ -1,4 +1,4 @@
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { HashPath } from '@aztec/barretenberg/merkle_tree';
 import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { randomBytes, randomInt } from 'crypto';
@@ -19,7 +19,7 @@ describe('Rollup', () => {
     const oldNullPaths = [...Array(numberOfTxs * 2)].map(randomNullPath);
     const dataRootsPaths = [...Array(numberOfTxs)].map(randomDataPath);
     const dataRootsIndicies = [1, 2];
-    const bridgeIds = [...Array(4)].map(() => BridgeId.random().toBuffer());
+    const bridgeCallDatas = [...Array(4)].map(() => BridgeCallData.random().toBuffer());
     const assetIds = [...Array(4)].map(() => numToUInt32BE(randomInt(100), 32));
     const rollup = new TxRollup(
       0,
@@ -37,7 +37,7 @@ describe('Rollup', () => {
       dataRootsPaths,
       dataRootsIndicies,
       randomRoot(),
-      bridgeIds,
+      bridgeCallDatas,
       assetIds,
     );
 

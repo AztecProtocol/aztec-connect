@@ -1,4 +1,4 @@
-import { BridgeId } from '../bridge_id';
+import { BridgeCallData } from '../bridge_call_data';
 import { ProofId } from '../client_proofs';
 import { InnerProofData } from './inner_proof';
 
@@ -15,8 +15,8 @@ export class RollupDefiClaimProofData {
     return RollupDefiClaimProofData.ENCODED_LENGTH;
   }
 
-  get bridgeId() {
-    return BridgeId.fromBuffer(this.proofData.publicAssetId);
+  get bridgeCallData() {
+    return BridgeCallData.fromBuffer(this.proofData.publicAssetId);
   }
 
   static decode(encoded: Buffer) {

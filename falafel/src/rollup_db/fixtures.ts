@@ -2,7 +2,7 @@ import { AliasHash } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { TxType } from '@aztec/barretenberg/blockchain';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
 import { OffchainAccountData } from '@aztec/barretenberg/offchain_tx_data';
 import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
@@ -25,7 +25,7 @@ const txTypeToProofId = (txType: TxType) => {
       return ProofId.DEPOSIT;
     case TxType.TRANSFER:
       return ProofId.SEND;
-    case TxType.WITHDRAW_TO_CONTRACT:
+    case TxType.WITHDRAW_HIGH_GAS:
     case TxType.WITHDRAW_TO_WALLET:
       return ProofId.WITHDRAW;
   }
@@ -38,10 +38,11 @@ export const randomTx = ({
   signature = Buffer.alloc(0),
   accountPublicKey = GrumpkinAddress.random(),
   aliasHash = AliasHash.random(),
+  creationTime = now.add(1, 's').toDate(),
 } = {}) => {
   const proofId = txTypeToProofId(txType);
   const isPublic =
-    txType == TxType.WITHDRAW_TO_CONTRACT || txType == TxType.WITHDRAW_TO_WALLET || txType == TxType.DEPOSIT;
+    txType == TxType.WITHDRAW_HIGH_GAS || txType == TxType.WITHDRAW_TO_WALLET || txType == TxType.DEPOSIT;
   const proofData = new ProofData(
     Buffer.concat([
       numToUInt32BE(proofId, 32),
@@ -63,7 +64,7 @@ export const randomTx = ({
     nullifier1: toBigIntBE(proofData.nullifier1) ? proofData.nullifier1 : undefined,
     nullifier2: toBigIntBE(proofData.nullifier2) ? proofData.nullifier2 : undefined,
     dataRootsIndex: 0,
-    created: now.add(1, 's').toDate(),
+    created: creationTime,
     signature: signature.length ? signature : undefined,
     txType,
     excessGas: 50000,
@@ -108,13 +109,14 @@ export const randomRollup = (rollupId: number, rollupProof: RollupProofDao) =>
     rollupProof,
     created: new Date(),
     assetMetrics: [],
+    bridgeMetrics: [],
   });
 
 export const randomClaim = () =>
   new ClaimDao({
     id: randomBytes(4).readUInt32BE(0),
     nullifier: randomBytes(32),
-    bridgeId: BridgeId.random().toBigInt(),
+    bridgeId: BridgeCallData.random().toBigInt(), // TODO: rename bridgeId to bridgeCallData
     depositValue: toBigIntBE(randomBytes(32)),
     partialState: randomBytes(32),
     partialStateSecretEphPubKey: randomBytes(64),

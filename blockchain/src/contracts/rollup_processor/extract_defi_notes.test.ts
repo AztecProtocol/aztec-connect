@@ -73,7 +73,7 @@ describe('rollup_processor: extract defi notes', () => {
   it('should extract defi notes from blocks between rollups', async () => {
     const inputAssetIdA = 1;
     const outputValueA = 7n;
-    const { bridgeId } = await mockAsyncBridge(signers[0], rollupProcessor, assetAddresses, {
+    const { bridgeCallData } = await mockAsyncBridge(signers[0], rollupProcessor, assetAddresses, {
       inputAssetIdA,
       outputAssetIdA: 0,
       outputValueA,
@@ -93,16 +93,16 @@ describe('rollup_processor: extract defi notes', () => {
       await createDepositProof(depositAmount, userAAddress, userA, inputAssetIdA),
       mergeInnerProofs([createAccountProof(), createSendProof(inputAssetIdA, sendAmount)]),
       mergeInnerProofs([
-        createDefiDepositProof(bridgeId, defiDepositAmount0),
-        createDefiDepositProof(bridgeId, defiDepositAmount1),
+        createDefiDepositProof(bridgeCallData, defiDepositAmount0),
+        createDefiDepositProof(bridgeCallData, defiDepositAmount1),
       ]),
       createWithdrawProof(withdrawalAmount, userAAddress, inputAssetIdA),
-      createDefiClaimProof(bridgeId),
+      createDefiClaimProof(bridgeCallData),
     ];
 
     const expectedInteractionResult = [
-      new DefiInteractionNote(bridgeId, numberOfBridgeCalls * 2, 12n, outputValueA, 0n, true),
-      new DefiInteractionNote(bridgeId, numberOfBridgeCalls * 2 + 1, 8n, outputValueA, 0n, true),
+      new DefiInteractionNote(bridgeCallData, numberOfBridgeCalls * 2, 12n, outputValueA, 0n, true),
+      new DefiInteractionNote(bridgeCallData, numberOfBridgeCalls * 2 + 1, 8n, outputValueA, 0n, true),
     ];
     const previousDefiInteractionHash = packInteractionNotes(expectedInteractionResult, numberOfBridgeCalls);
 
@@ -119,8 +119,8 @@ describe('rollup_processor: extract defi notes', () => {
         defiInteractionData:
           i === 2
             ? [
-                new DefiInteractionData(bridgeId, defiDepositAmount0),
-                new DefiInteractionData(bridgeId, defiDepositAmount1),
+                new DefiInteractionData(bridgeCallData, defiDepositAmount0),
+                new DefiInteractionData(bridgeCallData, defiDepositAmount1),
               ]
             : [],
         previousDefiInteractionHash: i === 4 ? previousDefiInteractionHash : undefined,

@@ -50,9 +50,14 @@ extern template wnaf_record<waffle::TurboComposer> convert_field_into_wnaf<waffl
 extern template void verify_signature<waffle::TurboComposer>(const byte_array<waffle::TurboComposer>&,
                                                              const point<waffle::TurboComposer>&,
                                                              const signature_bits<waffle::TurboComposer>&);
+extern template void verify_signature<waffle::PlookupComposer>(const byte_array<waffle::PlookupComposer>&,
+                                                               const point<waffle::PlookupComposer>&,
+                                                               const signature_bits<waffle::PlookupComposer>&);
 
 extern template signature_bits<waffle::TurboComposer> convert_signature<waffle::TurboComposer>(
     waffle::TurboComposer*, const crypto::schnorr::signature&);
+extern template signature_bits<waffle::PlookupComposer> convert_signature<waffle::PlookupComposer>(
+    waffle::PlookupComposer*, const crypto::schnorr::signature&);
 
 } // namespace schnorr
 } // namespace stdlib

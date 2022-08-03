@@ -1,7 +1,7 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { Blockchain, TxType } from '@aztec/barretenberg/blockchain';
-import { BridgeId, validateBridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeCallData, validateBridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import {
   AccountVerifier,
   DefiDepositProofData,
@@ -103,7 +103,8 @@ export class TxReceiver {
 
       const txDaos: TxDao[] = [];
       for (let i = 0; i < txs.length; ++i) {
-        const txDao = await this.validateTx(txs[i], txTypes[i]);
+        const prevTxTime = i == 0 ? undefined : txDaos[i - 1].created;
+        const txDao = await this.validateTx(txs[i], txTypes[i], prevTxTime);
         txDaos.push(txDao);
       }
 
@@ -116,7 +117,7 @@ export class TxReceiver {
     }
   }
 
-  private async validateTx({ proof, offchainTxData, depositSignature }: Tx, txType: TxType) {
+  private async validateTx({ proof, offchainTxData, depositSignature }: Tx, txType: TxType, previousTxTime?: Date) {
     this.validateAsset(proof);
 
     if (proof.proofId === ProofId.DEPOSIT) {
@@ -143,6 +144,17 @@ export class TxReceiver {
 
     const dataRootsIndex = await this.rollupDb.getDataRootsIndex(proof.noteTreeRoot);
 
+    // When txs are provided to us in a batch it's possible that they are chained
+    // we need to ensure that each tx in the chain has a timestamp that is greater than the previous
+    // It's improbable that they would be given the same time but this should ensure it doesn't happen
+    const getNextTxTime = () => {
+      const currentTime = new Date();
+      if (!previousTxTime || currentTime.getTime() > previousTxTime.getTime()) {
+        return currentTime;
+      }
+      return new Date(previousTxTime.getTime() + 1);
+    };
+
     return new TxDao({
       id: proof.txId,
       proofData: proof.rawProofData,
@@ -151,7 +163,7 @@ export class TxReceiver {
       nullifier1: toBigIntBE(proof.nullifier1) ? proof.nullifier1 : undefined,
       nullifier2: toBigIntBE(proof.nullifier2) ? proof.nullifier2 : undefined,
       dataRootsIndex,
-      created: new Date(),
+      created: getNextTxTime(),
       txType,
       excessGas: 0, // provided later
     });
@@ -183,6 +195,17 @@ export class TxReceiver {
     if (!(await this.accountVerifier.verifyProof(proof.rawProofData))) {
       throw new Error('Account proof verification failed.');
     }
+
+    // if the second nullifier is non-zero then this is attempting to register
+    // a new account public key. check that the key does not already exist
+    if (!proof.nullifier2.equals(Buffer.alloc(32)) && (await this.rollupDb.isAccountRegistered(accountPublicKey))) {
+      throw new Error('Account key already registered');
+    }
+    // if the first nullifier is non-zero then this is attempting to register
+    // a new alias. check that the alias does not already exist in this case
+    if (!proof.nullifier1.equals(Buffer.alloc(32)) && (await this.rollupDb.isAliasRegistered(aliasHash))) {
+      throw new Error('Alias already registered');
+    }
   }
 
   private async validateDefiDepositProof(proofData: ProofData, offchainTxData: Buffer) {
@@ -190,23 +213,25 @@ export class TxReceiver {
       throw new Error('Cannot chain from a defi deposit tx.');
     }
 
-    const { bridgeId, defiDepositValue, txFee } = new DefiDepositProofData(proofData);
+    const { bridgeCallData, defiDepositValue, txFee } = new DefiDepositProofData(proofData);
     try {
-      validateBridgeId(bridgeId);
+      validateBridgeCallData(bridgeCallData);
     } catch (e) {
-      throw new Error(`Invalid bridge id - ${e.message}`);
+      throw new Error(`Invalid bridge call data - ${e.message}`);
     }
 
-    const bridgeConfig = this.bridgeResolver.getBridgeConfig(bridgeId.toBigInt());
+    const bridgeConfig = this.bridgeResolver.getBridgeConfig(bridgeCallData.toBigInt());
     const blockchainStatus = this.blockchain.getBlockchainStatus();
     if (!blockchainStatus.allowThirdPartyContracts && !bridgeConfig) {
-      this.log(`Unrecognised Defi bridge: ${bridgeId.toString()}`);
+      this.log(`Unrecognised Defi bridge: ${bridgeCallData.toString()}`);
       throw new Error('Unrecognised Defi-bridge.');
     }
 
     const offchainData = OffchainDefiDepositData.fromBuffer(offchainTxData);
-    if (!bridgeId.equals(offchainData.bridgeId)) {
-      throw new Error(`Wrong bridgeId in offchain data. Expect ${bridgeId}. Got ${offchainData.bridgeId}.`);
+    if (!bridgeCallData.equals(offchainData.bridgeCallData)) {
+      throw new Error(
+        `Wrong bridgeCallData in offchain data. Expect ${bridgeCallData}. Got ${offchainData.bridgeCallData}.`,
+      );
     }
     if (defiDepositValue !== offchainData.depositValue) {
       throw new Error(
@@ -275,12 +300,12 @@ export class TxReceiver {
         break;
       }
       case ProofId.DEFI_DEPOSIT: {
-        const bridgeId = BridgeId.fromBuffer(proof.bridgeId);
-        if (!bridgeId.firstOutputVirtual) {
-          validateNonVirtualAssetId(bridgeId.outputAssetIdA);
+        const bridgeCallData = BridgeCallData.fromBuffer(proof.bridgeCallData);
+        if (!bridgeCallData.firstOutputVirtual) {
+          validateNonVirtualAssetId(bridgeCallData.outputAssetIdA);
         }
-        if (bridgeId.secondOutputInUse && !bridgeId.secondOutputVirtual) {
-          validateNonVirtualAssetId(bridgeId.outputAssetIdB!);
+        if (bridgeCallData.secondOutputInUse && !bridgeCallData.secondOutputVirtual) {
+          validateNonVirtualAssetId(bridgeCallData.outputAssetIdB!);
         }
         break;
       }
@@ -294,6 +319,10 @@ export class TxReceiver {
     let proofApproval = await this.blockchain.getUserProofApprovalStatus(publicOwner, txId.toBuffer());
     if (!proofApproval && depositSignature) {
       const message = txId.toDepositSigningData();
+      const lastByte = depositSignature[depositSignature.length - 1];
+      if (lastByte == 0 || lastByte == 1) {
+        depositSignature[depositSignature.length - 1] = lastByte + 27;
+      }
       proofApproval = this.blockchain.validateSignature(publicOwner, depositSignature, message);
     }
     if (!proofApproval) {

@@ -1,6 +1,6 @@
 import { randomBytes } from 'crypto';
 import { toBigIntBE } from '../bigint_buffer';
-import { BridgeId } from '../bridge_id';
+import { BridgeCallData } from '../bridge_call_data';
 import { GrumpkinAddress } from '../address';
 import { ViewingKey } from '../viewing_key';
 import { OffchainDefiDepositData } from './offchain_defi_deposit_data';
@@ -8,7 +8,7 @@ import { OffchainDefiDepositData } from './offchain_defi_deposit_data';
 describe('OffchainDefiDepositData', () => {
   it('convert offchain defi deposit data to and from buffer', () => {
     const userData = new OffchainDefiDepositData(
-      BridgeId.random(),
+      BridgeCallData.random(),
       randomBytes(32), // partialState
       GrumpkinAddress.random(), // partialStateSecretEphPubKey
       toBigIntBE(randomBytes(32)), // depositValue
@@ -25,7 +25,7 @@ describe('OffchainDefiDepositData', () => {
     expect(
       () =>
         new OffchainDefiDepositData(
-          BridgeId.random(),
+          BridgeCallData.random(),
           randomBytes(33),
           GrumpkinAddress.random(),
           toBigIntBE(randomBytes(32)),
@@ -40,7 +40,7 @@ describe('OffchainDefiDepositData', () => {
     expect(
       () =>
         new OffchainDefiDepositData(
-          BridgeId.random(),
+          BridgeCallData.random(),
           randomBytes(32),
           GrumpkinAddress.random(),
           toBigIntBE(randomBytes(32)),

@@ -311,6 +311,8 @@ template void verify_signature<waffle::TurboComposer>(const byte_array<waffle::T
 
 template signature_bits<waffle::TurboComposer> convert_signature<waffle::TurboComposer>(
     waffle::TurboComposer*, const crypto::schnorr::signature&);
+template signature_bits<waffle::PlookupComposer> convert_signature<waffle::PlookupComposer>(
+    waffle::PlookupComposer*, const crypto::schnorr::signature&);
 } // namespace schnorr
 } // namespace stdlib
 } // namespace plonk

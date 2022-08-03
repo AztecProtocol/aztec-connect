@@ -1,6 +1,7 @@
 #include "blake2s.hpp"
 #include <plonk/composer/standard_composer.hpp>
 #include <plonk/composer/turbo_composer.hpp>
+#include <plonk/composer/plookup_composer.hpp>
 #include <stdlib/primitives/uint/uint.hpp>
 
 namespace plonk {
@@ -155,6 +156,7 @@ template <typename Composer> byte_array<Composer> blake2s(const byte_array<Compo
 
 template byte_array<waffle::StandardComposer> blake2s(const byte_array<waffle::StandardComposer>& input);
 template byte_array<waffle::TurboComposer> blake2s(const byte_array<waffle::TurboComposer>& input);
+template byte_array<waffle::PlookupComposer> blake2s(const byte_array<waffle::PlookupComposer>& input);
 
 } // namespace stdlib
 } // namespace plonk

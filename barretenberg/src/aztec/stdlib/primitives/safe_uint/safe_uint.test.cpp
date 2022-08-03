@@ -4,6 +4,7 @@
 #include <numeric/random/engine.hpp>
 #include "../byte_array/byte_array.hpp"
 #include <plonk/composer/standard_composer.hpp>
+#include <plonk/composer/plookup_composer.hpp>
 #include <plonk/composer/turbo_composer.hpp>
 
 namespace {

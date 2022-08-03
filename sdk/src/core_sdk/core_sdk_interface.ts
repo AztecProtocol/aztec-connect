@@ -1,6 +1,6 @@
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetValue } from '@aztec/barretenberg/asset';
-import { BridgeId } from '@aztec/barretenberg/bridge_id';
+import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { SchnorrSignature } from '@aztec/barretenberg/crypto';
 import { DepositTx, RollupProviderStatus } from '@aztec/barretenberg/rollup_provider';
 import { TxId } from '@aztec/barretenberg/tx_id';
@@ -11,7 +11,6 @@ import { CoreSdkOptions } from './core_sdk_options';
 import { SdkEvent, SdkStatus } from './sdk_status';
 
 export interface CoreSdkInterface {
-  on(event: SdkEvent.UPDATED_USERS, listener: () => void): this;
   on(event: SdkEvent.UPDATED_USER_STATE, listener: (userId: GrumpkinAddress) => void): this;
   on(event: SdkEvent.UPDATED_WORLD_STATE, listener: (syncedToRollup: number, latestRollupId: number) => void): this;
   on(event: SdkEvent.DESTROYED, listener: () => void): this;
@@ -40,7 +39,7 @@ export interface CoreSdkInterface {
 
   getTxFees(assetId: number): Promise<AssetValue[][]>;
 
-  getDefiFees(bridgeId: BridgeId): Promise<AssetValue[]>;
+  getDefiFees(bridgeCallData: BridgeCallData): Promise<AssetValue[]>;
 
   getPendingDepositTxs(): Promise<DepositTx[]>;
 
@@ -83,9 +82,9 @@ export interface CoreSdkInterface {
 
   createAccountProofInput(
     userId: GrumpkinAddress,
-    alias: string,
-    migrate: boolean,
     spendingPublicKey: GrumpkinAddress,
+    migrate: boolean,
+    newAlias: string | undefined,
     newSpendingPublicKey1: GrumpkinAddress | undefined,
     newSpendingPublicKey2: GrumpkinAddress | undefined,
     newAccountPrivateKey: Buffer | undefined,
@@ -95,7 +94,7 @@ export interface CoreSdkInterface {
 
   createDefiProofInput(
     userId: GrumpkinAddress,
-    bridgeId: BridgeId,
+    bridgeCallData: BridgeCallData,
     depositValue: bigint,
     inputNotes: Note[],
     spendingPublicKey: GrumpkinAddress,

@@ -1,6 +1,7 @@
 import { TxHash } from '@aztec/barretenberg/blockchain';
 import { AfterInsert, AfterLoad, AfterUpdate, Column, Entity, OneToMany, OneToOne, PrimaryColumn } from 'typeorm';
 import { AssetMetricsDao } from './asset_metrics';
+import { BridgeMetricsDao } from './bridge_metrics';
 import { bufferColumn } from './init_entities';
 import { RollupProofDao } from './rollup_proof';
 import { txHashTransformer } from './transformer';
@@ -22,6 +23,9 @@ export class RollupDao {
 
   @OneToMany(() => AssetMetricsDao, am => am.rollup, { cascade: true })
   public assetMetrics!: AssetMetricsDao[];
+
+  @OneToMany(() => BridgeMetricsDao, bm => bm.rollup, { cascade: true })
+  public bridgeMetrics!: BridgeMetricsDao[];
 
   // @Column(...bufferColumn())
   // public viewingKeys!: Buffer;

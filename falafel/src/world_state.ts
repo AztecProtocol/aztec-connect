@@ -15,6 +15,7 @@ import { WorldStateConstants } from '@aztec/barretenberg/world_state';
 import { RollupTreeId, WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { fromBaseUnits } from '@aztec/blockchain';
 import { AccountDao, AssetMetricsDao, ClaimDao, RollupDao, RollupProofDao, TxDao } from './entity';
+import { BridgeMetricsDao } from './entity';
 import { getTxTypeFromInnerProofData } from './get_tx_type';
 import { Metrics } from './metrics';
 import { createDefiRollupTx } from './pipeline_coordinator/bridge_tx_queue';
@@ -53,7 +54,7 @@ const rollupDaoToBlockBuffer = (dao: RollupDao) => {
 };
 
 interface BridgeStat {
-  bridgeId: bigint;
+  bridgeCallData: bigint;
   gasAccrued: number;
 }
 
@@ -81,7 +82,7 @@ export class WorldState {
     private noteAlgo: NoteAlgorithms,
     private metrics: Metrics,
     private txFeeResolver: TxFeeResolver,
-    private expireTxPoolAfter = 60,
+    private expireTxPoolAfter = 60 * 1000,
     private log = createLogger('WorldState'),
   ) {
     this.txPoolProfile = {
@@ -154,14 +155,14 @@ export class WorldState {
 
         const defiProof = new DefiDepositProofData(proof);
         const rollupTx = createDefiRollupTx(tx, defiProof);
-        const bridgeId = rollupTx.bridgeId!;
-        const bridgeProfile = pendingBridgeStats.get(bridgeId) || {
-          bridgeId,
+        const bridgeCallData = rollupTx.bridgeCallData!;
+        const bridgeProfile = pendingBridgeStats.get(bridgeCallData) || {
+          bridgeCallData,
           gasAccrued: 0,
         };
-        bridgeProfile.gasAccrued += this.txFeeResolver.getSingleBridgeTxGas(bridgeId) + rollupTx.excessGas;
+        bridgeProfile.gasAccrued += this.txFeeResolver.getSingleBridgeTxGas(bridgeCallData) + rollupTx.excessGas;
 
-        pendingBridgeStats.set(bridgeId, bridgeProfile);
+        pendingBridgeStats.set(bridgeCallData, bridgeProfile);
       }
 
       this.txPoolProfile = {
@@ -170,7 +171,6 @@ export class WorldState {
         pendingBridgeStats: [...pendingBridgeStats.values()],
         pendingTxCount: pendingTransactionsNotInRollup.length,
       };
-
       this.txPoolProfileValidUntil = new Date(Date.now() + this.expireTxPoolAfter);
     }
 
@@ -181,7 +181,7 @@ export class WorldState {
     flushQueue ? this.blockQueue.end() : this.blockQueue.cancel();
     await this.runningPromise;
     await this.blockchain.stop();
-    await this.pipeline?.stop();
+    await this.pipeline?.stop(false);
     this.worldStateDb.stop();
   }
 
@@ -314,7 +314,7 @@ export class WorldState {
    * Called to purge all received, unsettled txs, and reset the rollup pipeline.
    */
   public async resetPipeline() {
-    await this.pipeline?.stop();
+    await this.pipeline?.stop(true);
     await this.worldStateDb.rollback();
     await this.rollupDb.deleteUnsettledRollups();
     await this.rollupDb.deleteOrphanedRollupProofs();
@@ -326,7 +326,7 @@ export class WorldState {
    * Called to restart the pipeline. e.g. If configuration changes and we want a new pipeline immediately.
    */
   public async restartPipeline() {
-    await this.pipeline?.stop();
+    await this.pipeline?.stop(true);
     await this.worldStateDb.rollback();
     this.startNewPipeline();
   }
@@ -347,7 +347,7 @@ export class WorldState {
    * Starts a new pipeline.
    */
   private async handleBlock(block: Block) {
-    await this.pipeline?.stop();
+    await this.pipeline?.stop(false);
     await this.updateDbs(block);
     this.startNewPipeline();
   }
@@ -363,16 +363,19 @@ export class WorldState {
 
     this.log(`Processing rollup ${rollupId}: ${rollupHash.toString('hex')}...`);
 
-    if (
+    const rollupIsOurs =
       newDataRoot.equals(this.worldStateDb.getRoot(RollupTreeId.DATA)) &&
       newNullRoot.equals(this.worldStateDb.getRoot(RollupTreeId.NULL)) &&
       newDataRootsRoot.equals(this.worldStateDb.getRoot(RollupTreeId.ROOT)) &&
-      newDefiRoot.equals(this.worldStateDb.getRoot(RollupTreeId.DEFI))
-    ) {
+      newDefiRoot.equals(this.worldStateDb.getRoot(RollupTreeId.DEFI));
+
+    if (rollupIsOurs) {
       // This must be the rollup we just published. Commit the world state.
+      this.log(`Rollup ${rollupId} was ours, committing our world state`);
       await this.worldStateDb.commit();
     } else {
       // Someone elses rollup. Discard any of our world state modifications and update world state with new rollup.
+      this.log(`Rollup ${rollupId} was not ours, taking new world state from received rollup`);
       await this.worldStateDb.rollback();
       await this.addRollupToWorldState(decodedRollupProofData);
     }
@@ -381,7 +384,9 @@ export class WorldState {
 
     await this.confirmOrAddRollupToDb(decodedRollupProofData, offchainTxData, block);
 
-    await this.purgeInvalidTxs();
+    if (!rollupIsOurs) {
+      await this.purgeInvalidTxs();
+    }
 
     this.printState();
     end();
@@ -394,6 +399,7 @@ export class WorldState {
       return;
     }
     await this.rollupDb.deleteTxsById(txsToPurge);
+    this.log(`Purged ${txsToPurge.length} txs from pool`);
   }
 
   private async validateTxs(txs: TxDao[]) {
@@ -481,7 +487,7 @@ export class WorldState {
   }
 
   private async processDefiProofs(rollup: RollupProofData, offchainTxData: Buffer[], block: Block) {
-    const { innerProofData, dataStartIndex, bridgeIds, rollupId } = rollup;
+    const { innerProofData, dataStartIndex, bridgeCallDatas, rollupId } = rollup;
     const { interactionResult } = block;
     let offChainIndex = 0;
     for (let i = 0; i < innerProofData.length; ++i) {
@@ -491,20 +497,27 @@ export class WorldState {
       }
       switch (proofData.proofId) {
         case ProofId.DEFI_DEPOSIT: {
-          const { bridgeId, depositValue, partialState, partialStateSecretEphPubKey, txFee } =
+          const { bridgeCallData, depositValue, partialState, partialStateSecretEphPubKey, txFee } =
             OffchainDefiDepositData.fromBuffer(offchainTxData[offChainIndex]);
           const fee = txFee - (txFee >> BigInt(1));
           const index = dataStartIndex + i * 2;
           const interactionNonce =
-            bridgeIds.findIndex(bridge => bridge.equals(bridgeId.toBuffer())) +
+            bridgeCallDatas.findIndex(bridge => bridge.equals(bridgeCallData.toBuffer())) +
             rollup.rollupId * RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK;
           const inputNullifier = proofData.nullifier1;
-          const note = new TreeClaimNote(depositValue, bridgeId, interactionNonce, fee, partialState, inputNullifier);
+          const note = new TreeClaimNote(
+            depositValue,
+            bridgeCallData,
+            interactionNonce,
+            fee,
+            partialState,
+            inputNullifier,
+          );
           const nullifier = this.noteAlgo.claimNoteNullifier(this.noteAlgo.claimNoteCommitment(note));
           const claim = new ClaimDao({
             id: index,
             nullifier,
-            bridgeId: bridgeId.toBigInt(),
+            bridgeId: bridgeCallData.toBigInt(), // TODO: rename bridgeId to bridgeCallData
             depositValue,
             partialState,
             partialStateSecretEphPubKey: partialStateSecretEphPubKey.toBuffer(),
@@ -554,6 +567,8 @@ export class WorldState {
 
     if (rollupProof) {
       // Our rollup. Confirm mined and track settlement times.
+      this.log(`Confirmed mining of our rollup ${rollup.rollupId}`);
+      const bridgeMetrics = await this.getBridgeMetrics(rollupProof, rollup.rollupId);
       const txIds = rollupProof.txs.map(tx => tx.id);
       const rollupDao = await this.rollupDb.confirmMined(
         rollup.rollupId,
@@ -564,6 +579,7 @@ export class WorldState {
         block.interactionResult,
         txIds,
         assetMetrics,
+        bridgeMetrics,
         subtreeRoot,
       );
 
@@ -581,6 +597,7 @@ export class WorldState {
 
       await this.metrics.rollupReceived(rollupDao);
     } else {
+      this.log(`Adding rollup ${rollup.rollupId} from someone else`);
       // Not a rollup we created. Add or replace rollup.
       const txs = rollup.innerProofData
         .filter(tx => !tx.isPadding())
@@ -594,6 +611,8 @@ export class WorldState {
         created: created,
       });
 
+      const bridgeMetrics = await this.getBridgeMetrics(rollupProofDao, rollup.rollupId);
+
       const rollupDao = new RollupDao({
         id: rollup.rollupId,
         dataRoot: rollup.newDataRoot,
@@ -605,6 +624,7 @@ export class WorldState {
         gasPrice: toBufferBE(block.gasPrice, 32),
         gasUsed: block.gasUsed,
         assetMetrics,
+        bridgeMetrics,
         subtreeRoot,
       });
 
@@ -632,13 +652,40 @@ export class WorldState {
       assetMetrics.totalDefiClaimed += interactionResults.reduce(
         (a, v) =>
           a +
-          (v.bridgeId.outputAssetIdA == assetId ? v.totalOutputValueA : BigInt(0)) +
-          (v.bridgeId.outputAssetIdB == assetId ? v.totalOutputValueB : BigInt(0)),
+          (v.bridgeCallData.outputAssetIdA == assetId ? v.totalOutputValueA : BigInt(0)) +
+          (v.bridgeCallData.outputAssetIdB == assetId ? v.totalOutputValueB : BigInt(0)),
         BigInt(0),
       );
       assetMetrics.totalFees += rollup.getTotalFees(assetId);
       result.push(assetMetrics);
     }
+    return result;
+  }
+
+  private async getBridgeMetrics(rollupProof: RollupProofDao, rollupId: number) {
+    const result: BridgeMetricsDao[] = [];
+    const bridgeTxNum = new Map<bigint, number>();
+    // count transactions for bridge
+    for (const tx of rollupProof.txs.filter(({ txType }) => txType === TxType.DEFI_DEPOSIT)) {
+      const { bridgeCallData } = OffchainDefiDepositData.fromBuffer(tx.offchainTxData);
+      const num = bridgeTxNum.get(bridgeCallData.toBigInt()) || 0;
+      bridgeTxNum.set(bridgeCallData.toBigInt(), num + 1);
+    }
+
+    // register metrics for defi bridge usage
+    for (const [bridgeCallData, numTxs] of bridgeTxNum.entries()) {
+      const storedMetrics = await this.rollupDb.getBridgeMetricsForRollup(bridgeCallData, rollupId);
+      const bridgeMetrics = storedMetrics
+        ? storedMetrics
+        : new BridgeMetricsDao({
+            rollupId,
+            bridgeId: bridgeCallData, // TODO: rename bridgeId to bridgeCallData
+          });
+      bridgeMetrics.numTxs = numTxs;
+      bridgeMetrics.totalNumTxs = (bridgeMetrics.totalNumTxs || 0) + numTxs;
+      result.push(bridgeMetrics);
+    }
+
     return result;
   }
 
