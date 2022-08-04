@@ -708,9 +708,23 @@ export class RollupProcessor {
     );
     // Key the offchain data event on the rollup id and sender.
     const offchainEventMap = offchainEvents.reduce<{ [key: string]: Event[] }>((a, e) => {
+      const offChainLog = this.contract.interface.parseLog(e);
       const {
         args: { rollupId, chunk, totalChunks, sender },
-      } = this.contract.interface.parseLog(e);
+      } = offChainLog;
+
+      // if the rollup event occurs before the offchain event, then ignore the off chain event
+      const rollupLogIndex = rollupLogs.findIndex(x => x.args.rollupId.toNumber() === rollupId.toNumber());
+      if (rollupLogIndex !== -1) {
+        const rollupEvent = rollupEvents[rollupLogIndex];
+        if (rollupEvent.blockNumber < e.blockNumber) {
+          this.log(
+            `ignoring offchain event at block ${e.blockNumber} for rollup ${rollupId} at block ${rollupEvent.blockNumber}`,
+          );
+          return a;
+        }
+      }
+
       const key = `${rollupId}:${sender}`;
       if (!a[key] || a[key].length != totalChunks) {
         a[key] = Array.from({ length: totalChunks });
@@ -752,6 +766,7 @@ export class RollupProcessor {
     const [proofData] = parsedRollupTx.args;
     const encodedProofBuffer = Buffer.from(proofData.slice(2), 'hex');
     const rollupProofData = RollupProofData.decode(encodedProofBuffer);
+    this.log(`decoding block with tx hash ${rollupTx.hash}, rollupId ${rollupProofData.rollupId}`);
     const validProofIds = rollupProofData.getNonPaddingProofIds();
     const offchainTxData = sliceOffchainTxData(validProofIds, offchainTxDataBuf);
 
