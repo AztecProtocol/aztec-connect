@@ -45,6 +45,7 @@ export class Metrics {
   private rollupGasBalance: Gauge<string>;
   private rollupBridgeDepositValue: Gauge<string>;
   private totalBridgeDepositValue: Gauge<string>;
+  private bridgeRollupGasCost: Gauge<string>;
 
   private httpEndpointCounter: Counter<string>;
   private txReceivedCounter: Counter<string>;
@@ -54,6 +55,7 @@ export class Metrics {
   private bridgeTotalAztecCallsCounter: Counter<string>;
   private bridgeTotalUsdCost: Counter<string>;
   private bridgeTotalUsdFees: Counter<string>;
+  private bridgeTotalAztecTxCounter: Counter<string>;
 
   private coinbaseClient: PublicClient = new PublicClient();
 
@@ -218,6 +220,12 @@ export class Metrics {
       labelNames: [BRIDGE_METRIC_LABEL],
     });
 
+    this.bridgeRollupGasCost = new Gauge({
+      name: 'bridge_rollup_gas_cost',
+      help: 'gas cost of this bridge in rollup',
+      labelNames: [BRIDGE_METRIC_LABEL],
+    });
+
     this.bridgeRollupUsdCost = new Gauge({
       name: 'bridge_rollup_usd_cost',
       help: 'USD cost of this bridge in rollup',
@@ -335,6 +343,12 @@ export class Metrics {
       help: 'Total USD fees accrued by bridge',
       labelNames: [BRIDGE_METRIC_LABEL],
     });
+
+    this.bridgeTotalAztecTxCounter = new Counter({
+      name: 'bridge_total_aztec_txs',
+      help: 'Total TXs published by aztec for bridge',
+      labelNames: [BRIDGE_METRIC_LABEL],
+    });
   }
 
   receiveTxTimer() {
@@ -415,13 +429,17 @@ export class Metrics {
     if (rollup.bridgeMetrics) {
       for (const bridgeMetric of rollup.bridgeMetrics) {
         // TODO: rename bridgeId to bridgeCallData
-        const { bridgeId: _bridgeCallData, numTxs } = bridgeMetric;
+        const { bridgeId: _bridgeCallData, numTxs, publishedByProvider } = bridgeMetric;
         const bridgeCallData = BridgeCallData.fromBigInt(_bridgeCallData);
         const bridgeLabel = bridgeCallData.toString();
 
         this.bridgeRollupTxGauge.labels(bridgeLabel).set(numTxs || 0);
         this.bridgeTotalTxCounter.labels(bridgeLabel).inc(numTxs);
         this.bridgeTotalTimesCalledCounter.labels(bridgeLabel).inc();
+
+        if (publishedByProvider) {
+          this.bridgeTotalAztecTxCounter.labels(bridgeLabel).inc(numTxs);
+        }
       }
     }
 
@@ -544,7 +562,7 @@ export class Metrics {
         const feeInWei = valueMappings[strBridgeCallData]?.feeInWei ?? 0n;
         const totalDeposit = valueMappings[strBridgeCallData]?.depositValue ?? 0n;
 
-        const previous = await this.rollupDb.getLastBridgeMetrics(encodedBridgeCallData);
+        const previous = await this.rollupDb.getOurLastBridgeMetrics(encodedBridgeCallData);
         const bridgeMetrics = previous || new BridgeMetricsDao();
         // TODO: rename bridgeId to bridgeCallData
         bridgeMetrics.bridgeId = encodedBridgeCallData;
@@ -564,12 +582,14 @@ export class Metrics {
         bridgeMetrics.totalUsdFees = (bridgeMetrics.totalUsdFees || 0) + usdFees;
         bridgeMetrics.depositValue = totalDeposit;
         bridgeMetrics.totalDepositValue = (bridgeMetrics.totalDepositValue || 0n) + totalDeposit;
+        bridgeMetrics.publishedByProvider = true;
         result.push(bridgeMetrics);
 
         const bridgeLabel = bridgeCallData.toString();
         this.bridgeRollupGasAcc.labels(bridgeLabel).set(gasAccrued);
         this.bridgeTotalGasAccCounter.labels(bridgeLabel).inc(gasAccrued);
         this.bridgeTotalAztecCallsCounter.labels(bridgeLabel).inc();
+        this.bridgeRollupGasCost.labels(bridgeLabel).set(bridgeProfile.gasThreshold);
         this.bridgeRollupUsdCost.labels(bridgeLabel).set(usdCostOfExecutingBridge);
         this.bridgeTotalUsdCost.labels(bridgeLabel).inc(usdCostOfExecutingBridge);
         this.bridgeRollupUsdFees.labels(bridgeLabel).set(usdFees);

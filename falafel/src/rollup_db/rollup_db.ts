@@ -222,9 +222,12 @@ export class TypeOrmRollupDb implements RollupDb {
     return await this.bridgeMetricsRep.findOne({ bridgeId: bridgeCallData, rollupId });
   }
 
-  public async getLastBridgeMetrics(bridgeCallData: bigint) {
+  public async getOurLastBridgeMetrics(bridgeCallData: bigint) {
     // TODO: rename bridgeId to bridgeCallData
-    return await this.bridgeMetricsRep.findOne({ bridgeId: bridgeCallData }, { order: { rollupId: 'DESC' } });
+    return await this.bridgeMetricsRep.findOne(
+      { bridgeId: bridgeCallData, publishedByProvider: true },
+      { order: { rollupId: 'DESC' } },
+    );
   }
 
   public async addBridgeMetrics(bridgeMetrics: BridgeMetricsDao[]) {
