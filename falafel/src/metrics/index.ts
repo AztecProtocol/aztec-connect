@@ -538,8 +538,18 @@ export class Metrics {
       }
     }
 
-    const calcUsd = (num: number) => {
-      return (num * Number(gasPrice / 10n ** 9n) * ethUsdPrice) / 10 ** 9;
+    const calcUsdCostOfFeeInWei = (feeInWei: bigint) => {
+      const usdScale = 1000000;
+      const scaledUsdPrice = BigInt(ethUsdPrice * usdScale);
+      const costInScaledUsd = (scaledUsdPrice * feeInWei) / 10n ** 18n;
+      const usdCost = Number(costInScaledUsd) / usdScale;
+      return usdCost;
+    };
+
+    const calcUsdCostOfGas = (num: number) => {
+      const gas = BigInt(num);
+      const costOfGasInWei = gas * gasPrice;
+      return calcUsdCostOfFeeInWei(costOfGasInWei);
     };
 
     const getDecimals = (bridgeId: BridgeCallData) => {
@@ -573,8 +583,8 @@ export class Metrics {
         bridgeMetrics.totalAztecCalls = (bridgeMetrics.totalAztecCalls || 0) + 1;
         bridgeMetrics.gasPrice = gasPrice;
 
-        const usdCostOfExecutingBridge = calcUsd(bridgeProfile.gasThreshold);
-        const usdFees = (Number(feeInWei / 10n ** 9n) * ethUsdPrice) / 10 ** 9;
+        const usdCostOfExecutingBridge = calcUsdCostOfGas(bridgeProfile.gasThreshold);
+        const usdFees = calcUsdCostOfFeeInWei(feeInWei);
 
         bridgeMetrics.usdCost = usdCostOfExecutingBridge;
         bridgeMetrics.totalUsdCost = (bridgeMetrics.totalUsdCost || 0) + usdCostOfExecutingBridge;
