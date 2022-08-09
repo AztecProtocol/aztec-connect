@@ -3,7 +3,7 @@ We use the notation of the Aztec Yellow Paper. In particular, $\text{BN254}$ is 
 
 ### Circuit Description
 
-This is a standard PLONK circuit that verifies a TurboPLONK root rollup proof. At the time the root verifier circuit $C_{RV}$ is constructed, it is supplied a list $L_{vk}$ of TurboPLONK verification keys, one for each root rollup circuit that is to be verifiable by $C_{RV}$. Let $N_{vk} = # L_{vk}$ denote the number of root rollup shapes that are accepted by the root verifier circuit.
+This is a standard PLONK circuit that verifies a TurboPLONK root rollup proof. At the time the root verifier circuit $C_{RV}$ is constructed, it is supplied a list $L_{vk}$ of TurboPLONK verification keys, one for each root rollup circuit that is to be verifiable by $C_{RV}$. Let $N_{vk} = \\# L_{vk}$ denote the number of root rollup shapes that are accepted by the root verifier circuit.
 
 ### Circuit Inputs: Summary
 The inputs for the root verifier circuit have the form
