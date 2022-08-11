@@ -248,7 +248,7 @@ export const ShieldForAliasForm: React.FunctionComponent<DepositFormProps> = ({
           </FieldTitleRoot>
           <FieldInputWrapper theme={InputTheme.LIGHT}>
             <AmountAssetIconRoot>
-              <ShieldedAssetIcon address={asset.address} size="m" white />
+              <ShieldedAssetIcon asset={asset} size="m" white />
             </AmountAssetIconRoot>
             <Input
               theme={InputTheme.LIGHT}
@@ -283,7 +283,7 @@ export const ShieldForAliasForm: React.FunctionComponent<DepositFormProps> = ({
           </FieldTitleRoot>
           <FieldInputWrapper theme={InputTheme.LIGHT}>
             <AmountAssetIconRoot>
-              <ShieldedAssetIcon address={asset.address} size="m" white />
+              <ShieldedAssetIcon asset={asset} size="m" white />
             </AmountAssetIconRoot>
             <Input
               theme={InputTheme.LIGHT}

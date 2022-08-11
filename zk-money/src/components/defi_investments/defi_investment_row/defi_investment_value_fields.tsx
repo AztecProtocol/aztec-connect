@@ -7,20 +7,14 @@ import type {
 import { useInteractionPresentValue } from 'alt-model/defi/defi_info_hooks';
 import { useAmount } from 'alt-model/top_level_context';
 import { ShieldedAssetIcon } from 'components/shielded_asset_icon';
-import { EthAddress, UserDefiInteractionResultState, UserDefiTx } from '@aztec/sdk';
+import { UserDefiInteractionResultState, UserDefiTx } from '@aztec/sdk';
 import { SkeletonRect } from 'ui-components';
 
 function ValueField({ amount }: { amount?: Amount }) {
-  if (!amount)
-    return (
-      <>
-        <SkeletonRect sizingContent={<ShieldedAssetIcon size="s" address={EthAddress.ZERO} />} />
-        <SkeletonRect sizingContent="1.000000 zkETH" />
-      </>
-    );
+  if (!amount) return <SkeletonRect sizingContent="XXX 1.000000 zkETH" />;
   return (
     <>
-      <ShieldedAssetIcon size="s" address={amount.address} />
+      <ShieldedAssetIcon size="s" asset={amount.info} />
       {amount.format({ uniform: true })}
     </>
   );

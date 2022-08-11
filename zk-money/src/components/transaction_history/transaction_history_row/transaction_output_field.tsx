@@ -13,7 +13,7 @@ export function DefiTransactionOutputField({ tx }: { tx: UserDefiTx }) {
   if (!amount) return <></>;
   return (
     <>
-      <ShieldedAssetIcon size="s" address={amount?.info.address} />
+      <ShieldedAssetIcon size="s" asset={amount?.info} />
       {amount.format({ showPlus: true, uniform: true })}
     </>
   );
