@@ -174,6 +174,10 @@ resource "aws_ecs_task_definition" "falafel" {
         "value": "0xFF1F2B4ADb9dF6FC8eAFecDcbF96A2B351680455"
       },
       {
+        "name": "PERMIT_HELPER_CONTRACT_ADDRESS",
+        "value": "0xf4F1e0B0b93b7b2b7b6992B99F2A1678b07Cd70C"
+      },
+      {
         "name": "FEE_DISTRIBUTOR_ADDRESS",
         "value": "0x4cf32670a53657596E641DFCC6d40f01e4d64927"
       },
