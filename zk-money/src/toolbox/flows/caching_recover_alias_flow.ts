@@ -70,7 +70,7 @@ export class CachingRecoverAliasFlow {
       emitState({ phase: 'derive-new-account-keys' });
       const accountKeys = await sdk.generateAccountKeyPair(address, signer);
       emitState({ phase: 'checking-new-account-keys' });
-      const isRegistered = await throwIfCancelled(sdk.isAccountRegistered(accountKeys.publicKey));
+      const isRegistered = await throwIfCancelled(sdk.isAccountRegistered(accountKeys.publicKey, true));
       if (isRegistered) throw new Error('An account already exists at this address');
       emitState({ phase: 'derive-new-spending-keys' });
       const spendingKeys = await sdk.generateSpendingKeyPair(address, signer);
