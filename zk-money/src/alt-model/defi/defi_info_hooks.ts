@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { BridgeCallData, UserDefiTx } from '@aztec/sdk';
 import { DefiRecipe, FlowDirection } from './types';
-import { useAmount, useBridgeDataAdaptorsMethodCaches } from 'alt-model/top_level_context';
+import { useAmount, useBridgeDataAdaptorsMethodCaches, useDefiRecipes } from 'alt-model/top_level_context';
 import { useMaybeObs } from 'app/util';
 import { Amount } from 'alt-model/assets';
 import { useAmountBulkPrice } from 'alt-model/price_hooks';
@@ -11,11 +11,14 @@ export function useBridgeDataAdaptor(recipeId: string) {
   return adaptorsCache.get(recipeId);
 }
 
-export function useDefaultAuxDataOption(recipeId: string) {
+export function useDefaultAuxDataOption(recipeId: string, isExit?: boolean) {
   const { auxDataPollerCache } = useBridgeDataAdaptorsMethodCaches();
+  const recipes = useDefiRecipes();
   const opts = useMaybeObs(auxDataPollerCache.get(recipeId)?.obs);
-  // TODO: don't assume last element is default choice
-  return opts?.[opts?.length - 1];
+  const recipe = recipes.find(x => x.id === recipeId);
+  if (!recipe || !opts) return;
+  if (isExit && recipe.selectExitAuxDataOpt) return recipe.selectExitAuxDataOpt(opts);
+  return recipe.selectEnterAuxDataOpt(opts);
 }
 
 export function useDefaultBridgeCallData(recipe: DefiRecipe) {
@@ -24,7 +27,14 @@ export function useDefaultBridgeCallData(recipe: DefiRecipe) {
     const { bridgeAddressId, flow } = recipe;
     if (auxData === undefined) return undefined;
     // TODO: use more complete bridge call data construction
-    return new BridgeCallData(bridgeAddressId, flow.enter.inA.id, flow.enter.outA.id, undefined, undefined, Number(auxData));
+    return new BridgeCallData(
+      bridgeAddressId,
+      flow.enter.inA.id,
+      flow.enter.outA.id,
+      undefined,
+      undefined,
+      Number(auxData),
+    );
   }, [recipe, auxData]);
 }
 
