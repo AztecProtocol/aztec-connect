@@ -35,7 +35,7 @@ export function Holding({ assetValue, onSend, onShield, onGoToEarn }: HoldingPro
 
   return (
     <div className={style.holdingWrapper}>
-      <ShieldedAssetIcon address={asset.address} />
+      <ShieldedAssetIcon asset={asset} />
       <div className={style.assetWrapper}>
         <div className={style.holdingUnits}>{amount.format({ uniform: true })}</div>
         <div className={style.spendable}>{`${spendableFormatted} available`}</div>

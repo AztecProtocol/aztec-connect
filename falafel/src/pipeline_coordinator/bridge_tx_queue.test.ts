@@ -5,7 +5,7 @@ import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { randomBytes } from 'crypto';
 import { TxDao } from '../entity/tx';
 import { TxFeeResolver } from '../tx_fee_resolver';
-import { BridgeTxQueue, RollupTx } from './bridge_tx_queue';
+import { BridgeQueueStats, BridgeTxQueue, RollupTx } from './bridge_tx_queue';
 
 const bridgeConfig: BridgeConfig = {
   bridgeCallData: 1n,
@@ -65,8 +65,18 @@ const getFullBridgeGas = () => bridgeConfig.gas;
 const getSingleBridgeTxGas = () => bridgeConfig.gas / bridgeConfig.numTxs;
 const getAllOtherBridgeSlotsGas = () => getFullBridgeGas() - getSingleBridgeTxGas();
 
+const testQueueStats = (unpublishedTxs: RollupTx[], bridgeQ: BridgeTxQueue) => {
+  const expectedStats: BridgeQueueStats = {
+    gasAccrued:
+      unpublishedTxs.length * getSingleBridgeTxGas() +
+      unpublishedTxs.reduce((prev, current) => prev + current.excessGas, 0),
+    numQueuedTxs: unpublishedTxs.length,
+    bridgeCallData: bridgeConfig.bridgeCallData,
+  };
+  expect(bridgeQ.getQueueStats()).toEqual(expectedStats);
+};
+
 describe('Bridge Tx Queue', () => {
-  let bridgeQ: BridgeTxQueue;
   let feeResolver: Mockify<TxFeeResolver>;
 
   beforeEach(() => {
@@ -97,11 +107,10 @@ describe('Bridge Tx Queue', () => {
       getMaxTxCallData: jest.fn(),
       getMaxUnadjustedGas: jest.fn(),
     };
-
-    bridgeQ = new BridgeTxQueue(bridgeConfig.bridgeCallData, feeResolver as any);
   });
 
   it("single tx that only covers it's own gas does not get returned", () => {
+    const bridgeQ = new BridgeTxQueue(bridgeConfig.bridgeCallData, feeResolver as any);
     const rollupTx = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
     bridgeQ.addDefiTx(rollupTx);
     const txsForRollup = bridgeQ.getTxsToRollup(10, new Set(), 10, 100000, 1000);
@@ -109,9 +118,13 @@ describe('Bridge Tx Queue', () => {
     expect(txsForRollup.txsToRollup.length).toEqual(0);
     expect(txsForRollup.resourcesConsumed.callDataUsed).toBe(0);
     expect(txsForRollup.resourcesConsumed.gasUsed).toBe(0);
+
+    const unpublishedTxs = [rollupTx];
+    testQueueStats(unpublishedTxs, bridgeQ);
   });
 
   it('single tx that covers the full bridge cost is returned', () => {
+    const bridgeQ = new BridgeTxQueue(bridgeConfig.bridgeCallData, feeResolver as any);
     const rollupTx = createRollupTx(
       1,
       TxType.DEFI_DEPOSIT,
@@ -127,9 +140,13 @@ describe('Bridge Tx Queue', () => {
     expect(txsForRollup.resourcesConsumed.callDataUsed).toBe(TX_CALL_DATA);
     // BASE_GAS is subtracted as we effectively remove an empty slot
     expect(txsForRollup.resourcesConsumed.gasUsed).toBe(TOTAL_DEFI_DEPOSIT_GAS - BASE_GAS + bridgeConfig.gas);
+
+    const unpublishedTxs: RollupTx[] = [];
+    testQueueStats(unpublishedTxs, bridgeQ);
   });
 
   it('multiple txs that cover the bridge cost are returned', () => {
+    const bridgeQ = new BridgeTxQueue(bridgeConfig.bridgeCallData, feeResolver as any);
     const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
     const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
     const rollupTx3 = createRollupTx(3, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
@@ -149,9 +166,13 @@ describe('Bridge Tx Queue', () => {
     expect(txsForRollup.resourcesConsumed.gasUsed).toBe(
       (TOTAL_DEFI_DEPOSIT_GAS - BASE_GAS) * numExpectedTxs + bridgeConfig.gas,
     );
+
+    const unpublishedTxs: RollupTx[] = [];
+    testQueueStats(unpublishedTxs, bridgeQ);
   });
 
   it('multiple txs are returned even with a single high fee tx', () => {
+    const bridgeQ = new BridgeTxQueue(bridgeConfig.bridgeCallData, feeResolver as any);
     const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
     const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
     const rollupTx3 = createRollupTx(
@@ -177,10 +198,14 @@ describe('Bridge Tx Queue', () => {
     expect(txsForRollup.resourcesConsumed.gasUsed).toBe(
       (TOTAL_DEFI_DEPOSIT_GAS - BASE_GAS) * numExpectedTxs + bridgeConfig.gas,
     );
+
+    const unpublishedTxs: RollupTx[] = [];
+    testQueueStats(unpublishedTxs, bridgeQ);
   });
 
   it('number of returned txs is limited to max slots', () => {
     {
+      const bridgeQ = new BridgeTxQueue(bridgeConfig.bridgeCallData, feeResolver as any);
       const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
       const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
       const rollupTx3 = createRollupTx(
@@ -207,8 +232,12 @@ describe('Bridge Tx Queue', () => {
       expect(txsForRollup.resourcesConsumed.gasUsed).toBe(
         (TOTAL_DEFI_DEPOSIT_GAS - BASE_GAS) * expectedTxs + bridgeConfig.gas,
       );
+
+      const unpublishedTxs = [rollupTx1, rollupTx2];
+      testQueueStats(unpublishedTxs, bridgeQ);
     }
     {
+      const bridgeQ = new BridgeTxQueue(bridgeConfig.bridgeCallData, feeResolver as any);
       const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
       const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
       const rollupTx3 = createRollupTx(
@@ -235,11 +264,15 @@ describe('Bridge Tx Queue', () => {
       expect(txsForRollup.resourcesConsumed.gasUsed).toBe(
         (TOTAL_DEFI_DEPOSIT_GAS - BASE_GAS) * expectedTxs + bridgeConfig.gas,
       );
+
+      const unpublishedTxs = [rollupTx2];
+      testQueueStats(unpublishedTxs, bridgeQ);
     }
   });
 
   it('number of returned txs is limited to gas remaining', () => {
     {
+      const bridgeQ = new BridgeTxQueue(bridgeConfig.bridgeCallData, feeResolver as any);
       const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
       const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
       const rollupTx3 = createRollupTx(
@@ -267,9 +300,12 @@ describe('Bridge Tx Queue', () => {
       expect(txsForRollup.resourcesConsumed.gasUsed).toBe(
         (TOTAL_DEFI_DEPOSIT_GAS - BASE_GAS) * expectedTxs + bridgeConfig.gas,
       );
+      const unpublishedTxs = [rollupTx2];
+      testQueueStats(unpublishedTxs, bridgeQ);
     }
 
     {
+      const bridgeQ = new BridgeTxQueue(bridgeConfig.bridgeCallData, feeResolver as any);
       const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
       const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
       const rollupTx3 = createRollupTx(
@@ -296,11 +332,14 @@ describe('Bridge Tx Queue', () => {
       expect(txsForRollup.resourcesConsumed.gasUsed).toBe(
         (TOTAL_DEFI_DEPOSIT_GAS - BASE_GAS) * expectedTxs + bridgeConfig.gas,
       );
+      const unpublishedTxs = [rollupTx1, rollupTx2];
+      testQueueStats(unpublishedTxs, bridgeQ);
     }
   });
 
   it('number of returned txs is limited to call data remaining', () => {
     {
+      const bridgeQ = new BridgeTxQueue(bridgeConfig.bridgeCallData, feeResolver as any);
       const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
       const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
       const rollupTx3 = createRollupTx(
@@ -327,8 +366,11 @@ describe('Bridge Tx Queue', () => {
       expect(txsForRollup.resourcesConsumed.gasUsed).toBe(
         (TOTAL_DEFI_DEPOSIT_GAS - BASE_GAS) * expectedTxs + bridgeConfig.gas,
       );
+      const unpublishedTxs = [rollupTx2];
+      testQueueStats(unpublishedTxs, bridgeQ);
     }
     {
+      const bridgeQ = new BridgeTxQueue(bridgeConfig.bridgeCallData, feeResolver as any);
       const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
       const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
       const rollupTx3 = createRollupTx(
@@ -355,10 +397,13 @@ describe('Bridge Tx Queue', () => {
       expect(txsForRollup.resourcesConsumed.gasUsed).toBe(
         (TOTAL_DEFI_DEPOSIT_GAS - BASE_GAS) * expectedTxs + bridgeConfig.gas,
       );
+      const unpublishedTxs = [rollupTx1, rollupTx2];
+      testQueueStats(unpublishedTxs, bridgeQ);
     }
   });
 
   it('multiple txs are not returned if not enough slots', () => {
+    const bridgeQ = new BridgeTxQueue(bridgeConfig.bridgeCallData, feeResolver as any);
     const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
     const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
     const rollupTx3 = createRollupTx(3, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
@@ -375,9 +420,12 @@ describe('Bridge Tx Queue', () => {
     expect(txsForRollup.txsToRollup.length).toEqual(0);
     expect(txsForRollup.resourcesConsumed.callDataUsed).toBe(0);
     expect(txsForRollup.resourcesConsumed.gasUsed).toBe(0);
+    const unpublishedTxs: RollupTx[] = [rollupTx1, rollupTx2, rollupTx3, rollupTx4, rollupTx5];
+    testQueueStats(unpublishedTxs, bridgeQ);
   });
 
   it('multiple txs are not returned if not enough remaining gas for the bridge', () => {
+    const bridgeQ = new BridgeTxQueue(bridgeConfig.bridgeCallData, feeResolver as any);
     const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
     const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
     const rollupTx3 = createRollupTx(3, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
@@ -394,9 +442,12 @@ describe('Bridge Tx Queue', () => {
     expect(txsForRollup.txsToRollup.length).toEqual(0);
     expect(txsForRollup.resourcesConsumed.callDataUsed).toBe(0);
     expect(txsForRollup.resourcesConsumed.gasUsed).toBe(0);
+    const unpublishedTxs: RollupTx[] = [rollupTx1, rollupTx2, rollupTx3, rollupTx4, rollupTx5];
+    testQueueStats(unpublishedTxs, bridgeQ);
   });
 
   it('multiple txs are not returned if not enough remaining gas for the bridge and all txs required for it', () => {
+    const bridgeQ = new BridgeTxQueue(bridgeConfig.bridgeCallData, feeResolver as any);
     const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
     const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
     const rollupTx3 = createRollupTx(3, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
@@ -413,9 +464,12 @@ describe('Bridge Tx Queue', () => {
     expect(txsForRollup.txsToRollup.length).toEqual(0);
     expect(txsForRollup.resourcesConsumed.callDataUsed).toBe(0);
     expect(txsForRollup.resourcesConsumed.gasUsed).toBe(0);
+    const unpublishedTxs: RollupTx[] = [rollupTx1, rollupTx2, rollupTx3, rollupTx4, rollupTx5];
+    testQueueStats(unpublishedTxs, bridgeQ);
   });
 
   it('multiple txs are not returned if not enough remaining call data for all of the txs', () => {
+    const bridgeQ = new BridgeTxQueue(bridgeConfig.bridgeCallData, feeResolver as any);
     const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
     const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
     const rollupTx3 = createRollupTx(3, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
@@ -432,9 +486,12 @@ describe('Bridge Tx Queue', () => {
     expect(txsForRollup.txsToRollup.length).toEqual(0);
     expect(txsForRollup.resourcesConsumed.callDataUsed).toBe(0);
     expect(txsForRollup.resourcesConsumed.gasUsed).toBe(0);
+    const unpublishedTxs: RollupTx[] = [rollupTx1, rollupTx2, rollupTx3, rollupTx4, rollupTx5];
+    testQueueStats(unpublishedTxs, bridgeQ);
   });
 
   it('multiple txs are not limited to bridge size', () => {
+    const bridgeQ = new BridgeTxQueue(bridgeConfig.bridgeCallData, feeResolver as any);
     // bridge size here is 5
     const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
     const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
@@ -461,9 +518,12 @@ describe('Bridge Tx Queue', () => {
     expect(txsForRollup.resourcesConsumed.gasUsed).toBe(
       (TOTAL_DEFI_DEPOSIT_GAS - BASE_GAS) * numExpectedTxs + bridgeConfig.gas,
     );
+    const unpublishedTxs: RollupTx[] = [];
+    testQueueStats(unpublishedTxs, bridgeQ);
   });
 
   it('multiple txs are not limited to single bridge size', () => {
+    const bridgeQ = new BridgeTxQueue(bridgeConfig.bridgeCallData, feeResolver as any);
     // bridge size is 5
     const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
     const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
@@ -494,9 +554,12 @@ describe('Bridge Tx Queue', () => {
     expect(txsForRollup.resourcesConsumed.gasUsed).toBe(
       (TOTAL_DEFI_DEPOSIT_GAS - BASE_GAS) * numExpectedTxs + bridgeConfig.gas,
     );
+    const unpublishedTxs: RollupTx[] = [];
+    testQueueStats(unpublishedTxs, bridgeQ);
   });
 
   it('txs that cover full bridge cost are ordered by excess gas at front of queue', () => {
+    const bridgeQ = new BridgeTxQueue(bridgeConfig.bridgeCallData, feeResolver as any);
     const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 120000);
     const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 130000);
     const rollupTx3 = createRollupTx(3, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 120000);
@@ -522,9 +585,12 @@ describe('Bridge Tx Queue', () => {
     expect(txsForRollup.resourcesConsumed.gasUsed).toBe(
       (TOTAL_DEFI_DEPOSIT_GAS - BASE_GAS) * numExpectedTxs + bridgeConfig.gas,
     );
+    const unpublishedTxs: RollupTx[] = [];
+    testQueueStats(unpublishedTxs, bridgeQ);
   });
 
   it('queue is depleted with each call', () => {
+    const bridgeQ = new BridgeTxQueue(bridgeConfig.bridgeCallData, feeResolver as any);
     const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
     const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
     const rollupTx3 = createRollupTx(3, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
@@ -554,6 +620,8 @@ describe('Bridge Tx Queue', () => {
     expect(txsForRollup.resourcesConsumed.gasUsed).toBe(
       (TOTAL_DEFI_DEPOSIT_GAS - BASE_GAS) * numExpectedTxs + bridgeConfig.gas,
     );
+    const unpublishedTxs = [rollupTx6, rollupTx7, rollupTx8, rollupTx9, rollupTx10];
+    testQueueStats(unpublishedTxs, bridgeQ);
 
     txsForRollup = bridgeQ.getTxsToRollup(8, new Set(), 10, 1000000, 1000);
     expect(txsForRollup).toBeTruthy();
@@ -564,6 +632,9 @@ describe('Bridge Tx Queue', () => {
       (TOTAL_DEFI_DEPOSIT_GAS - BASE_GAS) * numExpectedTxs + bridgeConfig.gas,
     );
 
+    const newUnpublishedTxs: RollupTx[] = [];
+    testQueueStats(newUnpublishedTxs, bridgeQ);
+
     txsForRollup = bridgeQ.getTxsToRollup(8, new Set(), 10, 1000000, 1000);
     expect(txsForRollup).toBeTruthy();
     expect(txsForRollup.txsToRollup.length).toEqual(0);
@@ -572,6 +643,7 @@ describe('Bridge Tx Queue', () => {
   });
 
   it('multiple txs are limited by number of assets', () => {
+    const bridgeQ = new BridgeTxQueue(bridgeConfig.bridgeCallData, feeResolver as any);
     const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 0, bridgeConfig.bridgeCallData, 0);
     const rollupTx2 = createRollupTx(2, TxType.DEFI_DEPOSIT, 1, bridgeConfig.bridgeCallData, 0);
     const rollupTx3 = createRollupTx(3, TxType.DEFI_DEPOSIT, 1, bridgeConfig.bridgeCallData, 1200000);
@@ -595,9 +667,12 @@ describe('Bridge Tx Queue', () => {
     expect(txsForRollup.resourcesConsumed.gasUsed).toBe(
       (TOTAL_DEFI_DEPOSIT_GAS - BASE_GAS) * numExpectedTxs + bridgeConfig.gas,
     );
+    const unpublishedTxs = [rollupTx1, rollupTx4, rollupTx5];
+    testQueueStats(unpublishedTxs, bridgeQ);
   });
 
   it('only fee-paying assets count towards the asset limit', () => {
+    const bridgeQ = new BridgeTxQueue(bridgeConfig.bridgeCallData, feeResolver as any);
     const rollupTx1 = createRollupTx(1, TxType.DEFI_DEPOSIT, 1, bridgeConfig.bridgeCallData, 0);
     const rollupTx2 = createRollupTx(
       2,
@@ -627,5 +702,7 @@ describe('Bridge Tx Queue', () => {
     expect(txsForRollup.resourcesConsumed.gasUsed).toBe(
       (TOTAL_DEFI_DEPOSIT_GAS - BASE_GAS) * numExpectedTxs + bridgeConfig.gas,
     );
+    const unpublishedTxs = [rollupTx4, rollupTx5];
+    testQueueStats(unpublishedTxs, bridgeQ);
   });
 });

@@ -68,4 +68,7 @@ export class BridgeMetricsDao {
 
   @ManyToOne(() => RollupDao, rollup => rollup.id, { onDelete: 'CASCADE' })
   public rollup!: RollupDao;
+
+  @Column({ default: true })
+  public publishedByProvider!: boolean;
 }

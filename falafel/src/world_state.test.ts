@@ -260,7 +260,7 @@ describe('world_state', () => {
       }),
       getAssetMetrics: jest.fn().mockReturnValue(undefined),
       getBridgeMetricsForRollup: jest.fn(),
-      getLastBridgeMetrics: jest.fn(),
+      getOurLastBridgeMetrics: jest.fn(),
       getRollup: jest.fn().mockImplementation((id: number) => rollupStore[id]),
       getPendingTxs: jest.fn().mockImplementation(() => {
         return pendingTxs;

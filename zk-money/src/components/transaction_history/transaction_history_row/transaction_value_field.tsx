@@ -11,7 +11,7 @@ function ValueField(props: { assetValue?: AssetValue }) {
   if (!amount) return <></>;
   return (
     <>
-      <ShieldedAssetIcon size="s" address={amount?.info.address} />
+      <ShieldedAssetIcon size="s" asset={amount?.info} />
       {amount.format({ showPlus: true, uniform: true })}
     </>
   );

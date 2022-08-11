@@ -12,12 +12,18 @@ export function ErrorToast() {
   const [hidden, setHidden] = useState(true);
   useEffect(() => {
     const handleRejection = (event: PromiseRejectionEvent) => {
-      setMessage(event.reason?.toString());
-      setHidden(false);
+      // This event can fire mid-render, hence why setting state must be deferred
+      setTimeout(() => {
+        setMessage(event.reason?.toString());
+        setHidden(false);
+      }, 0);
     };
     const handleError = (event: ErrorEvent) => {
-      setMessage(event.message?.toString());
-      setHidden(false);
+      // This event can fire mid-render, hence why setting state must be deferred
+      setTimeout(() => {
+        setMessage(event.message?.toString());
+        setHidden(false);
+      }, 0);
     };
     window.addEventListener('unhandledrejection', handleRejection);
     window.addEventListener('error', handleError);

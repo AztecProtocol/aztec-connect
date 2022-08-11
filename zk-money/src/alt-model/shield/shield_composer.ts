@@ -121,7 +121,7 @@ export class ShieldComposer {
   private async approveAndAwaitL1AllowanceIfNecessary(controller: DepositController, requiredAmount: Amount) {
     // If an ERC-20 doesn't support permits, an allowance must first be granted as a seperate transaction.
     const targetAssetIsEth = controller.assetValue.assetId === 0;
-    if (!targetAssetIsEth && !controller.hasPermitSupport()) {
+    if (!targetAssetIsEth && !controller.hasPermitSupport() && !this.isDai()) {
       const sufficientAllowanceHasBeenApproved = () =>
         controller.getPublicAllowance().then(allowance => allowance >= requiredAmount.baseUnits);
       if (!(await sufficientAllowanceHasBeenApproved())) {
@@ -148,7 +148,11 @@ export class ShieldComposer {
     );
     const expireIn = 60n * 60n * 24n; // 24 hours
     const deadline = BigInt(Math.floor(Date.now() / 1000)) + expireIn;
-    await this.withRetryableSigning(() => controller.depositFundsToContract(deadline));
+    if (this.isDai()) {
+      await this.withRetryableSigning(() => controller.depositFundsToContractWithNonStandardPermit(deadline));
+    } else {
+      await this.withRetryableSigning(() => controller.depositFundsToContract(deadline));
+    }
     this.stateObs.setPrompt('Awaiting transaction confirmation...');
     const timeout = 1000 * 60 * 30; // 30 mins
     const confirmed = await withinTimeLimit(controller.awaitDepositFundsToContract(), timeout);

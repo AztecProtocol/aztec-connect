@@ -6,7 +6,6 @@ import { HoldingsList } from '../../../components/holdings_list/holdings_list';
 import { MyBalance } from '../../../components/my_balance';
 import { ShieldMore } from '../../../components/shield_more';
 import { TransactionHistorySection } from '../../../components/transaction_history';
-import { IncentiveModal, useShouldShowIncentiveModal } from './modals/incentive_modal';
 import { SendModal } from './modals/send_modal';
 import { ShieldModal } from './modals/shield_modal';
 import style from './balance.module.scss';
@@ -44,25 +43,12 @@ interface BalanceProps {
 }
 
 export function Balance(props: BalanceProps) {
-  const [shouldShowPreShieldIncentiveModal, markPreShieldIncentiveModalAsShown] =
-    useShouldShowIncentiveModal('pre_shield');
-  const [showingPreShieldIncentiveModal, setShowingPreShieldIncentiveModal] = useState(false);
   const [modalActivation, setModalActivation] = useState<ModalActivation>();
   const isLoading = !useSdk();
   if (isLoading) return <LoadingFallback />;
 
   const handleOpenShieldModal = (assetId?: number) => {
-    if (shouldShowPreShieldIncentiveModal && (assetId ?? 0) === 0) {
-      setShowingPreShieldIncentiveModal(true);
-    } else {
-      setModalActivation({ type: 'shield', assetId });
-    }
-  };
-
-  const handleClosePreShieldIncentiveModal = () => {
-    markPreShieldIncentiveModalAsShown();
-    setShowingPreShieldIncentiveModal(false);
-    setModalActivation({ type: 'shield', assetId: 0 });
+    setModalActivation({ type: 'shield', assetId });
   };
 
   const handleOpenSendModal = (assetId: number) => {
@@ -86,13 +72,6 @@ export function Balance(props: BalanceProps) {
       />
       <TransactionHistorySection />
       {renderModal(modalActivation, handleCloseModal)}
-      {showingPreShieldIncentiveModal && (
-        <IncentiveModal
-          onClose={handleClosePreShieldIncentiveModal}
-          onButtonClick={handleClosePreShieldIncentiveModal}
-          buttonLabel="Continue"
-        />
-      )}
     </div>
   );
 }

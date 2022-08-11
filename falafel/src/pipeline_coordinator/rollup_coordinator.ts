@@ -333,8 +333,15 @@ export class RollupCoordinator {
       return rollupProfile;
     }
 
-    const bridgeConfigs = this.bridgeResolver.getBridgeConfigs();
-    this.metrics.recordRollupMetrics(txsToRollup, rollupProfile, bridgeConfigs);
+    try {
+      await this.metrics.recordRollupMetrics(
+        rollupProfile,
+        this.bridgeResolver,
+        Array.from(this.bridgeQueues.values()).map(bq => bq.getQueueStats()),
+      );
+    } catch (err) {
+      this.log('Error recording rollup metrics: ', err.message);
+    }
 
     // Profitable if gasBalance is equal or above what's needed.
     const isProfitable = rollupProfile.gasBalance >= 0;
@@ -411,10 +418,9 @@ export class RollupCoordinator {
           rollupDao.rollupProof?.txs ?? [],
           rollupDao.id,
           this.feeResolver,
-          this.bridgeResolver,
         );
       } catch (err) {
-        this.log('Error when registering published rollup metrics', err);
+        this.log('RollupCoordinator: Error when registering published rollup metrics', err);
       }
     }
 

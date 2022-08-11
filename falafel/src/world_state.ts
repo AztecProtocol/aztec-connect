@@ -680,6 +680,7 @@ export class WorldState {
         : new BridgeMetricsDao({
             rollupId,
             bridgeId: bridgeCallData, // TODO: rename bridgeId to bridgeCallData
+            publishedByProvider: false,
           });
       bridgeMetrics.numTxs = numTxs;
       bridgeMetrics.totalNumTxs = (bridgeMetrics.totalNumTxs || 0) + numTxs;

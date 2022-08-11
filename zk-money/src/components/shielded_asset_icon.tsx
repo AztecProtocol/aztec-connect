@@ -1,5 +1,5 @@
-import type { EthAddress } from '@aztec/sdk';
 import { getAssetIconGradient, getAssetIconWhite } from 'alt-model/known_assets/known_asset_display_data';
+import { RemoteAsset } from 'alt-model/types';
 import styled from 'styled-components/macro';
 import zkShieldGradientIcon from '../images/zk_shield_gradient.svg';
 import zkShieldWhiteIcon from '../images/zk_shield_white.svg';
@@ -58,14 +58,14 @@ const ShieldIcon = styled.div<{ white?: boolean; hide?: boolean }>`
 `;
 
 export const ShieldedAssetIcon: React.FunctionComponent<{
-  address: EthAddress;
+  asset: RemoteAsset;
   white?: boolean;
   size?: Size | number;
   hideShield?: boolean;
-}> = ({ white, address, size = 'm', hideShield }) => {
-  const icon = white ? getAssetIconWhite(address) : getAssetIconGradient(address);
+}> = ({ white, asset, size = 'm', hideShield }) => {
+  const icon = white ? getAssetIconWhite(asset.address) : getAssetIconGradient(asset.address);
   return (
-    <Root size={size}>
+    <Root size={size} title={asset.name}>
       <AssetIcon icon={icon} />
       <ShieldIcon white={white} hide={hideShield} />
     </Root>
