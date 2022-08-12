@@ -42,7 +42,7 @@ export class BridgeResolver {
       const bridgeGas = this.getFullBridgeGas(bridgeCallData);
       const numBridgeTxs = bridgeConfig ? bridgeConfig.numTxs : this.defaultDeFiBatchSize;
       const requiredGas = bridgeGas / numBridgeTxs;
-      return bridgeGas % numBridgeTxs ? requiredGas + 1 : requiredGas;
+      return Math.ceil(requiredGas);
     } else {
       throw new Error('Cannot get gas. Unrecognised DeFi-bridge');
     }
