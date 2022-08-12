@@ -68,12 +68,15 @@ export class CachingRecoverAliasFlow {
         throwIfCancelled,
       );
       emitState({ phase: 'derive-new-account-keys' });
-      const accountKeys = await sdk.generateAccountKeyPair(address, signer);
+      const accountKeys = await throwIfCancelled(sdk.generateAccountKeyPair(address, signer));
       emitState({ phase: 'checking-new-account-keys' });
       const isRegistered = await throwIfCancelled(sdk.isAccountRegistered(accountKeys.publicKey, true));
-      if (isRegistered) throw new Error('An account already exists at this address');
+      if (isRegistered)
+        throw new Error(
+          'This Ethereum wallet has already been used to register a different alias in the new system. Please "retry from failed" and select a different Ethereum wallet for deriving a fresh account to which your old alias will be recovered.',
+        );
       emitState({ phase: 'derive-new-spending-keys' });
-      const spendingKeys = await sdk.generateSpendingKeyPair(address, signer);
+      const spendingKeys = await throwIfCancelled(sdk.generateSpendingKeyPair(address, signer));
       return { accountKeys, spendingKeys };
     });
 

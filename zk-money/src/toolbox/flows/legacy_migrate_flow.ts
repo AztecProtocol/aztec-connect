@@ -51,7 +51,7 @@ export async function legacyMigrateFlow(
     undefined,
     signerForPaying,
   );
-  await controller.createProof();
+  await throwIfCancelled(controller.createProof());
 
   await depositAndSignFlow(
     depositAndSignFlow => emitState({ phase: 'deposit-and-sign', depositAndSignFlow }),
