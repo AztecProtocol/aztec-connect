@@ -21,7 +21,7 @@ export async function deployDev(signer: Signer, { dataTreeSize, roots }: TreeIni
   const uniswapRouter = await deployUniswap(signer);
   const verifier = await deployVerifier(signer, vk);
   const defiProxy = await deployDefiBridgeProxy(signer);
-  const { rollup } = await deployRollupProcessor(
+  const { rollup, permitHelper } = await deployRollupProcessor(
     signer,
     verifier,
     defiProxy,
@@ -33,13 +33,15 @@ export async function deployDev(signer: Signer, { dataTreeSize, roots }: TreeIni
     roots.rootsRoot,
     dataTreeSize,
     true,
+    true,
   );
   const feeDistributor = await deployFeeDistributor(signer, rollup, uniswapRouter.address);
 
   await rollup.setRollupProvider(await signer.getAddress(), true);
+  await rollup.grantRole(await rollup.LISTER_ROLE(), await signer.getAddress());
 
-  const asset0 = await deployErc20(rollup, signer, true, 'DAI');
-  const asset1 = await deployErc20(rollup, signer, true, 'BTC', 8);
+  const asset0 = await deployErc20(rollup, permitHelper, signer, true, 'DAI');
+  const asset1 = await deployErc20(rollup, permitHelper, signer, true, 'BTC', 8);
 
   const gasPrice = 20n * 10n ** 9n; // 20 gwei
   const daiPrice = 1n * 10n ** 15n; // 1000 DAI/ETH
@@ -54,5 +56,5 @@ export async function deployDev(signer: Signer, { dataTreeSize, roots }: TreeIni
   const daiPriceFeedContact = await deployMockPriceFeed(signer, daiPrice);
   const priceFeeds = [gasPriceFeedContact.address, daiPriceFeedContact.address];
 
-  return { rollup, priceFeeds, feeDistributor };
+  return { rollup, priceFeeds, feeDistributor, permitHelper };
 }

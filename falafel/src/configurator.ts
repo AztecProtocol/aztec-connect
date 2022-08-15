@@ -14,6 +14,7 @@ interface StartupConfig {
   port: number;
   dbUrl?: string;
   rollupContractAddress: EthAddress;
+  permitHelperContractAddress: EthAddress;
   priceFeedContractAddresses: EthAddress[];
   ethereumHost: string;
   ethereumPollInterval?: number;
@@ -37,6 +38,7 @@ export interface ConfVars extends StartupConfig {
 const defaultStartupConfig: StartupConfig = {
   port: 8081,
   rollupContractAddress: EthAddress.ZERO,
+  permitHelperContractAddress: EthAddress.ZERO,
   priceFeedContractAddresses: [],
   ethereumHost: 'http://localhost:8545',
   ethereumPollInterval: 10000,
@@ -77,6 +79,7 @@ function getStartupConfigEnvVars(): Partial<StartupConfig> {
   const {
     DB_URL,
     ROLLUP_CONTRACT_ADDRESS,
+    PERMIT_HELPER_CONTRACT_ADDRESS,
     PRICE_FEED_CONTRACT_ADDRESSES,
     ETHEREUM_HOST,
     ETHEREUM_POLL_INTERVAL,
@@ -98,6 +101,9 @@ function getStartupConfigEnvVars(): Partial<StartupConfig> {
     port: PORT ? +PORT : undefined,
     dbUrl: DB_URL,
     rollupContractAddress: ROLLUP_CONTRACT_ADDRESS ? EthAddress.fromString(ROLLUP_CONTRACT_ADDRESS) : undefined,
+    permitHelperContractAddress: PERMIT_HELPER_CONTRACT_ADDRESS
+      ? EthAddress.fromString(PERMIT_HELPER_CONTRACT_ADDRESS)
+      : undefined,
     priceFeedContractAddresses: PRICE_FEED_CONTRACT_ADDRESSES
       ? PRICE_FEED_CONTRACT_ADDRESSES.split(',').map(EthAddress.fromString)
       : undefined,
@@ -227,6 +233,9 @@ export class Configurator {
     return {
       ...conf,
       rollupContractAddress: EthAddress.fromString(conf.rollupContractAddress),
+      permitHelperContractAddress: conf.permitHelperContractAddress
+        ? EthAddress.fromString(conf.permitHelperContractAddress)
+        : undefined,
       priceFeedContractAddresses: conf.priceFeedContractAddresses.map(EthAddress.fromString),
       privateKey: Buffer.from(conf.privateKey, 'hex'),
       runtimeConfig: {
@@ -251,6 +260,9 @@ export class Configurator {
     writeJsonSync(path, {
       ...conf,
       rollupContractAddress: conf.rollupContractAddress.toString(),
+      permitHelperContractAddress: conf.permitHelperContractAddress
+        ? conf.permitHelperContractAddress.toString()
+        : undefined,
       priceFeedContractAddresses: conf.priceFeedContractAddresses.map(a => a.toString()),
       privateKey: conf.privateKey.toString('hex'),
       runtimeConfig: {

@@ -10,7 +10,7 @@ import {IERC20Permit} from '../interfaces/IERC20Permit.sol';
 
 import {AztecTypes} from '../AztecTypes.sol';
 
-contract UniswapBridge is IDefiBridge {
+contract SimpleUniBridge is IDefiBridge {
     address public immutable rollupProcessor;
     address public weth;
 
@@ -103,12 +103,6 @@ contract UniswapBridge is IDefiBridge {
             outputValueA = amounts[2];
             IERC20Permit(outputAssetA.erc20Address).approve(rollupProcessor, outputValueA);
         }
-    }
-
-    function canFinalise(
-        uint256 /*interactionNonce*/
-    ) external pure override returns (bool) {
-        return false;
     }
 
     function finalise(

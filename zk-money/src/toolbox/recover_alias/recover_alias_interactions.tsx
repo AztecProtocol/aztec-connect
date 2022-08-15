@@ -117,16 +117,19 @@ export function RecoverAliasInteractions({ sdk }: { sdk: AztecSdk }) {
     cachingRecoverAliasFlow.clearCache();
     runner.run();
   };
+  const message = getMessage(runnerState);
   return (
     <div className={style.root}>
       <h1>Tool: Recover pre-June 2021 alias</h1>
-      {getMessage(runnerState)}
+      <div key={message} className={style.message}>
+        {message}
+      </div>
       {canStart && <button onClick={handleStartOrRetryFromFailed}>{hasErrored ? 'Retry from failed' : 'Start'}</button>}
       {canStart && hasAttempted && <button onClick={handleRetryFromBeginning}>Retry from beginning</button>}
       {flowState?.phase === 'verify-alias' && <AliasChecker flowState={flowState.verifyAliasFlow} />}
       {fullfillSigner && <SignerSubmit onSubmitSigner={fullfillSigner} />}
       {cancel && <button onClick={cancel}>Cancel</button>}
-      {done && <button onClick={() => window.location.reload()}>Restart Toolbox</button>}
+      {done && <a href="signin">Go to login</a>}
     </div>
   );
 }

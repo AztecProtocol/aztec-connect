@@ -183,6 +183,10 @@ resource "aws_ecs_task_definition" "falafel" {
         "value": "${data.terraform_remote_state.blockchain.outputs.rollup_contract_address}"
       },
       {
+        "name": "PERMIT_HELPER_CONTRACT_ADDRESS",
+        "value": "${data.terraform_remote_state.blockchain.outputs.permit_helper_contract_address}"
+      },
+      {
         "name": "FEE_DISTRIBUTOR_ADDRESS",
         "value": "${data.terraform_remote_state.blockchain.outputs.fee_distributor_address}"
       },
@@ -212,11 +216,11 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "MIN_CONFIRMATION",
-        "value": "3"
+        "value": "1"
       },
       {
         "name": "MIN_CONFIRMATION_ESCAPE_HATCH_WINDOW",
-        "value": "3"
+        "value": "1"
       },
       {
         "name": "PROVERLESS",

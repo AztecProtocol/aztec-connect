@@ -50,10 +50,6 @@ contract FailingBridge is IDefiBridge {
         return (0, 0, true);
     }
 
-    function canFinalise(uint256) external pure override returns (bool) {
-        return true;
-    }
-
     function finalise(
         AztecTypes.AztecAsset memory,
         AztecTypes.AztecAsset memory,

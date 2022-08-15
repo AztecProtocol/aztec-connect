@@ -8,7 +8,7 @@ import { setupAssets } from '../../asset/fixtures/setup_assets';
 import { setupFeeDistributor } from '../../fee_distributor/fixtures/setup_fee_distributor';
 import { setupUniswap } from '../../fee_distributor/fixtures/setup_uniswap';
 import { Contract, ContractFactory } from 'ethers';
-import UniswapBridge from '../../../artifacts/contracts/bridges/UniswapBridge.sol/UniswapBridge.json';
+import UniswapBridge from '../../../artifacts/contracts/test/SimpleUniBridge.sol/SimpleUniBridge.json';
 import { deployRollupProcessor } from '../../../deploy/deployers';
 import { ProxyAdmin } from '../proxy_admin';
 
@@ -35,7 +35,7 @@ export async function upgradeTestRollupProcessor(proxyAdmin: ProxyAdmin, rollupP
 
 export async function setupTestRollupProcessor(
   signers: Signer[],
-  { numberOfTokenAssets = 2, escapeBlockLowerBound = 0, escapeBlockUpperBound = 1 } = {},
+  { numberOfTokenAssets = 2, escapeBlockLowerBound = 0, escapeBlockUpperBound = 1, useLatest = true } = {},
 ) {
   const rollupProvider = signers[0];
   const MockVerifier = await ethers.getContractFactory('MockVerifier');
@@ -48,7 +48,11 @@ export async function setupTestRollupProcessor(
 
   await defiBridgeProxy.deployed();
 
-  const { rollup: rollupProcessorContract, proxyAdmin } = await deployRollupProcessor(
+  const {
+    rollup: rollupProcessorContract,
+    proxyAdmin,
+    permitHelper,
+  } = await deployRollupProcessor(
     rollupProvider,
     mockVerifier,
     defiBridgeProxy,
@@ -60,6 +64,7 @@ export async function setupTestRollupProcessor(
     Buffer.from('2fd2364bfe47ccb410eba3a958be9f39a8c6aca07db1abd15f5a211f51505071', 'hex'),
     0,
     false,
+    useLatest,
   );
 
   await upgradeTestRollupProcessor(proxyAdmin, EthAddress.fromString(rollupProcessorContract.address));
@@ -67,6 +72,16 @@ export async function setupTestRollupProcessor(
   const rollupProcessor = new TestRollupProcessor(
     EthAddress.fromString(rollupProcessorContract.address),
     new EthersAdapter(ethers.provider),
+    EthAddress.fromString(permitHelper.address),
+  );
+
+  await rollupProcessor.grantRole(
+    await rollupProcessor.rollupProcessor.LISTER_ROLE(),
+    EthAddress.fromString(await rollupProvider.getAddress()),
+  );
+  await rollupProcessor.grantRole(
+    await rollupProcessor.rollupProcessor.RESUME_ROLE(),
+    EthAddress.fromString(await rollupProvider.getAddress()),
   );
 
   await rollupProcessor.setRollupProvider(EthAddress.fromString(await rollupProvider.getAddress()), true);

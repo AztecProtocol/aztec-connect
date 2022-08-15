@@ -587,7 +587,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
         }
 
         (bytes memory proofData, uint256 numTxs, uint256 publicInputsHash) = decodeProof();
-        address rollupBeneficiary = extractRollupBeneficiaryAddress(proofData);
+        address rollupBeneficiary = extractRollupBeneficiary(proofData);
 
         processRollupProof(proofData, signatures, numTxs, publicInputsHash, rollupBeneficiary);
 
@@ -682,7 +682,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
         uint8 v,
         bytes32 r,
         bytes32 s
-    ) external override(IRollupProcessor) whenNotPaused noReenter {
+    ) external whenNotPaused noReenter {
         internalDeposit(assetId, depositorAddress, amount, proofHash);
 
         address assetAddress = getSupportedAsset(assetId);
@@ -712,7 +712,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
         uint8 v,
         bytes32 r,
         bytes32 s
-    ) external override(IRollupProcessor) whenNotPaused noReenter {
+    ) external whenNotPaused noReenter {
         internalDeposit(assetId, depositorAddress, amount, proofHash);
 
         address assetAddress = getSupportedAsset(assetId);
@@ -1249,7 +1249,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
         for (uint256 i = 0; i < NUMBER_OF_ASSETS; ) {
             uint256 txFee = extractTotalTxFee(proofData, i);
             if (txFee > 0) {
-                uint256 assetId = extractAssetId(proofData, i);
+                uint256 assetId = extractFeeAssetId(proofData, i);
                 if (assetId == ethAssetId) {
                     // We explicitly do not throw if this call fails, as this opens up the possiblity of
                     // griefing attacks, as engineering a failed fee will invalidate an entire rollup block
@@ -1419,7 +1419,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
      * @dev Get the gas limit for the bridge specified by bridgeAddressId
      * @param bridgeAddressId - identifier used to denote a particular bridge
      */
-    function getBridgeGasLimit(uint256 bridgeAddressId) public view override(IRollupProcessor) returns (uint256) {
+    function getBridgeGasLimit(uint256 bridgeAddressId) public view returns (uint256) {
         return bridgeGasLimits[bridgeAddressId];
     }
 
@@ -1461,7 +1461,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
      * has not yet been added into the Aztec Defi Merkle tree. This step is needed in order to convert L2 Defi claim notes into L2 value notes
      * @return res the set of all pending defi interaction hashes
      */
-    function getDefiInteractionHashes() external view override(IRollupProcessor) returns (bytes32[] memory res) {
+    function getDefiInteractionHashes() external view returns (bytes32[] memory res) {
         uint256 len = getDefiInteractionHashesLength();
         assembly {
             // Allocate memory for return value
@@ -1505,7 +1505,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
      * has not yet been added into the Aztec Defi Merkle tree. This step is needed in order to convert L2 Defi claim notes into L2 value notes
      * @return res the set of all pending async defi interaction hashes
      */
-    function getAsyncDefiInteractionHashes() external view override(IRollupProcessor) returns (bytes32[] memory res) {
+    function getAsyncDefiInteractionHashes() external view returns (bytes32[] memory res) {
         uint256 len = getAsyncDefiInteractionHashesLength();
         assembly {
             // Allocate memory for return value
@@ -1534,12 +1534,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
     /**
      * @dev Get the addresses of all supported bridge contracts
      */
-    function getSupportedBridges()
-        external
-        view
-        override(IRollupProcessor)
-        returns (address[] memory, uint256[] memory)
-    {
+    function getSupportedBridges() external view returns (address[] memory, uint256[] memory) {
         uint256 supportedBridgesLength = supportedBridges.length;
         uint256[] memory gasLimits = new uint256[](supportedBridgesLength);
         for (uint256 i = 0; i < supportedBridgesLength; ) {
@@ -1554,12 +1549,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
     /**
      * @dev Get the addresses of all supported ERC20 tokens
      */
-    function getSupportedAssets()
-        external
-        view
-        override(IRollupProcessor)
-        returns (address[] memory, uint256[] memory)
-    {
+    function getSupportedAssets() external view returns (address[] memory, uint256[] memory) {
         uint256 supportedAssetsLength = supportedAssets.length;
         uint256[] memory gasLimits = new uint256[](supportedAssetsLength);
         for (uint256 i = 0; i < supportedAssetsLength; ) {

@@ -39,7 +39,7 @@ export function AmountSelection(props: AmountSelectionProps) {
         <div className={style.assetSelectorWrapper}>
           <div className={style.assetSelector} onClick={toggleAssetSelector}>
             <div className={style.assetDisplay}>
-              <ShieldedAssetIcon address={props.asset.address} />
+              <ShieldedAssetIcon asset={props.asset} />
               <div className={style.assetName}>{props.asset.symbol}</div>
             </div>
             <img src={downArrow} alt="" />
@@ -56,7 +56,7 @@ export function AmountSelection(props: AmountSelectionProps) {
         <div className={style.assetSelectorWrapper}>
           <div className={cx(style.assetSelector, style.noSelect)}>
             <div className={style.assetDisplay}>
-              <ShieldedAssetIcon address={props.asset.address} />
+              <ShieldedAssetIcon asset={props.asset} />
               <div className={style.assetName}>{props.asset.symbol}</div>
             </div>
           </div>

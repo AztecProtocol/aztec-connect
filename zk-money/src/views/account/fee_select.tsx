@@ -57,7 +57,7 @@ export const FeeSelect: React.FunctionComponent<FeeSelectProps> = ({
     trigger={
       <InputWrapper theme={inputTheme}>
         <InputIconRoot>
-          <ShieldedAssetIcon address={asset.address} />
+          <ShieldedAssetIcon asset={asset} />
         </InputIconRoot>
         <InputButton value={fromBaseUnits(fees[selectedSpeed].fee, asset.decimals)} readOnly />
       </InputWrapper>
@@ -69,7 +69,7 @@ export const FeeSelect: React.FunctionComponent<FeeSelectProps> = ({
         content: (
           <ItemRoot>
             <InfoRoot>
-              <ShieldedAssetIcon address={asset.address} />
+              <ShieldedAssetIcon asset={asset} />
               <Value text={fromBaseUnits(fee, asset.decimals)} />
             </InfoRoot>
             <Text text={formatTime(time)} color="grey" size="s" italic nowrap />

@@ -77,6 +77,7 @@ interface WalletSelectInputProps {
   providerState?: ProviderState;
   ethAccount: EthAccountState;
   message?: string;
+  comparisonAddress?: string;
   messageType?: MessageType;
   onChangeWallet(walletId: WalletId): void;
 }
@@ -86,6 +87,7 @@ export const WalletSelect: React.FunctionComponent<WalletSelectInputProps> = ({
   asset,
   providerState,
   ethAccount,
+  comparisonAddress,
   message,
   messageType,
   onChangeWallet,
@@ -107,11 +109,13 @@ export const WalletSelect: React.FunctionComponent<WalletSelectInputProps> = ({
   );
 
   if (ethAddress && ethAddress.toString() === providerState?.account?.toString()) {
+    const comparisonFails = comparisonAddress && comparisonAddress !== ethAddress.toString();
+
     return (
       <FlexRow className={className}>
         <Tooltip
           trigger={
-            message && messageType === MessageType.ERROR ? (
+            (message && messageType === MessageType.ERROR) || comparisonFails ? (
               <ErrorEthAddressRoot>
                 <ErrorEthAddressIcon src={errorIcon} />
               </ErrorEthAddressRoot>
@@ -122,11 +126,12 @@ export const WalletSelect: React.FunctionComponent<WalletSelectInputProps> = ({
         >
           <EthAddressText
             text={message || `${fromBaseUnits(publicBalance, asset.decimals)} ${asset.symbol}`}
-            size="xxs"
+            size="xs"
             nowrap
           />
         </Tooltip>
         <EthAddressText text={formatAddress(ethAddress.toString())} size="xs" />
+
         {walletSelect}
       </FlexRow>
     );

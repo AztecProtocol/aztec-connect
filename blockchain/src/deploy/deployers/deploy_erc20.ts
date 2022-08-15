@@ -6,6 +6,7 @@ const gasLimit = 5000000;
 
 export async function deployErc20(
   rollup: Contract,
+  permitHelper: Contract,
   signer: Signer,
   supportsPermit: boolean,
   symbol = 'TEST',
@@ -21,6 +22,7 @@ export async function deployErc20(
       await erc20.setDecimals(decimals);
     }
     await rollup.setSupportedAsset(erc20.address, 0, { gasLimit });
+    await permitHelper.preApprove(erc20.address, { gasLimit });
     return erc20;
   } else {
     console.error('Deploying ERC20...');

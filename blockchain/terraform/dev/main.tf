@@ -19,6 +19,14 @@ output "rollup_contract_address" {
   value = "${var.ROLLUP_CONTRACT_ADDRESS}"
 }
 
+variable "PERMIT_HELPER_CONTRACT_ADDRESS" {
+  type = string
+}
+
+output "permit_helper_contract_address" {
+  value = "${var.PERMIT_HELPER_CONTRACT_ADDRESS}"
+}
+
 variable "FEE_DISTRIBUTOR_ADDRESS" {
   type = string
 }

@@ -13,7 +13,7 @@ export function CardAssetTag({ asset }: { asset: RemoteAsset }) {
   return (
     <CardTag>
       <Content>
-        <ShieldedAssetIcon white size={18} address={asset.address} />
+        <ShieldedAssetIcon white size={18} asset={asset} />
         zk{asset.symbol}
       </Content>
     </CardTag>

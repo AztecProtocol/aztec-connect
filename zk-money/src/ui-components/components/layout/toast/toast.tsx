@@ -2,43 +2,10 @@ import { useEffect, useRef } from 'react';
 import { Button, ButtonTheme } from 'ui-components';
 import { CloseMiniIcon } from 'ui-components/components/icons';
 import { bindStyle } from 'ui-components/util/classnames';
+import { ToastProps, ToastType } from './toast.types';
 import style from './toast.module.scss';
 
 const cx = bindStyle(style);
-
-export interface ToastContent {
-  text: string;
-  key?: string;
-  type?: ToastType;
-  primaryButton?: ToastButton;
-  secondaryButton?: ToastButton;
-  autocloseInMs?: number;
-  isClosable?: boolean;
-  isHeavy?: boolean;
-}
-
-export interface ToastButton {
-  text: string;
-  onClick: () => void;
-}
-
-export enum ToastType {
-  NORMAL = 'NORMAL',
-  WARNING = 'WARNING',
-  ERROR = 'ERROR',
-}
-
-export interface ToastProps {
-  text: string;
-  index?: number;
-  primaryButton?: ToastButton;
-  secondaryButton?: ToastButton;
-  isHeavy?: boolean;
-  type?: ToastType;
-  isClosable?: boolean;
-  autocloseInMs?: number;
-  onCloseToast?: (index: number) => void;
-}
 
 export function Toast(props: ToastProps) {
   const hasPrimaryButton = !!props.primaryButton;

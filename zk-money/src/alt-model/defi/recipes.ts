@@ -1,5 +1,5 @@
 import createDebug from 'debug';
-import { EthAddress, RollupProviderStatus } from '@aztec/sdk';
+import { BlockchainBridge, BlockchainStatus, EthAddress, RollupProviderStatus, toBaseUnits } from '@aztec/sdk';
 import { BridgeFlowAssets, DefiInvestmentType, DefiRecipe, KeyBridgeStat } from './types';
 import lidoXCurveLogo from 'images/lido_x_curve_logo.svg';
 import lidoMiniLogo from 'images/lido_mini_logo.png';
@@ -13,7 +13,9 @@ import { createLidoAdaptor } from './bridge_data_adaptors/lido_adaptor';
 
 const debug = createDebug('zm:recipes');
 
-interface CreateRecipeArgs extends Omit<DefiRecipe, 'address' | 'flow' | 'valueEstimationInteractionAssets'> {
+interface CreateRecipeArgs
+  extends Omit<DefiRecipe, 'bridgeAddressId' | 'address' | 'flow' | 'valueEstimationInteractionAssets'> {
+  selectBlockchainBridge: (blockchainStatus: BlockchainStatus) => BlockchainBridge | undefined;
   isAsync?: boolean;
   entryInputAssetAddressA: EthAddress;
   entryOutputAssetAddressA: EthAddress;
@@ -21,17 +23,26 @@ interface CreateRecipeArgs extends Omit<DefiRecipe, 'address' | 'flow' | 'valueE
 }
 
 function createRecipe(
-  { isAsync, entryInputAssetAddressA, entryOutputAssetAddressA, openHandleAssetAddress, ...args }: CreateRecipeArgs,
+  {
+    isAsync,
+    entryInputAssetAddressA,
+    entryOutputAssetAddressA,
+    openHandleAssetAddress,
+    selectBlockchainBridge,
+    ...args
+  }: CreateRecipeArgs,
   status: RollupProviderStatus,
   assets: RemoteAsset[],
 ): DefiRecipe | undefined {
   const closable = !isAsync;
   const expectedYearlyOutDerivedFromExit = closable;
-  const address = status.blockchainStatus.bridges.find(x => x.id === args.bridgeAddressId)?.address;
-  if (!address) {
+  const blockchainBridge = selectBlockchainBridge(status.blockchainStatus);
+  if (!blockchainBridge) {
     debug(`Could not find remote bridge for recipe '${args.id}'`);
     return;
   }
+  const bridgeAddressId = blockchainBridge.id;
+  const address = blockchainBridge.address;
   const entryInputAssetA = assets.find(x => x.address.equals(entryInputAssetAddressA));
   const entryOutputAssetA = assets.find(x => x.address.equals(entryOutputAssetAddressA));
   if (!entryInputAssetA || !entryOutputAssetA) {
@@ -50,18 +61,19 @@ function createRecipe(
       return;
     }
   }
-  return { ...args, address, flow, openHandleAsset, valueEstimationInteractionAssets };
+  return { ...args, bridgeAddressId, address, flow, openHandleAsset, valueEstimationInteractionAssets };
 }
 
 const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
   {
     id: 'element-finance.DAI-to-DAI',
     isAsync: true,
-    bridgeAddressId: 1,
+    selectBlockchainBridge: ({ bridges }) => bridges.find(x => x.id === 1),
     entryInputAssetAddressA: KMAA.DAI,
     entryOutputAssetAddressA: KMAA.DAI,
     createAdaptor: createElementAdaptor,
     requiresAuxDataOpts: true,
+    selectEnterAuxDataOpt: opts => opts[0], // Tranche expiry timestamp
     projectName: 'Element',
     gradient: ['#2E69C3', '#6ACDE2'],
     website: 'https://element.fi/',
@@ -82,12 +94,22 @@ const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
   },
   {
     id: 'lido-staking-x-curve.ETH-to-wStETH',
-    bridgeAddressId: 5,
+    selectBlockchainBridge: ({ bridges, chainId }) => {
+      switch (chainId) {
+        case 1:
+          return bridges.find(x => x.id === 6);
+        case 0xa57ec:
+          // TODO: check aztec-connect-dev deployment settles on this id
+          return bridges.find(x => x.id === 6);
+      }
+    },
     gradient: ['#E97B61', '#F5CB85'],
     openHandleAssetAddress: KMAA.wstETH,
     entryInputAssetAddressA: KMAA.ETH,
     entryOutputAssetAddressA: KMAA.wstETH,
     createAdaptor: createLidoAdaptor,
+    selectEnterAuxDataOpt: () => toBaseUnits('1.0', 18), // Minimum acceptable amount of stEth per 1 eth
+    selectExitAuxDataOpt: () => toBaseUnits('0.9', 18), // Minimum acceptable amount of eth per 1 stEth
     projectName: 'Lido',
     website: 'https://lido.fi/',
     websiteLabel: 'lido.fi',

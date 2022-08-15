@@ -7,7 +7,6 @@ import { Theme } from 'styles';
 import { Home } from 'views/home';
 import { SupportStatus } from 'device_support';
 import { UnsupportedPopup } from './unsupported_popup';
-import { SelfDismissingIncentiveModal } from './account/dashboard/modals/incentive_modal';
 
 const FALAFEL_UNREACHABLE_MSG = {
   type: MessageType.ERROR,
@@ -54,7 +53,6 @@ export function AppInitFailed({ reason, explorerUrl }: AppInitFailedProps) {
             : []
         }
       />
-      <SelfDismissingIncentiveModal instanceName="failure" buttonLabel="Shield now" onButtonClick={handleInteraction} />
     </Template>
   );
 }

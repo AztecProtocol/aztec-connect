@@ -61,12 +61,6 @@ contract DummyDefiBridge is IDefiBridge {
         return (returnValueA, returnValueB, isAsync);
     }
 
-    function canFinalise(
-        uint256 /*interactionNonce*/
-    ) external pure override returns (bool) {
-        return true;
-    }
-
     function finalise(
         AztecTypes.AztecAsset memory, /*inputAssetA*/
         AztecTypes.AztecAsset memory, /*inputAssetB*/

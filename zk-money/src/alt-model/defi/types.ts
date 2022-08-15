@@ -46,6 +46,8 @@ export interface DefiRecipe {
   valueEstimationInteractionAssets: BridgeInteractionAssets;
   createAdaptor: BridgeDataAdaptorCreator;
   requiresAuxDataOpts?: boolean;
+  selectEnterAuxDataOpt: (opts: bigint[]) => bigint;
+  selectExitAuxDataOpt?: (opts: bigint[]) => bigint;
   projectName: string;
   website: string;
   websiteLabel: string;

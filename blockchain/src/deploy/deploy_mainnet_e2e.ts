@@ -24,7 +24,7 @@ const FAST_GAS_PRICE_FEED_ADDRESS = '0x169e633a2d1e6c10dd91238ba11c4a708dfef37c'
 export async function deployMainnetE2e(signer: Signer, { dataTreeSize, roots }: TreeInitData, vk: string) {
   const verifier = await deployVerifier(signer, vk);
   const defiProxy = await deployDefiBridgeProxy(signer);
-  const { rollup } = await deployRollupProcessor(
+  const { rollup, permitHelper } = await deployRollupProcessor(
     signer,
     verifier,
     defiProxy,
@@ -36,15 +36,21 @@ export async function deployMainnetE2e(signer: Signer, { dataTreeSize, roots }: 
     roots.rootsRoot,
     dataTreeSize,
     true,
+    true,
   );
   const feeDistributor = await deployFeeDistributor(signer, rollup, UNISWAP_ROUTER_ADDRESS);
 
   await rollup.setRollupProvider(await signer.getAddress(), true, { gasLimit });
+  await rollup.grantRole(await rollup.LISTER_ROLE(), await signer.getAddress(), { gasLimit });
 
   await rollup.setSupportedAsset(DAI_ADDRESS, 0, { gasLimit });
+  await permitHelper.preApprove(DAI_ADDRESS, { gasLimit });
   await rollup.setSupportedAsset(LIDO_WSTETH_ADDRESS, 0, { gasLimit });
+  await permitHelper.preApprove(LIDO_WSTETH_ADDRESS, { gasLimit });
   await rollup.setSupportedAsset(elementTokenAddresses['lusd3crv-f'], 0, { gasLimit });
+  await permitHelper.preApprove(elementTokenAddresses['lusd3crv-f'], { gasLimit });
   await rollup.setSupportedAsset(elementTokenAddresses['mim-3lp3crv-f'], 0, { gasLimit });
+  await permitHelper.preApprove(elementTokenAddresses['mim-3lp3crv-f'], { gasLimit });
 
   const expiryCutOff = new Date('01 Sept 2022 00:00:00 GMT');
   await deployElementBridge(signer, rollup, ['dai', 'lusd3crv-f'], expiryCutOff);
@@ -53,5 +59,5 @@ export async function deployMainnetE2e(signer: Signer, { dataTreeSize, roots }: 
 
   const priceFeeds = [FAST_GAS_PRICE_FEED_ADDRESS, DAI_PRICE_FEED_ADDRESS];
 
-  return { rollup, priceFeeds, feeDistributor };
+  return { rollup, priceFeeds, feeDistributor, permitHelper };
 }

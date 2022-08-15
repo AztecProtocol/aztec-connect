@@ -1,4 +1,3 @@
-import { EthAddress } from '@aztec/sdk';
 import { useAmountBulkPrice, useAssetUnitPriceFromAddress } from 'alt-model';
 import { Amount } from 'alt-model/assets/amount';
 import { KNOWN_MAINNET_ASSET_ADDRESS_STRS } from 'alt-model/known_assets/known_asset_addresses';
@@ -6,6 +5,7 @@ import {
   getAssetIcon,
   getAssetPreferredFractionalDigitsFromStr,
 } from 'alt-model/known_assets/known_asset_display_data';
+import { RemoteAsset } from 'alt-model/types';
 import { formatBaseUnits, formatBulkPrice } from 'app';
 import { ShieldedAssetIcon } from 'components';
 import style from './cost_breakdown.module.css';
@@ -29,18 +29,18 @@ interface RecipientRowProps {
 interface RowProps {
   label: string;
   cost?: string;
-  address?: EthAddress;
+  asset?: RemoteAsset;
   value?: string;
   conversionValue?: string;
   assetIsZk?: boolean;
 }
 
-function renderIcon(assetIsZk?: boolean, address?: EthAddress) {
-  if (!address) return;
+function renderIcon(assetIsZk?: boolean, asset?: RemoteAsset) {
+  if (!asset) return;
   if (assetIsZk) {
-    return <ShieldedAssetIcon size="s" address={address} />;
+    return <ShieldedAssetIcon size="s" asset={asset} />;
   } else {
-    const src = getAssetIcon(address);
+    const src = getAssetIcon(asset.address);
     if (src) return <div className={style.l1AssetIcon} style={{ backgroundImage: `url(${src})` }} />;
   }
 }
@@ -54,26 +54,26 @@ function RecipientRow({ label, value }: RecipientRowProps) {
   );
 }
 
-export function Row({ label, cost, address, value, assetIsZk }: RowProps) {
+export function Row({ label, cost, asset, value, assetIsZk }: RowProps) {
   return (
     <div className={style.row}>
       <div className={style.title}>{label}</div>
       <div className={style.values}>
         <div className={style.cost}>{cost}</div>
-        <div className={style.assetIcon}>{renderIcon(assetIsZk, address)}</div>
+        <div className={style.assetIcon}>{renderIcon(assetIsZk, asset)}</div>
         <div className={style.amount}>{value}</div>
       </div>
     </div>
   );
 }
 
-export function InvestmentRow({ label, cost, address, value, conversionValue, assetIsZk }: RowProps) {
+export function InvestmentRow({ label, cost, asset, value, conversionValue, assetIsZk }: RowProps) {
   return (
     <div className={style.investmentRow}>
       <div className={style.title}>{label}</div>
       <div className={style.values}>
         <div className={style.cost}>{cost}</div>
-        <div className={style.assetIcon}>{renderIcon(assetIsZk, address)}</div>
+        <div className={style.assetIcon}>{renderIcon(assetIsZk, asset)}</div>
         <div className={style.amount}>
           <div>{value}</div>
           {conversionValue && <div className={style.conversionValue}>{`≈ ${conversionValue}`}</div>}
@@ -123,7 +123,7 @@ export function CostBreakdown({
     amountBulkPrice !== undefined && feeBulkPrice !== undefined ? amountBulkPrice + feeBulkPrice : undefined;
   const feeIsInSameAsset = fee && amount?.id === fee.id;
   const totalAmount = feeIsInSameAsset ? amount?.add(fee?.baseUnits) : undefined;
-  const totalAddress = feeIsInSameAsset ? amount.address : undefined;
+  const totalAsset = feeIsInSameAsset ? amount.info : undefined;
 
   return (
     <div className={style.root}>
@@ -131,27 +131,27 @@ export function CostBreakdown({
       <Row
         label={amountLabel}
         cost={maybeBulkPriceStr(amountBulkPrice)}
-        address={amount?.address}
+        asset={amount?.info}
         value={amount?.format({ layer: deductionIsFromL1 ? 'L1' : 'L2' })}
         assetIsZk={!deductionIsFromL1}
       />
       <Row
         label="Transaction Fee"
         cost={maybeBulkPriceStr(feeBulkPrice)}
-        address={fee?.address}
+        asset={fee?.info}
         value={fee?.format({ layer: feeDeductionIsFromL1 ? 'L1' : 'L2' })}
         assetIsZk={!feeDeductionIsFromL1}
       />
       <Row
         label="Total"
         cost={maybeBulkPriceStr(totalBulkPrice)}
-        address={totalAddress}
+        asset={totalAsset}
         value={totalAmount?.format({ layer: deductionIsFromL1 ? 'L1' : 'L2' })}
         assetIsZk={!deductionIsFromL1}
       />
       {investmentLabel && investmentReturn && (
         <InvestmentRow
-          address={investmentReturn?.address}
+          asset={investmentReturn?.info}
           assetIsZk={true}
           label={investmentLabel}
           value={investmentReturn?.format({ layer: 'L1', uniform: true })}

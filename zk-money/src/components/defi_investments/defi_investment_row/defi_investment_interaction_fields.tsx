@@ -90,7 +90,7 @@ function AsyncEntering(props: { tx: UserDefiTx }) {
 function AsyncOpen(props: { auxData: number }) {
   const ms = props.auxData * 1000;
   const dateStr = dateFormatter.format(ms);
-  return <div className={style.fixedTerm}>Matures {dateStr}</div>;
+  return <div className={style.fixedTerm}>Funds locked until {dateStr}</div>;
 }
 
 function AsyncExiting(props: { tx: UserDefiTx }) {

@@ -30,7 +30,7 @@ export class CachingLegacyAccountRegisterFlow {
   async start(emitState: Emit<LegacyAccountRegisterFlowState>, throwIfCancelled: ThrowIfCancelled, alias: string) {
     emitState({ phase: 'await-sdk-sync' });
     const { sdk } = this;
-    await sdk.awaitSynchronised();
+    await throwIfCancelled(sdk.awaitSynchronised());
 
     const keys = await this.cache.keys.exec(async () => {
       const { signer, address } = await requestSignerFlow(
@@ -46,7 +46,7 @@ export class CachingLegacyAccountRegisterFlow {
       );
       if (await sdk.isAccountRegistered(accountKeys.publicKey)) throw new Error('Account already registered');
       emitState({ phase: 'derive-spending-keys' });
-      const spendingKeys = await sdk.generateSpendingKeyPair(address, signer);
+      const spendingKeys = await throwIfCancelled(sdk.generateSpendingKeyPair(address, signer));
       return { accountKeys, spendingKeys };
     });
     await registerFlow(

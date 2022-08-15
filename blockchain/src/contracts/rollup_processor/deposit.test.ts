@@ -1,7 +1,6 @@
 import { EthAddress } from '@aztec/barretenberg/address';
-import { Asset, EthereumSignature } from '@aztec/barretenberg/blockchain';
+import { Asset } from '@aztec/barretenberg/blockchain';
 import { virtualAssetIdFlag } from '@aztec/barretenberg/bridge_call_data';
-import { toBuffer } from 'ethereumjs-util';
 import { Signer } from 'ethers';
 import { keccak256, toUtf8Bytes } from 'ethers/lib/utils';
 import { ethers } from 'hardhat';
@@ -26,7 +25,6 @@ describe('rollup_processor: deposit', () => {
   let snapshot: string;
 
   const RANDOM_BYTES = keccak256(toUtf8Bytes('RANDOM'));
-  const badSig: EthereumSignature = { v: toBuffer('0x00'), r: toBuffer(RANDOM_BYTES), s: toBuffer(RANDOM_BYTES) };
 
   beforeAll(async () => {
     const signers = await ethers.getSigners();
@@ -154,7 +152,38 @@ describe('rollup_processor: deposit', () => {
     const permitData = createPermitData(
       name,
       depositor,
-      rollupProcessor.address,
+      EthAddress.fromString(rollupProcessor.permitHelper.address),
+      depositAmount,
+      nonce,
+      deadline,
+      asset.getStaticInfo().address,
+      chainId,
+    );
+    await rollupProcessor
+      .getHelperContractWithSigner({ signingAddress: depositor })
+      .preApprove(asset.getStaticInfo().address.toString());
+
+    const signer = new Web3Signer(new EthersAdapter(ethers.provider));
+    const signature = await signer.signTypedData(permitData, depositor);
+
+    await rollupProcessor.depositPendingFundsPermit(1, depositAmount, deadline, signature, {
+      signingAddress: depositor,
+    });
+
+    expect(await rollupProcessor.getUserPendingDeposit(1, depositor)).toBe(depositAmount);
+    expect(await asset.getUserNonce(depositor)).toBe(nonce + 1n);
+  });
+
+  it('should revert deposit funds via permit flow on behalf of someone else', async () => {
+    const asset = assets[1];
+    const depositor = userAddresses[0];
+    const deadline = 0xffffffffn;
+    const nonce = await asset.getUserNonce(depositor);
+    const name = asset.getStaticInfo().name;
+    const permitData = createPermitData(
+      name,
+      depositor,
+      EthAddress.fromString(rollupProcessor.permitHelper.address),
       depositAmount,
       nonce,
       deadline,
@@ -164,12 +193,22 @@ describe('rollup_processor: deposit', () => {
     const signer = new Web3Signer(new EthersAdapter(ethers.provider));
     const signature = await signer.signTypedData(permitData, depositor);
 
-    await rollupProcessor.depositPendingFundsPermit(1, depositAmount, deadline, signature, undefined, {
-      signingAddress: depositor,
-    });
+    await expect(
+      rollupProcessor
+        .getHelperContractWithSigner({ signingAddress: userAddresses[1] })
+        .depositPendingFundsPermit(
+          1,
+          depositAmount,
+          depositor.toString(),
+          deadline,
+          signature.v,
+          signature.r,
+          signature.s,
+        ),
+    ).rejects.toThrow('INVALID_SIGNATURE');
 
-    expect(await rollupProcessor.getUserPendingDeposit(1, depositor)).toBe(depositAmount);
-    expect(await asset.getUserNonce(depositor)).toBe(nonce + 1n);
+    expect(await rollupProcessor.getUserPendingDeposit(1, depositor)).toBe(0n);
+    expect(await asset.getUserNonce(depositor)).toBe(nonce);
   });
 
   it('should deposit funds via non standard permit flow', async () => {
@@ -182,7 +221,38 @@ describe('rollup_processor: deposit', () => {
     const permitData = createPermitDataNonStandard(
       name,
       depositor,
-      rollupProcessor.address,
+      EthAddress.fromString(rollupProcessor.permitHelper.address),
+      nonce,
+      deadline,
+      asset.getStaticInfo().address,
+      chainId,
+    );
+    await rollupProcessor
+      .getHelperContractWithSigner({ signingAddress: depositor })
+      .preApprove(asset.getStaticInfo().address.toString());
+
+    const signer = new Web3Signer(new EthersAdapter(ethers.provider));
+    const signature = await signer.signTypedData(permitData, depositor);
+
+    await rollupProcessor.depositPendingFundsPermitNonStandard(assetId, depositAmount, nonce, deadline, signature, {
+      signingAddress: depositor,
+    });
+
+    expect(await rollupProcessor.getUserPendingDeposit(assetId, depositor)).toBe(depositAmount);
+    expect(await asset.getUserNonce(depositor)).toBe(nonce + 1n);
+  });
+
+  it('should revert deposit funds via non standard permit flow on behalf of someone else', async () => {
+    const assetId = 1;
+    const asset = assets[assetId];
+    const depositor = userAddresses[0];
+    const deadline = 0xffffffffn;
+    const nonce = await asset.getUserNonce(depositor);
+    const name = asset.getStaticInfo().name;
+    const permitData = createPermitDataNonStandard(
+      name,
+      depositor,
+      EthAddress.fromString(rollupProcessor.permitHelper.address),
       nonce,
       deadline,
       asset.getStaticInfo().address,
@@ -191,20 +261,23 @@ describe('rollup_processor: deposit', () => {
     const signer = new Web3Signer(new EthersAdapter(ethers.provider));
     const signature = await signer.signTypedData(permitData, depositor);
 
-    await rollupProcessor.depositPendingFundsPermitNonStandard(
-      assetId,
-      depositAmount,
-      nonce,
-      deadline,
-      signature,
-      undefined,
-      {
-        signingAddress: depositor,
-      },
-    );
+    await expect(
+      rollupProcessor
+        .getHelperContractWithSigner({ signingAddress: userAddresses[1] })
+        .depositPendingFundsPermitNonStandard(
+          assetId,
+          depositAmount,
+          depositor.toString(),
+          nonce,
+          deadline,
+          signature.v,
+          signature.r,
+          signature.s,
+        ),
+    ).rejects.toThrow('INVALID_SIGNATURE');
 
-    expect(await rollupProcessor.getUserPendingDeposit(assetId, depositor)).toBe(depositAmount);
-    expect(await asset.getUserNonce(depositor)).toBe(nonce + 1n);
+    expect(await rollupProcessor.getUserPendingDeposit(assetId, depositor)).toBe(0n);
+    expect(await asset.getUserNonce(depositor)).toBe(nonce);
   });
 
   it('should deposit funds using proof approval', async () => {
@@ -359,26 +432,43 @@ describe('rollup_processor: deposit', () => {
   });
 
   it('should revert for depositing virtual asset with standard permit', async () => {
-    const tokenAssetId = 1;
-    expect(await rollupProcessor.contract.getSupportedAsset(tokenAssetId)).toBe(
-      assets[tokenAssetId].getStaticInfo().address.toString(),
+    const assetId = 1;
+    const asset = assets[assetId];
+    const depositor = userAddresses[0];
+    const deadline = 0xffffffffn;
+    const nonce = await asset.getUserNonce(depositor);
+    const name = asset.getStaticInfo().name;
+    const permitData = createPermitData(
+      name,
+      depositor,
+      EthAddress.fromString(rollupProcessor.permitHelper.address),
+      depositAmount,
+      nonce,
+      deadline,
+      asset.getStaticInfo().address,
+      chainId,
     );
+    await rollupProcessor
+      .getHelperContractWithSigner({ signingAddress: depositor })
+      .preApprove(asset.getStaticInfo().address.toString());
 
-    const virtualAssetId = tokenAssetId + virtualAssetIdFlag;
+    const signer = new Web3Signer(new EthersAdapter(ethers.provider));
+    const signature = await signer.signTypedData(permitData, depositor);
+
+    const virtualAssetId = assetId + virtualAssetIdFlag;
     await expect(rollupProcessor.contract.getSupportedAsset(virtualAssetId)).rejects.toThrow('INVALID_ASSET_ID');
 
     await expect(
-      rollupProcessor.contract
-        .connect(userSigners[0])
+      rollupProcessor
+        .getHelperContractWithSigner({ signingAddress: depositor })
         .depositPendingFundsPermit(
           virtualAssetId,
-          1,
-          userAddresses[0].toString(),
-          RANDOM_BYTES,
-          0,
-          badSig.v,
-          badSig.r,
-          badSig.s,
+          depositAmount,
+          depositor.toString(),
+          deadline,
+          signature.v,
+          signature.r,
+          signature.s,
         ),
     ).rejects.toThrow('INVALID_ASSET_ID');
 
@@ -391,27 +481,43 @@ describe('rollup_processor: deposit', () => {
   });
 
   it('should revert for depositing virtual asset with non-standard permit', async () => {
-    const tokenAssetId = 1;
-    expect(await rollupProcessor.contract.getSupportedAsset(tokenAssetId)).toBe(
-      assets[tokenAssetId].getStaticInfo().address.toString(),
+    const assetId = 1;
+    const asset = assets[assetId];
+    const depositor = userAddresses[0];
+    const deadline = 0xffffffffn;
+    const nonce = await asset.getUserNonce(depositor);
+    const name = asset.getStaticInfo().name;
+    const permitData = createPermitDataNonStandard(
+      name,
+      depositor,
+      EthAddress.fromString(rollupProcessor.permitHelper.address),
+      nonce,
+      deadline,
+      asset.getStaticInfo().address,
+      chainId,
     );
+    await rollupProcessor
+      .getHelperContractWithSigner({ signingAddress: depositor })
+      .preApprove(asset.getStaticInfo().address.toString());
 
-    const virtualAssetId = tokenAssetId + virtualAssetIdFlag;
+    const signer = new Web3Signer(new EthersAdapter(ethers.provider));
+    const signature = await signer.signTypedData(permitData, depositor);
+
+    const virtualAssetId = assetId + virtualAssetIdFlag;
     await expect(rollupProcessor.contract.getSupportedAsset(virtualAssetId)).rejects.toThrow('INVALID_ASSET_ID');
 
     await expect(
-      rollupProcessor.contract
-        .connect(userSigners[0])
+      rollupProcessor
+        .getHelperContractWithSigner({ signingAddress: depositor })
         .depositPendingFundsPermitNonStandard(
           virtualAssetId,
-          1,
-          userAddresses[0].toString(),
-          RANDOM_BYTES,
-          0,
-          0,
-          badSig.v,
-          badSig.r,
-          badSig.s,
+          depositAmount,
+          depositor.toString(),
+          nonce,
+          deadline,
+          signature.v,
+          signature.r,
+          signature.s,
         ),
     ).rejects.toThrow('INVALID_ASSET_ID');
 
@@ -439,89 +545,5 @@ describe('rollup_processor: deposit', () => {
 
     expect(await rollupProcessor.getProofApprovalStatus(signingAddress, txId)).toBe(true);
     expect(await rollupProcessor.getUserPendingDeposit(1, signingAddress)).toBe(0n);
-  });
-
-  it('should allows deposit funds via permit flow to a proof hash', async () => {
-    const asset = assets[1];
-    const depositor = userAddresses[0];
-    const deadline = 0xffffffffn;
-    const nonce = await asset.getUserNonce(depositor);
-    const name = asset.getStaticInfo().name;
-    const permitData = createPermitData(
-      name,
-      depositor,
-      rollupProcessor.address,
-      depositAmount,
-      nonce,
-      deadline,
-      asset.getStaticInfo().address,
-      chainId,
-    );
-    const signer = new Web3Signer(new EthersAdapter(ethers.provider));
-    const signature = await signer.signTypedData(permitData, depositor);
-
-    const innerProofData = await createDepositProof(depositAmount, userAddresses[0], userSigners[0], 1);
-    const txId = innerProofData.innerProofs[0].txId;
-
-    await rollupProcessor.depositPendingFundsPermit(1, depositAmount, deadline, signature, txId, {
-      signingAddress: depositor,
-    });
-    const { encodedProofData } = createRollupProof(rollupProvider, innerProofData);
-
-    expect(await rollupProcessor.getProofApprovalStatus(depositor, txId)).toBe(true);
-    expect(await rollupProcessor.getUserPendingDeposit(1, depositor)).toBe(depositAmount);
-
-    const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
-    await rollupProcessor.sendTx(tx);
-
-    expect(await rollupProcessor.getProofApprovalStatus(depositor, txId)).toBe(true);
-    expect(await rollupProcessor.getUserPendingDeposit(1, depositor)).toBe(0n);
-    expect(await asset.getUserNonce(depositor)).toBe(nonce + 1n);
-  });
-
-  it('should deposit funds via non standard permit flow to a proof hash', async () => {
-    const assetId = 1;
-    const asset = assets[assetId];
-    const depositor = userAddresses[0];
-    const deadline = 0xffffffffn;
-    const nonce = await asset.getUserNonce(depositor);
-    const name = asset.getStaticInfo().name;
-    const permitData = createPermitDataNonStandard(
-      name,
-      depositor,
-      rollupProcessor.address,
-      nonce,
-      deadline,
-      asset.getStaticInfo().address,
-      chainId,
-    );
-    const signer = new Web3Signer(new EthersAdapter(ethers.provider));
-    const signature = await signer.signTypedData(permitData, depositor);
-
-    const innerProofData = await createDepositProof(depositAmount, userAddresses[0], userSigners[0], 1);
-    const txId = innerProofData.innerProofs[0].txId;
-
-    await rollupProcessor.depositPendingFundsPermitNonStandard(
-      assetId,
-      depositAmount,
-      nonce,
-      deadline,
-      signature,
-      txId,
-      {
-        signingAddress: depositor,
-      },
-    );
-    const { encodedProofData } = createRollupProof(rollupProvider, innerProofData);
-
-    expect(await rollupProcessor.getProofApprovalStatus(depositor, txId)).toBe(true);
-    expect(await rollupProcessor.getUserPendingDeposit(1, depositor)).toBe(depositAmount);
-
-    const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
-    await rollupProcessor.sendTx(tx);
-
-    expect(await rollupProcessor.getProofApprovalStatus(depositor, txId)).toBe(true);
-    expect(await rollupProcessor.getUserPendingDeposit(assetId, depositor)).toBe(0n);
-    expect(await asset.getUserNonce(depositor)).toBe(nonce + 1n);
   });
 });

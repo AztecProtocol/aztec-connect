@@ -241,8 +241,8 @@ export class SyncRollupDb {
     return this.synchronise(() => this.rollupDb.getBridgeMetricsForRollup(bridgeCallData, rollupId));
   }
 
-  public getLastBridgeMetrics(bridgeCallData: bigint) {
-    return this.synchronise(() => this.rollupDb.getLastBridgeMetrics(bridgeCallData));
+  public getOurLastBridgeMetrics(bridgeCallData: bigint) {
+    return this.synchronise(() => this.rollupDb.getOurLastBridgeMetrics(bridgeCallData));
   }
 
   private async synchronise<T>(fn: () => Promise<T>) {

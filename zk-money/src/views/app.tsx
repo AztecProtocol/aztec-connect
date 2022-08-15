@@ -35,7 +35,6 @@ import { Trade } from './account/dashboard/trade';
 import { Toasts } from './toasts';
 import { DefiRecipe, FlowDirection } from 'alt-model/defi/types';
 import { DefiModal } from 'views/account/dashboard/modals/defi_modal';
-import { SelfDismissingIncentiveModal } from 'views/account/dashboard/modals/incentive_modal';
 import { KNOWN_MAINNET_ASSET_ADDRESSES } from 'alt-model/known_assets/known_asset_addresses';
 import { AccountStateProvider } from 'alt-model/account_state';
 import './app.css';
@@ -374,21 +373,7 @@ export class AppView extends PureComponent<AppProps, AppState> {
                     path={Pages.BALANCE}
                     element={<Balance onOpenDefiExitModal={this.handleOpenDefiExitModal} />}
                   />
-                  <Route
-                    path={Pages.HOME}
-                    element={
-                      <>
-                        <Home onSignup={this.handleSignup} />
-                        {!isLoggedIn && (
-                          <SelfDismissingIncentiveModal
-                            instanceName="home"
-                            buttonLabel="Shield now"
-                            onButtonClick={this.handleSignup}
-                          />
-                        )}
-                      </>
-                    }
-                  />
+                  <Route path={Pages.HOME} element={<Home onSignup={this.handleSignup} />} />
                 </Routes>
               </CSSTransition>
             </TransitionGroup>

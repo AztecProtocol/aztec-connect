@@ -1,5 +1,4 @@
 import { EthAddress } from '@aztec/barretenberg/address';
-import { EthereumSignature } from '@aztec/barretenberg/blockchain';
 import { toBuffer } from 'ethereumjs-util';
 import { Signer } from 'ethers';
 import { keccak256, toUtf8Bytes } from 'ethers/lib/utils';
@@ -25,7 +24,6 @@ describe('rollup_processor: ', () => {
   const escapeBlockUpperBound = 100;
 
   const RANDOM_BYTES = keccak256(toUtf8Bytes('RANDOM'));
-  const badSig: EthereumSignature = { v: toBuffer('0x00'), r: toBuffer(RANDOM_BYTES), s: toBuffer(RANDOM_BYTES) };
 
   beforeAll(async () => {
     signers = await ethers.getSigners();
@@ -86,22 +84,6 @@ describe('rollup_processor: ', () => {
   it('cannot depositPendingFunds when paused', async () => {
     await expect(
       rollupProcessor.depositPendingFunds(0, 0n, toBuffer(RANDOM_BYTES), { signingAddress: addresses[0] }),
-    ).rejects.toThrow(`PAUSED`);
-  });
-
-  it('cannot depositPendingFundsPermit when paused', async () => {
-    await expect(
-      rollupProcessor.depositPendingFundsPermit(0, 0n, 0n, badSig, toBuffer(RANDOM_BYTES), {
-        signingAddress: addresses[0],
-      }),
-    ).rejects.toThrow(`PAUSED`);
-  });
-
-  it('cannot depositPendingFundsPermitNonStandard when paused', async () => {
-    await expect(
-      rollupProcessor.depositPendingFundsPermitNonStandard(0, 0n, 0n, 0n, badSig, toBuffer(RANDOM_BYTES), {
-        signingAddress: addresses[0],
-      }),
     ).rejects.toThrow(`PAUSED`);
   });
 

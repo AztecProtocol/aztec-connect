@@ -39,7 +39,7 @@ export const AssetInfoRow: React.FunctionComponent<AssetInfoRowProps> = ({ asset
       <PriceValue text={`$${formatValueAsBulkPrice(value, asset.decimals, unitPrice)}`} size="m" color="grey" />
     )}
     <IconWrapper>
-      <ShieldedAssetIcon size="s" address={asset.address} />
+      <ShieldedAssetIcon size="s" asset={asset} />
     </IconWrapper>
     {fromBaseUnits(value, asset.decimals)}
   </FlexRow>

@@ -9,11 +9,12 @@ import client, { Counter, Gauge, Histogram } from 'prom-client';
 import { RollupDb } from '../rollup_db';
 import { RollupProfile } from '../pipeline_coordinator/rollup_profiler';
 import { TxDao, BridgeMetricsDao, RollupDao } from '../entity';
-import { RollupTx } from '../pipeline_coordinator/bridge_tx_queue';
-import { BridgeConfig } from '@aztec/barretenberg/rollup_provider';
+import { BridgeQueueStats } from '../pipeline_coordinator/bridge_tx_queue';
 import { TxFeeResolver } from '../tx_fee_resolver';
 import { DefiDepositProofData } from '@aztec/barretenberg/client_proofs/proof_data/defi_deposit_proof_data';
 import { BridgeResolver } from '../bridge';
+
+const BRIDGE_METRIC_LABEL = 'bridge_call_data';
 
 export class Metrics {
   private receiveTxDuration: Histogram<string>;
@@ -44,6 +45,7 @@ export class Metrics {
   private rollupGasBalance: Gauge<string>;
   private rollupBridgeDepositValue: Gauge<string>;
   private totalBridgeDepositValue: Gauge<string>;
+  private bridgeRollupGasCost: Gauge<string>;
 
   private httpEndpointCounter: Counter<string>;
   private txReceivedCounter: Counter<string>;
@@ -51,8 +53,9 @@ export class Metrics {
   private bridgeTotalGasAccCounter: Counter<string>;
   private bridgeTotalTimesCalledCounter: Counter<string>;
   private bridgeTotalAztecCallsCounter: Counter<string>;
-  private bridgetotalUsdCost: Counter<string>;
+  private bridgeTotalUsdCost: Counter<string>;
   private bridgeTotalUsdFees: Counter<string>;
+  private bridgeTotalAztecTxCounter: Counter<string>;
 
   private coinbaseClient: PublicClient = new PublicClient();
 
@@ -61,6 +64,7 @@ export class Metrics {
     private rollupDb: RollupDb,
     private blockchain: Blockchain,
     public rollupBeneficiary: EthAddress,
+    private log = console.log,
   ) {
     client.collectDefaultMetrics();
 
@@ -201,37 +205,43 @@ export class Metrics {
     this.bridgeRollupTxs = new Gauge({
       name: 'bridge_rollup_txs',
       help: 'Num txs for full rollup for bridge',
-      labelNames: ['bridgeCallData'],
+      labelNames: [BRIDGE_METRIC_LABEL],
     });
 
     this.bridgeRollupGas = new Gauge({
       name: 'bridge_rollup_gas',
       help: 'Total gas in rollup for bridge',
-      labelNames: ['bridgeCallData'],
+      labelNames: [BRIDGE_METRIC_LABEL],
     });
 
     this.bridgeRollupGasAcc = new Gauge({
       name: 'bridge_gas_acc',
       help: 'Gas accumulated for bridge',
-      labelNames: ['bridge_call_data'],
+      labelNames: [BRIDGE_METRIC_LABEL],
+    });
+
+    this.bridgeRollupGasCost = new Gauge({
+      name: 'bridge_rollup_gas_cost',
+      help: 'gas cost of this bridge in rollup',
+      labelNames: [BRIDGE_METRIC_LABEL],
     });
 
     this.bridgeRollupUsdCost = new Gauge({
       name: 'bridge_rollup_usd_cost',
       help: 'USD cost of this bridge in rollup',
-      labelNames: ['bridge_call_data'],
+      labelNames: [BRIDGE_METRIC_LABEL],
     });
 
     this.bridgeRollupUsdFees = new Gauge({
       name: 'bridge_rollup_usd_fees',
       help: 'USD Fees accrued by bridge in rollup',
-      labelNames: ['bridge_call_data'],
+      labelNames: [BRIDGE_METRIC_LABEL],
     });
 
     this.bridgeRollupTxGauge = new Gauge({
       name: 'bridge_rollup_tx',
       help: 'Bridge transactions received in rollup',
-      labelNames: ['bridge_call_data'],
+      labelNames: [BRIDGE_METRIC_LABEL],
     });
 
     this.rollupTransactions = new Gauge({
@@ -247,13 +257,13 @@ export class Metrics {
     this.rollupBridgeDepositValue = new Gauge({
       name: 'bridge_deposit_value',
       help: 'Bridge Deposit Value',
-      labelNames: ['bridgeId'],
+      labelNames: [BRIDGE_METRIC_LABEL],
     });
 
     this.totalBridgeDepositValue = new Gauge({
       name: 'total_bridge_deposit_value',
       help: 'Total Bridge Deposit Value',
-      labelNames: ['bridgeId'],
+      labelNames: [BRIDGE_METRIC_LABEL],
     });
 
     this.receiveTxDuration = new Histogram({
@@ -301,37 +311,43 @@ export class Metrics {
     this.bridgeTotalTxCounter = new Counter({
       name: 'bridge_total_tx',
       help: 'Total bridge transactions',
-      labelNames: ['bridge_call_data'],
+      labelNames: [BRIDGE_METRIC_LABEL],
     });
 
     this.bridgeTotalGasAccCounter = new Counter({
       name: 'bridge_total_gas_acc',
       help: 'Gas accumulated for bridge',
-      labelNames: ['bridge_call_data'],
+      labelNames: [BRIDGE_METRIC_LABEL],
     });
 
     this.bridgeTotalTimesCalledCounter = new Counter({
       name: 'bridge_total_times_called',
       help: 'Total times a bridge has been called',
-      labelNames: ['bridge_call_data'],
+      labelNames: [BRIDGE_METRIC_LABEL],
     });
 
     this.bridgeTotalAztecCallsCounter = new Counter({
       name: 'bridge_total_aztec_times_called',
       help: 'Totaltimes a bridge has been called by Aztec rollups',
-      labelNames: ['bridge_call_data'],
+      labelNames: [BRIDGE_METRIC_LABEL],
     });
 
-    this.bridgetotalUsdCost = new Counter({
+    this.bridgeTotalUsdCost = new Counter({
       name: 'bridge_total_usd_cost',
       help: 'Total USD cost of bridge',
-      labelNames: ['bridge_call_data'],
+      labelNames: [BRIDGE_METRIC_LABEL],
     });
 
     this.bridgeTotalUsdFees = new Counter({
       name: 'bridge_total_usd_fees',
       help: 'Total USD fees accrued by bridge',
-      labelNames: ['bridge_call_data'],
+      labelNames: [BRIDGE_METRIC_LABEL],
+    });
+
+    this.bridgeTotalAztecTxCounter = new Counter({
+      name: 'bridge_total_aztec_txs',
+      help: 'Total TXs published by aztec for bridge',
+      labelNames: [BRIDGE_METRIC_LABEL],
     });
   }
 
@@ -367,12 +383,17 @@ export class Metrics {
     this.txReceivedCounter.labels(TxType[txType]).inc();
   }
 
-  recordBridgeRollupTxNum(rollupTxs: number, bridgeCallData: bigint) {
-    this.bridgeRollupTxs.labels(BridgeCallData.fromBigInt(bridgeCallData).toString()).set(rollupTxs);
-  }
-
-  recordBridgeRollupGas(gas: number, bridgeCallData: bigint) {
-    this.bridgeRollupGas.labels(BridgeCallData.fromBigInt(bridgeCallData).toString()).set(gas);
+  bridgeMetricLabelsToReset() {
+    return [
+      {
+        name: 'bridge_gas_acc',
+        gauge: this.bridgeRollupGasAcc,
+      },
+      {
+        name: 'bridge_rollup_tx',
+        gauge: this.bridgeRollupTxGauge,
+      },
+    ];
   }
 
   async rollupReceived(rollup: RollupDao) {
@@ -408,11 +429,17 @@ export class Metrics {
     if (rollup.bridgeMetrics) {
       for (const bridgeMetric of rollup.bridgeMetrics) {
         // TODO: rename bridgeId to bridgeCallData
-        const { bridgeId: _bridgeCallData, numTxs } = bridgeMetric;
-        const bridgeCallData = BridgeCallData.fromBigInt(_bridgeCallData).toString();
+        const { bridgeId: _bridgeCallData, numTxs, publishedByProvider } = bridgeMetric;
+        const bridgeCallData = BridgeCallData.fromBigInt(_bridgeCallData);
+        const bridgeLabel = bridgeCallData.toString();
 
-        this.bridgeTotalTxCounter.labels(bridgeCallData).inc(numTxs);
-        this.bridgeTotalTimesCalledCounter.labels(bridgeCallData).inc();
+        this.bridgeRollupTxGauge.labels(bridgeLabel).set(numTxs || 0);
+        this.bridgeTotalTxCounter.labels(bridgeLabel).inc(numTxs);
+        this.bridgeTotalTimesCalledCounter.labels(bridgeLabel).inc();
+
+        if (publishedByProvider) {
+          this.bridgeTotalAztecTxCounter.labels(bridgeLabel).inc(numTxs);
+        }
       }
     }
 
@@ -423,45 +450,70 @@ export class Metrics {
   }
 
   // record transient bridge metrics
-  public recordRollupMetrics(txs: RollupTx[], rollupProfile: RollupProfile, bridgeConfigs: BridgeConfig[]) {
+  public async recordRollupMetrics(
+    rollupProfile: RollupProfile,
+    bridgeResolver: BridgeResolver,
+    bridgeStats: BridgeQueueStats[],
+  ) {
     this.rollupTransactions.set(rollupProfile.totalTxs);
     this.rollupGasBalance.set(rollupProfile.gasBalance);
 
-    const bridgeStats: Record<string, { txNum: number; gasAcc: number }> = {};
+    const usedBridgesLabels: string[] = [];
+
+    const bridgeConfigs = bridgeResolver.getBridgeConfigs();
+
+    // loop through bridge profiles (profitable bridges)
     for (const bp of rollupProfile.bridgeProfiles.values()) {
       const bridgeConfig = bridgeConfigs.find(
         ({ bridgeCallData: configBridgeCallData }) => bp.bridgeCallData === configBridgeCallData,
       );
+      const bridgeCallData = BridgeCallData.fromBigInt(bp.bridgeCallData);
+      const bridgeLabel = bridgeCallData.toString();
       if (bridgeConfig) {
-        this.recordBridgeRollupTxNum(bridgeConfig.numTxs, bp.bridgeCallData);
-        this.recordBridgeRollupGas(bridgeConfig.gas, bp.bridgeCallData);
+        this.bridgeRollupTxs.labels(bridgeLabel).set(bridgeConfig.numTxs);
+        this.bridgeRollupGas.labels(bridgeLabel).set(bridgeConfig.gas);
       }
-      const strBridgeCallData = BridgeCallData.fromBigInt(bp.bridgeCallData).toString();
-      if (bridgeStats[strBridgeCallData]) {
-        bridgeStats[strBridgeCallData].txNum += bp.numTxs;
-        bridgeStats[strBridgeCallData].gasAcc += bp.gasAccrued;
-      } else {
-        bridgeStats[strBridgeCallData] = {
-          txNum: bp.numTxs,
-          gasAcc: bp.gasAccrued,
-        };
-      }
+      this.bridgeRollupTxGauge.labels(bridgeLabel).set(bp.numTxs || 0);
+      this.bridgeRollupGasAcc.labels(bridgeLabel).set(bp.gasAccrued || 0);
+      usedBridgesLabels.push(bridgeLabel);
     }
 
-    for (const bridgeConfig of bridgeConfigs) {
-      const strBridgeCallData = BridgeCallData.fromBigInt(bridgeConfig.bridgeCallData).toString();
-      this.bridgeRollupTxGauge.labels(strBridgeCallData).set(bridgeStats[strBridgeCallData]?.txNum || 0);
-      this.bridgeRollupGasAcc.labels(strBridgeCallData).set(bridgeStats[strBridgeCallData]?.gasAcc || 0);
+    // loop through all bridge stats
+    for (const bs of bridgeStats) {
+      // skip if bridge is included in rollupProfile.bridgeProfiles
+      if (rollupProfile.bridgeProfiles.has(bs.bridgeCallData)) {
+        continue;
+      }
+      const bridgeConfig = bridgeConfigs.find(
+        ({ bridgeCallData: configBridgeCallData }) => bs.bridgeCallData === configBridgeCallData,
+      );
+      const bridgeCallData = BridgeCallData.fromBigInt(bs.bridgeCallData);
+      const bridgeLabel = bridgeCallData.toString();
+      if (bridgeConfig) {
+        this.bridgeRollupTxs.labels(bridgeLabel).set(bridgeConfig.numTxs);
+        this.bridgeRollupGas.labels(bridgeLabel).set(bridgeConfig.gas);
+      }
+      this.bridgeRollupTxGauge.labels(bridgeLabel).set(bs.numQueuedTxs || 0);
+      this.bridgeRollupGasAcc.labels(bridgeLabel).set(bs.gasAccrued || 0);
+      usedBridgesLabels.push(bridgeLabel);
+    }
+
+    // rollup metrics that weren't present in this rollup and need to be set to 0
+    for (const metric of this.bridgeMetricLabelsToReset()) {
+      // metrics are returned in format:
+      // bridge_gas_acc{bridge_call_data="{BridgeCallData as hex string}"} <value>
+      const regex = new RegExp(`(?!${metric.name}{${BRIDGE_METRIC_LABEL}=")(0x|0X)[a-fA-F0-9]{64}`, 'g');
+      const metricValue = await client.register.getSingleMetricAsString(metric.name);
+      const bridgeLabels = metricValue.match(regex) || [];
+      for (const bridgeLabel of bridgeLabels) {
+        if (!usedBridgesLabels.includes(bridgeLabel)) {
+          metric.gauge.labels(bridgeLabel).set(0);
+        }
+      }
     }
   }
 
-  async rollupPublished(
-    rollupProfile: RollupProfile,
-    txs: TxDao[],
-    rollupId: number,
-    feeResolver: TxFeeResolver,
-    bridgeResolver: BridgeResolver,
-  ) {
+  async rollupPublished(rollupProfile: RollupProfile, txs: TxDao[], rollupId: number, feeResolver: TxFeeResolver) {
     const result: BridgeMetricsDao[] = [];
     const ethUsdTicker = await this.coinbaseClient.getProductTicker('ETH-USD');
     const ethUsdPrice = Number(ethUsdTicker.price);
@@ -486,8 +538,18 @@ export class Metrics {
       }
     }
 
-    const calcUsd = (num: number) => {
-      return (num * Number(gasPrice / 10n ** 9n) * ethUsdPrice) / 10 ** 9;
+    const calcUsdCostOfFeeInWei = (feeInWei: bigint) => {
+      const usdScale = 1000000;
+      const scaledUsdPrice = BigInt(ethUsdPrice * usdScale);
+      const costInScaledUsd = (scaledUsdPrice * feeInWei) / 10n ** 18n;
+      const usdCost = Number(costInScaledUsd) / usdScale;
+      return usdCost;
+    };
+
+    const calcUsdCostOfGas = (num: number) => {
+      const gas = BigInt(num);
+      const costOfGasInWei = gas * gasPrice;
+      return calcUsdCostOfFeeInWei(costOfGasInWei);
     };
 
     const getDecimals = (bridgeId: BridgeCallData) => {
@@ -510,18 +572,19 @@ export class Metrics {
         const feeInWei = valueMappings[strBridgeCallData]?.feeInWei ?? 0n;
         const totalDeposit = valueMappings[strBridgeCallData]?.depositValue ?? 0n;
 
-        const previous = await this.rollupDb.getLastBridgeMetrics(encodedBridgeCallData);
+        const previous = await this.rollupDb.getOurLastBridgeMetrics(encodedBridgeCallData);
         const bridgeMetrics = previous || new BridgeMetricsDao();
         // TODO: rename bridgeId to bridgeCallData
         bridgeMetrics.bridgeId = encodedBridgeCallData;
         bridgeMetrics.rollupId = rollupId;
         bridgeMetrics.gas = BigInt(gasAccrued);
-        bridgeMetrics.totalGas = BigInt(bridgeMetrics.totalGas + BigInt(bridgeProfile.gasThreshold));
+        bridgeMetrics.totalGasAccrued = BigInt(bridgeMetrics.totalGasAccrued || 0) + BigInt(bridgeMetrics.gas);
+        bridgeMetrics.totalGas = BigInt(bridgeMetrics.totalGas || 0) + BigInt(bridgeProfile.gasThreshold);
         bridgeMetrics.totalAztecCalls = (bridgeMetrics.totalAztecCalls || 0) + 1;
         bridgeMetrics.gasPrice = gasPrice;
 
-        const usdCostOfExecutingBridge = calcUsd(bridgeProfile.gasThreshold);
-        const usdFees = (Number(feeInWei / 10n ** 9n) * ethUsdPrice) / 10 ** 9;
+        const usdCostOfExecutingBridge = calcUsdCostOfGas(bridgeProfile.gasThreshold);
+        const usdFees = calcUsdCostOfFeeInWei(feeInWei);
 
         bridgeMetrics.usdCost = usdCostOfExecutingBridge;
         bridgeMetrics.totalUsdCost = (bridgeMetrics.totalUsdCost || 0) + usdCostOfExecutingBridge;
@@ -529,16 +592,16 @@ export class Metrics {
         bridgeMetrics.totalUsdFees = (bridgeMetrics.totalUsdFees || 0) + usdFees;
         bridgeMetrics.depositValue = totalDeposit;
         bridgeMetrics.totalDepositValue = (bridgeMetrics.totalDepositValue || 0n) + totalDeposit;
+        bridgeMetrics.publishedByProvider = true;
         result.push(bridgeMetrics);
 
-        const bridgeLabel =
-          bridgeResolver.getBridgeDescription(encodedBridgeCallData) ||
-          `${bridgeCallData.bridgeAddressId} - ${bridgeCallData.inputAssetIdA} - ${bridgeCallData.auxData}`;
+        const bridgeLabel = bridgeCallData.toString();
         this.bridgeRollupGasAcc.labels(bridgeLabel).set(gasAccrued);
         this.bridgeTotalGasAccCounter.labels(bridgeLabel).inc(gasAccrued);
         this.bridgeTotalAztecCallsCounter.labels(bridgeLabel).inc();
+        this.bridgeRollupGasCost.labels(bridgeLabel).set(bridgeProfile.gasThreshold);
         this.bridgeRollupUsdCost.labels(bridgeLabel).set(usdCostOfExecutingBridge);
-        this.bridgetotalUsdCost.labels(bridgeLabel).inc(usdCostOfExecutingBridge);
+        this.bridgeTotalUsdCost.labels(bridgeLabel).inc(usdCostOfExecutingBridge);
         this.bridgeRollupUsdFees.labels(bridgeLabel).set(usdFees);
 
         const totalDepositValue = +fromBaseUnits(totalDeposit, assetDecimals);
@@ -550,7 +613,7 @@ export class Metrics {
       try {
         await this.rollupDb.addBridgeMetrics(result);
       } catch (err) {
-        console.log('Error when adding bridge metrics to DB', err);
+        this.log('Metrics: Error when adding bridge metrics to DB', err);
       }
     }
   }

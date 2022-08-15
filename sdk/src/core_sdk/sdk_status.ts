@@ -18,6 +18,7 @@ export interface SdkStatus {
   serverUrl: string;
   chainId: number;
   rollupContractAddress: EthAddress;
+  permitHelperContractAddress: EthAddress;
   verifierContractAddress: EthAddress;
   feePayingAssetIds: number[];
   rollupSize: number;
@@ -35,6 +36,7 @@ export type SdkStatusJson = Jsonify<SdkStatus>;
 export const sdkStatusToJson = (status: SdkStatus): SdkStatusJson => ({
   ...status,
   rollupContractAddress: status.rollupContractAddress.toString(),
+  permitHelperContractAddress: status.permitHelperContractAddress.toString(),
   verifierContractAddress: status.verifierContractAddress.toString(),
   dataRoot: status.dataRoot.toString('hex'),
 });
@@ -42,6 +44,7 @@ export const sdkStatusToJson = (status: SdkStatus): SdkStatusJson => ({
 export const sdkStatusFromJson = (json: SdkStatusJson): SdkStatus => ({
   ...json,
   rollupContractAddress: EthAddress.fromString(json.rollupContractAddress),
+  permitHelperContractAddress: EthAddress.fromString(json.permitHelperContractAddress),
   verifierContractAddress: EthAddress.fromString(json.verifierContractAddress),
   dataRoot: Buffer.from(json.dataRoot, 'hex'),
 });

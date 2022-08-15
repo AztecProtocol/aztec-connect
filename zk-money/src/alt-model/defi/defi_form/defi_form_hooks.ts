@@ -33,18 +33,22 @@ function getInteractionAssets(recipe: DefiRecipe, mode: FlowDirection) {
   }
 }
 
-function useDefiFormBridgeCallData(recipe: DefiRecipe, { inA, outA }: BridgeInteractionAssets) {
-  const auxData = useDefaultAuxDataOption(recipe.id);
+function useDefiFormBridgeCallData(
+  recipe: DefiRecipe,
+  direction: FlowDirection,
+  { inA, outA }: BridgeInteractionAssets,
+) {
+  const auxData = useDefaultAuxDataOption(recipe.id, direction === 'exit');
   return useMemo(() => {
     if (auxData === undefined) return undefined;
     return new BridgeCallData(recipe.bridgeAddressId, inA.id, outA.id, undefined, undefined, Number(auxData));
   }, [auxData, recipe, inA, outA]);
 }
 
-export function useDefiForm(recipe: DefiRecipe, mode: FlowDirection) {
+export function useDefiForm(recipe: DefiRecipe, direction: FlowDirection) {
   const { userId, config } = useApp();
   const [fields, setFields] = useState<DefiFormFields>({
-    amountStrOrMax: mode === 'exit' ? MAX_MODE : '',
+    amountStrOrMax: direction === 'exit' ? MAX_MODE : '',
     speed: DefiSettlementTime.DEADLINE,
   });
   const [touchedFields, setters] = useTrackedFieldChangeHandlers(fields, setFields);
@@ -55,9 +59,9 @@ export function useDefiForm(recipe: DefiRecipe, mode: FlowDirection) {
   const rpStatusPoller = useRollupProviderStatusPoller();
   const awaitCorrectProvider = useAwaitCorrectProvider();
   const amountFactory = useAmountFactory();
-  const interactionAssets = getInteractionAssets(recipe, mode);
+  const interactionAssets = getInteractionAssets(recipe, direction);
   const depositAsset = interactionAssets.inA;
-  const bridgeCallData = useDefiFormBridgeCallData(recipe, interactionAssets);
+  const bridgeCallData = useDefiFormBridgeCallData(recipe, direction, interactionAssets);
   const feeAmounts = useDefiFeeAmounts(bridgeCallData);
   const feeAmount = feeAmounts?.[fields.speed];
   const balanceInTargetAsset = useMaxSpendableValue(depositAsset.id);

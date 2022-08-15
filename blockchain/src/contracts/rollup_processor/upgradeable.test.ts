@@ -12,9 +12,10 @@ import { ProxyAdmin } from './proxy_admin';
 import { setupTestRollupProcessor } from './fixtures/setup_upgradeable_test_rollup_processor';
 import { TestRollupProcessor } from './fixtures/test_rollup_processor';
 import { EthersAdapter } from '../../provider';
+import { TestUpgradeRollupProcessor } from './fixtures/test_upgrade_rollup_processor';
 
 describe('rollup_processor: upgradable test', () => {
-  let rollupProcessor: TestRollupProcessor;
+  let rollupProcessor: TestUpgradeRollupProcessor;
   let proxyAdmin: ProxyAdmin;
   let signers: Signer[];
   let addresses: EthAddress[];
@@ -29,12 +30,21 @@ describe('rollup_processor: upgradable test', () => {
   beforeAll(async () => {
     signers = await ethers.getSigners();
     addresses = await Promise.all(signers.map(async u => EthAddress.fromString(await u.getAddress())));
+    let rp: TestRollupProcessor;
 
-    ({ proxyAdmin, rollupProcessor } = await setupTestRollupProcessor(signers, {
+    ({ proxyAdmin, rollupProcessor: rp } = await setupTestRollupProcessor(signers, {
       numberOfTokenAssets: 1,
       escapeBlockLowerBound,
       escapeBlockUpperBound,
+      useLatest: false,
     }));
+    rollupProcessor = new TestUpgradeRollupProcessor(rp.address, new EthersAdapter(ethers.provider));
+
+    await proxyAdmin.upgradeUNSAFE(
+      rollupProcessor.address,
+      await ethers.getContractFactory('TestUpgradeRollupProcessor', signers[0]),
+      [escapeBlockLowerBound, escapeBlockUpperBound],
+    );
 
     // Advance into block region where escapeHatch is active.
     const blocks = await blocksToAdvanceHardhat(escapeBlockLowerBound, escapeBlockUpperBound, ethers.provider);
@@ -66,7 +76,7 @@ describe('rollup_processor: upgradable test', () => {
 
   it('cannot initialize implementation directly', async () => {
     const implementationAddress = await proxyAdmin.getProxyImplementation(rollupProcessor.address);
-    const implementation = await ethers.getContractAt('TestRollupProcessor', implementationAddress);
+    const implementation = await ethers.getContractAt('TestUpgradeRollupProcessor', implementationAddress);
 
     expect(await implementation.defiBridgeProxy()).toBe(EthAddress.ZERO.toString());
     expect(await implementation.verifier()).toBe(EthAddress.ZERO.toString());
@@ -98,7 +108,7 @@ describe('rollup_processor: upgradable test', () => {
   });
 
   it('anyone can initialize after unsafe deployment', async () => {
-    const RollupProcessor = await ethers.getContractFactory('TestRollupProcessor', signers[0]);
+    const RollupProcessor = await ethers.getContractFactory('TestUpgradeRollupProcessor', signers[0]);
 
     const unsafeProxy = await proxyAdmin.deployProxyUNSAFE(RollupProcessor, [
       await rollupProcessor.escapeBlockLowerBound(),
