@@ -28,7 +28,7 @@ contract Upgrade is Test {
             ROLLUP = RollupProcessorV2(0xFF1F2B4ADb9dF6FC8eAFecDcbF96A2B351680455);
         } else {
             MULTI_SIG = 0x7095057A08879e09DC1c0a85520e3160A0F67C96;
-            ROLLUP = RollupProcessorV2(0x76Fefb38ac7A221ece94138F027d5e4505A856FE);
+            ROLLUP = RollupProcessorV2(0x316EEAB3549e8b90CE7a0392BB151E3E4D09D860);
         }
 
         address admin = address(

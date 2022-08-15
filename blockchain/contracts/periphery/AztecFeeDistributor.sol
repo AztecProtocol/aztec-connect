@@ -103,7 +103,9 @@ contract AztecFeeDistributor is IFeeDistributor, Ownable {
             if (aztecFeeClaimer.balance < feeLimit) {
                 uint256 toSend = address(this).balance > feeLimit ? feeLimit : address(this).balance;
                 (bool success, ) = aztecFeeClaimer.call{gas: 3000, value: toSend}('');
-                emit FeeReimbursed(aztecFeeClaimer, toSend);
+                if (success) {
+                    emit FeeReimbursed(aztecFeeClaimer, toSend);
+                }
             }
         }
     }

@@ -10,19 +10,6 @@ import {StandardTypes} from './cryptography/StandardTypes.sol';
 /**
  * @title Standard Plonk proof verification contract
  * @dev Top level Plonk proof verification contract, which allows Plonk proof to be verified
- *
- * Copyright 2022 Aztec
- *
- * Licensed under the GNU General Public License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 contract StandardVerifier is IVerifier {
     // VERIFICATION KEY MEMORY LOCATIONS
@@ -144,6 +131,7 @@ contract StandardVerifier is IVerifier {
      * @dev Verify a Plonk proof
      * @param - array of serialized proof data
      * @param - public input hash as computed from the broadcast data
+     * @return True if proof is valid, reverts otherwise
      */
     function verify(bytes calldata, uint256 public_inputs_hash) external view override returns (bool) {
         // validate the correctness of the public inputs hash
@@ -165,7 +153,6 @@ contract StandardVerifier is IVerifier {
         assembly {
             /**
              * LOAD VKEY
-             * TODO REPLACE THIS WITH A CONTRACT CALL
              */
             {
                 mstore(N_LOC, mload(vk))
