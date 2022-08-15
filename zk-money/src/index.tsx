@@ -5,7 +5,6 @@ import 'ui-components/styles/global.css';
 import { getEnvironment } from './config';
 import { Views } from './views';
 import { TopLevelContextProvider } from 'alt-model/top_level_context/top_level_context_provider';
-import { ErrorToast } from 'ui-components/components/layout/global_error_toast';
 import { AppInitFailed } from 'views/app_init_failed';
 import { getSupportStatus } from 'device_support';
 import { Toolbox } from 'toolbox';
@@ -32,7 +31,6 @@ async function rootRender() {
         <BrowserRouter>
           <Views config={config} />
         </BrowserRouter>
-        <ErrorToast />
       </TopLevelContextProvider>
     );
   } catch {
