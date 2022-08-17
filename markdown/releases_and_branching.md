@@ -12,6 +12,13 @@ Under Aztec connect the long lived branches are:
 | `v2.1-testnet`        | Staging     | `aztec-connect-testnet-*` (ganache) |
 | `v2.1`                | Release     | `aztec-connect-prod-*` (mainnet)    |
 
+Changes between long-lived branches are propagated with regular merges. Changes applied to long-lived branches from other branches, such as feature branches, are squashed and merged. E.g.:
+
+- Merge `defi-bridge-project` -> `v2.1-testnet`
+- Merge `v2.1-testnet` -> `defi-bridge-project`
+- Squash and merge `some-hotfix` -> `v2.1`
+- Squash and merge `some-feature` -> `defi-bridge-project`
+
 ## Release branch
 
 At the time of writing `v2.1` is the active release branch &ndash; under the ultra plonk project this will likely be `v2.2`. The release branch exists to reflect the state of the code that has been deployed to production, and is thus branch from which production deployments are triggered.
