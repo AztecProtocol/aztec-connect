@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "@aztec/bridge-clients": "0.1.49",
+    "@aztec/bridge-clients": "0.1.52",
     "@aztec/sdk": "file:../sdk/dest",
     "@rainbow-me/rainbowkit": "^0.4.2",
     "@types/jsan": "^3.1.2",

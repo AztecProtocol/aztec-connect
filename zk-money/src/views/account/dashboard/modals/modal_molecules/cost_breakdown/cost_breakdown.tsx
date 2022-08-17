@@ -1,14 +1,17 @@
-import { useAmountBulkPrice, useAssetUnitPriceFromAddress } from 'alt-model';
+import { useAmountBulkPrice } from 'alt-model';
 import { Amount } from 'alt-model/assets/amount';
-import { KNOWN_MAINNET_ASSET_ADDRESS_STRS } from 'alt-model/known_assets/known_asset_addresses';
-import {
-  getAssetIcon,
-  getAssetPreferredFractionalDigitsFromStr,
-} from 'alt-model/known_assets/known_asset_display_data';
+import { getAssetIcon } from 'alt-model/known_assets/known_asset_display_data';
 import { RemoteAsset } from 'alt-model/types';
-import { formatBaseUnits, formatBulkPrice } from 'app';
+import { formatBulkPrice } from 'app';
 import { ShieldedAssetIcon } from 'components';
 import style from './cost_breakdown.module.css';
+
+export interface CostBreakdownInvestmentInfo {
+  label: string;
+  asset: RemoteAsset;
+  formattedValue: React.ReactNode;
+  formattedConversionValue?: React.ReactNode;
+}
 
 interface CostBreakdownProps {
   amountLabel: string;
@@ -17,8 +20,7 @@ interface CostBreakdownProps {
   recipient: string;
   deductionIsFromL1?: boolean;
   feeDeductionIsFromL1?: boolean;
-  investmentLabel?: string;
-  investmentReturn?: Amount;
+  investmentInfo?: CostBreakdownInvestmentInfo;
 }
 
 interface RecipientRowProps {
@@ -30,8 +32,8 @@ interface RowProps {
   label: string;
   cost?: string;
   asset?: RemoteAsset;
-  value?: string;
-  conversionValue?: string;
+  value?: React.ReactNode;
+  conversionValue?: React.ReactNode;
   assetIsZk?: boolean;
 }
 
@@ -76,7 +78,7 @@ export function InvestmentRow({ label, cost, asset, value, conversionValue, asse
         <div className={style.assetIcon}>{renderIcon(assetIsZk, asset)}</div>
         <div className={style.amount}>
           <div>{value}</div>
-          {conversionValue && <div className={style.conversionValue}>{`≈ ${conversionValue}`}</div>}
+          {conversionValue && <div className={style.conversionValue}>≈ {conversionValue}</div>}
         </div>
       </div>
     </div>
@@ -88,17 +90,6 @@ function maybeBulkPriceStr(bulkPrice?: bigint) {
   return '$' + formatBulkPrice(bulkPrice);
 }
 
-function convert_wstETH_to_stETH(wstEthAmountToConvert: Amount, stEthUnitPrice: bigint, wstEthUnitPrice: bigint) {
-  const stEthBaseUnits = (wstEthAmountToConvert.baseUnits * wstEthUnitPrice) / stEthUnitPrice;
-
-  const numStr = formatBaseUnits(stEthBaseUnits, wstEthAmountToConvert.info.decimals, {
-    precision: getAssetPreferredFractionalDigitsFromStr(KNOWN_MAINNET_ASSET_ADDRESS_STRS.stETH),
-    commaSeparated: true,
-  });
-
-  return `${numStr} stETH`;
-}
-
 export function CostBreakdown({
   amountLabel,
   amount,
@@ -106,18 +97,10 @@ export function CostBreakdown({
   recipient,
   deductionIsFromL1,
   feeDeductionIsFromL1,
-  investmentLabel,
-  investmentReturn,
+  investmentInfo,
 }: CostBreakdownProps) {
   const amountBulkPrice = useAmountBulkPrice(amount);
   const feeBulkPrice = useAmountBulkPrice(fee);
-  const stEthAssetUnitPrice = useAssetUnitPriceFromAddress(KNOWN_MAINNET_ASSET_ADDRESS_STRS.stETH);
-  const wstEthAssetUnitPrice = useAssetUnitPriceFromAddress(KNOWN_MAINNET_ASSET_ADDRESS_STRS.wstETH);
-
-  const shouldFormatAsStEth =
-    investmentReturn?.address.toString() === KNOWN_MAINNET_ASSET_ADDRESS_STRS.wstETH &&
-    stEthAssetUnitPrice &&
-    wstEthAssetUnitPrice;
 
   const totalBulkPrice =
     amountBulkPrice !== undefined && feeBulkPrice !== undefined ? amountBulkPrice + feeBulkPrice : undefined;
@@ -149,17 +132,13 @@ export function CostBreakdown({
         value={totalAmount?.format({ layer: deductionIsFromL1 ? 'L1' : 'L2' })}
         assetIsZk={!deductionIsFromL1}
       />
-      {investmentLabel && investmentReturn && (
+      {investmentInfo && (
         <InvestmentRow
-          asset={investmentReturn?.info}
+          asset={investmentInfo.asset}
           assetIsZk={true}
-          label={investmentLabel}
-          value={investmentReturn?.format({ layer: 'L1', uniform: true })}
-          conversionValue={
-            !!shouldFormatAsStEth
-              ? convert_wstETH_to_stETH(investmentReturn, stEthAssetUnitPrice, wstEthAssetUnitPrice)
-              : undefined
-          }
+          label={investmentInfo.label}
+          value={investmentInfo.formattedValue}
+          conversionValue={investmentInfo.formattedConversionValue}
         />
       )}
     </div>

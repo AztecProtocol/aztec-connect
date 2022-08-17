@@ -1,5 +1,5 @@
 import createDebug from 'debug';
-import { BlockchainBridge, BlockchainStatus, EthAddress, RollupProviderStatus, toBaseUnits } from '@aztec/sdk';
+import { BlockchainBridge, BlockchainStatus, EthAddress, RollupProviderStatus } from '@aztec/sdk';
 import { BridgeFlowAssets, DefiInvestmentType, DefiRecipe, KeyBridgeStat } from './types';
 import lidoXCurveLogo from 'images/lido_x_curve_logo.svg';
 import lidoMiniLogo from 'images/lido_mini_logo.png';
@@ -108,8 +108,8 @@ const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
     entryInputAssetAddressA: KMAA.ETH,
     entryOutputAssetAddressA: KMAA.wstETH,
     createAdaptor: createLidoAdaptor,
-    selectEnterAuxDataOpt: () => toBaseUnits('1.0', 18), // Minimum acceptable amount of stEth per 1 eth
-    selectExitAuxDataOpt: () => toBaseUnits('0.9', 18), // Minimum acceptable amount of eth per 1 stEth
+    selectEnterAuxDataOpt: () => 1e18, // Minimum acceptable amount of stEth per 1 eth
+    selectExitAuxDataOpt: () => 0.9e18, // Minimum acceptable amount of eth per 1 stEth
     projectName: 'Lido',
     website: 'https://lido.fi/',
     websiteLabel: 'lido.fi',
