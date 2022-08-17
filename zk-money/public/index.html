@@ -2,6 +2,26 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <script>
+      const logs = [];
+
+      const logAndStore = (oldCons, fn, args) => {
+        oldCons[fn](...args);
+        logs.push({ fn, args });
+      };
+
+      window.exportLogs = () => {
+        window.handleLogsInZkMoney(logs);
+      };
+
+      window.console = (oldCons => ({
+        log: (...args) => logAndStore(oldCons, 'log', args),
+        info: (...args) => logAndStore(oldCons, 'info', args),
+        warn: (...args) => logAndStore(oldCons, 'warn', args),
+        error: (...args) => logAndStore(oldCons, 'error', args),
+        debug: (...args) => logAndStore(oldCons, 'debug', args),
+      }))(window.console);
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="apple-touch-icon" sizes="180x180" href="%PUBLIC_URL%/apple-touch-icon.png" />
     <link rel="icon" type="image/png" sizes="32x32" href="%PUBLIC_URL%/favicon-32x32.png" />

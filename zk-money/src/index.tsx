@@ -8,6 +8,7 @@ import { TopLevelContextProvider } from 'alt-model/top_level_context/top_level_c
 import { AppInitFailed } from 'views/app_init_failed';
 import { getSupportStatus } from 'device_support';
 import { Toolbox } from 'toolbox';
+import './log_exporter';
 
 const PROD_EXPLORER_URL = 'https://aztec-connect-prod-explorer.aztec.network/';
 
