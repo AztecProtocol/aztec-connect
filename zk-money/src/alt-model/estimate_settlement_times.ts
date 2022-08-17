@@ -32,7 +32,9 @@ function estimateDefiBatchSettlementTime(
   const { rollupFrequency } = bridgeStatus;
   const publishIntervalSeconds = rollupProviderStatus.runtimeConfig.publishInterval;
 
-  if (rollupFrequency > 0 && publishIntervalSeconds > 0 && nextSettlementTime && !fastTrack) {
+  if (bridgeStatus.nextPublishTime) {
+    return new Date(bridgeStatus.nextPublishTime.getTime() + APPROX_ROLLUP_PROOF_DURATION_MS);
+  } else if (rollupFrequency > 0 && publishIntervalSeconds > 0 && nextSettlementTime && !fastTrack) {
     const defiBatchInterval = rollupFrequency * (publishIntervalSeconds * 1000);
     return new Date(nextSettlementTime.getTime() + defiBatchInterval + APPROX_ROLLUP_PROOF_DURATION_MS);
   } else if (nextSettlementTime) {
@@ -49,9 +51,10 @@ export function estimateDefiSettlementTimes(
   bridgeStatus?: BridgeStatus,
 ): EstimatedDefiSettlementTimes {
   const { instantSettlementTime, nextSettlementTime } = estimateTxSettlementTimes(rollupProviderStatus);
+  const batchSettlementTime = estimateDefiBatchSettlementTime(rollupProviderStatus, bridgeStatus, nextSettlementTime);
   return {
     instantSettlementTime,
     nextSettlementTime,
-    batchSettlementTime: estimateDefiBatchSettlementTime(rollupProviderStatus, bridgeStatus, nextSettlementTime),
+    batchSettlementTime,
   };
 }
