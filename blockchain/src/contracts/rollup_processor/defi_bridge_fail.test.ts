@@ -1,3 +1,10 @@
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { solidity } = require('ethereum-waffle');
+import chai from 'chai';
+
+import { expect } from 'chai';
+chai.use(solidity);
+
 import { EthAddress } from '@aztec/barretenberg/address';
 import { isVirtualAsset } from '@aztec/barretenberg/asset';
 import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
@@ -70,9 +77,9 @@ describe('rollup_processor: defi bridge failures', () => {
       .map(l => rollupProcessor.contract.interface.parseLog(l))
       .filter(e => e.eventFragment.name === 'DefiBridgeProcessed')
       .map(parseInteractionResultFromLog);
-    expect(interactionResult.length).toBe(expectedResult.length);
+    expect(interactionResult.length).to.be.eq(expectedResult.length);
     for (let i = 0; i < expectedResult.length; ++i) {
-      expect(interactionResult[i]).toEqual(expectedResult[i]);
+      expect(interactionResult[i]).to.be.eql(expectedResult[i]);
     }
 
     const expectedHashes = computeInteractionHashes([
@@ -85,7 +92,7 @@ describe('rollup_processor: defi bridge failures', () => {
       ...hashes,
       ...[...Array(numberOfBridgeCalls - hashes.length)].map(() => WorldStateConstants.EMPTY_INTERACTION_HASH),
     ];
-    expect(expectedHashes).toEqual(resultHashes);
+    expect(expectedHashes).to.be.eql(resultHashes);
   };
 
   const expectFailedResult = async (
@@ -99,7 +106,7 @@ describe('rollup_processor: defi bridge failures', () => {
 
   const expectBalance = async (assetId: number, balance: bigint) => {
     if (!isVirtualAsset(assetId)) {
-      expect(await assets[assetId].balanceOf(rollupProcessor.address)).toBe(balance);
+      expect(await assets[assetId].balanceOf(rollupProcessor.address)).to.be.eq(balance);
     }
   };
 
@@ -118,7 +125,7 @@ describe('rollup_processor: defi bridge failures', () => {
     return Buffer.concat([signature, offset, byteLength, reasonBytes]);
   };
 
-  beforeAll(async () => {
+  before(async () => {
     signers = await ethers.getSigners();
     rollupProvider = signers[0];
     addresses = await Promise.all(signers.map(async u => EthAddress.fromString(await u.getAddress())));
@@ -293,7 +300,7 @@ describe('rollup_processor: defi bridge failures', () => {
       previousDefiInteractionHash: randomBytes(32),
     });
     const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
-    await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('INCORRECT_PREVIOUS_DEFI_INTERACTION_HASH');
+    await expect(rollupProcessor.sendTx(tx)).to.be.revertedWith('INCORRECT_PREVIOUS_DEFI_INTERACTION_HASH');
   });
 
   it('revert if total input value is empty', async () => {
@@ -303,7 +310,7 @@ describe('rollup_processor: defi bridge failures', () => {
       defiInteractionData: [new DefiInteractionData(bridgeCallData, inputValue)],
     });
     const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
-    await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('ZERO_TOTAL_INPUT_VALUE');
+    await expect(rollupProcessor.sendTx(tx)).to.be.revertedWith('ZERO_TOTAL_INPUT_VALUE');
   });
 
   it('process defi interaction data fails if defiInteractionHash is max size', async () => {
@@ -330,7 +337,7 @@ describe('rollup_processor: defi bridge failures', () => {
     // if we then copy NUM_BRIDGE_CALLS async tx hashes into defiInteractionHashes, we should trigger the array overflow
     await rollupProcessor.stubAsyncTransactionHashes(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK);
     const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
-    await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('ARRAY_OVERFLOW');
+    await expect(rollupProcessor.sendTx(tx)).to.be.revertedWith('ARRAY_OVERFLOW');
   });
 
   describe('Cases using additional bridge implementations', () => {
@@ -343,7 +350,7 @@ describe('rollup_processor: defi bridge failures', () => {
       return Buffer.from(keccak256(toUtf8Bytes(reason)).substring(2), 'hex').subarray(0, 4);
     };
 
-    beforeAll(async () => {
+    before(async () => {
       reentryBridge = await (
         await ethers.getContractFactory('ReentryBridge', rollupProvider)
       ).deploy(rollupProcessor.address.toString());
@@ -390,7 +397,7 @@ describe('rollup_processor: defi bridge failures', () => {
 
       await failingAsyncBridge.setReturnValues(1, 0);
 
-      await expect(rollupProcessor.processAsyncDefiInteraction(0)).rejects.toThrow('INSUFFICIENT_ETH_PAYMENT()');
+      await expect(rollupProcessor.processAsyncDefiInteraction(0)).to.be.revertedWith('INSUFFICIENT_ETH_PAYMENT()');
     });
 
     it('process defi interaction that fails because async but `outputValueA > 0`', async () => {

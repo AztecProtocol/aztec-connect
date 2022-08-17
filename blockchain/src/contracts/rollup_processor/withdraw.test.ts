@@ -1,3 +1,10 @@
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { solidity } = require('ethereum-waffle');
+import chai from 'chai';
+
+import { expect } from 'chai';
+chai.use(solidity);
+
 import { EthAddress } from '@aztec/barretenberg/address';
 import { Asset } from '@aztec/barretenberg/blockchain';
 import { virtualAssetIdFlag } from '@aztec/barretenberg/bridge_call_data';
@@ -25,7 +32,7 @@ describe('rollup_processor: withdraw', () => {
 
   let snapshot: string;
 
-  beforeAll(async () => {
+  before(async () => {
     const signers = await ethers.getSigners();
     [rollupProvider, ...userSigners] = signers;
     userAddresses = await Promise.all(userSigners.map(async u => EthAddress.fromString(await u.getAddress())));
@@ -72,10 +79,10 @@ describe('rollup_processor: withdraw', () => {
     await rollupProcessor.sendTx(tx);
 
     const postWithdrawalRollupBalance = await assets[0].balanceOf(rollupProcessor.address);
-    expect(postWithdrawalRollupBalance).toBe(depositAmount - withdrawalAmount);
+    expect(postWithdrawalRollupBalance).to.be.eq(depositAmount - withdrawalAmount);
 
     const postWithdrawalBalance = await assets[0].balanceOf(userAddresses[0]);
-    expect(postWithdrawalBalance).toBe(preWithdrawalBalance + withdrawalAmount);
+    expect(postWithdrawalBalance).to.be.eq(preWithdrawalBalance + withdrawalAmount);
   });
 
   it('should withdraw erc20', async () => {
@@ -92,10 +99,10 @@ describe('rollup_processor: withdraw', () => {
     await rollupProcessor.sendTx(tx);
 
     const postWithdrawalRollupBalance = await assets[1].balanceOf(rollupProcessor.address);
-    expect(postWithdrawalRollupBalance).toBe(depositAmount - withdrawalAmount);
+    expect(postWithdrawalRollupBalance).to.be.eq(depositAmount - withdrawalAmount);
 
     const postWithdrawalBalance = await assets[1].balanceOf(userAddresses[2]);
-    expect(postWithdrawalBalance).toBe(preWithdrawalBalance + withdrawalAmount);
+    expect(postWithdrawalBalance).to.be.eq(preWithdrawalBalance + withdrawalAmount);
   });
 
   it('should NOT revert if withdraw fails due to faulty ERC20 transfer', async () => {
@@ -135,7 +142,7 @@ describe('rollup_processor: withdraw', () => {
     const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
     await rollupProcessor.sendTx(tx);
     const postWithdrawalBalance = await asset.balanceOf(userAddresses[0]);
-    expect(postWithdrawalBalance).toBe(preWithdrawalBalance);
+    expect(postWithdrawalBalance).to.be.eq(preWithdrawalBalance);
   });
 
   it('should revert if withdraw of virtual asset', async () => {
@@ -174,8 +181,8 @@ describe('rollup_processor: withdraw', () => {
       { rollupId: 2 },
     );
     const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
-    await expect(rollupProcessor.sendTx(tx)).rejects.toThrow('INVALID_ASSET_ID()');
+    await expect(rollupProcessor.sendTx(tx)).to.be.revertedWith('INVALID_ASSET_ID()');
     const postWithdrawalBalance = await asset.balanceOf(userAddresses[0]);
-    expect(postWithdrawalBalance).toBe(preWithdrawalBalance);
+    expect(postWithdrawalBalance).to.be.eq(preWithdrawalBalance);
   });
 });

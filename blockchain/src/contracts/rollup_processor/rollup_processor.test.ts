@@ -1,3 +1,10 @@
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { solidity } = require('ethereum-waffle');
+import chai from 'chai';
+
+import { expect } from 'chai';
+chai.use(solidity);
+
 import { EthAddress } from '@aztec/barretenberg/address';
 import { Asset, TxHash } from '@aztec/barretenberg/blockchain';
 import { DefiInteractionNote, packInteractionNotes } from '@aztec/barretenberg/note_algorithms';
@@ -28,6 +35,7 @@ import {
 import { deployMockBridge, MockBridgeParams } from './fixtures/setup_defi_bridges';
 import { setupTestRollupProcessor } from './fixtures/setup_upgradeable_test_rollup_processor';
 import { TestRollupProcessor } from './fixtures/test_rollup_processor';
+import { toMatchObject } from '../../mocha-checker';
 
 describe('rollup_processor', () => {
   let feeDistributor: FeeDistributor;
@@ -64,7 +72,7 @@ describe('rollup_processor', () => {
     return rollup;
   };
 
-  beforeAll(async () => {
+  before(async () => {
     signers = await ethers.getSigners();
     addresses = await Promise.all(signers.map(async u => EthAddress.fromString(await u.getAddress())));
     ({ rollupProcessor, feeDistributor, assets, assetAddresses } = await setupTestRollupProcessor(signers, {
@@ -86,45 +94,47 @@ describe('rollup_processor', () => {
   });
 
   it('should get contract status', async () => {
-    expect(rollupProcessor.address).toEqual(rollupProcessor.address);
-    expect(await rollupProcessor.dataSize()).toBe(0);
-    expect(await rollupProcessor.getSupportedAssets()).toEqual(
+    expect(rollupProcessor.address).to.be.eql(rollupProcessor.address);
+    expect(await rollupProcessor.dataSize()).to.be.eq(0);
+    expect(await rollupProcessor.getSupportedAssets()).to.be.eql(
       assets
         .slice(1)
         .map(a => a.getStaticInfo())
         .map(({ address, gasLimit }) => ({ address, gasLimit })),
     );
-    expect(await rollupProcessor.getEscapeHatchStatus()).toEqual({ escapeOpen: true, blocksRemaining: 20 });
+    expect(await rollupProcessor.getEscapeHatchStatus()).to.be.eql({ escapeOpen: true, blocksRemaining: 20 });
   });
 
   it('owner should be able to set the allowThirdParty contract flag', async () => {
     const statusBefore = await rollupProcessor.getThirdPartyContractStatus();
-    expect(statusBefore).toBe(false);
+    expect(statusBefore).to.be.eq(false);
 
     await expect(
       rollupProcessor.setThirdPartyContractStatus(true, {
         signingAddress: EthAddress.fromString(await signers[1].getAddress()),
       }),
-    ).rejects.toThrow(`AccessControl: account ${addresses[1].toString().toLowerCase()} is missing role ${OWNER_ROLE}`);
+    ).to.be.revertedWith(
+      `AccessControl: account ${addresses[1].toString().toLowerCase()} is missing role ${OWNER_ROLE}`,
+    );
 
     await rollupProcessor.setThirdPartyContractStatus(true, {
       signingAddress: EthAddress.fromString(await signers[0].getAddress()),
     });
 
     const statusAfter = await rollupProcessor.getThirdPartyContractStatus();
-    expect(statusAfter).toBe(true);
+    expect(statusAfter).to.be.eq(true);
   });
 
   it('should get supported asset', async () => {
     const supportedAssetAAddress = await rollupProcessor.getSupportedAsset(1);
-    expect(supportedAssetAAddress).toEqual(assets[1].getStaticInfo().address);
+    expect(supportedAssetAAddress).to.be.eql(assets[1].getStaticInfo().address);
   });
 
   it('should throw for a virtual asset', async () => {
     const assetIdA = 1 << 29;
-    await expect(rollupProcessor.getSupportedAsset(assetIdA)).rejects.toThrow('INVALID_ASSET_ID');
+    await expect(rollupProcessor.getSupportedAsset(assetIdA)).to.be.revertedWith('INVALID_ASSET_ID');
     const assetIdB = 0x2abbccdd;
-    await expect(rollupProcessor.getSupportedAsset(assetIdB)).rejects.toThrow('INVALID_ASSET_ID');
+    await expect(rollupProcessor.getSupportedAsset(assetIdB)).to.be.revertedWith('INVALID_ASSET_ID');
   });
 
   it('should set new supported asset with default gas limit', async () => {
@@ -135,19 +145,19 @@ describe('rollup_processor', () => {
     const receipt = await ethers.provider.getTransactionReceipt(txHash.toString());
     const parsed = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]);
     const { assetId, assetAddress, assetGasLimit } = parsed.args;
-    expect(assetGasLimit.toNumber()).toBe(TestRollupProcessor.DEFAULT_ERC20_GAS_LIMIT);
+    expect(assetGasLimit.toNumber()).to.be.eq(TestRollupProcessor.DEFAULT_ERC20_GAS_LIMIT);
 
-    expect(assetId.toNumber()).toBe(2);
-    expect(assetAddress).toBe(assetAddr.toString());
+    expect(assetId.toNumber()).to.be.eq(2);
+    expect(assetAddress).to.be.eq(assetAddr.toString());
 
     const supportedAssetBAddress = await rollupProcessor.getSupportedAsset(2);
-    expect(supportedAssetBAddress).toEqual(assetAddr);
+    expect(supportedAssetBAddress).to.be.eql(assetAddr);
   });
 
   it('should set new supported asset if not owner when the THIRD_PARTY_CONTRACTS flag is set', async () => {
     const assetAddr = EthAddress.random();
     const nonOwner = EthAddress.fromString(await signers[1].getAddress());
-    await expect(rollupProcessor.setSupportedAsset(assetAddr, 0, { signingAddress: nonOwner })).rejects.toThrow(
+    await expect(rollupProcessor.setSupportedAsset(assetAddr, 0, { signingAddress: nonOwner })).to.be.revertedWith(
       'THIRD_PARTY_CONTRACTS_FLAG_NOT_SET',
     );
 
@@ -170,12 +180,12 @@ describe('rollup_processor', () => {
       .assetAddress;
     const assetBGasLimit = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args
       .assetGasLimit;
-    expect(assetBGasLimit.toNumber()).toBe(gasLimit);
-    expect(assetBId.toNumber()).toBe(2);
-    expect(assetBAddress).toBe(assetAddr.toString());
+    expect(assetBGasLimit.toNumber()).to.be.eq(gasLimit);
+    expect(assetBId.toNumber()).to.be.eq(2);
+    expect(assetBAddress).to.be.eq(assetAddr.toString());
 
     const supportedAssetBAddress = await rollupProcessor.getSupportedAsset(2);
-    expect(supportedAssetBAddress).toEqual(assetAddr);
+    expect(supportedAssetBAddress).to.be.eql(assetAddr);
   });
 
   it('should set new supported asset with a minimum gas limit', async () => {
@@ -191,12 +201,12 @@ describe('rollup_processor', () => {
       .assetAddress;
     const assetBGasLimit = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args
       .assetGasLimit;
-    expect(assetBGasLimit.toNumber()).toBe(minimumGasLimit);
-    expect(assetBId.toNumber()).toBe(2);
-    expect(assetBAddress).toBe(assetAddr.toString());
+    expect(assetBGasLimit.toNumber()).to.be.eq(minimumGasLimit);
+    expect(assetBId.toNumber()).to.be.eq(2);
+    expect(assetBAddress).to.be.eq(assetAddr.toString());
 
     const supportedAssetBAddress = await rollupProcessor.getSupportedAsset(2);
-    expect(supportedAssetBAddress).toEqual(assetAddr);
+    expect(supportedAssetBAddress).to.be.eql(assetAddr);
   });
 
   it('should set new supported asset with a maximum gas limit', async () => {
@@ -212,12 +222,12 @@ describe('rollup_processor', () => {
       .assetAddress;
     const assetBGasLimit = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args
       .assetGasLimit;
-    expect(assetBGasLimit.toNumber()).toBe(maximumGasLimit);
-    expect(assetBId.toNumber()).toBe(2);
-    expect(assetBAddress).toBe(assetAddr.toString());
+    expect(assetBGasLimit.toNumber()).to.be.eq(maximumGasLimit);
+    expect(assetBId.toNumber()).to.be.eq(2);
+    expect(assetBAddress).to.be.eq(assetAddr.toString());
 
     const supportedAssetBAddress = await rollupProcessor.getSupportedAsset(2);
-    expect(supportedAssetBAddress).toEqual(assetAddr);
+    expect(supportedAssetBAddress).to.be.eql(assetAddr);
   });
 
   it('should set new supported bridge with limit within pre-defined contract limits', async () => {
@@ -234,13 +244,13 @@ describe('rollup_processor', () => {
       .bridgeAddress;
     const bridgeGasLimit = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args
       .bridgeGasLimit;
-    expect(bridgeGasLimit.toNumber()).toBe(gasLimit);
-    expect(bridgeCallData.toNumber()).toBe(bridgeAddressId);
-    expect(bridgeAddress).toBe(bridgeAddr.toString());
+    expect(bridgeGasLimit.toNumber()).to.be.eq(gasLimit);
+    expect(bridgeCallData.toNumber()).to.be.eq(bridgeAddressId);
+    expect(bridgeAddress).to.be.eq(bridgeAddr.toString());
 
     const supportedAssetBAddress = await rollupProcessor.getSupportedBridge(bridgeAddressId);
-    expect(supportedAssetBAddress).toEqual(bridgeAddr);
-    expect(await rollupProcessor.getBridgeGasLimit(bridgeAddressId)).toBe(gasLimit);
+    expect(supportedAssetBAddress).to.be.eql(bridgeAddr);
+    expect(await rollupProcessor.getBridgeGasLimit(bridgeAddressId)).to.be.eq(gasLimit);
   });
 
   it('should set new supported bridge with minimum gas limit', async () => {
@@ -257,12 +267,12 @@ describe('rollup_processor', () => {
       .bridgeAddress;
     const bridgeGasLimit = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args
       .bridgeGasLimit;
-    expect(bridgeGasLimit.toNumber()).toBe(minimumGasLimit);
-    expect(bridgeCallData.toNumber()).toBe(2);
-    expect(bridgeAddress).toBe(bridgeAddr.toString());
+    expect(bridgeGasLimit.toNumber()).to.be.eq(minimumGasLimit);
+    expect(bridgeCallData.toNumber()).to.be.eq(2);
+    expect(bridgeAddress).to.be.eq(bridgeAddr.toString());
 
     const supportedAssetBAddress = await rollupProcessor.getSupportedBridge(2);
-    expect(supportedAssetBAddress).toEqual(bridgeAddr);
+    expect(supportedAssetBAddress).to.be.eql(bridgeAddr);
   });
 
   it('should set new supported bridge with maximum gas limit', async () => {
@@ -279,12 +289,12 @@ describe('rollup_processor', () => {
       .bridgeAddress;
     const bridgeGasLimit = rollupProcessor.contract.interface.parseLog(receipt.logs[receipt.logs.length - 1]).args
       .bridgeGasLimit;
-    expect(bridgeGasLimit.toNumber()).toBe(maximumGasLimit);
-    expect(bridgeCallData.toNumber()).toBe(2);
-    expect(bridgeAddress).toBe(bridgeAddr.toString());
+    expect(bridgeGasLimit.toNumber()).to.be.eq(maximumGasLimit);
+    expect(bridgeCallData.toNumber()).to.be.eq(2);
+    expect(bridgeAddress).to.be.eq(bridgeAddr.toString());
 
     const supportedAssetBAddress = await rollupProcessor.getSupportedBridge(2);
-    expect(supportedAssetBAddress).toEqual(bridgeAddr);
+    expect(supportedAssetBAddress).to.be.eql(bridgeAddr);
   });
 
   it('should set new supported bridge if not owner when the THIRD_PARTY_CONTRACTS flag is set', async () => {
@@ -293,7 +303,7 @@ describe('rollup_processor', () => {
     const nonOwner = EthAddress.fromString(await signers[1].getAddress());
     await expect(
       rollupProcessor.setSupportedBridge(bridgeAddr, gasLimit, { signingAddress: nonOwner }),
-    ).rejects.toThrow('THIRD_PARTY_CONTRACTS_FLAG_NOT_SET');
+    ).to.be.revertedWith('THIRD_PARTY_CONTRACTS_FLAG_NOT_SET');
 
     await rollupProcessor.setThirdPartyContractStatus(true, {
       signingAddress: EthAddress.fromString(await signers[0].getAddress()),
@@ -304,11 +314,11 @@ describe('rollup_processor', () => {
 
   it('should approve a proof', async () => {
     const proofHash = randomBytes(32);
-    expect(await rollupProcessor.getProofApprovalStatus(addresses[0], proofHash)).toBe(false);
-    expect(await rollupProcessor.getProofApprovalStatus(addresses[1], proofHash)).toBe(false);
+    expect(await rollupProcessor.getProofApprovalStatus(addresses[0], proofHash)).to.be.eq(false);
+    expect(await rollupProcessor.getProofApprovalStatus(addresses[1], proofHash)).to.be.eq(false);
     await rollupProcessor.approveProof(proofHash, { signingAddress: addresses[1] });
-    expect(await rollupProcessor.getProofApprovalStatus(addresses[0], proofHash)).toBe(false);
-    expect(await rollupProcessor.getProofApprovalStatus(addresses[1], proofHash)).toBe(true);
+    expect(await rollupProcessor.getProofApprovalStatus(addresses[0], proofHash)).to.be.eq(false);
+    expect(await rollupProcessor.getProofApprovalStatus(addresses[1], proofHash)).to.be.eq(true);
   });
 
   it('should allow any address to use escape hatch', async () => {
@@ -324,12 +334,12 @@ describe('rollup_processor', () => {
     await advanceBlocksHardhat(50, ethers.provider);
 
     const { escapeOpen } = await rollupProcessor.getEscapeHatchStatus();
-    expect(escapeOpen).toBe(false);
+    expect(escapeOpen).to.be.eq(false);
     const tx = await rollupProcessor.createRollupProofTx(encodedProofData, signatures, []);
 
     await expect(
       rollupProcessor.sendTx(tx, { signingAddress: EthAddress.fromString(await signers[1].getAddress()) }),
-    ).rejects.toThrow('INVALID_PROVIDER');
+    ).to.be.revertedWith('INVALID_PROVIDER');
   });
 
   it('should allow the owner to change the verifier address', async () => {
@@ -337,11 +347,11 @@ describe('rollup_processor', () => {
     const txHash = await rollupProcessor.setVerifier(random);
     const [{ verifierAddress }] = await fetchResults(txHash, 'VerifierUpdated');
 
-    expect(verifierAddress.toString()).toBe(random.toString());
+    expect(verifierAddress.toString()).to.be.eq(random.toString());
   });
 
   it('should not be able to set the verifier if not the owner', async () => {
-    await expect(rollupProcessor.setVerifier(EthAddress.random(), { signingAddress: addresses[1] })).rejects.toThrow(
+    await expect(rollupProcessor.setVerifier(EthAddress.random(), { signingAddress: addresses[1] })).to.be.revertedWith(
       `AccessControl: account ${addresses[1].toString().toLowerCase()} is missing role ${OWNER_ROLE}`,
     );
   });
@@ -351,8 +361,8 @@ describe('rollup_processor', () => {
     await advanceBlocksHardhat(nextEscapeBlock, ethers.provider);
 
     const { escapeOpen, blocksRemaining } = await rollupProcessor.getEscapeHatchStatus();
-    expect(escapeOpen).toBe(true);
-    expect(blocksRemaining).toBe(20);
+    expect(escapeOpen).to.be.eq(true);
+    expect(blocksRemaining).to.be.eq(20);
   });
 
   it('should get escape hatch closed status', async () => {
@@ -360,8 +370,8 @@ describe('rollup_processor', () => {
     await advanceBlocksHardhat(nextEscapeBlock, ethers.provider);
 
     const { escapeOpen, blocksRemaining } = await rollupProcessor.getEscapeHatchStatus();
-    expect(escapeOpen).toBe(false);
-    expect(blocksRemaining).toBe(1);
+    expect(escapeOpen).to.be.eq(false);
+    expect(blocksRemaining).to.be.eq(1);
   });
 
   it('should process all proof types and get specified blocks', async () => {
@@ -424,19 +434,19 @@ describe('rollup_processor', () => {
     }
 
     const blocks = await rollupProcessor.getRollupBlocksFrom(0, 1);
-    expect(blocks.length).toBe(5);
+    expect(blocks.length).to.be.eq(5);
 
     {
       const block = blocks[0];
       const rollup = decodeRollup(block);
       const { innerProofs, offchainTxData } = innerProofOutputs[0];
-      expect(block).toMatchObject({
+      toMatchObject(block, {
         rollupId: 0,
         rollupSize: 2,
         interactionResult: [],
         offchainTxData,
       });
-      expect(rollup).toMatchObject({
+      toMatchObject(rollup, {
         rollupId: 0,
         dataStartIndex: 0,
         innerProofData: [innerProofs[0], InnerProofData.PADDING],
@@ -449,13 +459,13 @@ describe('rollup_processor', () => {
       const block = blocks[1];
       const rollup = decodeRollup(block);
       const { innerProofs, offchainTxData } = innerProofOutputs[1];
-      expect(block).toMatchObject({
+      toMatchObject(block, {
         rollupId: 1,
         rollupSize: 2,
         interactionResult: [],
         offchainTxData,
       });
-      expect(rollup).toMatchObject({
+      toMatchObject(rollup, {
         rollupId: 1,
         dataStartIndex: 1 * numRealTxsInRollup,
         innerProofData: innerProofs,
@@ -466,13 +476,13 @@ describe('rollup_processor', () => {
       const block = blocks[2];
       const rollup = decodeRollup(block);
       const { innerProofs, offchainTxData } = innerProofOutputs[2];
-      expect(block).toMatchObject({
+      toMatchObject(block, {
         rollupId: 2,
         rollupSize: 2,
         offchainTxData,
         interactionResult: expectedInteractionResult,
       });
-      expect(rollup).toMatchObject({
+      toMatchObject(rollup, {
         rollupId: 2,
         dataStartIndex: 2 * numRealTxsInRollup,
         innerProofData: innerProofs,
@@ -483,13 +493,13 @@ describe('rollup_processor', () => {
       const block = blocks[3];
       const rollup = decodeRollup(block);
       const { innerProofs, offchainTxData } = innerProofOutputs[3];
-      expect(block).toMatchObject({
+      toMatchObject(block, {
         rollupId: 3,
         rollupSize: 2,
         offchainTxData,
         interactionResult: [],
       });
-      expect(rollup).toMatchObject({
+      toMatchObject(rollup, {
         rollupId: 3,
         dataStartIndex: 3 * numRealTxsInRollup,
         innerProofData: [innerProofs[0], InnerProofData.PADDING],
@@ -500,13 +510,13 @@ describe('rollup_processor', () => {
       const block = blocks[4];
       const rollup = decodeRollup(block);
       const { innerProofs, offchainTxData } = innerProofOutputs[4];
-      expect(block).toMatchObject({
+      toMatchObject(block, {
         rollupId: 4,
         rollupSize: 2,
         offchainTxData,
         interactionResult: [],
       });
-      expect(rollup).toMatchObject({
+      toMatchObject(rollup, {
         rollupId: 4,
         dataStartIndex: 4 * numRealTxsInRollup,
         innerProofData: [innerProofs[0], InnerProofData.PADDING],
@@ -515,21 +525,23 @@ describe('rollup_processor', () => {
   });
 
   it('check getters', async () => {
-    expect((await rollupProcessor.getSupportedAssets()).length).toBe(await rollupProcessor.getSupportedAssetsLength());
+    expect((await rollupProcessor.getSupportedAssets()).length).to.be.eq(
+      await rollupProcessor.getSupportedAssetsLength(),
+    );
 
-    expect((await rollupProcessor.getSupportedBridges()).length).toBe(
+    expect((await rollupProcessor.getSupportedBridges()).length).to.be.eq(
       await rollupProcessor.getSupportedBridgesLength(),
     );
 
-    expect((await rollupProcessor.defiInteractionHashes()).length).toBe(
+    expect((await rollupProcessor.defiInteractionHashes()).length).to.be.eq(
       await rollupProcessor.getDefiInteractionHashesLength(),
     );
 
-    expect((await rollupProcessor.asyncDefiInteractionHashes()).length).toBe(
+    expect((await rollupProcessor.asyncDefiInteractionHashes()).length).to.be.eq(
       await rollupProcessor.getAsyncDefiInteractionHashesLength(),
     );
 
-    expect(await rollupProcessor.getPendingDefiInteractionHashesLength()).toBe(
+    expect(await rollupProcessor.getPendingDefiInteractionHashesLength()).to.be.eq(
       (await rollupProcessor.getAsyncDefiInteractionHashesLength()) +
         (await rollupProcessor.getDefiInteractionHashesLength()),
     );

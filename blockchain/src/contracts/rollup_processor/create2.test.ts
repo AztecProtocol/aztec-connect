@@ -1,3 +1,10 @@
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { solidity } = require('ethereum-waffle');
+import chai from 'chai';
+
+import { expect } from 'chai';
+chai.use(solidity);
+
 import { EthAddress } from '@aztec/barretenberg/address';
 import { Contract, Signer } from 'ethers';
 import { ethers } from 'hardhat';
@@ -22,7 +29,7 @@ describe('rollup_processor: upgradable test', () => {
 
   let initializeArgs: unknown[];
 
-  beforeAll(async () => {
+  before(async () => {
     signers = await ethers.getSigners();
     addresses = await Promise.all(signers.map(async u => EthAddress.fromString(await u.getAddress())));
 
@@ -73,7 +80,7 @@ describe('rollup_processor: upgradable test', () => {
         calldata,
         proxyAdmin.vanitySalt,
       ),
-    ).rejects.toThrow();
+    ).to.be.reverted;
   });
 
   it('self destruct and redeploy', async () => {
@@ -89,7 +96,7 @@ describe('rollup_processor: upgradable test', () => {
     );
 
     // No contract at `rollup`, tx will fail
-    await expect(rollup.stateHash()).rejects.toThrow();
+    await expect(rollup.stateHash()).to.be.reverted;
 
     // Redeploy to the same address
     await (
@@ -98,7 +105,7 @@ describe('rollup_processor: upgradable test', () => {
         .deployProxy(implementationAddress, proxyAdmin.address.toString(), calldata, proxyAdmin.vanitySalt)
     ).wait();
 
-    expect(await rollup.stateHash()).toStrictEqual(stateHash);
+    expect(await rollup.stateHash()).to.be.eql(stateHash);
   });
 
   it('user deposits, self destruct, non-eth funds still at address', async () => {
@@ -113,7 +120,7 @@ describe('rollup_processor: upgradable test', () => {
     expect(await assets[1].approve(depositAmount, addresses[1], rollup.address));
 
     expect(await rollup.depositPendingFunds(1, depositAmount, Buffer.alloc(32), { signingAddress: addresses[1] }));
-    expect(await assets[1].balanceOf(rollup.address)).toBe(depositAmount);
+    expect(await assets[1].balanceOf(rollup.address)).to.be.eq(depositAmount);
 
     // Upgrade and kill
     await proxyAdmin.upgradeAndInitializeWithConstructor(
@@ -124,7 +131,7 @@ describe('rollup_processor: upgradable test', () => {
     );
 
     // Ensure that rollup is dead but still have the funds
-    await expect(rollup.stateHash()).rejects.toThrow();
-    expect(await assets[1].balanceOf(rollup.address)).toBe(depositAmount);
+    await expect(rollup.stateHash()).to.be.reverted;
+    expect(await assets[1].balanceOf(rollup.address)).to.be.eq(depositAmount);
   });
 });

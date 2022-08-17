@@ -5,3 +5,5 @@ artifacts
 data
 out
 broadcast
+coverage/
+coverage.json

@@ -1,9 +1,8 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { Contract } from 'ethers';
 import { decodeErrorFromContract } from './decode_error';
-// import { abi } from '../artifacts/contracts/RollupProcessor.sol/RollupProcessor.json';
-// import { JsonRpcProvider } from '../provider';
-// import { TxHash } from '@aztec/barretenberg/blockchain';
+
+import { expect } from 'chai';
 
 describe('decode_error', () => {
   it('should decode error', () => {
@@ -31,8 +30,10 @@ describe('decode_error', () => {
 
     const error = decodeErrorFromContract(contract, data);
 
-    expect(error).not.toBeUndefined();
-    expect(error!.name).toBe('INCORRECT_STATE_HASH');
+    expect(error).not.to.be.undefined;
+    if (error != undefined) {
+      expect(error.name).to.be.eq('INCORRECT_STATE_HASH');
+    }
   });
 
   /* Not sure of the long term viability of this test. But might prove useful to keep around.

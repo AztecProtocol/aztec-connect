@@ -1,3 +1,10 @@
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { solidity } = require('ethereum-waffle');
+import chai from 'chai';
+
+import { expect } from 'chai';
+chai.use(solidity);
+
 import { bufferToHex } from 'ethereumjs-util';
 import { Contract, Signer } from 'ethers';
 import { ethers } from 'hardhat';
@@ -76,10 +83,10 @@ describe('rollup_processor: reentry', () => {
       .map(l => rollupProcessor.contract.interface.parseLog(l))
       .filter(e => e.eventFragment.name === 'DefiBridgeProcessed')
       .map(parseInteractionEventResultFromLog);
-    expect(interactionResult.length).toBe(expectedResultEventOrder.length);
+    expect(interactionResult.length).to.be.eq(expectedResultEventOrder.length);
 
     for (let i = 0; i < expectedResultEventOrder.length; ++i) {
-      expect(interactionResult[i]).toEqual(expectedResultEventOrder[i]);
+      expect(interactionResult[i]).to.be.eql(expectedResultEventOrder[i]);
     }
 
     const cleanedExpectedResultStorage = expectedResultStorage.map(
@@ -104,14 +111,14 @@ describe('rollup_processor: reentry', () => {
       ...[...Array(numberOfBridgeCalls - hashes.length)].map(() => WorldStateConstants.EMPTY_INTERACTION_HASH),
     ];
 
-    expect(expectedHashes).toEqual(resultHashes);
+    expect(expectedHashes).to.be.eql(resultHashes);
   };
 
   const formatCustomErrorMsg = (reason: string) => {
     return Buffer.from(keccak256(toUtf8Bytes(reason)).substring(2), 'hex').subarray(0, 4);
   };
 
-  beforeAll(async () => {
+  before(async () => {
     const signers = await ethers.getSigners();
     [rollupProvider, ...userSigners] = signers;
     userAddresses = await Promise.all(userSigners.map(async u => EthAddress.fromString(await u.getAddress())));
@@ -445,7 +452,7 @@ describe('rollup_processor: reentry', () => {
     const interactions: DefiInteractionEvent[] = [];
     await expectResult(interactions, interactions, txHash);
 
-    await expect(rollupProcessor.processAsyncDefiInteraction(0)).rejects.toThrow('LOCKED_NO_REENTER()');
+    await expect(rollupProcessor.processAsyncDefiInteraction(0)).to.be.revertedWith('LOCKED_NO_REENTER()');
   });
 
   it('should revert when reentering set supported bridge from async', async () => {
@@ -472,7 +479,7 @@ describe('rollup_processor: reentry', () => {
     const interactions: DefiInteractionEvent[] = [];
     await expectResult(interactions, interactions, txHash);
 
-    await expect(rollupProcessor.processAsyncDefiInteraction(0)).rejects.toThrow('LOCKED_NO_REENTER()');
+    await expect(rollupProcessor.processAsyncDefiInteraction(0)).to.be.revertedWith('LOCKED_NO_REENTER()');
   });
 
   it('should revert when reentering set supported asset from async', async () => {
@@ -499,7 +506,7 @@ describe('rollup_processor: reentry', () => {
     const interactions: DefiInteractionEvent[] = [];
     await expectResult(interactions, interactions, txHash);
 
-    await expect(rollupProcessor.processAsyncDefiInteraction(0)).rejects.toThrow('LOCKED_NO_REENTER()');
+    await expect(rollupProcessor.processAsyncDefiInteraction(0)).to.be.revertedWith('LOCKED_NO_REENTER()');
   });
 
   it('should revert when reentering process rollup from async', async () => {
@@ -524,7 +531,7 @@ describe('rollup_processor: reentry', () => {
     const interactions: DefiInteractionEvent[] = [];
     await expectResult(interactions, interactions, txHash);
 
-    await expect(rollupProcessor.processAsyncDefiInteraction(0)).rejects.toThrow('LOCKED_NO_REENTER()');
+    await expect(rollupProcessor.processAsyncDefiInteraction(0)).to.be.revertedWith('LOCKED_NO_REENTER()');
   });
 
   it('should revert when re-entering from deposit', async () => {
@@ -533,7 +540,7 @@ describe('rollup_processor: reentry', () => {
     await rollupProcessor.setSupportedAsset(EthAddress.fromString(reenterToken.address), 1000000);
     const assetId = (await rollupProcessor.getSupportedAssets()).length;
 
-    await expect(rollupProcessor.depositPendingFunds(assetId, 0n)).rejects.toThrow('LOCKED_NO_REENTER');
+    await expect(rollupProcessor.depositPendingFunds(assetId, 0n)).to.be.revertedWith('LOCKED_NO_REENTER');
   });
 
   it('should revert when async reenter tries to execute same interaction nonce twice', async () => {
@@ -558,7 +565,7 @@ describe('rollup_processor: reentry', () => {
 
     await asyncReenter.setValues(0, 1000);
 
-    await expect(rollupProcessor.processAsyncDefiInteraction(0)).rejects.toThrow('INVALID_BRIDGE_CALL_DATA()');
+    await expect(rollupProcessor.processAsyncDefiInteraction(0)).to.be.revertedWith('INVALID_BRIDGE_CALL_DATA()');
   });
 
   it('failing async will revert and not "spend" the interactionNonce', async () => {
@@ -581,23 +588,23 @@ describe('rollup_processor: reentry', () => {
     const interactions: DefiInteractionEvent[] = [];
     await expectResult(interactions, interactions, txHash);
 
-    expect((await rollupProcessor.contract.pendingDefiInteractions(0)).encodedBridgeCallData.toNumber()).toBe(
+    expect((await rollupProcessor.contract.pendingDefiInteractions(0)).encodedBridgeCallData.toNumber()).to.be.eq(
       bridgeAddressId,
     );
 
     const assetBalance = await assets[0].balanceOf(rollupProcessor.address);
 
     expect(await rollupProcessor.processAsyncDefiInteraction(0));
-    expect(await assets[0].balanceOf(rollupProcessor.address)).toBe(assetBalance);
+    expect(await assets[0].balanceOf(rollupProcessor.address)).to.be.eq(assetBalance);
 
-    expect((await rollupProcessor.contract.pendingDefiInteractions(0)).encodedBridgeCallData.toNumber()).toBe(
+    expect((await rollupProcessor.contract.pendingDefiInteractions(0)).encodedBridgeCallData.toNumber()).to.be.eq(
       bridgeAddressId,
     );
 
     await failingBridge.setComplete(true, 0);
     expect(await rollupProcessor.processAsyncDefiInteraction(0));
 
-    expect((await rollupProcessor.contract.pendingDefiInteractions(0)).encodedBridgeCallData.toNumber()).toBe(0);
-    expect(await assets[0].balanceOf(rollupProcessor.address)).toBe(assetBalance + amount);
+    expect((await rollupProcessor.contract.pendingDefiInteractions(0)).encodedBridgeCallData.toNumber()).to.be.eq(0);
+    expect(await assets[0].balanceOf(rollupProcessor.address)).to.be.eq(assetBalance + amount);
   });
 });

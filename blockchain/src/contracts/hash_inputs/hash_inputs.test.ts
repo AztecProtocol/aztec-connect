@@ -1,3 +1,10 @@
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { solidity } = require('ethereum-waffle');
+import chai from 'chai';
+
+import { expect } from 'chai';
+chai.use(solidity);
+
 import { ethers } from 'hardhat';
 import { HashInputs } from './hash_inputs';
 import { getRollupData } from '../verifier/fixtures/get_rollup_data';
@@ -20,7 +27,7 @@ describe('hashInputs', function () {
   let hashInputs: HashInputs;
   const gasLimit = 10000000;
 
-  beforeAll(async () => {
+  before(async () => {
     hashInputs = await setupHashInputs();
   });
 
@@ -38,7 +45,7 @@ describe('hashInputs', function () {
     // Bork.
     proofBytes.writeUInt8(10, 0);
 
-    await expect(hashInputs.validate(proofBytes, { gasLimit })).rejects.toThrow(
+    await expect(hashInputs.validate(proofBytes, { gasLimit })).to.be.revertedWith(
       'PUBLIC_INPUTS_HASH_VERIFICATION_FAILED',
     );
   });
