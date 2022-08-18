@@ -509,15 +509,7 @@ describe('tx receiver', () => {
 
       await txReceiver.receiveTxs(createTxRequest(txs, 'id1'));
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(1);
-      expect(rollupDb.addTxs).toHaveBeenCalledWith([
-        expect.objectContaining({ id: txs[0].proof.txId }),
-        expect.objectContaining({ id: txs[1].proof.txId }),
-        expect.objectContaining({ id: txs[2].proof.txId }),
-        expect.objectContaining({ id: txs[3].proof.txId }),
-        expect.objectContaining({ id: txs[4].proof.txId }),
-        expect.objectContaining({ id: txs[5].proof.txId }),
-        expect.objectContaining({ id: txs[6].proof.txId }),
-      ]);
+      expect(rollupDb.addTxs).toHaveBeenCalledWith(txs.map(x => expect.objectContaining({ id: x.proof.txId })));
 
       // reset the blacklist
       blacklistProvider.configureNewAddresses([]);
@@ -575,6 +567,52 @@ describe('tx receiver', () => {
       // reset the blacklist
       blacklistProvider.configureNewAddresses([]);
     });
+
+    it('does not apply rate limit to withdrawals', async () => {
+      // limit is 5 per day, create lots of withdrawals
+      const txs = [
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+      ];
+
+      await txReceiver.receiveTxs(createTxRequest(txs, 'id1'));
+      expect(rollupDb.addTxs).toHaveBeenCalledTimes(1);
+      expect(rollupDb.addTxs).toHaveBeenCalledWith(txs.map(x => expect.objectContaining({ id: x.proof.txId })));
+    });
+
+    it('does not apply rate limit to withdrawals 2', async () => {
+      // limit is 5 per day, create lots of withdrawals
+      const txs = [
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+      ];
+
+      for (let i = 0; i < txs.length; i++) {
+        await txReceiver.receiveTxs(createTxRequest([txs[i]], 'id1'));
+        expect(rollupDb.addTxs).toHaveBeenCalledTimes(1 + i);
+        expect(rollupDb.addTxs).toHaveBeenCalledWith([expect.objectContaining({ id: txs[i].proof.txId })]);
+      }
+    });
   });
 
   describe('send tx', () => {
@@ -612,6 +650,52 @@ describe('tx receiver', () => {
 
       await expect(() => txReceiver.receiveTxs(createTxRequest(txs, 'id1'))).rejects.toThrow('Invalid offchain data');
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
+    });
+
+    it('does not apply rate limit to payments', async () => {
+      // limit is 5 per day, create lots of payments
+      const txs = [
+        mockTx({ proofId: ProofId.SEND }),
+        mockTx({ proofId: ProofId.SEND }),
+        mockTx({ proofId: ProofId.SEND }),
+        mockTx({ proofId: ProofId.SEND }),
+        mockTx({ proofId: ProofId.SEND }),
+        mockTx({ proofId: ProofId.SEND }),
+        mockTx({ proofId: ProofId.SEND }),
+        mockTx({ proofId: ProofId.SEND }),
+        mockTx({ proofId: ProofId.SEND }),
+        mockTx({ proofId: ProofId.SEND }),
+        mockTx({ proofId: ProofId.SEND }),
+        mockTx({ proofId: ProofId.SEND }),
+      ];
+
+      await txReceiver.receiveTxs(createTxRequest(txs, 'id1'));
+      expect(rollupDb.addTxs).toHaveBeenCalledTimes(1);
+      expect(rollupDb.addTxs).toHaveBeenCalledWith(txs.map(x => expect.objectContaining({ id: x.proof.txId })));
+    });
+
+    it('does not apply rate limit to payments 2', async () => {
+      // limit is 5 per day, create lots of payments
+      const txs = [
+        mockTx({ proofId: ProofId.SEND }),
+        mockTx({ proofId: ProofId.SEND }),
+        mockTx({ proofId: ProofId.SEND }),
+        mockTx({ proofId: ProofId.SEND }),
+        mockTx({ proofId: ProofId.SEND }),
+        mockTx({ proofId: ProofId.SEND }),
+        mockTx({ proofId: ProofId.SEND }),
+        mockTx({ proofId: ProofId.SEND }),
+        mockTx({ proofId: ProofId.SEND }),
+        mockTx({ proofId: ProofId.SEND }),
+        mockTx({ proofId: ProofId.SEND }),
+        mockTx({ proofId: ProofId.SEND }),
+      ];
+
+      for (let i = 0; i < txs.length; i++) {
+        await txReceiver.receiveTxs(createTxRequest([txs[i]], 'id1'));
+        expect(rollupDb.addTxs).toHaveBeenCalledTimes(1 + i);
+        expect(rollupDb.addTxs).toHaveBeenCalledWith([expect.objectContaining({ id: txs[i].proof.txId })]);
+      }
     });
   });
 
@@ -712,6 +796,52 @@ describe('tx receiver', () => {
       await txReceiver.receiveTxs(createTxRequest(txs, 'id1'));
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(1);
       expect(rollupDb.addTxs).toHaveBeenCalledWith([expect.objectContaining({ id: txs[0].proof.txId })]);
+    });
+
+    it('does not apply rate limit to defi deposits', async () => {
+      // limit is 5 per day, create lots of defi deposits
+      const txs = [
+        mockDefiDepositTx(),
+        mockDefiDepositTx(),
+        mockDefiDepositTx(),
+        mockDefiDepositTx(),
+        mockDefiDepositTx(),
+        mockDefiDepositTx(),
+        mockDefiDepositTx(),
+        mockDefiDepositTx(),
+        mockDefiDepositTx(),
+        mockDefiDepositTx(),
+        mockDefiDepositTx(),
+        mockDefiDepositTx(),
+      ];
+
+      await txReceiver.receiveTxs(createTxRequest(txs, 'id1'));
+      expect(rollupDb.addTxs).toHaveBeenCalledTimes(1);
+      expect(rollupDb.addTxs).toHaveBeenCalledWith(txs.map(x => expect.objectContaining({ id: x.proof.txId })));
+    });
+
+    it('does not apply rate limit to defi deposits 2', async () => {
+      // limit is 5 per day, create lots of defi deposits
+      const txs = [
+        mockDefiDepositTx(),
+        mockDefiDepositTx(),
+        mockDefiDepositTx(),
+        mockDefiDepositTx(),
+        mockDefiDepositTx(),
+        mockDefiDepositTx(),
+        mockDefiDepositTx(),
+        mockDefiDepositTx(),
+        mockDefiDepositTx(),
+        mockDefiDepositTx(),
+        mockDefiDepositTx(),
+        mockDefiDepositTx(),
+      ];
+
+      for (let i = 0; i < txs.length; i++) {
+        await txReceiver.receiveTxs(createTxRequest([txs[i]], 'id1'));
+        expect(rollupDb.addTxs).toHaveBeenCalledTimes(1 + i);
+        expect(rollupDb.addTxs).toHaveBeenCalledWith([expect.objectContaining({ id: txs[i].proof.txId })]);
+      }
     });
 
     it('reject a defi deposit tx with invalid proof', async () => {
