@@ -12,8 +12,8 @@ export class RateLimiter {
   }
 
   add(identifier: string, quantity = 1) {
-    // always return true for quantity === 0
-    if (quantity === 0) {
+    // always return true for quantity <= 0
+    if (quantity <= 0) {
       return true;
     }
 

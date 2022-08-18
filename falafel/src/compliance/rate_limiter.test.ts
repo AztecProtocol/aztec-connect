@@ -75,6 +75,21 @@ describe('Rate Limiter', () => {
     }
   });
 
+  it('adding negative always allowed and has not effect', () => {
+    const limiter = new RateLimiter(5);
+    const id1 = 'id1';
+    for (let i = 0; i < 50; i++) {
+      expect(limiter.add(id1, -1)).toBe(true);
+      expect(limiter.getCurrentValue(id1)).toBe(0);
+    }
+    expect(limiter.add(id1)).toBe(true);
+    expect(limiter.getCurrentValue(id1)).toBe(1);
+    for (let i = 0; i < 50; i++) {
+      expect(limiter.add(id1, -1)).toBe(true);
+      expect(limiter.getCurrentValue(id1)).toBe(1);
+    }
+  });
+
   it('reject actions if outside of limit', () => {
     const limiter = new RateLimiter(5);
     const id1 = 'id1';
@@ -123,7 +138,6 @@ describe('Rate Limiter', () => {
     expect(limiter.getCurrentValue(id2)).toBe(5);
 
     // now go forward 1ms to the new day
-    console.log('next day');
     date = realDate.parse('2022-08-19T00:00:00.000Z');
     expect(limiter.getCurrentValue(id1)).toBe(0);
     expect(limiter.getCurrentValue(id2)).toBe(0);
