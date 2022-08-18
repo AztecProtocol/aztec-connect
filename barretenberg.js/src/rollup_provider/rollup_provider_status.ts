@@ -31,6 +31,8 @@ export interface RuntimeConfig {
   feePayingAssetIds: number[];
   privacySets: { [key: number]: PrivacySet[] };
   rollupBeneficiary?: EthAddress;
+  depositLimit: number;
+  blacklist: EthAddress[];
 }
 
 export interface RuntimeConfigJson {
@@ -51,6 +53,8 @@ export interface RuntimeConfigJson {
   feePayingAssetIds: number[];
   privacySets: { [key: string]: PrivacySetJson[] };
   rollupBeneficiary?: string;
+  depositLimit: number;
+  blacklist: string[];
 }
 
 export const runtimeConfigToJson = ({
@@ -60,6 +64,7 @@ export const runtimeConfigToJson = ({
   bridgeConfigs,
   privacySets,
   rollupBeneficiary,
+  blacklist,
   ...rest
 }: RuntimeConfig): RuntimeConfigJson => ({
   ...rest,
@@ -69,6 +74,7 @@ export const runtimeConfigToJson = ({
   bridgeConfigs: bridgeConfigs.map(bridgeConfigToJson),
   privacySets: privacySetsToJson(privacySets),
   rollupBeneficiary: rollupBeneficiary ? rollupBeneficiary.toString() : undefined,
+  blacklist: blacklist.map(x => x.toString()),
 });
 
 export const runtimeConfigFromJson = ({
@@ -78,6 +84,7 @@ export const runtimeConfigFromJson = ({
   bridgeConfigs,
   privacySets,
   rollupBeneficiary,
+  blacklist,
   ...rest
 }: RuntimeConfigJson): RuntimeConfig => ({
   ...rest,
@@ -87,6 +94,7 @@ export const runtimeConfigFromJson = ({
   bridgeConfigs: bridgeConfigs.map(bridgeConfigFromJson),
   privacySets: privacySetsFromJson(privacySets),
   rollupBeneficiary: rollupBeneficiary ? EthAddress.fromString(rollupBeneficiary) : undefined,
+  blacklist: blacklist.map(x => EthAddress.fromString(x)),
 });
 
 export const partialRuntimeConfigFromJson = ({
@@ -96,6 +104,7 @@ export const partialRuntimeConfigFromJson = ({
   bridgeConfigs,
   privacySets,
   rollupBeneficiary,
+  blacklist,
   ...rest
 }: Partial<RuntimeConfigJson>): Partial<RuntimeConfig> => ({
   ...rest,
@@ -105,6 +114,7 @@ export const partialRuntimeConfigFromJson = ({
   ...(bridgeConfigs ? { bridgeConfigs: bridgeConfigs.map(bridgeConfigFromJson) } : {}),
   ...(privacySets ? { privacySets: privacySetsFromJson(privacySets) } : {}),
   ...(rollupBeneficiary ? { rollupBeneficiary: EthAddress.fromString(rollupBeneficiary) } : {}),
+  ...(blacklist ? { blacklist: blacklist.map(x => EthAddress.fromString(x)) } : {}),
 });
 
 export interface RollupProviderStatus {
