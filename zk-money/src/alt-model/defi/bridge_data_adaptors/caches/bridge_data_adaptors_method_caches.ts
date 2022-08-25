@@ -10,7 +10,7 @@ import { createCurrentAssetYieldPollerCache } from './current_yield_poller_cache
 
 import { createInteractionPresentValuePollerCache } from './interaction_present_value_poller_cache';
 import { createMarketSizePollerCache } from './market_size_poller_cache';
-import { createTermAprPollerCache } from './term_apr_poller_cache.ts';
+import { createTermAprPollerCache } from './term_apr_poller_cache';
 import { createUnderlyingAmountPollerCache } from './underlying_amount_poller_cache';
 
 export function createBridgeDataAdaptorsMethodCaches(

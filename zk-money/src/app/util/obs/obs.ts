@@ -7,6 +7,7 @@ import { PromiseObs } from './promise_obs';
 import { Emitter, EmitterObs } from './emitter_obs';
 import { FilterObs } from './filter_obs';
 import { ConstantObs } from './constant_obs';
+import { Fullfiller } from '../promises';
 
 export class Obs<T> implements IObs<T> {
   constructor(protected readonly internalObs: IObs<T>) {}
@@ -49,6 +50,15 @@ export class Obs<T> implements IObs<T> {
 
   filter(filter: (value: T, prevValue: T) => boolean) {
     return new Obs(new FilterObs(this, filter));
+  }
+
+  async whenNext(): Promise<T> {
+    const fullfiller = new Fullfiller<T>();
+    const unlisten = this.listen(value => {
+      unlisten();
+      fullfiller.resolve(value);
+    });
+    return fullfiller.promise;
   }
 }
 

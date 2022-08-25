@@ -60,6 +60,7 @@ export interface DefiRecipe {
   roiType: string;
   longDescription: string;
   investmentType: DefiInvestmentType;
+  hideUnderlyingOnExit?: boolean;
   keyStat1: KeyBridgeStat;
   keyStat2: KeyBridgeStat;
   keyStat3: KeyBridgeStat;

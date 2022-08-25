@@ -38,3 +38,5 @@ export function createUnderlyingAmountPollerCache(recipes: DefiRecipe[], adaptor
     return new Poller(pollObs, POLL_INTERVAL, undefined);
   });
 }
+
+export type UnderlyingAmountPollerCache = ReturnType<typeof createUnderlyingAmountPollerCache>;

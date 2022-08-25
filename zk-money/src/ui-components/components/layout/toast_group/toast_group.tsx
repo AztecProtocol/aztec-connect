@@ -48,7 +48,7 @@ export function ToastGroup(props: ToastGroupProps) {
             onCloseToast={handleCloseErrorToast}
             isClosable={true}
             primaryButton={{
-              text: 'Export log',
+              text: 'Download error log',
               onClick: () => {
                 (window as any).exportLogs();
               },

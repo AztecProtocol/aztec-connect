@@ -101,13 +101,18 @@ function getInvestmentInfo(fieldProps: FieldProps): CostBreakdownInvestmentInfo 
         asset: fieldProps.recipe.flow.enter.outA,
         formattedValue: <RoiAfterMaturity {...fieldProps} />,
       };
-    case DefiInvestmentType.STAKING:
+    case DefiInvestmentType.YIELD:
+    case DefiInvestmentType.STAKING: {
+      const formattedConversionValue = fieldProps.recipe.hideUnderlyingOnExit ? undefined : (
+        <ExpectedOutputUnderlyingAssetValue {...fieldProps} />
+      );
       return {
         label: 'You will receive approximately',
         asset: fieldProps.recipe.flow.enter.outA,
         formattedValue: <ExpectedOutput {...fieldProps} />,
-        formattedConversionValue: <ExpectedOutputUnderlyingAssetValue {...fieldProps} />,
+        formattedConversionValue,
       };
+    }
   }
 }
 
@@ -118,9 +123,9 @@ export function DefiConfirmationPage({
   flowDirection,
   onSubmit,
   onClose,
+  validationResult,
 }: DefiConfirmationPageProps) {
   const [riskChecked, setRiskChecked] = useState(false);
-  const auxData = useDefaultAuxDataOption(recipe.id);
   const amount = lockedComposerPayload.targetDepositAmount;
 
   const hasError = !!composerState?.error;
@@ -128,6 +133,7 @@ export function DefiConfirmationPage({
   const showingComplete = composerState.phase === DefiComposerPhase.DONE;
   const showingDeclaration = isIdle && !hasError;
   const canSubmit = riskChecked && isIdle;
+  const auxData = validationResult.input.bridgeCallData?.auxData;
 
   return (
     <div className={style.page2Wrapper}>
