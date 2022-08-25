@@ -2,6 +2,8 @@ import type { Provider } from '@ethersproject/providers';
 import createDebug from 'debug';
 import { KNOWN_MAINNET_ASSET_ADDRESS_STRS as S } from '../known_assets/known_asset_addresses';
 import { BigNumber, Contract } from 'ethers';
+import { DefiRecipe } from 'alt-model/defi/types';
+import { UnderlyingAmountPollerCache } from 'alt-model/defi/bridge_data_adaptors/caches/underlying_amount_poller_cache';
 
 const debug = createDebug('zm:price_fetchers');
 
@@ -54,8 +56,61 @@ function createWstEthPriceFetcher(provider: Provider) {
   };
 }
 
-export function createAssetPriceFetcher(addressStr: string, provider: Provider) {
+function createETHPriceFetcherUsingUnderlyingAsset(
+  underlyingAmountPollerCache: UnderlyingAmountPollerCache,
+  provider: Provider,
+) {
+  const oraclePriceFetcherAddress = getAssetPriceFeedAddressStr(S.ETH);
+  if (!oraclePriceFetcherAddress) return;
+
+  const ethUnitPriceFetcher = createDefaultPriceFetcher(oraclePriceFetcherAddress, provider);
+  return createPriceFetcherUsingUnderlyingAsset(
+    underlyingAmountPollerCache,
+    ethUnitPriceFetcher,
+    'yearn-finance.ETH-to-yvETH',
+  );
+}
+
+function createDAIPriceFetcherUsingUnderlyingAsset(
+  underlyingAmountPollerCache: UnderlyingAmountPollerCache,
+  provider: Provider,
+) {
+  const oraclePriceFetcherAddress = getAssetPriceFeedAddressStr(S.DAI);
+  if (!oraclePriceFetcherAddress) return;
+
+  const daiUnitPriceFetcher = createDefaultPriceFetcher(oraclePriceFetcherAddress, provider);
+  return createPriceFetcherUsingUnderlyingAsset(
+    underlyingAmountPollerCache,
+    daiUnitPriceFetcher,
+    'yearn-finance.DAI-to-yvDAI',
+  );
+}
+
+function createPriceFetcherUsingUnderlyingAsset(
+  underlyingAmountPollerCache: UnderlyingAmountPollerCache,
+  assetUnitPriceFetcher: () => Promise<bigint>,
+  recipeId: string,
+) {
+  return async () => {
+    const poller = underlyingAmountPollerCache.get([recipeId, 10n ** 18n]);
+    if (!poller) return;
+    const underlyingAmount = await poller.obs.whenNext();
+    const unitPrice = await assetUnitPriceFetcher();
+    const price = underlyingAmount ? (unitPrice * underlyingAmount?.amount) / 10n ** 18n : undefined;
+    return price;
+  };
+}
+
+export function createAssetPriceFetcher(
+  addressStr: string,
+  provider: Provider,
+  underlyingAmountPollerCache: UnderlyingAmountPollerCache,
+) {
   switch (addressStr) {
+    case S.yvDAI:
+      return createDAIPriceFetcherUsingUnderlyingAsset(underlyingAmountPollerCache, provider);
+    case S.yvETH:
+      return createETHPriceFetcherUsingUnderlyingAsset(underlyingAmountPollerCache, provider);
     case S.wstETH:
       return createWstEthPriceFetcher(provider);
     default:

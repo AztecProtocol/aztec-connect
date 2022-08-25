@@ -1,3 +1,10 @@
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { solidity } = require('ethereum-waffle');
+import chai from 'chai';
+
+import { expect } from 'chai';
+chai.use(solidity);
+
 import { EthAddress } from '@aztec/barretenberg/address';
 import { Asset } from '@aztec/barretenberg/blockchain';
 import { Signer } from 'ethers';
@@ -21,7 +28,7 @@ describe('rollup_processor: deposit', () => {
 
   let snapshot: string;
 
-  beforeAll(async () => {
+  before(async () => {
     const signers = await ethers.getSigners();
     [rollupProvider, ...userSigners] = signers;
     rollupProviderAddress = EthAddress.fromString(await rollupProvider.getAddress());
@@ -62,10 +69,10 @@ describe('rollup_processor: deposit', () => {
     const gasCost = BigInt(gasUsed.mul(gasPrice!).toString());
     const feeDistributorETHBalance = await feeDistributor.txFeeBalance(EthAddress.ZERO);
 
-    expect(feeDistributorETHBalance).toBe(txFee);
-    expect(await rollupProcessor.getUserPendingDeposit(0, userAddresses[0])).toBe(0n);
-    expect(await assets[0].balanceOf(rollupProcessor.address)).toBe(depositAmount);
-    expect(await assets[0].balanceOf(rollupProviderAddress)).toBe(providerInitialBalance - gasCost);
+    expect(feeDistributorETHBalance).to.be.eq(txFee);
+    expect(await rollupProcessor.getUserPendingDeposit(0, userAddresses[0])).to.be.eq(0n);
+    expect(await assets[0].balanceOf(rollupProcessor.address)).to.be.eq(depositAmount);
+    expect(await assets[0].balanceOf(rollupProviderAddress)).to.be.eq(providerInitialBalance - gasCost);
   });
 
   it('should be able to pay fee with erc20 tokens', async () => {
@@ -87,9 +94,9 @@ describe('rollup_processor: deposit', () => {
     const tx = await rollupProcessor.createRollupProofTx(encodedProofData, signatures, []);
     await rollupProcessor.sendTx(tx);
 
-    expect(await feeDistributor.txFeeBalance(EthAddress.ZERO)).toBe(0n);
-    expect(await feeDistributor.txFeeBalance(asset.getStaticInfo().address)).toBe(txFee);
-    expect(await asset.balanceOf(feeDistributor.address)).toBe(txFee);
-    expect(await asset.balanceOf(rollupProcessor.address)).toBe(depositAmount);
+    expect(await feeDistributor.txFeeBalance(EthAddress.ZERO)).to.be.eq(0n);
+    expect(await feeDistributor.txFeeBalance(asset.getStaticInfo().address)).to.be.eq(txFee);
+    expect(await asset.balanceOf(feeDistributor.address)).to.be.eq(txFee);
+    expect(await asset.balanceOf(rollupProcessor.address)).to.be.eq(depositAmount);
   });
 });

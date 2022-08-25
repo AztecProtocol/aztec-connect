@@ -1,3 +1,10 @@
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { solidity } = require('ethereum-waffle');
+import chai from 'chai';
+
+import { expect } from 'chai';
+chai.use(solidity);
+
 import { EthAddress } from '@aztec/barretenberg/address';
 import { Asset, TxHash } from '@aztec/barretenberg/blockchain';
 import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
@@ -63,22 +70,22 @@ describe('rollup_processor: multi async defi', () => {
 
   const expectHashes = async (expectedResult: DefiInteractionNote[]) => {
     const expectedHashes = computeInteractionHashes(expectedResult);
-    expect(await rollupProcessor.defiInteractionHashes()).toEqual(expectedHashes);
+    expect(await rollupProcessor.defiInteractionHashes()).to.be.eql(expectedHashes);
   };
 
   const expectAsyncHashes = async (expectedResult: DefiInteractionNote[]) => {
     const expectedHashes = computeInteractionHashes(expectedResult);
-    expect(await rollupProcessor.asyncDefiInteractionHashes()).toEqual(expectedHashes);
+    expect(await rollupProcessor.asyncDefiInteractionHashes()).to.be.eql(expectedHashes);
   };
 
   const expectResult = async (txHash: TxHash, expectedResult: DefiInteractionNote[]) => {
-    expect(await fetchResult(txHash)).toEqual(expectedResult);
+    expect(await fetchResult(txHash)).to.be.eql(expectedResult);
   };
 
   const expectBalance = async (assetId: number, balance: bigint) =>
-    expect(await assets[assetId].balanceOf(rollupProcessor.address)).toBe(balance);
+    expect(await assets[assetId].balanceOf(rollupProcessor.address)).to.be.eq(balance);
 
-  beforeAll(async () => {
+  before(async () => {
     signers = await ethers.getSigners();
     rollupProvider = signers[0];
     addresses = await Promise.all(signers.map(async u => EthAddress.fromString(await u.getAddress())));

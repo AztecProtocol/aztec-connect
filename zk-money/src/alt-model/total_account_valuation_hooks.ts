@@ -24,7 +24,7 @@ function useUnfinalisedAsyncDefiAsyncPresentValues() {
         if (recipe) {
           const poller = interactionPresentValuePollerCache.get([
             recipe.id,
-            BigInt(tx.interactionResult.interactionNonce),
+            tx.interactionResult.interactionNonce,
             tx.depositValue.value,
           ]);
           obsList.push(poller?.obs ?? Obs.constant(undefined));

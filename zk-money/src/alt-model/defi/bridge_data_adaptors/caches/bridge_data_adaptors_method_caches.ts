@@ -10,6 +10,8 @@ import { createCurrentAssetYieldPollerCache } from './current_yield_poller_cache
 
 import { createInteractionPresentValuePollerCache } from './interaction_present_value_poller_cache';
 import { createMarketSizePollerCache } from './market_size_poller_cache';
+import { createTermAprPollerCache } from './term_apr_poller_cache';
+import { createUnderlyingAmountPollerCache } from './underlying_amount_poller_cache';
 
 export function createBridgeDataAdaptorsMethodCaches(
   defiRecipes: DefiRecipe[],
@@ -20,18 +22,22 @@ export function createBridgeDataAdaptorsMethodCaches(
   const adaptorsCache = createBridgeDataAdaptorCache(defiRecipes, remoteStatus, provider, config);
   const auxDataPollerCache = createAuxDataOptionsPollerCache(defiRecipes, adaptorsCache);
   const expectedAssetYieldPollerCache = createExpectedAssetYieldPollerCache(defiRecipes, adaptorsCache);
+  const termAprPollerCache = createTermAprPollerCache(defiRecipes, adaptorsCache);
   const currentAssetYieldPollerCache = createCurrentAssetYieldPollerCache(defiRecipes, adaptorsCache);
   const expectedOutputPollerCache = createExpectedOutputPollerCache(defiRecipes, adaptorsCache);
   const marketSizePollerCache = createMarketSizePollerCache(defiRecipes, adaptorsCache);
   const interactionPresentValuePollerCache = createInteractionPresentValuePollerCache(adaptorsCache);
+  const underlyingAmountPollerCache = createUnderlyingAmountPollerCache(defiRecipes, adaptorsCache);
   return {
     adaptorsCache,
     auxDataPollerCache,
     expectedAssetYieldPollerCache,
+    termAprPollerCache,
     expectedOutputPollerCache,
     marketSizePollerCache,
     currentAssetYieldPollerCache,
     interactionPresentValuePollerCache,
+    underlyingAmountPollerCache,
   };
 }
 

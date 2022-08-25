@@ -14,12 +14,12 @@ export function createCurrentAssetYieldPollerCache(recipes: DefiRecipe[], adapto
     const recipe = recipes?.find(x => x.id === recipeId);
     const adaptor = adaptorCache.get(recipeId);
     if (!adaptor || !recipe) return undefined;
-    if (!adaptor.getCurrentYield) {
+    if (!adaptor.getInteractionAPR) {
       throw new Error('Attempted to call unsupported method "getCurrentYield" on bridge adaptor');
     }
     const pollObs = Obs.constant(async () => {
       try {
-        const values = await adaptor.getCurrentYield!(BigInt(interactionNonce));
+        const values = await adaptor.getInteractionAPR!(interactionNonce);
         return values[0];
       } catch (err) {
         debug({ recipeId, interactionNonce }, err);

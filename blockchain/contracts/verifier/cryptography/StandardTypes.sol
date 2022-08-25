@@ -20,7 +20,6 @@ library StandardTypes {
     uint256 internal constant coset_generator1 = 0x0000000000000000000000000000000000000000000000000000000000000006;
     uint256 internal constant coset_generator2 = 0x0000000000000000000000000000000000000000000000000000000000000007;
 
-    // TODO: add external_coset_generator() method to compute this
     uint256 internal constant coset_generator7 = 0x000000000000000000000000000000000000000000000000000000000000000c;
 
     struct G1Point {

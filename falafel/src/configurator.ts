@@ -73,6 +73,8 @@ const defaultRuntimeConfig: RuntimeConfig = {
   bridgeConfigs: [],
   feePayingAssetIds: [0],
   privacySets: getDefaultPrivacySets(),
+  depositLimit: 10,
+  blacklist: [],
 };
 
 function getStartupConfigEnvVars(): Partial<StartupConfig> {
@@ -248,6 +250,9 @@ export class Configurator {
         rollupBeneficiary: conf.runtimeConfig.rollupBeneficiary
           ? EthAddress.fromString(conf.runtimeConfig.rollupBeneficiary)
           : undefined,
+        blacklist: conf.runtimeConfig.blacklist
+          ? conf.runtimeConfig.blacklist.map((x: string) => EthAddress.fromString(x))
+          : [],
       },
     };
   }
@@ -276,6 +281,9 @@ export class Configurator {
         rollupBeneficiary: conf.runtimeConfig.rollupBeneficiary
           ? conf.runtimeConfig.rollupBeneficiary.toString()
           : undefined,
+        blacklist: conf.runtimeConfig.blacklist
+          ? conf.runtimeConfig.blacklist.map((x: EthAddress) => x.toString())
+          : [],
       },
     });
   }

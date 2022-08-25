@@ -118,7 +118,6 @@ library RollupProcessorLibrary {
             revert SIGNATURE_ADDRESS_IS_ZERO();
         }
         assembly {
-            let mPtr := mload(0x40)
             // There's a little trick we can pull. We expect `signature` to be a byte array, of length 0x60, with
             // 'v', 'r' and 's' located linearly in memory. Preceeding this is the length parameter of `signature`.
             // We *replace* the length param with the signature msg to get a memory block formatted for the precompile

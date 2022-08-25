@@ -1,7 +1,7 @@
 import styled from 'styled-components/macro';
 
 export const CardTag = styled.div`
-  background-color: #00000035;
+  background-color: #00000060;
   color: white;
   font-size: 14px;
   padding: 0 10px;

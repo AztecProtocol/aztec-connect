@@ -81,7 +81,7 @@ contract SimpleUniBridge is IDefiBridge {
             amounts = router.swapExactTokensForETH(totalInputValue, 0, path, address(this), deadline);
             outputValueA = amounts[1];
             bytes memory payload = abi.encodeWithSignature('receiveEthFromBridge(uint256)', interactionNonce);
-            (bool success, ) = address(rollupProcessor).call{value: outputValueA}(payload);
+            address(rollupProcessor).call{value: outputValueA}(payload);
         } else {
             require(
                 inputAssetA.assetType == AztecTypes.AztecAssetType.ERC20,

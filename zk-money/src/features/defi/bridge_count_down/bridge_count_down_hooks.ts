@@ -13,7 +13,6 @@ export function useCountDownData(bridgeCallData?: BridgeCallData) {
   const fraction = status ? Number(status.gasAccrued) / Number(status.gasThreshold) : 0;
   const takenSlots = Math.floor(totalSlots * Math.min(1, Math.max(0, fraction)));
   const { batchSettlementTime } = estimateDefiSettlementTimes(rpStatus, status);
-
   return { totalSlots, takenSlots, nextBatch: batchSettlementTime };
 }
 

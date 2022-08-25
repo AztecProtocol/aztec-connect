@@ -26,6 +26,7 @@ interface ButtonProps {
 export const Button: React.FunctionComponent<ButtonProps> = ({
   className,
   text,
+  disabled,
   onClick,
   gradient,
   theme = ButtonTheme.Primary,
@@ -42,6 +43,7 @@ export const Button: React.FunctionComponent<ButtonProps> = ({
         style.button,
         theme === ButtonTheme.Primary && style.primary,
         theme === ButtonTheme.Secondary && style.secondary,
+        disabled && style.disabled,
         className,
       )}
       style={gradientStyle}

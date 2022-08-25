@@ -25,7 +25,7 @@ import { TxDao } from './entity/tx';
 import { Metrics } from './metrics';
 import { RollupResolver, ServerStatusResolver, TxResolver } from './resolver';
 import { Server } from './server';
-import { Tx } from './tx_receiver';
+import { Tx, TxRequest } from './tx_receiver';
 
 const toDepositTxJson = ({ proofData }: TxDao): DepositTxJson => {
   const proof = JoinSplitProofData.fromBuffer(proofData);
@@ -100,7 +100,12 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     const stream = new PromiseReadable(ctx.req);
     const postData = JSON.parse((await stream.readAll()) as string);
     const txs = postData.map(fromTxJson);
-    const txIds = await server.receiveTxs(txs);
+    const clientIp = requestIp.getClientIp(ctx.request);
+    const txRequest: TxRequest = {
+      txs,
+      requestSender: clientIp ?? '',
+    };
+    const txIds = await server.receiveTxs(txRequest);
     const response = {
       txIds: txIds.map(txId => txId.toString('hex')),
     };

@@ -1,4 +1,11 @@
-import { Contract, Signer } from 'ethers';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { solidity } = require('ethereum-waffle');
+import chai from 'chai';
+
+import { expect } from 'chai';
+chai.use(solidity);
+
+import { BigNumber, Contract, Signer } from 'ethers';
 import { ethers } from 'hardhat';
 import { EthAddress } from '@aztec/barretenberg/address';
 import { Asset } from '@aztec/barretenberg/blockchain';
@@ -22,7 +29,7 @@ describe('fee_distributor', () => {
 
   let snapshot: string;
 
-  beforeAll(async () => {
+  before(async () => {
     signers = await ethers.getSigners();
     addresses = await Promise.all(signers.map(async u => EthAddress.fromString(await u.getAddress())));
     fakeRollupProccessor = addresses[3];
@@ -47,7 +54,7 @@ describe('fee_distributor', () => {
 
   it('deposit eth to fee distributor', async () => {
     await assets[0].transfer(100n, addresses[0], feeDistributor.address);
-    expect(BigInt(await feeDistributor.txFeeBalance(EthAddress.ZERO))).toBe(100n);
+    expect(BigInt(await feeDistributor.txFeeBalance(EthAddress.ZERO))).to.be.eq(100n);
   });
 
   it('deposit token asset to fee distributor', async () => {
@@ -56,27 +63,27 @@ describe('fee_distributor', () => {
     const amount = 100n;
 
     await asset.transfer(amount, addresses[0], feeDistributor.address);
-    expect(await feeDistributor.txFeeBalance(assetAddress)).toBe(amount);
+    expect(await feeDistributor.txFeeBalance(assetAddress)).to.be.eq(amount);
   });
 
   it('only owner can change convertConstant', async () => {
     const convertConstant = 100n;
-    expect(await feeDistributor.convertConstant()).not.toBe(convertConstant);
-    await expect(feeDistributor.setConvertConstant(convertConstant, { signingAddress: addresses[1] })).rejects.toThrow(
-      'Ownable: caller is not the owner',
-    );
+    expect(await feeDistributor.convertConstant()).not.to.be.eq(convertConstant);
+    await expect(
+      feeDistributor.setConvertConstant(convertConstant, { signingAddress: addresses[1] }),
+    ).to.be.revertedWith('Ownable: caller is not the owner');
     await feeDistributor.setConvertConstant(convertConstant);
-    expect(BigInt(await feeDistributor.convertConstant())).toBe(convertConstant);
+    expect(BigInt(await feeDistributor.convertConstant())).to.be.eq(convertConstant);
   });
 
   it('only owner can change feeClaimer', async () => {
     const userAddress = addresses[1];
-    expect(await feeDistributor.aztecFeeClaimer()).not.toBe(userAddress);
-    await expect(feeDistributor.setFeeClaimer(userAddress, { signingAddress: addresses[1] })).rejects.toThrow(
+    expect(await feeDistributor.aztecFeeClaimer()).not.to.be.eq(userAddress);
+    await expect(feeDistributor.setFeeClaimer(userAddress, { signingAddress: addresses[1] })).to.be.revertedWith(
       'Ownable: caller is not the owner',
     );
     await feeDistributor.setFeeClaimer(userAddress);
-    expect((await feeDistributor.aztecFeeClaimer()).toString()).toBe(userAddress.toString());
+    expect((await feeDistributor.aztecFeeClaimer()).toString()).to.be.eq(userAddress.toString());
   });
 
   it('reimburse eth to fee claimer if fee claimer is below threshold', async () => {
@@ -92,37 +99,37 @@ describe('fee_distributor', () => {
 
     // simulate a rollup, paying the feeDistributor
     await ethAsset.transfer(toSend, fakeRollupProccessor, feeDistributor.address);
-    expect(initialUserBalance).toBe(await ethAsset.balanceOf(userAddress));
+    expect(initialUserBalance).to.be.eq(await ethAsset.balanceOf(userAddress));
 
     // drain the fee claimer address
     await ethAsset.transfer(initialUserBalance - 25000n * gasPrice, userAddress, EthAddress.ZERO);
     const drainedUserBalance = await ethAsset.balanceOf(userAddress);
-    expect(drainedUserBalance).toBeLessThan(await feeDistributor.feeLimit());
+    expect(BigNumber.from(drainedUserBalance)).to.be.lt(BigNumber.from(await feeDistributor.feeLimit()));
 
     await feeDistributor.setFeeClaimer(userAddress);
-    expect((await feeDistributor.aztecFeeClaimer()).toString()).toBe(userAddress.toString());
+    expect((await feeDistributor.aztecFeeClaimer()).toString()).to.be.eq(userAddress.toString());
 
     await ethAsset.transfer(initialFeeDistributorBalance, addresses[0], feeDistributor.address);
 
     // simulate a rollup, paying the feeDistributor
     await ethAsset.transfer(toSend, fakeRollupProccessor, feeDistributor.address);
 
-    expect(await ethAsset.balanceOf(feeDistributor.address)).toBe(
+    expect(await ethAsset.balanceOf(feeDistributor.address)).to.be.eq(
       initialFeeDistributorBalance - feeLimit + toSend + toSend,
     );
     const expectedBalance =
       drainedUserBalance + // starting balance
       feeLimit; // feeLimit balance as now transfered;
 
-    expect(await ethAsset.balanceOf(userAddress)).toBe(expectedBalance);
+    expect(await ethAsset.balanceOf(userAddress)).to.be.eq(expectedBalance);
   });
 
   it('convert asset balance to eth', async () => {
     const asset = assets[1];
     const assetAddr = asset.getStaticInfo().address;
 
-    expect(await feeDistributor.txFeeBalance(assetAddr)).toBe(0n);
-    expect(await feeDistributor.txFeeBalance(EthAddress.ZERO)).toBe(0n);
+    expect(await feeDistributor.txFeeBalance(assetAddr)).to.be.eq(0n);
+    expect(await feeDistributor.txFeeBalance(EthAddress.ZERO)).to.be.eq(0n);
 
     const balance = 10n;
 
@@ -130,12 +137,12 @@ describe('fee_distributor', () => {
 
     const fee = 1n;
     const minOutputValue = 9n;
-    expect(await feeDistributor.txFeeBalance(assetAddr)).toBe(balance);
-    expect(await feeDistributor.txFeeBalance(EthAddress.ZERO)).toBe(0n);
+    expect(await feeDistributor.txFeeBalance(assetAddr)).to.be.eq(balance);
+    expect(await feeDistributor.txFeeBalance(EthAddress.ZERO)).to.be.eq(0n);
     await feeDistributor.convert(assetAddr, minOutputValue);
 
-    expect(await feeDistributor.txFeeBalance(assetAddr)).toBe(0n);
-    expect(await feeDistributor.txFeeBalance(EthAddress.ZERO)).toBe(balance - fee);
+    expect(await feeDistributor.txFeeBalance(assetAddr)).to.be.eq(0n);
+    expect(await feeDistributor.txFeeBalance(EthAddress.ZERO)).to.be.eq(balance - fee);
   });
 
   it('convert weth balance to eth', async () => {
@@ -144,41 +151,41 @@ describe('fee_distributor', () => {
     const balance = 10n;
     await weth.deposit({ value: balance.toString() });
 
-    expect(await feeDistributor.txFeeBalance(EthAddress.fromString(weth.address))).toBe(0n);
-    expect(await feeDistributor.txFeeBalance(EthAddress.ZERO)).toBe(0n);
+    expect(await feeDistributor.txFeeBalance(EthAddress.fromString(weth.address))).to.be.eq(0n);
+    expect(await feeDistributor.txFeeBalance(EthAddress.ZERO)).to.be.eq(0n);
 
     await weth.transfer(feeDistributor.address.toString(), balance);
 
     const minOutputValue = 9n;
-    expect(await feeDistributor.txFeeBalance(EthAddress.fromString(weth.address))).toBe(balance);
-    expect(await feeDistributor.txFeeBalance(EthAddress.ZERO)).toBe(0n);
+    expect(await feeDistributor.txFeeBalance(EthAddress.fromString(weth.address))).to.be.eq(balance);
+    expect(await feeDistributor.txFeeBalance(EthAddress.ZERO)).to.be.eq(0n);
 
     await feeDistributor.convert(EthAddress.fromString(weth.address), minOutputValue);
 
-    expect(await feeDistributor.txFeeBalance(EthAddress.fromString(weth.address))).toBe(0n);
-    expect(await feeDistributor.txFeeBalance(EthAddress.ZERO)).toBe(balance);
+    expect(await feeDistributor.txFeeBalance(EthAddress.fromString(weth.address))).to.be.eq(0n);
+    expect(await feeDistributor.txFeeBalance(EthAddress.ZERO)).to.be.eq(balance);
   });
 
   it('revert if non-owner tries to convert asset balance to eth', async () => {
     const asset = assets[1];
     const assetAddr = asset.getStaticInfo().address;
 
-    expect(await feeDistributor.txFeeBalance(assetAddr)).toBe(0n);
-    expect(await feeDistributor.txFeeBalance(EthAddress.ZERO)).toBe(0n);
+    expect(await feeDistributor.txFeeBalance(assetAddr)).to.be.eq(0n);
+    expect(await feeDistributor.txFeeBalance(EthAddress.ZERO)).to.be.eq(0n);
 
     const balance = 10n;
 
     await asset.transfer(balance, addresses[0], feeDistributor.address);
 
     const minOutputValue = 9n;
-    expect(await feeDistributor.txFeeBalance(assetAddr)).toBe(balance);
-    expect(await feeDistributor.txFeeBalance(EthAddress.ZERO)).toBe(0n);
-    await expect(feeDistributor.convert(assetAddr, minOutputValue, { signingAddress: addresses[1] })).rejects.toThrow(
-      'Ownable: caller is not the owner',
-    );
+    expect(await feeDistributor.txFeeBalance(assetAddr)).to.be.eq(balance);
+    expect(await feeDistributor.txFeeBalance(EthAddress.ZERO)).to.be.eq(0n);
+    await expect(
+      feeDistributor.convert(assetAddr, minOutputValue, { signingAddress: addresses[1] }),
+    ).to.be.revertedWith('Ownable: caller is not the owner');
 
-    expect(await feeDistributor.txFeeBalance(assetAddr)).toBe(balance);
-    expect(await feeDistributor.txFeeBalance(EthAddress.ZERO)).toBe(0n);
+    expect(await feeDistributor.txFeeBalance(assetAddr)).to.be.eq(balance);
+    expect(await feeDistributor.txFeeBalance(EthAddress.ZERO)).to.be.eq(0n);
   });
 
   it('revert if output will be less than minOutputValue', async () => {
@@ -189,15 +196,15 @@ describe('fee_distributor', () => {
     await asset.transfer(balance, addresses[0], feeDistributor.address);
 
     const minOutputValue = balance;
-    await expect(feeDistributor.convert(assetAddr, minOutputValue)).rejects.toThrow('INSUFFICIENT_OUTPUT_AMOUNT');
+    await expect(feeDistributor.convert(assetAddr, minOutputValue)).to.be.revertedWith('INSUFFICIENT_OUTPUT_AMOUNT');
   });
 
   it('cannot convert eth to eth', async () => {
-    await expect(feeDistributor.convert(EthAddress.ZERO, 0n)).rejects.toThrow('NOT_A_TOKEN_ASSET');
+    await expect(feeDistributor.convert(EthAddress.ZERO, 0n)).to.be.revertedWith('NOT_A_TOKEN_ASSET');
   });
 
   it('revert convert if asset balance is empty', async () => {
     const assetAddr = assets[1].getStaticInfo().address;
-    await expect(feeDistributor.convert(assetAddr, 1n)).rejects.toThrow('EMPTY_BALANCE');
+    await expect(feeDistributor.convert(assetAddr, 1n)).to.be.revertedWith('EMPTY_BALANCE');
   });
 });

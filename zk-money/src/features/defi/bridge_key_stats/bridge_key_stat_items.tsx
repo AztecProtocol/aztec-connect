@@ -5,6 +5,7 @@ import {
   useDefaultBridgeCallData,
   useDefaultExpectedAssetYield,
   useDefaultLiquidity,
+  useDefaultTermApr,
 } from 'alt-model/defi/defi_info_hooks';
 import { useDefaultCountDownData } from '../bridge_count_down/bridge_count_down_hooks';
 
@@ -40,6 +41,12 @@ function YieldValue(props: { recipe: DefiRecipe }) {
   return <>{percentageFormatter.format(expectedYield / 100)}</>;
 }
 
+function TermAprValue(props: { recipe: DefiRecipe }) {
+  const termApr = useDefaultTermApr(props.recipe);
+  if (termApr === undefined) return <SkeletonRect sizingContent="2.34%" />;
+  return <>{percentageFormatter.format(termApr / 100)}</>;
+}
+
 const dateFormatter = new Intl.DateTimeFormat('default', { day: 'numeric', month: 'short', year: '2-digit' });
 
 function MaturityValue(props: { recipe: DefiRecipe }) {
@@ -68,8 +75,9 @@ export function getKeyStatItemProps(stat: KeyBridgeStat, recipe: DefiRecipe) {
     case KeyBridgeStat.BATCH_SIZE:
       return { label: 'Batch Size', value: <BatchSizeValue recipe={recipe} /> };
     case KeyBridgeStat.YIELD:
-    case KeyBridgeStat.FIXED_YIELD:
       return { label: recipe.roiType, value: <YieldValue recipe={recipe} /> };
+    case KeyBridgeStat.FIXED_YIELD:
+      return { label: recipe.roiType, value: <TermAprValue recipe={recipe} /> };
     case KeyBridgeStat.MATURITY:
       return { label: 'Maturity', value: <MaturityValue recipe={recipe} /> };
     case KeyBridgeStat.NEXT_BATCH:

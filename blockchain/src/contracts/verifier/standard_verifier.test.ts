@@ -1,3 +1,10 @@
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { solidity } = require('ethereum-waffle');
+import chai from 'chai';
+
+import { expect } from 'chai';
+chai.use(solidity);
+
 import { ethers } from 'hardhat';
 import { StandardVerifier } from './standard_verifier';
 import { getRollupData } from './fixtures/get_rollup_data';
@@ -7,7 +14,7 @@ describe('StandardVerifier', function () {
   let verifier: StandardVerifier;
   const gasLimit = 10000000;
 
-  beforeAll(async () => {
+  before(async () => {
     verifier = await StandardVerifier.deploy(new EthersAdapter(ethers.provider), 'MockVerificationKey');
   });
 
@@ -27,6 +34,6 @@ describe('StandardVerifier', function () {
     // Bork.
     proofData.writeUInt8(10, 300);
 
-    await expect(verifier.verify(proofData, inputHash, { gasLimit })).rejects.toThrow('PROOF_VERIFICATION_FAILED');
+    await expect(verifier.verify(proofData, inputHash, { gasLimit })).to.be.revertedWith('PROOF_VERIFICATION_FAILED');
   });
 });

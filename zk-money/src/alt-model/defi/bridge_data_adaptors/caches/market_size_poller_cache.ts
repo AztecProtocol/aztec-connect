@@ -11,7 +11,7 @@ const debug = createDebug('zm:market_size_poller_cache');
 const POLL_INTERVAL = 5 * 60 * 1000;
 
 export function createMarketSizePollerCache(recipes: DefiRecipe[], adaptorCache: BridgeDataAdaptorCache) {
-  return new LazyInitDeepCacheMap(([recipeId, auxData]: [string, bigint]) => {
+  return new LazyInitDeepCacheMap(([recipeId, auxData]: [string, number]) => {
     const adaptor = adaptorCache.get(recipeId);
     const recipe = recipes.find(x => x.id === recipeId);
     if (!adaptor || !recipe) return undefined;
@@ -23,7 +23,7 @@ export function createMarketSizePollerCache(recipes: DefiRecipe[], adaptorCache:
     const pollObs = Obs.constant(async () => {
       try {
         const values = await adaptor.getMarketSize!(inA, inB, outA, outB, auxData);
-        return values.map(x => ({ assetId: Number(x.assetId), value: x.amount }));
+        return values;
       } catch (err) {
         debug({ recipeId, inA, inB, outA, outB, auxData }, err);
         throw new Error(`Failed to fetch bridge market size for "${recipe.name}".`);

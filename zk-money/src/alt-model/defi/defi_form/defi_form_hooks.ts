@@ -9,7 +9,6 @@ import { DefiComposerPhase } from './defi_composer_state_obs';
 import { DefiComposer } from './defi_composer';
 import { useApp } from 'alt-model/app_context';
 import { useMaybeObs } from 'app/util';
-import { isKnownAssetAddressString } from 'alt-model/known_assets/known_asset_addresses';
 import { useDefiFeeAmounts } from './defi_fee_hooks';
 import { useAwaitCorrectProvider } from './correct_provider_hooks';
 import { BridgeInteractionAssets, DefiRecipe, FlowDirection } from '../types';
@@ -67,9 +66,7 @@ export function useDefiForm(recipe: DefiRecipe, direction: FlowDirection) {
   const balanceInTargetAsset = useMaxSpendableValue(depositAsset.id);
   const balanceInFeePayingAsset = useMaxSpendableValue(feeAmount?.id);
   const targetAssetAddressStr = depositAsset.address.toString();
-  const transactionLimit = isKnownAssetAddressString(targetAssetAddressStr)
-    ? config.txAmountLimits[targetAssetAddressStr]
-    : undefined;
+  const transactionLimit = config.txAmountLimits[targetAssetAddressStr];
   const validationResult = validateDefiForm({
     fields,
     amountFactory,

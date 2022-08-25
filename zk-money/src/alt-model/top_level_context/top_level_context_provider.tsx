@@ -30,7 +30,6 @@ function createTopLevelContextValue(
 
   const amountFactory = new AmountFactory(initialRemoteAssets);
   const gasPricePoller = createGasPricePoller(stableEthereumProvider);
-  const priceFeedPollerCache = createPriceFeedPollerCache(stableEthereumProvider);
   const defiRecipes = createDefiRecipes(initialRollupProviderStatus, initialRemoteAssets);
   const bridgeDataAdaptorsMethodCaches = createBridgeDataAdaptorsMethodCaches(
     defiRecipes,
@@ -38,6 +37,11 @@ function createTopLevelContextValue(
     initialRollupProviderStatus,
     config,
   );
+  const priceFeedPollerCache = createPriceFeedPollerCache(
+    stableEthereumProvider,
+    bridgeDataAdaptorsMethodCaches.underlyingAmountPollerCache,
+  );
+
   return {
     config,
     stableEthereumProvider,

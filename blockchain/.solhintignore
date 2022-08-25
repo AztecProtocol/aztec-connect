@@ -1,0 +1,8 @@
+artifacts
+node_modules
+script
+contracts/dependencies
+contracts/test
+
+contracts/Decoder.sol
+contracts/verifier/StandardVerifier.sol

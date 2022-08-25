@@ -3,5 +3,5 @@
 pragma solidity >=0.8.4;
 
 interface IVerifier {
-    function verify(bytes memory serialized_proof, uint256 _publicInputsHash) external returns (bool);
+    function verify(bytes memory _serializedProof, uint256 _publicInputsHash) external returns (bool);
 }
