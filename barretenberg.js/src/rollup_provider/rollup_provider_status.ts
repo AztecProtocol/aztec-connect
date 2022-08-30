@@ -32,7 +32,7 @@ export interface RuntimeConfig {
   privacySets: { [key: number]: PrivacySet[] };
   rollupBeneficiary?: EthAddress;
   depositLimit: number;
-  blacklist: EthAddress[];
+  blacklist?: EthAddress[];
 }
 
 export interface RuntimeConfigJson {
@@ -54,7 +54,7 @@ export interface RuntimeConfigJson {
   privacySets: { [key: string]: PrivacySetJson[] };
   rollupBeneficiary?: string;
   depositLimit: number;
-  blacklist: string[];
+  blacklist?: string[];
 }
 
 export const runtimeConfigToJson = ({
@@ -74,7 +74,7 @@ export const runtimeConfigToJson = ({
   bridgeConfigs: bridgeConfigs.map(bridgeConfigToJson),
   privacySets: privacySetsToJson(privacySets),
   rollupBeneficiary: rollupBeneficiary ? rollupBeneficiary.toString() : undefined,
-  blacklist: blacklist.map(x => x.toString()),
+  blacklist: blacklist ? blacklist.map(x => x.toString()) : undefined,
 });
 
 export const runtimeConfigFromJson = ({
@@ -94,7 +94,7 @@ export const runtimeConfigFromJson = ({
   bridgeConfigs: bridgeConfigs.map(bridgeConfigFromJson),
   privacySets: privacySetsFromJson(privacySets),
   rollupBeneficiary: rollupBeneficiary ? EthAddress.fromString(rollupBeneficiary) : undefined,
-  blacklist: blacklist.map(x => EthAddress.fromString(x)),
+  blacklist: blacklist ? blacklist.map(x => EthAddress.fromString(x)) : undefined,
 });
 
 export const partialRuntimeConfigFromJson = ({
