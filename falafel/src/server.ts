@@ -61,7 +61,7 @@ export class Server {
         bridgeConfigs,
         rollupBeneficiary = signingAddress,
         depositLimit,
-        blacklist,
+        blacklist = [],
       },
     } = configurator.getConfVars();
 
@@ -184,7 +184,7 @@ export class Server {
         bridgeConfigs,
         rollupBeneficiary = this.signingAddress,
         depositLimit,
-        blacklist,
+        blacklist = [],
       },
     } = this.configurator.getConfVars();
 
@@ -286,7 +286,10 @@ export class Server {
 
     return {
       blockchainStatus,
-      runtimeConfig,
+      runtimeConfig: {
+        ...runtimeConfig,
+        blacklist: undefined, // don't expose the blacklist
+      },
       numTxsPerRollup: numInnerRollupTxs * numOuterRollupProofs,
       numUnsettledTxs: txPoolProfile.numTxs,
       numTxsInNextRollup: txPoolProfile.numTxsInNextRollup,
