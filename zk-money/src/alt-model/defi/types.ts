@@ -40,6 +40,7 @@ export interface DefiRecipe {
   id: string;
   gradient?: string[];
   bridgeAddressId: number;
+  exitBridgeAddressId?: number;
   address: EthAddress;
   flow: BridgeFlowAssets;
   openHandleAsset?: RemoteAsset;

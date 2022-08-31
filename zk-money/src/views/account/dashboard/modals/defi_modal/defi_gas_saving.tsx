@@ -3,7 +3,7 @@ import { useAmountBulkPrice, useRollupProviderStatus } from 'alt-model';
 import { useGasBulkPrice } from 'alt-model/gas/gas_hooks';
 import { formatBulkPrice } from 'app';
 
-export function DefiGasSaving(props: { feeAmount?: Amount; bridgeAddressId: number }) {
+export function DefiGasSaving(props: { feeAmount?: Amount; bridgeAddressId?: number }) {
   const feeBulkPrice = useAmountBulkPrice(props.feeAmount);
   const rpStatus = useRollupProviderStatus();
   const bridgeStatus = rpStatus?.blockchainStatus.bridges.find(x => x.id === props.bridgeAddressId);

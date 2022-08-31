@@ -21,6 +21,7 @@ const debug = createDebug('zm:recipes');
 interface CreateRecipeArgs
   extends Omit<DefiRecipe, 'bridgeAddressId' | 'address' | 'flow' | 'valueEstimationInteractionAssets'> {
   selectBlockchainBridge: (blockchainStatus: BlockchainStatus) => BlockchainBridge | undefined;
+  selectExitBlockchainBridge?: (blockchainStatus: BlockchainStatus) => BlockchainBridge | undefined;
   isAsync?: boolean;
   entryInputAssetAddressA: EthAddress;
   entryOutputAssetAddressA: EthAddress;
@@ -34,6 +35,7 @@ function createRecipe(
     entryOutputAssetAddressA,
     openHandleAssetAddress,
     selectBlockchainBridge,
+    selectExitBlockchainBridge,
     ...args
   }: CreateRecipeArgs,
   status: RollupProviderStatus,
@@ -48,6 +50,12 @@ function createRecipe(
   }
   const bridgeAddressId = blockchainBridge.id;
   const address = blockchainBridge.address;
+  const exitBlockchainBridge = selectExitBlockchainBridge?.(status.blockchainStatus);
+  if (selectExitBlockchainBridge && !exitBlockchainBridge) {
+    debug(`Could not find remote bridge for exiting on recipe '${args.id}'`);
+    return;
+  }
+  const exitBridgeAddressId = exitBlockchainBridge?.id;
   const entryInputAssetA = assets.find(x => x.address.equals(entryInputAssetAddressA));
   const entryOutputAssetA = assets.find(x => x.address.equals(entryOutputAssetAddressA));
   if (!entryInputAssetA || !entryOutputAssetA) {
@@ -66,7 +74,15 @@ function createRecipe(
       return;
     }
   }
-  return { ...args, bridgeAddressId, address, flow, openHandleAsset, valueEstimationInteractionAssets };
+  return {
+    ...args,
+    bridgeAddressId,
+    exitBridgeAddressId,
+    address,
+    flow,
+    openHandleAsset,
+    valueEstimationInteractionAssets,
+  };
 }
 
 const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
@@ -159,6 +175,7 @@ if (shouldShowYearn) {
     keyStat3: KeyBridgeStat.NEXT_BATCH,
     requiresAuxDataOpts: true,
     selectBlockchainBridge: ({ bridges }) => bridges.find(x => x.id === 7),
+    selectExitBlockchainBridge: ({ bridges }) => bridges.find(x => x.id === 8),
     selectEnterAuxDataOpt: () => 0,
     selectExitAuxDataOpt: () => 1,
   });
@@ -187,6 +204,7 @@ if (shouldShowYearn) {
     requiresAuxDataOpts: true,
     hideUnderlyingOnExit: true,
     selectBlockchainBridge: ({ bridges }) => bridges.find(x => x.id === 7),
+    selectExitBlockchainBridge: ({ bridges }) => bridges.find(x => x.id === 8),
     selectEnterAuxDataOpt: () => 0,
     selectExitAuxDataOpt: () => 1,
   });

@@ -21,7 +21,7 @@ export function useDefaultAuxDataOption(recipeId: string, isExit?: boolean) {
   return recipe.selectEnterAuxDataOpt(opts);
 }
 
-export function useDefaultBridgeCallData(recipe: DefiRecipe) {
+export function useDefaultEnterBridgeCallData(recipe: DefiRecipe) {
   const auxData = useDefaultAuxDataOption(recipe.id);
   return useMemo(() => {
     const { bridgeAddressId, flow } = recipe;
