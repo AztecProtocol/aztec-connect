@@ -1,14 +1,14 @@
 import { DefiRecipe } from 'alt-model/defi/types';
 import { ProgressBar } from 'ui-components';
-import { useDefaultCountDownData } from './bridge_count_down_hooks';
+import { useDefaultEnterCountDownData } from './bridge_count_down_hooks';
 import style from './bridge_count_down.module.scss';
 
-interface BridgeCountDownProps {
+interface EnterBridgeCountDownProps {
   recipe: DefiRecipe;
 }
 
-export function BridgeCountDown({ recipe }: BridgeCountDownProps) {
-  const data = useDefaultCountDownData(recipe);
+export function EnterBridgeCountDown({ recipe }: EnterBridgeCountDownProps) {
+  const data = useDefaultEnterCountDownData(recipe);
   const progress = (data?.takenSlots ?? 0) / (data?.totalSlots ?? 1);
   const remainingSlots = data?.takenSlots ?? 0;
   const isFastTrack = progress >= 1;

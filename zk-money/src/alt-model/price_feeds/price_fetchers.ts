@@ -35,7 +35,9 @@ function createDefaultPriceFetcher(priceFeedContractAddressStr: string, provider
 }
 
 function createWstEthPriceFetcher(provider: Provider) {
-  const stETHPriceFetcher = createDefaultPriceFetcher(S.stETH, provider);
+  const stETHOracleAddress = getAssetPriceFeedAddressStr(S.stETH);
+  if (!stETHOracleAddress) return;
+  const stETHPriceFetcher = createDefaultPriceFetcher(stETHOracleAddress, provider);
   if (!stETHPriceFetcher) return;
 
   const wstETHContract = new Contract(

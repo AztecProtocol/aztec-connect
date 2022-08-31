@@ -1,5 +1,5 @@
 import styled from 'styled-components/macro';
-import { BridgeCountDown } from 'features/defi/bridge_count_down';
+import { EnterBridgeCountDown } from 'features/defi/bridge_count_down';
 import { colours } from '../../../styles';
 import { DefiRecipe } from 'alt-model/defi/types';
 
@@ -12,7 +12,7 @@ const CardProgress = styled.div`
 export const DefiCardProgress = ({ recipe }: { recipe: DefiRecipe }) => {
   return (
     <CardProgress>
-      <BridgeCountDown recipe={recipe} />
+      <EnterBridgeCountDown recipe={recipe} />
     </CardProgress>
   );
 };

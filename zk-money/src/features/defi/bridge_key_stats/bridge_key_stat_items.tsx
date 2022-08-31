@@ -2,12 +2,12 @@ import moment from 'moment';
 import { useRollupProviderStatus } from 'alt-model';
 import {
   useDefaultAuxDataOption,
-  useDefaultBridgeCallData,
+  useDefaultEnterBridgeCallData,
   useDefaultExpectedAssetYield,
   useDefaultLiquidity,
   useDefaultTermApr,
 } from 'alt-model/defi/defi_info_hooks';
-import { useDefaultCountDownData } from '../bridge_count_down/bridge_count_down_hooks';
+import { useDefaultEnterCountDownData } from '../bridge_count_down/bridge_count_down_hooks';
 
 import { DefiRecipe, KeyBridgeStat } from 'alt-model/defi/types';
 import { baseUnitsToFloat, PRICE_DECIMALS } from 'app';
@@ -26,7 +26,7 @@ function LiquidityValue(props: { recipe: DefiRecipe }) {
 }
 
 function BatchSizeValue(props: { recipe: DefiRecipe }) {
-  const bridgeCallData = useDefaultBridgeCallData(props.recipe)?.toBigInt();
+  const bridgeCallData = useDefaultEnterBridgeCallData(props.recipe)?.toBigInt();
   const rpStatus = useRollupProviderStatus();
   if (!rpStatus?.bridgeStatus || !bridgeCallData) return <SkeletonRect sizingContent="25" />;
   const bridgeStatus = rpStatus.bridgeStatus.find(x => x.bridgeCallData === bridgeCallData);
@@ -59,7 +59,7 @@ function MaturityValue(props: { recipe: DefiRecipe }) {
 
 function NextBatchValue(props: { recipe: DefiRecipe }) {
   // Assume aux data is unix datetime for now
-  const data = useDefaultCountDownData(props.recipe);
+  const data = useDefaultEnterCountDownData(props.recipe);
 
   if (data === undefined) return <SkeletonRect sizingContent="16 Sept 2022" />;
 
@@ -68,7 +68,7 @@ function NextBatchValue(props: { recipe: DefiRecipe }) {
   return <>{timeStr}</>;
 }
 
-export function getKeyStatItemProps(stat: KeyBridgeStat, recipe: DefiRecipe) {
+export function getEnterKeyStatItemProps(stat: KeyBridgeStat, recipe: DefiRecipe) {
   switch (stat) {
     case KeyBridgeStat.LIQUIDITY:
       return { label: 'L1 Liquidity', value: <LiquidityValue recipe={recipe} /> };
