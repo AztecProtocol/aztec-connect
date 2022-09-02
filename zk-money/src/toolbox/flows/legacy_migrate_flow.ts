@@ -48,7 +48,6 @@ export async function legacyMigrateFlow(
     { value: 0n, assetId: 0 },
     fee,
     addressOfDepositor,
-    undefined,
     signerForPaying,
   );
   await throwIfCancelled(controller.createProof());

@@ -147,13 +147,14 @@ describe('end-to-end migrated tests', () => {
       for (let i = 0; i < 3; ++i) {
         const depositor = addresses[i];
         const user = accounts[i];
+        const userSpendingKeyRequired = true;
         const fee = depositFees[i == 2 ? TxSettlementTime.INSTANT : TxSettlementTime.NEXT_ROLLUP];
         debug(
           `shielding ${sdk.fromBaseUnits(depositValue, true)} (fee: ${sdk.fromBaseUnits(
             fee,
           )}) from ${depositor.toString()} to account ${i}...`,
         );
-        const controller = sdk.createDepositController(depositor, depositValue, fee, user);
+        const controller = sdk.createDepositController(depositor, depositValue, fee, user, userSpendingKeyRequired);
         await controller.createProof();
 
         await controller.depositFundsToContract();
@@ -193,6 +194,7 @@ describe('end-to-end migrated tests', () => {
         const sender = accounts[i];
         const recipientAlias = initialAccounts.aliases[i + 1];
         const recipientAccount = await sdk.getAccountPublicKey(recipientAlias);
+        const recipientSpendingKeyRequired = true;
 
         expect(recipientAccount).toBeTruthy();
 
@@ -203,6 +205,7 @@ describe('end-to-end migrated tests', () => {
           transferValue,
           transferFees[i == 2 ? TxSettlementTime.INSTANT : TxSettlementTime.NEXT_ROLLUP],
           recipientAccount!,
+          recipientSpendingKeyRequired,
         );
         transferControllers.push(controller);
         await controller.createProof();
@@ -235,7 +238,7 @@ describe('end-to-end migrated tests', () => {
       for (let i = 0; i < 4; i++) {
         const signer = signers[i];
         const recipient = addresses[i];
-        const withdrawalFees = await sdk.getWithdrawFees(assetId, recipient);
+        const withdrawalFees = await sdk.getWithdrawFees(assetId, { recipient });
 
         debug(
           `withdrawing ${sdk.fromBaseUnits(withdrawValue, true)} from account ${i} to address ${recipient.toString()}`,

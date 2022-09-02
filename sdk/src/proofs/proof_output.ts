@@ -4,6 +4,7 @@ import {
   OffchainDefiDepositData,
   OffchainJoinSplitData,
 } from '@aztec/barretenberg/offchain_tx_data';
+import { Tx } from '@aztec/barretenberg/rollup_provider';
 import {
   CoreAccountTx,
   CoreAccountTxJson,
@@ -73,4 +74,10 @@ export const proofOutputFromJson = ({
   offchainTxData: offchainTxDataFromBuffer(tx.proofId, Buffer.from(offchainTxData)),
   outputNotes: outputNotes.map(n => noteFromJson(n)),
   signature: signature ? Buffer.from(signature) : undefined,
+});
+
+export const proofOutputToProofTx = ({ proofData, offchainTxData, signature }: ProofOutput): Tx => ({
+  proofData: proofData.rawProofData,
+  offchainTxData: offchainTxData.toBuffer(),
+  depositSignature: signature,
 });

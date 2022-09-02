@@ -60,11 +60,13 @@ export function useBalances() {
   return useWithoutDust(balances);
 }
 
-export function useSpendableBalance(assetId: number) {
-  return useSpendableBalances()?.find(assetValue => assetValue.assetId === assetId)?.value;
+export function useSpendableBalance(assetId: number | undefined) {
+  const balances = useSpendableBalances();
+  if (assetId === undefined) return;
+  return balances?.find(assetValue => assetValue.assetId === assetId)?.value;
 }
 
-// maxSpendableValue is the sum of the two highest available notes
+// maxSpendableValue is the highest chainable value in a single tx minus joinsplit fees
 export function useMaxSpendableValue(assetId?: number) {
   const { userId } = useApp();
   const sdk = useSdk();

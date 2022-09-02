@@ -14,7 +14,7 @@ import { OffchainAccountData } from '@aztec/barretenberg/offchain_tx_data';
 import { Pippenger } from '@aztec/barretenberg/pippenger';
 import { retryUntil } from '@aztec/barretenberg/retry';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
-import { RollupProvider } from '@aztec/barretenberg/rollup_provider';
+import { RollupProvider, Tx } from '@aztec/barretenberg/rollup_provider';
 import { InterruptableSleep } from '@aztec/barretenberg/sleep';
 import { Timer } from '@aztec/barretenberg/timer';
 import { TxId } from '@aztec/barretenberg/tx_id';
@@ -27,7 +27,7 @@ import { BlockContext } from '../block_context/block_context';
 import { CorePaymentTx, createCorePaymentTxForRecipient } from '../core_tx';
 import { Alias, Database } from '../database';
 import { getUserSpendingKeysFromGenesisData, parseGenesisAliasesAndKeys } from '../genesis_state.ts';
-import { Note } from '../note';
+import { Note, treeNoteToNote } from '../note';
 import {
   AccountProofCreator,
   AccountProofInput,
@@ -384,6 +384,16 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     return await userState.getBalance(assetId);
   }
 
+  public async getSpendableNoteValues(
+    userId: GrumpkinAddress,
+    assetId: number,
+    spendingKeyRequired?: boolean,
+    excludePendingNotes?: boolean,
+  ) {
+    const userState = this.getUserState(userId);
+    return await userState.getSpendableNoteValues(assetId, spendingKeyRequired, excludePendingNotes);
+  }
+
   public async getSpendableSum(
     userId: GrumpkinAddress,
     assetId: number,
@@ -399,7 +409,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     return await userState.getSpendableSums(spendingKeyRequired, excludePendingNotes);
   }
 
-  public async getMaxSpendableValue(
+  public async getMaxSpendableNoteValues(
     userId: GrumpkinAddress,
     assetId: number,
     spendingKeyRequired?: boolean,
@@ -407,7 +417,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     numNotes?: number,
   ) {
     const userState = this.getUserState(userId);
-    return await userState.getMaxSpendableValue(assetId, spendingKeyRequired, excludePendingNotes, numNotes);
+    return await userState.getMaxSpendableNoteValues(assetId, spendingKeyRequired, excludePendingNotes, numNotes);
   }
 
   public async pickNotes(
@@ -522,7 +532,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     });
   }
 
-  public async createPaymentProofInput(
+  public async createPaymentProofInputs(
     userId: GrumpkinAddress,
     assetId: number,
     publicInput: bigint,
@@ -545,24 +555,61 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       const spendingKeyRequired = !spendingPublicKey.equals(userId);
       const notes = privateInput ? await userState.pickNotes(assetId, privateInput, spendingKeyRequired) : [];
       if (privateInput && !notes.length) {
-        throw new Error(`Failed to find no more than 2 notes that sum to ${privateInput}.`);
+        throw new Error(`Failed to find notes that sum to ${privateInput}.`);
       }
 
-      return this.paymentProofCreator.createProofInput(
-        user,
-        notes,
-        privateInput,
-        recipientPrivateOutput,
-        senderPrivateOutput,
-        publicInput,
-        publicOutput,
-        assetId,
-        noteRecipient,
-        recipientSpendingKeyRequired,
-        publicOwner,
-        spendingPublicKey,
-        allowChain,
-      );
+      const proofInputs: JoinSplitProofInput[] = [];
+      const settledNotes = notes.filter(n => !n.pending);
+      let firstNote = notes.find(n => n.pending) || settledNotes.shift()!;
+      const lastNote = settledNotes.pop();
+
+      // Create chained txs to generate one large value note.
+      for (const note of settledNotes) {
+        const inputNotes = [firstNote, note];
+        const noteSum = inputNotes.reduce((sum, n) => sum + n.value, BigInt(0));
+        const proofInput = await this.paymentProofCreator.createProofInput(
+          user,
+          inputNotes,
+          noteSum, // privateInput
+          BigInt(0), // recipientPrivateOutput
+          noteSum, // senderPrivateOutput
+          BigInt(0), // publicInput,
+          BigInt(0), // publicOutput
+          assetId,
+          userId, // noteRecipient
+          spendingKeyRequired,
+          undefined, // publicOwner
+          spendingPublicKey,
+          2,
+        );
+        proofInputs.push(proofInput);
+        firstNote = treeNoteToNote(proofInput.tx.outputNotes[1], user.accountPrivateKey, this.noteAlgos, {
+          allowChain: true,
+        });
+      }
+
+      // Spend the last note and the large value note for whatever this payment proof is for.
+      {
+        const inputNotes = lastNote ? [firstNote, lastNote] : [firstNote];
+        const proofInput = await this.paymentProofCreator.createProofInput(
+          user,
+          inputNotes,
+          privateInput,
+          recipientPrivateOutput,
+          senderPrivateOutput,
+          publicInput,
+          publicOutput,
+          assetId,
+          noteRecipient,
+          recipientSpendingKeyRequired,
+          publicOwner,
+          spendingPublicKey,
+          allowChain,
+        );
+        proofInputs.push(proofInput);
+      }
+
+      return proofInputs;
     });
   }
 
@@ -672,7 +719,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     });
   }
 
-  public async sendProofs(proofs: ProofOutput[]) {
+  public async sendProofs(proofs: ProofOutput[], proofTxs: Tx[] = []) {
     return await this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
 
@@ -681,7 +728,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
         offchainTxData: offchainTxData.toBuffer(),
         depositSignature: signature,
       }));
-      const txIds = await this.rollupProvider.sendTxs(txs);
+      const txIds = await this.rollupProvider.sendTxs([...proofTxs, ...txs]);
 
       for (const proof of proofs) {
         const { userId } = proof.tx;

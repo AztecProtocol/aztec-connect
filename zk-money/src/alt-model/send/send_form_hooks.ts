@@ -17,8 +17,11 @@ import { SendComposerPhase } from './send_composer_state_obs';
 import { getSendFormFeedback } from './send_form_feedback';
 import { useUserIdForAlias } from 'alt-model/alias_hooks';
 import { estimateTxSettlementTimes } from 'alt-model/estimate_settlement_times';
-import { useTransferFeeAmounts, useWithdrawFeeAmounts } from './tx_fee_hooks';
+import { useSendFeeAmounts } from './tx_fee_hooks';
 import { useAccountState } from 'alt-model/account_state';
+import { useMaxSendValue } from './max_send_value_hooks';
+import { MAX_MODE } from 'alt-model/forms/constants';
+import { Amount } from 'alt-model/assets';
 
 const debug = createDebug('zm:send_form_hooks');
 
@@ -56,19 +59,20 @@ export function useSendForm(preselectedAssetId?: number) {
   const amountFactory = useAmountFactory();
 
   const { recipientStr, sendMode } = fields;
-  const ethAddress = useMemo(() => getEthAddress(recipientStr, sendMode), [recipientStr, sendMode]);
+  const recipientEthAddress = useMemo(() => getEthAddress(recipientStr, sendMode), [recipientStr, sendMode]);
   const { userId: recipientUserId, isLoading: isLoadingRecipient } = useUserIdForAlias(fields.recipientStr, 200);
-  const recipient = getRecipient(fields.sendMode, ethAddress, recipientUserId);
+  const recipient = getRecipient(fields.sendMode, recipientEthAddress, recipientUserId);
 
   const rpStatus = useRollupProviderStatus();
   const { instantSettlementTime, nextSettlementTime } = estimateTxSettlementTimes(rpStatus);
-  const withdrawFeeAmounts = useWithdrawFeeAmounts(fields.assetId, ethAddress);
-  const transferFeeAmounts = useTransferFeeAmounts(fields.assetId);
-  const feeAmounts = fields.sendMode === SendMode.WIDTHDRAW ? withdrawFeeAmounts : transferFeeAmounts;
+  const maxChainableValue = useMaxSendValue(fields.sendMode, fields.assetId, fields.speed, recipientEthAddress);
+  const asset = useAsset(fields.assetId);
+  const uncheckedValue =
+    fields.amountStrOrMax === MAX_MODE ? maxChainableValue : Amount.from(fields.amountStrOrMax, asset).toAssetValue();
+  const feeAmounts = useSendFeeAmounts(fields.sendMode, uncheckedValue, recipientEthAddress);
   const feeAmount = feeAmounts?.[fields.speed];
   const balanceInTargetAsset = useMaxSpendableValue(fields.assetId);
   const balanceInFeePayingAsset = useMaxSpendableValue(feeAmount?.id);
-  const asset = useAsset(fields.assetId);
   const targetAssetAddressStr = asset?.address.toString();
   const transactionLimit = isKnownAssetAddressString(targetAssetAddressStr)
     ? config.txAmountLimits[targetAssetAddressStr]
@@ -84,6 +88,7 @@ export function useSendForm(preselectedAssetId?: number) {
     balanceInTargetAsset,
     balanceInFeePayingAsset,
     transactionLimit,
+    maxChainableValue,
     recipient,
     isLoadingRecipient,
     userTxs,

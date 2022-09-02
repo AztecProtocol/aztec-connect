@@ -1,15 +1,16 @@
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
+import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { JoinSplitProver, ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
-import { createDebugLogger } from '@aztec/barretenberg/log';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
+import { createDebugLogger } from '@aztec/barretenberg/log';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { OffchainDefiDepositData } from '@aztec/barretenberg/offchain_tx_data';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { WorldState } from '@aztec/barretenberg/world_state';
 import { CoreDefiTx } from '../core_tx';
 import { Database } from '../database';
-import { Note } from '../note';
+import { Note, treeNoteToNote } from '../note';
 import { UserData } from '../user';
 import { JoinSplitTxFactory } from './join_split_tx_factory';
 import { JoinSplitProofInput } from './proof_input';
@@ -73,11 +74,8 @@ export class DefiDepositProofCreator {
     const {
       outputNotes,
       claimNote: { value: depositValue, bridgeCallData, partialStateSecret },
-      inputNotes,
     } = tx;
-    const privateInput =
-      bridgeCallData.numInputAssets > 1 ? inputNotes[0].value : inputNotes.reduce((sum, n) => sum + n.value, BigInt(0));
-    const txFee = privateInput - depositValue;
+    const txFee = toBigIntBE(proofData.txFee);
     const accountRequired = outputNotes[1].accountRequired;
     const coreTx = new CoreDefiTx(txId, accountPublicKey, bridgeCallData, depositValue, txFee, txRefNo, new Date());
     const partialState = this.noteAlgos.valueNotePartialCommitment(
@@ -100,10 +98,10 @@ export class DefiDepositProofCreator {
       proofData,
       offchainTxData,
       outputNotes: [
-        this.txFactory.generateNewNote(outputNotes[0], accountPrivateKey, {
+        treeNoteToNote(outputNotes[0], accountPrivateKey, this.noteAlgos, {
           allowChain: proofData.allowChainFromNote1,
         }),
-        this.txFactory.generateNewNote(outputNotes[1], accountPrivateKey, {
+        treeNoteToNote(outputNotes[1], accountPrivateKey, this.noteAlgos, {
           allowChain: proofData.allowChainFromNote2,
         }),
       ],

@@ -80,6 +80,7 @@ export class ManualPaymentAgent {
       { assetId: 0, value },
       fee,
       recipient.user.id,
+      true,
     );
     await controller.createProof();
     this.txIDs.push(await controller.send());

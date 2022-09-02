@@ -28,7 +28,7 @@ export async function registerFlow(
   );
 
   emitState({ phase: 'fetching-fees' });
-  const fees = await throwIfCancelled(sdk.getRegisterFees({ assetId: 0, value: 0n }));
+  const fees = await throwIfCancelled(sdk.getRegisterFees(0));
   const fee = fees[TxSettlementTime.NEXT_ROLLUP];
 
   if (!(await sdk.userExists(accountKeys.publicKey))) {
@@ -43,7 +43,6 @@ export async function registerFlow(
     { assetId: 0, value: 0n },
     fee,
     address,
-    undefined,
     signer,
   );
 

@@ -76,7 +76,9 @@ export class UniswapAgent {
       const fees: AgentFees = {
         depositFee: (await this.sdk.getDepositFees(0))[TxSettlementTime.NEXT_ROLLUP],
         transferFee: (await this.sdk.getTransferFees(0))[TxSettlementTime.NEXT_ROLLUP],
-        withdrawFee: (await this.sdk.getWithdrawFees(0, this.user.address))[TxSettlementTime.NEXT_ROLLUP],
+        withdrawFee: (await this.sdk.getWithdrawFees(0, { recipient: this.user.address }))[
+          TxSettlementTime.NEXT_ROLLUP
+        ],
       };
       this.agentFees = {
         agentFees: fees,
@@ -125,7 +127,9 @@ export class UniswapAgent {
   }
 
   private async getDefiFees(bridgeSpec: BridgeSpec) {
-    return await this.sdk.getDefiFees(getBridgeCallData(bridgeSpec));
+    const fees = await this.sdk.getDefiFees(getBridgeCallData(bridgeSpec));
+    const jsFee = (await this.sdk.getTransferFees(fees[0].assetId))[TxSettlementTime.NEXT_ROLLUP];
+    return fees.map(fee => ({ ...fee, value: fee.value + jsFee.value }));
   }
 
   private async getBalance(assetId = 0) {

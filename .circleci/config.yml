@@ -443,6 +443,20 @@ jobs:
           working_directory: end-to-end
           command: cond_spot_run_tests end-to-end ./src/e2e_virtual_assets.test.ts
 
+  e2e-chained-txs:
+    docker:
+      - image: aztecprotocol/build-image
+    resource_class: small
+    steps:
+      - checkout
+      - *setup_env
+      - setup_remote_docker:
+          version: 20.10.14
+      - run:
+          name: 'Test'
+          working_directory: end-to-end
+          command: cond_spot_run_tests end-to-end ./src/e2e_chained_txs.test.ts
+
   e2e-element:
     docker:
       - image: aztecprotocol/build-image
@@ -818,6 +832,11 @@ workflows:
             - end-to-end
             - hummus
           filters: *tag_filter
+      - e2e-chained-txs:
+          requires:
+            - end-to-end
+            - hummus
+          filters: *tag_filter
       - e2e-element:
           requires:
             - end-to-end
@@ -856,6 +875,7 @@ workflows:
             - e2e-hosted-sdk
             - e2e-non-fee-assets
             - e2e-virtual-assets
+            - e2e-chained-txs
             - wasabi
             - zk-money
             - hummus

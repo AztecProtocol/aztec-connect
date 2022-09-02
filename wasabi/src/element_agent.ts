@@ -171,9 +171,11 @@ export class ElementAgent {
     expiry: number,
     settlementTime: DefiSettlementTime = DefiSettlementTime.DEADLINE,
   ) {
-    return (await this.sdk.getDefiFees(buildBridgeCallData(ELEMENT_BRIDGE_ADDRESS_ID, assetId, assetId, expiry)))[
+    const fee = (await this.sdk.getDefiFees(buildBridgeCallData(ELEMENT_BRIDGE_ADDRESS_ID, assetId, assetId, expiry)))[
       settlementTime
     ];
+    const jsFee = (await this.sdk.getTransferFees(fee.assetId))[TxSettlementTime.NEXT_ROLLUP];
+    return { ...fee, value: fee.value + jsFee.value };
   }
 
   private async measureBalances() {

@@ -17,6 +17,8 @@ import { MAX_MODE } from 'alt-model/forms/constants';
 import { useRollupProviderStatus, useRollupProviderStatusPoller } from 'alt-model/rollup_provider_hooks';
 import { useMaxSpendableValue } from 'alt-model/balance_hooks';
 import { estimateDefiSettlementTimes } from 'alt-model/estimate_settlement_times';
+import { useMaxDefiValue } from './max_defi_value_hooks';
+import { Amount } from 'alt-model/assets';
 
 const debug = createDebug('zm:defi_form_hooks');
 
@@ -61,7 +63,12 @@ export function useDefiForm(recipe: DefiRecipe, direction: FlowDirection) {
   const interactionAssets = getInteractionAssets(recipe, direction);
   const depositAsset = interactionAssets.inA;
   const bridgeCallData = useDefiFormBridgeCallData(recipe, direction, interactionAssets);
-  const feeAmounts = useDefiFeeAmounts(bridgeCallData);
+  const maxChainableDefiDeposit = useMaxDefiValue(bridgeCallData, fields.speed);
+  const uncheckedTargetValue =
+    fields.amountStrOrMax === MAX_MODE
+      ? maxChainableDefiDeposit
+      : Amount.from(fields.amountStrOrMax, depositAsset).toAssetValue();
+  const feeAmounts = useDefiFeeAmounts(bridgeCallData, uncheckedTargetValue);
   const feeAmount = feeAmounts?.[fields.speed];
   const balanceInTargetAsset = useMaxSpendableValue(depositAsset.id);
   const balanceInFeePayingAsset = useMaxSpendableValue(feeAmount?.id);
@@ -76,6 +83,7 @@ export function useDefiForm(recipe: DefiRecipe, direction: FlowDirection) {
     balanceInTargetAsset,
     balanceInFeePayingAsset,
     transactionLimit,
+    maxChainableDefiDeposit,
     bridgeCallData,
   });
 

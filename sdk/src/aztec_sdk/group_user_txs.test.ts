@@ -3,9 +3,12 @@ import { BridgeCallData, virtualAssetIdFlag, virtualAssetIdPlaceholder } from '@
 import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { createTxRefNo } from '../controllers/create_tx_ref_no';
+import { CoreUserTx } from '../core_tx';
 import { randomCoreAccountTx, randomCoreDefiTx, randomCorePaymentTx } from '../core_tx/fixtures';
 import { UserAccountTx, UserDefiClaimTx, UserDefiInteractionResultState, UserDefiTx, UserPaymentTx } from '../user_tx';
 import { groupUserTxs } from './group_user_txs';
+
+type UserTx = UserAccountTx | UserDefiClaimTx | UserDefiTx | UserPaymentTx;
 
 const createFeeTx = (fee: bigint, txRefNo: number) =>
   randomCorePaymentTx({
@@ -47,161 +50,222 @@ const createWithdrawTx = ({
     txRefNo,
   });
 
+const createChainedTxs = (values: bigint[]) =>
+  values.map(value =>
+    randomCorePaymentTx({
+      proofId: ProofId.SEND,
+      privateInput: value,
+      senderPrivateOutput: value,
+      recipientPrivateOutput: 0n,
+      isSender: true,
+      isRecipient: true,
+    }),
+  );
+
 describe('groupUserTxs', () => {
   const garbageAssetId = 123;
   const now = Date.now();
 
+  const expectGroupedUserTxs = (coreTxs: CoreUserTx[], expected: UserTx[]) => {
+    expect(groupUserTxs(coreTxs)).toEqual(expected);
+    expect(groupUserTxs([...coreTxs].reverse())).toEqual(expected);
+  };
+
   describe('account tx', () => {
     it('recover account tx without fee and deposit', () => {
       const accountTx = randomCoreAccountTx();
-      expect(groupUserTxs([accountTx])).toEqual([
-        new UserAccountTx(
-          accountTx.txId,
-          accountTx.userId,
-          accountTx.aliasHash,
-          accountTx.newSpendingPublicKey1,
-          accountTx.newSpendingPublicKey2,
-          accountTx.migrated,
-          { assetId: 0, value: 0n },
-          accountTx.created,
-        ),
-      ]);
+      expectGroupedUserTxs(
+        [accountTx],
+        [
+          new UserAccountTx(
+            accountTx.txId,
+            accountTx.userId,
+            accountTx.aliasHash,
+            accountTx.newSpendingPublicKey1,
+            accountTx.newSpendingPublicKey2,
+            accountTx.migrated,
+            { assetId: 0, value: 0n },
+            accountTx.created,
+          ),
+        ],
+      );
     });
 
     it('recover account tx with fee and deposit', () => {
       const txRefNo = createTxRefNo();
       const accountTx = randomCoreAccountTx({ txRefNo });
       const depositAndFeeTx = createDepositTx({ publicValue: 100n, fee: 20n, txRefNo });
-      expect(groupUserTxs([accountTx, depositAndFeeTx])).toEqual([
-        new UserPaymentTx(
-          depositAndFeeTx.txId,
-          depositAndFeeTx.userId,
-          ProofId.DEPOSIT,
-          { assetId: 0, value: 80n },
-          { assetId: 0, value: 20n },
-          depositAndFeeTx.publicOwner,
-          false,
-          depositAndFeeTx.created,
-        ),
-        new UserAccountTx(
-          accountTx.txId,
-          accountTx.userId,
-          accountTx.aliasHash,
-          accountTx.newSpendingPublicKey1,
-          accountTx.newSpendingPublicKey2,
-          accountTx.migrated,
-          { assetId: 0, value: 0n },
-          accountTx.created,
-        ),
-      ]);
+      expectGroupedUserTxs(
+        [depositAndFeeTx, accountTx],
+        [
+          new UserPaymentTx(
+            depositAndFeeTx.txId,
+            depositAndFeeTx.userId,
+            ProofId.DEPOSIT,
+            { assetId: 0, value: 80n },
+            { assetId: 0, value: 20n },
+            depositAndFeeTx.publicOwner,
+            false,
+            depositAndFeeTx.created,
+          ),
+          new UserAccountTx(
+            accountTx.txId,
+            accountTx.userId,
+            accountTx.aliasHash,
+            accountTx.newSpendingPublicKey1,
+            accountTx.newSpendingPublicKey2,
+            accountTx.migrated,
+            { assetId: 0, value: 0n },
+            accountTx.created,
+          ),
+        ],
+      );
     });
 
     it('recover account tx with fee paid by deposit', () => {
       const txRefNo = createTxRefNo();
       const accountTx = randomCoreAccountTx({ txRefNo });
       const depositAndFeeTx = createDepositTx({ publicValue: 20n, fee: 20n, txRefNo });
-      expect(groupUserTxs([accountTx, depositAndFeeTx])).toEqual([
-        new UserAccountTx(
-          accountTx.txId,
-          accountTx.userId,
-          accountTx.aliasHash,
-          accountTx.newSpendingPublicKey1,
-          accountTx.newSpendingPublicKey2,
-          accountTx.migrated,
-          { assetId: 0, value: 20n },
-          accountTx.created,
-        ),
-      ]);
+      expectGroupedUserTxs(
+        [accountTx, depositAndFeeTx],
+        [
+          new UserAccountTx(
+            accountTx.txId,
+            accountTx.userId,
+            accountTx.aliasHash,
+            accountTx.newSpendingPublicKey1,
+            accountTx.newSpendingPublicKey2,
+            accountTx.migrated,
+            { assetId: 0, value: 20n },
+            accountTx.created,
+          ),
+        ],
+      );
     });
 
     it('recover account tx with fee paid by private send', () => {
       const txRefNo = createTxRefNo();
       const accountTx = randomCoreAccountTx({ txRefNo });
       const feeTx = createFeeTx(20n, txRefNo);
-      expect(groupUserTxs([accountTx, feeTx])).toEqual([
-        new UserAccountTx(
-          accountTx.txId,
-          accountTx.userId,
-          accountTx.aliasHash,
-          accountTx.newSpendingPublicKey1,
-          accountTx.newSpendingPublicKey2,
-          accountTx.migrated,
-          { assetId: 0, value: 20n },
-          accountTx.created,
-        ),
-      ]);
+      expectGroupedUserTxs(
+        [accountTx, feeTx],
+        [
+          new UserAccountTx(
+            accountTx.txId,
+            accountTx.userId,
+            accountTx.aliasHash,
+            accountTx.newSpendingPublicKey1,
+            accountTx.newSpendingPublicKey2,
+            accountTx.migrated,
+            { assetId: 0, value: 20n },
+            accountTx.created,
+          ),
+        ],
+      );
     });
   });
 
   describe('deposit tx', () => {
     it('recover deposit tx', () => {
       const depositTx = createDepositTx({ publicValue: 100n, fee: 20n });
-      expect(groupUserTxs([depositTx])).toEqual([
-        new UserPaymentTx(
-          depositTx.txId,
-          depositTx.userId,
-          ProofId.DEPOSIT,
-          { assetId: 0, value: 80n },
-          { assetId: 0, value: 20n },
-          depositTx.publicOwner,
-          false,
-          depositTx.created,
-        ),
-      ]);
+      expectGroupedUserTxs(
+        [depositTx],
+        [
+          new UserPaymentTx(
+            depositTx.txId,
+            depositTx.userId,
+            ProofId.DEPOSIT,
+            { assetId: 0, value: 80n },
+            { assetId: 0, value: 20n },
+            depositTx.publicOwner,
+            false,
+            depositTx.created,
+          ),
+        ],
+      );
     });
 
     it('recover deposit tx with fee paying tx', () => {
       const txRefNo = createTxRefNo();
       const depositTx = createDepositTx({ assetId: garbageAssetId, publicValue: 80n, txRefNo });
       const feeTx = createFeeTx(20n, txRefNo);
-      expect(groupUserTxs([depositTx, feeTx])).toEqual([
-        new UserPaymentTx(
-          depositTx.txId,
-          depositTx.userId,
-          ProofId.DEPOSIT,
-          { assetId: garbageAssetId, value: 80n },
-          { assetId: 0, value: 20n },
-          depositTx.publicOwner,
-          false,
-          depositTx.created,
-        ),
-      ]);
+      expectGroupedUserTxs(
+        [depositTx, feeTx],
+        [
+          new UserPaymentTx(
+            depositTx.txId,
+            depositTx.userId,
+            ProofId.DEPOSIT,
+            { assetId: garbageAssetId, value: 80n },
+            { assetId: 0, value: 20n },
+            depositTx.publicOwner,
+            false,
+            depositTx.created,
+          ),
+        ],
+      );
     });
   });
 
   describe('withdraw tx', () => {
     it('recover withdraw tx', () => {
       const withdrawTx = createWithdrawTx({ publicValue: 80n, fee: 20n, privateInput: 200n });
-      expect(groupUserTxs([withdrawTx])).toEqual([
-        new UserPaymentTx(
-          withdrawTx.txId,
-          withdrawTx.userId,
-          ProofId.WITHDRAW,
-          { assetId: 0, value: 80n },
-          { assetId: 0, value: 20n },
-          withdrawTx.publicOwner,
-          true,
-          withdrawTx.created,
-        ),
-      ]);
+      expectGroupedUserTxs(
+        [withdrawTx],
+        [
+          new UserPaymentTx(
+            withdrawTx.txId,
+            withdrawTx.userId,
+            ProofId.WITHDRAW,
+            { assetId: 0, value: 80n },
+            { assetId: 0, value: 20n },
+            withdrawTx.publicOwner,
+            true,
+            withdrawTx.created,
+          ),
+        ],
+      );
+    });
+
+    it('recover withdraw tx with chained txs', () => {
+      const chainedTxs = createChainedTxs([30n, 24n, 46n]);
+      const withdrawTx = createWithdrawTx({ publicValue: 80n, fee: 20n, privateInput: 200n });
+      expectGroupedUserTxs(
+        [...chainedTxs, withdrawTx],
+        [
+          new UserPaymentTx(
+            withdrawTx.txId,
+            withdrawTx.userId,
+            ProofId.WITHDRAW,
+            { assetId: 0, value: 80n },
+            { assetId: 0, value: 20n },
+            withdrawTx.publicOwner,
+            true,
+            withdrawTx.created,
+          ),
+        ],
+      );
     });
 
     it('recover withdraw tx with fee paying asset', () => {
       const txRefNo = createTxRefNo();
       const withdrawTx = createWithdrawTx({ assetId: garbageAssetId, publicValue: 80n, txRefNo });
       const feeTx = createFeeTx(20n, txRefNo);
-      expect(groupUserTxs([withdrawTx, feeTx])).toEqual([
-        new UserPaymentTx(
-          withdrawTx.txId,
-          withdrawTx.userId,
-          ProofId.WITHDRAW,
-          { assetId: garbageAssetId, value: 80n },
-          { assetId: 0, value: 20n },
-          withdrawTx.publicOwner,
-          true,
-          withdrawTx.created,
-        ),
-      ]);
+      expectGroupedUserTxs(
+        [withdrawTx, feeTx],
+        [
+          new UserPaymentTx(
+            withdrawTx.txId,
+            withdrawTx.userId,
+            ProofId.WITHDRAW,
+            { assetId: garbageAssetId, value: 80n },
+            { assetId: 0, value: 20n },
+            withdrawTx.publicOwner,
+            true,
+            withdrawTx.created,
+          ),
+        ],
+      );
     });
   });
 
@@ -215,24 +279,27 @@ describe('groupUserTxs', () => {
         isSender: true,
         isRecipient: true,
       });
-      expect(groupUserTxs([sendTx])).toEqual([
-        new UserPaymentTx(
-          sendTx.txId,
-          sendTx.userId,
-          ProofId.SEND,
-          { assetId: 0, value: 80n },
-          { assetId: 0, value: 15n },
-          undefined,
-          true,
-          sendTx.created,
-        ),
-      ]);
+      expectGroupedUserTxs(
+        [sendTx],
+        [
+          new UserPaymentTx(
+            sendTx.txId,
+            sendTx.userId,
+            ProofId.SEND,
+            { assetId: 0, value: 80n },
+            { assetId: 0, value: 15n },
+            undefined,
+            true,
+            sendTx.created,
+          ),
+        ],
+      );
     });
 
     it('does not return a fee tx', () => {
       const txRefNo = createTxRefNo();
       const feeTx = createFeeTx(20n, txRefNo);
-      expect(groupUserTxs([feeTx])).toEqual([]);
+      expectGroupedUserTxs([feeTx], []);
     });
 
     it('recover transfer tx sent to another user', () => {
@@ -244,18 +311,48 @@ describe('groupUserTxs', () => {
         isSender: true,
         isRecipient: false,
       });
-      expect(groupUserTxs([sendTx])).toEqual([
-        new UserPaymentTx(
-          sendTx.txId,
-          sendTx.userId,
-          ProofId.SEND,
-          { assetId: 0, value: 80n },
-          { assetId: 0, value: 15n },
-          undefined,
-          true,
-          sendTx.created,
-        ),
-      ]);
+      expectGroupedUserTxs(
+        [sendTx],
+        [
+          new UserPaymentTx(
+            sendTx.txId,
+            sendTx.userId,
+            ProofId.SEND,
+            { assetId: 0, value: 80n },
+            { assetId: 0, value: 15n },
+            undefined,
+            true,
+            sendTx.created,
+          ),
+        ],
+      );
+    });
+
+    it('recover transfer tx sent to another user with chained txs', () => {
+      const chainedTxs = createChainedTxs([30n, 24n, 46n]);
+      const sendTx = randomCorePaymentTx({
+        proofId: ProofId.SEND,
+        privateInput: 100n,
+        senderPrivateOutput: 5n,
+        recipientPrivateOutput: 80n,
+        isSender: true,
+        isRecipient: false,
+      });
+      expectGroupedUserTxs(
+        [...chainedTxs, sendTx],
+        [
+          new UserPaymentTx(
+            sendTx.txId,
+            sendTx.userId,
+            ProofId.SEND,
+            { assetId: 0, value: 80n },
+            { assetId: 0, value: 15n },
+            undefined,
+            true,
+            sendTx.created,
+          ),
+        ],
+      );
     });
 
     it('recover transfer tx sent to another user without recipient state', () => {
@@ -267,18 +364,21 @@ describe('groupUserTxs', () => {
         isSender: true,
         isRecipient: false,
       });
-      expect(groupUserTxs([sendTx])).toEqual([
-        new UserPaymentTx(
-          sendTx.txId,
-          sendTx.userId,
-          ProofId.SEND,
-          { assetId: 0, value: 95n },
-          { assetId: 0, value: 0n },
-          undefined,
-          true,
-          sendTx.created,
-        ),
-      ]);
+      expectGroupedUserTxs(
+        [sendTx],
+        [
+          new UserPaymentTx(
+            sendTx.txId,
+            sendTx.userId,
+            ProofId.SEND,
+            { assetId: 0, value: 95n },
+            { assetId: 0, value: 0n },
+            undefined,
+            true,
+            sendTx.created,
+          ),
+        ],
+      );
     });
 
     it('recover transfer tx sent to us', () => {
@@ -288,18 +388,21 @@ describe('groupUserTxs', () => {
         isRecipient: true,
         isSender: false,
       });
-      expect(groupUserTxs([sendTx])).toEqual([
-        new UserPaymentTx(
-          sendTx.txId,
-          sendTx.userId,
-          ProofId.SEND,
-          { assetId: 0, value: 80n },
-          { assetId: 0, value: 0n },
-          undefined,
-          false,
-          sendTx.created,
-        ),
-      ]);
+      expectGroupedUserTxs(
+        [sendTx],
+        [
+          new UserPaymentTx(
+            sendTx.txId,
+            sendTx.userId,
+            ProofId.SEND,
+            { assetId: 0, value: 80n },
+            { assetId: 0, value: 0n },
+            undefined,
+            false,
+            sendTx.created,
+          ),
+        ],
+      );
     });
 
     it('recover transfer tx sent to another user with fee paying tx', () => {
@@ -315,18 +418,21 @@ describe('groupUserTxs', () => {
         txRefNo,
       });
       const feeTx = createFeeTx(20n, txRefNo);
-      expect(groupUserTxs([sendTx, feeTx])).toEqual([
-        new UserPaymentTx(
-          sendTx.txId,
-          sendTx.userId,
-          ProofId.SEND,
-          { assetId: garbageAssetId, value: 85n },
-          { assetId: 0, value: 20n },
-          undefined,
-          true,
-          sendTx.created,
-        ),
-      ]);
+      expectGroupedUserTxs(
+        [sendTx, feeTx],
+        [
+          new UserPaymentTx(
+            sendTx.txId,
+            sendTx.userId,
+            ProofId.SEND,
+            { assetId: garbageAssetId, value: 85n },
+            { assetId: 0, value: 20n },
+            undefined,
+            true,
+            sendTx.created,
+          ),
+        ],
+      );
     });
 
     it('recover transfer tx sent to another user with fee paying tx and without recipient state', () => {
@@ -342,18 +448,21 @@ describe('groupUserTxs', () => {
         txRefNo,
       });
       const feeTx = createFeeTx(20n, txRefNo);
-      expect(groupUserTxs([sendTx, feeTx])).toEqual([
-        new UserPaymentTx(
-          sendTx.txId,
-          sendTx.userId,
-          ProofId.SEND,
-          { assetId: garbageAssetId, value: 85n },
-          { assetId: 0, value: 20n },
-          undefined,
-          true,
-          sendTx.created,
-        ),
-      ]);
+      expectGroupedUserTxs(
+        [sendTx, feeTx],
+        [
+          new UserPaymentTx(
+            sendTx.txId,
+            sendTx.userId,
+            ProofId.SEND,
+            { assetId: garbageAssetId, value: 85n },
+            { assetId: 0, value: 20n },
+            undefined,
+            true,
+            sendTx.created,
+          ),
+        ],
+      );
     });
   });
 
@@ -363,27 +472,59 @@ describe('groupUserTxs', () => {
 
     it('recover defi tx', () => {
       const defiTx = randomCoreDefiTx({ bridgeCallData });
-      expect(groupUserTxs([defiTx])).toEqual([
-        new UserDefiTx(
-          defiTx.txId,
-          defiTx.userId,
-          bridgeCallData,
-          { assetId: 0, value: defiTx.depositValue },
-          { assetId: 0, value: defiTx.txFee },
-          defiTx.created,
-          undefined,
-          {
-            state: UserDefiInteractionResultState.PENDING,
-            isAsync: undefined,
-            interactionNonce: undefined,
-            success: undefined,
-            outputValueA: undefined,
-            outputValueB: undefined,
-            claimSettled: undefined,
-            finalised: undefined,
-          },
-        ),
-      ]);
+      expectGroupedUserTxs(
+        [defiTx],
+        [
+          new UserDefiTx(
+            defiTx.txId,
+            defiTx.userId,
+            bridgeCallData,
+            { assetId: 0, value: defiTx.depositValue },
+            { assetId: 0, value: defiTx.txFee },
+            defiTx.created,
+            undefined,
+            {
+              state: UserDefiInteractionResultState.PENDING,
+              isAsync: undefined,
+              interactionNonce: undefined,
+              success: undefined,
+              outputValueA: undefined,
+              outputValueB: undefined,
+              claimSettled: undefined,
+              finalised: undefined,
+            },
+          ),
+        ],
+      );
+    });
+
+    it('recover defi tx with chained txs', () => {
+      const chainedTxs = createChainedTxs([20n, 30n, 50n]);
+      const defiTx = randomCoreDefiTx({ bridgeCallData });
+      expectGroupedUserTxs(
+        [...chainedTxs, defiTx],
+        [
+          new UserDefiTx(
+            defiTx.txId,
+            defiTx.userId,
+            bridgeCallData,
+            { assetId: 0, value: defiTx.depositValue },
+            { assetId: 0, value: defiTx.txFee },
+            defiTx.created,
+            undefined,
+            {
+              state: UserDefiInteractionResultState.PENDING,
+              isAsync: undefined,
+              interactionNonce: undefined,
+              success: undefined,
+              outputValueA: undefined,
+              outputValueB: undefined,
+              claimSettled: undefined,
+              finalised: undefined,
+            },
+          ),
+        ],
+      );
     });
 
     it('recover deposited defi tx', () => {
@@ -395,27 +536,30 @@ describe('groupUserTxs', () => {
         interactionNonce: 45,
         isAsync: true,
       });
-      expect(groupUserTxs([defiTx])).toEqual([
-        new UserDefiTx(
-          defiTx.txId,
-          defiTx.userId,
-          bridgeCallData,
-          { assetId: 0, value: defiTx.depositValue },
-          { assetId: 0, value: defiTx.txFee },
-          defiTx.created,
-          defiTx.settled,
-          {
-            state: UserDefiInteractionResultState.AWAITING_FINALISATION,
-            isAsync: true,
-            interactionNonce: 45,
-            success: true,
-            outputValueA: { assetId: bridgeCallData.outputAssetIdA, value: 123n },
-            outputValueB: undefined,
-            claimSettled: undefined,
-            finalised: undefined,
-          },
-        ),
-      ]);
+      expectGroupedUserTxs(
+        [defiTx],
+        [
+          new UserDefiTx(
+            defiTx.txId,
+            defiTx.userId,
+            bridgeCallData,
+            { assetId: 0, value: defiTx.depositValue },
+            { assetId: 0, value: defiTx.txFee },
+            defiTx.created,
+            defiTx.settled,
+            {
+              state: UserDefiInteractionResultState.AWAITING_FINALISATION,
+              isAsync: true,
+              interactionNonce: 45,
+              success: true,
+              outputValueA: { assetId: bridgeCallData.outputAssetIdA, value: 123n },
+              outputValueB: undefined,
+              claimSettled: undefined,
+              finalised: undefined,
+            },
+          ),
+        ],
+      );
     });
 
     it('assign correct asset id for virtual output assets', () => {
@@ -429,27 +573,30 @@ describe('groupUserTxs', () => {
         interactionNonce: 678,
         isAsync: true,
       });
-      expect(groupUserTxs([defiTx])).toEqual([
-        new UserDefiTx(
-          defiTx.txId,
-          defiTx.userId,
-          bridgeCallData,
-          { assetId: 0, value: defiTx.depositValue },
-          { assetId: 0, value: defiTx.txFee },
-          defiTx.created,
-          defiTx.settled,
-          {
-            state: UserDefiInteractionResultState.AWAITING_FINALISATION,
-            isAsync: true,
-            interactionNonce: 678,
-            success: true,
-            outputValueA: { assetId: virtualAssetIdFlag + 678, value: 23n },
-            outputValueB: { assetId: virtualAssetIdFlag + 678, value: 45n },
-            claimSettled: undefined,
-            finalised: undefined,
-          },
-        ),
-      ]);
+      expectGroupedUserTxs(
+        [defiTx],
+        [
+          new UserDefiTx(
+            defiTx.txId,
+            defiTx.userId,
+            bridgeCallData,
+            { assetId: 0, value: defiTx.depositValue },
+            { assetId: 0, value: defiTx.txFee },
+            defiTx.created,
+            defiTx.settled,
+            {
+              state: UserDefiInteractionResultState.AWAITING_FINALISATION,
+              isAsync: true,
+              interactionNonce: 678,
+              success: true,
+              outputValueA: { assetId: virtualAssetIdFlag + 678, value: 23n },
+              outputValueB: { assetId: virtualAssetIdFlag + 678, value: 45n },
+              claimSettled: undefined,
+              finalised: undefined,
+            },
+          ),
+        ],
+      );
     });
 
     it('recover finalised defi tx with pending claim', () => {
@@ -464,39 +611,42 @@ describe('groupUserTxs', () => {
         settled: new Date(now),
         finalised: new Date(now + 1),
       });
-      expect(groupUserTxs([defiTx])).toEqual([
-        new UserDefiClaimTx(
-          undefined,
-          defiTx.txId,
-          defiTx.userId,
-          bridgeCallData,
-          { assetId: 0, value: defiTx.depositValue },
-          true,
-          { assetId: 1, value: 23n },
-          { assetId: 3, value: 45n },
-          defiTx.finalised!,
-          undefined,
-        ),
-        new UserDefiTx(
-          defiTx.txId,
-          defiTx.userId,
-          bridgeCallData,
-          { assetId: 0, value: defiTx.depositValue },
-          { assetId: 0, value: defiTx.txFee },
-          defiTx.created,
-          defiTx.settled,
-          {
-            state: UserDefiInteractionResultState.AWAITING_SETTLEMENT,
-            isAsync: true,
-            interactionNonce: 678,
-            success: true,
-            outputValueA: { assetId: 1, value: 23n },
-            outputValueB: { assetId: 3, value: 45n },
-            claimSettled: undefined,
-            finalised: defiTx.finalised,
-          },
-        ),
-      ]);
+      expectGroupedUserTxs(
+        [defiTx],
+        [
+          new UserDefiClaimTx(
+            undefined,
+            defiTx.txId,
+            defiTx.userId,
+            bridgeCallData,
+            { assetId: 0, value: defiTx.depositValue },
+            true,
+            { assetId: 1, value: 23n },
+            { assetId: 3, value: 45n },
+            defiTx.finalised!,
+            undefined,
+          ),
+          new UserDefiTx(
+            defiTx.txId,
+            defiTx.userId,
+            bridgeCallData,
+            { assetId: 0, value: defiTx.depositValue },
+            { assetId: 0, value: defiTx.txFee },
+            defiTx.created,
+            defiTx.settled,
+            {
+              state: UserDefiInteractionResultState.AWAITING_SETTLEMENT,
+              isAsync: true,
+              interactionNonce: 678,
+              success: true,
+              outputValueA: { assetId: 1, value: 23n },
+              outputValueB: { assetId: 3, value: 45n },
+              claimSettled: undefined,
+              finalised: defiTx.finalised,
+            },
+          ),
+        ],
+      );
     });
 
     it('recover settled defi tx and settled claim tx', () => {
@@ -514,39 +664,42 @@ describe('groupUserTxs', () => {
         claimSettled: new Date(now + 2),
         claimTxId,
       });
-      expect(groupUserTxs([defiTx])).toEqual([
-        new UserDefiClaimTx(
-          claimTxId,
-          defiTx.txId,
-          defiTx.userId,
-          bridgeCallData,
-          { assetId: 0, value: defiTx.depositValue },
-          true,
-          { assetId: bridgeCallData.outputAssetIdA, value: 23n },
-          { assetId: virtualAssetIdFlag + 678, value: 45n },
-          defiTx.finalised!,
-          defiTx.claimSettled!,
-        ),
-        new UserDefiTx(
-          defiTx.txId,
-          defiTx.userId,
-          bridgeCallData,
-          { assetId: 0, value: defiTx.depositValue },
-          { assetId: 0, value: defiTx.txFee },
-          defiTx.created,
-          defiTx.settled,
-          {
-            state: UserDefiInteractionResultState.SETTLED,
-            isAsync: true,
-            interactionNonce: 678,
-            success: true,
-            outputValueA: { assetId: bridgeCallData.outputAssetIdA, value: 23n },
-            outputValueB: { assetId: virtualAssetIdFlag + 678, value: 45n },
-            claimSettled: defiTx.claimSettled,
-            finalised: defiTx.finalised,
-          },
-        ),
-      ]);
+      expectGroupedUserTxs(
+        [defiTx],
+        [
+          new UserDefiClaimTx(
+            claimTxId,
+            defiTx.txId,
+            defiTx.userId,
+            bridgeCallData,
+            { assetId: 0, value: defiTx.depositValue },
+            true,
+            { assetId: bridgeCallData.outputAssetIdA, value: 23n },
+            { assetId: virtualAssetIdFlag + 678, value: 45n },
+            defiTx.finalised!,
+            defiTx.claimSettled!,
+          ),
+          new UserDefiTx(
+            defiTx.txId,
+            defiTx.userId,
+            bridgeCallData,
+            { assetId: 0, value: defiTx.depositValue },
+            { assetId: 0, value: defiTx.txFee },
+            defiTx.created,
+            defiTx.settled,
+            {
+              state: UserDefiInteractionResultState.SETTLED,
+              isAsync: true,
+              interactionNonce: 678,
+              success: true,
+              outputValueA: { assetId: bridgeCallData.outputAssetIdA, value: 23n },
+              outputValueB: { assetId: virtualAssetIdFlag + 678, value: 45n },
+              claimSettled: defiTx.claimSettled,
+              finalised: defiTx.finalised,
+            },
+          ),
+        ],
+      );
     });
 
     it('recover defi tx with join split tx', () => {
@@ -558,54 +711,60 @@ describe('groupUserTxs', () => {
         txRefNo,
       });
       const defiTx = randomCoreDefiTx({ bridgeCallData, txFee: 0n, txRefNo });
-      expect(groupUserTxs([jsTx, defiTx])).toEqual([
-        new UserDefiTx(
-          defiTx.txId,
-          defiTx.userId,
-          bridgeCallData,
-          { assetId: 0, value: defiTx.depositValue },
-          { assetId: 0, value: 20n },
-          defiTx.created,
-          undefined,
-          {
-            state: UserDefiInteractionResultState.PENDING,
-            isAsync: undefined,
-            interactionNonce: undefined,
-            success: undefined,
-            outputValueA: undefined,
-            outputValueB: undefined,
-            claimSettled: undefined,
-            finalised: undefined,
-          },
-        ),
-      ]);
+      expectGroupedUserTxs(
+        [jsTx, defiTx],
+        [
+          new UserDefiTx(
+            defiTx.txId,
+            defiTx.userId,
+            bridgeCallData,
+            { assetId: 0, value: defiTx.depositValue },
+            { assetId: 0, value: 20n },
+            defiTx.created,
+            undefined,
+            {
+              state: UserDefiInteractionResultState.PENDING,
+              isAsync: undefined,
+              interactionNonce: undefined,
+              success: undefined,
+              outputValueA: undefined,
+              outputValueB: undefined,
+              claimSettled: undefined,
+              finalised: undefined,
+            },
+          ),
+        ],
+      );
     });
 
     it('recover defi tx with fee paying tx', () => {
       const txRefNo = createTxRefNo();
       const defiTx = randomCoreDefiTx({ bridgeCallData: garbageBridgeCallData, txFee: 0n, txRefNo });
       const feeTx = createFeeTx(20n, txRefNo);
-      expect(groupUserTxs([defiTx, feeTx])).toEqual([
-        new UserDefiTx(
-          defiTx.txId,
-          defiTx.userId,
-          garbageBridgeCallData,
-          { assetId: garbageAssetId, value: defiTx.depositValue },
-          { assetId: 0, value: 20n },
-          defiTx.created,
-          undefined,
-          {
-            state: UserDefiInteractionResultState.PENDING,
-            isAsync: undefined,
-            interactionNonce: undefined,
-            success: undefined,
-            outputValueA: undefined,
-            outputValueB: undefined,
-            claimSettled: undefined,
-            finalised: undefined,
-          },
-        ),
-      ]);
+      expectGroupedUserTxs(
+        [defiTx, feeTx],
+        [
+          new UserDefiTx(
+            defiTx.txId,
+            defiTx.userId,
+            garbageBridgeCallData,
+            { assetId: garbageAssetId, value: defiTx.depositValue },
+            { assetId: 0, value: 20n },
+            defiTx.created,
+            undefined,
+            {
+              state: UserDefiInteractionResultState.PENDING,
+              isAsync: undefined,
+              interactionNonce: undefined,
+              success: undefined,
+              outputValueA: undefined,
+              outputValueB: undefined,
+              claimSettled: undefined,
+              finalised: undefined,
+            },
+          ),
+        ],
+      );
     });
 
     it('recover defi tx with join split tx and fee paying tx', () => {
@@ -619,27 +778,30 @@ describe('groupUserTxs', () => {
       });
       const defiTx = randomCoreDefiTx({ bridgeCallData: garbageBridgeCallData, txFee: 0n, txRefNo });
       const feeTx = createFeeTx(20n, txRefNo);
-      expect(groupUserTxs([jsTx, defiTx, feeTx])).toEqual([
-        new UserDefiTx(
-          defiTx.txId,
-          defiTx.userId,
-          garbageBridgeCallData,
-          { assetId: garbageAssetId, value: defiTx.depositValue },
-          { assetId: 0, value: 20n },
-          defiTx.created,
-          undefined,
-          {
-            state: UserDefiInteractionResultState.PENDING,
-            isAsync: undefined,
-            interactionNonce: undefined,
-            success: undefined,
-            outputValueA: undefined,
-            outputValueB: undefined,
-            claimSettled: undefined,
-            finalised: undefined,
-          },
-        ),
-      ]);
+      expectGroupedUserTxs(
+        [jsTx, defiTx, feeTx],
+        [
+          new UserDefiTx(
+            defiTx.txId,
+            defiTx.userId,
+            garbageBridgeCallData,
+            { assetId: garbageAssetId, value: defiTx.depositValue },
+            { assetId: 0, value: 20n },
+            defiTx.created,
+            undefined,
+            {
+              state: UserDefiInteractionResultState.PENDING,
+              isAsync: undefined,
+              interactionNonce: undefined,
+              success: undefined,
+              outputValueA: undefined,
+              outputValueB: undefined,
+              claimSettled: undefined,
+              finalised: undefined,
+            },
+          ),
+        ],
+      );
     });
   });
 });

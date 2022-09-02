@@ -13,7 +13,7 @@ import {
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { createFundedWalletProvider } from './create_funded_wallet_provider';
-import { registerUsers } from './sdk_utils';
+import { addUsers } from './sdk_utils';
 
 jest.setTimeout(20 * 60 * 1000);
 EventEmitter.defaultMaxListeners = 30;
@@ -36,8 +36,8 @@ describe('end-to-end defi tests', () => {
   let sdk: AztecSdk;
   let accounts: EthAddress[] = [];
   let userIds: GrumpkinAddress[] = [];
+  let signers: SchnorrSigner[] = [];
   let shieldValue: AssetValue;
-  const signers: SchnorrSigner[] = [];
   const debug = createDebug('bb:e2e_curve');
 
   beforeAll(async () => {
@@ -56,11 +56,7 @@ describe('end-to-end defi tests', () => {
     await sdk.awaitSynchronised();
 
     shieldValue = sdk.toBaseUnits(0, '0.10');
-    userIds = await registerUsers(sdk, accounts, shieldValue);
-    for (const account of accounts) {
-      const spendingKey = await sdk.generateSpendingKeyPair(account);
-      signers.push(await sdk.createSchnorrSigner(spendingKey.privateKey));
-    }
+    ({ userIds, signers } = await addUsers(sdk, accounts, shieldValue));
   });
 
   afterAll(async () => {
@@ -75,7 +71,6 @@ describe('end-to-end defi tests', () => {
     const ethAssetId = 0;
     const wstETHAssetId = 2;
     const ethToWstETHBridge = new BridgeCallData(bridgeAddressId, ethAssetId, wstETHAssetId);
-    const ethToWstETHFees = await sdk.getDefiFees(ethToWstETHBridge);
 
     // Rollup 1.
     // Account 0 swaps ETH to wstETH.
@@ -86,6 +81,10 @@ describe('end-to-end defi tests', () => {
       await debugBalance(outputAssetIdA);
 
       const depositValue = sdk.toBaseUnits(inputAssetIdA, '0.05');
+      const ethToWstETHFees = await sdk.getDefiFees(ethToWstETHBridge, {
+        userId: userIds[0],
+        assetValue: depositValue,
+      });
       const fee = ethToWstETHFees[DefiSettlementTime.INSTANT];
 
       debug(
@@ -124,8 +123,6 @@ describe('end-to-end defi tests', () => {
     // Account 0 swaps wstETH to ETH.
     {
       const wstETHToEthBridge = new BridgeCallData(bridgeAddressId, wstETHAssetId, ethAssetId);
-      const wstETHToEthFees = await sdk.getDefiFees(wstETHToEthBridge);
-
       const { inputAssetIdA, outputAssetIdA } = wstETHToEthBridge;
 
       await debugBalance(inputAssetIdA);
@@ -135,6 +132,10 @@ describe('end-to-end defi tests', () => {
       const outputBalanceBefore = await sdk.getBalance(userIds[0], outputAssetIdA);
 
       const depositValue = sdk.toBaseUnits(inputAssetIdA, '0.025');
+      const wstETHToEthFees = await sdk.getDefiFees(wstETHToEthBridge, {
+        userId: userIds[0],
+        assetValue: depositValue,
+      });
       const fee = wstETHToEthFees[DefiSettlementTime.INSTANT];
 
       debug(
