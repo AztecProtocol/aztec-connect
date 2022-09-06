@@ -27,20 +27,18 @@ function aggregatePositions(balances: AssetValue[], defiTxs: UserDefiTx[], recip
     if (recipe) positions.push({ type: 'sync-open', handleValue: assetValue, recipe });
   }
   for (const tx of defiTxs) {
-    const { state, isAsync } = tx.interactionResult;
-    if (state !== UserDefiInteractionResultState.SETTLED) {
-      if (isAsync) {
-        const recipe = recipes.find(recipeMatcher(tx.bridgeCallData));
-        if (recipe) positions.push({ type: 'async', tx, recipe });
-      } else {
-        const enteringRecipe = recipes.find(recipeMatcher(tx.bridgeCallData));
-        if (enteringRecipe) {
-          positions.push({ type: 'sync-entering', tx, recipe: enteringRecipe });
+    if (tx.interactionResult.state !== UserDefiInteractionResultState.SETTLED) {
+      const enteringRecipe = recipes.find(recipeMatcher(tx.bridgeCallData));
+      if (enteringRecipe) {
+        if (enteringRecipe.isAsync) {
+          positions.push({ type: 'async', tx, recipe: enteringRecipe });
         } else {
-          const exitingRecipe = recipes.find(exitingRecipeMatcher(tx.bridgeCallData));
-          if (exitingRecipe) {
-            positions.push({ type: 'sync-exiting', tx, recipe: exitingRecipe });
-          }
+          positions.push({ type: 'sync-entering', tx, recipe: enteringRecipe });
+        }
+      } else {
+        const exitingRecipe = recipes.find(exitingRecipeMatcher(tx.bridgeCallData));
+        if (exitingRecipe) {
+          positions.push({ type: 'sync-exiting', tx, recipe: exitingRecipe });
         }
       }
     }
