@@ -76,6 +76,7 @@ function createRecipe(
   }
   return {
     ...args,
+    isAsync,
     bridgeAddressId,
     exitBridgeAddressId,
     address,

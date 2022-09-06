@@ -45,8 +45,8 @@ function getTimeUntilMaturityInYears(maturityTimeInSeconds: number | undefined) 
 }
 
 function getROIAfterMaturity(amount: number | undefined, timeUntilMaturityInYears: number, annualYieldValue: number) {
-  if (!amount) return 0;
-  return amount * annualYieldValue * timeUntilMaturityInYears;
+  if (!amount) return 0n;
+  return BigInt(Math.floor(amount * annualYieldValue * timeUntilMaturityInYears));
 }
 
 function getFixedYieldReturn(
@@ -57,7 +57,7 @@ function getFixedYieldReturn(
 ) {
   const timeUntilMaturityInYears = getTimeUntilMaturityInYears(timeToMaturity);
   const roiAfterMaturity = getROIAfterMaturity(amount, timeUntilMaturityInYears, annualYieldValue);
-  return new Amount(BigInt(roiAfterMaturity), asset);
+  return new Amount(roiAfterMaturity, asset);
 }
 
 interface FieldProps {
