@@ -59,7 +59,12 @@ export function DefiExitPage1({
             feeAmounts={validationResult?.feeAmounts}
           />
         }
-        rightPanel={<RecipeSettlementTimeInformationSection recipe={recipe} selectedSpeed={fields.speed} />}
+        rightPanel={
+          <RecipeSettlementTimeInformationSection
+            bridgeCallData={validationResult.input.bridgeCallData}
+            selectedSpeed={fields.speed}
+          />
+        }
       />
       <FooterSection onNext={onNext} nextDisabled={!validationResult.isValid} feedback={feedback.footer} />
     </div>

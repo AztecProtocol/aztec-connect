@@ -14,12 +14,25 @@ import {
 import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { ViewingKey } from '@aztec/barretenberg/viewing_key';
 import { BridgeResolver } from '../bridge';
+import { AddressCheckProviders } from '../compliance/address_check_provider';
+import { AztecBlacklistProvider } from '../compliance/aztec_blacklist_provider';
+import { RateLimiter } from '../compliance/rate_limiter';
 import { RollupDb } from '../rollup_db';
 import { TxFeeResolver } from '../tx_fee_resolver';
+import { Tx, TxRequest } from './tx';
 import { TxReceiver } from './tx_receiver';
 
 type Mockify<T> = {
   [P in keyof T]: jest.Mock;
+};
+
+let testDate = Date.parse('2022-10-10T09:30:00');
+const currentDate = () => {
+  return new Date(testDate);
+};
+
+const createTxRequest = (txs: Tx[], requestSender: string) => {
+  return { txs, requestSender } as TxRequest;
 };
 
 describe('tx receiver', () => {
@@ -31,6 +44,9 @@ describe('tx receiver', () => {
   let accountVerifier: Mockify<AccountVerifier>;
   let txFeeResolver: Mockify<TxFeeResolver>;
   let bridgeResolver: Mockify<BridgeResolver>;
+  let spy: any;
+  const realDate = global.Date;
+  const blacklistProvider = new AztecBlacklistProvider([]);
   const maxAssetId = 2;
   const assets = Array(maxAssetId + 1).fill(0);
   const feePayingAssets = [0, 1];
@@ -121,6 +137,13 @@ describe('tx receiver', () => {
   beforeEach(() => {
     const barretenberg = {} as any;
 
+    spy = jest.spyOn(global, 'Date').mockImplementation((...args): any => {
+      if (args.length) {
+        return new realDate(...args);
+      }
+      return currentDate() as any;
+    });
+
     noteAlgo = {
       accountNoteCommitment: jest.fn().mockReturnValue(randomBytes(32)),
     } as any;
@@ -170,6 +193,9 @@ describe('tx receiver', () => {
       getBridgeConfig: jest.fn().mockReturnValue({}),
     } as any;
 
+    const addressCheckProviders = new AddressCheckProviders();
+    addressCheckProviders.addProvider(blacklistProvider);
+
     txReceiver = new TxReceiver(
       barretenberg,
       noteAlgo as any,
@@ -181,15 +207,21 @@ describe('tx receiver', () => {
       txFeeResolver as any,
       metrics,
       bridgeResolver as any,
+      new RateLimiter(5),
+      addressCheckProviders,
       () => {},
     );
+  });
+
+  afterEach(() => {
+    spy.mockRestore();
   });
 
   describe('deposit tx', () => {
     it('accept a deposit tx', async () => {
       const txs = [mockTx({ proofId: ProofId.DEPOSIT, publicValue: 1n })];
 
-      await txReceiver.receiveTxs(txs);
+      await txReceiver.receiveTxs(createTxRequest(txs, 'id1'));
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(1);
       expect(rollupDb.addTxs).toHaveBeenCalledWith([expect.objectContaining({ id: txs[0].proof.txId })]);
     });
@@ -199,7 +231,7 @@ describe('tx receiver', () => {
         mockTx({ proofId: ProofId.DEPOSIT, publicAssetId: nonFeePayingAssetId, txFeeAssetId: nonFeePayingAssetId }),
       ];
 
-      await expect(() => txReceiver.receiveTxs(txs)).rejects.toThrow(
+      await expect(() => txReceiver.receiveTxs(createTxRequest(txs, 'id1'))).rejects.toThrow(
         'Transactions must have exactly 1 fee paying asset.',
       );
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
@@ -208,7 +240,7 @@ describe('tx receiver', () => {
     it('reject a deposit tx with unregistered asset', async () => {
       const txs = [mockTx({ proofId: ProofId.DEPOSIT, publicAssetId: maxAssetId + 1 })];
 
-      await expect(() => txReceiver.receiveTxs(txs)).rejects.toThrow('Unsupported asset');
+      await expect(() => txReceiver.receiveTxs(createTxRequest(txs, 'id1'))).rejects.toThrow('Unsupported asset');
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
     });
 
@@ -216,7 +248,9 @@ describe('tx receiver', () => {
       const txs = [mockTx({ proofId: ProofId.DEPOSIT, publicValue: 2n })];
       blockchain.getUserPendingDeposit.mockResolvedValue(1n);
 
-      await expect(() => txReceiver.receiveTxs(txs)).rejects.toThrow('User insufficient pending deposit balance.');
+      await expect(() => txReceiver.receiveTxs(createTxRequest(txs, 'id1'))).rejects.toThrow(
+        'User insufficient pending deposit balance.',
+      );
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
     });
 
@@ -227,7 +261,9 @@ describe('tx receiver', () => {
         { proofData: mockTx({ proofId: ProofId.DEPOSIT, publicValue: 7n }).proof.rawProofData },
       ]);
 
-      await expect(() => txReceiver.receiveTxs(txs)).rejects.toThrow('User insufficient pending deposit balance.');
+      await expect(() => txReceiver.receiveTxs(createTxRequest(txs, 'id1'))).rejects.toThrow(
+        'User insufficient pending deposit balance.',
+      );
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
     });
 
@@ -238,7 +274,7 @@ describe('tx receiver', () => {
         { proofData: mockTx({ proofId: ProofId.DEPOSIT, publicValue: 7n }).proof.rawProofData },
       ]);
 
-      await txReceiver.receiveTxs(txs);
+      await txReceiver.receiveTxs(createTxRequest(txs, 'id1'));
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(1);
       expect(rollupDb.addTxs).toHaveBeenCalledWith([expect.objectContaining({ id: txs[0].proof.txId })]);
     });
@@ -247,7 +283,9 @@ describe('tx receiver', () => {
       const tx = mockTx({ proofId: ProofId.DEPOSIT, publicValue: 1n });
       const txs = [{ proof: tx.proof, offchainTxData: tx.offchainTxData }];
 
-      await expect(() => txReceiver.receiveTxs(txs)).rejects.toThrow('Tx not approved or invalid signature');
+      await expect(() => txReceiver.receiveTxs(createTxRequest(txs, 'id1'))).rejects.toThrow(
+        'Tx not approved or invalid signature',
+      );
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
     });
 
@@ -256,7 +294,7 @@ describe('tx receiver', () => {
       const txs = [{ proof: tx.proof, offchainTxData: tx.offchainTxData }];
       blockchain.getUserProofApprovalStatus.mockResolvedValue(true);
 
-      await txReceiver.receiveTxs(txs);
+      await txReceiver.receiveTxs(createTxRequest(txs, 'id1'));
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(1);
       expect(rollupDb.addTxs).toHaveBeenCalledWith([expect.objectContaining({ id: txs[0].proof.txId })]);
     });
@@ -265,8 +303,237 @@ describe('tx receiver', () => {
       const txs = [mockTx({ proofId: ProofId.DEPOSIT, publicValue: 1n })];
       blockchain.validateSignature.mockReturnValue(false);
 
-      await expect(() => txReceiver.receiveTxs(txs)).rejects.toThrow('Tx not approved or invalid signature');
+      await expect(() => txReceiver.receiveTxs(createTxRequest(txs, 'id1'))).rejects.toThrow(
+        'Tx not approved or invalid signature',
+      );
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
+    });
+
+    it('rejects deposit txs once the rate limit has been breached', async () => {
+      // limit is 5 per day
+      const txs = [
+        mockTx({ proofId: ProofId.DEPOSIT, publicValue: 1n }),
+        mockTx({ proofId: ProofId.DEPOSIT, publicValue: 1n }),
+        mockTx({ proofId: ProofId.DEPOSIT, publicValue: 1n }),
+        mockTx({ proofId: ProofId.DEPOSIT, publicValue: 1n }),
+        mockTx({ proofId: ProofId.DEPOSIT, publicValue: 1n }),
+        mockTx({ proofId: ProofId.DEPOSIT, publicValue: 1n }),
+      ];
+
+      // the first 5 succeed
+      for (let i = 0; i < 5; i++) {
+        await txReceiver.receiveTxs(createTxRequest([txs[i]], 'id1'));
+        expect(rollupDb.addTxs).toHaveBeenCalledTimes(i + 1);
+        expect(rollupDb.addTxs.mock.calls[i][0]).toEqual([expect.objectContaining({ id: txs[i].proof.txId })]);
+      }
+
+      // the last one should fail
+      await expect(() => txReceiver.receiveTxs(createTxRequest([txs[5]], 'id1'))).rejects.toThrow(
+        'Exceeded deposit limit',
+      );
+    });
+
+    it('rejects all deposit txs once the rate limit has been breached', async () => {
+      // limit is 5 per day
+      const txs = [
+        mockTx({ proofId: ProofId.DEPOSIT, publicValue: 1n }),
+        mockTx({ proofId: ProofId.DEPOSIT, publicValue: 1n }),
+        mockTx({ proofId: ProofId.DEPOSIT, publicValue: 1n }),
+        mockTx({ proofId: ProofId.DEPOSIT, publicValue: 1n }),
+        mockTx({ proofId: ProofId.DEPOSIT, publicValue: 1n }),
+        mockTx({ proofId: ProofId.DEPOSIT, publicValue: 1n }),
+      ];
+
+      // trying to submit them all should fail
+      await expect(() => txReceiver.receiveTxs(createTxRequest(txs, 'id1'))).rejects.toThrow('Exceeded deposit limit');
+    });
+
+    it('applies deposit limits per id', async () => {
+      // limit is 5 per day
+      const txs = [
+        mockTx({ proofId: ProofId.DEPOSIT, publicValue: 1n }),
+        mockTx({ proofId: ProofId.DEPOSIT, publicValue: 1n }),
+        mockTx({ proofId: ProofId.DEPOSIT, publicValue: 1n }),
+        mockTx({ proofId: ProofId.DEPOSIT, publicValue: 1n }),
+        mockTx({ proofId: ProofId.DEPOSIT, publicValue: 1n }),
+        mockTx({ proofId: ProofId.DEPOSIT, publicValue: 1n }),
+      ];
+
+      const txs2 = [
+        mockTx({ proofId: ProofId.DEPOSIT, publicValue: 1n }),
+        mockTx({ proofId: ProofId.DEPOSIT, publicValue: 1n }),
+        mockTx({ proofId: ProofId.DEPOSIT, publicValue: 1n }),
+        mockTx({ proofId: ProofId.DEPOSIT, publicValue: 1n }),
+        mockTx({ proofId: ProofId.DEPOSIT, publicValue: 1n }),
+        mockTx({ proofId: ProofId.DEPOSIT, publicValue: 1n }),
+      ];
+
+      const id1 = 'id1';
+      const id2 = 'id2';
+
+      // the first 5 succeed
+      for (let i = 0; i < 5; i++) {
+        await txReceiver.receiveTxs(createTxRequest([txs[i]], id1));
+        expect(rollupDb.addTxs).toHaveBeenCalledTimes(i + 1);
+        expect(rollupDb.addTxs.mock.calls[i][0]).toEqual([expect.objectContaining({ id: txs[i].proof.txId })]);
+      }
+
+      // the last one should fail
+      await expect(() => txReceiver.receiveTxs(createTxRequest([txs[5]], id1))).rejects.toThrow(
+        'Exceeded deposit limit',
+      );
+
+      // id2 can continue to place deposits
+      // the first 5 succeed
+      for (let i = 0; i < 5; i++) {
+        await txReceiver.receiveTxs(createTxRequest([txs2[i]], id2));
+        expect(rollupDb.addTxs).toHaveBeenCalledTimes(i + 6);
+        expect(rollupDb.addTxs.mock.calls[i + 5][0]).toEqual([expect.objectContaining({ id: txs2[i].proof.txId })]);
+      }
+
+      // the last one should fail for id2
+      await expect(() => txReceiver.receiveTxs(createTxRequest([txs2[5]], id1))).rejects.toThrow(
+        'Exceeded deposit limit',
+      );
+    });
+
+    it('deposit limit is reset each day', async () => {
+      // limit is 5 per day
+      const txs = [
+        mockTx({ proofId: ProofId.DEPOSIT, publicValue: 1n }),
+        mockTx({ proofId: ProofId.DEPOSIT, publicValue: 1n }),
+        mockTx({ proofId: ProofId.DEPOSIT, publicValue: 1n }),
+        mockTx({ proofId: ProofId.DEPOSIT, publicValue: 1n }),
+        mockTx({ proofId: ProofId.DEPOSIT, publicValue: 1n }),
+        mockTx({ proofId: ProofId.DEPOSIT, publicValue: 1n }),
+      ];
+
+      const txs2 = [
+        mockTx({ proofId: ProofId.DEPOSIT, publicValue: 1n }),
+        mockTx({ proofId: ProofId.DEPOSIT, publicValue: 1n }),
+        mockTx({ proofId: ProofId.DEPOSIT, publicValue: 1n }),
+        mockTx({ proofId: ProofId.DEPOSIT, publicValue: 1n }),
+        mockTx({ proofId: ProofId.DEPOSIT, publicValue: 1n }),
+        mockTx({ proofId: ProofId.DEPOSIT, publicValue: 1n }),
+      ];
+
+      const id1 = 'id1';
+      const id2 = 'id2';
+
+      const dateBefore = testDate;
+
+      // the first 5 succeed
+      for (let i = 0; i < 5; i++) {
+        await txReceiver.receiveTxs(createTxRequest([txs[i]], id1));
+        expect(rollupDb.addTxs).toHaveBeenCalledTimes(i + 1);
+        expect(rollupDb.addTxs.mock.calls[i][0]).toEqual([expect.objectContaining({ id: txs[i].proof.txId })]);
+      }
+
+      // the last one should fail
+      await expect(() => txReceiver.receiveTxs(createTxRequest([txs[5]], id1))).rejects.toThrow(
+        'Exceeded deposit limit',
+      );
+
+      // id2 can continue to place deposits
+      // the first 5 succeed
+      for (let i = 0; i < 5; i++) {
+        await txReceiver.receiveTxs(createTxRequest([txs2[i]], id2));
+        expect(rollupDb.addTxs).toHaveBeenCalledTimes(i + 6);
+        expect(rollupDb.addTxs.mock.calls[i + 5][0]).toEqual([expect.objectContaining({ id: txs2[i].proof.txId })]);
+      }
+
+      // the last one should fail for id2
+      await expect(() => txReceiver.receiveTxs(createTxRequest([txs2[5]], id1))).rejects.toThrow(
+        'Exceeded deposit limit',
+      );
+
+      const tempDate = new Date(testDate);
+      tempDate.setDate(tempDate.getDate() + 1);
+      testDate = tempDate.getTime();
+
+      // add the last tx again for both ids
+      await txReceiver.receiveTxs(createTxRequest([txs[5]], id1));
+      expect(rollupDb.addTxs.mock.calls[10][0]).toEqual([expect.objectContaining({ id: txs[5].proof.txId })]);
+      await txReceiver.receiveTxs(createTxRequest([txs2[5]], id2));
+      expect(rollupDb.addTxs.mock.calls[11][0]).toEqual([expect.objectContaining({ id: txs2[5].proof.txId })]);
+
+      testDate = dateBefore;
+    });
+
+    it('rejects deposit txs from blacklisted address', async () => {
+      const badAddress = EthAddress.random();
+      const txs = [mockTx({ proofId: ProofId.DEPOSIT, publicValue: 1n, publicOwner: badAddress })];
+
+      // add the bad address to the blacklist provider
+      blacklistProvider.configureNewAddresses([badAddress]);
+
+      // trying to submit them all should fail
+      await expect(() => txReceiver.receiveTxs(createTxRequest(txs, 'id1'))).rejects.toThrow(
+        'Attempt to deposit from prohibited address',
+      );
+
+      // update the blacklist and try again
+      blacklistProvider.configureNewAddresses([EthAddress.random()]);
+
+      await txReceiver.receiveTxs(createTxRequest(txs, 'id1'));
+      expect(rollupDb.addTxs).toHaveBeenCalledTimes(1);
+      expect(rollupDb.addTxs).toHaveBeenCalledWith([expect.objectContaining({ id: txs[0].proof.txId })]);
+
+      // reset the blacklist
+      blacklistProvider.configureNewAddresses([]);
+    });
+
+    it('rejects all txs if 1 deposit is from blacklist', async () => {
+      const goodAddress = EthAddress.random();
+      const badAddress = EthAddress.random();
+      const txs = [
+        mockTx({ proofId: ProofId.DEPOSIT, publicValue: 1n, publicOwner: goodAddress }),
+        mockTx({ proofId: ProofId.WITHDRAW, publicValue: 1n, publicOwner: badAddress }), // withdraw txs are not checked
+        mockTx({ proofId: ProofId.SEND }),
+        mockTx({ proofId: ProofId.SEND }),
+        mockTx({ proofId: ProofId.DEPOSIT, publicValue: 1n, publicOwner: goodAddress }),
+        mockTx({ proofId: ProofId.DEPOSIT, publicValue: 1n, publicOwner: badAddress }),
+        mockTx({ proofId: ProofId.SEND }),
+      ];
+
+      // add the bad address to the blacklist provider
+      blacklistProvider.configureNewAddresses([badAddress]);
+
+      // trying to submit them all should fail
+      await expect(() => txReceiver.receiveTxs(createTxRequest(txs, 'id1'))).rejects.toThrow(
+        'Attempt to deposit from prohibited address',
+      );
+
+      // update the blacklist and try again
+      blacklistProvider.configureNewAddresses([EthAddress.random()]);
+
+      await txReceiver.receiveTxs(createTxRequest(txs, 'id1'));
+      expect(rollupDb.addTxs).toHaveBeenCalledTimes(1);
+      expect(rollupDb.addTxs).toHaveBeenCalledWith(txs.map(x => expect.objectContaining({ id: x.proof.txId })));
+
+      // reset the blacklist
+      blacklistProvider.configureNewAddresses([]);
+    });
+
+    it('accepts deposit txs from non blacklisted address', async () => {
+      const goodAddress = EthAddress.random();
+      const badAddress = EthAddress.random();
+      const txs = [
+        mockTx({ proofId: ProofId.DEPOSIT, publicValue: 1n, publicOwner: goodAddress }),
+        mockTx({ proofId: ProofId.DEPOSIT, publicValue: 1n, publicOwner: goodAddress }),
+      ];
+
+      // add the bad address to the blacklist provider
+      blacklistProvider.configureNewAddresses([badAddress]);
+
+      await txReceiver.receiveTxs(createTxRequest(txs, 'id1'));
+      expect(rollupDb.addTxs.mock.calls[0][0]).toEqual([
+        expect.objectContaining({ id: txs[0].proof.txId }),
+        expect.objectContaining({ id: txs[1].proof.txId }),
+      ]);
+
+      // reset the blacklist
+      blacklistProvider.configureNewAddresses([]);
     });
   });
 
@@ -274,7 +541,7 @@ describe('tx receiver', () => {
     it('accept a withdraw tx', async () => {
       const txs = [mockTx({ proofId: ProofId.WITHDRAW, publicValue: 1n })];
 
-      await txReceiver.receiveTxs(txs);
+      await txReceiver.receiveTxs(createTxRequest(txs, 'id1'));
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(1);
       expect(rollupDb.addTxs).toHaveBeenCalledWith([expect.objectContaining({ id: txs[0].proof.txId })]);
     });
@@ -282,8 +549,69 @@ describe('tx receiver', () => {
     it('reject a withdraw tx with unregistered asset', async () => {
       const txs = [mockTx({ proofId: ProofId.WITHDRAW, publicAssetId: maxAssetId + 1 })];
 
-      await expect(() => txReceiver.receiveTxs(txs)).rejects.toThrow('Unsupported asset');
+      await expect(() => txReceiver.receiveTxs(createTxRequest(txs, 'id1'))).rejects.toThrow('Unsupported asset');
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
+    });
+
+    it('accepts withdraw tx to blacklisted address', async () => {
+      const badAddress = EthAddress.random();
+      const txs = [mockTx({ proofId: ProofId.WITHDRAW, publicValue: 1n, publicOwner: badAddress })];
+
+      // add the bad address to the blacklist provider
+      blacklistProvider.configureNewAddresses([badAddress]);
+
+      await txReceiver.receiveTxs(createTxRequest(txs, 'id1'));
+      expect(rollupDb.addTxs).toHaveBeenCalledTimes(1);
+      expect(rollupDb.addTxs).toHaveBeenCalledWith([expect.objectContaining({ id: txs[0].proof.txId })]);
+
+      // reset the blacklist
+      blacklistProvider.configureNewAddresses([]);
+    });
+
+    it('does not apply rate limit to withdrawals', async () => {
+      // limit is 5 per day, create lots of withdrawals
+      const txs = [
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+      ];
+
+      await txReceiver.receiveTxs(createTxRequest(txs, 'id1'));
+      expect(rollupDb.addTxs).toHaveBeenCalledTimes(1);
+      expect(rollupDb.addTxs).toHaveBeenCalledWith(txs.map(x => expect.objectContaining({ id: x.proof.txId })));
+    });
+
+    it('does not apply rate limit to withdrawals 2', async () => {
+      // limit is 5 per day, create lots of withdrawals
+      const txs = [
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+        mockTx({ proofId: ProofId.WITHDRAW, publicOwner: EthAddress.random() }),
+      ];
+
+      for (let i = 0; i < txs.length; i++) {
+        await txReceiver.receiveTxs(createTxRequest([txs[i]], 'id1'));
+        expect(rollupDb.addTxs).toHaveBeenCalledTimes(1 + i);
+        expect(rollupDb.addTxs).toHaveBeenCalledWith([expect.objectContaining({ id: txs[i].proof.txId })]);
+      }
     });
   });
 
@@ -291,7 +619,7 @@ describe('tx receiver', () => {
     it('accept a send tx', async () => {
       const txs = [mockTx({ proofId: ProofId.SEND })];
 
-      await txReceiver.receiveTxs(txs);
+      await txReceiver.receiveTxs(createTxRequest(txs, 'id1'));
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(1);
       expect(rollupDb.addTxs).toHaveBeenCalledWith([expect.objectContaining({ id: txs[0].proof.txId })]);
     });
@@ -299,7 +627,7 @@ describe('tx receiver', () => {
     it('reject a send tx paid with non-fee-paying asset', async () => {
       const txs = [mockTx({ proofId: ProofId.SEND, txFeeAssetId: nonFeePayingAssetId })];
 
-      await expect(() => txReceiver.receiveTxs(txs)).rejects.toThrow(
+      await expect(() => txReceiver.receiveTxs(createTxRequest(txs, 'id1'))).rejects.toThrow(
         'Transactions must have exactly 1 fee paying asset.',
       );
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
@@ -311,15 +639,63 @@ describe('tx receiver', () => {
       const txs = [mockTx({ proofId: ProofId.DEPOSIT })];
       joinSplitVerifier.verifyProof.mockResolvedValue(false);
 
-      await expect(() => txReceiver.receiveTxs(txs)).rejects.toThrow('Payment proof verification failed.');
+      await expect(() => txReceiver.receiveTxs(createTxRequest(txs, 'id1'))).rejects.toThrow(
+        'Payment proof verification failed.',
+      );
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
     });
 
     it('reject a payment tx with invalid offchain data buffer size', async () => {
       const txs = [mockTx({ proofId: ProofId.DEPOSIT, offchainTxData: randomBytes(100) })];
 
-      await expect(() => txReceiver.receiveTxs(txs)).rejects.toThrow('Invalid offchain data');
+      await expect(() => txReceiver.receiveTxs(createTxRequest(txs, 'id1'))).rejects.toThrow('Invalid offchain data');
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
+    });
+
+    it('does not apply rate limit to payments', async () => {
+      // limit is 5 per day, create lots of payments
+      const txs = [
+        mockTx({ proofId: ProofId.SEND }),
+        mockTx({ proofId: ProofId.SEND }),
+        mockTx({ proofId: ProofId.SEND }),
+        mockTx({ proofId: ProofId.SEND }),
+        mockTx({ proofId: ProofId.SEND }),
+        mockTx({ proofId: ProofId.SEND }),
+        mockTx({ proofId: ProofId.SEND }),
+        mockTx({ proofId: ProofId.SEND }),
+        mockTx({ proofId: ProofId.SEND }),
+        mockTx({ proofId: ProofId.SEND }),
+        mockTx({ proofId: ProofId.SEND }),
+        mockTx({ proofId: ProofId.SEND }),
+      ];
+
+      await txReceiver.receiveTxs(createTxRequest(txs, 'id1'));
+      expect(rollupDb.addTxs).toHaveBeenCalledTimes(1);
+      expect(rollupDb.addTxs).toHaveBeenCalledWith(txs.map(x => expect.objectContaining({ id: x.proof.txId })));
+    });
+
+    it('does not apply rate limit to payments 2', async () => {
+      // limit is 5 per day, create lots of payments
+      const txs = [
+        mockTx({ proofId: ProofId.SEND }),
+        mockTx({ proofId: ProofId.SEND }),
+        mockTx({ proofId: ProofId.SEND }),
+        mockTx({ proofId: ProofId.SEND }),
+        mockTx({ proofId: ProofId.SEND }),
+        mockTx({ proofId: ProofId.SEND }),
+        mockTx({ proofId: ProofId.SEND }),
+        mockTx({ proofId: ProofId.SEND }),
+        mockTx({ proofId: ProofId.SEND }),
+        mockTx({ proofId: ProofId.SEND }),
+        mockTx({ proofId: ProofId.SEND }),
+        mockTx({ proofId: ProofId.SEND }),
+      ];
+
+      for (let i = 0; i < txs.length; i++) {
+        await txReceiver.receiveTxs(createTxRequest([txs[i]], 'id1'));
+        expect(rollupDb.addTxs).toHaveBeenCalledTimes(1 + i);
+        expect(rollupDb.addTxs).toHaveBeenCalledWith([expect.objectContaining({ id: txs[i].proof.txId })]);
+      }
     });
   });
 
@@ -329,7 +705,7 @@ describe('tx receiver', () => {
       noteAlgo.accountNoteCommitment.mockReturnValueOnce(txs[0].proof.noteCommitment1);
       noteAlgo.accountNoteCommitment.mockReturnValueOnce(txs[0].proof.noteCommitment2);
 
-      await txReceiver.receiveTxs(txs);
+      await txReceiver.receiveTxs(createTxRequest(txs, 'id1'));
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(1);
       expect(rollupDb.addTxs).toHaveBeenCalledWith([expect.objectContaining({ id: txs[0].proof.txId })]);
     });
@@ -340,7 +716,9 @@ describe('tx receiver', () => {
       noteAlgo.accountNoteCommitment.mockReturnValueOnce(txs[0].proof.noteCommitment2);
       accountVerifier.verifyProof.mockResolvedValue(false);
 
-      await expect(txReceiver.receiveTxs(txs)).rejects.toThrow('Account proof verification failed.');
+      await expect(txReceiver.receiveTxs(createTxRequest(txs, 'id1'))).rejects.toThrow(
+        'Account proof verification failed.',
+      );
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
     });
 
@@ -349,14 +727,18 @@ describe('tx receiver', () => {
       noteAlgo.accountNoteCommitment.mockReturnValueOnce(txs[0].proof.noteCommitment1);
       noteAlgo.accountNoteCommitment.mockReturnValueOnce(randomBytes(32));
 
-      await expect(txReceiver.receiveTxs(txs)).rejects.toThrow('Invalid offchain account data.');
+      await expect(txReceiver.receiveTxs(createTxRequest(txs, 'id1'))).rejects.toThrow(
+        'Invalid offchain account data.',
+      );
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
 
       noteAlgo.accountNoteCommitment.mockReset();
 
       noteAlgo.accountNoteCommitment.mockReturnValue(randomBytes(32));
 
-      await expect(txReceiver.receiveTxs(txs)).rejects.toThrow('Invalid offchain account data.');
+      await expect(txReceiver.receiveTxs(createTxRequest(txs, 'id1'))).rejects.toThrow(
+        'Invalid offchain account data.',
+      );
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
     });
 
@@ -365,7 +747,9 @@ describe('tx receiver', () => {
       noteAlgo.accountNoteCommitment.mockReturnValueOnce(accountTx.proof.noteCommitment1);
       noteAlgo.accountNoteCommitment.mockReturnValueOnce(accountTx.proof.noteCommitment2);
       rollupDb.isAccountRegistered.mockResolvedValueOnce(true);
-      await expect(txReceiver.receiveTxs([accountTx])).rejects.toThrow('Account key already registered');
+      await expect(txReceiver.receiveTxs(createTxRequest([accountTx], 'id1'))).rejects.toThrow(
+        'Account key already registered',
+      );
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
     });
 
@@ -375,7 +759,7 @@ describe('tx receiver', () => {
       noteAlgo.accountNoteCommitment.mockReturnValueOnce(accountTx.proof.noteCommitment2);
       // ensure the call to isAccountRegistered returns true
       rollupDb.isAccountRegistered.mockResolvedValueOnce(true);
-      await expect(txReceiver.receiveTxs([accountTx])).resolves.toEqual([accountTx.proof.txId]);
+      await expect(txReceiver.receiveTxs(createTxRequest([accountTx], 'id1'))).resolves.toEqual([accountTx.proof.txId]);
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(1);
       expect(rollupDb.addTxs).toHaveBeenCalledWith([expect.objectContaining({ id: accountTx.proof.txId })]);
     });
@@ -386,7 +770,9 @@ describe('tx receiver', () => {
       noteAlgo.accountNoteCommitment.mockReturnValueOnce(accountTx.proof.noteCommitment2);
       // ensure the call to isAliasRegistered returns true
       rollupDb.isAliasRegistered.mockResolvedValueOnce(true);
-      await expect(txReceiver.receiveTxs([accountTx])).rejects.toThrow('Alias already registered');
+      await expect(txReceiver.receiveTxs(createTxRequest([accountTx], 'id1'))).rejects.toThrow(
+        'Alias already registered',
+      );
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
     });
 
@@ -397,7 +783,7 @@ describe('tx receiver', () => {
       noteAlgo.accountNoteCommitment.mockReturnValueOnce(accountTx.proof.noteCommitment2);
       // ensure the call to isAliasRegistered returns true
       rollupDb.isAliasRegistered.mockResolvedValueOnce(true);
-      await expect(txReceiver.receiveTxs([accountTx])).resolves.toEqual([accountTx.proof.txId]);
+      await expect(txReceiver.receiveTxs(createTxRequest([accountTx], 'id1'))).resolves.toEqual([accountTx.proof.txId]);
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(1);
       expect(rollupDb.addTxs).toHaveBeenCalledWith([expect.objectContaining({ id: accountTx.proof.txId })]);
     });
@@ -407,37 +793,91 @@ describe('tx receiver', () => {
     it('accept a defi deposit tx', async () => {
       const txs = [mockDefiDepositTx()];
 
-      await txReceiver.receiveTxs(txs);
+      await txReceiver.receiveTxs(createTxRequest(txs, 'id1'));
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(1);
       expect(rollupDb.addTxs).toHaveBeenCalledWith([expect.objectContaining({ id: txs[0].proof.txId })]);
+    });
+
+    it('does not apply rate limit to defi deposits', async () => {
+      // limit is 5 per day, create lots of defi deposits
+      const txs = [
+        mockDefiDepositTx(),
+        mockDefiDepositTx(),
+        mockDefiDepositTx(),
+        mockDefiDepositTx(),
+        mockDefiDepositTx(),
+        mockDefiDepositTx(),
+        mockDefiDepositTx(),
+        mockDefiDepositTx(),
+        mockDefiDepositTx(),
+        mockDefiDepositTx(),
+        mockDefiDepositTx(),
+        mockDefiDepositTx(),
+      ];
+
+      await txReceiver.receiveTxs(createTxRequest(txs, 'id1'));
+      expect(rollupDb.addTxs).toHaveBeenCalledTimes(1);
+      expect(rollupDb.addTxs).toHaveBeenCalledWith(txs.map(x => expect.objectContaining({ id: x.proof.txId })));
+    });
+
+    it('does not apply rate limit to defi deposits 2', async () => {
+      // limit is 5 per day, create lots of defi deposits
+      const txs = [
+        mockDefiDepositTx(),
+        mockDefiDepositTx(),
+        mockDefiDepositTx(),
+        mockDefiDepositTx(),
+        mockDefiDepositTx(),
+        mockDefiDepositTx(),
+        mockDefiDepositTx(),
+        mockDefiDepositTx(),
+        mockDefiDepositTx(),
+        mockDefiDepositTx(),
+        mockDefiDepositTx(),
+        mockDefiDepositTx(),
+      ];
+
+      for (let i = 0; i < txs.length; i++) {
+        await txReceiver.receiveTxs(createTxRequest([txs[i]], 'id1'));
+        expect(rollupDb.addTxs).toHaveBeenCalledTimes(1 + i);
+        expect(rollupDb.addTxs).toHaveBeenCalledWith([expect.objectContaining({ id: txs[i].proof.txId })]);
+      }
     });
 
     it('reject a defi deposit tx with invalid proof', async () => {
       const txs = [mockDefiDepositTx()];
       joinSplitVerifier.verifyProof.mockResolvedValue(false);
 
-      await expect(() => txReceiver.receiveTxs(txs)).rejects.toThrow('Defi-deposit proof verification failed.');
+      await expect(() => txReceiver.receiveTxs(createTxRequest(txs, 'id1'))).rejects.toThrow(
+        'Defi-deposit proof verification failed.',
+      );
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
     });
 
     it('reject a defi deposit tx with allow chain note 1', async () => {
       const txs = [mockDefiDepositTx({ allowChain: 1 })];
 
-      await expect(() => txReceiver.receiveTxs(txs)).rejects.toThrow('Cannot chain from a defi deposit tx.');
+      await expect(() => txReceiver.receiveTxs(createTxRequest(txs, 'id1'))).rejects.toThrow(
+        'Cannot chain from a defi deposit tx.',
+      );
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
     });
 
     it('reject a defi deposit tx with allow chain note 2', async () => {
       const txs = [mockDefiDepositTx({ allowChain: 2 })];
 
-      await expect(() => txReceiver.receiveTxs(txs)).rejects.toThrow('Cannot chain from a defi deposit tx.');
+      await expect(() => txReceiver.receiveTxs(createTxRequest(txs, 'id1'))).rejects.toThrow(
+        'Cannot chain from a defi deposit tx.',
+      );
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
     });
 
     it('reject a defi deposit tx with allow chain both notes', async () => {
       const txs = [mockDefiDepositTx({ allowChain: 3 })];
 
-      await expect(() => txReceiver.receiveTxs(txs)).rejects.toThrow('Cannot chain from a defi deposit tx.');
+      await expect(() => txReceiver.receiveTxs(createTxRequest(txs, 'id1'))).rejects.toThrow(
+        'Cannot chain from a defi deposit tx.',
+      );
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
     });
 
@@ -445,7 +885,9 @@ describe('tx receiver', () => {
       const bridgeCallData = new BridgeCallData(0, 1, 2, 1);
       const txs = [mockDefiDepositTx({ bridgeCallData })];
 
-      await expect(() => txReceiver.receiveTxs(txs)).rejects.toThrow('Invalid bridge call data');
+      await expect(() => txReceiver.receiveTxs(createTxRequest(txs, 'id1'))).rejects.toThrow(
+        'Invalid bridge call data',
+      );
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
     });
 
@@ -453,7 +895,9 @@ describe('tx receiver', () => {
       const bridgeCallData = new BridgeCallData(0, 1, 2, 3, 2);
       const txs = [mockDefiDepositTx({ bridgeCallData })];
 
-      await expect(() => txReceiver.receiveTxs(txs)).rejects.toThrow('Invalid bridge call data');
+      await expect(() => txReceiver.receiveTxs(createTxRequest(txs, 'id1'))).rejects.toThrow(
+        'Invalid bridge call data',
+      );
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
     });
 
@@ -461,7 +905,9 @@ describe('tx receiver', () => {
       const txs = [mockDefiDepositTx()];
       bridgeResolver.getBridgeConfig.mockReturnValue(undefined);
 
-      await expect(() => txReceiver.receiveTxs(txs)).rejects.toThrow('Unrecognised Defi-bridge.');
+      await expect(() => txReceiver.receiveTxs(createTxRequest(txs, 'id1'))).rejects.toThrow(
+        'Unrecognised Defi-bridge.',
+      );
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
     });
 
@@ -470,7 +916,7 @@ describe('tx receiver', () => {
       bridgeResolver.getBridgeConfig.mockReturnValue(undefined);
       blockchain.getBlockchainStatus.mockReturnValue({ assets, allowThirdPartyContracts: true });
 
-      await txReceiver.receiveTxs(txs);
+      await txReceiver.receiveTxs(createTxRequest(txs, 'id1'));
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(1);
       expect(rollupDb.addTxs).toHaveBeenCalledWith([expect.objectContaining({ id: txs[0].proof.txId })]);
     });
@@ -499,7 +945,7 @@ describe('tx receiver', () => {
           defiDepositValue,
           txFee,
         });
-        await expect(() => txReceiver.receiveTxs([tx])).rejects.toThrow('offchain data');
+        await expect(() => txReceiver.receiveTxs(createTxRequest([tx], 'id1'))).rejects.toThrow('offchain data');
       }
 
       {
@@ -510,7 +956,7 @@ describe('tx receiver', () => {
           defiDepositValue: defiDepositValue + 1n, // <--
           txFee,
         });
-        await expect(() => txReceiver.receiveTxs([tx])).rejects.toThrow('offchain data');
+        await expect(() => txReceiver.receiveTxs(createTxRequest([tx], 'id1'))).rejects.toThrow('offchain data');
       }
 
       {
@@ -521,7 +967,7 @@ describe('tx receiver', () => {
           defiDepositValue,
           txFee: txFee + 1n, // <--
         });
-        await expect(() => txReceiver.receiveTxs([tx])).rejects.toThrow('offchain data');
+        await expect(() => txReceiver.receiveTxs(createTxRequest([tx], 'id1'))).rejects.toThrow('offchain data');
       }
 
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
@@ -533,7 +979,7 @@ describe('tx receiver', () => {
       const tx0 = mockTx({ allowChain: 1 });
       const tx1 = mockTx({ backwardLink: tx0.proof.noteCommitment1 });
 
-      await txReceiver.receiveTxs([tx0, tx1]);
+      await txReceiver.receiveTxs(createTxRequest([tx0, tx1], 'id1'));
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(1);
       expect(rollupDb.addTxs).toHaveBeenCalledWith([
         expect.objectContaining({ id: tx0.proof.txId }),
@@ -544,29 +990,22 @@ describe('tx receiver', () => {
     it('chained txs never have the same date', async () => {
       // setup a mock new Date() so that the same date is always returned
       // but if a specific date is constructed via an argument then return this
-      const mockDate = new Date(1466424490000);
-      const realDate = global.Date;
-      const spy = jest.spyOn(global, 'Date').mockImplementation((...args): any => {
-        // if an argument is given construct a date as normal, otherwise return our mock date
-        if (args.length) {
-          return new realDate(...args);
-        }
-        return mockDate;
-      });
+      const dateBefore = testDate;
+      testDate = 1466424490000;
 
       const tx0 = mockTx({ allowChain: 1 });
       const tx1 = mockTx({ backwardLink: tx0.proof.noteCommitment1, allowChain: 2 });
       const tx2 = mockTx({ backwardLink: tx1.proof.noteCommitment2 });
 
       // the mock date constructor above will give all txs the same time but this should be correct for
-      await txReceiver.receiveTxs([tx0, tx1, tx2]);
+      await txReceiver.receiveTxs(createTxRequest([tx0, tx1, tx2], 'id1'));
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(1);
       const txDaos = rollupDb.addTxs.mock.calls[0][0];
       expect(txDaos[0].created.getTime()).toBe(1466424490000);
       expect(txDaos[1].created.getTime()).toBe(1466424490001);
       expect(txDaos[2].created.getTime()).toBe(1466424490002);
 
-      spy.mockRestore();
+      testDate = dateBefore;
     });
 
     it('accept a tx chained from an unsettled tx', async () => {
@@ -574,7 +1013,7 @@ describe('tx receiver', () => {
       rollupDb.getUnsettledTxs.mockResolvedValue([{ proofData: unsettledTx.proof.rawProofData }]);
       const tx = mockTx({ backwardLink: unsettledTx.proof.noteCommitment1 });
 
-      await txReceiver.receiveTxs([tx]);
+      await txReceiver.receiveTxs(createTxRequest([tx], 'id1'));
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(1);
       expect(rollupDb.addTxs).toHaveBeenCalledWith([expect.objectContaining({ id: tx.proof.txId })]);
     });
@@ -582,7 +1021,7 @@ describe('tx receiver', () => {
     it('reject a tx chained from an unknown note', async () => {
       const tx = mockTx({ backwardLink: randomBytes(32) });
 
-      await expect(() => txReceiver.receiveTxs([tx])).rejects.toThrow('Linked tx not found.');
+      await expect(() => txReceiver.receiveTxs(createTxRequest([tx], 'id1'))).rejects.toThrow('Linked tx not found.');
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
     });
 
@@ -590,25 +1029,33 @@ describe('tx receiver', () => {
       {
         const tx0 = mockTx({ allowChain: 0 });
         const tx1 = mockTx({ backwardLink: tx0.proof.noteCommitment1 });
-        await expect(() => txReceiver.receiveTxs([tx0, tx1])).rejects.toThrow('Linked tx not found.');
+        await expect(() => txReceiver.receiveTxs(createTxRequest([tx0, tx1], 'id1'))).rejects.toThrow(
+          'Linked tx not found.',
+        );
       }
 
       {
         const tx0 = mockTx({ allowChain: 0 });
         const tx1 = mockTx({ backwardLink: tx0.proof.noteCommitment2 });
-        await expect(() => txReceiver.receiveTxs([tx0, tx1])).rejects.toThrow('Linked tx not found.');
+        await expect(() => txReceiver.receiveTxs(createTxRequest([tx0, tx1], 'id1'))).rejects.toThrow(
+          'Linked tx not found.',
+        );
       }
 
       {
         const tx0 = mockTx({ allowChain: 2 });
         const tx1 = mockTx({ backwardLink: tx0.proof.noteCommitment1 });
-        await expect(() => txReceiver.receiveTxs([tx0, tx1])).rejects.toThrow('Linked tx not found.');
+        await expect(() => txReceiver.receiveTxs(createTxRequest([tx0, tx1], 'id1'))).rejects.toThrow(
+          'Linked tx not found.',
+        );
       }
 
       {
         const tx0 = mockTx({ allowChain: 1 });
         const tx1 = mockTx({ backwardLink: tx0.proof.noteCommitment2 });
-        await expect(() => txReceiver.receiveTxs([tx0, tx1])).rejects.toThrow('Linked tx not found.');
+        await expect(() => txReceiver.receiveTxs(createTxRequest([tx0, tx1], 'id1'))).rejects.toThrow(
+          'Linked tx not found.',
+        );
       }
 
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
@@ -620,7 +1067,9 @@ describe('tx receiver', () => {
         const tx1 = mockTx({ backwardLink: tx0.proof.noteCommitment1 });
         const tx2 = mockTx({ backwardLink: tx0.proof.noteCommitment1 });
 
-        await expect(() => txReceiver.receiveTxs([tx0, tx1, tx2])).rejects.toThrow('Duplicated backward link.');
+        await expect(() => txReceiver.receiveTxs(createTxRequest([tx0, tx1, tx2], 'id1'))).rejects.toThrow(
+          'Duplicated backward link.',
+        );
       }
 
       {
@@ -632,7 +1081,9 @@ describe('tx receiver', () => {
         ]);
         const tx = mockTx({ backwardLink: unsettledTx0.proof.noteCommitment1 });
 
-        await expect(() => txReceiver.receiveTxs([tx])).rejects.toThrow('Duplicated backward link.');
+        await expect(() => txReceiver.receiveTxs(createTxRequest([tx], 'id1'))).rejects.toThrow(
+          'Duplicated backward link.',
+        );
       }
 
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
@@ -644,7 +1095,9 @@ describe('tx receiver', () => {
       const tx = mockTx();
       rollupDb.nullifiersExist.mockResolvedValue(true);
 
-      await expect(() => txReceiver.receiveTxs([tx])).rejects.toThrow('Nullifier already exists.');
+      await expect(() => txReceiver.receiveTxs(createTxRequest([tx], 'id1'))).rejects.toThrow(
+        'Nullifier already exists.',
+      );
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
     });
 
@@ -653,13 +1106,17 @@ describe('tx receiver', () => {
       {
         const tx0 = mockTx({ nullifier1: nullifier });
         const tx1 = mockTx({ nullifier1: nullifier });
-        await expect(() => txReceiver.receiveTxs([tx0, tx1])).rejects.toThrow('Nullifier already exists.');
+        await expect(() => txReceiver.receiveTxs(createTxRequest([tx0, tx1], 'id1'))).rejects.toThrow(
+          'Nullifier already exists.',
+        );
       }
 
       {
         const tx0 = mockTx({ nullifier1: nullifier });
         const tx1 = mockTx({ nullifier2: nullifier });
-        await expect(() => txReceiver.receiveTxs([tx0, tx1])).rejects.toThrow('Nullifier already exists.');
+        await expect(() => txReceiver.receiveTxs(createTxRequest([tx0, tx1], 'id1'))).rejects.toThrow(
+          'Nullifier already exists.',
+        );
       }
 
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);

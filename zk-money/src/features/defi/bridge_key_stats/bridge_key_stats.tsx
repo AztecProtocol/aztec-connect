@@ -1,12 +1,12 @@
 import { DefiRecipe, KeyBridgeStat } from 'alt-model/defi/types';
 import { bindStyle } from 'ui-components/util/classnames';
 import style from './bridge_key_stats.module.scss';
-import { getKeyStatItemProps } from './bridge_key_stat_items';
+import { getEnterKeyStatItemProps } from './bridge_key_stat_items';
 
 const cx = bindStyle(style);
 
 function renderItem(stat: KeyBridgeStat, recipe: DefiRecipe) {
-  const { label, value } = getKeyStatItemProps(stat, recipe);
+  const { label, value } = getEnterKeyStatItemProps(stat, recipe);
   return (
     <div className={style.item}>
       <div className={style.label}>{label}</div>

@@ -40,14 +40,16 @@ export interface DefiRecipe {
   id: string;
   gradient?: string[];
   bridgeAddressId: number;
+  exitBridgeAddressId?: number;
   address: EthAddress;
+  isAsync?: boolean;
   flow: BridgeFlowAssets;
   openHandleAsset?: RemoteAsset;
   valueEstimationInteractionAssets: BridgeInteractionAssets;
   createAdaptor: BridgeDataAdaptorCreator;
   requiresAuxDataOpts?: boolean;
-  selectEnterAuxDataOpt: (opts: bigint[]) => bigint;
-  selectExitAuxDataOpt?: (opts: bigint[]) => bigint;
+  selectEnterAuxDataOpt: (opts: number[]) => number;
+  selectExitAuxDataOpt?: (opts: number[]) => number;
   projectName: string;
   website: string;
   websiteLabel: string;
@@ -60,6 +62,7 @@ export interface DefiRecipe {
   roiType: string;
   longDescription: string;
   investmentType: DefiInvestmentType;
+  hideUnderlyingOnExit?: boolean;
   keyStat1: KeyBridgeStat;
   keyStat2: KeyBridgeStat;
   keyStat3: KeyBridgeStat;

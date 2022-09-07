@@ -23,7 +23,7 @@ function getInteractionAssets(flow: BridgeFlowAssets, direction: FlowDirection) 
 
 export function createExpectedOutputPollerCache(recipes: DefiRecipe[], adaptorCache: BridgeDataAdaptorCache) {
   return new LazyInitDeepCacheMap(
-    ([recipeId, auxData, inputAmount, direction]: [string, bigint, bigint, FlowDirection]) => {
+    ([recipeId, auxData, inputAmount, direction]: [string, number, bigint, FlowDirection]) => {
       const adaptor = adaptorCache.get(recipeId);
       const recipe = recipes.find(x => x.id === recipeId);
       if (!adaptor || !recipe) return undefined;

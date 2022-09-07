@@ -1,3 +1,10 @@
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { solidity } = require('ethereum-waffle');
+import chai from 'chai';
+
+import { expect } from 'chai';
+chai.use(solidity);
+
 import { EthAddress } from '@aztec/barretenberg/address';
 import { Asset } from '@aztec/barretenberg/blockchain';
 import { DefiInteractionNote, packInteractionNotes } from '@aztec/barretenberg/note_algorithms';
@@ -25,8 +32,9 @@ import {
 import { mockAsyncBridge } from './fixtures/setup_defi_bridges';
 import { setupTestRollupProcessor } from './fixtures/setup_upgradeable_test_rollup_processor';
 import { TestRollupProcessor } from './fixtures/test_rollup_processor';
+import { toMatchObject } from '../../mocha-checker';
 
-jest.setTimeout(60000 * 2);
+//jest.setTimeout(60000 * 2);
 
 describe('rollup_processor: extract defi notes', () => {
   let rollupProcessor: TestRollupProcessor;
@@ -49,7 +57,7 @@ describe('rollup_processor: extract defi notes', () => {
     return rollup;
   };
 
-  beforeAll(async () => {
+  before(async () => {
     signers = await ethers.getSigners();
     addresses = await Promise.all(signers.map(async u => EthAddress.fromString(await u.getAddress())));
     ({ rollupProcessor, assets, assetAddresses } = await setupTestRollupProcessor(signers, {
@@ -155,19 +163,19 @@ describe('rollup_processor: extract defi notes', () => {
     }
 
     const blocks = await rollupProcessor.getRollupBlocksFrom(0, 1);
-    expect(blocks.length).toBe(5);
+    expect(blocks.length).to.be.eq(5);
 
     {
       const block = blocks[0];
       const rollup = decodeRollup(block);
       const { innerProofs, offchainTxData } = innerProofOutputs[0];
-      expect(block).toMatchObject({
+      toMatchObject(block, {
         rollupId: 0,
         rollupSize: 2,
         interactionResult: [],
         offchainTxData,
       });
-      expect(rollup).toMatchObject({
+      toMatchObject(rollup, {
         rollupId: 0,
         dataStartIndex: 0,
         innerProofData: [innerProofs[0], InnerProofData.PADDING],
@@ -180,13 +188,13 @@ describe('rollup_processor: extract defi notes', () => {
       const block = blocks[1];
       const rollup = decodeRollup(block);
       const { innerProofs, offchainTxData } = innerProofOutputs[1];
-      expect(block).toMatchObject({
+      toMatchObject(block, {
         rollupId: 1,
         rollupSize: 2,
         interactionResult: [],
         offchainTxData,
       });
-      expect(rollup).toMatchObject({
+      toMatchObject(rollup, {
         rollupId: 1,
         dataStartIndex: 1 * numRealTxsInRollup,
         innerProofData: innerProofs,
@@ -197,12 +205,12 @@ describe('rollup_processor: extract defi notes', () => {
       const block = blocks[2];
       const rollup = decodeRollup(block);
       const { innerProofs, offchainTxData } = innerProofOutputs[2];
-      expect(block).toMatchObject({
+      toMatchObject(block, {
         rollupId: 2,
         rollupSize: 2,
         offchainTxData,
       });
-      expect(rollup).toMatchObject({
+      toMatchObject(rollup, {
         rollupId: 2,
         dataStartIndex: 2 * numRealTxsInRollup,
         innerProofData: innerProofs,
@@ -213,13 +221,13 @@ describe('rollup_processor: extract defi notes', () => {
       const block = blocks[3];
       const rollup = decodeRollup(block);
       const { innerProofs, offchainTxData } = innerProofOutputs[3];
-      expect(block).toMatchObject({
+      toMatchObject(block, {
         rollupId: 3,
         rollupSize: 2,
         offchainTxData,
         interactionResult: expectedInteractionResult,
       });
-      expect(rollup).toMatchObject({
+      toMatchObject(rollup, {
         rollupId: 3,
         dataStartIndex: 3 * numRealTxsInRollup,
         innerProofData: [innerProofs[0], InnerProofData.PADDING],
@@ -230,13 +238,13 @@ describe('rollup_processor: extract defi notes', () => {
       const block = blocks[4];
       const rollup = decodeRollup(block);
       const { innerProofs, offchainTxData } = innerProofOutputs[4];
-      expect(block).toMatchObject({
+      toMatchObject(block, {
         rollupId: 4,
         rollupSize: 2,
         offchainTxData,
         interactionResult: [],
       });
-      expect(rollup).toMatchObject({
+      toMatchObject(rollup, {
         rollupId: 4,
         dataStartIndex: 4 * numRealTxsInRollup,
         innerProofData: [innerProofs[0], InnerProofData.PADDING],

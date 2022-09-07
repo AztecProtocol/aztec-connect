@@ -3,12 +3,10 @@ import { EthAddress } from '@aztec/sdk';
 import { AztecAsset, AztecAssetType } from '@aztec/bridge-clients/client-dest/src/client/bridge-data';
 import { BridgeInteractionAssets } from '../types';
 
-const ZERO_ADDRESS_STR = EthAddress.ZERO.toString();
-
 export const UNUSED_ADAPTOR_ASSET: AztecAsset = {
-  id: 0n,
+  id: 0,
   assetType: AztecAssetType.NOT_USED,
-  erc20Address: ZERO_ADDRESS_STR,
+  erc20Address: EthAddress.ZERO as any,
 };
 
 // Will be used once we have a bridge with virtual assets
@@ -20,11 +18,11 @@ export const UNUSED_ADAPTOR_ASSET: AztecAsset = {
 //   };
 // }
 
-function toAdaptorAsset(asset: RemoteAsset): AztecAsset {
+export function toAdaptorAsset(asset: RemoteAsset): AztecAsset {
   return {
-    id: BigInt(asset.id),
+    id: asset.id,
     assetType: asset.id === 0 ? AztecAssetType.ETH : AztecAssetType.ERC20,
-    erc20Address: asset.address.toString(),
+    erc20Address: asset.address as any,
   };
 }
 

@@ -1,12 +1,12 @@
 import {
   AztecAsset,
   BridgeDataFieldGetters,
-  AssetValue,
   AuxDataConfig,
 } from '@aztec/bridge-clients/client-dest/src/client/bridge-data';
+import { AssetValue } from '@aztec/sdk';
 
 export class BridgeDataFieldGettersMock implements BridgeDataFieldGetters {
-  async getInteractionPresentValue(interactionNonce: bigint): Promise<AssetValue[]> {
+  async getInteractionPresentValue(interactionNonce: number): Promise<AssetValue[]> {
     return [];
   }
   async getAuxData(
@@ -14,8 +14,8 @@ export class BridgeDataFieldGettersMock implements BridgeDataFieldGetters {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-  ): Promise<bigint[]> {
-    return [0n];
+  ): Promise<number[]> {
+    return [0];
   }
 
   auxDataConfig: AuxDataConfig[] = [];
@@ -25,7 +25,7 @@ export class BridgeDataFieldGettersMock implements BridgeDataFieldGetters {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-    auxData: bigint,
+    auxData: number,
     inputValue: bigint,
   ): Promise<bigint[]> {
     return [];
@@ -47,14 +47,14 @@ export class BridgeDataFieldGettersMock implements BridgeDataFieldGetters {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-    auxData: bigint,
+    auxData: number,
   ): Promise<AssetValue[]> {
-    return [{ assetId: 0n, amount: 12379654321234567898765n }];
+    return [{ assetId: 0, value: 12379654321234567898765n }];
   }
-  async getExpiration(interactionNonce: bigint): Promise<bigint> {
+  async getExpiration(interactionNonce: number): Promise<bigint> {
     return BigInt(Date.now() / 1000 + 60 * 20 * 24 * 100);
   }
-  async hasFinalised(interactionNonce: bigint): Promise<Boolean> {
+  async hasFinalised(interactionNonce: number): Promise<boolean> {
     return false;
   }
 }

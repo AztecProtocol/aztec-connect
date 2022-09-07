@@ -1,21 +1,27 @@
 import createDebug from 'debug';
-import { BlockchainBridge, BlockchainStatus, EthAddress, RollupProviderStatus, toBaseUnits } from '@aztec/sdk';
+import { BlockchainBridge, BlockchainStatus, EthAddress, RollupProviderStatus } from '@aztec/sdk';
 import { BridgeFlowAssets, DefiInvestmentType, DefiRecipe, KeyBridgeStat } from './types';
 import lidoXCurveLogo from 'images/lido_x_curve_logo.svg';
 import lidoMiniLogo from 'images/lido_mini_logo.png';
 import elementFiLogo from 'images/element_fi_logo.svg';
+import yearnLogo from 'images/yearn_logo.svg';
+import yearnGradientLogo from 'images/yearn_gradient.svg';
 import elementMiniLogo from 'images/element_mini_logo.png';
 import ethToDaiBanner from 'images/eth_to_dai_banner.svg';
 import { createElementAdaptor } from './bridge_data_adaptors/element_adaptor';
+import { createYearnAdaptor } from './bridge_data_adaptors/yearn_adaptor';
 import { KNOWN_MAINNET_ASSET_ADDRESSES as KMAA } from 'alt-model/known_assets/known_asset_addresses';
 import { RemoteAsset } from 'alt-model/types';
 import { createLidoAdaptor } from './bridge_data_adaptors/lido_adaptor';
+
+const shouldShowYearn = !!localStorage.getItem('enable_yearn');
 
 const debug = createDebug('zm:recipes');
 
 interface CreateRecipeArgs
   extends Omit<DefiRecipe, 'bridgeAddressId' | 'address' | 'flow' | 'valueEstimationInteractionAssets'> {
   selectBlockchainBridge: (blockchainStatus: BlockchainStatus) => BlockchainBridge | undefined;
+  selectExitBlockchainBridge?: (blockchainStatus: BlockchainStatus) => BlockchainBridge | undefined;
   isAsync?: boolean;
   entryInputAssetAddressA: EthAddress;
   entryOutputAssetAddressA: EthAddress;
@@ -29,6 +35,7 @@ function createRecipe(
     entryOutputAssetAddressA,
     openHandleAssetAddress,
     selectBlockchainBridge,
+    selectExitBlockchainBridge,
     ...args
   }: CreateRecipeArgs,
   status: RollupProviderStatus,
@@ -43,6 +50,12 @@ function createRecipe(
   }
   const bridgeAddressId = blockchainBridge.id;
   const address = blockchainBridge.address;
+  const exitBlockchainBridge = selectExitBlockchainBridge?.(status.blockchainStatus);
+  if (selectExitBlockchainBridge && !exitBlockchainBridge) {
+    debug(`Could not find remote bridge for exiting on recipe '${args.id}'`);
+    return;
+  }
+  const exitBridgeAddressId = exitBlockchainBridge?.id;
   const entryInputAssetA = assets.find(x => x.address.equals(entryInputAssetAddressA));
   const entryOutputAssetA = assets.find(x => x.address.equals(entryOutputAssetAddressA));
   if (!entryInputAssetA || !entryOutputAssetA) {
@@ -61,7 +74,16 @@ function createRecipe(
       return;
     }
   }
-  return { ...args, bridgeAddressId, address, flow, openHandleAsset, valueEstimationInteractionAssets };
+  return {
+    ...args,
+    isAsync,
+    bridgeAddressId,
+    exitBridgeAddressId,
+    address,
+    flow,
+    openHandleAsset,
+    valueEstimationInteractionAssets,
+  };
 }
 
 const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
@@ -108,8 +130,8 @@ const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
     entryInputAssetAddressA: KMAA.ETH,
     entryOutputAssetAddressA: KMAA.wstETH,
     createAdaptor: createLidoAdaptor,
-    selectEnterAuxDataOpt: () => toBaseUnits('1.0', 18), // Minimum acceptable amount of stEth per 1 eth
-    selectExitAuxDataOpt: () => toBaseUnits('0.9', 18), // Minimum acceptable amount of eth per 1 stEth
+    selectEnterAuxDataOpt: () => 1e18, // Minimum acceptable amount of stEth per 1 eth
+    selectExitAuxDataOpt: () => 0.9e18, // Minimum acceptable amount of eth per 1 stEth
     projectName: 'Lido',
     website: 'https://lido.fi/',
     websiteLabel: 'lido.fi',
@@ -128,6 +150,66 @@ const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
     keyStat3: KeyBridgeStat.NEXT_BATCH,
   },
 ];
+
+if (shouldShowYearn) {
+  CREATE_RECIPES_ARGS.push({
+    id: 'yearn-finance.ETH-to-yvETH',
+    openHandleAssetAddress: KMAA.yvETH,
+    entryInputAssetAddressA: KMAA.ETH,
+    entryOutputAssetAddressA: KMAA.yvETH,
+    createAdaptor: createYearnAdaptor,
+    projectName: 'Yearn Finance',
+    gradient: ['#0040C2', '#A1B6E0'],
+    website: 'https://yearn.finance/',
+    websiteLabel: 'yearn.finance',
+    name: 'Yearn Finance',
+    investmentType: DefiInvestmentType.YIELD,
+    shortDesc: `Deposit ETH into Yearn's vault to easily generate yield with a passive investing strategy.`,
+    longDescription:
+      'Depositing into the Yearn vault, pools the capital and uses the Yearn strategies to automate yield generation and rebalancing. Your position is represented with yvETH.',
+    bannerImg: yearnLogo,
+    logo: yearnLogo,
+    miniLogo: yearnGradientLogo,
+    roiType: 'APY',
+    keyStat1: KeyBridgeStat.YIELD,
+    keyStat2: KeyBridgeStat.LIQUIDITY,
+    keyStat3: KeyBridgeStat.NEXT_BATCH,
+    requiresAuxDataOpts: true,
+    selectBlockchainBridge: ({ bridges }) => bridges.find(x => x.id === 7),
+    selectExitBlockchainBridge: ({ bridges }) => bridges.find(x => x.id === 8),
+    selectEnterAuxDataOpt: () => 0,
+    selectExitAuxDataOpt: () => 1,
+  });
+  CREATE_RECIPES_ARGS.push({
+    id: 'yearn-finance.DAI-to-yvDAI',
+    openHandleAssetAddress: KMAA.yvDAI,
+    entryInputAssetAddressA: KMAA.DAI,
+    entryOutputAssetAddressA: KMAA.yvDAI,
+    createAdaptor: createYearnAdaptor,
+    projectName: 'Yearn Finance',
+    gradient: ['#0040C2', '#A1B6E0'],
+    website: 'https://yearn.finance/',
+    websiteLabel: 'yearn.finance',
+    name: 'Yearn Finance',
+    investmentType: DefiInvestmentType.YIELD,
+    shortDesc: `Deposit DAI into Yearn's vault to easily generate yield with a passive investing strategy.`,
+    longDescription:
+      'Depositing into the Yearn vault, pools the capital and uses the Yearn strategies to automate yield generation and rebalancing. Your position is represented with yvDAI.',
+    bannerImg: yearnLogo,
+    logo: yearnLogo,
+    miniLogo: yearnGradientLogo,
+    roiType: 'APY',
+    keyStat1: KeyBridgeStat.YIELD,
+    keyStat2: KeyBridgeStat.LIQUIDITY,
+    keyStat3: KeyBridgeStat.NEXT_BATCH,
+    requiresAuxDataOpts: true,
+    hideUnderlyingOnExit: true,
+    selectBlockchainBridge: ({ bridges }) => bridges.find(x => x.id === 7),
+    selectExitBlockchainBridge: ({ bridges }) => bridges.find(x => x.id === 8),
+    selectEnterAuxDataOpt: () => 0,
+    selectExitAuxDataOpt: () => 1,
+  });
+}
 
 export function createDefiRecipes(status: RollupProviderStatus, assets: RemoteAsset[]) {
   const recipes: DefiRecipe[] = [];

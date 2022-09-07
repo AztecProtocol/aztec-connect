@@ -17,7 +17,9 @@ export function exitingRecipeMatcher(bridgeCallData: BridgeCallData) {
     // TODO: Handle input and output assets B
     return (
       recipe.flow.type === 'closable' &&
-      recipe.bridgeAddressId === bridgeCallData.bridgeAddressId &&
+      (recipe.exitBridgeAddressId === undefined
+        ? recipe.bridgeAddressId === bridgeCallData.bridgeAddressId
+        : recipe.exitBridgeAddressId === bridgeCallData.bridgeAddressId) &&
       recipe.flow.exit.inA.id === bridgeCallData.inputAssetIdA &&
       recipe.flow.exit.outA.id === bridgeCallData.outputAssetIdA
     );

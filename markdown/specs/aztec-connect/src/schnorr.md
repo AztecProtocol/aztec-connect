@@ -42,7 +42,7 @@ We derive the randomly distributed Schnorr signature nonce $k \in \mathbb{F}_r$ 
 
 The algorithm: Given a message $m$, an account $(\text{priv}, \text{pub})\in \mathbb{F}_r \times \mathbb{G}_1$ produces the nonce
 
-$$k = h(s' \oplus \text{opad} || h((s' \oplus \text{ipad} || m)))$$
+$$\text{hmac} = h(s' \oplus \text{opad} || h((s' \oplus \text{ipad} || m)))$$
 where:
 
 - $\text{priv}$ is a 32-byte secret key
@@ -52,7 +52,14 @@ where:
 - $\text{ipad}$ is a 64-byte string, consisting of repeated bytes valued `0x36`
 - $||$ denotes concatenation
 - $\oplus$ denotes bitwise exclusive or
+- $text{hmac}$ is a 32-byte string
 
+The 32-byte $\text{hmac}$ output is first padded to 64-bytes before converting into $k \in \mathbb{F}_r$, to reduce the bias when taking the hmac output modulo $r$. The padding is as follows:
+
+- $k_{lo} = h(\text{hmac}, 0)$
+- $k_{hi} = h(\text{hmac}, 1)$
+- $k_base = { k_{hi}, k_{lo} }$, where $k_base$ is interpreted as a 512-bit unsigned integer
+- $k = k_base \% r$
 ## Sign
 
 We use signatures with compression as described in Section 19.2.3 of [BS], in the sense that the signature contains the hash, meaning that the signature contains a hash and a field element, rather than a group element and a field element.

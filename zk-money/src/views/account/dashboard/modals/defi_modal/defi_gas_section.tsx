@@ -17,7 +17,7 @@ function renderInfo(props: DefiGasSectionProps) {
       return (
         <>
           <p>Default speed. Split fees with others doing the same transaction.</p>
-          <DefiGasSaving feeAmount={selectedFeeAmount} bridgeAddressId={props.recipe?.bridgeAddressId} />
+          <DefiGasSaving feeAmount={selectedFeeAmount} bridgeAddressId={props.bridgeCallData?.bridgeAddressId} />
         </>
       );
     case DefiSettlementTime.NEXT_ROLLUP:

@@ -1,5 +1,5 @@
 import type { DefiPosition } from 'alt-model/defi/open_position_hooks';
-import { useDefaultExpectedAssetYield, useCurrentAssetYield } from 'alt-model/defi/defi_info_hooks';
+import { useDefaultExpectedAssetYield, useCurrentAssetYield, useDefaultTermApr } from 'alt-model/defi/defi_info_hooks';
 import { DefiInvestmentType, DefiRecipe } from 'alt-model/defi/types';
 import { SkeletonRect } from 'ui-components';
 
@@ -43,6 +43,11 @@ function ApyFromDefaultAux({ recipe, position }: { recipe: DefiRecipe; position:
   return <Apy expectedYield={expectedYield} investmentType={recipe.investmentType} roiType={position.recipe.roiType} />;
 }
 
+function TermAprValue({ recipe, position }: { recipe: DefiRecipe; position: DefiPosition }) {
+  const termApr = useDefaultTermApr(recipe);
+  return <Apy expectedYield={termApr} investmentType={recipe.investmentType} roiType={position.recipe.roiType} />;
+}
+
 export function renderApyField(position: DefiPosition) {
   switch (position.type) {
     case 'async': {
@@ -52,7 +57,7 @@ export function renderApyField(position: DefiPosition) {
           <ApyFromInteractionNonce recipe={position.recipe} interactionNonce={interactionNonce} position={position} />
         );
       } else {
-        return <ApyFromDefaultAux recipe={position.recipe} position={position} />;
+        return <TermAprValue recipe={position.recipe} position={position} />;
       }
     }
     case 'sync-entering':

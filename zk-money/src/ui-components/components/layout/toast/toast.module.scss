@@ -61,3 +61,13 @@
 .warning {
   border: 4px solid colors.$warning;
 }
+
+.collapseButton {
+  cursor: pointer;
+  position: absolute;
+  bottom: 20px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 14px;
+  border-radius: 10px;
+}
