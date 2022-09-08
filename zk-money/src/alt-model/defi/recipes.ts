@@ -14,8 +14,6 @@ import { KNOWN_MAINNET_ASSET_ADDRESSES as KMAA } from 'alt-model/known_assets/kn
 import { RemoteAsset } from 'alt-model/types';
 import { createLidoAdaptor } from './bridge_data_adaptors/lido_adaptor';
 
-const shouldShowYearn = !!localStorage.getItem('enable_yearn');
-
 const debug = createDebug('zm:recipes');
 
 interface CreateRecipeArgs
@@ -157,10 +155,7 @@ const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
     keyStat2: KeyBridgeStat.LIQUIDITY,
     keyStat3: KeyBridgeStat.NEXT_BATCH,
   },
-];
-
-if (shouldShowYearn) {
-  CREATE_RECIPES_ARGS.push({
+  {
     id: 'yearn-finance.ETH-to-yvETH',
     openHandleAssetAddress: KMAA.yvETH,
     entryInputAssetAddressA: KMAA.ETH,
@@ -186,8 +181,8 @@ if (shouldShowYearn) {
     selectExitBlockchainBridge: ({ bridges }) => bridges.find(x => x.id === 8),
     enterAuxDataResolver: { type: 'static', value: 0 },
     exitAuxDataResolver: { type: 'static', value: 1 },
-  });
-  CREATE_RECIPES_ARGS.push({
+  },
+  {
     id: 'yearn-finance.DAI-to-yvDAI',
     openHandleAssetAddress: KMAA.yvDAI,
     entryInputAssetAddressA: KMAA.DAI,
@@ -214,8 +209,8 @@ if (shouldShowYearn) {
     selectExitBlockchainBridge: ({ bridges }) => bridges.find(x => x.id === 8),
     enterAuxDataResolver: { type: 'static', value: 0 },
     exitAuxDataResolver: { type: 'static', value: 1 },
-  });
-}
+  },
+];
 
 export function createDefiRecipes(status: RollupProviderStatus, assets: RemoteAsset[]) {
   const recipes: DefiRecipe[] = [];
