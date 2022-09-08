@@ -508,7 +508,7 @@ export class ShieldForm extends EventEmitter implements AccountForm {
     if (this.status === ShieldStatus.VALIDATE) {
       // This error won't be displayed in the form but should trigger a "Session Expired" error in the confirm step.
       const currentFees = this.isNewAccount
-        ? await this.sdk.getRegisterFees({ assetId: this.asset.id, value: amount })
+        ? await this.sdk.getRegisterFees(this.asset.id)
         : await this.sdk.getDepositFees(this.asset.id);
       const currentFee = currentFees[form.speed.value].value;
       if (fee < currentFee) {
@@ -675,7 +675,6 @@ export class ShieldForm extends EventEmitter implements AccountForm {
           depositValue,
           fee,
           depositor,
-          undefined,
           this.provider?.ethereumProvider,
         )
       : this.sdk.createDepositController(
@@ -684,7 +683,6 @@ export class ShieldForm extends EventEmitter implements AccountForm {
           fee,
           outputNoteOwner,
           true, // recipientAccountRequired: (depositing to an account that is registered - though not yet settled)
-          undefined,
           this.provider?.ethereumProvider,
         );
   }

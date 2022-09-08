@@ -10,7 +10,7 @@ export VK=$5
 if [ "$MAINNET_FORK" = "true" ]; then
   export CHAIN_ID='--chain.chainId=0xe2e'
   export FORK_HOST='-f=https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35'
-  export FORK_BLOCK='--fork.blockNumber=14728000'
+  export FORK_BLOCK='--fork.blockNumber=15495678'
 fi
 
 if [ -z "$VK" ]; then

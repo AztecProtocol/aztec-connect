@@ -16,11 +16,13 @@ import {
   UserPaymentTx,
   AssetValue,
   DefiSettlementTime,
-  FeePayer,
+  GrumpkinAddress,
+  Signer,
+  FeeController,
 } from '@aztec/sdk';
 import { randomBytes } from 'crypto';
 
-type AnyController = DefiController | DepositController | WithdrawController | TransferController;
+type AnyController = DefiController | DepositController | WithdrawController | TransferController | FeeController;
 
 export interface EthAddressAndNonce {
   address: EthAddress;
@@ -156,7 +158,7 @@ export class Agent {
     assetId = 0,
     instant = false,
     maxFee?: bigint,
-    feePayer?: FeePayer,
+    feePayer?: { userId: GrumpkinAddress; signer: Signer },
   ) {
     const { user, address, userRegistered } = userData;
     const fee = await this.waitForMaxFee(
@@ -172,13 +174,13 @@ export class Agent {
     );
 
     const controller = await this.executeUntilSucces(async () => {
+      const depositFee = feePayer ? { ...fee, value: BigInt(0) } : fee;
       const controller = this.sdk.createDepositController(
         fundingAddress,
         { assetId, value: actualDepositValue },
-        fee,
+        depositFee,
         user.id,
         userRegistered,
-        feePayer,
       );
       await controller.createProof();
       await controller.sign();
@@ -190,8 +192,20 @@ export class Agent {
         await controller.depositFundsToContract();
         await controller.awaitDepositFundsToContract();
       }
-      await controller.send();
-      return controller;
+      if (!feePayer) {
+        await controller.send();
+        return controller;
+      } else {
+        const feeController = this.sdk.createFeeController(
+          feePayer.userId,
+          feePayer.signer,
+          controller.exportProofTxs(),
+          fee,
+        );
+        await feeController.createProof();
+        await feeController.send();
+        return feeController;
+      }
     }, `deposit for agent ${this.id}`);
     console.log(
       `agent ${this.id} sent deposit of ${this.getBalanceString(actualDepositValue, assetId)} with fee ${
@@ -201,9 +215,7 @@ export class Agent {
     return controller;
   }
 
-  public async awaitBulkSettlement(
-    controllers: Array<DefiController | DepositController | WithdrawController | TransferController | undefined>,
-  ) {
+  public async awaitBulkSettlement(controllers: (AnyController | undefined)[]) {
     const valid = controllers.filter(c => c != undefined);
     if (!valid.length) {
       return;
@@ -219,7 +231,7 @@ export class Agent {
   ) {
     const { user, signer } = userData;
     const fee = await this.waitForMaxFee(
-      () => this.sdk.getWithdrawFees(assetId, userData.address),
+      () => this.sdk.getWithdrawFees(assetId, { recipient: userData.address }),
       TxSettlementTime.NEXT_ROLLUP,
       maxFee,
     );
@@ -278,6 +290,7 @@ export class Agent {
         assetValue,
         fee,
         recipient.user.id,
+        true,
       );
       await controller.createProof();
       await controller.send();

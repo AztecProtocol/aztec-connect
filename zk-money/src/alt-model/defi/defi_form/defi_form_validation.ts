@@ -1,4 +1,4 @@
-import type { DefiSettlementTime, BridgeCallData } from '@aztec/sdk';
+import type { DefiSettlementTime, BridgeCallData, AssetValue } from '@aztec/sdk';
 import type { AmountFactory } from 'alt-model/assets/amount_factory';
 import type { DefiComposerPayload } from './defi_composer';
 import type { RemoteAsset } from 'alt-model/types';
@@ -21,6 +21,7 @@ interface DefiFormValidationInput {
   feeAmounts?: (Amount | undefined)[];
   balanceInFeePayingAsset?: bigint;
   transactionLimit?: bigint;
+  maxChainableDefiDeposit?: AssetValue;
   bridgeCallData?: BridgeCallData;
 }
 
@@ -50,9 +51,16 @@ export function validateDefiForm(input: DefiFormValidationInput): DefiFormValida
     feeAmounts,
     balanceInFeePayingAsset,
     transactionLimit,
+    maxChainableDefiDeposit,
     depositAsset,
   } = input;
-  if (!amountFactory || !feeAmount || balanceInTargetAsset === undefined || balanceInFeePayingAsset === undefined) {
+  if (
+    !amountFactory ||
+    !feeAmount ||
+    balanceInTargetAsset === undefined ||
+    balanceInFeePayingAsset === undefined ||
+    !maxChainableDefiDeposit
+  ) {
     return { loading: true, input };
   }
   if (transactionLimit === undefined) {
@@ -63,7 +71,7 @@ export function validateDefiForm(input: DefiFormValidationInput): DefiFormValida
   const targetAssetIsPayingFee = depositAsset.id === feeAmount.id;
   const feeInTargetAsset = targetAssetIsPayingFee ? feeAmount.baseUnits : 0n;
 
-  const maxOutput = max(min(balanceInTargetAsset - feeInTargetAsset, transactionLimit), 0n);
+  const maxOutput = max(min(maxChainableDefiDeposit.value, transactionLimit), 0n);
   const targetDepositAmount = amountFromStrOrMaxRoundedDown(fields.amountStrOrMax, maxOutput, depositAsset);
 
   const requiredInputInTargetAssetCoveringCosts = targetDepositAmount.baseUnits + feeInTargetAsset;

@@ -69,7 +69,7 @@ describe('end-to-end account tests', () => {
     {
       const depositValue = sdk.toBaseUnits(assetId, '0.005');
       // in order to flush this tx through, we will pay for all slots in the rollup
-      const fee = (await sdk.getRegisterFees(depositValue))[TxSettlementTime.INSTANT];
+      const fee = (await sdk.getRegisterFees(assetId))[TxSettlementTime.INSTANT];
       debug(`depositing ${sdk.fromBaseUnits(depositValue, true)} (fee: ${sdk.fromBaseUnits(fee)}) to the account...`);
 
       const controller = sdk.createRegisterController(

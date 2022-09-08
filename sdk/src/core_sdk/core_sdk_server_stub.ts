@@ -1,7 +1,7 @@
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { assetValueToJson } from '@aztec/barretenberg/asset';
 import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
-import { depositTxToJson, rollupProviderStatusToJson } from '@aztec/barretenberg/rollup_provider';
+import { depositTxToJson, rollupProviderStatusToJson, txFromJson, TxJson } from '@aztec/barretenberg/rollup_provider';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { EventEmitter } from 'events';
 import { coreUserTxToJson } from '../core_tx';
@@ -135,7 +135,7 @@ export class CoreSdkServerStub {
     return proofOutputToJson(proofOutput);
   }
 
-  public async createPaymentProofInput(
+  public async createPaymentProofInputs(
     userId: string,
     assetId: number,
     publicInput: string,
@@ -149,7 +149,7 @@ export class CoreSdkServerStub {
     spendingPublicKey: string,
     allowChain: number,
   ) {
-    const proofInput = await this.core.createPaymentProofInput(
+    const proofInputs = await this.core.createPaymentProofInputs(
       GrumpkinAddress.fromString(userId),
       assetId,
       BigInt(publicInput),
@@ -163,7 +163,7 @@ export class CoreSdkServerStub {
       GrumpkinAddress.fromString(spendingPublicKey),
       allowChain,
     );
-    return joinSplitProofInputToJson(proofInput);
+    return proofInputs.map(joinSplitProofInputToJson);
   }
 
   public async createPaymentProof(input: JoinSplitProofInputJson, txRefNo: number) {
@@ -240,8 +240,8 @@ export class CoreSdkServerStub {
     return proofOutputToJson(proofOutput);
   }
 
-  public async sendProofs(proofs: ProofOutputJson[]) {
-    const txIds = await this.core.sendProofs(proofs.map(proofOutputFromJson));
+  public async sendProofs(proofs: ProofOutputJson[], proofTxs: TxJson[] = []) {
+    const txIds = await this.core.sendProofs(proofs.map(proofOutputFromJson), proofTxs.map(txFromJson));
     return txIds.map(txId => txId.toString());
   }
 
@@ -324,6 +324,21 @@ export class CoreSdkServerStub {
     return balance.toString();
   }
 
+  public async getSpendableNoteValues(
+    userId: string,
+    assetId: number,
+    spendingKeyRequired?: boolean,
+    excludePendingNotes?: boolean,
+  ) {
+    const values = await this.core.getSpendableNoteValues(
+      GrumpkinAddress.fromString(userId),
+      assetId,
+      spendingKeyRequired,
+      excludePendingNotes,
+    );
+    return values.map(v => v.toString());
+  }
+
   public async getSpendableSum(
     userId: string,
     assetId: number,
@@ -348,21 +363,21 @@ export class CoreSdkServerStub {
     return sums.map(assetValueToJson);
   }
 
-  public async getMaxSpendableValue(
+  public async getMaxSpendableNoteValues(
     userId: string,
     assetId: number,
     spendingKeyRequired?: boolean,
     excludePendingNotes?: boolean,
     numNotes?: number,
   ) {
-    const value = await this.core.getMaxSpendableValue(
+    const values = await this.core.getMaxSpendableNoteValues(
       GrumpkinAddress.fromString(userId),
       assetId,
       spendingKeyRequired,
       excludePendingNotes,
       numNotes,
     );
-    return value.toString();
+    return values.map(v => v.toString());
   }
 
   public async pickNotes(

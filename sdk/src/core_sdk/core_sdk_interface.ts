@@ -2,7 +2,7 @@ import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetValue } from '@aztec/barretenberg/asset';
 import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { SchnorrSignature } from '@aztec/barretenberg/crypto';
-import { DepositTx, RollupProviderStatus } from '@aztec/barretenberg/rollup_provider';
+import { DepositTx, RollupProviderStatus, Tx } from '@aztec/barretenberg/rollup_provider';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { CoreUserTx } from '../core_tx';
 import { Note } from '../note';
@@ -53,7 +53,7 @@ export interface CoreSdkInterface {
     txRefNo: number,
   ): Promise<ProofOutput>;
 
-  createPaymentProofInput(
+  createPaymentProofInputs(
     userId: GrumpkinAddress,
     assetId: number,
     publicInput: bigint,
@@ -66,7 +66,7 @@ export interface CoreSdkInterface {
     publicOwner: EthAddress | undefined,
     spendingPublicKey: GrumpkinAddress,
     allowChain: number,
-  ): Promise<JoinSplitProofInput>;
+  ): Promise<JoinSplitProofInput[]>;
 
   createPaymentProof(input: JoinSplitProofInput, txRefNo: number): Promise<ProofOutput>;
 
@@ -102,7 +102,7 @@ export interface CoreSdkInterface {
 
   createDefiProof(input: JoinSplitProofInput, txRefNo: number): Promise<ProofOutput>;
 
-  sendProofs(proofs: ProofOutput[]): Promise<TxId[]>;
+  sendProofs(proofs: ProofOutput[], proofTxs?: Tx[]): Promise<TxId[]>;
 
   awaitSynchronised(timeout?: number): Promise<void>;
 
@@ -140,6 +140,13 @@ export interface CoreSdkInterface {
 
   getBalance(userId: GrumpkinAddress, assetId: number): Promise<bigint>;
 
+  getSpendableNoteValues(
+    userId: GrumpkinAddress,
+    assetId: number,
+    spendingKeyRequired?: boolean,
+    excludePendingNotes?: boolean,
+  ): Promise<bigint[]>;
+
   getSpendableSum(
     userId: GrumpkinAddress,
     assetId: number,
@@ -153,13 +160,13 @@ export interface CoreSdkInterface {
     excludePendingNotes?: boolean,
   ): Promise<AssetValue[]>;
 
-  getMaxSpendableValue(
+  getMaxSpendableNoteValues(
     userId: GrumpkinAddress,
     assetId: number,
     spendingKeyRequired?: boolean,
     excludePendingNotes?: boolean,
     numNotes?: number,
-  ): Promise<bigint>;
+  ): Promise<bigint[]>;
 
   pickNotes(
     userId: GrumpkinAddress,
