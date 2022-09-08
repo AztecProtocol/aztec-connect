@@ -14,11 +14,20 @@ export function useBridgeDataAdaptor(recipeId: string) {
 export function useDefaultAuxDataOption(recipeId: string, isExit?: boolean) {
   const { auxDataPollerCache } = useBridgeDataAdaptorsMethodCaches();
   const recipes = useDefiRecipes();
-  const opts = useMaybeObs(auxDataPollerCache.get(recipeId)?.obs);
   const recipe = recipes.find(x => x.id === recipeId);
-  if (!recipe || !opts) return;
-  if (isExit && recipe.selectExitAuxDataOpt) return recipe.selectExitAuxDataOpt(opts);
-  return recipe.selectEnterAuxDataOpt(opts);
+  const resolver = isExit ? recipe?.exitAuxDataResolver : recipe?.enterAuxDataResolver;
+  const shouldFetchOpts = resolver?.type === 'bridge-data-select';
+  const opts = useMaybeObs(shouldFetchOpts ? auxDataPollerCache.get(recipeId)?.obs : undefined);
+  if (!resolver) return;
+  switch (resolver.type) {
+    case 'bridge-data-select': {
+      if (!opts) return;
+      return resolver.selectOpt(opts);
+    }
+    case 'static': {
+      return resolver.value;
+    }
+  }
 }
 
 export function useDefaultEnterBridgeCallData(recipe: DefiRecipe) {

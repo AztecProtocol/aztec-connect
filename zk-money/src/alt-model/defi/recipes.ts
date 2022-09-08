@@ -94,8 +94,10 @@ const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
     entryInputAssetAddressA: KMAA.DAI,
     entryOutputAssetAddressA: KMAA.DAI,
     createAdaptor: createElementAdaptor,
-    requiresAuxDataOpts: true,
-    selectEnterAuxDataOpt: opts => opts[0], // Tranche expiry timestamp
+    enterAuxDataResolver: {
+      type: 'bridge-data-select',
+      selectOpt: opts => opts[0], // Tranche expiry timestamp
+    },
     projectName: 'Element',
     gradient: ['#2E69C3', '#6ACDE2'],
     website: 'https://element.fi/',
@@ -130,8 +132,14 @@ const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
     entryInputAssetAddressA: KMAA.ETH,
     entryOutputAssetAddressA: KMAA.wstETH,
     createAdaptor: createLidoAdaptor,
-    selectEnterAuxDataOpt: () => 1e18, // Minimum acceptable amount of stEth per 1 eth
-    selectExitAuxDataOpt: () => 0.9e18, // Minimum acceptable amount of eth per 1 stEth
+    enterAuxDataResolver: {
+      type: 'static',
+      value: 1e18, // Minimum acceptable amount of stEth per 1 eth
+    },
+    exitAuxDataResolver: {
+      type: 'static',
+      value: 0.9e18, // Minimum acceptable amount of eth per 1 stEth
+    },
     projectName: 'Lido',
     website: 'https://lido.fi/',
     websiteLabel: 'lido.fi',
@@ -174,11 +182,10 @@ if (shouldShowYearn) {
     keyStat1: KeyBridgeStat.YIELD,
     keyStat2: KeyBridgeStat.LIQUIDITY,
     keyStat3: KeyBridgeStat.NEXT_BATCH,
-    requiresAuxDataOpts: true,
     selectBlockchainBridge: ({ bridges }) => bridges.find(x => x.id === 7),
     selectExitBlockchainBridge: ({ bridges }) => bridges.find(x => x.id === 8),
-    selectEnterAuxDataOpt: () => 0,
-    selectExitAuxDataOpt: () => 1,
+    enterAuxDataResolver: { type: 'static', value: 0 },
+    exitAuxDataResolver: { type: 'static', value: 1 },
   });
   CREATE_RECIPES_ARGS.push({
     id: 'yearn-finance.DAI-to-yvDAI',
@@ -202,12 +209,11 @@ if (shouldShowYearn) {
     keyStat1: KeyBridgeStat.YIELD,
     keyStat2: KeyBridgeStat.LIQUIDITY,
     keyStat3: KeyBridgeStat.NEXT_BATCH,
-    requiresAuxDataOpts: true,
     hideUnderlyingOnExit: true,
     selectBlockchainBridge: ({ bridges }) => bridges.find(x => x.id === 7),
     selectExitBlockchainBridge: ({ bridges }) => bridges.find(x => x.id === 8),
-    selectEnterAuxDataOpt: () => 0,
-    selectExitAuxDataOpt: () => 1,
+    enterAuxDataResolver: { type: 'static', value: 0 },
+    exitAuxDataResolver: { type: 'static', value: 1 },
   });
 }
 
