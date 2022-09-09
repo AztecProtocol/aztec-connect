@@ -5,5 +5,5 @@ export type BridgeDataAdaptorCreator = (
   provider: EthereumProvider,
   rollupContractAddress: string,
   bridgeContractAddress: string,
-  isMainnet: boolean,
+  falafelGraphQlEndpoint: string,
 ) => BridgeDataFieldGetters;
