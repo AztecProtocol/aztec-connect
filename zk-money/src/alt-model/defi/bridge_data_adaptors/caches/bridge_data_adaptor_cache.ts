@@ -14,7 +14,6 @@ export function createBridgeDataAdaptorCache(
   config: Config,
 ) {
   return new LazyInitCacheMap((recipeId: string) => {
-    const isMainnet = config.chainId === 1;
     const recipe = recipes.find(x => x.id === recipeId)!;
     const { rollupContractAddress } = status.blockchainStatus;
     const blockchainBridge = status.blockchainStatus.bridges.find(bridge => bridge.id === recipe.bridgeAddressId);
@@ -22,11 +21,12 @@ export function createBridgeDataAdaptorCache(
       debug("No bridge found for recipe's enter address.");
       return undefined;
     }
+    const falafelGraphQlEndpoint = `${config.rollupProviderUrl}/graphql`;
     return recipe.createAdaptor(
       new EthersAdapter(provider),
       rollupContractAddress.toString(),
       blockchainBridge.address.toString(),
-      isMainnet,
+      falafelGraphQlEndpoint,
     );
   });
 }
