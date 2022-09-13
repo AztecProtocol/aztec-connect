@@ -457,7 +457,7 @@ export class RollupProcessor {
         return { earliestBlock: 14728000, chunk: 100000, offchainSearchLead: 6 * 60 * 24 };
       case 0xa57ec:
       case 0xe2e:
-        return { earliestBlock: 15495678, chunk: 10, offchainSearchLead: 10 };
+        return { earliestBlock: 15525911, chunk: 10, offchainSearchLead: 10 };
       default:
         return { earliestBlock: 0, chunk: 100000, offchainSearchLead: 6 * 60 * 24 };
     }
