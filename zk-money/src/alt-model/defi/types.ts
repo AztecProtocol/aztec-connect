@@ -36,6 +36,16 @@ export type BridgeFlowAssets =
       exit: BridgeInteractionAssets;
     };
 
+type AuxDataResolver =
+  | {
+      type: 'static';
+      value: number;
+    }
+  | {
+      type: 'bridge-data-select';
+      selectOpt: (opts: number[]) => number | undefined;
+    };
+
 export interface DefiRecipe {
   id: string;
   gradient?: string[];
@@ -47,9 +57,8 @@ export interface DefiRecipe {
   openHandleAsset?: RemoteAsset;
   valueEstimationInteractionAssets: BridgeInteractionAssets;
   createAdaptor: BridgeDataAdaptorCreator;
-  requiresAuxDataOpts?: boolean;
-  selectEnterAuxDataOpt: (opts: number[]) => number;
-  selectExitAuxDataOpt?: (opts: number[]) => number;
+  enterAuxDataResolver: AuxDataResolver;
+  exitAuxDataResolver?: AuxDataResolver;
   projectName: string;
   website: string;
   websiteLabel: string;

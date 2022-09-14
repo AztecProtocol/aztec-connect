@@ -93,7 +93,7 @@ function useValidRecipesOnly(recipes?: DefiRecipe[]) {
   const validRecipesObs = useMemo(() => {
     if (!recipes) return;
     // Each recipe in this list will have it's corresponding aux data opts checked
-    const recipesRequiringAuxDataOpts = recipes.filter(x => x.requiresAuxDataOpts);
+    const recipesRequiringAuxDataOpts = recipes.filter(x => x.enterAuxDataResolver.type === 'bridge-data-select');
     // Lazy fetch the aux data opts for recipe in the above list
     const recipesAuxDataOptsObs = Obs.combine(
       recipesRequiringAuxDataOpts.map(x => auxDataPollerCache.get(x.id)?.obs ?? Obs.constant(undefined)),
