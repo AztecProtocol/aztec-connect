@@ -86,7 +86,8 @@ function createRecipe(
 
 const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
   {
-    id: 'element-finance.DAI-to-DAI',
+    id: 'element-finance-old.DAI-to-DAI',
+    unlisted: true,
     isAsync: true,
     selectBlockchainBridge: ({ bridges }) => bridges.find(x => x.id === 1),
     entryInputAssetAddressA: KMAA.DAI,
@@ -95,6 +96,35 @@ const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
     enterAuxDataResolver: {
       type: 'bridge-data-select',
       selectOpt: opts => opts[0], // Tranche expiry timestamp
+    },
+    projectName: 'Element',
+    gradient: ['#2E69C3', '#6ACDE2'],
+    website: 'https://element.fi/',
+    websiteLabel: 'element.fi',
+    name: 'Element Fixed Yield',
+    investmentType: DefiInvestmentType.FIXED_YIELD,
+    shortDesc:
+      'Deposit zkDai to Element for fixed yield. Funds are locked in Element and returned at the maturity date.',
+    longDescription:
+      'Element allows you to invest assets for a fixed yield. Deposit an asset today and receive it back on the maturity date with a fixed APR.',
+    bannerImg: ethToDaiBanner,
+    logo: elementFiLogo,
+    miniLogo: elementMiniLogo,
+    roiType: 'APR',
+    keyStat1: KeyBridgeStat.FIXED_YIELD,
+    keyStat2: KeyBridgeStat.MATURITY,
+    keyStat3: KeyBridgeStat.NEXT_BATCH,
+  },
+  {
+    id: 'element-finance.DAI-to-DAI',
+    isAsync: true,
+    selectBlockchainBridge: ({ bridges }) => bridges.find(x => x.id === 9),
+    entryInputAssetAddressA: KMAA.DAI,
+    entryOutputAssetAddressA: KMAA.DAI,
+    createAdaptor: createElementAdaptor,
+    enterAuxDataResolver: {
+      type: 'bridge-data-select',
+      selectOpt: opts => opts[opts.length - 1], // Tranche expiry timestamp
     },
     projectName: 'Element',
     gradient: ['#2E69C3', '#6ACDE2'],
