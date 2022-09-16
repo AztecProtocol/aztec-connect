@@ -2,18 +2,21 @@
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { TxType } from '@aztec/barretenberg/blockchain';
 import { ProofData } from '@aztec/barretenberg/client_proofs';
+import { OffchainDefiDepositData } from '@aztec/barretenberg/offchain_tx_data';
 import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
-import { Command } from 'commander';
-import { createConnection } from 'typeorm';
-import { getOrmConfig } from '../config';
 import { Configurator } from '../configurator';
 import { initEntities } from '../entity/init_entities';
+const configurator = new Configurator();
+initEntities(configurator.getConfVars().dbUrl);
+import { Command } from 'commander';
+import { createConnection } from 'typeorm';
+import { BridgeCallData } from '../../../barretenberg.js/dest/bridge_call_data';
+import { getOrmConfig } from '../config';
 import { TypeOrmRollupDb } from '../rollup_db';
 import { SyncRollupDb } from '../rollup_db/sync_rollup_db';
 import { checkDuplicateNullifiers, checkNullifiersAgainstWorldState, findNearbyTxs } from './diagnostics';
-
-const configurator = new Configurator();
-initEntities(configurator.getConfVars().dbUrl);
+import { fromBaseUnits } from '@aztec/blockchain';
+import { RollupDao } from '../entity';
 
 const getOrmDbConfig = () => {
   const confVars = configurator.getConfVars();
@@ -119,6 +122,116 @@ const deleteTxById = async (id: Buffer) => {
   await rollupDb.deleteTxsById([id]);
 };
 
+const calculateBridgeSubsidy = async (
+  bridgeId: BridgeCallData,
+  gas: number,
+  numTxs: number,
+  startBlock = 0,
+  endBlock?: number,
+) => {
+  console.log(
+    `bridge address ${bridgeId.bridgeAddressId}, assets ${bridgeId.inputAssetIdA}/${bridgeId.outputAssetIdA}, aux data ${bridgeId.auxData}`,
+  );
+  const rollupDb = await createRollupDb();
+  const nextRollupId = await rollupDb.getNextRollupId();
+  const lastRollup = endBlock === undefined ? nextRollupId - 1 : endBlock >= nextRollupId ? nextRollupId - 1 : endBlock;
+  console.log(`Using rollups from ${startBlock} to ${lastRollup}`);
+  const correctedGasPerTx = BigInt(Math.ceil(gas / numTxs));
+  const maxExcessGas = BigInt(gas) - correctedGasPerTx;
+
+  const rollupMap: { [key: number]: RollupDao } = {};
+
+  const getRollups = async (start: number, numRollups: number) => {
+    const rollups = await rollupDb.getRollups(numRollups, start);
+    for (const rollup of rollups) {
+      rollupMap[rollup.id] = rollup;
+    }
+  };
+
+  interface RollupBridgeData {
+    numTxs: number;
+    gasCost: number;
+    gasReceived: bigint;
+    gasPrice: bigint;
+    weiPaidFor: bigint;
+    weiBalance: bigint;
+  }
+
+  const rollupDatas: RollupBridgeData[] = [];
+
+  for (let i = startBlock; i <= lastRollup; ++i) {
+    if (rollupMap[i] === undefined) {
+      await getRollups(i, 50);
+    }
+    const rollup = rollupMap[i];
+    if (rollup === undefined) {
+      console.log(`Rollup id ${i} was undefined!`);
+    }
+    const txsForBridge = [];
+    for (const tx of rollup!.rollupProof.txs) {
+      if (tx.txType !== TxType.DEFI_DEPOSIT) {
+        continue;
+      }
+      const defiOffChainData = OffchainDefiDepositData.fromBuffer(tx.offchainTxData);
+      if (!defiOffChainData.bridgeCallData.equals(bridgeId)) {
+        continue;
+      }
+      txsForBridge.push(tx);
+    }
+    if (!txsForBridge.length) {
+      continue;
+    }
+
+    const min = (a: bigint, b: bigint) => {
+      return a > b ? b : a;
+    };
+
+    const gasPaidFor =
+      correctedGasPerTx * BigInt(txsForBridge.length) +
+      txsForBridge.reduce((p, c) => p + min(BigInt(c.excessGas), maxExcessGas), 0n);
+    const gasPrice = toBigIntBE(rollup!.gasPrice!);
+    const weiPaidFor = gasPaidFor * gasPrice;
+    const weiCost = BigInt(gas) * gasPrice;
+    const balance = weiPaidFor - weiCost;
+    const rollupData = {
+      gasPrice,
+      numTxs: txsForBridge.length,
+      gasCost: gas,
+      gasReceived: gasPaidFor,
+      weiBalance: balance,
+      weiPaidFor,
+    } as RollupBridgeData;
+    rollupDatas.push(rollupData);
+    console.log(
+      `Found ${txsForBridge.length} txs for bridge in rollup ${
+        rollup!.id
+      }, time ${rollup.mined?.toISOString()}, gas paid for ${gasPaidFor}, gas cost ${gas}, gas price (GWEI) ${fromBaseUnits(
+        gasPrice,
+        9,
+        3,
+      )}, P&L (ETH) ${fromBaseUnits(balance, 18, 6)}`,
+    );
+  }
+  const overallBalance = rollupDatas.reduce((p, c) => p + c.weiBalance, 0n);
+  const totalDeposits = rollupDatas.reduce((p, c) => p + c.numTxs, 0);
+  const avgDepositsPerCall = totalDeposits / rollupDatas.length;
+  const roundedAvgDeposits = Math.round(avgDepositsPerCall * 100) / 100;
+  const totalWeiFee = rollupDatas.reduce((p, c) => p + c.weiPaidFor, 0n);
+  const avgWeiFeePerDeposit = totalWeiFee / BigInt(totalDeposits);
+  const avgGasPrice = rollupDatas.reduce((p, c) => p + BigInt(c.gasPrice), 0n) / BigInt(rollupDatas.length);
+  console.log(
+    `Num batches ${
+      rollupDatas.length
+    }, total deposits ${totalDeposits}, avg deposits per batch ${roundedAvgDeposits.toFixed(
+      2,
+    )}, avg fee per deposit (ETH) ${fromBaseUnits(avgWeiFeePerDeposit, 18, 6)}, avg gas price (GWEI) ${fromBaseUnits(
+      avgGasPrice,
+      9,
+      3,
+    )}, bridge P&L (ETH) ${fromBaseUnits(overallBalance, 18, 6)}`,
+  );
+};
+
 const program = new Command();
 
 async function main() {
@@ -148,6 +261,17 @@ async function main() {
     .action(async (txIdStrings: string) => {
       const ids = txIdStrings.split(',');
       await getTxs(txIdsToBuffers(ids));
+    });
+  program
+    .command('calculateBridgeSubsidy')
+    .description('calculate the total subsidy for a given bridge')
+    .argument('<bridgeId>', 'the bridge id, as a hex string to be converted by Buffer.from()')
+    .argument('<gas>', 'the amount of gas specified in the bridge config')
+    .argument('<numTxs>', 'the number of txs specified in the bridge config')
+    .argument('[startBlock]', 'the number of the first block, defaults to 0', 0)
+    .argument('[endBlock]', 'the number of the last block, defaults to latest', undefined)
+    .action(async (bridgeId: string, gas: number, numTxs: number, startBlock: number, endBlock?: number) => {
+      await calculateBridgeSubsidy(BridgeCallData.fromString(bridgeId), gas, numTxs, startBlock, endBlock);
     });
 
   await program.parseAsync(process.argv);
