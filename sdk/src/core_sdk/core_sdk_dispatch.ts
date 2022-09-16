@@ -1,3 +1,4 @@
+import { TxJson } from '@aztec/barretenberg/rollup_provider';
 import { EventEmitter } from 'events';
 import { DispatchMsg } from '../core_sdk_flavours/transport';
 import { NoteJson } from '../note';
@@ -86,7 +87,7 @@ export class CoreSdkDispatch extends EventEmitter implements CoreSdkSerializedIn
     ]);
   }
 
-  public async createPaymentProofInput(
+  public async createPaymentProofInputs(
     userId: string,
     assetId: number,
     publicInput: string,
@@ -100,7 +101,7 @@ export class CoreSdkDispatch extends EventEmitter implements CoreSdkSerializedIn
     spendingPublicKey: string,
     allowChain: number,
   ) {
-    return await this.request('createPaymentProofInput', [
+    return await this.request('createPaymentProofInputs', [
       userId,
       assetId,
       publicInput,
@@ -184,8 +185,8 @@ export class CoreSdkDispatch extends EventEmitter implements CoreSdkSerializedIn
     return await this.request('createDefiProof', [input, txRefNo]);
   }
 
-  public async sendProofs(proofs: ProofOutputJson[]) {
-    return await this.request('sendProofs', [proofs]);
+  public async sendProofs(proofs: ProofOutputJson[], proofTxs: TxJson[] = []) {
+    return await this.request('sendProofs', [proofs, proofTxs]);
   }
 
   public async awaitSynchronised(timeout?: number) {
@@ -260,6 +261,15 @@ export class CoreSdkDispatch extends EventEmitter implements CoreSdkSerializedIn
     return await this.request('getBalance', [userId, assetId]);
   }
 
+  public async getSpendableNoteValues(
+    userId: string,
+    assetId: number,
+    spendingKeyRequired?: boolean,
+    excludePendingNotes?: boolean,
+  ) {
+    return await this.request('getSpendableNoteValues', [userId, assetId, spendingKeyRequired, excludePendingNotes]);
+  }
+
   public async getSpendableSum(
     userId: string,
     assetId: number,
@@ -273,14 +283,14 @@ export class CoreSdkDispatch extends EventEmitter implements CoreSdkSerializedIn
     return await this.request('getSpendableSums', [userId, spendingKeyRequired, excludePendingNotes]);
   }
 
-  public async getMaxSpendableValue(
+  public async getMaxSpendableNoteValues(
     userId: string,
     assetId: number,
     spendingKeyRequired?: boolean,
     excludePendingNotes?: boolean,
     numNotes?: number,
   ) {
-    return await this.request('getMaxSpendableValue', [
+    return await this.request('getMaxSpendableNoteValues', [
       userId,
       assetId,
       spendingKeyRequired,

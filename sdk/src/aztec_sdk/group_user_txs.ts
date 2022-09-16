@@ -206,11 +206,17 @@ const getTotalFee = (txs: CoreUserTx[]) => {
   return { assetId, value: fees.reduce((sum, fee) => sum + fee.value, BigInt(0)) };
 };
 
-const getPrimaryTx = (txs: CoreUserTx[]) =>
-  txs.find(tx => !tx.txRefNo) ||
-  txs.find(tx => [ProofId.ACCOUNT, ProofId.DEFI_DEPOSIT, ProofId.DEPOSIT, ProofId.WITHDRAW].includes(tx.proofId)) ||
-  txs.find(tx => tx.proofId === ProofId.SEND && !tx.isSender) ||
-  txs.find(tx => !getFee(tx).value);
+const getPrimaryTx = (coreTxs: CoreUserTx[]) => {
+  const txs = coreTxs.filter(
+    tx => tx.proofId !== ProofId.SEND || !tx.privateInput || tx.privateInput !== tx.senderPrivateOutput,
+  );
+  return (
+    txs.find(tx => !tx.txRefNo) ||
+    txs.find(tx => [ProofId.ACCOUNT, ProofId.DEFI_DEPOSIT, ProofId.WITHDRAW].includes(tx.proofId)) ||
+    txs.find(tx => [ProofId.DEPOSIT].includes(tx.proofId)) ||
+    txs.find(tx => tx.proofId === ProofId.SEND && (!tx.isSender || !tx.isRecipient || tx.recipientPrivateOutput))
+  );
+};
 
 const toUserTx = (txs: CoreUserTx[]) => {
   const primaryTx = getPrimaryTx(txs);

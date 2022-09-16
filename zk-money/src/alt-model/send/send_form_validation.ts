@@ -1,4 +1,4 @@
-import { ProofId, TxSettlementTime, UserTx } from '@aztec/sdk';
+import { AssetValue, ProofId, TxSettlementTime, UserTx } from '@aztec/sdk';
 import { Amount } from 'alt-model/assets';
 import { AmountFactory } from 'alt-model/assets/amount_factory';
 import { StrOrMax } from 'alt-model/forms/constants';
@@ -18,17 +18,17 @@ export interface SendFormFields {
 
 interface SendFormValidationInput {
   fields: SendFormFields;
-  amountFactory?: AmountFactory;
+  amountFactory: AmountFactory | undefined;
   asset: RemoteAsset;
-  balanceInTargetAsset?: bigint;
-  feeAmount?: Amount;
-  feeAmounts?: (Amount | undefined)[];
-  balanceInFeePayingAsset?: bigint;
-  transactionLimit?: bigint;
-  recipient?: Recipient;
-  aliasIsValid?: boolean;
+  balanceInTargetAsset: bigint | undefined;
+  feeAmount: Amount | undefined;
+  feeAmounts: (Amount | undefined)[] | undefined;
+  balanceInFeePayingAsset: bigint | undefined;
+  transactionLimit: bigint | undefined;
+  maxChainableValue: AssetValue | undefined;
+  recipient: Recipient | undefined;
   isLoadingRecipient: boolean;
-  userTxs?: UserTx[];
+  userTxs: UserTx[] | undefined;
 }
 
 export interface SendFormDerivedData extends Omit<SendFormValidationInput, 'fields'> {
@@ -65,12 +65,19 @@ export function validateSendForm(input: SendFormValidationInput): SendFormValida
     feeAmount,
     balanceInFeePayingAsset,
     transactionLimit,
+    maxChainableValue,
     asset,
     recipient,
     isLoadingRecipient,
     userTxs,
   } = input;
-  if (!amountFactory || !feeAmount || balanceInTargetAsset === undefined || balanceInFeePayingAsset === undefined) {
+  if (
+    !amountFactory ||
+    !feeAmount ||
+    balanceInTargetAsset === undefined ||
+    balanceInFeePayingAsset === undefined ||
+    !maxChainableValue
+  ) {
     return { isLoading: true, state: { ...input } };
   }
   if (transactionLimit === undefined) {
@@ -81,7 +88,7 @@ export function validateSendForm(input: SendFormValidationInput): SendFormValida
   const targetAssetIsPayingFee = fields.assetId === feeAmount.id;
   const feeInTargetAsset = targetAssetIsPayingFee ? feeAmount.baseUnits : 0n;
 
-  const maxOutput = max(min(balanceInTargetAsset - feeInTargetAsset, transactionLimit), 0n);
+  const maxOutput = max(min(maxChainableValue.value, transactionLimit), 0n);
   const targetAmount = amountFromStrOrMaxRoundedDown(fields.amountStrOrMax, maxOutput, asset);
 
   const requiredInputInTargetAssetCoveringCosts = targetAmount.baseUnits + feeInTargetAsset;

@@ -11,7 +11,7 @@ import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { asyncMap } from './async_map';
 import { createFundedWalletProvider } from './create_funded_wallet_provider';
-import { registerUsers } from './sdk_utils';
+import { addUsers } from './sdk_utils';
 
 jest.setTimeout(5 * 60 * 1000);
 EventEmitter.defaultMaxListeners = 30;
@@ -31,7 +31,7 @@ describe('end-to-end non fee paying asset tests', () => {
   let sdk: AztecSdk;
   let addresses: EthAddress[] = [];
   let userIds: GrumpkinAddress[] = [];
-  const signers: Signer[] = [];
+  let signers: Signer[] = [];
   const assetId = 2;
   const initialTokenBalance = { assetId, value: 10n ** 10n };
   const debug = createDebug('bb:e2e_non_fee_asset');
@@ -62,15 +62,13 @@ describe('end-to-end non fee paying asset tests', () => {
     await sdk.awaitSynchronised();
 
     debug('minting non-fee-paying asset...');
-    await Promise.all(addresses.map(address => sdk.mint(initialTokenBalance, address)));
+    await Promise.all(
+      addresses.map(address => sdk.mint(initialTokenBalance, address, { signingAddress: addresses[0] })),
+    );
 
-    debug(`registering users...`);
+    debug(`adding users...`);
     const shieldEthValue = sdk.toBaseUnits(0, '0.01');
-    userIds = await registerUsers(sdk, addresses, shieldEthValue);
-    for (const account of addresses) {
-      const spendingKey = await sdk.generateSpendingKeyPair(account);
-      signers.push(await sdk.createSchnorrSigner(spendingKey.privateKey));
-    }
+    ({ userIds, signers } = await addUsers(sdk, addresses, shieldEthValue, ...addresses));
   });
 
   afterAll(async () => {
@@ -97,19 +95,32 @@ describe('end-to-end non fee paying asset tests', () => {
         debug(
           `shielding ${sdk.fromBaseUnits(depositValue, true)} (fee: ${sdk.fromBaseUnits(
             fee,
+            true,
           )}) from ${address.toString()} to account ${i}...`,
         );
 
-        const feePayer = { userId: userIds[i], signer: signers[i] };
-        const controller = sdk.createDepositController(address, depositValue, fee, userId, true, feePayer);
+        const requireFeeController = fee.assetId !== depositValue.assetId;
+        const depoistFee = !requireFeeController ? fee : { assetId, value: BigInt(0) };
+        const userSpendingKeyRequired = false;
+        const controller = sdk.createDepositController(
+          address,
+          depositValue,
+          depoistFee,
+          userId,
+          userSpendingKeyRequired,
+        );
         await controller.createProof();
-
         await controller.approve();
         await controller.depositFundsToContract();
         await controller.awaitDepositFundsToContract();
-
         await controller.sign();
-        return controller;
+        if (!requireFeeController) {
+          return controller;
+        } else {
+          const feeController = sdk.createFeeController(userIds[i], signers[i], controller.exportProofTxs(), fee);
+          await feeController.createProof();
+          return feeController;
+        }
       });
 
       for (const controller of controllers) {
@@ -129,7 +140,7 @@ describe('end-to-end non fee paying asset tests', () => {
     {
       // user0 withdraw to address1.
       const recipient = addresses[1];
-      const withdrawalFee = (await sdk.getWithdrawFees(assetId, recipient))[TxSettlementTime.NEXT_ROLLUP];
+      const withdrawalFee = (await sdk.getWithdrawFees(assetId, { recipient }))[TxSettlementTime.NEXT_ROLLUP];
       const transferFee = transferFees[TxSettlementTime.INSTANT];
 
       debug(

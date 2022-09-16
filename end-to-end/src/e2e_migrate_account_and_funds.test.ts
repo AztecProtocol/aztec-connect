@@ -118,7 +118,14 @@ describe('end-to-end migrate account and funds tests', () => {
           fee,
         )}) from ${oldEthAddress.toString()} to account 0...`,
       );
-      const controller = sdk.createDepositController(oldEthAddress, depositValue, fee, oldUserId);
+      const oldUserSpendingKeyRequired = true;
+      const controller = sdk.createDepositController(
+        oldEthAddress,
+        depositValue,
+        fee,
+        oldUserId,
+        oldUserSpendingKeyRequired,
+      );
       await controller.createProof();
 
       await controller.depositFundsToContract();
@@ -141,21 +148,29 @@ describe('end-to-end migrate account and funds tests', () => {
     expect(await sdk.isAccountRegistered(newAccountKeyPair.publicKey)).toBe(false);
 
     {
-      const migrateFee = (await sdk.getMigrateAccountFees(assetId))[TxSettlementTime.NEXT_ROLLUP];
-      debug(`migrating alias (fee: ${sdk.fromBaseUnits(migrateFee)}) from account 0 to account 1...`);
+      const depositValue = { assetId, value: 0n };
       const migrateController = sdk.createMigrateAccountController(
         oldAccountKeyPair.publicKey,
         oldAccountSigner,
         newAccountKeyPair.privateKey,
         newAccountSpendingKeyPair.publicKey,
         undefined,
+        depositValue,
         { assetId, value: 0n },
-        migrateFee,
-        undefined,
-        { userId: oldAccountKeyPair.publicKey, signer: oldAccountSigner }, // fee payer
       );
       await migrateController.createProof();
-      await migrateController.send();
+
+      const proofTxs = migrateController.exportProofTxs();
+      const migrateFee = (await sdk.getProofTxsFees(assetId, proofTxs))[TxSettlementTime.NEXT_ROLLUP];
+      debug(`migrating alias (fee: ${sdk.fromBaseUnits(migrateFee)}) from account 0 to account 1...`);
+      const feeController = sdk.createFeeController(
+        oldAccountKeyPair.publicKey,
+        oldAccountSigner,
+        proofTxs,
+        migrateFee,
+      );
+      await feeController.createProof();
+      await feeController.send();
 
       const balance = await sdk.getBalance(oldUserId, 0);
       const transferFee = transferFees[TxSettlementTime.INSTANT];
@@ -166,17 +181,19 @@ describe('end-to-end migrate account and funds tests', () => {
         )}) from account 0 to account 1...`,
       );
 
+      const newAccountSpendingKeyRequired = true;
       const transferController = sdk.createTransferController(
         oldAccountKeyPair.publicKey,
         oldAccountSigner,
         actualTransferAmount,
         transferFee,
         newAccountKeyPair.publicKey!,
+        newAccountSpendingKeyRequired,
       );
       await transferController.createProof();
       await transferController.send();
 
-      await Promise.all([migrateController.awaitSettlement(), transferController.awaitSettlement()]);
+      await Promise.all([feeController.awaitSettlement(), transferController.awaitSettlement()]);
 
       expect(await sdk.isAccountRegistered(newAccountKeyPair.publicKey)).toBe(true);
       expectEqualSpendingKeys(await newUser.getSpendingKeys(), [newAccountSpendingKeyPair.publicKey]);
@@ -191,7 +208,7 @@ describe('end-to-end migrate account and funds tests', () => {
     // Rollup 3: Now withdraw the funds to the new eth address from the new aztec account
     {
       const balance = await sdk.getBalance(newAccountKeyPair.publicKey, 0);
-      const withdrawFees = await sdk.getWithdrawFees(assetId, newEthAddress);
+      const withdrawFees = await sdk.getWithdrawFees(assetId, { recipient: newEthAddress });
       const withdrawFee = withdrawFees[TxSettlementTime.INSTANT];
       const actualWithdrawAmount = { assetId: 0, value: balance.value - withdrawFee.value };
       debug(

@@ -1,3 +1,4 @@
+import { TxJson } from '@aztec/barretenberg/rollup_provider';
 import { EventEmitter } from 'events';
 import { LevelUp } from 'levelup';
 import { CoreSdkOptions, CoreSdkSerializedInterface, CoreSdkServerStub, SdkEvent } from '../../core_sdk';
@@ -99,7 +100,7 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
     );
   }
 
-  public async createPaymentProofInput(
+  public async createPaymentProofInputs(
     userId: string,
     assetId: number,
     publicInput: string,
@@ -114,7 +115,7 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
     allowChain: number,
   ) {
     await this.checkPermission(userId);
-    return this.core.createPaymentProofInput(
+    return await this.core.createPaymentProofInputs(
       userId,
       assetId,
       publicInput,
@@ -208,8 +209,8 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
     return this.core.createDefiProof(input, txRefNo);
   }
 
-  public async sendProofs(proofs: ProofOutputJson[]) {
-    return await this.core.sendProofs(proofs);
+  public async sendProofs(proofs: ProofOutputJson[], proofTxs: TxJson[] = []) {
+    return await this.core.sendProofs(proofs, proofTxs);
   }
 
   public async awaitSynchronised(timeout?: number) {
@@ -319,6 +320,16 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
     return this.core.getBalance(userId, assetId);
   }
 
+  public async getSpendableNoteValues(
+    userId: string,
+    assetId: number,
+    spendingKeyRequired?: boolean,
+    excludePendingNotes?: boolean,
+  ) {
+    await this.checkPermission(userId);
+    return this.core.getSpendableNoteValues(userId, assetId, spendingKeyRequired, excludePendingNotes);
+  }
+
   public async getSpendableSum(
     userId: string,
     assetId: number,
@@ -334,7 +345,7 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
     return this.core.getSpendableSums(userId, spendingKeyRequired, excludePendingNotes);
   }
 
-  public async getMaxSpendableValue(
+  public async getMaxSpendableNoteValues(
     userId: string,
     assetId: number,
     spendingKeyRequired?: boolean,
@@ -342,7 +353,7 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
     numNotes?: number,
   ) {
     await this.checkPermission(userId);
-    return this.core.getMaxSpendableValue(userId, assetId, spendingKeyRequired, excludePendingNotes, numNotes);
+    return this.core.getMaxSpendableNoteValues(userId, assetId, spendingKeyRequired, excludePendingNotes, numNotes);
   }
 
   public async pickNotes(

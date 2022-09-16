@@ -8,7 +8,7 @@ import { TxId } from '@aztec/barretenberg/tx_id';
 import { WorldState } from '@aztec/barretenberg/world_state';
 import { CorePaymentTx } from '../core_tx';
 import { Database } from '../database';
-import { Note } from '../note';
+import { Note, treeNoteToNote } from '../note';
 import { UserData } from '../user';
 import { JoinSplitTxFactory } from './join_split_tx_factory';
 import { JoinSplitProofInput } from './proof_input';
@@ -20,7 +20,7 @@ export class PaymentProofCreator {
 
   constructor(
     private prover: JoinSplitProver,
-    noteAlgos: NoteAlgorithms,
+    private noteAlgos: NoteAlgorithms,
     worldState: WorldState,
     grumpkin: Grumpkin,
     db: Database,
@@ -57,6 +57,10 @@ export class PaymentProofCreator {
 
     if (recipientPrivateOutput && !newNoteOwner) {
       throw new Error('Note recipient undefined.');
+    }
+
+    if (inputNotes.length > 2) {
+      throw new Error('Cannot create a proof with more than 2 input notes.');
     }
 
     const accountRequired = !spendingPublicKey.equals(user.accountPublicKey);
@@ -142,10 +146,10 @@ export class PaymentProofCreator {
       proofData,
       offchainTxData,
       outputNotes: [
-        this.txFactory.generateNewNote(valueNote, user.accountPrivateKey, {
+        treeNoteToNote(valueNote, user.accountPrivateKey, this.noteAlgos, {
           allowChain: proofData.allowChainFromNote1,
         }),
-        this.txFactory.generateNewNote(changeNote, user.accountPrivateKey, {
+        treeNoteToNote(changeNote, user.accountPrivateKey, this.noteAlgos, {
           allowChain: proofData.allowChainFromNote2,
         }),
       ],

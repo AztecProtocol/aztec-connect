@@ -48,6 +48,7 @@ type AuxDataResolver =
 
 export interface DefiRecipe {
   id: string;
+  unlisted?: boolean;
   gradient?: string[];
   bridgeAddressId: number;
   exitBridgeAddressId?: number;
