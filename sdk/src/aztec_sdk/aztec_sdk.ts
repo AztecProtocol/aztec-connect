@@ -1,11 +1,11 @@
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetValue, isVirtualAsset } from '@aztec/barretenberg/asset';
-import { EthereumProvider, Receipt, SendTxOptions, TxHash, TxType } from '@aztec/barretenberg/blockchain';
+import { EthereumProvider, Receipt, SendTxOptions, TxHash } from '@aztec/barretenberg/blockchain';
 import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { randomBytes } from '@aztec/barretenberg/crypto';
 import { retryUntil } from '@aztec/barretenberg/retry';
-import { TxSettlementTime } from '@aztec/barretenberg/rollup_provider';
+import { DefiSettlementTime, Tx, TxSettlementTime } from '@aztec/barretenberg/rollup_provider';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { ClientEthereumBlockchain, validateSignature, Web3Signer } from '@aztec/blockchain';
 import { EventEmitter } from 'events';
@@ -13,19 +13,26 @@ import {
   AddSpendingKeyController,
   DefiController,
   DepositController,
-  FeePayer,
+  FeeController,
   MigrateAccountController,
   RecoverAccountController,
   RegisterController,
   TransferController,
   WithdrawController,
 } from '../controllers';
+import { createTxRefNo } from '../controllers/create_tx_ref_no';
 import { CoreSdkInterface, SdkEvent } from '../core_sdk';
+import { ProofOutput } from '../proofs';
 import { SchnorrSigner, Signer } from '../signer';
 import { RecoveryData, RecoveryPayload } from '../user';
 import { UserAccountTx, UserDefiTx, UserPaymentTx } from '../user_tx';
 import { AztecSdkUser } from './aztec_sdk_user';
+import { FeeCalculator, GetFeesOptions } from './fee_calcalator';
 import { groupUserTxs } from './group_user_txs';
+import { roundUp } from './round_up';
+import { TxValueCalculator, GetMaxTxValueOptions } from './tx_value_calculator';
+
+export { GetFeesOptions, GetMaxTxValueOptions };
 
 export interface AztecSdk {
   on(event: SdkEvent.UPDATED_USER_STATE, listener: (userId: GrumpkinAddress) => void): this;
@@ -34,12 +41,18 @@ export interface AztecSdk {
 }
 
 export class AztecSdk extends EventEmitter {
+  private feeCalculator: FeeCalculator;
+  private txValueCalculator: TxValueCalculator;
+
   constructor(
     private core: CoreSdkInterface,
     private blockchain: ClientEthereumBlockchain,
     private provider: EthereumProvider,
   ) {
     super();
+
+    this.feeCalculator = new FeeCalculator(core, blockchain);
+    this.txValueCalculator = new TxValueCalculator(core, blockchain);
 
     // Forward all core sdk events.
     for (const e in SdkEvent) {
@@ -127,8 +140,11 @@ export class AztecSdk extends EventEmitter {
     return await this.core.getAccountPublicKey(alias);
   }
 
-  public async getTxFees(assetId: number) {
-    return await this.core.getTxFees(assetId);
+  public async getTxFees(assetId: number, { feeSignificantFigures = 0 } = {}) {
+    const txFees = await this.core.getTxFees(assetId);
+    return txFees.map(fees =>
+      fees.map((fee): AssetValue => ({ ...fee, value: roundUp(fee.value, feeSignificantFigures) })),
+    );
   }
 
   public async userExists(accountPublicKey: GrumpkinAddress) {
@@ -241,8 +257,8 @@ export class AztecSdk extends EventEmitter {
     return isVirtualAsset(assetId);
   }
 
-  public async mint({ assetId, value }: AssetValue, account: EthAddress, provider?: EthereumProvider) {
-    return await this.blockchain.getAsset(assetId).mint(value, account, { provider });
+  public async mint({ assetId, value }: AssetValue, account: EthAddress, options?: SendTxOptions) {
+    return await this.blockchain.getAsset(assetId).mint(value, account, options);
   }
 
   public async setSupportedAsset(assetAddress: EthAddress, assetGasLimit?: number, options?: SendTxOptions) {
@@ -261,8 +277,8 @@ export class AztecSdk extends EventEmitter {
     return await this.blockchain.processAsyncDefiInteraction(interactionNonce, options);
   }
 
-  public async getDepositFees(assetId: number) {
-    return await this.getTransactionFees(assetId, TxType.DEPOSIT);
+  public async getDepositFees(assetId: number, options?: { feeSignificantFigures?: number }) {
+    return await this.feeCalculator.getDepositFees(assetId, options);
   }
 
   public async getPendingDepositTxs() {
@@ -271,120 +287,96 @@ export class AztecSdk extends EventEmitter {
 
   public createDepositController(
     depositor: EthAddress,
-    value: AssetValue,
+    assetValue: AssetValue,
     fee: AssetValue,
     recipient: GrumpkinAddress,
-    recipientSpendingKeyRequired = true,
-    feePayer?: FeePayer,
+    recipientSpendingKeyRequired = false,
     provider = this.provider,
   ) {
     return new DepositController(
-      value,
+      assetValue,
       fee,
       depositor,
       recipient,
       recipientSpendingKeyRequired,
-      feePayer,
       this.core,
       this.blockchain,
       provider,
     );
   }
 
-  public async getWithdrawFees(assetId: number, recipient?: EthAddress) {
-    const txType =
-      recipient && ((await this.isContract(recipient)) || (await this.blockchain.isEmpty(recipient)))
-        ? TxType.WITHDRAW_HIGH_GAS
-        : TxType.WITHDRAW_TO_WALLET;
-    return this.getTransactionFees(assetId, txType);
+  public async getWithdrawFees(
+    assetId: number,
+    options?: GetFeesOptions & { recipient?: EthAddress; assetValue?: AssetValue },
+  ) {
+    return await this.feeCalculator.getWithdrawFees(assetId, options);
+  }
+
+  public async getMaxWithdrawValue(
+    userId: GrumpkinAddress,
+    assetId: number,
+    options?: GetMaxTxValueOptions & { recipient?: EthAddress },
+  ) {
+    return await this.txValueCalculator.getMaxWithdrawValue(userId, assetId, options);
   }
 
   public createWithdrawController(
     userId: GrumpkinAddress,
     userSigner: Signer,
-    value: AssetValue,
+    assetValue: AssetValue,
     fee: AssetValue,
     to: EthAddress,
-    feePayer?: FeePayer,
   ) {
-    return new WithdrawController(userId, userSigner, value, fee, to, feePayer, this.core);
+    return new WithdrawController(userId, userSigner, assetValue, fee, to, this.core);
   }
 
-  public async getTransferFees(assetId: number) {
-    return await this.getTransactionFees(assetId, TxType.TRANSFER);
+  public async getTransferFees(assetId: number, options?: GetFeesOptions & { assetValue?: AssetValue }) {
+    return await this.feeCalculator.getTransferFees(assetId, options);
+  }
+
+  public async getMaxTransferValue(userId: GrumpkinAddress, assetId: number, options?: GetMaxTxValueOptions) {
+    return await this.txValueCalculator.getMaxTransferValue(userId, assetId, options);
   }
 
   public createTransferController(
     userId: GrumpkinAddress,
     userSigner: Signer,
-    value: AssetValue,
+    assetValue: AssetValue,
     fee: AssetValue,
     recipient: GrumpkinAddress,
-    recipientSpendingKeyRequired = true,
-    feePayer?: FeePayer,
+    recipientSpendingKeyRequired = false,
   ) {
     return new TransferController(
       userId,
       userSigner,
-      value,
+      assetValue,
       fee,
       recipient,
       recipientSpendingKeyRequired,
-      feePayer,
       this.core,
     );
   }
 
-  public async getDefiFees(bridgeCallData: BridgeCallData, userId?: GrumpkinAddress, depositValue?: AssetValue) {
-    if (depositValue && depositValue.assetId !== bridgeCallData.inputAssetIdA) {
-      throw new Error('Inconsistent asset ids.');
-    }
+  public async getDefiFees(bridgeCallData: BridgeCallData, options?: GetFeesOptions & { assetValue?: AssetValue }) {
+    return await this.feeCalculator.getDefiFees(bridgeCallData, options);
+  }
 
-    const defiFees = await this.core.getDefiFees(bridgeCallData);
-    const { assetId: feeAssetId, value: minDefiFee } = defiFees[0];
-    const requireFeePayingTx = feeAssetId !== bridgeCallData.inputAssetIdA;
-    const requireJoinSplitTx = await (async () => {
-      if (!userId || !depositValue) {
-        return true;
-      }
-
-      const { value } = depositValue;
-      const privateInput = value + (!requireFeePayingTx ? minDefiFee : BigInt(0));
-
-      if (bridgeCallData.inputAssetIdB === undefined) {
-        const notes = await this.core.pickNotes(userId, bridgeCallData.inputAssetIdA, privateInput);
-        return notes.reduce((sum, n) => sum + n.value, BigInt(0)) !== privateInput;
-      }
-
-      return (
-        (await this.core.pickNote(userId, bridgeCallData.inputAssetIdA, privateInput))?.value !== privateInput ||
-        (await this.core.pickNote(userId, bridgeCallData.inputAssetIdB, value))?.value !== value
-      );
-    })();
-
-    const [minTransferFee] = (await this.core.getTxFees(feeAssetId))[TxType.TRANSFER];
-    // Always include the fee for an extra join split tx if the user is willing to pay higher fee.
-    const additionalFees = [
-      minTransferFee.value * BigInt(+requireFeePayingTx + +requireJoinSplitTx),
-      minTransferFee.value * BigInt(+requireFeePayingTx + 1),
-      minTransferFee.value * BigInt(+requireFeePayingTx + 1),
-    ];
-
-    return defiFees.map((defiFee, i) => ({
-      ...defiFee,
-      value: defiFee.value + additionalFees[i],
-    }));
+  public async getMaxDefiValue(
+    userId: GrumpkinAddress,
+    bridgeCallData: BridgeCallData,
+    options?: Omit<GetMaxTxValueOptions, 'txSettlementTime'> & { txSettlementTime?: DefiSettlementTime },
+  ) {
+    return await this.txValueCalculator.getMaxDefiValue(userId, bridgeCallData, options);
   }
 
   public createDefiController(
     userId: GrumpkinAddress,
     userSigner: Signer,
     bridgeCallData: BridgeCallData,
-    value: AssetValue,
+    assetValue: AssetValue,
     fee: AssetValue,
-    feePayer?: FeePayer,
   ) {
-    return new DefiController(userId, userSigner, bridgeCallData, value, fee, feePayer, this.core);
+    return new DefiController(userId, userSigner, bridgeCallData, assetValue, fee, this.core);
   }
 
   public async generateAccountRecoveryData(
@@ -412,13 +404,8 @@ export class AztecSdk extends EventEmitter {
     );
   }
 
-  public async getRegisterFees({ assetId, value: depositValue }: AssetValue): Promise<AssetValue[]> {
-    const txFees = await this.core.getTxFees(assetId);
-    const [depositFee] = txFees[TxType.DEPOSIT];
-    return txFees[TxType.ACCOUNT].map(({ value, ...rest }) => ({
-      ...rest,
-      value: value || depositValue ? value + depositFee.value : value,
-    }));
+  public async getRegisterFees(assetId: number, options?: { feeSignificantFigures?: number }) {
+    return await this.feeCalculator.getRegisterFees(assetId, options);
   }
 
   public createRegisterController(
@@ -430,7 +417,6 @@ export class AztecSdk extends EventEmitter {
     deposit: AssetValue,
     fee: AssetValue,
     depositor?: EthAddress,
-    feePayer?: FeePayer,
     provider = this.provider,
   ) {
     return new RegisterController(
@@ -442,20 +428,14 @@ export class AztecSdk extends EventEmitter {
       deposit,
       fee,
       depositor,
-      feePayer,
       this.core,
       this.blockchain,
       provider,
     );
   }
 
-  public async getRecoverAccountFees(assetId: number) {
-    const txFees = await this.core.getTxFees(assetId);
-    const [depositFee] = txFees[TxType.DEPOSIT];
-    return txFees[TxType.ACCOUNT].map(({ value, ...rest }) => ({
-      ...rest,
-      value: value ? value + depositFee.value : value,
-    }));
+  public async getRecoverAccountFees(assetId: number, options?: { feeSignificantFigures?: number }) {
+    return await this.feeCalculator.getRecoverAccountFees(assetId, options);
   }
 
   public createRecoverAccountController(
@@ -463,23 +443,13 @@ export class AztecSdk extends EventEmitter {
     deposit: AssetValue,
     fee: AssetValue,
     depositor?: EthAddress,
-    feePayer?: FeePayer,
     provider = this.provider,
   ) {
-    return new RecoverAccountController(
-      recoveryPayload,
-      deposit,
-      fee,
-      depositor,
-      feePayer,
-      this.core,
-      this.blockchain,
-      provider,
-    );
+    return new RecoverAccountController(recoveryPayload, deposit, fee, depositor, this.core, this.blockchain, provider);
   }
 
-  public async getAddSpendingKeyFees(assetId: number) {
-    return await this.getAccountFee(assetId);
+  public async getAddSpendingKeyFees(assetId: number, options?: { feeSignificantFigures?: number }) {
+    return await this.feeCalculator.getAddSpendingKeyFees(assetId, options);
   }
 
   public createAddSpendingKeyController(
@@ -488,26 +458,12 @@ export class AztecSdk extends EventEmitter {
     spendingPublicKey1: GrumpkinAddress,
     spendingPublicKey2: GrumpkinAddress | undefined,
     fee: AssetValue,
-    feePayer?: FeePayer,
   ) {
-    return new AddSpendingKeyController(
-      userId,
-      userSigner,
-      spendingPublicKey1,
-      spendingPublicKey2,
-      fee,
-      feePayer,
-      this.core,
-    );
+    return new AddSpendingKeyController(userId, userSigner, spendingPublicKey1, spendingPublicKey2, fee, this.core);
   }
 
-  public async getMigrateAccountFees(assetId: number) {
-    const txFees = await this.core.getTxFees(assetId);
-    const [depositFee] = txFees[TxType.DEPOSIT];
-    return txFees[TxType.ACCOUNT].map(({ value, ...rest }) => ({
-      ...rest,
-      value: value ? value + depositFee.value : value,
-    }));
+  public async getMigrateAccountFees(assetId: number, options?: { feeSignificantFigures?: number }) {
+    return await this.feeCalculator.getMigrateAccountFees(assetId, options);
   }
 
   public createMigrateAccountController(
@@ -519,7 +475,6 @@ export class AztecSdk extends EventEmitter {
     deposit: AssetValue,
     fee: AssetValue,
     depositor?: EthAddress,
-    feePayer?: FeePayer,
     provider = this.provider,
   ) {
     return new MigrateAccountController(
@@ -531,11 +486,19 @@ export class AztecSdk extends EventEmitter {
       deposit,
       fee,
       depositor,
-      feePayer,
       this.core,
       this.blockchain,
       provider,
     );
+  }
+
+  public async getProofTxsFees(assetId: number, proofTxs: Tx[], options?: GetFeesOptions) {
+    const proofs = proofTxs.map(p => p.proofData);
+    return await this.feeCalculator.getProofDataFees(assetId, proofs, options);
+  }
+
+  public createFeeController(userId: GrumpkinAddress, userSigner: Signer, proofTxs: Tx[], fee: AssetValue) {
+    return new FeeController(userId, userSigner, proofTxs, fee, this.core);
   }
 
   public async depositFundsToContract({ assetId, value }: AssetValue, from: EthAddress, provider = this.provider) {
@@ -571,8 +534,16 @@ export class AztecSdk extends EventEmitter {
   }
 
   public async flushRollup(userId: GrumpkinAddress, userSigner: Signer) {
-    const fee = (await this.getTransferFees(0))[TxSettlementTime.INSTANT];
-    const feeProofInput = await this.core.createPaymentProofInput(
+    const assetId = 0;
+    const userSpendingKeyRequired = !userSigner.getPublicKey().equals(userId);
+    const fee = (
+      await this.getTransferFees(assetId, {
+        userId,
+        userSpendingKeyRequired,
+        assetValue: { assetId, value: BigInt(0) },
+      })
+    )[TxSettlementTime.INSTANT];
+    const proofInputs = await this.core.createPaymentProofInputs(
       userId,
       fee.assetId,
       BigInt(0),
@@ -586,10 +557,14 @@ export class AztecSdk extends EventEmitter {
       userSigner.getPublicKey(),
       2,
     );
-    feeProofInput.signature = await userSigner.signMessage(feeProofInput.signingData);
-    const feeProofOutput = await this.core.createPaymentProof(feeProofInput, 0);
-    const [txId] = await this.core.sendProofs([feeProofOutput]);
-    await this.core.awaitSettlement(txId);
+    const txRefNo = proofInputs.length > 1 ? createTxRefNo() : 0;
+    const proofs: ProofOutput[] = [];
+    for (const proofInput of proofInputs) {
+      proofInput.signature = await userSigner.signMessage(proofInput.signingData);
+      proofs.push(await this.core.createPaymentProof(proofInput, txRefNo));
+    }
+    const txIds = await this.core.sendProofs(proofs);
+    await Promise.all(txIds.map(txId => this.core.awaitSettlement(txId)));
   }
 
   public async getSpendingKeys(userId: GrumpkinAddress) {
@@ -632,10 +607,14 @@ export class AztecSdk extends EventEmitter {
     excludePendingNotes?: boolean,
     numNotes?: number,
   ) {
-    if (numNotes !== undefined && (numNotes > 2 || numNotes < 1)) {
-      throw new Error(`numNotes can only be 1 or 2. Got ${numNotes}.`);
-    }
-    return await this.core.getMaxSpendableValue(userId, assetId, spendingKeyRequired, excludePendingNotes, numNotes);
+    const values = await this.core.getMaxSpendableNoteValues(
+      userId,
+      assetId,
+      spendingKeyRequired,
+      excludePendingNotes,
+      numNotes,
+    );
+    return values.reduce((sum, v) => sum + v, BigInt(0));
   }
 
   public async getUserTxs(userId: GrumpkinAddress) {
@@ -655,22 +634,5 @@ export class AztecSdk extends EventEmitter {
 
   public async getDefiTxs(userId: GrumpkinAddress) {
     return (await this.getUserTxs(userId)).filter(tx => tx.proofId === ProofId.DEFI_DEPOSIT) as UserDefiTx[];
-  }
-
-  private async getTransactionFees(assetId: number, txType: TxType) {
-    const fees = await this.core.getTxFees(assetId);
-    const txSettlementFees = fees[txType];
-    if (await this.isFeePayingAsset(assetId)) {
-      return txSettlementFees;
-    }
-    const [feeTxTransferFee] = fees[TxType.TRANSFER];
-    return txSettlementFees.map(({ value, ...rest }) => ({ value: value + feeTxTransferFee.value, ...rest }));
-  }
-
-  private async getAccountFee(assetId: number) {
-    const txFees = await this.core.getTxFees(assetId);
-    const [minFee, ...fees] = txFees[TxType.ACCOUNT];
-    const [transferFee] = txFees[TxType.TRANSFER];
-    return [{ ...minFee, value: minFee.value ? minFee.value + transferFee.value : minFee.value }, ...fees];
   }
 }

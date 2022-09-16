@@ -1,4 +1,4 @@
-import { GrumpkinAddress, AztecSdk, EthAddress, DepositController, TxId, FeePayer, TxSettlementTime } from '@aztec/sdk';
+import { GrumpkinAddress, AztecSdk, EthAddress, DepositController, TxId, TxSettlementTime } from '@aztec/sdk';
 import type { Provider } from '../../app';
 import createDebug from 'debug';
 import { Amount } from 'alt-model/assets';
@@ -6,10 +6,10 @@ import { retryUntil, withinTimeLimit, CachedStep } from 'app/util';
 import { WalletAccountEnforcer } from './ensured_provider';
 import { Network } from 'app/networks';
 import { ShieldComposerPhase, ShieldComposerStateObs } from './shield_composer_state_obs';
-import { createSigningKeys, KeyVault } from '../../app/key_vault';
+import { KeyVault } from '../../app/key_vault';
 import { KNOWN_MAINNET_ASSET_ADDRESSES } from 'alt-model/known_assets/known_asset_addresses';
 import { createSigningRetryableGenerator } from 'alt-model/forms/composer_helpers';
-import { normaliseFeeForPrivacy } from '../forms/fee_helpers';
+import { FEE_SIG_FIGURES } from 'alt-model/forms/constants';
 
 const debug = createDebug('zm:shield_composer');
 
@@ -76,17 +76,14 @@ export class ShieldComposer {
 
   private async createController() {
     const { targetOutput, fee, depositor, recipientUserId } = this.payload;
-    const { provider, sdk, userId } = this.deps;
+    const { provider, sdk } = this.deps;
 
     // If fees are taken in second asset we need access to the user's spending key.
     // Otherwise we can shield from nonce 0 and skip spending key generation.
-    let feePayer: FeePayer | undefined;
     const isPayingFeeWithNotes = targetOutput.id !== fee.id;
     if (isPayingFeeWithNotes) {
       this.stateObs.setPhase(ShieldComposerPhase.GENERATE_SPENDING_KEY);
-      const signingKeys = this.withRetryableSigning(() => createSigningKeys(provider, sdk));
-      const signer = await sdk.createSchnorrSigner((await signingKeys).privateKey);
-      feePayer = { userId, signer };
+      // TODO - create FeeController to pay the fee for the deposit proof.
     }
 
     return sdk.createDepositController(
@@ -95,7 +92,6 @@ export class ShieldComposer {
       fee.toAssetValue(),
       recipientUserId,
       true, // recipientAccountRequired (depositing to a registered account)
-      feePayer,
       provider.ethereumProvider,
     );
   }
@@ -215,8 +211,8 @@ export class ShieldComposer {
   private async showInsufficientFeeMessage() {
     const { sdk } = this.deps;
     const { fee, targetOutput, settlementTime } = this.payload;
-    const latestFees = await sdk.getDepositFees(targetOutput.id);
-    const latestFee = normaliseFeeForPrivacy(latestFees[settlementTime]);
+    const latestFees = await sdk.getDepositFees(targetOutput.id, { feeSignificantFigures: FEE_SIG_FIGURES });
+    const latestFee = latestFees[settlementTime];
     const latestFeeAmount = fee.withBaseUnits(latestFee.value);
     const isPayingFeeWithNotes = targetOutput.id !== fee.id;
     const layer = isPayingFeeWithNotes ? 'L1' : 'L2';

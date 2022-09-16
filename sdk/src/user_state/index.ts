@@ -25,6 +25,7 @@ import { TxId } from '@aztec/barretenberg/tx_id';
 import { ViewingKey } from '@aztec/barretenberg/viewing_key';
 import { EventEmitter } from 'events';
 import { BlockContext } from '../block_context/block_context';
+import { CacheRequest } from '../cache_request';
 import { CoreAccountTx, CoreDefiTx, CorePaymentTx, PaymentProofId } from '../core_tx';
 import { Database } from '../database';
 import { Note } from '../note';
@@ -39,6 +40,9 @@ export enum UserStateEvent {
 }
 
 export class UserState extends EventEmitter {
+  private pendingNoteNullifiersRequest: CacheRequest<Buffer[]>;
+  private notePickersRequest: CacheRequest<{ assetId: number; notePicker: NotePicker }[]>;
+
   constructor(
     private userData: UserData,
     private grumpkin: Grumpkin,
@@ -48,6 +52,9 @@ export class UserState extends EventEmitter {
     private rollupProvider: RollupProvider,
   ) {
     super();
+
+    this.pendingNoteNullifiersRequest = new CacheRequest(async () => await rollupProvider.getPendingNoteNullifiers());
+    this.notePickersRequest = new CacheRequest(async () => await this.getNotePickers());
   }
 
   private debug(...args: any[]) {
@@ -70,6 +77,7 @@ export class UserState extends EventEmitter {
     const { syncedToRollup } = (await this.db.getUser(this.userData.accountPublicKey))!;
     if (syncedToRollup !== this.userData.syncedToRollup) {
       this.userData.syncedToRollup = syncedToRollup;
+      this.notePickersRequest.clearCache();
       this.emit(UserStateEvent.UPDATED_USER_STATE, this.userData.accountPublicKey);
     }
   }
@@ -227,69 +235,88 @@ export class UserState extends EventEmitter {
 
     await this.db.updateUser(this.userData);
 
+    this.notePickersRequest.clearCache();
     this.emit(UserStateEvent.UPDATED_USER_STATE, this.userData.accountPublicKey);
 
     this.debug(`done in ${timer.s()}s.`);
   }
 
-  public async pickNotes(assetId: number, value: bigint, spendingKeyRequired = false, excludePendingNotes = false) {
-    const { notePicker } = (await this.getNotePickers()).find(np => np.assetId === assetId) || {};
+  public async pickNotes(assetId: number, value: bigint, ownerAccountRequired = false, excludePendingNotes = false) {
+    const { notePicker } = (await this.notePickersRequest.get()).find(np => np.assetId === assetId) || {};
     if (!notePicker) {
       return [];
     }
-    const pendingNullifiers = await this.rollupProvider.getPendingNoteNullifiers();
-    return notePicker.pick(value, pendingNullifiers, excludePendingNotes, spendingKeyRequired);
+    const excludedNullifiers = await this.pendingNoteNullifiersRequest.get();
+    return notePicker.pick(value, { ownerAccountRequired, excludePendingNotes, excludedNullifiers });
   }
 
-  public async pickNote(assetId: number, value: bigint, spendingKeyRequired = false, excludePendingNotes = false) {
-    const { notePicker } = (await this.getNotePickers()).find(np => np.assetId === assetId) || {};
+  public async pickNote(assetId: number, value: bigint, ownerAccountRequired = false, excludePendingNotes = false) {
+    const { notePicker } = (await this.notePickersRequest.get()).find(np => np.assetId === assetId) || {};
     if (!notePicker) {
       return;
     }
-    const pendingNullifiers = await this.rollupProvider.getPendingNoteNullifiers();
-    return notePicker.pickOne(value, pendingNullifiers, excludePendingNotes, spendingKeyRequired);
+    const excludedNullifiers = await this.pendingNoteNullifiersRequest.get();
+    return notePicker.pickOne(value, { ownerAccountRequired, excludePendingNotes, excludedNullifiers });
   }
 
-  public async getSpendableSum(assetId: number, spendingKeyRequired = false, excludePendingNotes = false) {
-    const { notePicker } = (await this.getNotePickers()).find(np => np.assetId === assetId) || {};
+  public async getSpendableNoteValues(assetId: number, ownerAccountRequired = false, excludePendingNotes = false) {
+    const { notePicker } = (await this.notePickersRequest.get()).find(np => np.assetId === assetId) || {};
+    if (!notePicker) {
+      return [];
+    }
+    const excludedNullifiers = await this.pendingNoteNullifiersRequest.get();
+    return notePicker.getSpendableNoteValues({ ownerAccountRequired, excludePendingNotes, excludedNullifiers });
+  }
+
+  public async getSpendableSum(assetId: number, ownerAccountRequired = false, excludePendingNotes = false) {
+    const { notePicker } = (await this.notePickersRequest.get()).find(np => np.assetId === assetId) || {};
     if (!notePicker) {
       return BigInt(0);
     }
-    const pendingNullifiers = await this.rollupProvider.getPendingNoteNullifiers();
-    return notePicker.getSpendableSum(pendingNullifiers, excludePendingNotes, spendingKeyRequired);
+    const excludedNullifiers = await this.pendingNoteNullifiersRequest.get();
+    return notePicker
+      .getSpendableNoteValues({ ownerAccountRequired, excludePendingNotes, excludedNullifiers })
+      .reduce((sum, v) => sum + v, BigInt(0));
   }
 
-  public async getSpendableSums(spendingKeyRequired = false, excludePendingNotes = false) {
-    const pendingNullifiers = await this.rollupProvider.getPendingNoteNullifiers();
-    return (await this.getNotePickers())
+  public async getSpendableSums(ownerAccountRequired = false, excludePendingNotes = false) {
+    const excludedNullifiers = await this.pendingNoteNullifiersRequest.get();
+    return (await this.notePickersRequest.get())
       .map(({ assetId, notePicker }) => ({
         assetId,
-        value: notePicker.getSpendableSum(pendingNullifiers, excludePendingNotes, spendingKeyRequired),
+        value: notePicker
+          .getSpendableNoteValues({ ownerAccountRequired, excludePendingNotes, excludedNullifiers })
+          .reduce((sum, v) => sum + v, BigInt(0)),
       }))
       .filter(assetValue => assetValue.value > BigInt(0));
   }
 
-  public async getMaxSpendableValue(
+  public async getMaxSpendableNoteValues(
     assetId: number,
-    spendingKeyRequired = false,
+    ownerAccountRequired = false,
     excludePendingNotes = false,
     numNotes?: number,
   ) {
-    const { notePicker } = (await this.getNotePickers()).find(np => np.assetId === assetId) || {};
+    const { notePicker } = (await this.notePickersRequest.get()).find(np => np.assetId === assetId) || {};
     if (!notePicker) {
-      return BigInt(0);
+      return [];
     }
-    const pendingNullifiers = await this.rollupProvider.getPendingNoteNullifiers();
-    return notePicker.getMaxSpendableValue(pendingNullifiers, numNotes, excludePendingNotes, spendingKeyRequired);
+    const excludedNullifiers = await this.pendingNoteNullifiersRequest.get();
+    return notePicker.getMaxSpendableNoteValues({
+      ownerAccountRequired,
+      excludePendingNotes,
+      excludedNullifiers,
+      numNotes,
+    });
   }
 
   public async getBalance(assetId: number) {
-    const { notePicker } = (await this.getNotePickers()).find(np => np.assetId === assetId) || {};
+    const { notePicker } = (await this.notePickersRequest.get()).find(np => np.assetId === assetId) || {};
     return notePicker ? notePicker.getSum() : BigInt(0);
   }
 
   public async getBalances() {
-    return (await this.getNotePickers())
+    return (await this.notePickersRequest.get())
       .map(({ assetId, notePicker }) => ({ assetId, value: notePicker.getSum() }))
       .filter(assetValue => assetValue.value > BigInt(0));
   }
@@ -316,8 +343,10 @@ export class UserState extends EventEmitter {
     await this.processPendingNote(outputNotes[1]);
 
     // No need to do anything with proof.backwardLink (i.e., mark a note as chained).
+    // But will have to clear the cache for pending note nullifers.
     // Rollup provider will return the nullifiers of pending notes, which will be excluded when the sdk is picking notes.
-
+    this.pendingNoteNullifiersRequest.clearCache();
+    this.notePickersRequest.clearCache();
     this.emit(UserStateEvent.UPDATED_USER_STATE, this.userData.accountPublicKey);
   }
 

@@ -99,7 +99,7 @@ function useValidRecipesOnly(recipes?: DefiRecipe[]) {
       recipesRequiringAuxDataOpts.map(x => auxDataPollerCache.get(x.id)?.obs ?? Obs.constant(undefined)),
     );
     return recipesAuxDataOptsObs.map(recipesAuxDataOpts => {
-      let validRecipes = recipes;
+      let validRecipes = recipes.filter(x => !x.unlisted);
       // Check each item in the aforementioned list, and remove it from
       // the complete recipe list if it doesn't have any aux data opts.
       // We generously assume success until the dat's loaded.

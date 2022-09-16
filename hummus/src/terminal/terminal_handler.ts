@@ -245,7 +245,7 @@ export class TerminalHandler {
     const value = this.sdk.toBaseUnits(this.assetId, valueStr);
     const [, fee] = await this.sdk.getDepositFees(this.assetId);
     const publicInput = value.value + fee.value;
-    const controller = this.sdk.createDepositController(this.ethAddress, value, fee, this.user.id);
+    const controller = this.sdk.createDepositController(this.ethAddress, value, fee, this.user.id, true);
     const assetBalance = await this.sdk.getPublicBalance(this.ethAddress, this.assetId);
     const pendingBalance = await controller.getPendingFunds();
     if (assetBalance.value + pendingBalance < publicInput) {
@@ -274,7 +274,7 @@ export class TerminalHandler {
   ) {
     await this.assertRegistered();
     const inputAsset = +inputAssetStr;
-    const value = this.sdk.toBaseUnits(inputAsset, valueStr);
+    const assetValue = this.sdk.toBaseUnits(inputAsset, valueStr);
     const bridgeCallData = new BridgeCallData(
       +addressIdStr,
       inputAsset,
@@ -283,10 +283,12 @@ export class TerminalHandler {
       undefined,
       +auxData,
     );
-    const fee = (await this.sdk.getDefiFees(bridgeCallData, this.user.id, value))[DefiSettlementTime.INSTANT];
+    const fee = (
+      await this.sdk.getDefiFees(bridgeCallData, { userId: this.user.id, userSpendingKeyRequired: true, assetValue })
+    )[DefiSettlementTime.INSTANT];
     const spendingKey = await this.sdk.generateSpendingKeyPair(this.ethAddress);
     const userSigner = await this.sdk.createSchnorrSigner(spendingKey.privateKey);
-    const controller = this.sdk.createDefiController(this.user.id, userSigner, bridgeCallData, value, fee);
+    const controller = this.sdk.createDefiController(this.user.id, userSigner, bridgeCallData, assetValue, fee);
     this.printQueue.put(`generating proof...\n`);
     await controller.createProof();
     await controller.send();
@@ -296,7 +298,7 @@ export class TerminalHandler {
   private async withdraw(valueStr: string) {
     await this.assertRegistered();
     const value = this.sdk.toBaseUnits(this.assetId, valueStr);
-    const [, fee] = await this.sdk.getWithdrawFees(this.assetId);
+    const [, fee] = await this.sdk.getWithdrawFees(this.assetId, { recipient: this.ethAddress });
     const spendingKey = await this.sdk.generateSpendingKeyPair(this.ethAddress);
     const userSigner = await this.sdk.createSchnorrSigner(spendingKey.privateKey);
     const controller = this.sdk.createWithdrawController(this.user.id, userSigner, value, fee, this.ethAddress);
@@ -315,7 +317,7 @@ export class TerminalHandler {
     const [, fee] = await this.sdk.getTransferFees(this.assetId);
     const spendingKey = await this.sdk.generateSpendingKeyPair(this.ethAddress);
     const userSigner = await this.sdk.createSchnorrSigner(spendingKey.privateKey);
-    const controller = this.sdk.createTransferController(this.user.id, userSigner, value, fee, to);
+    const controller = this.sdk.createTransferController(this.user.id, userSigner, value, fee, to, true);
     await controller.createProof();
     await controller.send();
     this.printQueue.put(`transfer proof sent.\n`);
@@ -339,7 +341,7 @@ export class TerminalHandler {
       throw new Error('alias already registered.');
     }
     const deposit = this.sdk.toBaseUnits(0, valueStr);
-    const [, fee] = await this.sdk.getRegisterFees(deposit);
+    const [, fee] = await this.sdk.getRegisterFees(deposit.assetId);
     const spendingKey = await this.sdk.generateSpendingKeyPair(this.ethAddress);
     const controller = this.sdk.createRegisterController(
       this.user.id,

@@ -16,7 +16,7 @@ import {
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { createFundedWalletProvider } from './create_funded_wallet_provider';
-import { registerUsers } from './sdk_utils';
+import { addUsers } from './sdk_utils';
 
 jest.setTimeout(20 * 60 * 1000);
 EventEmitter.defaultMaxListeners = 30;
@@ -38,8 +38,8 @@ describe('end-to-end virtual assets tests', () => {
   let provider: WalletProvider;
   let sdk: AztecSdk;
   let userIds: GrumpkinAddress[] = [];
+  let signers: Signer[] = [];
   let shieldValue: AssetValue;
-  const signers: Signer[] = [];
   const bridgeAddressId = 2;
   const outputValueEth = 10n ** 15n; // 0.001
   const outputValueDai = 10n ** 20n; // 100
@@ -61,12 +61,10 @@ describe('end-to-end virtual assets tests', () => {
     await sdk.flushRollup(userIds[2], signers[2]);
   };
 
-  const min = (v0: bigint, v1: bigint) => (v0 <= v1 ? v0 : v1);
-
   beforeAll(async () => {
     debug(`funding initial ETH accounts...`);
     const privateKey = Buffer.from(PRIVATE_KEY, 'hex');
-    provider = await createFundedWalletProvider(ETHEREUM_HOST, 3, 3, privateKey, toBaseUnits('0.2', 18));
+    provider = await createFundedWalletProvider(ETHEREUM_HOST, 3, 1, privateKey, toBaseUnits('0.3', 18));
     const accounts = provider.getAccounts();
 
     sdk = await createAztecSdk(provider, {
@@ -78,13 +76,9 @@ describe('end-to-end virtual assets tests', () => {
     await sdk.run();
     await sdk.awaitSynchronised();
 
-    debug(`registering users...`);
+    debug(`adding users...`);
     shieldValue = sdk.toBaseUnits(0, '0.08');
-    userIds = await registerUsers(sdk, accounts, shieldValue);
-    for (const account of accounts) {
-      const spendingKey = await sdk.generateSpendingKeyPair(account);
-      signers.push(await sdk.createSchnorrSigner(spendingKey.privateKey));
-    }
+    ({ userIds, signers } = await addUsers(sdk, accounts, shieldValue, accounts[0]));
   });
 
   afterAll(async () => {
@@ -102,17 +96,19 @@ describe('end-to-end virtual assets tests', () => {
     {
       const defiControllers: DefiController[] = [];
       const depositValue = sdk.toBaseUnits(ethAssetId, '0.01');
-      const fees = await sdk.getDefiFees(new BridgeCallData(bridgeAddressId, ethAssetId, 0));
-      const fee = fees[DefiSettlementTime.INSTANT];
 
       // ETH to V0.
       const bridgeCallDataEthToV0 = new BridgeCallData(bridgeAddressId, ethAssetId, virtualAssetIdPlaceholder);
+      let fee0: AssetValue;
       {
         const account = 0;
+        fee0 = (await sdk.getDefiFees(bridgeCallDataEthToV0, { userId: userIds[account], assetValue: depositValue }))[
+          DefiSettlementTime.NEXT_ROLLUP
+        ];
 
         debug(
           `account ${account} swapping ${sdk.fromBaseUnits(depositValue, true)} (fee: ${sdk.fromBaseUnits(
-            fee,
+            fee0,
             true,
           )}) for a virtual assets...`,
         );
@@ -122,7 +118,7 @@ describe('end-to-end virtual assets tests', () => {
           signers[account],
           bridgeCallDataEthToV0,
           depositValue,
-          fee,
+          fee0,
         );
         await controller.createProof();
         await controller.send();
@@ -137,12 +133,16 @@ describe('end-to-end virtual assets tests', () => {
         undefined,
         virtualAssetIdPlaceholder,
       );
+      let fee1: AssetValue;
       {
         const account = 0;
+        fee1 = (
+          await sdk.getDefiFees(bridgeCallDataEthToDaiAndV1, { userId: userIds[account], assetValue: depositValue })
+        )[DefiSettlementTime.INSTANT];
 
         debug(
           `account ${account} swapping ${sdk.fromBaseUnits(depositValue, true)} (fee: ${sdk.fromBaseUnits(
-            fee,
+            fee1,
             true,
           )}) for Dai and a virtual asset...`,
         );
@@ -152,7 +152,7 @@ describe('end-to-end virtual assets tests', () => {
           signers[account],
           bridgeCallDataEthToDaiAndV1,
           depositValue,
-          fee,
+          fee1,
         );
         await controller.createProof();
         await controller.send();
@@ -183,7 +183,7 @@ describe('end-to-end virtual assets tests', () => {
         expect(defiTx0).toMatchObject({
           bridgeCallData: bridgeCallDataEthToV0,
           depositValue,
-          fee,
+          fee: fee0,
         });
         expect(defiTx0.interactionResult).toMatchObject({
           isAsync: false,
@@ -197,7 +197,7 @@ describe('end-to-end virtual assets tests', () => {
         expect(defiTx1).toMatchObject({
           bridgeCallData: bridgeCallDataEthToDaiAndV1,
           depositValue,
-          fee,
+          fee: fee1,
         });
         expect(defiTx1.interactionResult).toMatchObject({
           isAsync: false,
@@ -209,7 +209,7 @@ describe('end-to-end virtual assets tests', () => {
           },
         });
         expect((await sdk.getBalance(userIds[0], ethAssetId)).value).toBe(
-          shieldValue.value - (depositValue.value + fee.value) * 2n,
+          shieldValue.value - (depositValue.value * 2n + fee0.value + fee1.value),
         );
         expect((await sdk.getBalance(userIds[0], daiAssetId)).value).toBe(
           defiTx1.interactionResult.outputValueA!.value,
@@ -229,9 +229,6 @@ describe('end-to-end virtual assets tests', () => {
     {
       const defiControllers: DefiController[] = [];
       const depositValue = sdk.toBaseUnits(ethAssetId, '0.01');
-      const fees = await sdk.getDefiFees(new BridgeCallData(bridgeAddressId, ethAssetId, 0));
-      const feeInstant = fees[DefiSettlementTime.INSTANT];
-      const feeNextRollup = fees[DefiSettlementTime.NEXT_ROLLUP];
 
       // ETH to Dai and V2
       const bridgeCallDataEthToDaiAndV2 = new BridgeCallData(
@@ -242,9 +239,13 @@ describe('end-to-end virtual assets tests', () => {
         virtualAssetIdPlaceholder,
       );
       const numOfTxs = 2;
+      const fees: AssetValue[] = [];
       for (let i = 0; i < numOfTxs; ++i) {
         const account = 1;
-        const fee = i === numOfTxs - 1 ? feeInstant : feeNextRollup;
+        const fee = (
+          await sdk.getDefiFees(bridgeCallDataEthToDaiAndV2, { userId: userIds[account], assetValue: depositValue })
+        )[i === numOfTxs - 1 ? DefiSettlementTime.INSTANT : DefiSettlementTime.DEADLINE];
+        fees.push(fee);
 
         debug(
           `account ${account} swapping ${sdk.fromBaseUnits(depositValue, true)} (fee: ${sdk.fromBaseUnits(
@@ -287,7 +288,7 @@ describe('end-to-end virtual assets tests', () => {
         expect(defiTx0).toMatchObject({
           bridgeCallData: bridgeCallDataEthToDaiAndV2,
           depositValue,
-          fee: feeInstant,
+          fee: fees[1],
         });
         expect(defiTx0.interactionResult).toMatchObject({
           isAsync: false,
@@ -301,7 +302,7 @@ describe('end-to-end virtual assets tests', () => {
         expect(defiTx1).toMatchObject({
           bridgeCallData: bridgeCallDataEthToDaiAndV2,
           depositValue,
-          fee: feeNextRollup,
+          fee: fees[0],
         });
         expect(defiTx1.interactionResult).toMatchObject({
           isAsync: false,
@@ -313,7 +314,7 @@ describe('end-to-end virtual assets tests', () => {
           },
         });
         expect((await sdk.getBalance(userIds[1], ethAssetId)).value).toBe(
-          shieldValue.value - depositValue.value * 2n - feeInstant.value - feeNextRollup.value,
+          shieldValue.value - depositValue.value * 2n - fees[0].value - fees[1].value,
         );
         expect((await sdk.getBalance(userIds[1], daiAssetId)).value).toBe(outputValueDai);
         expect((await sdk.getBalance(userIds[1], virtualAssetIds[0])).value).toBe(0n);
@@ -333,11 +334,15 @@ describe('end-to-end virtual assets tests', () => {
       const initialDaiBalance1 = await sdk.getBalance(userIds[1], daiAssetId);
 
       // Send V0.
-      const sendV0Value = await sdk.getBalance(userIds[0], virtualAssetIds[0]);
-      const fee0 = (await sdk.getTransferFees(sendV0Value.assetId))[TxSettlementTime.INSTANT];
+      let sendV0Value: AssetValue;
+      let fee0: AssetValue;
       {
         const account = 0;
         const receipientAccount = 1;
+        sendV0Value = await sdk.getBalance(userIds[account], virtualAssetIds[0]);
+        fee0 = (await sdk.getTransferFees(sendV0Value.assetId, { userId: userIds[account], assetValue: sendV0Value }))[
+          TxSettlementTime.NEXT_ROLLUP
+        ];
 
         debug(
           `account ${account} sending virtual asset ${sdk.fromBaseUnits(sendV0Value, true)} (fee: ${sdk.fromBaseUnits(
@@ -357,12 +362,14 @@ describe('end-to-end virtual assets tests', () => {
         await controller.send();
       }
 
-      // Send v2.
-      const sendV2Value = await sdk.getBalance(userIds[1], virtualAssetIds[2]);
-      const fee1 = (await sdk.getTransferFees(sendV2Value.assetId))[TxSettlementTime.INSTANT];
+      // Send V2.
+      let sendV2Value: AssetValue;
+      let fee1: AssetValue;
       {
         const account = 1;
         const receipientAccount = 0;
+        sendV2Value = await sdk.getBalance(userIds[account], virtualAssetIds[2]);
+        fee1 = (await sdk.getTransferFees(sendV2Value.assetId))[TxSettlementTime.NEXT_ROLLUP];
 
         debug(
           `account ${account} sending virtual asset ${sdk.fromBaseUnits(sendV2Value, true)} (fee: ${sdk.fromBaseUnits(
@@ -382,7 +389,7 @@ describe('end-to-end virtual assets tests', () => {
         await controller.send();
       }
 
-      // Dai and v1 to v3
+      // Dai and V1 to V3
       let defiController: DefiController;
       const bridgeCallDataDaiAndV1ToV3 = new BridgeCallData(
         bridgeAddressId,
@@ -390,14 +397,19 @@ describe('end-to-end virtual assets tests', () => {
         virtualAssetIdPlaceholder,
         virtualAssetIds[1],
       );
-      const depositV1Value = await sdk.getBalance(userIds[0], virtualAssetIds[1]);
-      const depositDaiValue = {
-        assetId: daiAssetId,
-        value: depositV1Value.value,
-      };
-      const fee2 = (await sdk.getDefiFees(bridgeCallDataDaiAndV1ToV3))[DefiSettlementTime.INSTANT];
+      let depositV1Value: AssetValue;
+      let depositDaiValue: AssetValue;
+      let fee2: AssetValue;
       {
         const account = 0;
+        depositV1Value = await sdk.getBalance(userIds[account], virtualAssetIds[1]);
+        depositDaiValue = {
+          assetId: daiAssetId,
+          value: depositV1Value.value,
+        };
+        fee2 = (
+          await sdk.getDefiFees(bridgeCallDataDaiAndV1ToV3, { userId: userIds[account], assetValue: depositDaiValue })
+        )[DefiSettlementTime.INSTANT];
 
         debug(
           `account ${account} swapping ${sdk.fromBaseUnits(
@@ -499,31 +511,13 @@ describe('end-to-end virtual assets tests', () => {
         ethAssetId,
         virtualAssetIds[3],
       );
-      const spendingKeyRequired = true;
-      const excludePendingNotes = false;
-      const numNotes = 1;
-      const depositV2V3Value = {
-        assetId: virtualAssetIds[2],
-        value: min(
-          await sdk.getMaxSpendableValue(
-            userIds[0],
-            virtualAssetIds[2],
-            spendingKeyRequired,
-            excludePendingNotes,
-            numNotes,
-          ),
-          await sdk.getMaxSpendableValue(
-            userIds[0],
-            virtualAssetIds[3],
-            spendingKeyRequired,
-            excludePendingNotes,
-            numNotes,
-          ),
-        ),
-      };
-      const fee0 = (await sdk.getDefiFees(bridgeCallDataV2V3ToEth))[DefiSettlementTime.INSTANT];
+      let depositV2V3Value: AssetValue;
+      let fee0: AssetValue;
       {
         const account = 0;
+        ({ fee: fee0, ...depositV2V3Value } = await sdk.getMaxDefiValue(userIds[account], bridgeCallDataV2V3ToEth, {
+          txSettlementTime: DefiSettlementTime.NEXT_ROLLUP,
+        }));
 
         debug(
           `account ${account} swapping two virtual assets ${sdk.fromBaseUnits(
@@ -551,10 +545,14 @@ describe('end-to-end virtual assets tests', () => {
 
       // V0 to Dai.
       const bridgeCallDataV0ToDai = new BridgeCallData(bridgeAddressId, virtualAssetIds[0], daiAssetId);
-      const depositV0Value = await sdk.getBalance(userIds[1], virtualAssetIds[0]);
-      const fee1 = (await sdk.getDefiFees(bridgeCallDataV0ToDai))[DefiSettlementTime.INSTANT];
+      let depositV0Value: AssetValue;
+      let fee1: AssetValue;
       {
         const account = 1;
+        depositV0Value = await sdk.getBalance(userIds[account], virtualAssetIds[0]);
+        fee1 = (await sdk.getDefiFees(bridgeCallDataV0ToDai, { userId: userIds[account], assetValue: depositV0Value }))[
+          DefiSettlementTime.INSTANT
+        ];
 
         debug(
           `account ${account} swapping virtual asset ${sdk.fromBaseUnits(

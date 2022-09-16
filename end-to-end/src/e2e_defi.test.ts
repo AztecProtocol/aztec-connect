@@ -13,7 +13,7 @@ import {
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { createFundedWalletProvider } from './create_funded_wallet_provider';
-import { registerUsers } from './sdk_utils';
+import { addUsers } from './sdk_utils';
 
 jest.setTimeout(20 * 60 * 1000);
 EventEmitter.defaultMaxListeners = 30;
@@ -35,8 +35,8 @@ describe('end-to-end defi tests', () => {
   let provider: WalletProvider;
   let sdk: AztecSdk;
   let userIds: GrumpkinAddress[] = [];
+  let signers: SchnorrSigner[] = [];
   let shieldValue: AssetValue;
-  const signers: SchnorrSigner[] = [];
   const debug = createDebug('bb:e2e_defi');
 
   const flushClaim = async () => {
@@ -47,7 +47,7 @@ describe('end-to-end defi tests', () => {
   beforeAll(async () => {
     debug(`funding initial ETH accounts...`);
     const privateKey = Buffer.from(PRIVATE_KEY, 'hex');
-    provider = await createFundedWalletProvider(ETHEREUM_HOST, 3, 3, privateKey, toBaseUnits('0.2', 18));
+    provider = await createFundedWalletProvider(ETHEREUM_HOST, 3, 1, privateKey, toBaseUnits('0.3', 18));
     const accounts = provider.getAccounts();
 
     sdk = await createAztecSdk(provider, {
@@ -59,13 +59,9 @@ describe('end-to-end defi tests', () => {
     await sdk.run();
     await sdk.awaitSynchronised();
 
-    debug(`registering users...`);
+    debug(`adding users...`);
     shieldValue = sdk.toBaseUnits(0, '0.08');
-    userIds = await registerUsers(sdk, accounts, shieldValue);
-    for (const account of accounts) {
-      const spendingKey = await sdk.generateSpendingKeyPair(account);
-      signers.push(await sdk.createSchnorrSigner(spendingKey.privateKey));
-    }
+    ({ userIds, signers } = await addUsers(sdk, accounts, shieldValue, accounts[0]));
   });
 
   afterAll(async () => {
@@ -82,8 +78,6 @@ describe('end-to-end defi tests', () => {
     const btcAssetId = 2;
     const ethToDaiBridge = new BridgeCallData(bridgeAddressId, ethAssetId, daiAssetId);
     const daiToEthBridge = new BridgeCallData(bridgeAddressId, daiAssetId, ethAssetId);
-    const ethToDaiFees = await sdk.getDefiFees(ethToDaiBridge);
-    const daiToEthFees = await sdk.getDefiFees(daiToEthBridge);
 
     const dummyBridgeAddressId = 2;
     const daiAndEthToBtcBridge = new BridgeCallData(dummyBridgeAddressId, daiAssetId, btcAssetId, ethAssetId);
@@ -100,6 +94,7 @@ describe('end-to-end defi tests', () => {
         await debugBalance(outputAssetIdA, i);
 
         const depositValue = sdk.toBaseUnits(inputAssetIdA, '0.05');
+        const ethToDaiFees = await sdk.getDefiFees(ethToDaiBridge, { userId: userIds[i], assetValue: depositValue });
         const fee = ethToDaiFees[i === 1 ? DefiSettlementTime.INSTANT : DefiSettlementTime.DEADLINE];
 
         debug(
@@ -159,14 +154,15 @@ describe('end-to-end defi tests', () => {
       }
 
       // DAI and ETH to BTC
-      const depositDaiEthFee = (await sdk.getDefiFees(daiAndEthToBtcBridge))[DefiSettlementTime.NEXT_ROLLUP];
       const depositDaiEthValue = {
         assetId: daiAssetId,
         value: (await sdk.getBalance(userIds[0], ethAssetId)).value,
       };
       {
         const account = 0;
-        const fee = depositDaiEthFee;
+        const fee = (
+          await sdk.getDefiFees(daiAndEthToBtcBridge, { userId: userIds[account], assetValue: depositDaiEthValue })
+        )[DefiSettlementTime.NEXT_ROLLUP];
         const { inputAssetIdB, outputAssetIdA } = daiAndEthToBtcBridge;
 
         debug(
@@ -189,24 +185,15 @@ describe('end-to-end defi tests', () => {
 
       // DAI to ETH
       const depositDaiValues: AssetValue[] = [];
-      const depositDaiFee0 = daiToEthFees[DefiSettlementTime.NEXT_ROLLUP];
-      const depositDaiFee1 = daiToEthFees[DefiSettlementTime.INSTANT];
       {
-        const { inputAssetIdA, outputAssetIdA } = daiToEthBridge;
-
         for (let i = 0; i < 2; ++i) {
-          const fee = i ? depositDaiFee1 : depositDaiFee0;
-          const spendingKeyRequired = true;
-          const daiBalance = await sdk.getSpendableSum(userIds[i], daiAssetId, spendingKeyRequired);
-          const depositValue = {
-            assetId: inputAssetIdA,
-            value: daiBalance - fee.value,
-          };
+          const txSettlementTime = i === 1 ? DefiSettlementTime.INSTANT : DefiSettlementTime.DEADLINE;
+          const { fee, ...depositValue } = await sdk.getMaxDefiValue(userIds[i], daiToEthBridge, { txSettlementTime });
           depositDaiValues.push(depositValue);
 
           debug(
             `account ${i} swapping ${sdk.fromBaseUnits(depositValue, true)} (fee: ${sdk.fromBaseUnits(fee)}) for ${
-              sdk.getAssetInfo(outputAssetIdA).symbol
+              sdk.getAssetInfo(daiToEthBridge.outputAssetIdA).symbol
             }...`,
           );
 
@@ -234,13 +221,13 @@ describe('end-to-end defi tests', () => {
         expect(defiTx0).toMatchObject({
           bridgeCallData: daiAndEthToBtcBridge,
           depositValue: depositDaiEthValue,
-          fee: depositDaiEthFee,
+          fee: defiControllers[0].fee,
         });
         expect(defiTx0.interactionResult).toMatchObject({ isAsync: false, success: true, outputValueB: undefined });
         expect(defiTx1).toMatchObject({
           bridgeCallData: daiToEthBridge,
           depositValue: depositDaiValues[0],
-          fee: depositDaiFee0,
+          fee: defiControllers[1].fee,
         });
         expect(defiTx1.interactionResult).toMatchObject({ isAsync: false, success: true, outputValueB: undefined });
         expect((await sdk.getBalance(userIds[0], 0)).value).toBe(
@@ -260,7 +247,7 @@ describe('end-to-end defi tests', () => {
         expect(defiTx).toMatchObject({
           bridgeCallData: daiToEthBridge,
           depositValue: depositDaiValues[1],
-          fee: depositDaiFee1,
+          fee: defiControllers[2].fee,
         });
         expect(defiTx.interactionResult).toMatchObject({ isAsync: false, success: true, outputValueB: undefined });
         expect((await sdk.getBalance(userIds[1], 0)).value).toBe(

@@ -71,7 +71,9 @@ export class PaymentAgent {
       const fees: AgentFees = {
         depositFee: (await this.sdk.getDepositFees(0))[TxSettlementTime.NEXT_ROLLUP],
         transferFee: (await this.sdk.getTransferFees(0))[TxSettlementTime.NEXT_ROLLUP],
-        withdrawFee: (await this.sdk.getWithdrawFees(0, this.userA.address))[TxSettlementTime.NEXT_ROLLUP],
+        withdrawFee: (await this.sdk.getWithdrawFees(0, { recipient: this.userA.address }))[
+          TxSettlementTime.NEXT_ROLLUP
+        ],
       };
       this.agentFees = fees;
     }
