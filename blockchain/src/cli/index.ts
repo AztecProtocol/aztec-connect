@@ -16,6 +16,7 @@ import { getTokenBalance, getWethBalance } from '../tokens';
 import { LogDescription } from 'ethers/lib/utils';
 import { RollupProcessor } from '../contracts';
 import { akiToKey } from './key_derivation';
+import { AssetValue } from '@aztec/bridge-clients/client-dest/src/client/bridge-data';
 
 const { PRIVATE_KEY } = process.env;
 
@@ -42,9 +43,11 @@ export async function retrieveEvents(
   from: number,
   to?: number,
 ) {
+  console.log(`retrieving ${eventName} events from contract ${contractAddress} over blocks ${from} to ${to}`);
   const contract = new Contract(contractAddress.toString(), abis[contractName].abi, new Web3Provider(provider));
   const filter = contract.filters[eventName]();
   const events = await contract.queryFilter(filter, from, to);
+  console.log(`received ${events.length} events`);
   return events.map(event => contract.interface.parseLog(event));
 }
 
@@ -85,13 +88,14 @@ export const createElementBridgeData = (
   rollupAddress: EthAddress,
   elementBridgeAddress: EthAddress,
   provider: EthereumProvider,
+  batchSize: number,
 ) => {
   return ElementBridgeData.create(
     provider,
     elementBridgeAddress as any,
     EthAddress.fromString(MainnetAddresses.Contracts['BALANCER']) as any,
     rollupAddress as any,
-    { eventBatchSize: 10 },
+    { eventBatchSize: batchSize },
   );
 };
 
@@ -105,12 +109,13 @@ export async function profileElement(
   provider: EthereumProvider,
   from: number,
   to?: number,
+  batchSize = 10,
 ) {
   const convertEvents = await retrieveEvents(elementAddress, 'Element', provider, 'LogConvert', from, to);
   const finaliseEvents = await retrieveEvents(elementAddress, 'Element', provider, 'LogFinalise', from, to);
   const poolEvents = await retrieveEvents(elementAddress, 'Element', provider, 'LogPoolAdded', from, to);
   const rollupBridgeEvents = await retrieveEvents(rollupAddress, 'Rollup', provider, 'DefiBridgeProcessed', from, to);
-  const elementBridgeData = createElementBridgeData(rollupAddress, elementAddress, provider);
+  const elementBridgeData = createElementBridgeData(rollupAddress, elementAddress, provider, batchSize);
 
   const interactions: {
     [key: string]: {
@@ -191,12 +196,19 @@ export async function profileElement(
       interactions[log.nonce.toString()].finalValue = rollupLog.outputValue;
     }
   }
+  const promises: { [key: string]: Promise<AssetValue[]> } = {};
   for (const log of convertLogs) {
     if (!interactions[log.nonce.toString()]?.finalised) {
-      const presentValue = await elementBridgeData.getInteractionPresentValue(log.nonce.toBigInt());
-      if (presentValue.length > 0) {
-        interactions[log.nonce.toString()].presentValue = presentValue[0].amount;
-      }
+      promises[log.nonce.toString()] = elementBridgeData.getInteractionPresentValue(log.nonce.toBigInt());
+    }
+  }
+  console.log(`calculating interaction present values...`);
+  await Promise.all(Object.values(promises));
+  const nonces = Object.keys(promises);
+  for (const nonce of nonces) {
+    const presentValue = await promises[nonce];
+    if (presentValue.length > 0) {
+      interactions[nonce].presentValue = presentValue[0].amount;
     }
   }
   const summary = {
@@ -436,8 +448,9 @@ async function main() {
     .argument('<elementAddress>', 'the address of the deployed element bridge contract, as a hex string')
     .argument('<from>', 'the block number to search from')
     .argument('[to]', 'the block number to search to, defaults to the latest block')
+    .argument('[batchSize]', 'the batch size used for scanning events on chain')
     .argument('[url]', 'your ganache url', 'http://localhost:8545')
-    .action(async (rollupAddress, elementAddress, from, to, url) => {
+    .action(async (rollupAddress, elementAddress, from, to, batchSize, url) => {
       const provider = getProvider(url);
       await profileElement(
         EthAddress.fromString(rollupAddress),
@@ -445,6 +458,7 @@ async function main() {
         provider,
         parseInt(from),
         to ? parseInt(to) : undefined,
+        batchSize ? parseInt(batchSize) : 10,
       );
     });
 
