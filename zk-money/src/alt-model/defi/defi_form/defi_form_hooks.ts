@@ -39,11 +39,13 @@ function useDefiFormBridgeCallData(
   direction: FlowDirection,
   { inA, outA }: BridgeInteractionAssets,
 ) {
-  const auxData = useDefaultAuxDataOption(recipe.id, direction === 'exit');
+  const isExit = direction === 'exit';
+  const auxData = useDefaultAuxDataOption(recipe.id, isExit);
+  const bridgeAddressId = isExit ? recipe.exitBridgeAddressId ?? recipe.bridgeAddressId : recipe.bridgeAddressId;
   return useMemo(() => {
     if (auxData === undefined) return undefined;
-    return new BridgeCallData(recipe.bridgeAddressId, inA.id, outA.id, undefined, undefined, Number(auxData));
-  }, [auxData, recipe, inA, outA]);
+    return new BridgeCallData(bridgeAddressId, inA.id, outA.id, undefined, undefined, Number(auxData));
+  }, [auxData, bridgeAddressId, inA, outA]);
 }
 
 export function useDefiForm(recipe: DefiRecipe, direction: FlowDirection) {

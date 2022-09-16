@@ -32,14 +32,15 @@ function estimateDefiBatchSettlementTime(
   const { rollupFrequency } = bridgeStatus;
   const publishIntervalSeconds = rollupProviderStatus.runtimeConfig.publishInterval;
 
-  if (bridgeStatus.nextPublishTime) {
+  if (fastTrack) {
+    return nextSettlementTime;
+  } else if (bridgeStatus.nextPublishTime) {
     return new Date(bridgeStatus.nextPublishTime.getTime() + APPROX_ROLLUP_PROOF_DURATION_MS);
   } else if (rollupFrequency > 0 && publishIntervalSeconds > 0 && nextSettlementTime && !fastTrack) {
     const defiBatchInterval = rollupFrequency * (publishIntervalSeconds * 1000);
-    return new Date(nextSettlementTime.getTime() + defiBatchInterval + APPROX_ROLLUP_PROOF_DURATION_MS);
-  } else if (nextSettlementTime) {
-    return new Date(nextSettlementTime.getTime());
+    return new Date(nextSettlementTime.getTime() + defiBatchInterval);
   }
+  return nextSettlementTime;
 }
 
 interface EstimatedDefiSettlementTimes extends EstimatedTxSettlementTimes {
