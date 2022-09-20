@@ -13,7 +13,7 @@ function useUnfinalisedAsyncDefiAsyncPresentValues() {
   const recipes = useDefiRecipes();
   const assetValuesObs = useMemo(() => {
     if (!defiTxs || !recipes) return;
-    const obsList: Obs<AssetValue | undefined>[] = [];
+    const obsList: Obs<AssetValue[] | undefined>[] = [];
     for (const tx of defiTxs) {
       if (
         tx.interactionResult.isAsync &&
@@ -33,7 +33,7 @@ function useUnfinalisedAsyncDefiAsyncPresentValues() {
     }
     return Obs.combine(obsList);
   }, [defiTxs, interactionPresentValuePollerCache, recipes]);
-  return useMaybeObs(assetValuesObs);
+  return useMaybeObs(assetValuesObs)?.flatMap(assetValues => assetValues);
 }
 
 export function useTotalValuation() {

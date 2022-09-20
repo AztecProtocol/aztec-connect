@@ -5,28 +5,28 @@ import { mapToObj } from 'app/util/objects';
 import { useMemo } from 'react';
 import { Amount } from './assets';
 import { useRollupProviderStatus } from './rollup_provider_hooks';
-import { usePriceFeedPollerCache, useRemoteAssets } from './top_level_context';
+import { usePriceFeedObsCache, useRemoteAssets } from './top_level_context';
 
 export function useAssetUnitPrice(assetId?: number) {
-  const priceFeedPollerCache = usePriceFeedPollerCache();
+  const priceFeedObsCache = usePriceFeedObsCache();
   const assets = useRemoteAssets();
-  const poller = assetId !== undefined ? priceFeedPollerCache.get(assets[assetId].address.toString()) : undefined;
-  return useMaybeObs(poller?.obs);
+  const obs = assetId !== undefined ? priceFeedObsCache.get(assets[assetId].address.toString()) : undefined;
+  return useMaybeObs(obs);
 }
 
 export function useAssetUnitPriceFromAddress(assetAddress?: string) {
-  const priceFeedPollerCache = usePriceFeedPollerCache();
-  const poller = assetAddress !== undefined ? priceFeedPollerCache.get(assetAddress) : undefined;
-  return useMaybeObs(poller?.obs);
+  const priceFeedObsCache = usePriceFeedObsCache();
+  const obs = assetAddress !== undefined ? priceFeedObsCache.get(assetAddress) : undefined;
+  return useMaybeObs(obs);
 }
 
 export function useAssetUnitPrices(assetIds?: number[]) {
-  const priceFeedPollerCache = usePriceFeedPollerCache();
+  const priceFeedPollerCache = usePriceFeedObsCache();
   const assets = useRemoteAssets();
   const obs = useMemo(() => {
     if (assetIds) {
       const deps = assetIds.map(
-        assetId => priceFeedPollerCache.get(assets[assetId].address.toString())?.obs ?? Obs.constant(undefined),
+        assetId => priceFeedPollerCache.get(assets[assetId].address.toString()) ?? Obs.constant(undefined),
       );
       return Obs.combine(deps).map(prices => mapToObj(assetIds, (_, idx) => prices[idx]));
     }

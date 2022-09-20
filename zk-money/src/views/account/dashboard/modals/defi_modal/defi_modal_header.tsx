@@ -1,6 +1,6 @@
 import { BackButton } from 'ui-components';
 import { DefiRecipe } from 'alt-model/defi/types';
-import { CloseButtonWhite, CardAssetTag, CardInvestmentTypeTag } from 'components';
+import { CloseButtonWhite, CardAssetTag, CardTag } from 'components';
 import style from './defi_modal_header.module.scss';
 
 interface DefiModalHeaderProps {
@@ -12,7 +12,7 @@ interface DefiModalHeaderProps {
 }
 
 export function DefiModalHeader({ recipe, onClose, closeDisabled, onBack }: DefiModalHeaderProps) {
-  const { logo, investmentType, flow } = recipe;
+  const { logo, cardTag, flow } = recipe;
   return (
     <div className={style.root}>
       <div className={style.leftSegment}>
@@ -25,7 +25,7 @@ export function DefiModalHeader({ recipe, onClose, closeDisabled, onBack }: Defi
       </div>
       <div className={style.rightSegment}>
         <div className={style.tags}>
-          <CardInvestmentTypeTag investmentType={investmentType} />
+          <CardTag>{cardTag}</CardTag>
           <CardAssetTag asset={flow.enter.inA} />
         </div>
         <CloseButtonWhite disabled={closeDisabled} onClick={onClose} />

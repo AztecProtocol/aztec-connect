@@ -19,7 +19,7 @@ export function createInteractionPresentValuePollerCache(adaptorCache: BridgeDat
     const pollObs = Obs.constant(async () => {
       try {
         const values = await adaptor.getInteractionPresentValue!(interactionNonce, inputValue);
-        return values[0];
+        return values;
       } catch (err) {
         debug({ recipeId, interactionNonce }, err);
         throw new Error(`Failed to fetch bridge interaction present value for "${recipeId}".`);

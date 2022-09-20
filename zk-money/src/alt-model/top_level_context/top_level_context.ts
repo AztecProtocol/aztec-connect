@@ -7,9 +7,10 @@ import type { SdkObs } from './sdk_obs';
 import type { DefiRecipe } from 'alt-model/defi/types';
 import type { RemoteAssetsObs } from './remote_assets_obs';
 import type { AmountFactory } from 'alt-model/assets/amount_factory';
-import type { PriceFeedPollerCache } from 'alt-model/price_feeds';
+import type { PriceFeedObsCache } from 'alt-model/price_feeds';
 import type { GasPricePoller } from 'alt-model/gas/gas_price_obs';
 import { ToastsObs } from './toasts_obs';
+import { ChainLinkPollerCache } from 'alt-model/price_feeds/chain_link_poller_cache';
 
 export interface TopLevelContextValue {
   config: Config;
@@ -19,7 +20,8 @@ export interface TopLevelContextValue {
   remoteStatusPoller: RemoteStatusPoller;
   remoteAssetsObs: RemoteAssetsObs;
   amountFactory: AmountFactory;
-  priceFeedPollerCache: PriceFeedPollerCache;
+  chainLinkPollerCache: ChainLinkPollerCache;
+  priceFeedObsCache: PriceFeedObsCache;
   gasPricePoller: GasPricePoller;
   bridgeDataAdaptorsMethodCaches: BridgeDataAdaptorsMethodCaches;
   defiRecipes: DefiRecipe[];
