@@ -806,6 +806,10 @@ workflows:
           requires:
             - sdk
           filters: *tag_filter
+      - faucet:
+          requires:
+            - blockchain
+          filters: *tag_filter
       - docs:
           filters: *tag_filter
       - wasabi:
@@ -919,6 +923,7 @@ workflows:
             - zk-money
             - hummus
             - explorer
+            - faucet
             - docs
           filters:
             branches:
