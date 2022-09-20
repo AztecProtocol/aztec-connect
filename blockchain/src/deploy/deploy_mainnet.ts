@@ -10,6 +10,7 @@ import {
   deployLidoBridge,
   deployRollupProcessor,
   deployVerifier,
+  deployAztecFaucet,
 } from './deployers';
 import { deployAceOfZk } from './deployers/deploy_ace_of_zk';
 
@@ -86,5 +87,7 @@ export async function deployMainnet(signer: Signer, { dataTreeSize, roots }: Tre
 
   // TODO: Revoking of the default admin role should be done manually with the multi-sig to ensure correct setup
 
-  return { rollup, priceFeeds, feeDistributor, permitHelper };
+  const faucet = await deployAztecFaucet(signer);
+
+  return { rollup, priceFeeds, feeDistributor, permitHelper, faucet };
 }

@@ -27,6 +27,14 @@ output "permit_helper_contract_address" {
   value = "${var.PERMIT_HELPER_CONTRACT_ADDRESS}"
 }
 
+variable "FAUCET_CONTRACT_ADDRESS" {
+  type = string
+}
+
+output "faucet_contract_address" {
+  value = "${var.FAUCET_CONTRACT_ADDRESS}"
+}
+
 variable "FEE_DISTRIBUTOR_ADDRESS" {
   type = string
 }

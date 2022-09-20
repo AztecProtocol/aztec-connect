@@ -34,6 +34,7 @@ export TF_VAR_FEE_DISTRIBUTOR_ADDRESS=$(terraform output fee_distributor_address
 export TF_VAR_ROLLUP_CONTRACT_ADDRESS=$(terraform output rollup_contract_address || echo "")
 export TF_VAR_PRICE_FEED_CONTRACT_ADDRESSES=$(terraform output price_feed_contract_addresses || echo "")
 export TF_VAR_PERMIT_HELPER_CONTRACT_ADDRESS=$(terraform output permit_helper_contract_address || echo "")
+export TF_VAR_FAUCET_CONTRACT_ADDRESS=$(terraform output faucet_contract_address || echo "")
 cd ../..
 
 LAST_COMMIT=$(last_successful_commit blockchain $DEPLOY_TAG-deployed)

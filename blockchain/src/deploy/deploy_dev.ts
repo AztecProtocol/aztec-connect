@@ -11,6 +11,7 @@ import {
   deployUniswapBridge,
   deployVerifier,
   deployCompoundBridge,
+  deployAztecFaucet,
 } from './deployers';
 import { deployErc20 } from './deployers/deploy_erc20';
 
@@ -56,5 +57,7 @@ export async function deployDev(signer: Signer, { dataTreeSize, roots }: TreeIni
   const daiPriceFeedContact = await deployMockPriceFeed(signer, daiPrice);
   const priceFeeds = [gasPriceFeedContact.address, daiPriceFeedContact.address];
 
-  return { rollup, priceFeeds, feeDistributor, permitHelper };
+  const faucet = await deployAztecFaucet(signer);
+
+  return { rollup, priceFeeds, feeDistributor, permitHelper, faucet };
 }

@@ -9,6 +9,7 @@ import {
   deployRollupProcessor,
   deployVerifier,
   elementTokenAddresses,
+  deployAztecFaucet,
 } from './deployers';
 
 const gasLimit = 5000000;
@@ -59,5 +60,7 @@ export async function deployMainnetE2e(signer: Signer, { dataTreeSize, roots }: 
 
   const priceFeeds = [FAST_GAS_PRICE_FEED_ADDRESS, DAI_PRICE_FEED_ADDRESS];
 
-  return { rollup, priceFeeds, feeDistributor, permitHelper };
+  const faucet = await deployAztecFaucet(signer);
+
+  return { rollup, priceFeeds, feeDistributor, permitHelper, faucet };
 }
