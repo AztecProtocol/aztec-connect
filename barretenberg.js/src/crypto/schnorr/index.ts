@@ -29,19 +29,29 @@ export class Schnorr {
     return this.wasm.call('verify_signature', 128, msg.length, 0, 64, 96) ? true : false;
   }
 
+  // upon input a private key pk, generate a 'multisig publickey' which is the same public key
+  // augmented with a proof of possession
   public multiSigComputePublicKey(pk: Uint8Array) {
     this.wasm.transferToHeap(pk, 128);
     this.wasm.call('multisig_create_multisig_public_key', 128, 0);
     return Buffer.from(this.wasm.sliceMemory(0, 128));
   }
 
+  // upon input an array of 'multisig publickey's, return the aggregated public key
+  // that the group of signers can create a signature for.
+  // If any of these keys are invalid, returns an invalid public key. The caller should
+  // always check if this key is valid before proceeding.
   public multiSigValidateAndCombinePublicKeys(pubKeys: Buffer[]) {
     const buffer = serializeBufferArrayToVector(pubKeys);
     this.wasm.transferToHeap(buffer, 64);
-    this.wasm.call('multisig_validate_and_combine_signer_pubkeys', 64, 0);
-    return Buffer.from(this.wasm.sliceMemory(0, 64));
+    const success = this.wasm.call('multisig_validate_and_combine_signer_pubkeys', 64, 0);
+    return success ? Buffer.from(this.wasm.sliceMemory(0, 64)) : Buffer.alloc(64);
   }
 
+  // generate the nonces as a public/private pair ({R,S}, {r,s}). This round can be run in advance
+  // as a form of preprocessing, as it does not depend on the message being signed.
+  // the private output should be safely stored by the user, while the public inputs can be shared
+  // with a coordinator who will be in charge of initiating round 2 with the desired message.
   public multiSigRoundOne() {
     this.wasm.call('multisig_construct_signature_round_1', 0, 128);
 
@@ -51,6 +61,11 @@ export class Schnorr {
     };
   }
 
+  // once all users have uploaded their public input from round 1, they are given the message
+  // as well as all public outputs from the other participants in this session.
+  // At the end of this round, each user returns their share of the final signature,
+  // which can either be sent to all other participants to create the signature,
+  // or to the coordinator.
   public multiSigRoundTwo(
     msg: Uint8Array,
     pk: Uint8Array,
@@ -72,7 +87,7 @@ export class Schnorr {
     const roundOnePtr = pubKeysPtr + pubKeysBuffer.length;
     this.wasm.transferToHeap(roundOneOutputsBuffer, roundOnePtr);
 
-    this.wasm.call(
+    const success = this.wasm.call(
       'multisig_construct_signature_round_2',
       msgPtr,
       msg.length,
@@ -82,9 +97,12 @@ export class Schnorr {
       roundOnePtr,
       0,
     );
-    return Buffer.from(this.wasm.sliceMemory(0, 32));
+    return success ? Buffer.from(this.wasm.sliceMemory(0, 32)) : Buffer.alloc(32);
   }
 
+  // given the outputs of both rounds, this party (either a signer or coordinator)
+  // will validate all outputs and attempt to reconstruct a signature for the given message
+  // which would be valid for the aggregated public key of the signers.
   public multiSigCombineSignatures(
     msg: Uint8Array,
     pubKeys: Buffer[],
@@ -105,7 +123,16 @@ export class Schnorr {
     const roundTwoPtr = roundOnePtr + roundOneOutputsBuffer.length;
     this.wasm.transferToHeap(roundTwoOutputsBuffer, roundTwoPtr);
 
-    this.wasm.call('multisig_combine_signatures', msgPtr, msg.length, pubKeysPtr, roundOnePtr, roundTwoPtr, 0, 32);
-    return new SchnorrSignature(Buffer.from(this.wasm.sliceMemory(0, 64)));
+    const success = this.wasm.call(
+      'multisig_combine_signatures',
+      msgPtr,
+      msg.length,
+      pubKeysPtr,
+      roundOnePtr,
+      roundTwoPtr,
+      0,
+      32,
+    );
+    return success ? new SchnorrSignature(Buffer.from(this.wasm.sliceMemory(0, 64))) : undefined;
   }
 }
