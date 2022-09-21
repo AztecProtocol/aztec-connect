@@ -654,8 +654,8 @@ jobs:
           name: 'faucet'
           working_directory: faucet
           command: |
-            deploy_ecr faucet
-            deploy_s3 faucet
+            deploy faucet
+            deploy_dockerhub faucet
       - run:
           name: 'docs'
           working_directory: docs
