@@ -65,7 +65,7 @@ async function main() {
     PERMIT_HELPER_CONTRACT_ADDRESS: permitHelper.address,
     FEE_DISTRIBUTOR_ADDRESS: feeDistributor.address,
     PRICE_FEED_CONTRACT_ADDRESSES: priceFeeds.map(p => p).join(','),
-    FAUCET_CONTRACT_ADDRESSS: faucet.address,
+    FAUCET_CONTRACT_ADDRESS: faucet.address,
   };
 
   for (const [k, v] of Object.entries(envVars)) {
