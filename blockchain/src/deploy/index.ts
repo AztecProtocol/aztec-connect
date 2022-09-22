@@ -5,10 +5,11 @@ import { deployDev } from './deploy_dev';
 import { InitHelpers, TreeInitData } from '@aztec/barretenberg/environment';
 import { deployMainnet } from './deploy_mainnet';
 import { deployMainnetE2e } from './deploy_mainnet_e2e';
+import { EthAddress } from '@aztec/barretenberg/address';
 
 // Assume these env vars could be set to ''.
 // Default values will not be picked up as '' !== undefined.
-const { ETHEREUM_HOST, PRIVATE_KEY, VK } = process.env;
+const { ETHEREUM_HOST, PRIVATE_KEY, VK, FAUCET_OPERATOR } = process.env;
 
 function getSigner() {
   if (!ETHEREUM_HOST) {
@@ -20,16 +21,16 @@ function getSigner() {
   return new NonceManager(signer);
 }
 
-function deploy(chainId: number, signer: Signer, treeInitData: TreeInitData, vk: string) {
+function deploy(chainId: number, signer: Signer, treeInitData: TreeInitData, vk: string, faucetOperator?: EthAddress) {
   switch (chainId) {
     case 1:
     case 0xa57ec:
-      return deployMainnet(signer, treeInitData, vk);
+      return deployMainnet(signer, treeInitData, vk, faucetOperator);
     case 0xe2e:
     case 0x7a69:
-      return deployMainnetE2e(signer, treeInitData, vk);
+      return deployMainnetE2e(signer, treeInitData, vk, faucetOperator);
     default:
-      return deployDev(signer, treeInitData, vk);
+      return deployDev(signer, treeInitData, vk, faucetOperator);
   }
 }
 
@@ -50,6 +51,9 @@ async function main() {
   const chainId = await signer.getChainId();
   console.error(`Chain id: ${chainId}`);
 
+  const faucetOperator = FAUCET_OPERATOR ? EthAddress.fromString(FAUCET_OPERATOR) : undefined;
+  console.error(`Faucet operator: ${faucetOperator}`);
+
   const treeInitData = InitHelpers.getInitData(chainId);
   const { dataTreeSize, roots } = treeInitData;
   console.error(`Initial data size: ${dataTreeSize}`);
@@ -58,7 +62,13 @@ async function main() {
   console.error(`Initial root root: ${roots.rootsRoot.toString('hex')}`);
 
   const vk = VK ? VK : 'MockVerificationKey';
-  const { rollup, priceFeeds, feeDistributor, permitHelper, faucet } = await deploy(chainId, signer, treeInitData, vk);
+  const { rollup, priceFeeds, feeDistributor, permitHelper, faucet } = await deploy(
+    chainId,
+    signer,
+    treeInitData,
+    vk,
+    faucetOperator,
+  );
 
   const envVars = {
     ROLLUP_CONTRACT_ADDRESS: rollup.address,
