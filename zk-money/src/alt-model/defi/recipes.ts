@@ -5,7 +5,7 @@ import { RemoteAsset } from 'alt-model/types';
 import { LIDO_CARD } from './card_configs/lido';
 import { ELEMENT_CARD, OLD_ELEMENT_CARD } from './card_configs/element';
 import { YEARN_DAI_CARD, YEARN_ETH_CARD } from './card_configs/yearn';
-import { SEVEN_DAY_DCA_CARD } from './card_configs/seven_day_dca';
+import { SEVEN_DAY_DCA_CARD_DAI_TO_ETH, SEVEN_DAY_DCA_CARD_ETH_TO_DAI } from './card_configs/seven_day_dca';
 
 const debug = createDebug('zm:recipes');
 
@@ -73,7 +73,8 @@ const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
   LIDO_CARD,
   YEARN_ETH_CARD,
   YEARN_DAI_CARD,
-  SEVEN_DAY_DCA_CARD
+  SEVEN_DAY_DCA_CARD_DAI_TO_ETH,
+  SEVEN_DAY_DCA_CARD_ETH_TO_DAI
 ];
 
 export function createDefiRecipes(status: RollupProviderStatus, assets: RemoteAsset[]) {
