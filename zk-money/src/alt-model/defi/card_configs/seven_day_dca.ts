@@ -96,6 +96,13 @@ export const SEVEN_DAY_DCA_CARD_ETH_TO_DAI: CreateRecipeArgs = {
     useOpenText: useEthToDaiExchangeRateText,
     useExitText: useEthToDaiExchangeRateText,
   },
+  useEnterInteractionPredictionInfo: (_, { inputValue, inputAssetA }) => {
+    const formattedValue = new Amount(inputValue, inputAssetA).format({ uniform: true, layer: 'L1' });
+    return {
+      type: 'text-only',
+      text: `You will be purchasing DAI with ${formattedValue} over 7 Days.`,
+    };
+  },
 };
 
 const SEVEN_DAYS_MS = 1000 * 60 * 60 * 24 * 7;
