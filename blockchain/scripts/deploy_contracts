@@ -66,7 +66,7 @@ fi
 
 if [ -n "$REDEPLOY" ]; then
   echo "Redeploying contracts..."
-  `docker run -e ETHEREUM_HOST=$TF_VAR_PUBLIC_ETHEREUM_HOST -e PRIVATE_KEY=$TF_VAR_PRIVATE_KEY -e VK=$VERIFICATION_KEY -e FAUCET_OPERATOR=$TF_VAR_NEXT_PUBLIC_OPERATOR_ADDRESS 278380418400.dkr.ecr.eu-west-2.amazonaws.com/blockchain:$COMMIT_HASH`
+  `docker run -e ETHEREUM_HOST=$TF_VAR_PUBLIC_ETHEREUM_HOST -e PRIVATE_KEY=$TF_VAR_PRIVATE_KEY -e VK=$VERIFICATION_KEY -e FAUCET_OPERATOR=$TF_VAR_FAUCET_OPERATOR_ADDRESS 278380418400.dkr.ecr.eu-west-2.amazonaws.com/blockchain:$COMMIT_HASH`
   if [ "$NETWORK" = "goerli" ]; then
     docker run -e ETHERSCAN_API_KEY=$ETHERSCAN_API_KEY 278380418400.dkr.ecr.eu-west-2.amazonaws.com/blockchain:$COMMIT_HASH yarn verify:goerli $ROLLUP_CONTRACT_ADDRESS || true
   fi

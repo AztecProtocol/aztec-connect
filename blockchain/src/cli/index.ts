@@ -9,6 +9,7 @@ import { setBlockchainTime, getCurrentBlockTime } from '../ganache/manipulate_bl
 import { decodeErrorFromContractByTxHash, decodeSelector, retrieveContractSelectors } from '../contracts/decode_error';
 import { EthereumProvider } from '@aztec/barretenberg/blockchain';
 import * as RollupAbi from '../artifacts/contracts/RollupProcessor.sol/RollupProcessor.json';
+import * as AztecFaucetAbi from '../artifacts/contracts/periphery/AztecFaucet.sol/AztecFaucet.json';
 import * as Element from '@aztec/bridge-clients/client-dest/typechain-types/factories/ElementBridge__factory';
 import { ElementBridgeData } from '@aztec/bridge-clients/client-dest/src/client/element/element-bridge-data';
 import { WalletProvider } from '../provider';
@@ -23,6 +24,7 @@ const { PRIVATE_KEY } = process.env;
 export const abis: { [key: string]: any } = {
   Rollup: RollupAbi,
   Element: Element.ElementBridge__factory,
+  AztecFaucet: AztecFaucetAbi,
 };
 
 const getProvider = (url = 'http://localhost:8545') => {
