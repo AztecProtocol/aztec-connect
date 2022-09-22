@@ -73,11 +73,8 @@ const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
   LIDO_CARD,
   YEARN_ETH_CARD,
   YEARN_DAI_CARD,
+  SEVEN_DAY_DCA_CARD
 ];
-
-if (localStorage.getItem('enable_dca')) {
-  CREATE_RECIPES_ARGS.push(SEVEN_DAY_DCA_CARD);
-}
 
 export function createDefiRecipes(status: RollupProviderStatus, assets: RemoteAsset[]) {
   const recipes: DefiRecipe[] = [];

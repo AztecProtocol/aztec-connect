@@ -14,7 +14,7 @@ import { Amount } from 'alt-model/assets';
 export const SEVEN_DAY_DCA_CARD: CreateRecipeArgs = {
   id: 'seven-day-dca.DAI-to-ETH',
   isAsync: true,
-  selectBlockchainBridge: ({ bridges }) => bridges.find(x => x.id === 10),
+  selectBlockchainBridge: ({ bridges }) => bridges.find(x => x.id === 11),
   entryInputAssetAddressA: KMAA.DAI,
   entryOutputAssetAddressA: KMAA.ETH,
   createAdaptor: createDcaAdaptor,
