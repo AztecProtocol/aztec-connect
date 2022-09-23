@@ -1,18 +1,24 @@
-import { DefiRecipe, KeyBridgeStat } from 'alt-model/defi/types';
+import { DefiRecipe, KeyStatConfig } from 'alt-model/defi/types';
+import React from 'react';
+import { SkeletonRect } from 'ui-components';
 import { bindStyle } from 'ui-components/util/classnames';
 import style from './bridge_key_stats.module.scss';
-import { getEnterKeyStatItemProps } from './bridge_key_stat_items';
 
 const cx = bindStyle(style);
 
-function renderItem(stat: KeyBridgeStat, recipe: DefiRecipe) {
-  const { label, value } = getEnterKeyStatItemProps(stat, recipe);
+function renderItem(label: string, value: React.ReactNode) {
   return (
     <div className={style.item}>
       <div className={style.label}>{label}</div>
       <div className={style.value}>{value}</div>
     </div>
   );
+}
+
+function KeyStatItem(props: { stat: KeyStatConfig; recipe: DefiRecipe }) {
+  const { label, skeletonSizingContent, useFormattedValue } = props.stat;
+  const value = useFormattedValue(props.recipe);
+  return renderItem(label, value !== undefined ? value : <SkeletonRect sizingContent={skeletonSizingContent} />);
 }
 
 interface BridgeKeyStatsProps {
@@ -23,9 +29,9 @@ interface BridgeKeyStatsProps {
 export function BridgeKeyStats({ recipe, compact }: BridgeKeyStatsProps) {
   return (
     <div className={cx(style.root, { compact })}>
-      {renderItem(recipe.keyStat1, recipe)}
-      {renderItem(recipe.keyStat2, recipe)}
-      {renderItem(recipe.keyStat3, recipe)}
+      <KeyStatItem stat={recipe.keyStats.keyStat1} recipe={recipe} />
+      <KeyStatItem stat={recipe.keyStats.keyStat2} recipe={recipe} />
+      <KeyStatItem stat={recipe.keyStats.keyStat3} recipe={recipe} />
     </div>
   );
 }

@@ -35,7 +35,7 @@ export function filterRecipes(recipes: DefiRecipe[] | undefined, filters: Recipe
   if (!recipes) return undefined;
   let out = [...recipes];
   if (filters.type) {
-    out = out.filter(x => x.investmentType === filters.type);
+    out = out.filter(x => x.cardTag === filters.type);
   }
   if (filters.project) {
     out = out.filter(x => x.projectName === filters.project);

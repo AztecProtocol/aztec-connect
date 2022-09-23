@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Section, SectionTitle, SearchInput } from 'ui-components';
 import { Obs, useMaybeObs } from 'app/util';
 import { DefiCard, Select } from 'components';
-import { DefiInvestmentType, DefiRecipe } from '../../../alt-model/defi/types';
+import { DefiRecipe } from '../../../alt-model/defi/types';
 import { useBridgeDataAdaptorsMethodCaches, useDefiRecipes } from 'alt-model/top_level_context';
 import style from './defi_cards_list.module.scss';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -27,26 +27,13 @@ interface InvestmentsFilterProps {
   recipes?: DefiRecipe[];
 }
 
-function getInvestmentTypeLabel(type: DefiInvestmentType): string {
-  switch (type) {
-    case DefiInvestmentType.FIXED_YIELD:
-      return 'Fixed Yield';
-    case DefiInvestmentType.YIELD:
-      return 'Yield';
-    case DefiInvestmentType.STAKING:
-      return 'Staking';
-    case DefiInvestmentType.BORROW:
-      return 'Borrow';
-  }
-}
-
 function InvestmentsFilter({ filters, onChangeFilters, recipes }: InvestmentsFilterProps) {
   const assetSymbolsSet = new Set(
     recipes?.map(x => x.flow.enter.inA.symbol).concat(recipes.map(x => x.flow.enter.outA.symbol)),
   );
   const assetSymbolOpts = Array.from(assetSymbolsSet).map(value => ({ value, label: value }));
-  const typesSet = new Set(recipes?.map(x => x.investmentType));
-  const typeOpts = Array.from(typesSet).map(value => ({ value, label: getInvestmentTypeLabel(value) }));
+  const tagsSet = new Set(recipes?.map(x => x.cardTag));
+  const typeOpts = Array.from(tagsSet).map(value => ({ value, label: value }));
   const projectsSet = new Set(recipes?.map(x => x.projectName));
   const projectOpts = Array.from(projectsSet).map(value => ({ value, label: value }));
   return (

@@ -1,7 +1,5 @@
 # JoinSplit Circuit
 
-[![hackmd-github-sync-badge](https://hackmd.io/zwjbbtxkTKm00nAOvAJY-w/badge)](https://hackmd.io/zwjbbtxkTKm00nAOvAJY-w)
-
 ### Circuit Description
 
 This circuit allows notes to be spent.

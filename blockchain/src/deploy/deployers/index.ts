@@ -10,3 +10,4 @@ export * from './deploy_rollup_processor';
 export * from './deploy_uniswap';
 export * from './deploy_verifier';
 export * from './deploy_compound';
+export * from './deploy_faucet';

@@ -2,6 +2,25 @@
   "name": "aztec-block-explorer",
   "version": "0.1.0",
   "private": true,
+  "scripts": {
+    "start:dev": "parcel --port 3000 ./src/index.html --no-source-maps",
+    "build": "yarn clean && yarn formatting && yarn tsc && parcel build ./src/index.html --no-source-maps",
+    "formatting": "prettier --check ./src && eslint --max-warnings 0 ./src",
+    "clean": "rm -rf ./cache ./dist"
+  },
+  "eslintConfig": {
+    "extends": "react-app"
+  },
+  "browserslist": [
+    "last 1 chrome version"
+  ],
+  "staticFiles": {
+    "staticPath": [
+      "src/public/robots.txt",
+      "src/public/browserconfig.xml",
+      "src/public/mstile-150x150.png"
+    ]
+  },
   "dependencies": {
     "@aztec/barretenberg": "../barretenberg.js/dest",
     "@aztec/sdk": "file:../sdk/dest",
@@ -34,25 +53,6 @@
     "styled-reset": "^4.2.3",
     "type-graphql": "^1.0.0",
     "typescript": "^4.4.4"
-  },
-  "scripts": {
-    "start:dev": "parcel --port 3000 ./src/index.html --no-source-maps",
-    "build": "yarn clean && yarn formatting && yarn tsc && parcel build ./src/index.html --no-source-maps",
-    "formatting": "prettier --check ./src && eslint --max-warnings 0 ./src",
-    "clean": "rm -rf ./cache ./dist"
-  },
-  "eslintConfig": {
-    "extends": "react-app"
-  },
-  "browserslist": [
-    "last 1 chrome version"
-  ],
-  "staticFiles": {
-    "staticPath": [
-      "src/public/robots.txt",
-      "src/public/browserconfig.xml",
-      "src/public/mstile-150x150.png"
-    ]
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^5.27.0",

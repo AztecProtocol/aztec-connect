@@ -291,6 +291,19 @@ jobs:
           working_directory: explorer
           command: build explorer
 
+  faucet:
+    docker:
+      - image: aztecprotocol/build-image
+    steps:
+      - checkout
+      - *setup_env
+      - setup_remote_docker:
+          version: 20.10.14
+      - run:
+          name: 'Build and test'
+          working_directory: faucet
+          command: build faucet
+
   docs:
     docker:
       - image: aztecprotocol/build-image
@@ -638,6 +651,12 @@ jobs:
             deploy_ecr explorer
             deploy_s3 explorer
       - run:
+          name: 'faucet'
+          working_directory: faucet
+          command: |
+            deploy faucet
+            deploy_dockerhub faucet
+      - run:
           name: 'docs'
           working_directory: docs
           command: |
@@ -787,6 +806,10 @@ workflows:
           requires:
             - sdk
           filters: *tag_filter
+      - faucet:
+          requires:
+            - blockchain
+          filters: *tag_filter
       - docs:
           filters: *tag_filter
       - wasabi:
@@ -900,6 +923,7 @@ workflows:
             - zk-money
             - hummus
             - explorer
+            - faucet
             - docs
           filters:
             branches:

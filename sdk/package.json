@@ -2,7 +2,7 @@
   "name": "@aztec/sdk",
   "version": "2.0.16",
   "main": "index.js",
-  "homepage": "https://developers.aztec.network",
+  "homepage": "https://docs.aztec.network/sdk/overview",
   "author": "AZTEC",
   "license": "GPL-2.0",
   "scripts": {

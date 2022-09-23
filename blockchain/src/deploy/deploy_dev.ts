@@ -1,3 +1,4 @@
+import { EthAddress } from '@aztec/barretenberg/address';
 import { TreeInitData } from '@aztec/barretenberg/environment';
 import { Signer } from 'ethers';
 import {
@@ -11,13 +12,19 @@ import {
   deployUniswapBridge,
   deployVerifier,
   deployCompoundBridge,
+  deployAztecFaucet,
 } from './deployers';
 import { deployErc20 } from './deployers/deploy_erc20';
 
 const escapeBlockLower = 2160;
 const escapeBlockUpper = 2400;
 
-export async function deployDev(signer: Signer, { dataTreeSize, roots }: TreeInitData, vk: string) {
+export async function deployDev(
+  signer: Signer,
+  { dataTreeSize, roots }: TreeInitData,
+  vk: string,
+  faucetOperator?: EthAddress,
+) {
   const uniswapRouter = await deployUniswap(signer);
   const verifier = await deployVerifier(signer, vk);
   const defiProxy = await deployDefiBridgeProxy(signer);
@@ -56,5 +63,7 @@ export async function deployDev(signer: Signer, { dataTreeSize, roots }: TreeIni
   const daiPriceFeedContact = await deployMockPriceFeed(signer, daiPrice);
   const priceFeeds = [gasPriceFeedContact.address, daiPriceFeedContact.address];
 
-  return { rollup, priceFeeds, feeDistributor, permitHelper };
+  const faucet = await deployAztecFaucet(signer, faucetOperator);
+
+  return { rollup, priceFeeds, feeDistributor, permitHelper, faucet };
 }
