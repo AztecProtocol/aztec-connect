@@ -19,7 +19,7 @@ export const ELEMENT_CARD: CreateRecipeArgs = {
   createAdaptor: createElementAdaptor,
   enterAuxDataResolver: {
     type: 'bridge-data-select',
-    selectOpt: opts => opts[0], // Tranche expiry timestamp
+    selectOpt: opts => opts[opts.length - 1], // Tranche expiry timestamp
   },
   projectName: 'Element',
   gradient: ['#2E69C3', '#6ACDE2'],
@@ -74,7 +74,7 @@ export const OLD_ELEMENT_CARD: CreateRecipeArgs = {
   ...ELEMENT_CARD,
   id: 'element-finance-old.DAI-to-DAI',
   unlisted: true,
-  selectBlockchainBridge: ({ bridges }) => bridges.find(x => x.id === 9),
+  selectBlockchainBridge: ({ bridges }) => bridges.find(x => x.id === 1),
 };
 
 function useFixedAprFromDefaultTermApr(recipe: DefiRecipe) {
