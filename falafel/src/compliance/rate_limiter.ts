@@ -1,11 +1,18 @@
+import { createLogger } from '@aztec/barretenberg/log';
+
 interface ValueForDate {
   time: Date;
   value: number;
 }
 
+const MILLISECONDS_IN_DAY = 86400 * 1000;
+const MIDNIGHT_THRESHOLD = 60 * 1000; // set to 1 minute
+
 export class RateLimiter {
   private values: { [key: string]: ValueForDate } = {};
-  constructor(private limitPerDay: number) {}
+  constructor(private limitPerDay: number, private log = createLogger('RateLimiter')) {
+    this.setDailyTimeout();
+  }
 
   configureLimit(limitPerDay: number) {
     this.limitPerDay = limitPerDay;
@@ -45,9 +52,30 @@ export class RateLimiter {
 
   private isNewDay(oldDate: Date, newDate: Date) {
     // compare the number of whole days since the unix epoch
-    const milliSecondsInDay = 86400000;
-    const oldDays = Math.floor(oldDate.getTime() / milliSecondsInDay);
-    const newDays = Math.floor(newDate.getTime() / milliSecondsInDay);
+    const oldDays = Math.floor(oldDate.getTime() / MILLISECONDS_IN_DAY);
+    const newDays = Math.floor(newDate.getTime() / MILLISECONDS_IN_DAY);
     return oldDays !== newDays;
+  }
+
+  private processDailyTimer() {
+    this.log('Clearing rate limiter cache...');
+    this.values = {};
+  }
+
+  private setDailyTimeout() {
+    const interval = this.getIntervalForNextTimeout();
+    setTimeout(() => {
+      this.processDailyTimer();
+      this.setDailyTimeout();
+    }, interval);
+  }
+
+  private getIntervalForNextTimeout() {
+    // find out the current time and set a timeout at the next midnight
+    // if withn MIDNIGHT_THRESHOLD seconds of the next midnight then set it to the following midnight
+    const currentTime = new Date().getTime();
+    const nextMidnight = (Math.floor(currentTime / MILLISECONDS_IN_DAY) + 1) * MILLISECONDS_IN_DAY;
+    const msToNextMidnight = nextMidnight - currentTime;
+    return msToNextMidnight > MIDNIGHT_THRESHOLD ? msToNextMidnight : msToNextMidnight + MILLISECONDS_IN_DAY;
   }
 }

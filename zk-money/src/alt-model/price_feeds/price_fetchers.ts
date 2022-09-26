@@ -1,123 +1,92 @@
 import type { Provider } from '@ethersproject/providers';
-import createDebug from 'debug';
 import { KNOWN_MAINNET_ASSET_ADDRESS_STRS as S } from '../known_assets/known_asset_addresses';
 import { BigNumber, Contract } from 'ethers';
-import { DefiRecipe } from 'alt-model/defi/types';
 import { UnderlyingAmountPollerCache } from 'alt-model/defi/bridge_data_adaptors/caches/underlying_amount_poller_cache';
+import { ChainLinkPollerCache } from './chain_link_poller_cache';
+import { getUsdOracleAddressForAsset } from './chain_link_oracles';
+import { Poller } from 'app/util/poller';
+import { Obs } from 'app/util';
 
-const debug = createDebug('zm:price_fetchers');
-
-function getAssetPriceFeedAddressStr(addressStr: string) {
-  switch (addressStr) {
-    case S.ETH:
-      return '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419';
-    case S.DAI:
-      return '0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9';
-    case S.renBTC:
-      return '0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c';
-    case S.stETH:
-      return '0xcfe54b5cd566ab89272946f602d76ea879cab4a8';
-  }
-}
-const ABI = ['function latestAnswer() public view returns(int256)'];
-
-function createDefaultPriceFetcher(priceFeedContractAddressStr: string, provider: Provider) {
-  const contract = new Contract(priceFeedContractAddressStr, ABI, provider);
-  return async () => {
-    try {
-      const bigNum = await contract.latestAnswer();
-      return bigNum.toBigInt() as bigint;
-    } catch (err) {
-      debug(`Price fetch failed for address ${priceFeedContractAddressStr}`, err);
-      throw err;
-    }
-  };
-}
-
-function createWstEthPriceFetcher(provider: Provider) {
-  const stETHOracleAddress = getAssetPriceFeedAddressStr(S.stETH);
+function createWstEthPriceObs(provider: Provider, chainLinkPollerCache: ChainLinkPollerCache) {
+  const stETHOracleAddress = getUsdOracleAddressForAsset(S.stETH);
   if (!stETHOracleAddress) return;
-  const stETHPriceFetcher = createDefaultPriceFetcher(stETHOracleAddress, provider);
-  if (!stETHPriceFetcher) return;
+  const stETHPricePoller = chainLinkPollerCache.get(stETHOracleAddress);
+  if (!stETHPricePoller) return;
 
   const wstETHContract = new Contract(
     S.wstETH,
     ['function getStETHByWstETH(uint256) public view returns(uint256)'],
     provider,
   );
-  return async () => {
-    const stEthPrice = await stETHPriceFetcher();
-    const oneUnitBigNum = BigNumber.from((10n ** 18n).toString());
+  const oneUnitBigNum = BigNumber.from((10n ** 18n).toString());
+  const pollStETHByWstETH = Obs.constant(async () => {
     const wstEthToStEthBigNum = await wstETHContract.getStETHByWstETH(oneUnitBigNum);
-    const wstEthToStEth = wstEthToStEthBigNum.toBigInt();
+    return wstEthToStEthBigNum.toBigInt() as bigint;
+  });
+  const stETHByWstETHPoller = new Poller(pollStETHByWstETH, 1000 * 60 * 10, undefined);
+  return Obs.combine([stETHPricePoller.obs, stETHByWstETHPoller.obs]).map(([stETH_price, stETH_by_wstETH]) => {
+    if (stETH_price === undefined) return undefined;
+    if (stETH_by_wstETH === undefined) return undefined;
     // 1 stETH = stETHPrice USD
     // 1 wstETH = wstEthToStEth stETH
     // 1 wstETH = stETHPrice * wstEthToStEth
-    const price = (BigInt(stEthPrice) * wstEthToStEth) / 10n ** 18n;
-    return price;
-  };
+    return (stETH_price * stETH_by_wstETH) / 10n ** 18n;
+  });
 }
 
-function createETHPriceFetcherUsingUnderlyingAsset(
-  underlyingAmountPollerCache: UnderlyingAmountPollerCache,
-  provider: Provider,
-) {
-  const oraclePriceFetcherAddress = getAssetPriceFeedAddressStr(S.ETH);
-  if (!oraclePriceFetcherAddress) return;
-
-  const ethUnitPriceFetcher = createDefaultPriceFetcher(oraclePriceFetcherAddress, provider);
-  return createPriceFetcherUsingUnderlyingAsset(
-    underlyingAmountPollerCache,
-    ethUnitPriceFetcher,
-    'yearn-finance.ETH-to-yvETH',
-  );
-}
-
-function createDAIPriceFetcherUsingUnderlyingAsset(
-  underlyingAmountPollerCache: UnderlyingAmountPollerCache,
-  provider: Provider,
-) {
-  const oraclePriceFetcherAddress = getAssetPriceFeedAddressStr(S.DAI);
-  if (!oraclePriceFetcherAddress) return;
-
-  const daiUnitPriceFetcher = createDefaultPriceFetcher(oraclePriceFetcherAddress, provider);
-  return createPriceFetcherUsingUnderlyingAsset(
-    underlyingAmountPollerCache,
-    daiUnitPriceFetcher,
-    'yearn-finance.DAI-to-yvDAI',
-  );
-}
-
-function createPriceFetcherUsingUnderlyingAsset(
-  underlyingAmountPollerCache: UnderlyingAmountPollerCache,
-  assetUnitPriceFetcher: () => Promise<bigint>,
+function createUnderlyingAssetPriceObs(
+  underlyingAssetAddressStr: string,
   recipeId: string,
+  decimals: number,
+  chainLinkPollerCache: ChainLinkPollerCache,
+  underlyingAmountPollerCache: UnderlyingAmountPollerCache,
 ) {
-  return async () => {
-    const poller = underlyingAmountPollerCache.get([recipeId, 10n ** 18n]);
-    if (!poller) return;
-    const underlyingAmount = await poller.obs.whenNext();
-    const unitPrice = await assetUnitPriceFetcher();
-    const price = underlyingAmount ? (unitPrice * underlyingAmount?.amount) / 10n ** 18n : undefined;
-    return price;
-  };
+  const unitAssetValue = 10n ** BigInt(decimals);
+  const unitUnderlyingAssetValuePoller = underlyingAmountPollerCache.get([recipeId, unitAssetValue]);
+  const chainLinkPriceObs = getChainLinkPriceObs(underlyingAssetAddressStr, chainLinkPollerCache);
+  if (!unitUnderlyingAssetValuePoller) return;
+  if (!chainLinkPriceObs) return;
+  return Obs.combine([unitUnderlyingAssetValuePoller.obs, chainLinkPriceObs]).map(
+    ([unitUnderlyingAssetValue, chainlinkPrice]) => {
+      if (!unitUnderlyingAssetValue) return undefined;
+      if (chainlinkPrice === undefined) return undefined;
+      return (chainlinkPrice * unitUnderlyingAssetValue.amount) / unitAssetValue;
+    },
+  );
 }
 
-export function createAssetPriceFetcher(
+function getChainLinkPriceObs(assetAddressStr: string, chainLinkPollerCache: ChainLinkPollerCache) {
+  const oracleAddress = getUsdOracleAddressForAsset(assetAddressStr);
+  if (!oracleAddress) return;
+  return chainLinkPollerCache.get(oracleAddress).obs;
+}
+
+export function createAssetPriceObs(
   addressStr: string,
   provider: Provider,
+  chainLinkPollerCache: ChainLinkPollerCache,
   underlyingAmountPollerCache: UnderlyingAmountPollerCache,
 ) {
   switch (addressStr) {
     case S.yvDAI:
-      return createDAIPriceFetcherUsingUnderlyingAsset(underlyingAmountPollerCache, provider);
+      return createUnderlyingAssetPriceObs(
+        S.DAI,
+        'yearn-finance.DAI-to-yvDAI',
+        18,
+        chainLinkPollerCache,
+        underlyingAmountPollerCache,
+      );
     case S.yvETH:
-      return createETHPriceFetcherUsingUnderlyingAsset(underlyingAmountPollerCache, provider);
+      return createUnderlyingAssetPriceObs(
+        S.wETH,
+        'yearn-finance.ETH-to-yvETH',
+        18,
+        chainLinkPollerCache,
+        underlyingAmountPollerCache,
+      );
     case S.wstETH:
-      return createWstEthPriceFetcher(provider);
+      return createWstEthPriceObs(provider, chainLinkPollerCache);
     default:
-      const priceFeedContractAddressStr = getAssetPriceFeedAddressStr(addressStr);
-      if (!priceFeedContractAddressStr) return;
-      return createDefaultPriceFetcher(priceFeedContractAddressStr, provider);
+      return getChainLinkPriceObs(addressStr, chainLinkPollerCache);
   }
 }

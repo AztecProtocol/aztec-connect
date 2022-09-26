@@ -1,6 +1,6 @@
 import { createBridgeDataAdaptorsMethodCaches } from 'alt-model/defi/bridge_data_adaptors/caches/bridge_data_adaptors_method_caches';
 import { createDefiRecipes } from 'alt-model/defi/recipes';
-import { createPriceFeedPollerCache } from 'alt-model/price_feeds';
+import { createPriceFeedObsCache } from 'alt-model/price_feeds';
 import { useMemo } from 'react';
 import { JsonRpcProvider } from '@ethersproject/providers';
 import { Config } from '../../config';
@@ -12,6 +12,7 @@ import { createGasPricePoller } from 'alt-model/gas/gas_price_obs';
 import { AmountFactory } from 'alt-model/assets/amount_factory';
 import { RollupProviderStatus } from '@aztec/sdk';
 import { ToastsObs } from './toasts_obs';
+import { createChainLinkPollerCache } from 'alt-model/price_feeds/chain_link_poller_cache';
 
 function createTopLevelContextValue(
   config: Config,
@@ -37,8 +38,10 @@ function createTopLevelContextValue(
     initialRollupProviderStatus,
     config,
   );
-  const priceFeedPollerCache = createPriceFeedPollerCache(
+  const chainLinkPollerCache = createChainLinkPollerCache(stableEthereumProvider);
+  const priceFeedObsCache = createPriceFeedObsCache(
     stableEthereumProvider,
+    chainLinkPollerCache,
     bridgeDataAdaptorsMethodCaches.underlyingAmountPollerCache,
   );
 
@@ -50,7 +53,8 @@ function createTopLevelContextValue(
     remoteStatusPoller,
     remoteAssetsObs,
     amountFactory,
-    priceFeedPollerCache,
+    chainLinkPollerCache,
+    priceFeedObsCache,
     gasPricePoller,
     bridgeDataAdaptorsMethodCaches,
     defiRecipes,

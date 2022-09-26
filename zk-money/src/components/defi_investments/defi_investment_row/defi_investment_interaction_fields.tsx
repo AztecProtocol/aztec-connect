@@ -87,9 +87,10 @@ function AsyncEntering(props: { tx: UserDefiTx }) {
   return <TicksAndTooltip txId={props.tx.txId} tooltip={tooltip} filledTicks={1} totalTicks={2} label="Entering" />;
 }
 
-function AsyncOpen(props: { auxData: number }) {
-  const ms = props.auxData * 1000;
-  const dateStr = dateFormatter.format(ms);
+function AsyncOpen(props: { tx: UserDefiTx; recipe: DefiRecipe }) {
+  const date = props.recipe.getAsyncResolutionDate?.(props.tx);
+  if (!date) return <></>;
+  const dateStr = dateFormatter.format(date);
   return <div className={style.fixedTerm}>Funds locked until {dateStr}</div>;
 }
 
@@ -108,7 +109,7 @@ function renderAsyncField(position: DefiPosition_NonInteractable) {
     case UserDefiInteractionResultState.PENDING:
       return <AsyncEntering tx={position.tx} />;
     case UserDefiInteractionResultState.AWAITING_FINALISATION:
-      return <AsyncOpen auxData={position.tx.bridgeCallData.auxData} />;
+      return <AsyncOpen tx={position.tx} recipe={position.recipe} />;
     case UserDefiInteractionResultState.AWAITING_SETTLEMENT:
       return <AsyncExiting tx={position.tx} />;
     case UserDefiInteractionResultState.SETTLED:

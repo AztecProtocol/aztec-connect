@@ -11,9 +11,9 @@ A note on pedersen hashing.
 - `pedersen::commit` returns a point.
 - `pedersen::compress` returns the x-coordinate of `pedersen::commit`.
 
-A different generator is used for each type of note and nullifier (including different generators for partial vs complete commitments).
+A different generator is used for each type of note and nullifier (including different generators for partial vs complete commitments). See the hackmd https://hackmd.io/gRsmqUGkSDOCI9O22qWXBA?view for a detailed description of pedersen hashing using turbo plonk.
 
-Note: `pedersen::compress` is collision resistant (see the large comment above the `hash_single` function in the codebase), so this can be used in place of `pedersen::commit` for note commitments & nullifiers.
+Note: `pedersen::compress` is collision resistant (see the large comment above the `hash_single` function in the codebase, see the hackmd https://hackmd.io/urZOnB1gQimMqsMdf7ZBvw for a formal proof), so this can be used in place of `pedersen::commit` for note commitments & nullifiers.
 
 ## Notes and Commitments
 
@@ -29,7 +29,6 @@ An account note commitment is:
 
 - `pedersen::compress(alias_hash, account_public_key.x, signing_pub_key.x)`
   - Pedersen GeneratorIndex: `ACCOUNT_NOTE_COMMITMENT`
-  - `allow_zero_inputs = true`
 
 ### Value note
 
@@ -48,8 +47,7 @@ Consists of the following:
 
 - `pedersen::compress(secret, owner.x, owner.y, account_required, creator_pubkey)`
   - Pedersen GeneratorIndex: `VALUE_NOTE_PARTIAL_COMMITMENT`
-  - `allow_zero_inputs = true`
-    - `creator_pubkey` can be zero.
+  - `creator_pubkey` can be zero.
 
 > _Note:_ The `secret` is to construct a hiding Pedersen commitment to hide the note details.
 
@@ -57,13 +55,15 @@ Consists of the following:
 
 - `pedersen::compress(value_note_partial_commitment, value, asset_id, input_nullifier)`
   - Pedersen GeneratorIndex: `VALUE_NOTE_COMMITMENT`
-  - `allow_zero_inputs = true`
-    - `value` and `asset_id` can be zero
+  - `value` and `asset_id` can be zero
 
 In other words:
 
 $$
-Comm(\text{ValueNote}) = \big( [(note.secret \cdot g_0 + note.owner.x \cdot g_1 + note.owner.y \cdot g_2 + note.account\_required \cdot g_3 + note.creator\_pubkey \cdot g_4).x] \cdot h_0 + \\ note.value \cdot h_1 + note.asset\_id \cdot h_2 + note.input\_nullifier \cdot h_5 \big) .x
+\begin{align}
+&Comm(\text{ValueNote}) = \big( [(\text{note.secret} \cdot g_0 + \text{note.owner.x} \cdot g_1 + \text{note.owner.y} \cdot g_2 + \text{note.account-required} \cdot g_3 \\
+&+ \text{note.creator-pubkey} \cdot g_4).x] \cdot h_0 + \text{note.value} \cdot h_1 + \text{note.asset-id} \cdot h_2 + \text{note.input-nullifier} \cdot h_3 \big) .x
+\end{align}
 $$
 
 (The generator indexing is just for illustration. Consult the code.)
@@ -85,15 +85,13 @@ Consists of the following:
 
 - `pedersen::compress(deposit_value, bridge_call_data, value_note_partial_commitment, input_nullifier)`
   - Pedersen GeneratorIndex: `CLAIM_NOTE_PARTIAL_COMMITMENT`
-  - `allow_zero_inputs = true`
-    - `bridge_call_data` can be zero.
+  - `bridge_call_data` can be zero.
 
 **complete commitment**
 
 - `pedersen::compress(claim_note_partial_commitment, defi_interaction_nonce, fee)`
   - Pedersen GeneratorIndex: `CLAIM_NOTE_COMMITMENT`
-  - `allow_zero_inputs = true`
-    - `fee` and `defi_interaction_nonce` could be zero.
+  - `fee` and `defi_interaction_nonce` could be zero.
 
 ### Defi Interaction note
 
@@ -112,7 +110,6 @@ Consists of the following:
 
 - `pedersen::compress(bridge_call_data, total_input_value, total_output_value_a, total_output_value_b, interaction_nonce, interaction_result)`
   - Pedersen GeneratorIndex: `DEFI_INTERACTION_NOTE_COMMITMENT`
-  - `allow_zero_inputs = true`
 
 # Note encryption and decryption
 
@@ -143,9 +140,7 @@ We set out the computation steps below, with suggestions for changes:
 Pedersen GeneratorIndex:
 
 - `JOIN_SPLIT_NULLIFIER_ACCOUNT_PRIVATE_KEY` for the hashed_pk
-  - `allow_zero_inputs = false`
 - `JOIN_SPLIT_NULLIFIER` to compress the inputs
-  - `allow_zero_inputs = true`
 
 ## Claim note nullifier
 
@@ -162,7 +157,6 @@ Pedersen GeneratorIndex:
 - `nullifier = pedersen::compress(claim_note_commitment);`
   - Note: it is ok that observers can see which claim note is being nullified, since values in a defi interaction are public (only owners are private). Furthermore, the rollup priovider needs to be able to generate the claim proof and doesn't have access to any user secrets - so this nullifier allows this use case.
   - Pedersen GeneratorIndex:`CLAIM_NOTE_NULLIFIER`
-  - `allow_zero_inputs = true`
 
 ## Defi Interaction nullifier
 
@@ -176,5 +170,4 @@ Pedersen GeneratorIndex:
 **Calculation:**
 
 - `nullifier = pedersen::compress(defi_interaction_note_commitment, claim_note_commitment);`
-  - Pedersen GeneratorIndex:`DEFI_INTERACTION_NULLIFIER`
-  - `allow_zero_inputs = true`
+- Pedersen GeneratorIndex:`DEFI_INTERACTION_NULLIFIER`

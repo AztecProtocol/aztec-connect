@@ -1,30 +1,13 @@
 import createDebug from 'debug';
-import { BlockchainBridge, BlockchainStatus, EthAddress, RollupProviderStatus } from '@aztec/sdk';
-import { BridgeFlowAssets, DefiInvestmentType, DefiRecipe, KeyBridgeStat } from './types';
-import lidoXCurveLogo from 'images/lido_x_curve_logo.svg';
-import lidoMiniLogo from 'images/lido_mini_logo.png';
-import elementFiLogo from 'images/element_fi_logo.svg';
-import yearnLogo from 'images/yearn_logo.svg';
-import yearnGradientLogo from 'images/yearn_gradient.svg';
-import elementMiniLogo from 'images/element_mini_logo.png';
-import ethToDaiBanner from 'images/eth_to_dai_banner.svg';
-import { createElementAdaptor } from './bridge_data_adaptors/element_adaptor';
-import { createYearnAdaptor } from './bridge_data_adaptors/yearn_adaptor';
-import { KNOWN_MAINNET_ASSET_ADDRESSES as KMAA } from 'alt-model/known_assets/known_asset_addresses';
+import { RollupProviderStatus } from '@aztec/sdk';
+import { BridgeFlowAssets, CreateRecipeArgs, DefiRecipe } from './types';
 import { RemoteAsset } from 'alt-model/types';
-import { createLidoAdaptor } from './bridge_data_adaptors/lido_adaptor';
+import { LIDO_CARD } from './card_configs/lido';
+import { ELEMENT_CARD, OLD_ELEMENT_CARD } from './card_configs/element';
+import { YEARN_DAI_CARD, YEARN_ETH_CARD } from './card_configs/yearn';
+import { SEVEN_DAY_DCA_CARD_DAI_TO_ETH, SEVEN_DAY_DCA_CARD_ETH_TO_DAI } from './card_configs/seven_day_dca';
 
 const debug = createDebug('zm:recipes');
-
-interface CreateRecipeArgs
-  extends Omit<DefiRecipe, 'bridgeAddressId' | 'address' | 'flow' | 'valueEstimationInteractionAssets'> {
-  selectBlockchainBridge: (blockchainStatus: BlockchainStatus) => BlockchainBridge | undefined;
-  selectExitBlockchainBridge?: (blockchainStatus: BlockchainStatus) => BlockchainBridge | undefined;
-  isAsync?: boolean;
-  entryInputAssetAddressA: EthAddress;
-  entryOutputAssetAddressA: EthAddress;
-  openHandleAssetAddress?: EthAddress;
-}
 
 function createRecipe(
   {
@@ -85,161 +68,13 @@ function createRecipe(
 }
 
 const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
-  {
-    id: 'element-finance-old.DAI-to-DAI',
-    unlisted: true,
-    isAsync: true,
-    selectBlockchainBridge: ({ bridges }) => bridges.find(x => x.id === 1),
-    entryInputAssetAddressA: KMAA.DAI,
-    entryOutputAssetAddressA: KMAA.DAI,
-    createAdaptor: createElementAdaptor,
-    enterAuxDataResolver: {
-      type: 'bridge-data-select',
-      selectOpt: opts => opts[0], // Tranche expiry timestamp
-    },
-    projectName: 'Element',
-    gradient: ['#2E69C3', '#6ACDE2'],
-    website: 'https://element.fi/',
-    websiteLabel: 'element.fi',
-    name: 'Element Fixed Yield',
-    investmentType: DefiInvestmentType.FIXED_YIELD,
-    shortDesc:
-      'Deposit zkDai to Element for fixed yield. Funds are locked in Element and returned at the maturity date.',
-    longDescription:
-      'Element allows you to invest assets for a fixed yield. Deposit an asset today and receive it back on the maturity date with a fixed APR.',
-    bannerImg: ethToDaiBanner,
-    logo: elementFiLogo,
-    miniLogo: elementMiniLogo,
-    roiType: 'APR',
-    keyStat1: KeyBridgeStat.FIXED_YIELD,
-    keyStat2: KeyBridgeStat.MATURITY,
-    keyStat3: KeyBridgeStat.NEXT_BATCH,
-  },
-  {
-    id: 'element-finance.DAI-to-DAI',
-    isAsync: true,
-    selectBlockchainBridge: ({ bridges }) => bridges.find(x => x.id === 9),
-    entryInputAssetAddressA: KMAA.DAI,
-    entryOutputAssetAddressA: KMAA.DAI,
-    createAdaptor: createElementAdaptor,
-    enterAuxDataResolver: {
-      type: 'bridge-data-select',
-      selectOpt: opts => opts[opts.length - 1], // Tranche expiry timestamp
-    },
-    projectName: 'Element',
-    gradient: ['#2E69C3', '#6ACDE2'],
-    website: 'https://element.fi/',
-    websiteLabel: 'element.fi',
-    name: 'Element Fixed Yield',
-    investmentType: DefiInvestmentType.FIXED_YIELD,
-    shortDesc:
-      'Deposit zkDai to Element for fixed yield. Funds are locked in Element and returned at the maturity date.',
-    longDescription:
-      'Element allows you to invest assets for a fixed yield. Deposit an asset today and receive it back on the maturity date with a fixed APR.',
-    bannerImg: ethToDaiBanner,
-    logo: elementFiLogo,
-    miniLogo: elementMiniLogo,
-    roiType: 'APR',
-    keyStat1: KeyBridgeStat.FIXED_YIELD,
-    keyStat2: KeyBridgeStat.MATURITY,
-    keyStat3: KeyBridgeStat.NEXT_BATCH,
-  },
-  {
-    id: 'lido-staking-x-curve.ETH-to-wStETH',
-    selectBlockchainBridge: ({ bridges, chainId }) => {
-      switch (chainId) {
-        case 1:
-          return bridges.find(x => x.id === 6);
-        case 0xa57ec:
-          // TODO: check aztec-connect-dev deployment settles on this id
-          return bridges.find(x => x.id === 6);
-      }
-    },
-    gradient: ['#E97B61', '#F5CB85'],
-    openHandleAssetAddress: KMAA.wstETH,
-    entryInputAssetAddressA: KMAA.ETH,
-    entryOutputAssetAddressA: KMAA.wstETH,
-    createAdaptor: createLidoAdaptor,
-    enterAuxDataResolver: {
-      type: 'static',
-      value: 1e18, // Minimum acceptable amount of stEth per 1 eth
-    },
-    exitAuxDataResolver: {
-      type: 'static',
-      value: 0.9e18, // Minimum acceptable amount of eth per 1 stEth
-    },
-    projectName: 'Lido',
-    website: 'https://lido.fi/',
-    websiteLabel: 'lido.fi',
-    name: 'Lido Staking × Curve',
-    investmentType: DefiInvestmentType.STAKING,
-    shortDesc: 'Swap ETH for stETH on Curve and earn daily staking rewards. stETH is wrapped into wstETH.',
-    exitDesc: 'Unwrap zkwstETH and swap on Curve to get back zkETH.',
-    longDescription:
-      'Swap ETH for liquid staked ETH (stETH) on Curve and earn daily staking rewards. stETH is wrapped into wstETH, allowing you to earn staking yields without locking assets.',
-    bannerImg: ethToDaiBanner,
-    logo: lidoXCurveLogo,
-    miniLogo: lidoMiniLogo,
-    roiType: 'APR',
-    keyStat1: KeyBridgeStat.YIELD,
-    keyStat2: KeyBridgeStat.LIQUIDITY,
-    keyStat3: KeyBridgeStat.NEXT_BATCH,
-  },
-  {
-    id: 'yearn-finance.ETH-to-yvETH',
-    openHandleAssetAddress: KMAA.yvETH,
-    entryInputAssetAddressA: KMAA.ETH,
-    entryOutputAssetAddressA: KMAA.yvETH,
-    createAdaptor: createYearnAdaptor,
-    projectName: 'Yearn Finance',
-    gradient: ['#0040C2', '#A1B6E0'],
-    website: 'https://yearn.finance/',
-    websiteLabel: 'yearn.finance',
-    name: 'Yearn Finance',
-    investmentType: DefiInvestmentType.YIELD,
-    shortDesc: `Deposit ETH into Yearn's vault to easily generate yield with a passive investing strategy.`,
-    longDescription:
-      'Depositing into the Yearn vault, pools the capital and uses the Yearn strategies to automate yield generation and rebalancing. Your position is represented with yvETH.',
-    bannerImg: yearnLogo,
-    logo: yearnLogo,
-    miniLogo: yearnGradientLogo,
-    roiType: 'APY',
-    keyStat1: KeyBridgeStat.YIELD,
-    keyStat2: KeyBridgeStat.LIQUIDITY,
-    keyStat3: KeyBridgeStat.NEXT_BATCH,
-    selectBlockchainBridge: ({ bridges }) => bridges.find(x => x.id === 7),
-    selectExitBlockchainBridge: ({ bridges }) => bridges.find(x => x.id === 8),
-    enterAuxDataResolver: { type: 'static', value: 0 },
-    exitAuxDataResolver: { type: 'static', value: 1 },
-  },
-  {
-    id: 'yearn-finance.DAI-to-yvDAI',
-    openHandleAssetAddress: KMAA.yvDAI,
-    entryInputAssetAddressA: KMAA.DAI,
-    entryOutputAssetAddressA: KMAA.yvDAI,
-    createAdaptor: createYearnAdaptor,
-    projectName: 'Yearn Finance',
-    gradient: ['#0040C2', '#A1B6E0'],
-    website: 'https://yearn.finance/',
-    websiteLabel: 'yearn.finance',
-    name: 'Yearn Finance',
-    investmentType: DefiInvestmentType.YIELD,
-    shortDesc: `Deposit DAI into Yearn's vault to easily generate yield with a passive investing strategy.`,
-    longDescription:
-      'Depositing into the Yearn vault, pools the capital and uses the Yearn strategies to automate yield generation and rebalancing. Your position is represented with yvDAI.',
-    bannerImg: yearnLogo,
-    logo: yearnLogo,
-    miniLogo: yearnGradientLogo,
-    roiType: 'APY',
-    keyStat1: KeyBridgeStat.YIELD,
-    keyStat2: KeyBridgeStat.LIQUIDITY,
-    keyStat3: KeyBridgeStat.NEXT_BATCH,
-    hideUnderlyingOnExit: true,
-    selectBlockchainBridge: ({ bridges }) => bridges.find(x => x.id === 7),
-    selectExitBlockchainBridge: ({ bridges }) => bridges.find(x => x.id === 8),
-    enterAuxDataResolver: { type: 'static', value: 0 },
-    exitAuxDataResolver: { type: 'static', value: 1 },
-  },
+  OLD_ELEMENT_CARD,
+  ELEMENT_CARD,
+  LIDO_CARD,
+  YEARN_ETH_CARD,
+  YEARN_DAI_CARD,
+  SEVEN_DAY_DCA_CARD_DAI_TO_ETH,
+  SEVEN_DAY_DCA_CARD_ETH_TO_DAI
 ];
 
 export function createDefiRecipes(status: RollupProviderStatus, assets: RemoteAsset[]) {

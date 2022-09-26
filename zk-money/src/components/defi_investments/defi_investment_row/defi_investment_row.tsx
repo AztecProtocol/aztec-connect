@@ -3,7 +3,7 @@ import type { DefiPosition } from 'alt-model/defi/open_position_hooks';
 import { bindStyle } from 'ui-components/util/classnames';
 import { renderInteractionField } from './defi_investment_interaction_fields';
 import { renderValueField } from './defi_investment_value_fields';
-import { renderApyField } from './defi_investment_apy_field';
+import { renderPositionKeyStat } from './defi_investment_key_stat_field';
 import style from './defi_investment_row.module.scss';
 
 const cx = bindStyle(style);
@@ -23,7 +23,7 @@ export function DefiInvestmentRow({ position, onOpenDefiExitModal }: DefiInvestm
       </div>
       <div className={style.separator} />
       <div className={cx(style.segment, style.apyWrapper)}>
-        <div className={style.apy}>{renderApyField(position)}</div>
+        <div className={style.apy}>{renderPositionKeyStat(position)}</div>
       </div>
       <div className={cx(style.segment, style.valueWrapper)}>
         <div className={style.value}>{renderValueField(position)}</div>

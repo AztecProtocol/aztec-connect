@@ -207,7 +207,7 @@ describe('tx receiver', () => {
       txFeeResolver as any,
       metrics,
       bridgeResolver as any,
-      new RateLimiter(5),
+      new RateLimiter(5, () => {}),
       addressCheckProviders,
       () => {},
     );

@@ -10,6 +10,7 @@ import {
   deployLidoBridge,
   deployRollupProcessor,
   deployVerifier,
+  deployAztecFaucet,
 } from './deployers';
 import { deployAceOfZk } from './deployers/deploy_ace_of_zk';
 
@@ -32,7 +33,12 @@ const EMERGENCY_ROLE = keccak256(toUtf8Bytes('EMERGENCY_ROLE'));
 const OWNER_ROLE = keccak256(toUtf8Bytes('OWNER_ROLE'));
 const LISTER_ROLE = keccak256(toUtf8Bytes('LISTER_ROLE'));
 
-export async function deployMainnet(signer: Signer, { dataTreeSize, roots }: TreeInitData, vk: string) {
+export async function deployMainnet(
+  signer: Signer,
+  { dataTreeSize, roots }: TreeInitData,
+  vk: string,
+  faucetOperator?: EthAddress,
+) {
   const verifier = await deployVerifier(signer, vk);
   const defiProxy = await deployDefiBridgeProxy(signer);
   const { rollup, proxyAdmin, permitHelper } = await deployRollupProcessor(
@@ -86,5 +92,7 @@ export async function deployMainnet(signer: Signer, { dataTreeSize, roots }: Tre
 
   // TODO: Revoking of the default admin role should be done manually with the multi-sig to ensure correct setup
 
-  return { rollup, priceFeeds, feeDistributor, permitHelper };
+  const faucet = await deployAztecFaucet(signer, faucetOperator);
+
+  return { rollup, priceFeeds, feeDistributor, permitHelper, faucet };
 }

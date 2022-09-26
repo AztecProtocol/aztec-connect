@@ -5,7 +5,6 @@ This circuit enables converting a claim note into two value notes, according to 
 ## Diagrams
 
 - [The entire defi process](https://app.diagrams.net/#G1rbBywUqM78RkCNcI0jmie6-N79PY0lqv)
-- [Claim circuit flowchart](https://app.diagrams.net/#G1L3j78ncvFdupR0p86ayqANOp1rrkwvdN)
 
 ## Before the claim circuit
 
@@ -71,9 +70,9 @@ Recall that all inner circuits must have the **same number of public inputs** as
 - ```
   claim_note: {
       deposit_value,
-      bridge_call_data,    // actually a public input
+      bridge_call_data, // actually a public input
       defi_interaction_nonce,
-      fee,          // actually a public input
+      fee,             // actually a public input
       value_note_partial_commitment,
       input_nullifier,
   }
@@ -119,12 +118,8 @@ Computed vars:
 - Extract config data from `bit_config`:
   - ```
     bit_config = {
-      first_input_virtual,
-      second_input_virtual,
-      first_output_virtual,
-      second_output_virtual,
-      second_input_real,
-      second_output_real,
+      second_input_in_use,
+      second_output_in_use,
     }
     ```
 - ```
@@ -155,11 +150,14 @@ Checks:
 
 - Many values are range-checked. See [constants.hpp](../../barretenberg/src/aztec/rollup/proofs/notes/constants.hpp) and [constants.hpp](../../barretenberg/src/aztec/rollup/constants.hpp) for the variables whose bit-lengths are constrained.
 - Check `bit_config` vars:
-  - Extract 'virtualness' from `input_asset_id_b` and `output_asset_id_b`
-  - `second_input_virtual must_imply second_input_in_use`
-  - `second_output_virtual must_imply second_output_in_use`
-  - `second_input_in_use must_imply input_asset_id_a != input_asset_id_b`
-  - `second_output_in_use must_imply output_asset_id_a != output_asset_id_b`
+- Extract `second_input_in_use` and `second_output_in_use` from `claim_note_data.bridge_call_data_local.config`
+// The below six constraints are exercised in bridge_call_data.hpp, see comments there for elaboration
+- `!(input_asset_id_b.is_zero) must_imply config.second_input_in_use`
+- `!(input_asset_id_b.is_zero) must_imply config.second_output_in_use`
+- `config.second_input_in_use must_imply input_asset_id_a != input_asset_id_b`
+- `config.second_output_in_use && both_outputs_real must_imply output_asset_id_a != output_asset_id_b`
+- `first_output_virtual must_imply output_asset_id_a == virtual_asset_id_placeholder`
+- `second_output_virtual must_imply output_asset_id_b == virtual_asset_id_placeholder`
 - `require(claim_note.deposit_value != 0)`
 - `require(deposit_value <= total_input_value)`
 - `require(output_value_a <= total_output_value_a)`

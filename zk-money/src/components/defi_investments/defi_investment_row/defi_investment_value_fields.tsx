@@ -36,9 +36,15 @@ function ClosableValueField({ position }: { position: DefiPosition_Interactable 
 }
 
 function InteractionPresentValueField({ position }: { position: DefiPosition_NonInteractable }) {
-  const output = useInteractionPresentValue(position.recipe, position.tx);
-  const amount = useAmount(output);
-  return <ValueField amount={amount} />;
+  const values = useInteractionPresentValue(position.recipe, position.tx);
+  const amount0 = useAmount(values?.[0]);
+  const amount1 = useAmount(values?.[1]);
+  return (
+    <>
+      <ValueField amount={amount0} />
+      {amount1 && <ValueField amount={amount1} />}
+    </>
+  );
 }
 
 function renderAsyncValue(position: DefiPosition_NonInteractable) {

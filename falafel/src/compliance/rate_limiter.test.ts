@@ -11,6 +11,10 @@ const setNewDay = () => {
   date = newDate.getTime();
 };
 
+const createRateLimiter = (limit: number) => {
+  return new RateLimiter(limit, () => {});
+};
+
 describe('Rate Limiter', () => {
   let spy: any;
   const realDate = global.Date;
@@ -34,7 +38,7 @@ describe('Rate Limiter', () => {
   });
 
   it('allows action if within limit', () => {
-    const limiter = new RateLimiter(5);
+    const limiter = createRateLimiter(5);
     const id1 = 'id1';
     expect(limiter.getCurrentValue(id1)).toBe(0);
     expect(limiter.add(id1)).toBe(true);
@@ -42,7 +46,7 @@ describe('Rate Limiter', () => {
   });
 
   it('allows multiple actions if within limit', () => {
-    const limiter = new RateLimiter(5);
+    const limiter = createRateLimiter(5);
     const id1 = 'id1';
     expect(limiter.getCurrentValue(id1)).toBe(0);
     expect(limiter.add(id1, 3)).toBe(true);
@@ -50,7 +54,7 @@ describe('Rate Limiter', () => {
   });
 
   it('reject action if outside of limit', () => {
-    const limiter = new RateLimiter(5);
+    const limiter = createRateLimiter(5);
     const id1 = 'id1';
     for (let i = 0; i < 5; i++) {
       expect(limiter.add(id1)).toBe(true);
@@ -61,7 +65,7 @@ describe('Rate Limiter', () => {
   });
 
   it('adding 0 always allowed', () => {
-    const limiter = new RateLimiter(5);
+    const limiter = createRateLimiter(5);
     const id1 = 'id1';
     for (let i = 0; i < 50; i++) {
       expect(limiter.add(id1, 0)).toBe(true);
@@ -76,7 +80,7 @@ describe('Rate Limiter', () => {
   });
 
   it('adding negative always allowed and has not effect', () => {
-    const limiter = new RateLimiter(5);
+    const limiter = createRateLimiter(5);
     const id1 = 'id1';
     for (let i = 0; i < 50; i++) {
       expect(limiter.add(id1, -1)).toBe(true);
@@ -91,14 +95,14 @@ describe('Rate Limiter', () => {
   });
 
   it('reject actions if outside of limit', () => {
-    const limiter = new RateLimiter(5);
+    const limiter = createRateLimiter(5);
     const id1 = 'id1';
     expect(limiter.add(id1, 3)).toBe(true);
     expect(limiter.add(id1, 3)).toBe(false);
   });
 
   it('allows action if within limit', () => {
-    const limiter = new RateLimiter(5);
+    const limiter = createRateLimiter(5);
     const id1 = 'id1';
     expect(limiter.getCurrentValue(id1)).toBe(0);
     expect(limiter.add(id1)).toBe(true);
@@ -106,7 +110,7 @@ describe('Rate Limiter', () => {
   });
 
   it('value is reset on new day', () => {
-    const limiter = new RateLimiter(5);
+    const limiter = createRateLimiter(5);
     const id1 = 'id1';
     expect(limiter.getCurrentValue(id1)).toBe(0);
     expect(limiter.add(id1)).toBe(true);
@@ -117,7 +121,7 @@ describe('Rate Limiter', () => {
   });
 
   it('value is reset at midnight utc', () => {
-    const limiter = new RateLimiter(5);
+    const limiter = createRateLimiter(5);
     const id1 = 'id1';
     const id2 = 'id2';
 
@@ -160,7 +164,7 @@ describe('Rate Limiter', () => {
   });
 
   it('allows further actions on new day', () => {
-    const limiter = new RateLimiter(5);
+    const limiter = createRateLimiter(5);
     const id1 = 'id1';
     expect(limiter.add(id1, 5)).toBe(true);
     expect(limiter.add(id1)).toBe(false);
@@ -174,7 +178,7 @@ describe('Rate Limiter', () => {
   });
 
   it('applies limits per id', () => {
-    const limiter = new RateLimiter(5);
+    const limiter = createRateLimiter(5);
     const id1 = 'id1';
     const id2 = 'id2';
     expect(limiter.add(id1, 3)).toBe(true);
@@ -188,7 +192,7 @@ describe('Rate Limiter', () => {
   });
 
   it('allows limit to be changed', () => {
-    const limiter = new RateLimiter(5);
+    const limiter = createRateLimiter(5);
     const id1 = 'id1';
     expect(limiter.add(id1, 5)).toBe(true);
     expect(limiter.add(id1)).toBe(false);
