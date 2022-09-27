@@ -25,6 +25,7 @@ export const YEARN_ETH_CARD: CreateRecipeArgs = {
   logo: yearnLogo,
   miniLogo: yearnGradientLogo,
   cardTag: 'Yield',
+  cardButtonLabel: 'Earn',
   selectBlockchainBridge: ({ bridges }) => bridges.find(x => x.id === 7),
   selectExitBlockchainBridge: ({ bridges }) => bridges.find(x => x.id === 8),
   enterAuxDataResolver: { type: 'static', value: 0 },

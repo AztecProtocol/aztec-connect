@@ -41,7 +41,7 @@ export const DefiCardContent = (props: DefiCardContentProps) => {
         <Button
           className={style.defiCardButton}
           gradient={props.recipe.gradient && { from: props.recipe.gradient[0], to: props.recipe.gradient[1] }}
-          text={'Earn'}
+          text={props.recipe.cardButtonLabel}
           disabled={!props.isLoggedIn}
           onClick={handleClickDeposit}
         />

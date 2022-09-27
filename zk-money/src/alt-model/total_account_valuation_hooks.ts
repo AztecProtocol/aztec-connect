@@ -33,7 +33,8 @@ function useUnfinalisedAsyncDefiAsyncPresentValues() {
     }
     return Obs.combine(obsList);
   }, [defiTxs, interactionPresentValuePollerCache, recipes]);
-  return useMaybeObs(assetValuesObs)?.flatMap(assetValues => assetValues);
+  const unflattenedAssetValues = useMaybeObs(assetValuesObs);
+  return useMemo(() => unflattenedAssetValues?.flatMap(assetValues => assetValues), [unflattenedAssetValues]);
 }
 
 export function useTotalValuation() {
