@@ -38,6 +38,7 @@ export const LIDO_CARD: CreateRecipeArgs = {
   logo: lidoXCurveLogo,
   miniLogo: lidoMiniLogo,
   cardTag: 'Staking',
+  cardButtonLabel: 'Earn',
   keyStats: {
     keyStat1: {
       label: 'APR',

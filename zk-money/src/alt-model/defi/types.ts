@@ -113,6 +113,7 @@ export interface DefiRecipe {
   logo: string;
   miniLogo: string;
   cardTag: string;
+  cardButtonLabel: string;
   shortDesc: string;
   exitDesc?: string;
   bannerImg: string;

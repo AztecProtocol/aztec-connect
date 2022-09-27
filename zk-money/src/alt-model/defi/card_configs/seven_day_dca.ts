@@ -34,6 +34,7 @@ export const SEVEN_DAY_DCA_CARD_DAI_TO_ETH: CreateRecipeArgs = {
   logo: dcaLogo,
   miniLogo: dcaMiniLogo,
   cardTag: '7 Day DCA',
+  cardButtonLabel: 'Invest',
   keyStats: {
     keyStat1: {
       label: 'Duration',
@@ -77,7 +78,7 @@ export const SEVEN_DAY_DCA_CARD_ETH_TO_DAI: CreateRecipeArgs = {
   entryOutputAssetAddressA: KMAA.DAI,
   shortDesc: 'Dollar-Cost Averaging: Automate DAI purchases to smooth out short-term price movements.',
   longDescription:
-    "Your ETH deposit is divided across 7 daily ETH to DAI swaps, purchasing more DAI when its price is low and less when its high. The contract's pool uses external trades and uniswap as a fallbacks.",
+    "Your ETH deposit is divided across 7 daily ETH to DAI swaps, purchasing more DAI when the price of ETH is high and less DAI when the price of ETH is low. The contract's pool uses external trades and uniswap as a fallbacks.",
   keyStats: {
     ...SEVEN_DAY_DCA_CARD_DAI_TO_ETH.keyStats,
     keyStat2: {

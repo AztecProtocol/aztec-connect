@@ -33,6 +33,7 @@ export const ELEMENT_CARD: CreateRecipeArgs = {
   logo: elementFiLogo,
   miniLogo: elementMiniLogo,
   cardTag: 'Fixed Yield',
+  cardButtonLabel: 'Earn',
   keyStats: {
     keyStat1: {
       label: 'APR',
