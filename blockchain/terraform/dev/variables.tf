@@ -1,5 +1,6 @@
 variable "ROLLUP_CONTRACT_ADDRESS" {
   type = string
+  default = ""
 }
 
 output "rollup_contract_address" {
@@ -8,6 +9,7 @@ output "rollup_contract_address" {
 
 variable "PERMIT_HELPER_CONTRACT_ADDRESS" {
   type = string
+  default = ""
 }
 
 output "permit_helper_contract_address" {
@@ -16,6 +18,7 @@ output "permit_helper_contract_address" {
 
 variable "FAUCET_CONTRACT_ADDRESS" {
   type = string
+  default = ""
 }
 
 output "faucet_contract_address" {
@@ -24,6 +27,7 @@ output "faucet_contract_address" {
 
 variable "FEE_DISTRIBUTOR_ADDRESS" {
   type = string
+  default = ""
 }
 
 output "fee_distributor_address" {
@@ -32,6 +36,7 @@ output "fee_distributor_address" {
 
 variable "PRICE_FEED_CONTRACT_ADDRESSES" {
   type = string
+  default = ""
 }
 
 output "price_feed_contract_addresses" {
@@ -40,6 +45,7 @@ output "price_feed_contract_addresses" {
 
 variable "PUBLIC_ETHEREUM_HOST" {
   type = string
+  default = ""
 }
 
 output "public_ethereum_host" {
@@ -48,6 +54,7 @@ output "public_ethereum_host" {
 
 variable "PRIVATE_ETHEREUM_HOST" {
   type = string
+  default = ""
 }
 
 output "private_ethereum_host" {
@@ -56,6 +63,7 @@ output "private_ethereum_host" {
 
 variable "ETHEREUM_NETWORK" {
   type = string
+  default = ""
 }
 
 output "ethereum_network" {
