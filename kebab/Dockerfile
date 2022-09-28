@@ -17,4 +17,4 @@ RUN apk update && apk add --no-cache bash
 COPY --from=builder /usr/src /usr/src
 WORKDIR /usr/src/kebab
 CMD ["yarn", "start"]
-EXPOSE 80
+EXPOSE 8545

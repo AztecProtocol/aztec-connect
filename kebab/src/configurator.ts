@@ -37,7 +37,6 @@ function getStartupConfigEnvVars(): Partial<StartupConfig> {
 
 export class Configurator {
   private confVars!: StartupConfig;
-  private rollupContractChanged = false;
 
   /**
    * Builds a launch time configuration from environment variables.
@@ -59,7 +58,6 @@ export class Configurator {
         console.log(
           `Rollup contract changed: ${saved.rollupContractAddress.toString()} -> ${rollupContractAddress.toString()}`,
         );
-        this.rollupContractChanged = true;
       }
 
       // Priorities:

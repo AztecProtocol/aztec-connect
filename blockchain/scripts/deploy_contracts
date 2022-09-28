@@ -15,8 +15,8 @@ case $VERSION_TAG in
   dev)
     NETWORK=mainnet-fork
     VERIFICATION_KEY=MockVerificationKey
-    export TF_VAR_PUBLIC_ETHEREUM_HOST=https://mainnet-fork.aztec.network:8545
-    export TF_VAR_PRIVATE_ETHEREUM_HOST=https://mainnet-fork.aztec.network:8545
+    export TF_VAR_PUBLIC_ETHEREUM_HOST=https://$DEPLOY_TAG-mainnet-fork.aztec.network:8545
+    export TF_VAR_PRIVATE_ETHEREUM_HOST=https://$DEPLOY_TAG-mainnet-fork.aztec.network:8545
     ;;
   *)
     echo "No configuration for VERSION_TAG=$VERSION_TAG, skipping contract deployment."
