@@ -22,6 +22,7 @@ const {
 /**
  * Run the following:
  * blockchain: yarn start:ganache
+ * kebab: yarn start:e2e
  * halloumi: yarn start:e2e
  * falafel: export FEE_PAYING_ASSET_IDS=0,1 && yarn start:e2e
  * end-to-end: yarn test ./src/e2e_deposit_permit.test.ts

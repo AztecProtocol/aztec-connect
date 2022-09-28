@@ -8,3 +8,4 @@ export * from './validate_signature';
 export * from './units';
 export * from './tokens';
 export * from './ganache/manipulate_blocks';
+export * from './earliest_block';

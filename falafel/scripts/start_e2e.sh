@@ -8,7 +8,7 @@ make -j$(nproc) barretenberg.wasm
 cd ../../falafel
 
 # Hosts
-export ETHEREUM_HOST=http://localhost:8545
+export ETHEREUM_HOST=http://localhost:8546 # change port to 8545 to run locally WITHOUT Kebab
 export HALLOUMI_HOST=http://localhost:8083
 
 # Falafel
@@ -18,8 +18,9 @@ export NUM_OUTER_ROLLUP_PROOFS=2
 export ETHEREUM_POLL_INTERVAL=1000
 export PROVERLESS=true
 export FEE_GAS_PRICE_MULTIPLIER=0.01
+export FEE_PAYING_ASSET_IDS=0,1
 
-yarn clean_db
 yarn build
-`yarn -s deploy_rollup_processor`
+yarn clean_db
+. ../.env/env-vars
 yarn start

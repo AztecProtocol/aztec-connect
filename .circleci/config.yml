@@ -216,6 +216,18 @@ jobs:
           working_directory: blockchain
           command: cond_spot_run_tests blockchain
 
+  kebab:
+    machine:
+      image: ubuntu-2004:202010-01
+    resource_class: large
+    steps:
+      - checkout
+      - *setup_env
+      - run:
+          name: 'Build'
+          working_directory: kebab
+          command: build kebab
+
   halloumi:
     machine:
       image: ubuntu-2004:202010-01
@@ -612,6 +624,12 @@ jobs:
             ./scripts/deploy_contracts
             deploy_npm blockchain
       - run:
+          name: 'kebab'
+          working_directory: kebab
+          command: |
+            deploy kebab
+            deploy_dockerhub kebab
+      - run:
           name: 'halloumi'
           working_directory: halloumi
           command: deploy halloumi "halloumi halloumi-inner halloumi-outer"
@@ -783,6 +801,11 @@ workflows:
           filters: *tag_filter
       - blockchain-tests:
           requires:
+            - blockchain
+          filters: *tag_filter
+      - kebab:
+          requires:
+            - barretenberg-js
             - blockchain
           filters: *tag_filter
       - halloumi:

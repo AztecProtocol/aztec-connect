@@ -1,0 +1,6 @@
+data
+dest
+node_modules
+**/.terraform
+Dockerfile
+.env

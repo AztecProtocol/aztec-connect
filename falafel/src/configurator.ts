@@ -40,7 +40,7 @@ const defaultStartupConfig: StartupConfig = {
   rollupContractAddress: EthAddress.ZERO,
   permitHelperContractAddress: EthAddress.ZERO,
   priceFeedContractAddresses: [],
-  ethereumHost: 'http://localhost:8545',
+  ethereumHost: 'http://localhost:8546',
   ethereumPollInterval: 10000,
   proofGeneratorMode: 'normal',
   // Test mnemonic account 0.

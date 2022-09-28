@@ -12,6 +12,7 @@ PROJECTS=(
   blockchain
   halloumi
   falafel
+  kebab
   sdk
   hummus
   end-to-end
