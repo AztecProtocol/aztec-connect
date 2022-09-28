@@ -38,48 +38,63 @@ Let $g$ be a generator of $\mathbb{G}_1$.
 
 ## HMAC
 
-We derive the randomly distributed Schnorr signature nonce $k \in \mathbb{F}_r$ via the Hash-based Message Authentication Code specification as defined in RFC4231, see https://tools.ietf.org/html/rfc4231#section
+We the HMAC algorithm as Pseudo-Random Function (PRF) to generate a randomly distributed Schnorr signature nonce $k$ in a deterministic way.
+HMAC is the Hash-based Message Authentication Code specification as defined in [RFC4231](https://tools.ietf.org/html/rfc4231).
 
-The algorithm: Given a message $m$, an account $(\text{priv}, \text{pub})\in \mathbb{F}_r \times \mathbb{G}_1$ produces the nonce
+The HMAC algorithm: Given a message $m$, and a PRF key $\text{priv}$, the $\text{output}$ value is computed as 
 
-$$k = h(s' \oplus \text{opad} || h((s' \oplus \text{ipad} || m)))$$
+$$\text{output} = \text{HMAC}( \text{priv}, \mathtt{m}) = h(s' \oplus \text{opad} || h((s' \oplus \text{ipad} || m)))$$
 where:
 
-- $\text{priv}$ is a 32-byte secret key
 - $h$ is a hash function modeling a random oracle, whose block size is 64 bytes
-- $s'$ is a block-sized key derived from $\text{priv}$. Given a 32-byte $\text{priv}$, $s' = \text{priv}$ right-padded with 0s up to the 64 byte block size.
+- $s'$ is a block-sized key derived from $\text{priv}$. 
+    - If $\text{priv}$ is larger than the block size, we first hash it using $h$ and set $s' = h(\text{priv}) \vert\vert (0 \ldots 0)$
+    - Otherwise, $s' = \text{priv} \vert\vert (0 \ldots 0)$
+    - In both cases, $s'$ is right-padded with 0s up to the 64 byte block size.
 - $\text{opad}$ is a 64-byte string, consisting of repeated bytes valued `0x5c`
 - $\text{ipad}$ is a 64-byte string, consisting of repeated bytes valued `0x36`
 - $||$ denotes concatenation
 - $\oplus$ denotes bitwise exclusive or
+- $text{output}$ is a 32-byte string
+
+In order to derive a secret nonce $k \in \mathbb{F}_r$, we need to expand $text{output}$ in order to derive a 512 bit integer
+$$
+k_{512} = h\big(\text{HMAC}( \text{priv}, \mathtt{m}) \ \vert \vert \ 1 \big)  \ \vert \vert \  h\big(\text{HMAC}( \text{priv}, \mathtt{m}) \ \vert \vert\ 0 \big) \in [0,\ldots,2^{512}-1].
+$$
+Modeling $k_{512}$ as a uniformly sampled integer, taking $k = k_{512} \bmod r$ ensures that the statistical distance between the distribution of $k$ and the uniform distribution over $\mathbb{F}_r$ is negligible.
 
 ## Sign
 
 We use signatures with compression as described in Section 19.2.3 of [BS], in the sense that the signature contains the hash, meaning that the signature contains a hash and a field element, rather than a group element and a field element.
 
 The algorithm: Given a message $m$, an account $(\text{priv}, \text{pub})\in \mathbb{F}_r \times \mathbb{G}_1$ produces the signature
-$$\text{Sig} = (s, e) = (k - \text{priv} \cdot h(p(r, \text{pub}.x, \text{pub.y}), m), h(p(r, \text{pub}.x, \text{pub}.y), m)) \in \mathbb{F}_r \times \mathbb{F}_r, $$
+$$\text{Sig} = (s, e) \in \{0,1\}^{256} \times \{0,1\}^{256}$$
+
 where:
 
-- $k = HMAC(m, \text{priv})$;
-- $r$ is the $x$-coordinate of the scalar multiplication $k\cdot g$;
-- $\text{pub}.x$ is the $x$-coordinate of the signer's public key
-- $\text{pub}.y$ is the $y$-coordinate of the signer's public key
+- $s = \big( \mathbb{F}_r(k) - \text{priv} \cdot \mathbb{F}_r(e) \big) \bmod r  \in  \{0,1\}^{256}$.
+- $k =  h\big(\text{HMAC}( \text{priv}, \mathtt{m}) \ \vert \vert \ 0 \big)  \ \vert \vert \  h\big(\text{HMAC}( \text{priv}, \mathtt{m}) \ \vert \vert\ 1 \big) \in  \{0,1\}^{512}$ is the signer's secret nonce.
+- $R = (R.x,R.y) = \mathbb{F}_r(k) \cdot g \in \mathbb{G}_1$, is a commitment to the signer's nonce $k$.
+- $e= h(p(R.x, \text{pub}.x, \text{pub.y}) \ \vert \vert \ m) \in  \{0,1\}^{256}$ is the Fiat-Shamir response.
+- $\text{pub} = (x,y) \in \mathbb{F}_q \times \mathbb{F}_q \approx \mathbb{G}_1$ is the affine representation of the signer's public key
+- $\mathbb{F}_r (\cdot) : \{0,1\}^{\star} \rightarrow \mathbb{F}_r$ is a function interpreting a binary string as an integer and applying the modular reduction by $r$.
 - $p$ is a collisian-resistant pedersen hash function.
-- $h$ is a hash function modeling a random oracle.
+- $h$ is a hash function modeling a random oracle, which is instantiated with BLAKE2s. 
 
 The purpose of $p(r, \text{pub}.x, \text{pub.y})$ is to include the public key in the parameter $e$ whilst ensuring the input to $h$ is no more than 64 bytes.
 
 ## Verify
 
-Given $\text{Sig} = (s, e)\in \mathbb{F}_r^2$, purported to be the signature of a messages $m$ by an account $(\text{priv}, \text{pub})\in \mathbb{F}_r \times \mathbb{G}_1$ with respect to a random oracle hash function $h$, compute
+Given $\text{Sig} = (s, e)\in \{0,1\}^{256} \times \{0,1\}^{256}$, purported to be the signature of a messages $m$ by an account $(\text{priv}, \text{pub})\in \mathbb{F}_r \times \mathbb{G}_1$ with respect to a random oracle hash function $h$, compute
 
-- $r = $ the $x$-coordinate of $e\cdot \text{pub} + s\cdot g$;
-- $e' = h(p(r, \text{pub}.x, \text{pub}.y), m)$.
+- $R = (R.x, R.y) = \mathbb{F}_r(e)\cdot \text{pub} + \mathbb{F}_r(s)\cdot g \in \mathbb{G}_1$;
+- $e' = h(p(R.x, \text{pub}.x, \text{pub}.y)\ \vert\vert\ m) \in \{0,1\}^{256}$.
 
-The signature is verified if and only if $e'== e$.
+The signature is verified if and only if $e'== e$, where the comparison is done bit-wise.
 
-Imprecise rationale: The verification equation is $e = h((e.pub + s.g).x, m)$ for a generic element $e\in \mathbb{F_r}$. VERIFIER has seen that SIGNER can produce a preimage for a given $e$ which is outside of SIGNER's control by chosing a particular value of $s$. The difficulty of this assumption is documented, in the case where $\mathbb{G}_1$ is the units group of a finite field, in Schnorr's original paper [Sch] (cf especially pages 10-11).
+Imprecise rationale: The verification equation is $e = h((e.pub + s.g).x, m)$ where both sides of the equation are represented as an array of 256 bits. 
+VERIFIER has seen that SIGNER can produce a preimage for a given $e$ which is outside of SIGNER's control by chosing a particular value of $s$. 
+The difficulty of this assumption is documented, in the case where $\mathbb{G}_1$ is the units group of a finite field, in Schnorr's original paper [Sch] (cf especially pages 10-11).
 
 ## Variable base multiplication
 
@@ -114,6 +129,55 @@ This function has not been investigated since I propose it be removed. It is not
 ## `convert_field_into_wnaf(context, limb)`
 
 - When accumulating a `field_t` element using the proposed wnaf representaiton, there is branching at each bit position depending on the 32nd digit of the current `uint64_t` element `wnaf_entries[i+1]`.
+
+# Security Notes
+
+## Usage of HMAC for deterministic signatures 
+
+There are two main reasons why one may want deterministic signatures. 
+In some instances, the entropy provided by the system may be insufficient to guarantee uniform `k`, and using `HMAC` with a proper cryptographic hash function should therefore ensure this property. 
+By deriving it from the secret key, it also ensures that `k` remains private to the signer. 
+Nowadays, and especially with the types of devices we would be creating signatures, we can assume that the system's randomness source is strong enough for creating signatures.
+
+There are different ways of achieving this property, such as [RFC 6979](https://datatracker.ietf.org/doc/html/rfc6979), or as defined by the [EdDSA](https://ed25519.cr.yp.to/eddsa-20150704.pdf) specification.
+
+Our approach is closer to RFC 6979, though we do not use rejection sampling and instead generate a 512-bit value and apply modular reduction by $r$.
+This ensures that the statistical difference between the distribution of `k` and the uniform distribution over $\\{ 0,1, \ldots, r-1\\}$ is negligible.  
+Note that any leakage of the value of `k` may be catastrophic, especially in ECDSA. 
+
+Unfortunately, by using the secret key $\text{priv}$ for signing and as input to `HMAC`, the original security proof of the signature scheme no longer applies.
+We would need to derive two independent signing and PRF keys from one 256-bit secret seed.
+
+
+## Signature malleability
+
+Given a valid signature $(s,e) \in  \{0,1\}^{256} \times \{0,1\}^{256}$ , it is possible to generate another valid signature $(s',e) \in  \{0,1\}^{256} \times \{0,1\}^{256}$, where $s'\neq s$ but $\mathbb{F}_r(s') = \mathbb{F}_r(s)$ (take $s'$ to be congruent to $s$ modulo $r$).
+In our context, signatures are used within the `account` and `join_split` circuits to link the public inputs to the user's spending key. 
+The signatures themselves are private inputs to the circuit and are not revealed. We do not depend on their non-malleability in this context. 
+The solution would be to check that $\text{int}(s) < r$. 
+
+## Missing $R.y$ component in Pedersen hash
+
+As mentioned, we use the collision-resistant Pedersen hash to compress $R$ and $\text{pub}$ when computing the Fiat-Shamir challenge $e$. 
+We are aware that we do not embed the $y$ coordinate of $R$ and are working on a security proof to ensure this does not render the scheme insecure.
+
+
+## Biased sampling of Fiat-Shamir challenge $e$ 
+
+When we interpret $e \in \{0,1\}^{256}$ as a field element by reducing the corresponding integer modulo $r$, 
+the resulting field element is slightly biased in favor of "smaller" field elements, since $r \not\vert\ \ 2^{256}$. 
+Fixing this issue would require a technique similar to the method we use to derive $k$ without bias. 
+Unfortunately, this would require many more gates inside the circuit verification algorithm (additional hash compuation and modular reduction of a 512 bit integer).
+
+We are no longer in the random oracle model since the distribution of the challenge is not uniform. 
+We are looking into alternative proofs to guarantee correctness. 
+
+## Domain separation
+
+We do not use domain separation when generating the Fiat-Shamir challenge $e$ with BLAKE2s.
+Other components using the same hash function as random oracle should be careful that this could not lead to collisions when similar inputs are being processed. 
+
+We also note that we do not hash the group generator into the hash function.
 
 # References
 

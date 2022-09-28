@@ -3,102 +3,128 @@ import { AssetValue } from '@aztec/barretenberg/asset';
 import { BridgeCallData, validateBridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { CoreSdkInterface } from '../core_sdk';
-import { ProofOutput } from '../proofs';
+import { Note } from '../note';
+import { ProofOutput, proofOutputToProofTx } from '../proofs';
 import { Signer } from '../signer';
 import { createTxRefNo } from './create_tx_ref_no';
-import { FeePayer } from './fee_payer';
-import { filterUndefined } from './filter_undefined';
 
 export class DefiController {
   private readonly requireFeePayingTx: boolean;
   private proofOutput?: ProofOutput;
-  private jsProofOutput?: ProofOutput;
-  private feeProofOutput?: ProofOutput;
+  private jsProofOutputs: ProofOutput[] = [];
+  private feeProofOutputs: ProofOutput[] = [];
   private txIds: TxId[] = [];
 
   constructor(
     public readonly userId: GrumpkinAddress,
     private readonly userSigner: Signer,
     public readonly bridgeCallData: BridgeCallData,
-    public readonly depositValue: AssetValue,
+    public readonly assetValue: AssetValue,
     public readonly fee: AssetValue,
-    public readonly feePayer: FeePayer = { userId, signer: userSigner },
     private readonly core: CoreSdkInterface,
   ) {
-    if (!depositValue.value) {
+    if (!assetValue.value) {
       throw new Error('Deposit value must be greater than 0.');
     }
 
-    if (depositValue.assetId !== bridgeCallData.inputAssetIdA) {
-      throw new Error(`Incorrect deposit asset. Expect ${bridgeCallData.inputAssetIdA}. Got ${depositValue.assetId}.`);
+    if (
+      assetValue.assetId !== bridgeCallData.inputAssetIdA &&
+      (bridgeCallData.inputAssetIdB === undefined || assetValue.assetId !== bridgeCallData.inputAssetIdB)
+    ) {
+      throw new Error(
+        `Incorrect deposit asset. Expect ${bridgeCallData.inputAssetIdA}${
+          bridgeCallData.inputAssetIdB !== undefined ? ` or ${bridgeCallData.inputAssetIdB}` : ''
+        }. Got ${assetValue.assetId}.`,
+      );
     }
 
     validateBridgeCallData(bridgeCallData);
 
-    if (bridgeCallData.inputAssetIdB === fee.assetId) {
+    if (fee.value && fee.assetId === bridgeCallData.inputAssetIdB) {
       throw new Error('Fee paying asset must be the first input asset.');
     }
 
-    this.requireFeePayingTx =
-      !!fee.value &&
-      (fee.assetId !== depositValue.assetId ||
-        !feePayer.userId.equals(userId) ||
-        !feePayer.signer.getPublicKey().equals(userSigner.getPublicKey()));
+    this.requireFeePayingTx = !!fee.value && fee.assetId !== bridgeCallData.inputAssetIdA;
   }
 
   public async createProof() {
+    const { value } = this.assetValue;
+    const assetId = this.bridgeCallData.inputAssetIdA;
     const spendingPublicKey = this.userSigner.getPublicKey();
     const spendingKeyRequired = !spendingPublicKey.equals(this.userId);
-    const { assetId, value } = this.depositValue;
-    const hasTwoAssets = this.bridgeCallData.numInputAssets === 2;
-    const privateInput = value + (!this.requireFeePayingTx ? this.fee.value : BigInt(0));
-    const note1 = hasTwoAssets
-      ? await this.core.pickNote(this.userId, assetId, privateInput, spendingKeyRequired)
-      : undefined;
-    let notes = note1 ? [note1] : await this.core.pickNotes(this.userId, assetId, privateInput, spendingKeyRequired);
-    if (!notes.length) {
-      throw new Error(`Failed to find no more than 2 notes of asset ${assetId} that sum to ${privateInput}.`);
-    }
+    let notesA: Note[] = [];
+    let notesB: Note[] = [];
+    let requireJoinSplitTx = false;
+    let joinSplitTargetAsset = assetId;
 
-    const totalInputNoteValue = notes.reduce((sum, note) => sum + note.value, BigInt(0));
-    const changeValue = totalInputNoteValue - privateInput;
-    let requireJoinSplitTx = !!changeValue || (hasTwoAssets && notes.length > 1);
-    let joinSplitTargetNote = requireJoinSplitTx ? 1 : 0;
+    const hasTwoAssets = this.bridgeCallData.numInputAssets === 2;
     if (hasTwoAssets) {
-      const secondAssetId = this.bridgeCallData.inputAssetIdB!;
-      const excludePendingNotes = requireJoinSplitTx || notes.some(n => n.pending);
-      const note2 = await this.core.pickNote(
-        this.userId,
-        secondAssetId,
-        value,
-        spendingKeyRequired,
-        excludePendingNotes,
-      );
-      const notes2 = note2
-        ? [note2]
-        : await this.core.pickNotes(this.userId, secondAssetId, value, spendingKeyRequired, excludePendingNotes);
-      if (!notes2.length) {
-        throw new Error(`Failed to find no more than 2 notes of asset ${secondAssetId} that sum to ${value}.`);
+      const assetIdB = this.bridgeCallData.inputAssetIdB!;
+      const note2 = await this.core.pickNote(this.userId, assetIdB, value, spendingKeyRequired);
+      notesB = note2 ? [note2] : await this.core.pickNotes(this.userId, assetIdB, value, spendingKeyRequired);
+      if (!notesB.length) {
+        throw new Error(`Failed to find notes of asset ${assetIdB} that sum to ${value}.`);
       }
 
-      const totalInputNoteValue2 = notes2.reduce((sum, note) => sum + note.value, BigInt(0));
-      const changeValue2 = totalInputNoteValue2 - value;
-      if (changeValue2 || notes2.length > 1) {
+      const totalInputNoteValue = notesB.reduce((sum, note) => sum + note.value, BigInt(0));
+      const changeValue = totalInputNoteValue - value;
+      if (changeValue || notesB.length > 1) {
+        requireJoinSplitTx = true;
+        joinSplitTargetAsset = assetIdB;
+      }
+    }
+
+    const privateInput = value + (!this.requireFeePayingTx ? this.fee.value : BigInt(0));
+    {
+      const excludePendingNotes = notesB.some(n => n.pending);
+      const note1 = hasTwoAssets
+        ? await this.core.pickNote(this.userId, assetId, privateInput, spendingKeyRequired, excludePendingNotes)
+        : undefined;
+      notesA = note1
+        ? [note1]
+        : await this.core.pickNotes(this.userId, assetId, privateInput, spendingKeyRequired, excludePendingNotes);
+      if (!notesA.length) {
+        throw new Error(`Failed to find notes of asset ${assetId} that sum to ${privateInput}.`);
+      }
+
+      const totalInputNoteValue = notesA.reduce((sum, note) => sum + note.value, BigInt(0));
+      const changeValue = totalInputNoteValue - privateInput;
+      if (changeValue || notesA.length > 2 || (hasTwoAssets && notesA.length > 1)) {
         if (requireJoinSplitTx) {
-          throw new Error(`Cannot find a note with the exact value for asset ${secondAssetId}. Require ${value}.`);
+          throw new Error(`Cannot find a note with the exact value for asset ${assetId}. Require ${privateInput}.`);
         }
 
         requireJoinSplitTx = true;
-        joinSplitTargetNote = 2;
       }
-
-      notes = [...notes, ...notes2];
     }
 
     const txRefNo = this.requireFeePayingTx || requireJoinSplitTx ? createTxRefNo() : 0;
 
+    if (this.requireFeePayingTx) {
+      const feeProofInputs = await this.core.createPaymentProofInputs(
+        this.userId,
+        this.fee.assetId,
+        BigInt(0),
+        BigInt(0),
+        this.fee.value,
+        BigInt(0),
+        BigInt(0),
+        this.userId,
+        spendingKeyRequired,
+        undefined,
+        spendingPublicKey,
+        2,
+      );
+      this.feeProofOutputs = [];
+      for (const proofInput of feeProofInputs) {
+        proofInput.signature = await this.userSigner.signMessage(proofInput.signingData);
+        this.feeProofOutputs.push(await this.core.createPaymentProof(proofInput, txRefNo));
+      }
+    }
+
     // Create a defi deposit tx with 0 change value.
     if (!requireJoinSplitTx) {
+      const notes = [...notesA, ...notesB];
       const proofInput = await this.core.createDefiProofInput(
         this.userId,
         this.bridgeCallData,
@@ -109,18 +135,17 @@ export class DefiController {
       proofInput.signature = await this.userSigner.signMessage(proofInput.signingData);
       this.proofOutput = await this.core.createDefiProof(proofInput, txRefNo);
     } else {
-      // Create a join split tx to generate an output note with the exact value for the defi deposit plus fee.
-      // When depositing two different input assets, this tx should pay for the fee if it's fee-paying asset.
+      // Create join split txs to generate an output note with the exact value for the defi deposit plus fee.
+      // When depositing two different input assets, this chained txs should pay for the fee if it's fee-paying asset.
       {
-        const changeNoteAssetId = joinSplitTargetNote === 2 ? this.bridgeCallData.inputAssetIdB! : assetId;
-        const noteValue = joinSplitTargetNote === 2 ? value : privateInput;
-        const proofInput = await this.core.createPaymentProofInput(
+        const noteValue = joinSplitTargetAsset === assetId ? privateInput : value;
+        const jsProofInputs = await this.core.createPaymentProofInputs(
           this.userId,
-          changeNoteAssetId,
+          joinSplitTargetAsset,
           BigInt(0),
           BigInt(0),
-          noteValue, // private input
-          noteValue,
+          noteValue, // privateInput
+          noteValue, // recipientPrivateOutput
           BigInt(0),
           this.userId,
           spendingKeyRequired,
@@ -128,18 +153,21 @@ export class DefiController {
           spendingPublicKey,
           3, // allowChain
         );
-        proofInput.signature = await this.userSigner.signMessage(proofInput.signingData);
-        this.jsProofOutput = await this.core.createPaymentProof(proofInput, txRefNo);
+        this.jsProofOutputs = [];
+        for (const proofInput of jsProofInputs) {
+          proofInput.signature = await this.userSigner.signMessage(proofInput.signingData);
+          this.jsProofOutputs.push(await this.core.createPaymentProof(proofInput, txRefNo));
+        }
       }
 
-      // Use the first output note from the above j/s tx as the input note.
+      // Use the first output note from the last tx in the above chained txs as the input note.
       {
-        const inputNotes = [this.jsProofOutput.outputNotes[0]];
+        const inputNotes = [this.jsProofOutputs[this.jsProofOutputs.length - 1].outputNotes[0]];
         if (hasTwoAssets) {
-          if (joinSplitTargetNote === 2) {
-            inputNotes.unshift(notes[0]);
+          if (joinSplitTargetAsset === assetId) {
+            inputNotes.push(notesB[0]);
           } else {
-            inputNotes.push(notes[notes.length - 1]);
+            inputNotes.unshift(notesA[0]);
           }
         }
         const proofInput = await this.core.createDefiProofInput(
@@ -153,37 +181,21 @@ export class DefiController {
         this.proofOutput = await this.core.createDefiProof(proofInput, txRefNo);
       }
     }
+  }
 
-    if (this.requireFeePayingTx) {
-      const { userId, signer } = this.feePayer;
-      const spendingPublicKey = signer.getPublicKey();
-      const spendingKeyRequired = !spendingPublicKey.equals(userId);
-      const proofInput = await this.core.createPaymentProofInput(
-        userId,
-        this.fee.assetId,
-        BigInt(0),
-        BigInt(0),
-        this.fee.value,
-        BigInt(0),
-        BigInt(0),
-        userId,
-        spendingKeyRequired,
-        undefined,
-        spendingPublicKey,
-        2,
-      );
-      proofInput.signature = await signer.signMessage(proofInput.signingData);
-      this.feeProofOutput = await this.core.createPaymentProof(proofInput, txRefNo);
+  public exportProofTxs() {
+    if (!this.proofOutput) {
+      throw new Error('Call createProof() first.');
     }
+
+    return [...this.jsProofOutputs, this.proofOutput, ...this.feeProofOutputs].map(proofOutputToProofTx);
   }
 
   public async send() {
     if (!this.proofOutput) {
       throw new Error('Call createProof() first.');
     }
-    this.txIds = await this.core.sendProofs(
-      filterUndefined([this.jsProofOutput, this.proofOutput, this.feeProofOutput]),
-    );
+    this.txIds = await this.core.sendProofs([...this.jsProofOutputs, this.proofOutput, ...this.feeProofOutputs]);
     return this.getDefiTxId();
   }
 
@@ -219,6 +231,6 @@ export class DefiController {
   }
 
   private getDefiTxId() {
-    return this.txIds[this.jsProofOutput ? 1 : 0];
+    return this.txIds[this.jsProofOutputs.length];
   }
 }

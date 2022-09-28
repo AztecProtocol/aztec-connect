@@ -11,12 +11,15 @@ import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
 import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { CliProofGenerator, HttpJobServer, HttpJobServers, ProofGenerator } from 'halloumi/proof_generator';
 import { BridgeResolver } from './bridge';
+import { AddressCheckProviders } from './compliance/address_check_provider';
+import { AztecBlacklistProvider } from './compliance/aztec_blacklist_provider';
+import { RateLimiter } from './compliance/rate_limiter';
 import { Configurator } from './configurator';
 import { Metrics } from './metrics';
 import { RollupDb } from './rollup_db';
 import { RollupPipelineFactory } from './rollup_pipeline';
 import { TxFeeResolver } from './tx_fee_resolver';
-import { Tx, TxReceiver } from './tx_receiver';
+import { TxReceiver, TxRequest } from './tx_receiver';
 import { WorldState } from './world_state';
 
 export class Server {
@@ -27,6 +30,9 @@ export class Server {
   private pipelineFactory: RollupPipelineFactory;
   private proofGenerator: ProofGenerator;
   private bridgeResolver: BridgeResolver;
+  private depositRateLimiter: RateLimiter;
+  private blacklistProvider: AztecBlacklistProvider;
+  private addressCheckProviders: AddressCheckProviders;
   private ready = false;
 
   constructor(
@@ -54,6 +60,8 @@ export class Server {
         defaultDeFiBatchSize,
         bridgeConfigs,
         rollupBeneficiary = signingAddress,
+        depositLimit,
+        blacklist = [],
       },
     } = configurator.getConfVars();
 
@@ -110,6 +118,10 @@ export class Server {
       metrics,
       this.txFeeResolver,
     );
+    this.depositRateLimiter = new RateLimiter(depositLimit);
+    this.blacklistProvider = new AztecBlacklistProvider(blacklist);
+    this.addressCheckProviders = new AddressCheckProviders();
+    this.addressCheckProviders.addProvider(this.blacklistProvider);
     this.txReceiver = new TxReceiver(
       barretenberg,
       noteAlgo,
@@ -121,6 +133,8 @@ export class Server {
       this.txFeeResolver,
       metrics,
       this.bridgeResolver,
+      this.depositRateLimiter,
+      this.addressCheckProviders,
     );
   }
 
@@ -169,6 +183,8 @@ export class Server {
         defaultDeFiBatchSize,
         bridgeConfigs,
         rollupBeneficiary = this.signingAddress,
+        depositLimit,
+        blacklist = [],
       },
     } = this.configurator.getConfVars();
 
@@ -189,6 +205,8 @@ export class Server {
       rollupBeneficiary,
     );
     this.metrics.rollupBeneficiary = rollupBeneficiary;
+    this.depositRateLimiter.configureLimit(depositLimit);
+    this.blacklistProvider.configureNewAddresses(blacklist);
   }
 
   public async restartPipeline() {
@@ -268,7 +286,10 @@ export class Server {
 
     return {
       blockchainStatus,
-      runtimeConfig,
+      runtimeConfig: {
+        ...runtimeConfig,
+        blacklist: undefined, // don't expose the blacklist
+      },
       numTxsPerRollup: numInnerRollupTxs * numOuterRollupProofs,
       numUnsettledTxs: txPoolProfile.numTxs,
       numTxsInNextRollup: txPoolProfile.numTxsInNextRollup,
@@ -330,7 +351,7 @@ export class Server {
     return (await this.rollupDb.getNextRollupId()) - 1;
   }
 
-  public async receiveTxs(txs: Tx[]) {
+  public async receiveTxs(txRequest: TxRequest) {
     const { maxUnsettledTxs } = this.configurator.getConfVars().runtimeConfig;
     const unsettled = await this.getUnsettledTxCount();
     if (maxUnsettledTxs && unsettled >= maxUnsettledTxs) {
@@ -339,7 +360,7 @@ export class Server {
 
     const start = new Date().getTime();
     const end = this.metrics.receiveTxTimer();
-    const result = await this.txReceiver.receiveTxs(txs);
+    const result = await this.txReceiver.receiveTxs(txRequest);
     end();
     this.log(`Received tx in ${new Date().getTime() - start}ms.`);
     return result;

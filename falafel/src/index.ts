@@ -25,6 +25,7 @@ async function main() {
   const { ormConfig, provider, signingAddress, ethConfig } = await getComponents(configurator);
   const {
     rollupContractAddress,
+    permitHelperContractAddress,
     priceFeedContractAddresses,
     apiPrefix,
     serverAuthToken,
@@ -36,6 +37,7 @@ async function main() {
   const blockchain = await EthereumBlockchain.new(
     ethConfig,
     rollupContractAddress,
+    permitHelperContractAddress,
     priceFeedContractAddresses,
     provider,
   );

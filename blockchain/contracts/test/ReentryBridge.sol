@@ -124,10 +124,6 @@ contract ReentryBridge is IDefiBridge {
         return (action.a, action.b, isAsync);
     }
 
-    function canFinalise(uint256) external view override returns (bool) {
-        return actions[actions.length - 1].canFinalise;
-    }
-
     function finalise(
         AztecTypes.AztecAsset memory,
         AztecTypes.AztecAsset memory,

@@ -1,7 +1,7 @@
 export * from './aztec_sdk';
 export * from './controllers';
 export { SdkEvent, SdkStatus } from './core_sdk';
-export * from './note';
+export * from './note/note';
 export * from './signer';
 export * from './user';
 export * from './user_tx';

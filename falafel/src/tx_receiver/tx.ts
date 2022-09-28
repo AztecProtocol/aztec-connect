@@ -5,3 +5,8 @@ export interface Tx {
   offchainTxData: Buffer;
   depositSignature?: Buffer;
 }
+
+export interface TxRequest {
+  txs: Tx[];
+  requestSender: string;
+}

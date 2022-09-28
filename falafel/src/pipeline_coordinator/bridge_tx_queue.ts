@@ -49,6 +49,12 @@ export interface BridgeQueueResult {
   resourcesConsumed: RollupResources;
 }
 
+export interface BridgeQueueStats {
+  numQueuedTxs: number;
+  gasAccrued: number;
+  bridgeCallData: bigint;
+}
+
 export class BridgeTxQueue {
   // maintains an array of txs for this DefiBridge
   // we order by decreasing fee
@@ -60,6 +66,18 @@ export class BridgeTxQueue {
     private readonly feeResolver: TxFeeResolver,
     private readonly bridgeTimeout?: RollupTimeout,
   ) {}
+
+  public getQueueStats() {
+    const gasAccrued = this.txQueue.reduce((prev, currentTx) => {
+      const newGas = this.feeResolver.getSingleBridgeTxGas(this.bridgeCallData) + currentTx.excessGas;
+      return prev + newGas;
+    }, 0);
+    return {
+      numQueuedTxs: this.txQueue.length,
+      gasAccrued,
+      bridgeCallData: this.bridgeCallData,
+    } as BridgeQueueStats;
+  }
 
   // add a new tx to the queue, order by decreasing fee
   public addDefiTx(newTx: RollupTx) {

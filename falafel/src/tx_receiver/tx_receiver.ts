@@ -28,8 +28,10 @@ import { getTxTypeFromProofData } from '../get_tx_type';
 import { Metrics } from '../metrics';
 import { RollupDb } from '../rollup_db';
 import { TxFeeResolver } from '../tx_fee_resolver';
-import { Tx } from './tx';
+import { Tx, TxRequest } from './tx';
 import { TxFeeAllocator } from './tx_fee_allocator';
+import { RateLimiter } from '../compliance/rate_limiter';
+import { AddressCheckProviders } from '../compliance/address_check_provider';
 
 export class TxReceiver {
   private worker!: BarretenbergWorker;
@@ -46,6 +48,8 @@ export class TxReceiver {
     private txFeeResolver: TxFeeResolver,
     private metrics: Metrics,
     private bridgeResolver: BridgeResolver,
+    private rateLimiter: RateLimiter,
+    private addressCheckProviders: AddressCheckProviders,
     private log = createLogger('TxReceiver'),
   ) {}
 
@@ -72,9 +76,10 @@ export class TxReceiver {
     this.txFeeResolver = txFeeResolver;
   }
 
-  public async receiveTxs(txs: Tx[]) {
+  public async receiveTxs(txRequest: TxRequest) {
     // We mutex this entire receive call until we move to "deposit to proof hash". Read more below.
     await this.mutex.acquire();
+    const txs = txRequest.txs;
     try {
       const txTypes: TxType[] = [];
       for (let i = 0; i < txs.length; ++i) {
@@ -109,6 +114,18 @@ export class TxReceiver {
       }
 
       txFeeAllocator.reallocateGas(txDaos, txs, txTypes, validation);
+
+      // check that we aren't breaching the deposit limit
+      // need to do this as the last thing before adding to the db
+      // otherwise we could add to the rate limiter and then reject the txs for other reasons
+      const numDeposits = txTypes.filter(x => x === TxType.DEPOSIT).length;
+      if (numDeposits !== 0 && !this.rateLimiter.add(txRequest.requestSender, numDeposits)) {
+        const currentValue = this.rateLimiter.getCurrentValue(txRequest.requestSender);
+        this.log(
+          `Rejecting tx request from ${txRequest.requestSender}, attempted to submit ${numDeposits} deposits. ${currentValue} deposits already submitted`,
+        );
+        throw new Error('Exceeded deposit limit');
+      }
       await this.rollupDb.addTxs(txDaos);
 
       return txDaos.map(txDao => txDao.id);
@@ -338,17 +355,32 @@ export class TxReceiver {
       return;
     }
 
+    const uniqueDepositAddresses: EthAddress[] = [];
+
     const requiredDeposits: { publicOwner: EthAddress; publicAssetId: number; value: bigint }[] = [];
     depositProofs.forEach(({ publicAssetId, publicOwner, publicValue }) => {
       const index = requiredDeposits.findIndex(
         d => d.publicOwner.equals(publicOwner) && d.publicAssetId === publicAssetId,
       );
+      if (uniqueDepositAddresses.findIndex(address => address.equals(publicOwner)) === -1) {
+        uniqueDepositAddresses.push(publicOwner);
+      }
       if (index < 0) {
         requiredDeposits.push({ publicOwner, publicAssetId, value: publicValue });
       } else {
         requiredDeposits[index] = { publicOwner, publicAssetId, value: requiredDeposits[index].value + publicValue };
       }
     });
+
+    const addressesProhibited = await Promise.all(
+      uniqueDepositAddresses.map(x => this.addressCheckProviders.addressProhibited(x)),
+    );
+    for (let i = 0; i < uniqueDepositAddresses.length; ++i) {
+      if (addressesProhibited[i]) {
+        this.log(`Rejecting deposit attempt from ethereum address ${uniqueDepositAddresses[i]}`);
+        throw new Error('Attempt to deposit from prohibited address');
+      }
+    }
 
     const unsettledTxs = (await this.rollupDb.getUnsettledDepositTxs()).map(tx =>
       JoinSplitProofData.fromBuffer(tx.proofData),

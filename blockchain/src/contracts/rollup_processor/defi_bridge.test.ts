@@ -1,3 +1,10 @@
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { solidity } = require('ethereum-waffle');
+import chai from 'chai';
+
+import { expect } from 'chai';
+chai.use(solidity);
+
 import { EthAddress } from '@aztec/barretenberg/address';
 import { Asset, TxHash } from '@aztec/barretenberg/blockchain';
 import { BridgeCallData, virtualAssetIdFlag, virtualAssetIdPlaceholder } from '@aztec/barretenberg/bridge_call_data';
@@ -69,9 +76,9 @@ describe('rollup_processor: defi bridge', () => {
       .map(l => rollupProcessor.contract.interface.parseLog(l))
       .filter(e => e.eventFragment.name === 'DefiBridgeProcessed')
       .map(parseInteractionResultFromLog);
-    expect(interactionResult.length).toBe(expectedResult.length);
+    expect(interactionResult.length).to.be.eq(expectedResult.length);
     for (let i = 0; i < expectedResult.length; ++i) {
-      expect(interactionResult[i]).toEqual(expectedResult[i]);
+      expect(interactionResult[i]).to.be.eql(expectedResult[i]);
     }
 
     const expectedHashes = computeInteractionHashes([
@@ -84,13 +91,13 @@ describe('rollup_processor: defi bridge', () => {
       ...[...Array(numberOfBridgeCalls - hashes.length)].map(() => WorldStateConstants.EMPTY_INTERACTION_HASH),
     ];
 
-    expect(expectedHashes).toEqual(resultHashes);
+    expect(expectedHashes).to.be.eql(resultHashes);
   };
 
   const expectBalance = async (assetId: number, balance: bigint) =>
-    expect(await assets[assetId].balanceOf(rollupProcessor.address)).toBe(balance);
+    expect(await assets[assetId].balanceOf(rollupProcessor.address)).to.be.eq(balance);
 
-  beforeAll(async () => {
+  before(async () => {
     signers = await ethers.getSigners();
     rollupProvider = signers[0];
     addresses = await Promise.all(signers.map(async u => EthAddress.fromString(await u.getAddress())));
@@ -543,8 +550,8 @@ describe('rollup_processor: defi bridge', () => {
       const currentEthBalance = await assets[0].balanceOf(rollupProcessor.address);
       const currentDaiBalance = await assets[1].balanceOf(rollupProcessor.address);
 
-      expect(currentEthBalance === prevEthBalance).toBe(false);
-      expect(currentDaiBalance === prevDaiBalance).toBe(false);
+      expect(currentEthBalance === prevEthBalance).to.be.eq(false);
+      expect(currentDaiBalance === prevDaiBalance).to.be.eq(false);
 
       await expectBalance(1, 0n);
       await expectResult(

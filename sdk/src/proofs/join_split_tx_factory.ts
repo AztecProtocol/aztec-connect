@@ -8,7 +8,7 @@ import { HashPath } from '@aztec/barretenberg/merkle_tree';
 import { ClaimNoteTxData, deriveNoteSecret, NoteAlgorithms, TreeNote } from '@aztec/barretenberg/note_algorithms';
 import { WorldState, WorldStateConstants } from '@aztec/barretenberg/world_state';
 import { Database } from '../database';
-import { Note } from '../note';
+import { Note, treeNoteToNote } from '../note';
 import { UserData } from '../user';
 
 export class JoinSplitTxFactory {
@@ -68,7 +68,7 @@ export class JoinSplitTxFactory {
         this.grumpkin,
       );
       inputTreeNotes.push(treeNote);
-      notes.push(this.generateNewNote(treeNote, accountPrivateKey, { gibberish: true }));
+      notes.push(treeNoteToNote(treeNote, accountPrivateKey, this.noteAlgos, { gibberish: true }));
     }
 
     const inputNoteIndices = notes.map(n => n.index || 0);
@@ -149,12 +149,6 @@ export class JoinSplitTxFactory {
         index: spendingKey.treeIndex,
       };
     }
-  }
-
-  generateNewNote(treeNote: TreeNote, privateKey: Buffer, { allowChain = false, gibberish = false } = {}) {
-    const commitment = this.noteAlgos.valueNoteCommitment(treeNote);
-    const nullifier = this.noteAlgos.valueNoteNullifier(commitment, privateKey, !gibberish);
-    return new Note(treeNote, commitment, nullifier, allowChain, false);
   }
 
   private createNote(

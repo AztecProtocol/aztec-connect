@@ -2,6 +2,7 @@
 // Copyright 2022 Aztec
 pragma solidity >=0.8.4;
 
+// @dev For documentation of the functions within this interface see RollupProcessor contract
 interface IRollupProcessor {
     /*----------------------------------------
       MUTATING FUNCTIONS
@@ -11,62 +12,39 @@ interface IRollupProcessor {
 
     function unpause() external;
 
-    function setRollupProvider(address providerAddress, bool valid) external;
+    function setRollupProvider(address _provider, bool _valid) external;
 
-    function setVerifier(address verifierAddress) external;
+    function setVerifier(address _verifier) external;
 
-    function setAllowThirdPartyContracts(bool _flag) external;
+    function setAllowThirdPartyContracts(bool _allowThirdPartyContracts) external;
 
-    function setDefiBridgeProxy(address feeDistributorAddress) external;
+    function setDefiBridgeProxy(address _defiBridgeProxy) external;
 
-    function setSupportedAsset(address linkedToken, uint256 gasLimit) external;
+    function setSupportedAsset(address _token, uint256 _gasLimit) external;
 
-    function setSupportedBridge(address linkedBridge, uint256 gasLimit) external;
+    function setSupportedBridge(address _bridge, uint256 _gasLimit) external;
 
-    function processRollup(bytes calldata proofData, bytes calldata signatures) external;
+    function processRollup(bytes calldata _encodedProofData, bytes calldata _signatures) external;
 
-    function receiveEthFromBridge(uint256 interactionNonce) external payable;
+    function receiveEthFromBridge(uint256 _interactionNonce) external payable;
 
     function approveProof(bytes32 _proofHash) external;
 
     function depositPendingFunds(
-        uint256 assetId,
-        uint256 amount,
-        address owner,
-        bytes32 proofHash
+        uint256 _assetId,
+        uint256 _amount,
+        address _owner,
+        bytes32 _proofHash
     ) external payable;
 
-    function depositPendingFundsPermit(
-        uint256 assetId,
-        uint256 amount,
-        address owner,
-        bytes32 proofHash,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) external;
-
-    function depositPendingFundsPermitNonStandard(
-        uint256 assetId,
-        uint256 amount,
-        address owner,
-        bytes32 proofHash,
-        uint256 nonce,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) external;
-
     function offchainData(
-        uint256 rollupId,
-        uint256 chunk,
-        uint256 totalChunks,
-        bytes calldata offchainTxData
+        uint256 _rollupId,
+        uint256 _chunk,
+        uint256 _totalChunks,
+        bytes calldata _offchainTxData
     ) external;
 
-    function processAsyncDefiInteraction(uint256 interactionNonce) external returns (bool);
+    function processAsyncDefiInteraction(uint256 _interactionNonce) external returns (bool);
 
     /*----------------------------------------
       NON-MUTATING FUNCTIONS
@@ -74,7 +52,7 @@ interface IRollupProcessor {
 
     function rollupStateHash() external view returns (bytes32);
 
-    function userPendingDeposits(uint256 assetId, address userAddress) external view returns (uint256);
+    function userPendingDeposits(uint256 _assetId, address _user) external view returns (uint256);
 
     function defiBridgeProxy() external view returns (address);
 
@@ -90,25 +68,15 @@ interface IRollupProcessor {
 
     function getDefiInteractionHashesLength() external view returns (uint256);
 
-    function getAsyncDefiInteractionHashesLength() external view returns (uint256 res);
+    function getAsyncDefiInteractionHashesLength() external view returns (uint256);
 
-    function getSupportedBridge(uint256 bridgeAddressId) external view returns (address);
+    function getSupportedBridge(uint256 _bridgeAddressId) external view returns (address);
 
     function getSupportedBridgesLength() external view returns (uint256);
 
     function getSupportedAssetsLength() external view returns (uint256);
 
-    function getSupportedAsset(uint256 assetId) external view returns (address);
-
-    function getBridgeGasLimit(uint256 bridgeAddressId) external view returns (uint256);
+    function getSupportedAsset(uint256 _assetId) external view returns (address);
 
     function getEscapeHatchStatus() external view returns (bool, uint256);
-
-    function getDefiInteractionHashes() external view returns (bytes32[] memory);
-
-    function getAsyncDefiInteractionHashes() external view returns (bytes32[] memory);
-
-    function getSupportedAssets() external view returns (address[] memory, uint256[] memory);
-
-    function getSupportedBridges() external view returns (address[] memory, uint256[] memory);
 }

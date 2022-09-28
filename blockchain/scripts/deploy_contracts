@@ -7,11 +7,10 @@ set -e
 # Our mainnet fork, *does* need to be exposed publically, as it's the only node in the network.
 case $VERSION_TAG in
   testnet)
-    NETWORK=goerli
+    NETWORK=mainnet-fork
     VERIFICATION_KEY=MockVerificationKey
-    export TF_VAR_PUBLIC_ETHEREUM_HOST=https://goerli.infura.io/v3/$TF_VAR_INFURA_API_KEY
-    # export TF_VAR_PRIVATE_ETHEREUM_HOST=https://goerli.infura.io/v3/$TF_VAR_INFURA_API_KEY
-    export TF_VAR_PRIVATE_ETHEREUM_HOST=http://ethereum.aztec.network:10545
+    export TF_VAR_PUBLIC_ETHEREUM_HOST=https://mainnet-fork.aztec.network:8545
+    export TF_VAR_PRIVATE_ETHEREUM_HOST=https://mainnet-fork.aztec.network:8545
     ;;
   dev)
     NETWORK=mainnet-fork
@@ -34,6 +33,8 @@ export TF_VAR_ETHEREUM_NETWORK=$(terraform output ethereum_network || echo "")
 export TF_VAR_FEE_DISTRIBUTOR_ADDRESS=$(terraform output fee_distributor_address || echo "")
 export TF_VAR_ROLLUP_CONTRACT_ADDRESS=$(terraform output rollup_contract_address || echo "")
 export TF_VAR_PRICE_FEED_CONTRACT_ADDRESSES=$(terraform output price_feed_contract_addresses || echo "")
+export TF_VAR_PERMIT_HELPER_CONTRACT_ADDRESS=$(terraform output permit_helper_contract_address || echo "")
+export TF_VAR_FAUCET_CONTRACT_ADDRESS=$(terraform output faucet_contract_address || echo "")
 cd ../..
 
 LAST_COMMIT=$(last_successful_commit blockchain $DEPLOY_TAG-deployed)
@@ -65,7 +66,7 @@ fi
 
 if [ -n "$REDEPLOY" ]; then
   echo "Redeploying contracts..."
-  `docker run -e ETHEREUM_HOST=$TF_VAR_PUBLIC_ETHEREUM_HOST -e PRIVATE_KEY=$TF_VAR_PRIVATE_KEY -e VK=$VERIFICATION_KEY 278380418400.dkr.ecr.eu-west-2.amazonaws.com/blockchain:$COMMIT_HASH`
+  `docker run -e ETHEREUM_HOST=$TF_VAR_PUBLIC_ETHEREUM_HOST -e PRIVATE_KEY=$TF_VAR_PRIVATE_KEY -e VK=$VERIFICATION_KEY -e FAUCET_OPERATOR=$TF_VAR_FAUCET_OPERATOR_ADDRESS 278380418400.dkr.ecr.eu-west-2.amazonaws.com/blockchain:$COMMIT_HASH`
   if [ "$NETWORK" = "goerli" ]; then
     docker run -e ETHERSCAN_API_KEY=$ETHERSCAN_API_KEY 278380418400.dkr.ecr.eu-west-2.amazonaws.com/blockchain:$COMMIT_HASH yarn verify:goerli $ROLLUP_CONTRACT_ADDRESS || true
   fi

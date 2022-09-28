@@ -55,12 +55,14 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   static async new(
     config: EthereumBlockchainConfig,
     rollupContractAddress: EthAddress,
+    permitHelperContractAddress: EthAddress,
     priceFeedContractAddresses: EthAddress[],
     provider: EthereumProvider,
   ) {
     const confirmations = config.minConfirmation || EthereumBlockchain.DEFAULT_MIN_CONFIRMATIONS;
     const contracts = await Contracts.fromAddresses(
       rollupContractAddress,
+      permitHelperContractAddress,
       priceFeedContractAddresses,
       provider,
       confirmations,
@@ -91,6 +93,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     this.status = {
       chainId,
       rollupContractAddress: this.contracts.getRollupContractAddress(),
+      permitHelperContractAddress: this.contracts.getPermitHelperContractAddress(),
       verifierContractAddress: await this.contracts.getVerifierContractAddress(),
       ...(await this.getPerRollupState(latestBlock)),
       ...(await this.getPerEthBlockState()),

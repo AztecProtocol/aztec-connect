@@ -6,12 +6,16 @@ import { abi } from '../../../artifacts/contracts/test/TestRollupProcessor.sol/T
 import { Web3Provider } from '@ethersproject/providers';
 
 export class TestRollupProcessor extends RollupProcessor {
-  constructor(protected rollupContractAddress: EthAddress, provider: EthereumProvider) {
-    super(rollupContractAddress, provider);
+  constructor(
+    protected rollupContractAddress: EthAddress,
+    provider: EthereumProvider,
+    permitHelperAddress: EthAddress = EthAddress.ZERO,
+  ) {
+    super(rollupContractAddress, provider, permitHelperAddress);
     this.rollupProcessor = new Contract(rollupContractAddress.toString(), abi, this.provider);
   }
 
-  protected getContractWithSigner(options: SendTxOptions) {
+  public getContractWithSigner(options: SendTxOptions) {
     const { signingAddress } = options;
     const provider = options.provider ? new Web3Provider(options.provider) : this.provider;
     const ethSigner = provider.getSigner(signingAddress ? signingAddress.toString() : 0);

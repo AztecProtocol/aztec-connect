@@ -6,7 +6,7 @@ pragma solidity >=0.8.4;
  * ----------------------------------------
  *  PROOF DATA SPECIFICATION
  * ----------------------------------------
- * Our input "proof data" is represented as a single byte array - we use a custom encoding the encode the
+ * Our input "proof data" is represented as a single byte array - we use custom encoding to encode the
  * data associated with a rollup block. The encoded structure is as follows (excluding the length param of the bytes type):
  * 
    | byte range      | num bytes        | name                             | description |
@@ -23,14 +23,14 @@ pragma solidity >=0.8.4;
    | 0x120 - 0x140   | 32               | oldDefiRoot                      | Root of the defi tree prior to rollup block's state updates |
    | 0x140 - 0x160   | 32               | newDefiRoot                      | Root of the defi tree after rollup block's state updates |
    | 0x160 - 0x560   | 1024             | encodedBridgeCallDatas[NUMBER_OF_BRIDGE_CALLS]   | Size-32 array of encodedBridgeCallDatas for bridges being called in this block. If encodedBridgeCallData == 0, no bridge is called |
-   | 0x560 - 0x960   | 1024             | depositSums[NUMBER_OF_BRIDGE_CALLS] | Size-32 array of deposit values being sent for bridges being called in this block |
-   | 0x960 - 0xb60   | 512              | assetIds[NUMBER_OF_ASSETS]         | Size-16 array of the assetIds for assets being deposited/withdrawn/used to pay fees in this block |
+   | 0x560 - 0x960   | 1024             | depositSums[NUMBER_OF_BRIDGE_CALLS] | Size-32 array of deposit values being sent to bridges which are called in this block |
+   | 0x960 - 0xb60   | 512              | assetIds[NUMBER_OF_ASSETS]         | Size-16 array of assetIds which correspond to assets being used to pay fees in this block |
    | 0xb60 - 0xd60   | 512              | txFees[NUMBER_OF_ASSETS]           | Size-16 array of transaction fees paid to the rollup beneficiary, denominated in each assetId |
    | 0xd60 - 0x1160  | 1024             | interactionNotes[NUMBER_OF_BRIDGE_CALLS] | Size-32 array of defi interaction result commitments that must be inserted into the defi tree at this rollup block |
    | 0x1160 - 0x1180 | 32               | prevDefiInteractionHash          | A SHA256 hash of the data used to create each interaction result commitment. Used to validate correctness of interactionNotes |
    | 0x1180 - 0x11a0 | 32               | rollupBeneficiary                | The address that the fees from this rollup block should be sent to. Prevents a rollup proof being taken from the transaction pool and having its fees redirected |
    | 0x11a0 - 0x11c0 | 32               | numRollupTxs                     | Number of "inner rollup" proofs used to create the block proof. "inner rollup" circuits process 3-28 user txns, the outer rollup circuit processes 1-28 inner rollup proofs. |
-   | 0x11c0 - 0x11c4 | 4                | numRealTxs                       | Number of transactions in the rollup excluding right-padded padding proofs
+   | 0x11c0 - 0x11c4 | 4                | numRealTxs                       | Number of transactions in the rollup excluding right-padded padding proofs |
    | 0x11c4 - 0x11c8 | 4                | encodedInnerTxData.length        | Number of bytes of encodedInnerTxData |
    | 0x11c8 - end    | encodedInnerTxData.length | encodedInnerTxData      | Encoded inner transaction data. Contains encoded form of the broadcasted data associated with each tx in the rollup block |
  **/
@@ -124,19 +124,19 @@ contract Decoder {
       ----------------------------------------*/
     /**
      * In `bytes proofData`, transaction data is appended after the rollup header data
-     * Each transaction is described by 8 'public inputs' used to create a user transaction ZK-SNARK proof
+     * Each transaction is described by 8 'public inputs' used to create a user transaction's ZK-SNARK proof
      * (i.e. there are 8 public inputs for each of the "join-split", "account" and "claim" circuits)
      * The public inputs are represented in calldata according to the following specification:
      *
-     * | public input idx | calldata size (bytes) | variable | description |
-     * | 0                | 1                     |proofId         | transaction type identifier       |
-     * | 1                | 32                    | encrypted form of 1st output note |
-     * | 2                | 32                    | encrypted form of 2nd output note |
-     * | 3                | 32                    | nullifier of 1st input note       |
-     * | 4                | 32                    | nullifier of 2nd input note       |
-     * | 5                | 32                    | amount being deposited or withdrawn |
+     * | public input idx | calldata size (bytes) | variable description                         |
+     * | 0                | 1                     | proofId - transaction type identifier        |
+     * | 1                | 32                    | encrypted form of 1st output note            |
+     * | 2                | 32                    | encrypted form of 2nd output note            |
+     * | 3                | 32                    | nullifier of 1st input note                  |
+     * | 4                | 32                    | nullifier of 2nd input note                  |
+     * | 5                | 32                    | amount being deposited or withdrawn          |
      * | 6                | 20                    | address of depositor or withdraw destination |
-     * | 7                | 4                     | assetId used in transaction |
+     * | 7                | 4                     | assetId used in transaction                  |
      *
      * The following table maps proofId values to transaction types
      *
@@ -153,7 +153,7 @@ contract Decoder {
      *
      * Most of the above transaction types do not use the full set of 8 public inputs (i.e. some are zero).
      * To save on calldata costs, we encode each transaction into the smallest payload possible.
-     * In `decodeProof`, the encoded transaction data decoded, with the decoded tx data written into memory
+     * In `decodeProof`, the encoded transaction data is decoded and written into memory
      *
      * As part of the decoding algorithms we must convert the 20-byte `publicOwner` and 4-byte `assetId` fields
      * into 32-byte EVM words
@@ -162,122 +162,120 @@ contract Decoder {
      */
 
     /**
-     * @dev decode a padding tx
-     * @param inPtr location in calldata of the encoded transaction
-     * @return location in calldata of the next encoded transaction
+     * @notice Decodes a padding tx
+     * @param _inPtr location in calldata of the encoded transaction
+     * @return - a location in calldata of the next encoded transaction
      *
-     * Encoded padding tx consists of 1 byte, the `proofId`
-     * The proofId has been written into memory before we called this function so there is nothing to copy.
-     * Advance the calldatapointer by 1 byte to move to the next transaction
+     * @dev Encoded padding tx consists of 1 byte, the `proofId`
+     *      The `proofId` has been written into memory before we called this function so there is nothing to copy
+     *      Advance the calldatapointer by 1 byte to move to the next transaction
      */
-    function paddingTx(uint256 inPtr, uint256) internal pure returns (uint256) {
+    function paddingTx(uint256 _inPtr, uint256) internal pure returns (uint256) {
         unchecked{
-            return (inPtr + 0x1);
+            return (_inPtr + 0x1);
         }
     }
 
     /**
-     * @dev decode a deposit or a withdraw tx
-     * @param inPtr location in calldata of the encoded transaction
-     * @param outPtr location in memory to write the decoded transaction to
-     * @return location in calldata of the next encoded transaction
+     * @notice Decodes a deposit or a withdraw tx
+     * @param _inPtr location in calldata of the encoded transaction
+     * @param _outPtr location in memory to write the decoded transaction to
+     * @return - location in calldata of the next encoded transaction
      *
-     * the deposit tx uses all 8 public inputs. All calldata is copied into memory
+     * @dev The deposit tx uses all 8 public inputs. All calldata is copied into memory.
      */
-    function depositOrWithdrawTx(uint256 inPtr, uint256 outPtr) internal pure returns (uint256) {
+    function depositOrWithdrawTx(uint256 _inPtr, uint256 _outPtr) internal pure returns (uint256) {
         // Copy deposit calldata into memory
         assembly {
-            // start copying into `outPtr + 0x20`, as `outPtr` points to `proofId`, which has already been written into memry
-            calldatacopy(add(outPtr, 0x20), add(inPtr, 0x20), 0xa0) // noteCommitment1 ... publicValue
-            calldatacopy(add(outPtr, 0xcc), add(inPtr, 0xc0), 0x14) // convert 20-byte publicOwner calldata variable into 32-byte EVM word
-            calldatacopy(add(outPtr, 0xfc), add(inPtr, 0xd4), 0x4) // convert 4-byte assetId variable into 32-byte EVM word
+            // start copying into `outPtr + 0x20`, as `outPtr` points to `proofId`, which has already been written into memory
+            calldatacopy(add(_outPtr, 0x20), add(_inPtr, 0x20), 0xa0) // noteCommitment{1, 2}, nullifier{1,2}, publicValue; 32*5 bytes
+            calldatacopy(add(_outPtr, 0xcc), add(_inPtr, 0xc0), 0x14) // convert 20-byte `publicOwner` calldata variable into 32-byte EVM word
+            calldatacopy(add(_outPtr, 0xfc), add(_inPtr, 0xd4), 0x4) // convert 4-byte `assetId` variable into 32-byte EVM word
         }
         // advance calldata ptr by 185 bytes
         unchecked {
-            return (inPtr + 0xb9);
+            return (_inPtr + 0xb9);
         }
     }
 
     /**
-     * @dev decode a send tx
-     * @param inPtr location in calldata of the encoded transaction
-     * @param outPtr location in memory to write the decoded transaction to
-     * @return location in calldata of the next encoded transaction
+     * @notice Decodes a send-type tx
+     * @param _inPtr location in calldata of the encoded transaction
+     * @param _outPtr location in memory to write the decoded transaction to
+     * @return - location in calldata of the next encoded transaction
      *
-     * The send tx has 0-values for `publicValue`, `publicOwner` and `assetId`
-     * No need to copy anything into memory for these fields as memory defaults to 0
+     * @dev The send tx has 0-values for `publicValue`, `publicOwner` and `assetId`
+     *      No need to copy anything into memory for these fields as memory defaults to 0
      */
-    function sendTx(uint256 inPtr, uint256 outPtr) internal pure returns (uint256) {
+    function sendTx(uint256 _inPtr, uint256 _outPtr) internal pure returns (uint256) {
         assembly {
-            calldatacopy(add(outPtr, 0x20), add(inPtr, 0x20), 0x80) // noteCommitment1 ... nullifier2
+            calldatacopy(add(_outPtr, 0x20), add(_inPtr, 0x20), 0x80) // noteCommitment{1, 2}, nullifier{1,2}; 32*4 bytes
         }
         unchecked {
-            return (inPtr + 0x81);
+            return (_inPtr + 0x81);
         }
     }
 
     /**
-     * @dev decode an account tx
-     * @param inPtr location in calldata of the encoded transaction
-     * @param outPtr location in memory to write the decoded transaction to
-     * @return location in calldata of the next encoded transaction
+     * @notice Decodes an account creation tx
+     * @param _inPtr location in calldata of the encoded transaction
+     * @param _outPtr location in memory to write the decoded transaction to
+     * @return - location in calldata of the next encoded transaction
      *
-     * The send tx has 0-values for `nullifier2`, `publicValue`, `publicOwner` and `assetId`
-     * No need to copy anything into memory for these fields as memory defaults to 0
+     * @dev The account tx has 0-values for `nullifier2`, `publicValue`, `publicOwner` and `assetId`
+     *      No need to copy anything into memory for these fields as memory defaults to 0
      */
-    function accountTx(uint256 inPtr, uint256 outPtr) internal pure returns (uint256) {
+    function accountTx(uint256 _inPtr, uint256 _outPtr) internal pure returns (uint256) {
         assembly {
-            calldatacopy(add(outPtr, 0x20), add(inPtr, 0x20), 0x80) // noteCommitment1 ... nullifier2
+            calldatacopy(add(_outPtr, 0x20), add(_inPtr, 0x20), 0x80) // noteCommitment{1, 2}, nullifier{1,2}; 32*4 bytes
         }
         unchecked {
-            return (inPtr + 0x81);
+            return (_inPtr + 0x81);
         }
     }
 
     /**
-     * @dev decode a defi deposit or claim tx
-     * @param inPtr location in calldata of the encoded transaction
-     * @param outPtr location in memory to write the decoded transaction to
-     * @return location in calldata of the next encoded transaction
+     * @notice Decodes a defi deposit or claim tx
+     * @param _inPtr location in calldata of the encoded transaction
+     * @param _outPtr location in memory to write the decoded transaction to
+     * @return - location in calldata of the next encoded transaction
      *
-     * The defi deposit/claim txns has 0-values for `publicValue`, `publicOwner` and `assetId`
-     * No need to copy anything into memory for these fields as memory defaults to 0
+     * @dev The defi deposit/claim tx has 0-values for `publicValue`, `publicOwner` and `assetId`
+     *      No need to copy anything into memory for these fields as memory defaults to 0
      */
-    function defiDepositOrClaimTx(uint256 inPtr, uint256 outPtr) internal pure returns (uint256) {
+    function defiDepositOrClaimTx(uint256 _inPtr, uint256 _outPtr) internal pure returns (uint256) {
         assembly {
-            calldatacopy(add(outPtr, 0x20), add(inPtr, 0x20), 0x80) // noteCommitment1 ... nullifier2
+            calldatacopy(add(_outPtr, 0x20), add(_inPtr, 0x20), 0x80) // noteCommitment{1, 2}, nullifier{1,2}; 32*4 bytes
         }
         unchecked {
-            return (inPtr + 0x81);
+            return (_inPtr + 0x81);
         }
     }
 
     /**
-     * @dev invalid transaction function
-     * If we hit this, there is a transaction whose proofId is invalid (i.e. not 0 to 7).
-     * Throw an error and revert the tx.
+     * @notice Throws an error and reverts.
+     * @dev If we hit this, there is a transaction whose proofId is invalid (i.e. not 0 to 7).
      */
     function invalidTx(uint256, uint256) internal pure returns (uint256) {
         revert ENCODING_BYTE_INVALID();
     }
 
     /**
-     * @dev decodes the rollup block's proof data
-     * This function converts the proof data into a representation we can work with in memory
-     * In particular, encoded transaction calldata is decoded and written into memory
-     * The rollup header is also copied from calldata into memory
-     * @return proofData numTxs publicInputsHash
-     * proofData is a memory pointer to the decoded proof data
+     * @notice Decodes the rollup block's proof data
+     * @dev This function converts the proof data into a representation we can work with in memory
+     *      In particular, encoded transaction calldata is decoded and written into memory
+     *      The rollup header is copied from calldata into memory as well
+     * @return proofData a memory pointer to the decoded proof data
+     * @return numTxs number of transactions in the rollup, excluding end-padding transactions
+     * @return publicInputsHash sha256 hash of the public inputs
      *
-     * The publicInputsHash is a sha256 hash of the public inputs associated with each transaction in the rollup.
-     * It is used to validate the correctness of the data being fed into the rollup circuit
-     * (there is a bit of nomenclature abuse here. Processing a public input in the verifier algorithm costs 150 gas, which
-     * adds up very quickly. Instead of this, we sha256 hash what used to be the "public" inputs and only set the hash to be public.
-     * We then make the old "public" inputs private in the rollup circuit, and validate their correctness by checking their sha256 hash matches
-     * what we compute in the decodeProof function!
+     * @dev The `publicInputsHash` is a sha256 hash of the public inputs associated with each transaction in the rollup.
+     *      It is used to validate the correctness of the data being fed into the rollup circuit.
      *
-     * numTxs = number of transactions in the rollup, excluding end-padding transactions
-     * 
+     *      (There is a bit of nomenclature abuse here. Processing a public input in the verifier algorithm costs 150 gas,
+     *      which adds up very quickly. Instead of this, we sha256 hash what used to be the "public" inputs and only set
+     *      the hash to be public. We then make the old "public" inputs private in the rollup circuit, and validate their
+     *      correctness by checking that their sha256 hash matches what we compute in the decodeProof function!
      */
     function decodeProof()
         internal
@@ -345,10 +343,7 @@ contract Decoder {
                 // Set inPtr to point to the length parameter of `bytes calldata proofData`
                 inPtr := add(calldataload(0x04), 0x4) // `proofData = first input parameter. Calldata offset to proofData will be at 0x04. Add 0x04 to account for function signature.
                 
-                // set dataSize to be the length of `bytes calldata proofData`
-                // dataSize := sub(calldataload(inPtr), 0x4)
-
-                // Advance inPtr to point to the start of proofData
+                // Advance inPtr to point to the start of `proofData`
                 inPtr := add(inPtr, 0x20)
 
                 numTxs := and(
@@ -356,22 +351,21 @@ contract Decoder {
                     0xffffffff
                 )
                 // Get encoded inner proof data size.
-                // add ENCODED_PROOF_DATA_LENGTH_OFFSET to inPtr to point to the correct variable in our header block,
+                // Add ENCODED_PROOF_DATA_LENGTH_OFFSET to inPtr to point to the correct variable in our header block,
                 // mask off all but 4 least significant bytes as this is a packed 32-bit variable.
                 let encodedInnerDataSize := and(
                     calldataload(add(inPtr, ENCODED_PROOF_DATA_LENGTH_OFFSET)),
                     0xffffffff
                 )
-                // Add the size of trimmed zero bytes to dataSize.
 
-                // load up the rollup size from `proofData`
+                // Load up the rollup size from `proofData`
                 rollupSize := calldataload(add(inPtr, 0x20))
 
-                // compute the number of bytes our decoded proof data will take up.
+                // Compute the number of bytes our decoded proof data will take up.
                 // i.e. num total txns in the rollup (including padding) * number of public inputs per transaction
                 let decodedInnerDataSize := mul(rollupSize, TX_PUBLIC_INPUT_LENGTH)
 
-                // we want dataSize to equal: rollup header length + decoded tx length (excluding padding blocks)
+                // We want `dataSize` to equal: rollup header length + decoded tx length (excluding padding blocks)
                 let numInnerRollups := calldataload(add(inPtr, sub(ROLLUP_HEADER_LENGTH, 0x20)))
                 let numTxsPerRollup := div(rollupSize, numInnerRollups)
 
@@ -379,37 +373,36 @@ contract Decoder {
                 numFilledBlocks := add(numFilledBlocks, iszero(eq(mul(numFilledBlocks, numTxsPerRollup), numTxs)))
 
                 decodedTransactionDataSize := mul(mul(numFilledBlocks, numTxsPerRollup), TX_PUBLIC_INPUT_LENGTH)
-                // i.e. current dataSize value + (difference between decoded and encoded data)
                 dataSize := add(ROLLUP_HEADER_LENGTH, decodedTransactionDataSize)
 
                 // Allocate memory for `proofData`.
                 proofData := mload(0x40)
-                // set free mem ptr to dataSize + 0x20 (to account for the 0x20 bytes for the length param of proofData)
+                // Set free mem ptr to `dataSize` + 0x20 (to account for the 0x20 bytes for the length param of proofData)
                 // This allocates memory whose size is equal to the rollup header size, plus the data required for
-                // each transaction's decoded tx data (256 bytes * number of non-padding blocks)
-                // only reserve memory for blocks that contain non-padding proofs. These "padding" blocks don't need to be
-                // stored in memory as we don't need their data for any computations
+                // each transaction's decoded tx data (256 bytes * number of non-padding blocks).
+                // Only reserve memory for blocks that contain non-padding proofs. These "padding" blocks don't need to be
+                // stored in memory as we don't need their data for any computations.
                 mstore(0x40, add(proofData, add(dataSize, 0x20)))
 
-                // set outPtr to point to the proofData length parameter
+                // Set `outPtr` to point to the `proofData` length parameter
                 outPtr := proofData
-                // write dataSize into proofData.length
+                // Write `dataSize` into `proofData.length`
                 mstore(outPtr, dataSize)
-                // advance outPtr to point to start of proofData
+                // Advance `outPtr` to point to start of `proofData`
                 outPtr := add(outPtr, 0x20)
 
                 // Copy rollup header data to `proofData`.
                 calldatacopy(outPtr, inPtr, ROLLUP_HEADER_LENGTH)
-                // Advance outPtr to point to the end of the header data (i.e. the start of the decoded inner transaction data)
+                // Advance `outPtr` to point to the end of the header data (i.e. the start of the decoded inner transaction data)
                 outPtr := add(outPtr, ROLLUP_HEADER_LENGTH)
 
-                // Advance inPtr to point to the start of our encoded inner transaction data.
+                // Advance `inPtr` to point to the start of our encoded inner transaction data.
                 // Add (ROLLUP_HEADER_LENGTH + 0x08) to skip over the packed (numRealTransactions, encodedProofData.length) parameters
                 inPtr := add(inPtr, add(ROLLUP_HEADER_LENGTH, 0x08))
 
-                // Set tailInPtr to point to the end of our encoded transaction data
+                // Set `tailInPtr` to point to the end of our encoded transaction data
                 tailInPtr := add(inPtr, encodedInnerDataSize)
-                // Set decodedTxDataStart pointer
+                // Set `decodedTxDataStart` pointer
                 decodedTxDataStart := outPtr
             }
             /**
@@ -419,9 +412,9 @@ contract Decoder {
              * jump to the relevant transaction's decoding function
              */
             assembly {
-                // subtract 31 bytes off of inPtr, so that the first byte of the encoded transaction data
+                // Subtract 31 bytes off of `inPtr`, so that the first byte of the encoded transaction data
                 // is located at the least significant byte of calldataload(inPtr)
-                // also adjust tailInPtr as we compare inPtr against tailInPtr
+                // also adjust `tailInPtr` as we compare `inPtr` against `tailInPtr`
                 inPtr := sub(inPtr, 0x1f)
                 tailInPtr := sub(tailInPtr, 0x1f)
             }
@@ -432,15 +425,15 @@ contract Decoder {
                         // The encoding byte can take values from 0 to 7; we want to turn these into offsets that can index our function table.
                         // 1. Access encoding byte via `calldataload(inPtr)`. The least significant byte is our encoding byte. Mask off all but the 3 least sig bits
                         // 2. Shift left by 5 bits. This is equivalent to multiplying the encoding byte by 32.
-                        // 4. The result will be 1 of 8 offset values (0x00, 0x20, ..., 0xe0) which we can use to retrieve the relevant function pointer from `functionTable`
+                        // 3. The result will be 1 of 8 offset values (0x00, 0x20, ..., 0xe0) which we can use to retrieve the relevant function pointer from `functionTable`
                         let encoding := and(calldataload(inPtr), 7)
-                        // store proofId at outPtr.
+                        // Store `proofId` at `outPtr`.
                         mstore(outPtr, encoding) // proofId
 
-                        // use proofId to extract the relevant function pointer from functionTable
+                        // Use `proofId` to extract the relevant function pointer from `functionTable`
                         callfunc := mload(add(functionTable, shl(5, encoding)))
                     }
-                    // call the decoding function. Return value will be next required value of inPtr
+                    // Call the decoding function. Return value will be next required value of inPtr
                     inPtr = callfunc(inPtr, outPtr);
                     // advance outPtr by the size of a decoded transaction
                     outPtr += TX_PUBLIC_INPUT_LENGTH;
@@ -472,7 +465,7 @@ contract Decoder {
         // Step 1: compute the hashes that constitute the inner proofs data
         bool invalidRollupTopology;
         assembly {
-            // we need to figure out how many rollup proofs are in this tx and how many user transactions are in each rollup
+            // We need to figure out how many rollup proofs are in this tx and how many user transactions are in each rollup
             let numRollupTxs := mload(add(proofData, ROLLUP_HEADER_LENGTH))
             let numJoinSplitsPerRollup := div(rollupSize, numRollupTxs)
             let rollupDataSize := mul(mul(numJoinSplitsPerRollup, NUMBER_OF_PUBLIC_INPUTS_PER_TX), 32)
@@ -489,16 +482,16 @@ contract Decoder {
             let numEmptyInnerRollups := sub(numRollupTxs, numNotEmptyInnerRollups)
 
             let proofdataHashPtr := mload(0x40)
-            // copy the header data into the proofdataHash
-            // header start is at calldataload(0x04) + 0x24 (+0x04 to skip over func signature, +0x20 to skip over byte array length param)
+            // Copy the header data into the `proofdataHash`
+            // Header start is at calldataload(0x04) + 0x24 (+0x04 to skip over func signature, +0x20 to skip over byte array length param)
             calldatacopy(proofdataHashPtr, add(calldataload(0x04), 0x24), ROLLUP_HEADER_LENGTH)
 
-            // update pointer
+            // Update pointer
             proofdataHashPtr := add(proofdataHashPtr, ROLLUP_HEADER_LENGTH)
 
-            // compute the endpoint for the proofdataHashPtr (used as a loop boundary condition)
+            // Compute the endpoint for the `proofdataHashPtr` (used as a loop boundary condition)
             let endPtr := add(proofdataHashPtr, mul(numNotEmptyInnerRollups, 0x20))
-            // iterate over the public inputs for each inner rollup proof and compute their SHA256 hash
+            // Iterate over the public inputs of each inner rollup proof and compute their SHA256 hash
 
             // better solution here is ... iterate over number of non-padding rollup blocks
             // and hash those
@@ -557,7 +550,7 @@ contract Decoder {
                     mstore(proofdataHashPtr, zeroHash)
                 }
             }
-            // compute SHA256 hash of header data + inner public input hashes
+            // Compute SHA256 hash of header data + inner public input hashes
             let startPtr := mload(0x40)
             if iszero(staticcall(gas(), 0x02, startPtr, sub(proofdataHashPtr, startPtr), 0x00, 0x20)) {
                 revert(0x00, 0x00)
@@ -571,20 +564,20 @@ contract Decoder {
     }
 
     /**
-     * @dev Extract the `rollupId` param from the decoded proof data.
-     * represents the rollupId of the next valid rollup block
-     * @param proofData the decoded proof data
+     * @notice Extracts the `rollupId` param from the decoded proof data
+     * @dev This represents the rollupId of the next valid rollup block
+     * @param _proofData the decoded proof data
      * @return nextRollupId the expected id of the next rollup block
      */
-    function getRollupId(bytes memory proofData) internal pure returns (uint256 nextRollupId) {
+    function getRollupId(bytes memory _proofData) internal pure returns (uint256 nextRollupId) {
         assembly {
-            nextRollupId := mload(add(proofData, 0x20))
+            nextRollupId := mload(add(_proofData, 0x20))
         }
     }
 
     /**
-     * @dev Decode the public inputs component of proofData and compute sha3 hash of merkle roots && dataStartIndex
-     *      The rollup's state is uniquely defined by the following variables:
+     * @notice Decodes the input merkle roots of `proofData` and computes rollupId && sha3 hash of roots && dataStartIndex
+     * @dev The rollup's state is uniquely defined by the following variables:
      *          * The next empty location in the data root tree (rollupId + 1)
      *          * The next empty location in the data tree (dataStartIndex + rollupSize)
      *          * The root of the data tree
@@ -595,13 +588,18 @@ contract Decoder {
      *      To validate the correctness of a block's state transition, we must perform the following:
      *          * Use proof broadcasted inputs to reconstruct the "old" state hash
      *          * Use proof broadcasted inputs to reconstruct the "new" state hash
-     *          * Validate the old state hash matches what is in storage
+     *          * Validate that the old state hash matches what is in storage
      *          * Set the old state hash to the new state hash
-     *      N.B. we still store dataSize as a separate storage var as proofData does not contain all
+     *      N.B. we still store `dataSize` as a separate storage var as `proofData does not contain all
      *           neccessary information to reconstruct its old value.
-     * @param proofData - cryptographic proofData associated with a rollup
+     * @param _proofData cryptographic proofData associated with a rollup
+     * @return rollupId
+     * @return oldStateHash
+     * @return newStateHash
+     * @return numDataLeaves
+     * @return dataStartIndex
      */
-    function computeRootHashes(bytes memory proofData)
+    function computeRootHashes(bytes memory _proofData)
         internal
         pure
         returns (
@@ -613,7 +611,7 @@ contract Decoder {
         )
     {
         assembly {
-            let dataStart := add(proofData, 0x20) // jump over first word, it's length of data
+            let dataStart := add(_proofData, 0x20) // jump over first word, it's length of data
             numDataLeaves := shl(1, mload(add(dataStart, 0x20))) // rollupSize * 2 (2 notes per tx)
             dataStartIndex := mload(add(dataStart, 0x40))
 
@@ -643,38 +641,39 @@ contract Decoder {
     }
 
     /**
-     * @dev extract the `prevDefiInterationHash` from the proofData's rollup header
-     * @param proofData byte array of our input proof data
+     * @notice Extract the `prevDefiInteractionHash` from the proofData's rollup header
+     * @param _proofData decoded rollup proof data
      * @return prevDefiInteractionHash the defiInteractionHash of the previous rollup block
      */
-    function extractPrevDefiInteractionHash(bytes memory proofData)
+    function extractPrevDefiInteractionHash(bytes memory _proofData)
         internal
         pure
         returns (bytes32 prevDefiInteractionHash)
     {
         assembly {
-            prevDefiInteractionHash := mload(add(proofData, PREVIOUS_DEFI_INTERACTION_HASH_OFFSET))
+            prevDefiInteractionHash := mload(add(_proofData, PREVIOUS_DEFI_INTERACTION_HASH_OFFSET))
         }
     }
 
     /**
-     * @dev extract the address we pay the rollup fee to, from the proofData's rollup header
-     * This "rollup beneficiary" address is included as part of the ZK-SNARK circuit data, so that
-     * the rollup provider can explicitly define who should get the fee at the point they generate the ZK-SNARK proof.
-     * (instead of simply sending the fee to msg.sender)
-     * This prevents front-running attacks where an attacker can take somebody else's rollup proof from out of the tx pool and replay it, stealing the fee.
-     * @param proofData byte array of our input proof data
-     * @return rollupBeneficiaryAddress the address we pay this rollup block's fee to
+     * @notice Extracts the address we pay the rollup fee to from the proofData's rollup header
+     * @dev Rollup beneficiary address is included as part of the ZK-SNARK circuit data, so that the rollup provider
+     *      can explicitly define who should get the fee when they are generating the ZK-SNARK proof (instead of
+     *      simply sending the fee to msg.sender).
+     *      This prevents front-running attacks where an attacker can take somebody else's rollup proof from out of
+     *      the tx pool and replay it, stealing the fee.
+     * @param _proofData byte array of our input proof data
+     * @return rollupBeneficiary the address we pay this rollup block's fee to
      */
-    function extractRollupBeneficiaryAddress(bytes memory proofData)
+    function extractRollupBeneficiary(bytes memory _proofData)
         internal
         pure
-        returns (address rollupBeneficiaryAddress)
+        returns (address rollupBeneficiary)
     {
         assembly {
-            rollupBeneficiaryAddress := mload(add(proofData, ROLLUP_BENEFICIARY_OFFSET))
-            // validate rollupBeneficiaryAddress is an address!
-            if gt(rollupBeneficiaryAddress, ADDRESS_MASK) {
+            rollupBeneficiary := mload(add(_proofData, ROLLUP_BENEFICIARY_OFFSET))
+            // Validate `rollupBeneficiary` is an address
+            if gt(rollupBeneficiary, ADDRESS_MASK) {
                 revert(0, 0)
             }
 
@@ -682,19 +681,19 @@ contract Decoder {
     }
 
     /**
-     * @dev Extract an assetId from the rollup block.
-     * The rollup block contains up to 16 different assets, which can be recovered from the rollup header data.
-     * @param proofData byte array of our input proof data
-     * @param idx The index of the asset we want. assetId = header.assetIds[idx]
-     * @return assetId the 30-bit identifier of an asset. The ERC20 token address is obtained via the mapping `supportedAssets[assetId]`, 
+     * @notice Extracts an `assetId` in which a fee is going to be paid from a rollup block
+     * @dev The rollup block contains up to 16 different assets, which can be recovered from the rollup header data.
+     * @param _proofData byte array of our input proof data
+     * @param _idx index of the asset we want (assetId = header.assetIds[_idx])
+     * @return assetId 30-bit identifier of an asset. The ERC20 token address is obtained via the mapping `supportedAssets[assetId]`, 
      */
-    function extractAssetId(
-        bytes memory proofData,
-        uint256 idx
+    function extractFeeAssetId(
+        bytes memory _proofData,
+        uint256 _idx
     ) internal pure returns (uint256 assetId) {
         assembly {
-            assetId := mload(add(add(add(proofData, BRIDGE_CALL_DATAS_OFFSET), mul(0x40, NUMBER_OF_BRIDGE_CALLS)), mul(0x20, idx)))
-            // validate assetId is a uint32!
+            assetId := mload(add(add(add(_proofData, BRIDGE_CALL_DATAS_OFFSET), mul(0x40, NUMBER_OF_BRIDGE_CALLS)), mul(0x20, _idx)))
+            // Validate `assetId` is a uint32!
             if gt(assetId, 0xffffffff) {
                 revert(0, 0)
             }
@@ -702,19 +701,19 @@ contract Decoder {
     }
 
     /**
-     * @dev Extract the transaction fee, for a given asset, due to be paid to the rollup beneficiary
-     * The total fee is the sum of the individual fees paid by each transaction in the rollup block.
-     * This sum is computed directly in the rollup circuit, and is present in the rollup header data
-     * @param proofData byte array of our input proof data
-     * @param idx The index of the asset the fee is denominated in
-     * @return totalTxFee 
+     * @notice Extracts the transaction fee for a given asset which is to be paid to the rollup beneficiary
+     * @dev The total fee is the sum of the individual fees paid by each transaction in the rollup block.
+     *      This sum is computed directly in the rollup circuit, and is present in the rollup header data.
+     * @param _proofData byte array of decoded rollup proof data
+     * @param _idx The index of the asset the fee is denominated in
+     * @return totalTxFee total rollup block transaction fee for a given asset
      */
     function extractTotalTxFee(
-        bytes memory proofData,
-        uint256 idx
+        bytes memory _proofData,
+        uint256 _idx
     ) internal pure returns (uint256 totalTxFee) {
         assembly {
-            totalTxFee := mload(add(add(add(proofData, 0x380), mul(0x40, NUMBER_OF_BRIDGE_CALLS)), mul(0x20, idx)))
+            totalTxFee := mload(add(add(add(_proofData, 0x380), mul(0x40, NUMBER_OF_BRIDGE_CALLS)), mul(0x20, _idx)))
         }
     }
 }

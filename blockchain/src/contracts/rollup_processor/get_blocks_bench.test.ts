@@ -4,13 +4,11 @@ import { EthAddress } from '@aztec/barretenberg/address';
 
 const { ETHEREUM_HOST = 'http://localhost:9545' } = process.env;
 
-jest.setTimeout(10 * 60 * 1000);
-
 // This is not an actual unit test, rather for benchmarking the block fetching code. Skip it under normal execution.
 describe.skip('contract tests', () => {
   let contract: RollupProcessor;
 
-  beforeAll(() => {
+  before(() => {
     const ethereumProvider = new JsonRpcProvider(ETHEREUM_HOST);
     contract = new RollupProcessor(
       EthAddress.fromString('0x737901bea3eeb88459df9ef1be8ff3ae1b42a2ba'),

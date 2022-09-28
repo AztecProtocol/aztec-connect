@@ -1,5 +1,11 @@
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { solidity } = require('ethereum-waffle');
+import chai from 'chai';
+
+import { expect } from 'chai';
+chai.use(solidity);
+
 import { EthAddress } from '@aztec/barretenberg/address';
-import { EthereumSignature } from '@aztec/barretenberg/blockchain';
 import { toBuffer } from 'ethereumjs-util';
 import { Signer } from 'ethers';
 import { keccak256, toUtf8Bytes } from 'ethers/lib/utils';
@@ -25,9 +31,8 @@ describe('rollup_processor: ', () => {
   const escapeBlockUpperBound = 100;
 
   const RANDOM_BYTES = keccak256(toUtf8Bytes('RANDOM'));
-  const badSig: EthereumSignature = { v: toBuffer('0x00'), r: toBuffer(RANDOM_BYTES), s: toBuffer(RANDOM_BYTES) };
 
-  beforeAll(async () => {
+  before(async () => {
     signers = await ethers.getSigners();
     addresses = await Promise.all(signers.map(async u => EthAddress.fromString(await u.getAddress())));
     ({ rollupProcessor } = await setupTestRollupProcessor(signers, {
@@ -39,11 +44,11 @@ describe('rollup_processor: ', () => {
     const blocks = await blocksToAdvanceHardhat(escapeBlockLowerBound, escapeBlockUpperBound, ethers.provider);
     await advanceBlocksHardhat(blocks, ethers.provider);
 
-    expect(await rollupProcessor.hasRole(OWNER_ROLE, addresses[0])).toBe(true);
-    expect(await rollupProcessor.paused()).toBe(false);
+    expect(await rollupProcessor.hasRole(OWNER_ROLE, addresses[0])).to.be.eq(true);
+    expect(await rollupProcessor.paused()).to.be.eq(false);
 
     expect(await rollupProcessor.pause({ signingAddress: addresses[0] }));
-    expect(await rollupProcessor.paused()).toBe(true);
+    expect(await rollupProcessor.paused()).to.be.eq(true);
   });
 
   beforeEach(async () => {
@@ -55,54 +60,38 @@ describe('rollup_processor: ', () => {
   });
 
   it('cannot be paused when already paused', async () => {
-    await expect(rollupProcessor.pause({ signingAddress: addresses[0] })).rejects.toThrow(`PAUSED`);
+    await expect(rollupProcessor.pause({ signingAddress: addresses[0] })).to.be.revertedWith(`PAUSED`);
   });
 
   it('cannot unpause if already unpaused', async () => {
     expect(await rollupProcessor.unpause({ signingAddress: addresses[0] }));
-    expect(await rollupProcessor.paused()).toBe(false);
+    expect(await rollupProcessor.paused()).to.be.eq(false);
 
-    await expect(rollupProcessor.unpause({ signingAddress: addresses[0] })).rejects.toThrow(`NOT_PAUSED`);
+    await expect(rollupProcessor.unpause({ signingAddress: addresses[0] })).to.be.revertedWith(`NOT_PAUSED`);
   });
 
   it('cannot setSupportedAsset when paused', async () => {
-    await expect(rollupProcessor.setSupportedAsset(addresses[0], 1, { signingAddress: addresses[0] })).rejects.toThrow(
-      `PAUSED`,
-    );
+    await expect(
+      rollupProcessor.setSupportedAsset(addresses[0], 1, { signingAddress: addresses[0] }),
+    ).to.be.revertedWith(`PAUSED`);
   });
 
   it('cannot setSupportedBridge when paused', async () => {
-    await expect(rollupProcessor.setSupportedBridge(addresses[0], 1, { signingAddress: addresses[0] })).rejects.toThrow(
-      `PAUSED`,
-    );
+    await expect(
+      rollupProcessor.setSupportedBridge(addresses[0], 1, { signingAddress: addresses[0] }),
+    ).to.be.revertedWith(`PAUSED`);
   });
 
   it('cannot approveProof when paused', async () => {
     await expect(
       rollupProcessor.approveProof(toBuffer(RANDOM_BYTES), { signingAddress: addresses[0] }),
-    ).rejects.toThrow(`PAUSED`);
+    ).to.be.revertedWith(`PAUSED`);
   });
 
   it('cannot depositPendingFunds when paused', async () => {
     await expect(
       rollupProcessor.depositPendingFunds(0, 0n, toBuffer(RANDOM_BYTES), { signingAddress: addresses[0] }),
-    ).rejects.toThrow(`PAUSED`);
-  });
-
-  it('cannot depositPendingFundsPermit when paused', async () => {
-    await expect(
-      rollupProcessor.depositPendingFundsPermit(0, 0n, 0n, badSig, toBuffer(RANDOM_BYTES), {
-        signingAddress: addresses[0],
-      }),
-    ).rejects.toThrow(`PAUSED`);
-  });
-
-  it('cannot depositPendingFundsPermitNonStandard when paused', async () => {
-    await expect(
-      rollupProcessor.depositPendingFundsPermitNonStandard(0, 0n, 0n, 0n, badSig, toBuffer(RANDOM_BYTES), {
-        signingAddress: addresses[0],
-      }),
-    ).rejects.toThrow(`PAUSED`);
+    ).to.be.revertedWith(`PAUSED`);
   });
 
   it('cannot offchainData when paused', async () => {
@@ -110,7 +99,7 @@ describe('rollup_processor: ', () => {
       rollupProcessor.offchainData(0n, 0n, 0n, Buffer.from('0x00'), {
         signingAddress: addresses[0],
       }),
-    ).rejects.toThrow(`PAUSED`);
+    ).to.be.revertedWith(`PAUSED`);
   });
 
   it('cannot processRollup when paused', async () => {
@@ -118,7 +107,7 @@ describe('rollup_processor: ', () => {
       rollupProcessor.processRollup(Buffer.from('0x00'), Buffer.from('0x00'), {
         signingAddress: addresses[0],
       }),
-    ).rejects.toThrow(`PAUSED`);
+    ).to.be.revertedWith(`PAUSED`);
   });
 
   it('cannot processAsyncDefiInteraction when paused', async () => {
@@ -126,6 +115,6 @@ describe('rollup_processor: ', () => {
       rollupProcessor.processAsyncDefiInteraction(0, {
         signingAddress: addresses[0],
       }),
-    ).rejects.toThrow(`PAUSED`);
+    ).to.be.revertedWith(`PAUSED`);
   });
 });

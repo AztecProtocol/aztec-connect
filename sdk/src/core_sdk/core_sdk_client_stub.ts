@@ -2,7 +2,7 @@ import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { assetValueFromJson } from '@aztec/barretenberg/asset';
 import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { SchnorrSignature } from '@aztec/barretenberg/crypto';
-import { depositTxFromJson, rollupProviderStatusFromJson } from '@aztec/barretenberg/rollup_provider';
+import { depositTxFromJson, rollupProviderStatusFromJson, Tx, txToJson } from '@aztec/barretenberg/rollup_provider';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import EventEmitter from 'events';
 import { coreUserTxFromJson } from '../core_tx';
@@ -125,7 +125,7 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
     return proofOutputFromJson(json);
   }
 
-  public async createPaymentProofInput(
+  public async createPaymentProofInputs(
     userId: GrumpkinAddress,
     assetId: number,
     publicInput: bigint,
@@ -139,7 +139,7 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
     spendingPublicKey: GrumpkinAddress,
     allowChain: number,
   ) {
-    const json = await this.backend.createPaymentProofInput(
+    const proofInputs = await this.backend.createPaymentProofInputs(
       userId.toString(),
       assetId,
       publicInput.toString(),
@@ -153,7 +153,7 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
       spendingPublicKey.toString(),
       allowChain,
     );
-    return joinSplitProofInputFromJson(json);
+    return proofInputs.map(joinSplitProofInputFromJson);
   }
 
   public async createPaymentProof(input: JoinSplitProofInput, txRefNo: number) {
@@ -230,8 +230,8 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
     return proofOutputFromJson(json);
   }
 
-  public async sendProofs(proofs: ProofOutput[]) {
-    const txIds = await this.backend.sendProofs(proofs.map(proofOutputToJson));
+  public async sendProofs(proofs: ProofOutput[], proofTxs: Tx[] = []) {
+    const txIds = await this.backend.sendProofs(proofs.map(proofOutputToJson), proofTxs.map(txToJson));
     return txIds.map(TxId.fromString);
   }
 
@@ -314,6 +314,21 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
     return BigInt(balanceStr);
   }
 
+  public async getSpendableNoteValues(
+    userId: GrumpkinAddress,
+    assetId: number,
+    spendingKeyRequired?: boolean,
+    excludePendingNotes?: boolean,
+  ) {
+    const valueArr = await this.backend.getSpendableNoteValues(
+      userId.toString(),
+      assetId,
+      spendingKeyRequired,
+      excludePendingNotes,
+    );
+    return valueArr.map(v => BigInt(v));
+  }
+
   public async getSpendableSum(
     userId: GrumpkinAddress,
     assetId: number,
@@ -334,21 +349,21 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
     return sums.map(assetValueFromJson);
   }
 
-  public async getMaxSpendableValue(
+  public async getMaxSpendableNoteValues(
     userId: GrumpkinAddress,
     assetId: number,
     spendingKeyRequired?: boolean,
     excludePendingNotes?: boolean,
     numNotes?: number,
   ) {
-    const valueStr = await this.backend.getMaxSpendableValue(
+    const valueArr = await this.backend.getMaxSpendableNoteValues(
       userId.toString(),
       assetId,
       spendingKeyRequired,
       excludePendingNotes,
       numNotes,
     );
-    return BigInt(valueStr);
+    return valueArr.map(v => BigInt(v));
   }
 
   public async pickNotes(

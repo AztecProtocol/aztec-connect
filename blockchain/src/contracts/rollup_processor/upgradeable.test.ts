@@ -1,3 +1,10 @@
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { solidity } = require('ethereum-waffle');
+import chai from 'chai';
+
+import { expect } from 'chai';
+chai.use(solidity);
+
 import { EthAddress } from '@aztec/barretenberg/address';
 import { BigNumber, Signer } from 'ethers';
 import { formatBytes32String, keccak256, toUtf8Bytes } from 'ethers/lib/utils';
@@ -12,9 +19,10 @@ import { ProxyAdmin } from './proxy_admin';
 import { setupTestRollupProcessor } from './fixtures/setup_upgradeable_test_rollup_processor';
 import { TestRollupProcessor } from './fixtures/test_rollup_processor';
 import { EthersAdapter } from '../../provider';
+import { TestUpgradeRollupProcessor } from './fixtures/test_upgrade_rollup_processor';
 
 describe('rollup_processor: upgradable test', () => {
-  let rollupProcessor: TestRollupProcessor;
+  let rollupProcessor: TestUpgradeRollupProcessor;
   let proxyAdmin: ProxyAdmin;
   let signers: Signer[];
   let addresses: EthAddress[];
@@ -26,15 +34,24 @@ describe('rollup_processor: upgradable test', () => {
 
   const OWNER_ROLE = keccak256(toUtf8Bytes('OWNER_ROLE'));
 
-  beforeAll(async () => {
+  before(async () => {
     signers = await ethers.getSigners();
     addresses = await Promise.all(signers.map(async u => EthAddress.fromString(await u.getAddress())));
+    let rp: TestRollupProcessor;
 
-    ({ proxyAdmin, rollupProcessor } = await setupTestRollupProcessor(signers, {
+    ({ proxyAdmin, rollupProcessor: rp } = await setupTestRollupProcessor(signers, {
       numberOfTokenAssets: 1,
       escapeBlockLowerBound,
       escapeBlockUpperBound,
+      useLatest: false,
     }));
+    rollupProcessor = new TestUpgradeRollupProcessor(rp.address, new EthersAdapter(ethers.provider));
+
+    await proxyAdmin.upgradeUNSAFE(
+      rollupProcessor.address,
+      await ethers.getContractFactory('TestUpgradeRollupProcessor', signers[0]),
+      [escapeBlockLowerBound, escapeBlockUpperBound],
+    );
 
     // Advance into block region where escapeHatch is active.
     const blocks = await blocksToAdvanceHardhat(escapeBlockLowerBound, escapeBlockUpperBound, ethers.provider);
@@ -61,20 +78,20 @@ describe('rollup_processor: upgradable test', () => {
       testProcessor.depositPendingFunds(0, depositAmount, undefined, {
         signingAddress: addresses[0],
       }),
-    ).rejects.toThrow('PAUSED()');
+    ).to.be.revertedWith('PAUSED()');
   });
 
   it('cannot initialize implementation directly', async () => {
     const implementationAddress = await proxyAdmin.getProxyImplementation(rollupProcessor.address);
-    const implementation = await ethers.getContractAt('TestRollupProcessor', implementationAddress);
+    const implementation = await ethers.getContractAt('TestUpgradeRollupProcessor', implementationAddress);
 
-    expect(await implementation.defiBridgeProxy()).toBe(EthAddress.ZERO.toString());
-    expect(await implementation.verifier()).toBe(EthAddress.ZERO.toString());
-    expect(await implementation.prevDefiInteractionsHash()).toBe(formatBytes32String(''));
-    expect(await implementation.rollupStateHash()).toBe(formatBytes32String(''));
-    expect(await implementation.escapeBlockLowerBound()).toEqual(BigNumber.from(escapeBlockLowerBound));
-    expect(await implementation.escapeBlockUpperBound()).toEqual(BigNumber.from(escapeBlockUpperBound));
-    expect(await implementation.allowThirdPartyContracts()).toBe(false);
+    expect(await implementation.defiBridgeProxy()).to.be.eq(EthAddress.ZERO.toString());
+    expect(await implementation.verifier()).to.be.eq(EthAddress.ZERO.toString());
+    expect(await implementation.prevDefiInteractionsHash()).to.be.eq(formatBytes32String(''));
+    expect(await implementation.rollupStateHash()).to.be.eq(formatBytes32String(''));
+    expect(await implementation.escapeBlockLowerBound()).to.be.eq(BigNumber.from(escapeBlockLowerBound));
+    expect(await implementation.escapeBlockUpperBound()).to.be.eq(BigNumber.from(escapeBlockUpperBound));
+    expect(await implementation.allowThirdPartyContracts()).to.be.eq(false);
 
     await expect(
       implementation
@@ -89,16 +106,16 @@ describe('rollup_processor: upgradable test', () => {
           0,
           false,
         ),
-    ).rejects.toThrow(`Initializable: contract is already initialized`);
+    ).to.be.revertedWith(`Initializable: contract is already initialized`);
   });
 
   it('proxy admin owner has OWNER_ROLE of rollupProcessor', async () => {
     const proxyAdminOwner = await proxyAdmin.owner();
-    expect(await rollupProcessor.hasRole(OWNER_ROLE, proxyAdminOwner)).toBe(true);
+    expect(await rollupProcessor.hasRole(OWNER_ROLE, proxyAdminOwner)).to.be.eq(true);
   });
 
   it('anyone can initialize after unsafe deployment', async () => {
-    const RollupProcessor = await ethers.getContractFactory('TestRollupProcessor', signers[0]);
+    const RollupProcessor = await ethers.getContractFactory('TestUpgradeRollupProcessor', signers[0]);
 
     const unsafeProxy = await proxyAdmin.deployProxyUNSAFE(RollupProcessor, [
       await rollupProcessor.escapeBlockLowerBound(),
@@ -106,8 +123,8 @@ describe('rollup_processor: upgradable test', () => {
     ]);
 
     const attacker = signers[1];
-    expect(await unsafeProxy.hasRole(OWNER_ROLE, addresses[0].toString())).toBe(false);
-    expect(await unsafeProxy.hasRole(OWNER_ROLE, addresses[1].toString())).toBe(false);
+    expect(await unsafeProxy.hasRole(OWNER_ROLE, addresses[0].toString())).to.be.eq(false);
+    expect(await unsafeProxy.hasRole(OWNER_ROLE, addresses[1].toString())).to.be.eq(false);
 
     expect(
       await unsafeProxy
@@ -124,8 +141,8 @@ describe('rollup_processor: upgradable test', () => {
         ),
     );
 
-    expect(await unsafeProxy.hasRole(OWNER_ROLE, addresses[0].toString())).toBe(false);
-    expect(await unsafeProxy.hasRole(OWNER_ROLE, addresses[1].toString())).toBe(true);
+    expect(await unsafeProxy.hasRole(OWNER_ROLE, addresses[0].toString())).to.be.eq(false);
+    expect(await unsafeProxy.hasRole(OWNER_ROLE, addresses[1].toString())).to.be.eq(true);
   });
 
   it('anyone can reinitialize after unsafe upgrade', async () => {
@@ -138,7 +155,7 @@ describe('rollup_processor: upgradable test', () => {
     ]);
 
     const attacker = signers[1];
-    expect(await unsafeUpgrade.hasRole(OWNER_ROLE, addresses[1].toString())).toBe(false);
+    expect(await unsafeUpgrade.hasRole(OWNER_ROLE, addresses[1].toString())).to.be.eq(false);
     expect(
       await unsafeUpgrade
         .connect(attacker)
@@ -153,8 +170,8 @@ describe('rollup_processor: upgradable test', () => {
           false,
         ),
     );
-    expect(await unsafeUpgrade.getImplementationVersion()).toBe(versionBefore + 1);
-    expect(await unsafeUpgrade.hasRole(OWNER_ROLE, addresses[1].toString())).toBe(true);
+    expect(await unsafeUpgrade.getImplementationVersion()).to.be.eq(versionBefore + 1);
+    expect(await unsafeUpgrade.hasRole(OWNER_ROLE, addresses[1].toString())).to.be.eq(true);
   });
 
   it('cannot re-initialize proxy with same implementation version', async () => {
@@ -171,7 +188,7 @@ describe('rollup_processor: upgradable test', () => {
           0,
           false,
         ),
-    ).rejects.toThrow(`Initializable: contract is already initialized`);
+    ).to.be.revertedWith(`Initializable: contract is already initialized`);
   });
 
   it('unsafe upgrade to lower version implementation cannot be initialized', async () => {
@@ -195,13 +212,13 @@ describe('rollup_processor: upgradable test', () => {
           0,
           false,
         ),
-    ).rejects.toThrow(`Initializable: contract is already initialized`);
-    expect(await rollupProcessor.getImplementationVersion()).toBe(0);
+    ).to.be.revertedWith(`Initializable: contract is already initialized`);
+    expect(await rollupProcessor.getImplementationVersion()).to.be.eq(0);
   });
 
   it('cannot re-initialize after upgradeAndCall (with initialization)', async () => {
     const RollupProcessor = await ethers.getContractFactory('UpgradedTestRollupProcessorV2', signers[0]);
-    expect(await rollupProcessor.getImplementationVersion()).toBe(1);
+    expect(await rollupProcessor.getImplementationVersion()).to.be.eq(1);
     expect(
       await proxyAdmin.upgradeAndInitializeWithConstructor(
         rollupProcessor.address,
@@ -220,8 +237,8 @@ describe('rollup_processor: upgradable test', () => {
       ),
     );
 
-    expect(await rollupProcessor.getImplementationVersion()).toBe(2);
-    expect(await rollupProcessor.hasRole(OWNER_ROLE, addresses[0])).toBe(true);
+    expect(await rollupProcessor.getImplementationVersion()).to.be.eq(2);
+    expect(await rollupProcessor.hasRole(OWNER_ROLE, addresses[0])).to.be.eq(true);
 
     await expect(
       rollupProcessor.rollupProcessor
@@ -236,7 +253,7 @@ describe('rollup_processor: upgradable test', () => {
           0,
           false,
         ),
-    ).rejects.toThrow(`Initializable: contract is already initialized`);
+    ).to.be.revertedWith(`Initializable: contract is already initialized`);
   });
 
   it('cannot upgrade to lower or equal version implementation', async () => {
@@ -259,8 +276,8 @@ describe('rollup_processor: upgradable test', () => {
         ],
         [escapeBlockLowerBound, escapeBlockUpperBound],
       ),
-    ).rejects.toThrow(`Initializable: contract is already initialized`);
-    expect(await rollupProcessor.getImplementationVersion()).toBe(versionBefore);
+    ).to.be.revertedWith(`Initializable: contract is already initialized`);
+    expect(await rollupProcessor.getImplementationVersion()).to.be.eq(versionBefore);
 
     const RollupProcessorV0 = await ethers.getContractFactory('UpgradedTestRollupProcessorV0', signers[0]);
     await expect(
@@ -279,19 +296,19 @@ describe('rollup_processor: upgradable test', () => {
         ],
         [escapeBlockLowerBound, escapeBlockUpperBound],
       ),
-    ).rejects.toThrow(`Initializable: contract is already initialized`);
-    expect(await rollupProcessor.getImplementationVersion()).toBe(versionBefore);
+    ).to.be.revertedWith(`Initializable: contract is already initialized`);
+    expect(await rollupProcessor.getImplementationVersion()).to.be.eq(versionBefore);
   });
 
   it('ownership of proxy admin is transferred, new owner can upgrade implementation', async () => {
     const newAdmin = signers[1];
-    expect(await rollupProcessor.getImplementationVersion()).toBe(1);
-    expect(await rollupProcessor.hasRole(OWNER_ROLE, addresses[0])).toBe(true);
-    expect(await rollupProcessor.hasRole(OWNER_ROLE, addresses[1])).toBe(false);
+    expect(await rollupProcessor.getImplementationVersion()).to.be.eq(1);
+    expect(await rollupProcessor.hasRole(OWNER_ROLE, addresses[0])).to.be.eq(true);
+    expect(await rollupProcessor.hasRole(OWNER_ROLE, addresses[1])).to.be.eq(false);
 
-    expect(await proxyAdmin.owner()).toEqual(addresses[0]);
+    expect(await proxyAdmin.owner()).to.be.eql(addresses[0]);
     expect(await proxyAdmin.transferProxyAdminOwnership(addresses[1]));
-    expect(await proxyAdmin.owner()).toEqual(addresses[1]);
+    expect(await proxyAdmin.owner()).to.be.eql(addresses[1]);
 
     proxyAdmin.connectNewSigner(signers[1]);
 
@@ -314,9 +331,9 @@ describe('rollup_processor: upgradable test', () => {
       ),
     );
 
-    expect(await rollupProcessor.getImplementationVersion()).toBe(2);
+    expect(await rollupProcessor.getImplementationVersion()).to.be.eq(2);
 
-    expect(await rollupProcessor.hasRole(OWNER_ROLE, addresses[0])).toBe(true);
-    expect(await rollupProcessor.hasRole(OWNER_ROLE, addresses[1])).toBe(true);
+    expect(await rollupProcessor.hasRole(OWNER_ROLE, addresses[0])).to.be.eq(true);
+    expect(await rollupProcessor.hasRole(OWNER_ROLE, addresses[1])).to.be.eq(true);
   });
 });

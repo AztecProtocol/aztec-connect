@@ -3,3 +3,7 @@ artifacts
 **/fixtures/*.dat
 .openzeppelin
 data
+out
+broadcast
+coverage/
+coverage.json

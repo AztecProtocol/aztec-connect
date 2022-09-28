@@ -1,3 +1,10 @@
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { solidity } = require('ethereum-waffle');
+import chai from 'chai';
+
+import { expect } from 'chai';
+chai.use(solidity);
+
 import { EthAddress } from '@aztec/barretenberg/address';
 import { Asset, TxHash } from '@aztec/barretenberg/blockchain';
 import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
@@ -65,22 +72,22 @@ describe('rollup_processor: async defi bridge', () => {
 
   const expectHashes = async (expectedResult: DefiInteractionNote[]) => {
     const expectedHashes = computeInteractionHashes(expectedResult);
-    expect(await rollupProcessor.defiInteractionHashes()).toEqual(expectedHashes);
+    expect(await rollupProcessor.defiInteractionHashes()).to.be.eql(expectedHashes);
   };
 
   const expectAsyncHashes = async (expectedResult: DefiInteractionNote[]) => {
     const expectedHashes = computeInteractionHashes(expectedResult);
-    expect(await rollupProcessor.asyncDefiInteractionHashes()).toEqual(expectedHashes);
+    expect(await rollupProcessor.asyncDefiInteractionHashes()).to.be.eql(expectedHashes);
   };
 
   const expectResult = async (txHash: TxHash, expectedResult: DefiInteractionNote[]) => {
-    expect(await fetchResult(txHash)).toEqual(expectedResult);
+    expect(await fetchResult(txHash)).to.be.eql(expectedResult);
   };
 
   const expectBalance = async (assetId: number, balance: bigint) =>
-    expect(await assets[assetId].balanceOf(rollupProcessor.address)).toBe(balance);
+    expect(await assets[assetId].balanceOf(rollupProcessor.address)).to.be.eq(balance);
 
-  beforeAll(async () => {
+  before(async () => {
     signers = await ethers.getSigners();
     rollupProvider = signers[0];
     addresses = await Promise.all(signers.map(async u => EthAddress.fromString(await u.getAddress())));
@@ -212,7 +219,7 @@ describe('rollup_processor: async defi bridge', () => {
       await expectBalance(2, 0n);
     }
 
-    await expect(rollupProcessor.processAsyncDefiInteraction(0)).rejects.toThrow();
+    await expect(rollupProcessor.processAsyncDefiInteraction(0)).to.be.reverted;
   });
 
   it('revert if the bridge does not transfer enough output ETH to rollup processor', async () => {
@@ -247,7 +254,7 @@ describe('rollup_processor: async defi bridge', () => {
       await expectBalance(2, 0n);
     }
 
-    await expect(rollupProcessor.processAsyncDefiInteraction(0)).rejects.toThrow();
+    await expect(rollupProcessor.processAsyncDefiInteraction(0)).to.be.reverted;
   });
 
   it('revert if the bridge returns non empty output value B when number of output assets is 1', async () => {
@@ -282,7 +289,7 @@ describe('rollup_processor: async defi bridge', () => {
       await expectBalance(2, 0n);
     }
 
-    await expect(rollupProcessor.processAsyncDefiInteraction(0)).rejects.toThrow();
+    await expect(rollupProcessor.processAsyncDefiInteraction(0)).to.be.reverted;
   });
 
   it('transfer input token back to rollup processor if fail to finalise', async () => {
@@ -321,6 +328,50 @@ describe('rollup_processor: async defi bridge', () => {
       await expectAsyncHashes(expectedAsyncResult);
 
       await expectBalance(0, 0n);
+      await expectBalance(1, initialBalance);
+    }
+  });
+
+  it('refund input tokens back to rollup processor if finalise returns no tokens', async () => {
+    const inputValue = 20n;
+    const { bridgeCallData } = await mockAsyncBridge(rollupProvider, rollupProcessor, assetAddresses, {
+      inputAssetIdA: 0,
+      inputAssetIdB: 1,
+      outputValueA: 0n,
+      outputValueB: 0n,
+      returnInputValue: inputValue,
+    });
+
+    const initialBalance = 50n;
+    await topupEth(initialBalance);
+    await topupToken(1, initialBalance);
+
+    await expectBalance(0, initialBalance);
+    await expectBalance(1, initialBalance);
+
+    {
+      const { encodedProofData } = createRollupProof(rollupProvider, dummyProof(), {
+        defiInteractionData: [new DefiInteractionData(bridgeCallData, inputValue)],
+      });
+      const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
+      const txHash = await rollupProcessor.sendTx(tx);
+
+      await expectResult(txHash, []);
+      await expectHashes([]);
+      await expectAsyncHashes([]);
+
+      await expectBalance(0, initialBalance - inputValue);
+      await expectBalance(1, initialBalance - inputValue);
+    }
+
+    {
+      const txHash = await rollupProcessor.processAsyncDefiInteraction(0);
+      const expectedAsyncResult = [new DefiInteractionNote(bridgeCallData, 0, inputValue, 0n, 0n, false)];
+      await expectResult(txHash, expectedAsyncResult);
+      await expectHashes([]);
+      await expectAsyncHashes(expectedAsyncResult);
+
+      await expectBalance(0, initialBalance);
       await expectBalance(1, initialBalance);
     }
   });
@@ -398,7 +449,7 @@ describe('rollup_processor: async defi bridge', () => {
       await expectBalance(2, 0n);
     }
 
-    await expect(rollupProcessor.processAsyncDefiInteraction(0)).rejects.toThrow();
+    await expect(rollupProcessor.processAsyncDefiInteraction(0)).to.be.reverted;
   });
 
   it('revert if the bridge does not refund enough input ETH to rollup processor', async () => {
@@ -433,7 +484,7 @@ describe('rollup_processor: async defi bridge', () => {
       await expectBalance(2, 0n);
     }
 
-    await expect(rollupProcessor.processAsyncDefiInteraction(0)).rejects.toThrow();
+    await expect(rollupProcessor.processAsyncDefiInteraction(0)).to.be.reverted;
   });
 
   it('cannot process the same interaction more than once', async () => {
@@ -451,7 +502,7 @@ describe('rollup_processor: async defi bridge', () => {
 
     await rollupProcessor.processAsyncDefiInteraction(0);
 
-    await expect(rollupProcessor.processAsyncDefiInteraction(0)).rejects.toThrow();
+    await expect(rollupProcessor.processAsyncDefiInteraction(0)).to.be.reverted;
   });
 
   it('cannot process an unknown interaction', async () => {
@@ -467,7 +518,7 @@ describe('rollup_processor: async defi bridge', () => {
     const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
     await rollupProcessor.sendTx(tx);
 
-    await expect(rollupProcessor.processAsyncDefiInteraction(1)).rejects.toThrow();
+    await expect(rollupProcessor.processAsyncDefiInteraction(1)).to.be.reverted;
   });
 
   it('cannot process an interaction from another bridge', async () => {
@@ -495,8 +546,8 @@ describe('rollup_processor: async defi bridge', () => {
       await rollupProcessor.sendTx(tx);
     }
 
-    await expect(rollupProcessor.processAsyncDefiInteraction(numberOfBridgeCalls + 1)).rejects.toThrow();
-    await expect(rollupProcessor.processAsyncDefiInteraction(numberOfBridgeCalls + 2)).rejects.toThrow();
+    await expect(rollupProcessor.processAsyncDefiInteraction(numberOfBridgeCalls + 1)).to.be.reverted;
+    await expect(rollupProcessor.processAsyncDefiInteraction(numberOfBridgeCalls + 2)).to.be.reverted;
 
     await rollupProcessor.processAsyncDefiInteraction(0);
     await rollupProcessor.processAsyncDefiInteraction(numberOfBridgeCalls);
@@ -517,9 +568,9 @@ describe('rollup_processor: async defi bridge', () => {
     await rollupProcessor.sendTx(tx);
 
     await rollupProcessor.stubAsyncTransactionHashes(511);
-    expect((await rollupProcessor.asyncDefiInteractionHashes()).length).toEqual(511);
+    expect((await rollupProcessor.asyncDefiInteractionHashes()).length).to.be.eql(511);
     await rollupProcessor.processAsyncDefiInteraction(0);
-    expect((await rollupProcessor.asyncDefiInteractionHashes()).length).toEqual(512);
+    expect((await rollupProcessor.asyncDefiInteractionHashes()).length).to.be.eql(512);
   });
 
   it('will fail to finalise if async array is max size', async () => {
@@ -538,6 +589,6 @@ describe('rollup_processor: async defi bridge', () => {
 
     await rollupProcessor.stubAsyncTransactionHashes(512);
 
-    await expect(rollupProcessor.processAsyncDefiInteraction(0)).rejects.toThrow();
+    await expect(rollupProcessor.processAsyncDefiInteraction(0)).to.be.reverted;
   });
 });

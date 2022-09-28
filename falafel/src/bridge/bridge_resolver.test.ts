@@ -15,6 +15,24 @@ const bridgeConfigs: BridgeConfig[] = [
     gas: 0,
     rollupFrequency: 4,
   },
+  {
+    bridgeCallData: 3n,
+    numTxs: 40,
+    gas: 500000,
+    rollupFrequency: 2,
+  },
+  {
+    bridgeCallData: 4n,
+    numTxs: 40,
+    gas: 250000,
+    rollupFrequency: 4,
+  },
+  {
+    bridgeCallData: 5n,
+    numTxs: 3,
+    gas: 100000,
+    rollupFrequency: 4,
+  },
 ];
 
 type Mockify<T> = {
@@ -58,12 +76,11 @@ describe('Bridge Resolver', () => {
   });
 
   it('returns correct single tx gas in the bridge config', () => {
-    expect(bridgeResolver.getMinBridgeTxGas(bridgeConfigs[0].bridgeCallData)).toEqual(
-      bridgeConfigs[0].gas / bridgeConfigs[0].numTxs,
-    );
-    expect(bridgeResolver.getMinBridgeTxGas(bridgeConfigs[1].bridgeCallData)).toEqual(
-      bridgeConfigs[1].gas / bridgeConfigs[1].numTxs,
-    );
+    for (const bridgeConfig of bridgeConfigs) {
+      expect(bridgeResolver.getMinBridgeTxGas(bridgeConfig.bridgeCallData)).toEqual(
+        Math.ceil(bridgeConfig.gas / bridgeConfig.numTxs),
+      );
+    }
   });
 
   it('returns correct single tx gas NOT in the bridge config and when the allowThirdPartyContracts flag is set', () => {
@@ -78,6 +95,8 @@ describe('Bridge Resolver', () => {
 
   it('throws for a tx NOT in the bridge config and when the allowThirdPartyContracts flag is FALSE', () => {
     blockchain.getBlockchainStatus.mockReturnValue({ allowThirdPartyContracts: false });
-    expect(() => bridgeResolver.getMinBridgeTxGas(3n)).toThrow('Cannot get gas. Unrecognised DeFi-bridge');
+    expect(() => bridgeResolver.getMinBridgeTxGas(BigInt(bridgeConfigs.length + 1))).toThrow(
+      'Cannot get gas. Unrecognised DeFi-bridge',
+    );
   });
 });
