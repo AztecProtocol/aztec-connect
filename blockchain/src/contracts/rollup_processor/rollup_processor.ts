@@ -537,20 +537,45 @@ export class RollupProcessor {
     const latestBlock = await this.provider.getBlockNumber();
     const rollupChunkSize = this.rollupRetrievalChunkSize();
 
-    let start = earliestBlock;
-    let end = Math.min(latestBlock, start + rollupChunkSize - 1);
+    const findLatestBlock = async () => {
+      // look backwards to find the latest rollup, then stop
+      let end = latestBlock;
+      let start = Math.max(end - rollupChunkSize, earliestBlock);
 
-    while (start <= latestBlock) {
-      this.log(`fetching rollup events between blocks ${start} and ${end}...`);
-      const rollupFilter = this.rollupProcessor.filters.RollupProcessed(rollupId == -1 ? undefined : rollupId);
-      const events = await this.rollupProcessor.queryFilter(rollupFilter, start, end);
-      if (events.length) {
-        return (await this.getRollupBlocksFromEvents(events.slice(-1), 1))[0];
+      while (end > earliestBlock) {
+        this.log(`fetching rollup events between blocks ${start} and ${end}...`);
+        const rollupFilter = this.rollupProcessor.filters.RollupProcessed();
+        const events = await this.rollupProcessor.queryFilter(rollupFilter, start, end);
+        if (events.length) {
+          return (await this.getRollupBlocksFromEvents(events.slice(-1), 1))[0];
+        }
+
+        end = Math.max(start - 1, earliestBlock);
+        start = Math.max(end - rollupChunkSize, earliestBlock);
       }
+    };
 
-      start = end + 1;
-      end = Math.min(start + rollupChunkSize - 1, latestBlock);
+    const findSpecificBlock = async () => {
+      let start = earliestBlock;
+      let end = Math.min(latestBlock, start + rollupChunkSize - 1);
+
+      while (start <= latestBlock) {
+        this.log(`fetching rollup events between blocks ${start} and ${end}...`);
+        const rollupFilter = this.rollupProcessor.filters.RollupProcessed(rollupId);
+        const events = await this.rollupProcessor.queryFilter(rollupFilter, start, end);
+        if (events.length) {
+          return (await this.getRollupBlocksFromEvents(events.slice(-1), 1))[0];
+        }
+
+        start = end + 1;
+        end = Math.min(start + rollupChunkSize - 1, latestBlock);
+      }
+    };
+
+    if (rollupId == -1) {
+      return await findLatestBlock();
     }
+    return await findSpecificBlock();
   }
 
   /**
