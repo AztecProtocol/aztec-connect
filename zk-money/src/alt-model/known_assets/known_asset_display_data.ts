@@ -9,7 +9,9 @@ import rbtcIcon from '../../images/renBTC.svg';
 import rbtcGradientIcon from '../../images/renBTC_gradient.svg';
 import rbtcWhiteIcon from '../../images/renBTC_white.svg';
 import stEthGradientIcon from '../../images/steth_gradient.svg';
+import stEthWhiteIcon from '../../images/steth_white.svg';
 import yearnGradientIcon from '../../images/yearn_gradient.svg';
+import eulerGradientIcon from '../../images/euler_gradient.svg';
 import questionMarkBlackIcon from '../../images/question_mark_black.svg';
 import questionMarkWhiteIcon from '../../images/question_mark_white.svg';
 import { KNOWN_MAINNET_ASSET_ADDRESS_STRS as S } from './known_asset_addresses';
@@ -38,11 +40,10 @@ export function getAssetIconWhite(address: EthAddress) {
       return ethWhiteIcon;
     case S.DAI:
       return daiWhiteIcon;
+    case S.wstETH:
+      return stEthWhiteIcon;
     case S.renBTC:
       return rbtcWhiteIcon;
-    case S.yvDAI:
-    case S.yvETH:
-      return yearnGradientIcon;
     default:
       return questionMarkWhiteIcon;
   }
@@ -62,6 +63,10 @@ export function getAssetIconGradient(address: EthAddress) {
     case S.yvDAI:
     case S.yvETH:
       return yearnGradientIcon;
+    case S.weWETH:
+    case S.weDAI:
+    case S.wewstETH:
+      return eulerGradientIcon;
     default:
       return questionMarkBlackIcon;
   }
@@ -75,6 +80,7 @@ export function getAssetPreferredFractionalDigitsFromStr(addressStr: string) {
   switch (addressStr) {
     case S.DAI:
     case S.yvDAI:
+    case S.weDAI:
       return 2;
     case S.renBTC:
       return 8;
@@ -83,6 +89,8 @@ export function getAssetPreferredFractionalDigitsFromStr(addressStr: string) {
     case S.wstETH:
     case S.stETH:
     case S.wETH:
+    case S.weWETH:
+    case S.wewstETH:
       return 6;
   }
 }

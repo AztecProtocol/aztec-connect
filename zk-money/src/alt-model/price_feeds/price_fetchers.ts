@@ -34,23 +34,23 @@ function createWstEthPriceObs(provider: Provider, chainLinkPollerCache: ChainLin
   });
 }
 
+export type PriceObs = Obs<bigint | undefined>;
+
 function createUnderlyingAssetPriceObs(
-  underlyingAssetAddressStr: string,
+  underlyingAssetPriceObs: PriceObs | undefined,
   recipeId: string,
   decimals: number,
-  chainLinkPollerCache: ChainLinkPollerCache,
   underlyingAmountPollerCache: UnderlyingAmountPollerCache,
 ) {
   const unitAssetValue = 10n ** BigInt(decimals);
   const unitUnderlyingAssetValuePoller = underlyingAmountPollerCache.get([recipeId, unitAssetValue]);
-  const chainLinkPriceObs = getChainLinkPriceObs(underlyingAssetAddressStr, chainLinkPollerCache);
   if (!unitUnderlyingAssetValuePoller) return;
-  if (!chainLinkPriceObs) return;
-  return Obs.combine([unitUnderlyingAssetValuePoller.obs, chainLinkPriceObs]).map(
-    ([unitUnderlyingAssetValue, chainlinkPrice]) => {
+  if (!underlyingAssetPriceObs) return;
+  return Obs.combine([unitUnderlyingAssetValuePoller.obs, underlyingAssetPriceObs]).map(
+    ([unitUnderlyingAssetValue, underlyingAssetPrice]) => {
       if (!unitUnderlyingAssetValue) return undefined;
-      if (chainlinkPrice === undefined) return undefined;
-      return (chainlinkPrice * unitUnderlyingAssetValue.amount) / unitAssetValue;
+      if (underlyingAssetPrice === undefined) return undefined;
+      return (underlyingAssetPrice * unitUnderlyingAssetValue.amount) / unitAssetValue;
     },
   );
 }
@@ -66,24 +66,26 @@ export function createAssetPriceObs(
   provider: Provider,
   chainLinkPollerCache: ChainLinkPollerCache,
   underlyingAmountPollerCache: UnderlyingAmountPollerCache,
-) {
+  getPriceFeedObs: (assetAddressStr: string) => PriceObs | undefined,
+): PriceObs | undefined {
+  const boundCreateUnderlyingAssetPriceObs = (underlyingAssetAddressStr: string, recipeId: string, decimals = 18) =>
+    createUnderlyingAssetPriceObs(
+      getPriceFeedObs(underlyingAssetAddressStr),
+      recipeId,
+      decimals,
+      underlyingAmountPollerCache,
+    );
   switch (addressStr) {
     case S.yvDAI:
-      return createUnderlyingAssetPriceObs(
-        S.DAI,
-        'yearn-finance.DAI-to-yvDAI',
-        18,
-        chainLinkPollerCache,
-        underlyingAmountPollerCache,
-      );
+      return boundCreateUnderlyingAssetPriceObs(S.DAI, 'yearn-finance.DAI-to-yvDAI');
     case S.yvETH:
-      return createUnderlyingAssetPriceObs(
-        S.wETH,
-        'yearn-finance.ETH-to-yvETH',
-        18,
-        chainLinkPollerCache,
-        underlyingAmountPollerCache,
-      );
+      return boundCreateUnderlyingAssetPriceObs(S.wETH, 'yearn-finance.ETH-to-yvETH');
+    case S.weWETH:
+      return boundCreateUnderlyingAssetPriceObs(S.wETH, 'euler.ETH-to-weETH');
+    case S.weDAI:
+      return boundCreateUnderlyingAssetPriceObs(S.DAI, 'euler.DAI-to-weDAI');
+    case S.wewstETH:
+      return boundCreateUnderlyingAssetPriceObs(S.wstETH, 'euler.wstETH-to-wewstETH');
     case S.wstETH:
       return createWstEthPriceObs(provider, chainLinkPollerCache);
     default:
