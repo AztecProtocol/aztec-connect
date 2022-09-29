@@ -18,18 +18,6 @@
   overflow: hidden;
 }
 
-.dummyDefiCard {
-  background-image: url('../../../images/dummyDefiCardImg.svg');
-  height: 446px;
-  width: 346px;
-  background-size: cover;
-  box-shadow: 0px 4px 10px rgb(0 0 0 / 10%);
-  border-radius: 20px;
-  background-repeat: no-repeat;
-  top: 0px;
-  left: 0px;
-}
-
 .investmentFilterInputs {
   display: flex;
   flex-direction: row;
@@ -52,12 +40,6 @@
 
 .select {
   margin-right: 20px;
-}
-
-@media screen and (max-width: 1350px) {
-  .hideMinWidth {
-    display: none;
-  }
 }
 
 @media (max-width: 768px) {
