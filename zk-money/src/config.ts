@@ -54,6 +54,9 @@ const productionConfig: ConfigVars = {
     `${toBaseUnits('6', 18)}`, // 6 wstETH
     `${toBaseUnits('5', 18)}`, // 5 yvETH
     `${toBaseUnits('10000', 18)}`, // 10,000 yvDAI
+    `${toBaseUnits('5', 18)}`, // 5 weWETH
+    `${toBaseUnits('6', 18)}`, // 6 wewstETH
+    `${toBaseUnits('10000', 18)}`, // 10,000 weDAI
   ]),
   sessionTimeout: '30', // days
   debugFilter: 'zm:*,bb:*',
@@ -134,6 +137,9 @@ function assembleConfig(
       [S.wstETH]: BigInt(txAmountLimits[3]),
       [S.yvETH]: BigInt(txAmountLimits[4]),
       [S.yvDAI]: BigInt(txAmountLimits[5]),
+      [S.weWETH]: BigInt(txAmountLimits[6]),
+      [S.wewstETH]: BigInt(txAmountLimits[7]),
+      [S.weDAI]: BigInt(txAmountLimits[8]),
     },
     sessionTimeout: +(sessionTimeout || 1),
     debugFilter,
