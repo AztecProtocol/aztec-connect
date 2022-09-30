@@ -13,7 +13,7 @@ import { useVariableAprText } from '../position_key_stat_configs';
 export const EULER_ETH_CARD: CreateRecipeArgs = {
   id: 'euler.ETH-to-weETH',
   selectBlockchainBridge: ({ bridges }) => bridges.find(x => x.id === 10),
-  gradient: ['rgb(15, 32, 40)', 'rgb(49, 77, 89)'],
+  gradient: ['#414066', '#414066'],
   openHandleAssetAddress: KMAA.weWETH,
   entryInputAssetAddressA: KMAA.ETH,
   entryOutputAssetAddressA: KMAA.weWETH,

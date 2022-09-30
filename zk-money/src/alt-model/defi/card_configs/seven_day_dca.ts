@@ -23,7 +23,7 @@ export const SEVEN_DAY_DCA_CARD_DAI_TO_ETH: CreateRecipeArgs = {
     value: 7, // Duration in ticks (days)
   },
   projectName: '7 Day DCA',
-  gradient: ['#183A37', '#A0AF84'],
+  gradient: ['#3BB273', '#3BB273'],
   website: 'https://github.com/AztecProtocol/aztec-connect-bridges/blob/master/src/specs/dca/readme.md',
   websiteLabel: 'DCA Spec',
   name: 'Dollar-Cost Averaging',
