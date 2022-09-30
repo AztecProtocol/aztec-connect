@@ -8,6 +8,28 @@ services:
     ports:
       - '8545:8545'
 
+  kebab:
+    image: 278380418400.dkr.ecr.eu-west-2.amazonaws.com/kebab:latest
+    environment:
+      ETHEREUM_HOST: http://ganache:8545
+      PORT: 8546
+      ALLOW_PRIVILEGED_METHODS: 'true'
+      VK: ${VK}
+    depends_on:
+      - ganache
+    command: >
+      sh -c "
+      set -e;
+      mkdir -p /usr/share/env;
+      rm -f /usr/share/env/.env;
+      yarn -s deploy_rollup_processor >> /usr/share/env/.env;
+      . /usr/share/env/.env && yarn start
+      "
+    ports:
+      - '8546:8546'
+    volumes:
+      - env_data:/usr/share/env
+
   halloumi1:
     image: 278380418400.dkr.ecr.eu-west-2.amazonaws.com/halloumi:latest
     environment:
@@ -31,25 +53,25 @@ services:
   falafel:
     image: 278380418400.dkr.ecr.eu-west-2.amazonaws.com/falafel:latest
     environment:
-      ETHEREUM_HOST: http://ganache:8545
+      ETHEREUM_HOST: http://kebab:8546
       NUM_INNER_ROLLUP_TXS: ${NUM_INNER_ROLLUP_TXS}
       NUM_OUTER_ROLLUP_PROOFS: ${NUM_OUTER_ROLLUP_PROOFS}
       NODE_ENV: production
       PROVERLESS: ${PROVERLESS}
-      VK: ${VK}
       FEE_PAYING_ASSET_IDS: 0,1
       FEE_GAS_PRICE_MULTIPLIER: 0.01
     depends_on:
-      - ganache
+      - kebab
     command: >
       sh -c "
       set -e;
-      while ! nc -z ganache 8545; do sleep 1; done;
-      `yarn -s deploy_rollup_processor`;
-      yarn start
+      while ! nc -z kebab 8546; do sleep 1; done;
+      . /usr/share/env/.env && yarn start
       "
     ports:
       - '8081:8081'
+    volumes:
+      - env_data:/usr/share/env
 
   sdk:
     image: 278380418400.dkr.ecr.eu-west-2.amazonaws.com/sdk:latest
@@ -73,7 +95,7 @@ services:
   end-to-end:
     image: 278380418400.dkr.ecr.eu-west-2.amazonaws.com/end-to-end:latest
     environment:
-      ETHEREUM_HOST: http://ganache:8545
+      ETHEREUM_HOST: http://kebab:8546
       ROLLUP_HOST: http://falafel:8081
       SDK_HOST: http://sdk:1234
       HUMMUS_HOST: http://hummus:8080
@@ -86,3 +108,5 @@ services:
       ./scripts/wait_till_ready;
       yarn test ${TEST:-./src/e2e.test.ts}
       "
+volumes:
+  env_data:

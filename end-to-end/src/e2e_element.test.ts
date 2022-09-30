@@ -26,6 +26,7 @@ const { ETHEREUM_HOST = 'http://localhost:8545', ROLLUP_HOST = 'http://localhost
 /**
  * Run the following:
  * blockchain: yarn start:ganache:fork
+ * kebab: yarn start:e2e
  * halloumi: yarn start:e2e
  * falafel: yarn start:e2e
  * end-to-end: yarn test e2e_element

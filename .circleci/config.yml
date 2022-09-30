@@ -216,6 +216,18 @@ jobs:
           working_directory: blockchain
           command: cond_spot_run_tests blockchain
 
+  kebab:
+    machine:
+      image: ubuntu-2004:202010-01
+    resource_class: large
+    steps:
+      - checkout
+      - *setup_env
+      - run:
+          name: 'Build'
+          working_directory: kebab
+          command: build kebab
+
   halloumi:
     machine:
       image: ubuntu-2004:202010-01
@@ -608,9 +620,15 @@ jobs:
           name: 'blockchain'
           working_directory: blockchain
           command: |
-            deploy_ecr blockchain
+            deploy blockchain
             ./scripts/deploy_contracts
             deploy_npm blockchain
+      - run:
+          name: 'kebab'
+          working_directory: kebab
+          command: |
+            deploy kebab
+            deploy_dockerhub kebab
       - run:
           name: 'halloumi'
           working_directory: halloumi
@@ -656,12 +674,12 @@ jobs:
           command: |
             deploy faucet
             deploy_dockerhub faucet
-      - run:
-          name: 'docs'
-          working_directory: docs
-          command: |
-            deploy_ecr docs
-            deploy_s3 docs
+      # - run:
+      #     name: 'docs'
+      #     working_directory: docs
+      #     command: |
+      #       deploy_ecr docs
+      #       deploy_s3 docs
 
   smoketest:
     docker:
@@ -785,6 +803,11 @@ workflows:
           requires:
             - blockchain
           filters: *tag_filter
+      - kebab:
+          requires:
+            - barretenberg-js
+            - blockchain
+          filters: *tag_filter
       - halloumi:
           requires:
             - barretenberg-js
@@ -810,8 +833,8 @@ workflows:
           requires:
             - blockchain
           filters: *tag_filter
-      - docs:
-          filters: *tag_filter
+      # - docs:
+      #     filters: *tag_filter
       - wasabi:
           requires:
             - sdk
@@ -823,6 +846,7 @@ workflows:
       - end-to-end:
           requires:
             - sdk
+            - kebab
           filters: *tag_filter
       - e2e-prover:
           requires:
@@ -924,7 +948,7 @@ workflows:
             - hummus
             - explorer
             - faucet
-            - docs
+            # - docs
           filters:
             branches:
               only:

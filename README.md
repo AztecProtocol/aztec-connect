@@ -15,6 +15,7 @@ The Aztec 2.0 system consists of the following sub projects.
 - `markdown` - General project documentation, coding standards, etc.
 - `sdk` - SDK for interacting with a rollup provider.
 - `website` - Company website.
+- `faucet` - ETH & ERC20 faucet for Aztec mainnet fork.
 
 ### Contributing
 
