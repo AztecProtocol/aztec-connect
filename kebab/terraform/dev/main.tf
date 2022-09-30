@@ -111,12 +111,7 @@ resource "aws_ecs_task_definition" "kebab" {
     "name": "${var.DEPLOY_TAG}-mainnet-fork",
     "image": "trufflesuite/ganache",
     "essential": true,
-    "portMappings": [
-      {
-        "containerPort": 80
-      }
-    ],
-    "command": ["-p=80", "-f=https://mainnet.infura.io/v3/${var.INFURA_API_KEY}", "--chain.chainId=0xA57EC", "--fork.blockNumber=15525911", "--database.dbPath=/data", "-h=0.0.0.0", "-l=12000000", "-a=0"],
+    "command": ["-p=8545", "-f=https://mainnet.infura.io/v3/${var.INFURA_API_KEY}", "--chain.chainId=0xA57EC", "--fork.blockNumber=15525911", "--database.dbPath=/data", "-h=0.0.0.0", "-l=12000000", "-a=0"],
     "mountPoints": [
       {
         "containerPath": "/data",
@@ -139,7 +134,7 @@ resource "aws_ecs_task_definition" "kebab" {
     "memoryReservation": 3840,
     "portMappings": [
       {
-        "containerPort": 8545
+        "containerPort": 80
       }
     ],
     "environment": [
@@ -149,11 +144,11 @@ resource "aws_ecs_task_definition" "kebab" {
       },
       {
         "name": "PORT",
-        "value": "8545"
+        "value": "80"
       },
       {
         "name": "ETHEREUM_HOST",
-        "value": "http://localhost:80"
+        "value": "http://localhost:8545"
       },
       {
         "name": "FAUCET_OPERATOR",
@@ -172,31 +167,6 @@ resource "aws_ecs_task_definition" "kebab" {
       {
         "containerPath": "/usr/src/kebab/data",
         "sourceVolume": "efs-data-store"
-      }
-    ],
-    "logConfiguration": {
-      "logDriver": "awslogs",
-      "options": {
-        "awslogs-group": "${aws_cloudwatch_log_group.kebab_logs.name}",
-        "awslogs-region": "eu-west-2",
-        "awslogs-stream-prefix": "ecs"
-      }
-    }
-  },
-  {
-    "name": "metrics",
-    "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/metrics-sidecar:latest",
-    "essential": false,
-    "memoryReservation": 256,
-    "portMappings": [
-      {
-        "containerPort": 9545
-      }
-    ],
-    "environment": [
-      {
-        "name": "SERVICE",
-        "value": "${var.DEPLOY_TAG}-kebab"
       }
     ],
     "logConfiguration": {
@@ -232,13 +202,13 @@ resource "aws_ecs_service" "kebab" {
   load_balancer {
     target_group_arn = aws_alb_target_group.kebab.arn
     container_name   = "${var.DEPLOY_TAG}-kebab"
-    container_port   = 8545
+    container_port   = 80
   }
 
   service_registries {
     registry_arn   = aws_service_discovery_service.kebab.arn
     container_name = "${var.DEPLOY_TAG}-kebab"
-    container_port = 8545
+    container_port = 80
   }
 
   task_definition = aws_ecs_task_definition.kebab.family
@@ -253,7 +223,7 @@ resource "aws_cloudwatch_log_group" "kebab_logs" {
 # Configure ALB to route kebab.aztec to server.
 resource "aws_alb_target_group" "kebab" {
   name                 = "${var.DEPLOY_TAG}-kebab"
-  port                 = "8545"
+  port                 = "80"
   protocol             = "HTTP"
   target_type          = "ip"
   vpc_id               = data.terraform_remote_state.setup_iac.outputs.vpc_id
@@ -293,10 +263,10 @@ data "aws_alb" "aztec2" {
   arn = data.terraform_remote_state.aztec2_iac.outputs.alb_arn
 }
 
-# kebab DNS entry.
-resource "aws_route53_record" "kebab" {
+# mainnet-fork DNS entry.
+resource "aws_route53_record" "mainnet-fork" {
   zone_id = data.terraform_remote_state.aztec2_iac.outputs.aws_route53_zone_id
-  name    = "${var.DEPLOY_TAG}-kebab"
+  name    = "${var.DEPLOY_TAG}-mainnet-fork"
   type    = "A"
   alias {
     name                   = data.aws_alb.aztec2.dns_name
