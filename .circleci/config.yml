@@ -626,8 +626,8 @@ jobs:
           name: 'kebab'
           working_directory: kebab
           command: |
-            deploy kebab
             ./scripts/export_redeploy.sh
+            deploy kebab
             deploy_dockerhub kebab
       - run:
           name: 'halloumi'
