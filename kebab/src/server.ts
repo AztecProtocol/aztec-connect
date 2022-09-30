@@ -1,4 +1,3 @@
-import { EthAddress } from '@aztec/barretenberg/address';
 import { RequestArguments } from '@aztec/barretenberg/blockchain';
 import { JsonRpcProvider } from '@aztec/blockchain';
 import { InterruptableSleep } from '@aztec/barretenberg/sleep';
@@ -6,6 +5,7 @@ import { createLogger } from '@aztec/barretenberg/log';
 
 import { EthLogsDb, RollupLogsParamsQuery } from './logDb';
 import { RollupEventGetter } from './rollup_event_getter';
+import { RedeployConfig } from './configurator';
 
 export interface EthRequestArguments extends RequestArguments {
   jsonrpc: string;
@@ -32,13 +32,13 @@ export class Server {
   private log = createLogger('Server');
 
   constructor(
-    protected rollupContractAddress: EthAddress,
     private provider: JsonRpcProvider,
     private logsDb: EthLogsDb,
     chainId: number,
     private readonly _allowPrivilegedMethods: boolean,
+    private readonly redeployConfig: RedeployConfig,
   ) {
-    this.rollupEventGetter = new RollupEventGetter(rollupContractAddress, provider, chainId, logsDb);
+    this.rollupEventGetter = new RollupEventGetter(redeployConfig.rollupContractAddress!, provider, chainId, logsDb);
   }
 
   private async retrieveMoreBlocks() {
@@ -54,6 +54,10 @@ export class Server {
     } catch (err) {
       this.log('Error while looking for new rollup events: ', err.message);
     }
+  }
+
+  public getRedeployConfig() {
+    return this.redeployConfig;
   }
 
   public async start() {

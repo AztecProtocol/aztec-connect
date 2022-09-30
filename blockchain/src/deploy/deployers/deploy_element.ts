@@ -44,7 +44,7 @@ export async function deployElementBridge(
   );
   console.error(`ElementBridge contract address: ${elementBridge.address}`);
 
-  await rollup.setSupportedBridge(elementBridge.address, 800000n, { gasLimit });
+  await rollup.setSupportedBridge(elementBridge.address, BigInt(800000), { gasLimit });
 
   for (const asset of assets) {
     const assetTranches = ElementVaultConfig.tranches[asset].filter(

@@ -20,7 +20,7 @@ RUN yarn install --frozen-lockfile && \
   yarn cache clean
 
 FROM node:16-alpine3.15
-RUN apk update && apk add --no-cache llvm10-libs
+RUN apk update && apk add --no-cache llvm10-libs curl jq
 COPY --from=builder /usr/src /usr/src
 WORKDIR /usr/src/falafel
 CMD ["yarn", "start"]

@@ -11,6 +11,6 @@ export const deployCompoundBridge = async (owner: Signer, rollup: Contract) => {
   });
   console.error(`CompoundBridge contract address: ${bridge.address}`);
 
-  await rollup.setSupportedBridge(bridge.address, 100000n, { gasLimit });
+  await rollup.setSupportedBridge(bridge.address, BigInt(100000), { gasLimit });
   return bridge;
 };

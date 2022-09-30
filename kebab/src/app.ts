@@ -61,9 +61,18 @@ export function appFactory(server: Server, prefix: string) {
   });
 
   router.get('/', (ctx: Koa.Context) => {
+    const serverConfig = server.getRedeployConfig();
+    const redeployConfig = {
+      rollupContractAddress: serverConfig.rollupContractAddress?.toString(),
+      priceFeedContractAddresses: serverConfig.priceFeedContractAddresses?.map(x => x.toString()).join(','),
+      feeDistributorAddress: serverConfig.feeDistributorAddress?.toString(),
+      permitHelperAddress: serverConfig.permitHelperContractAddress?.toString(),
+      faucetContractAddress: serverConfig.faucetContractAddress?.toString(),
+    };
     ctx.body = {
       serviceName: 'kebab',
       isReady: server.isReady(),
+      redeployConfig,
     };
     ctx.status = 200;
   });

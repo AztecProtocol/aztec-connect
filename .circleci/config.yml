@@ -620,14 +620,14 @@ jobs:
           name: 'blockchain'
           working_directory: blockchain
           command: |
-            deploy blockchain
-            ./scripts/deploy_contracts
+            deploy_ecr blockchain
             deploy_npm blockchain
       - run:
           name: 'kebab'
           working_directory: kebab
           command: |
             deploy kebab
+            ./scripts/export_redeploy.sh
             deploy_dockerhub kebab
       - run:
           name: 'halloumi'
@@ -913,11 +913,11 @@ workflows:
             - end-to-end
             - hummus
           filters: *tag_filter
-      - e2e-hosted-sdk:
-          requires:
-            - end-to-end
-            - hummus
-          filters: *tag_filter
+      # - e2e-hosted-sdk:
+      #     requires:
+      #       - end-to-end
+      #       - hummus
+      #     filters: *tag_filter
       - deploy:
           requires:
             - x86_64-linux-gcc
@@ -938,7 +938,7 @@ workflows:
             - e2e-defi
             - e2e-element
             - e2e-lido
-            - e2e-hosted-sdk
+            # - e2e-hosted-sdk
             - e2e-non-fee-assets
             - e2e-virtual-assets
             - e2e-chained-txs

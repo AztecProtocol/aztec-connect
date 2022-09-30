@@ -29,15 +29,6 @@ data "terraform_remote_state" "aztec2_iac" {
   }
 }
 
-data "terraform_remote_state" "blockchain" {
-  backend = "s3"
-  config = {
-    bucket = "aztec-terraform"
-    key    = "${var.DEPLOY_TAG}/blockchain"
-    region = "eu-west-2"
-  }
-}
-
 provider "aws" {
   profile = "default"
   region  = "eu-west-2"
@@ -117,6 +108,31 @@ resource "aws_ecs_task_definition" "kebab" {
   container_definitions = <<DEFINITIONS
 [
   {
+    "name": "${var.DEPLOY_TAG}-mainnet-fork",
+    "image": "trufflesuite/ganache",
+    "essential": true,
+    "portMappings": [
+      {
+        "containerPort": 80
+      }
+    ],
+    "command": ["-p=80", "-f=https://mainnet.infura.io/v3/${var.INFURA_API_KEY}", "--chain.chainId=0xA57EC", "--fork.blockNumber=15525911", "--database.dbPath=/data", "-h=0.0.0.0", "-l=12000000", "-a=0"],
+    "mountPoints": [
+      {
+        "containerPath": "/data",
+        "sourceVolume": "efs-data-store"
+      }
+    ],
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "${aws_cloudwatch_log_group.kebab_logs.name}",
+        "awslogs-region": "eu-west-2",
+        "awslogs-stream-prefix": "ecs"
+      }
+    }
+  },
+  {
     "name": "${var.DEPLOY_TAG}-kebab",
     "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/kebab:${var.DEPLOY_TAG}",
     "essential": true,
@@ -137,11 +153,19 @@ resource "aws_ecs_task_definition" "kebab" {
       },
       {
         "name": "ETHEREUM_HOST",
-        "value": "http://${var.DEPLOY_TAG}-blockchain.local:80"
+        "value": "http://localhost:80"
       },
       {
-        "name": "ROLLUP_CONTRACT_ADDRESS",
-        "value": "${data.terraform_remote_state.blockchain.outputs.rollup_contract_address}"
+        "name": "FAUCET_OPERATOR",
+        "value": "${var.FAUCET_OPERATOR_ADDRESS}"
+      },
+      {
+        "name": "REDEPLOY",
+        "value": "${var.REDEPLOY}"
+      },
+      {
+        "name": "PRIVATE_KEY",
+        "value": "${var.DEV_NET_PRIVATE_KEY}"
       }
     ],
     "mountPoints": [
@@ -220,7 +244,7 @@ resource "aws_ecs_service" "kebab" {
   task_definition = aws_ecs_task_definition.kebab.family
 }
 
-# Logs
+# Kebab Logs
 resource "aws_cloudwatch_log_group" "kebab_logs" {
   name              = "/fargate/service/${var.DEPLOY_TAG}/kebab"
   retention_in_days = "14"

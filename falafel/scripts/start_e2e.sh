@@ -22,5 +22,4 @@ export FEE_PAYING_ASSET_IDS=0,1
 
 yarn build
 yarn clean_db
-. ../.env/env-vars
 yarn start

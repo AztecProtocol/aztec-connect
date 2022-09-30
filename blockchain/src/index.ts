@@ -9,3 +9,4 @@ export * from './units';
 export * from './tokens';
 export * from './ganache/manipulate_blocks';
 export * from './earliest_block';
+export * from './deploy/deploy_contracts';

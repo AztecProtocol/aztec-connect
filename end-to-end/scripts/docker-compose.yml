@@ -15,20 +15,16 @@ services:
       PORT: 8546
       ALLOW_PRIVILEGED_METHODS: 'true'
       VK: ${VK}
+      REDEPLOY: 1
     depends_on:
       - ganache
     command: >
       sh -c "
       set -e;
-      mkdir -p /usr/share/env;
-      rm -f /usr/share/env/.env;
-      yarn -s deploy_rollup_processor >> /usr/share/env/.env;
-      . /usr/share/env/.env && yarn start
+      yarn start
       "
     ports:
       - '8546:8546'
-    volumes:
-      - env_data:/usr/share/env
 
   halloumi1:
     image: 278380418400.dkr.ecr.eu-west-2.amazonaws.com/halloumi:latest
@@ -66,12 +62,10 @@ services:
       sh -c "
       set -e;
       while ! nc -z kebab 8546; do sleep 1; done;
-      . /usr/share/env/.env && yarn start
+      yarn start
       "
     ports:
       - '8081:8081'
-    volumes:
-      - env_data:/usr/share/env
 
   sdk:
     image: 278380418400.dkr.ecr.eu-west-2.amazonaws.com/sdk:latest
