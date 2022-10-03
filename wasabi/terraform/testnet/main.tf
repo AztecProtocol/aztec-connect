@@ -150,7 +150,7 @@ resource "aws_ecs_task_definition" "wasabi_uniswap" {
       },
       {
         "name": "ETHEREUM_HOST",
-        "value": "${data.terraform_remote_state.blockchain.outputs.private_ethereum_host}"
+        "value": "https://${var.DEPLOY_TAG}-mainnet-fork.aztec.network:8545"
       },
       {
         "name": "ROLLUP_HOST",
