@@ -6,6 +6,7 @@ import { LIDO_CARD } from './card_configs/lido';
 import { ELEMENT_CARD, OLD_ELEMENT_CARD } from './card_configs/element';
 import { YEARN_DAI_CARD, YEARN_ETH_CARD } from './card_configs/yearn';
 import { SEVEN_DAY_DCA_CARD_DAI_TO_ETH, SEVEN_DAY_DCA_CARD_ETH_TO_DAI } from './card_configs/seven_day_dca';
+import { EULER_DAI_CARD, EULER_ETH_CARD, EULER_WSTETH_CARD } from './card_configs/euler';
 
 const debug = createDebug('zm:recipes');
 
@@ -68,13 +69,16 @@ function createRecipe(
 }
 
 const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
-  OLD_ELEMENT_CARD,
-  ELEMENT_CARD,
-  LIDO_CARD,
+  EULER_ETH_CARD,
+  EULER_WSTETH_CARD,
+  EULER_DAI_CARD,
+  SEVEN_DAY_DCA_CARD_DAI_TO_ETH,
+  SEVEN_DAY_DCA_CARD_ETH_TO_DAI,
   YEARN_ETH_CARD,
   YEARN_DAI_CARD,
-  SEVEN_DAY_DCA_CARD_DAI_TO_ETH,
-  SEVEN_DAY_DCA_CARD_ETH_TO_DAI
+  LIDO_CARD,
+  OLD_ELEMENT_CARD,
+  ELEMENT_CARD,
 ];
 
 export function createDefiRecipes(status: RollupProviderStatus, assets: RemoteAsset[]) {

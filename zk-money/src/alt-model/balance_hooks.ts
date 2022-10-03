@@ -25,7 +25,9 @@ function getIncomingPendingValues(txs: UserTx[]): AssetValue[] {
           break;
         }
         case ProofId.DEFI_CLAIM: {
-          out.push(tx.outputValueA);
+          if (tx.success) {
+            out.push(tx.outputValueA);
+          }
           break;
         }
       }

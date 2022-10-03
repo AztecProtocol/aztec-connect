@@ -12,9 +12,6 @@ import {
   recipeFiltersToSearchStr,
   searchStrToRecipeFilters,
 } from 'alt-model/defi/recipe_filters';
-import { bindStyle } from 'ui-components/util/classnames';
-
-const cx = bindStyle(style);
 
 interface DefiCardsListProps {
   isLoggedIn: boolean;
@@ -129,7 +126,6 @@ export const DefiCardsList = ({ onSelect, isLoggedIn }: DefiCardsListProps) => {
             isLoggedIn={isLoggedIn}
           />
         ))}
-        {!hasFilters && <div className={cx(style.dummyDefiCard, style.hideMinWidth)} />}
       </div>
     </Section>
   );

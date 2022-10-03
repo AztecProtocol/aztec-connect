@@ -10,7 +10,7 @@ The Aztec Connect system consists of the following sub projects.
 - `sdk` - SDK for interacting with a rollup provider.
 
 Previous bugs fixed:
-https://medium.com/aztec-protocol/vulnerabilities-found-in-aztec-2-0-9b80c8bf416c.com:AztecProtocol/barretenberg.git
+https://medium.com/aztec-protocol/vulnerabilities-found-in-aztec-2-0-9b80c8bf416c
 
 check out our bug bounty:
 https://immunefi.com/bounty/aztecnetwork/

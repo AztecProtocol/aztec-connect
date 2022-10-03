@@ -22,7 +22,7 @@ export const ELEMENT_CARD: CreateRecipeArgs = {
     selectOpt: opts => opts[opts.length - 1], // Tranche expiry timestamp
   },
   projectName: 'Element',
-  gradient: ['#2E69C3', '#6ACDE2'],
+  gradient: ['#0090C1', '#0090C1'],
   website: 'https://element.fi/',
   websiteLabel: 'element.fi',
   name: 'Element Fixed Yield',

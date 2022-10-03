@@ -69,7 +69,7 @@
 "@aztec/blockchain@file:../blockchain/dest":
   version "2.0.0"
   dependencies:
-    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-@aztec-blockchain-2.0.0-394d847c-4f00-47f3-9ee7-ae956745e8ad-1664284559544/node_modules/barretenberg.js/dest"
+    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-@aztec-blockchain-2.0.0-347fe484-5f6a-47dc-b34a-f7468cb052ee-1664465599431/node_modules/barretenberg.js/dest"
     "@aztec/bridge-clients" "0.1.47"
     "@ethersproject/experimental" "5.5.0"
     "@openzeppelin/contracts" "4.6.0"
@@ -91,10 +91,10 @@
     "@aztec/barretenberg" "2.1.0-testnet.29"
     "@ethersproject/providers" "^5.6.5"
 
-"@aztec/bridge-clients@0.1.59":
-  version "0.1.59"
-  resolved "https://registry.yarnpkg.com/@aztec/bridge-clients/-/bridge-clients-0.1.59.tgz#717c1e8a826bdd109ec929f1e9d1d9ebf8532b16"
-  integrity sha512-7m+nc3ENsKvxTmUObVszCdPBhRhiDg9IzHjLUQFvYJvnpFkuvA8i8JdvU2tx/4qZN/xx6RM3XunT6MTIFCZ6YQ==
+"@aztec/bridge-clients@0.1.62":
+  version "0.1.62"
+  resolved "https://registry.yarnpkg.com/@aztec/bridge-clients/-/bridge-clients-0.1.62.tgz#d773cc6dadd3bae106db825012e4439d47056b7d"
+  integrity sha512-OL3V0AeE/5cbzwb0Oa0fdHkGFGP/kZk0T3d919AZCmyjzW/LZGCPajPqS5z2eaUlc3E2lbRo7buBYKKZ5ysmqA==
   dependencies:
     "@aztec/barretenberg" "2.1.37"
     "@ethersproject/providers" "^5.6.8"
@@ -111,8 +111,8 @@
 "@aztec/sdk@file:../sdk/dest":
   version "2.0.16"
   dependencies:
-    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-@aztec-sdk-2.0.16-24add3ed-c3f6-4167-8a73-95982136a79b-1664284559484/node_modules/barretenberg.js/dest"
-    "@aztec/blockchain" "file:../../.cache/yarn/v6/npm-@aztec-sdk-2.0.16-24add3ed-c3f6-4167-8a73-95982136a79b-1664284559484/node_modules/blockchain/dest"
+    "@aztec/barretenberg" "file:../../.cache/yarn/v6/npm-@aztec-sdk-2.0.16-bb35dcbf-c589-4691-8d36-1281d2f7c515-1664465599368/node_modules/barretenberg.js/dest"
+    "@aztec/blockchain" "file:../../.cache/yarn/v6/npm-@aztec-sdk-2.0.16-bb35dcbf-c589-4691-8d36-1281d2f7c515-1664465599368/node_modules/blockchain/dest"
     broadcast-channel "^4.13.0"
     detect-node "^2.0.4"
     dexie "^3.0.1"
