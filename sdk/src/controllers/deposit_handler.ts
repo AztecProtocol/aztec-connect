@@ -418,6 +418,7 @@ export class DepositHandler {
     // will have to be 1.
     switch (chainId) {
       case 0xa57ec:
+      case 0xdef:
       case 0xe2e:
         return 1;
       default:

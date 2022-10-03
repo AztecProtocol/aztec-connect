@@ -20,6 +20,7 @@ function deploy(chainId: number, signer: Signer, treeInitData: TreeInitData, vk:
   switch (chainId) {
     case 1:
     case 0xa57ec:
+    case 0xdef:
       return deployMainnet(signer, treeInitData, vk, faucetOperator);
     case 0xe2e:
     case 0x7a69:
