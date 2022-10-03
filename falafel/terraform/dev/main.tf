@@ -195,7 +195,7 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "REDEPLOY",
-        "value": "${var.REDEPLOY}
+        "value": "${var.REDEPLOY}"
       }
     ],
     "mountPoints": [
