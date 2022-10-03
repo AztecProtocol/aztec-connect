@@ -29,15 +29,6 @@ data "terraform_remote_state" "aztec2_iac" {
   }
 }
 
-data "terraform_remote_state" "blockchain" {
-  backend = "s3"
-  config = {
-    bucket = "aztec-terraform"
-    key    = "${var.DEPLOY_TAG}/blockchain"
-    region = "eu-west-2"
-  }
-}
-
 provider "aws" {
   profile = "default"
   region  = "eu-west-2"
@@ -71,7 +62,7 @@ resource "aws_ecs_task_definition" "wasabi" {
       },
       {
         "name": "ETHEREUM_HOST",
-        "value": "${data.terraform_remote_state.blockchain.outputs.private_ethereum_host}"
+        "value": "https://${var.DEPLOY_TAG}-mainnet-fork.aztec.network:8545"
       },
       {
         "name": "ROLLUP_HOST",
