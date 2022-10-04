@@ -16,21 +16,34 @@ function getSigner(host?: string, privateKey?: string) {
   return new NonceManager(signer);
 }
 
-function deploy(chainId: number, signer: Signer, treeInitData: TreeInitData, vk: string, faucetOperator?: EthAddress) {
+function deploy(
+  chainId: number,
+  signer: Signer,
+  treeInitData: TreeInitData,
+  vk: string,
+  faucetOperator?: EthAddress,
+  rollupProvider?: EthAddress,
+) {
   switch (chainId) {
     case 1:
     case 0xa57ec:
     case 0xdef:
-      return deployMainnet(signer, treeInitData, vk, faucetOperator);
+      return deployMainnet(signer, treeInitData, vk, faucetOperator, rollupProvider);
     case 0xe2e:
     case 0x7a69:
-      return deployMainnetE2e(signer, treeInitData, vk, faucetOperator);
+      return deployMainnetE2e(signer, treeInitData, vk, faucetOperator, rollupProvider);
     default:
-      return deployDev(signer, treeInitData, vk, faucetOperator);
+      return deployDev(signer, treeInitData, vk, faucetOperator, rollupProvider);
   }
 }
 
-export async function deployContracts(host: string, vk?: string, privateKey?: string, faucetOperator?: EthAddress) {
+export async function deployContracts(
+  host: string,
+  vk?: string,
+  privateKey?: string,
+  faucetOperator?: EthAddress,
+  rollupProvider?: EthAddress,
+) {
   const signer = getSigner(host, privateKey);
   const signerAddress = await signer.getAddress();
   console.error(`Signer: ${signerAddress}`);
@@ -39,6 +52,7 @@ export async function deployContracts(host: string, vk?: string, privateKey?: st
   console.error(`Chain id: ${chainId}`);
 
   console.error(`Faucet operator: ${faucetOperator}`);
+  console.error(`Rollup provider: ${rollupProvider}`);
 
   const verificationKey = vk ? vk : 'MockVerificationKey';
   console.log(`Verification key: ${verificationKey}`);
@@ -56,6 +70,7 @@ export async function deployContracts(host: string, vk?: string, privateKey?: st
     treeInitData,
     verificationKey,
     faucetOperator,
+    rollupProvider,
   );
 
   const envVars = {

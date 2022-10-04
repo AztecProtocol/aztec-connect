@@ -6,7 +6,7 @@ variable "INFURA_API_KEY" {
   type = string
 }
 
-variable "DEV_NET_PRIVATE_KEY" {
+variable "DEV_NET_ROOT_PRIVATE_KEY" {
   type = string
 }
 

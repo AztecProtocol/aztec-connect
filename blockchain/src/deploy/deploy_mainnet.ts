@@ -38,6 +38,7 @@ export async function deployMainnet(
   { dataTreeSize, roots }: TreeInitData,
   vk: string,
   faucetOperator?: EthAddress,
+  rollupProvider?: EthAddress,
 ) {
   const verifier = await deployVerifier(signer, vk);
   const defiProxy = await deployDefiBridgeProxy(signer);
@@ -57,7 +58,9 @@ export async function deployMainnet(
   );
   const feeDistributor = await deployFeeDistributor(signer, rollup, UNISWAP_ROUTER_ADDRESS);
 
-  await rollup.setRollupProvider(await signer.getAddress(), true, { gasLimit });
+  await rollup.setRollupProvider(rollupProvider ? rollupProvider.toString() : await signer.getAddress(), true, {
+    gasLimit,
+  });
 
   await rollup.setSupportedAsset(DAI_ADDRESS, 0, { gasLimit });
   await permitHelper.preApprove(DAI_ADDRESS, { gasLimit });

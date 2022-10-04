@@ -24,6 +24,7 @@ export async function deployDev(
   { dataTreeSize, roots }: TreeInitData,
   vk: string,
   faucetOperator?: EthAddress,
+  rollupProvider?: EthAddress,
 ) {
   const uniswapRouter = await deployUniswap(signer);
   const verifier = await deployVerifier(signer, vk);
@@ -44,7 +45,7 @@ export async function deployDev(
   );
   const feeDistributor = await deployFeeDistributor(signer, rollup, uniswapRouter.address);
 
-  await rollup.setRollupProvider(await signer.getAddress(), true);
+  await rollup.setRollupProvider(rollupProvider ? rollupProvider.toString() : await signer.getAddress(), true);
   await rollup.grantRole(await rollup.LISTER_ROLE(), await signer.getAddress());
 
   const asset0 = await deployErc20(rollup, permitHelper, signer, true, 'DAI');

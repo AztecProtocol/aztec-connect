@@ -6,7 +6,7 @@ import { deployContracts } from './deploy_contracts';
 
 // Assume these env vars could be set to ''.
 // Default values will not be picked up as '' !== undefined.
-const { ETHEREUM_HOST, PRIVATE_KEY, VK, FAUCET_OPERATOR } = process.env;
+const { ETHEREUM_HOST, PRIVATE_KEY, VK, FAUCET_OPERATOR, ROLLUP_PROVIDER_ADDRESS } = process.env;
 
 /**
  * We add gasLimit to all txs, to prevent calls to estimateGas that may fail. If a gasLimit is provided the calldata
@@ -21,7 +21,8 @@ async function main() {
     throw new Error('ETHEREUM_HOST not set');
   }
   const faucetOperator = FAUCET_OPERATOR ? EthAddress.fromString(FAUCET_OPERATOR) : undefined;
-  const envVars = await deployContracts(ETHEREUM_HOST, VK, PRIVATE_KEY, faucetOperator);
+  const rollupProvider = ROLLUP_PROVIDER_ADDRESS ? EthAddress.fromString(ROLLUP_PROVIDER_ADDRESS) : undefined;
+  const envVars = await deployContracts(ETHEREUM_HOST, VK, PRIVATE_KEY, faucetOperator, rollupProvider);
 
   for (const [k, v] of Object.entries(envVars)) {
     console.log(`export ${k}=${v}`);

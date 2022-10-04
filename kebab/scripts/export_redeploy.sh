@@ -6,7 +6,7 @@ if [ -z "$BASH_ENV" ]; then
 fi
 
 # increment this value to force a contract redployemt
-REDEPLOY=2
+REDEPLOY=3
 
 echo export TF_VAR_REDEPLOY=$REDEPLOY >> $BASH_ENV
 cat $BASH_ENV

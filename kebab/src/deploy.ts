@@ -4,7 +4,7 @@ import { RedeployConfig } from './configurator';
 import { JsonRpcProvider } from '@aztec/blockchain';
 import { sleep } from '@aztec/barretenberg/sleep';
 
-const { REDEPLOY, ETHEREUM_HOST, FAUCET_OPERATOR, VK, PRIVATE_KEY } = process.env;
+const { REDEPLOY, ETHEREUM_HOST, FAUCET_OPERATOR, VK, PRIVATE_KEY, ROLLUP_PROVIDER_ADDRESS } = process.env;
 
 async function waitForBlockchain(host: string) {
   const provider = new JsonRpcProvider(host);
@@ -40,6 +40,7 @@ export async function deployToBlockchain(prevRedeploy?: number) {
       VK,
       PRIVATE_KEY,
       FAUCET_OPERATOR ? EthAddress.fromString(FAUCET_OPERATOR) : undefined,
+      ROLLUP_PROVIDER_ADDRESS ? EthAddress.fromString(ROLLUP_PROVIDER_ADDRESS) : undefined,
     );
 
     const redeployConfig: RedeployConfig = {};

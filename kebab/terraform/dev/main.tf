@@ -160,7 +160,11 @@ resource "aws_ecs_task_definition" "kebab" {
       },
       {
         "name": "PRIVATE_KEY",
-        "value": "${var.DEV_NET_PRIVATE_KEY}"
+        "value": "${var.DEV_NET_ROOT_PRIVATE_KEY}"
+      },
+      {
+        "name": "ROLLUP_PROVIDER_ADDRESS",
+        "value": "0xA57EC00AfA2061565b9c8f4477E841F807222A6d"
       },
       {
         "name": "ADDITIONAL_PERMITTED_METHODS",
