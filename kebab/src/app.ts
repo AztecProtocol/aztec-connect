@@ -23,7 +23,11 @@ export function appFactory(server: Server, prefix: string) {
     if (ctx.method === 'POST') {
       const { body: postData } = ctx.request;
 
-      if (postData?.method?.startsWith('eth_') || server.allowPrivilegedMethods()) {
+      if (
+        postData?.method?.startsWith('eth_') ||
+        server.allowPrivilegedMethods() ||
+        server.additionalPermittedMethods().includes(postData?.method)
+      ) {
         await next();
       }
     } else {

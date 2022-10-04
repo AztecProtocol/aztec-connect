@@ -36,6 +36,7 @@ export class Server {
     private logsDb: EthLogsDb,
     chainId: number,
     private readonly _allowPrivilegedMethods: boolean,
+    private readonly _additionalPermittedMethods: string[],
     private readonly redeployConfig: RedeployConfig,
   ) {
     this.rollupEventGetter = new RollupEventGetter(redeployConfig.rollupContractAddress!, provider, chainId, logsDb);
@@ -159,5 +160,9 @@ export class Server {
 
   public allowPrivilegedMethods() {
     return this._allowPrivilegedMethods;
+  }
+
+  public additionalPermittedMethods() {
+    return this._additionalPermittedMethods;
   }
 }

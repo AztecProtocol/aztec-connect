@@ -8,6 +8,7 @@ export interface StartupConfig {
   apiPrefix: string;
   typeOrmLogging: boolean;
   allowPrivilegedMethods: boolean;
+  additionalPermittedMethods: string[];
 }
 
 export interface RedeployConfig {
@@ -25,6 +26,7 @@ const defaultStartupConfig: StartupConfig = {
   apiPrefix: '',
   typeOrmLogging: false,
   allowPrivilegedMethods: false,
+  additionalPermittedMethods: [],
 };
 
 const defaultRedeployConfig: RedeployConfig = {
@@ -37,7 +39,8 @@ const defaultRedeployConfig: RedeployConfig = {
 };
 
 function getStartupConfigEnvVars(): Partial<StartupConfig> {
-  const { ETHEREUM_HOST, PORT, API_PREFIX, TYPEORM_LOGGING, ALLOW_PRIVILEGED_METHODS } = process.env;
+  const { ETHEREUM_HOST, PORT, API_PREFIX, TYPEORM_LOGGING, ALLOW_PRIVILEGED_METHODS, ADDITIONAL_PERMITTED_METHODS } =
+    process.env;
 
   const envVars: Partial<StartupConfig> = {
     port: PORT ? +PORT : undefined,
@@ -45,6 +48,7 @@ function getStartupConfigEnvVars(): Partial<StartupConfig> {
     apiPrefix: API_PREFIX,
     typeOrmLogging: TYPEORM_LOGGING ? TYPEORM_LOGGING === 'true' : undefined,
     allowPrivilegedMethods: ALLOW_PRIVILEGED_METHODS ? ALLOW_PRIVILEGED_METHODS === 'true' : undefined,
+    additionalPermittedMethods: ADDITIONAL_PERMITTED_METHODS ? ADDITIONAL_PERMITTED_METHODS.split(',') : [],
   };
   return Object.fromEntries(Object.entries(envVars).filter(e => e[1] !== undefined));
 }

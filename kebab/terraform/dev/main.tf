@@ -161,6 +161,10 @@ resource "aws_ecs_task_definition" "kebab" {
       {
         "name": "PRIVATE_KEY",
         "value": "${var.DEV_NET_PRIVATE_KEY}"
+      },
+      {
+        "name": "ADDITIONAL_PERMITTED_METHODS",
+        "value": "net_version"
       }
     ],
     "mountPoints": [
