@@ -154,7 +154,7 @@ export class Server {
   }
 
   public async forwardEthRequest(args: EthRequestArguments) {
-    return await this.provider.request(args);
+    return await this.provider.request(args, false);
   }
 
   public allowPrivilegedMethods() {
