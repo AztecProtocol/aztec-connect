@@ -31,7 +31,7 @@ export const deployCurveBridge = async (owner: Signer, rollup: Contract) => {
   await wstEth.transfer(bridge.address, 10, { gasLimit });
   await wstEth.transfer(rollup.address, 10, { gasLimit });
 
-  await rollup.setSupportedBridge(bridge.address, 250000n, { gasLimit });
+  await rollup.setSupportedBridge(bridge.address, BigInt(250000), { gasLimit });
 
   return bridge;
 };

@@ -30,13 +30,12 @@ export function getOrmConfig(logging = false): ConnectionOptions {
 export async function getComponents(configurator: Configurator) {
   const confVars = configurator.getConfVars();
 
-  const { ethereumHost, typeOrmLogging, rollupContractAddress } = confVars;
+  const { ethereumHost, typeOrmLogging } = confVars;
   const { provider, chainId } = await getProvider(ethereumHost);
   const ormConfig = getOrmConfig(typeOrmLogging);
 
   console.log(`Process Id: ${process.pid}`);
   console.log(`Ethereum host: ${ethereumHost}`);
-  console.log(`Rollup contract address: ${rollupContractAddress || 'none'}`);
 
   return { ormConfig, provider, chainId };
 }

@@ -13,8 +13,8 @@ export const deployUniswapPair = async (
   owner: Signer,
   router: Contract,
   asset: Contract,
-  initialTokenSupply = 1000n * 10n ** 18n,
-  initialEthSupply = 10n ** 18n,
+  initialTokenSupply = BigInt(1000) * BigInt(10) ** BigInt(18),
+  initialEthSupply = BigInt(10) ** BigInt(18),
 ) => {
   const factory = new Contract(await router.factory(), UniswapV2FactoryJson.abi, owner);
   const weth = new Contract(await router.WETH(), IWETH.abi, owner);
@@ -67,6 +67,6 @@ export const deployUniswapBridge = async (signer: Signer, rollupProcessor: Contr
   const defiBridgeLibrary = new ContractFactory(UniswapBridge.abi, UniswapBridge.bytecode, signer);
   const defiBridge = await defiBridgeLibrary.deploy(rollupProcessor.address, uniswapRouter.address);
   console.error(`UniswapBridge contract address: ${defiBridge.address}`);
-  await rollupProcessor.setSupportedBridge(defiBridge.address, 300000n, { gasLimit });
+  await rollupProcessor.setSupportedBridge(defiBridge.address, BigInt(300000), { gasLimit });
   return defiBridge;
 };

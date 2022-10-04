@@ -5,7 +5,7 @@ RUN apk update && apk add build-base python3
 COPY --from=0 /usr/src /usr/src
 WORKDIR /usr/src/explorer
 COPY . .
-RUN yarn install && yarn build
+RUN yarn install --frozen-lockfile && yarn build
 
 FROM node:16-alpine3.15
 COPY --from=1 /usr/src/explorer/dist /usr/src/explorer/dist

@@ -45,6 +45,7 @@ export async function getNetwork(): Promise<Network> {
         blockchainStatus,
       };
     case 0xa57ec:
+    case 0xdef:
       return {
         name: 'mainnet-fork',
         baseUrl: '',

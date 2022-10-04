@@ -111,7 +111,7 @@ resource "aws_ecs_task_definition" "kebab" {
     "name": "${var.DEPLOY_TAG}-mainnet-fork",
     "image": "trufflesuite/ganache",
     "essential": true,
-    "command": ["-p=8545", "-f=https://mainnet.infura.io/v3/${var.INFURA_API_KEY}", "--chain.chainId=0xDEF", "--fork.blockNumber=15525911", "--database.dbPath=/data", "-h=0.0.0.0", "-l=12000000", "-a=0"],
+    "command": ["-p=8545", "-f=https://mainnet.infura.io/v3/${var.INFURA_API_KEY}", "--chain.chainId=0xA57EC", "--fork.blockNumber=15525911", "--database.dbPath=/data", "-h=0.0.0.0", "-l=12000000", "-a=0"],
     "mountPoints": [
       {
         "containerPath": "/data",
@@ -160,7 +160,7 @@ resource "aws_ecs_task_definition" "kebab" {
       },
       {
         "name": "PRIVATE_KEY",
-        "value": "${var.DEV_NET_ROOT_PRIVATE_KEY}"
+        "value": "${var.TEST_NET_ROOT_PRIVATE_KEY}"
       },
       {
         "name": "ROLLUP_PROVIDER_ADDRESS",
@@ -261,7 +261,7 @@ resource "aws_lb_listener_rule" "mainnet-fork" {
 
   condition {
     host_header {
-      values = ["${var.DEPLOY_TAG}-mainnet-fork.aztec.network"]
+      values = ["${var.DEPLOY_TAG}-mainnet-fork.aztec.network", "mainnet-fork.aztec.network"]
     }
   }
 }

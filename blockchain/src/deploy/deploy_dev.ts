@@ -24,6 +24,7 @@ export async function deployDev(
   { dataTreeSize, roots }: TreeInitData,
   vk: string,
   faucetOperator?: EthAddress,
+  rollupProvider?: EthAddress,
 ) {
   const uniswapRouter = await deployUniswap(signer);
   const verifier = await deployVerifier(signer, vk);
@@ -44,16 +45,16 @@ export async function deployDev(
   );
   const feeDistributor = await deployFeeDistributor(signer, rollup, uniswapRouter.address);
 
-  await rollup.setRollupProvider(await signer.getAddress(), true);
+  await rollup.setRollupProvider(rollupProvider ? rollupProvider.toString() : await signer.getAddress(), true);
   await rollup.grantRole(await rollup.LISTER_ROLE(), await signer.getAddress());
 
   const asset0 = await deployErc20(rollup, permitHelper, signer, true, 'DAI');
   const asset1 = await deployErc20(rollup, permitHelper, signer, true, 'BTC', 8);
 
-  const gasPrice = 20n * 10n ** 9n; // 20 gwei
-  const daiPrice = 1n * 10n ** 15n; // 1000 DAI/ETH
-  const initialEthSupply = 1n * 10n ** 17n; // 0.1 ETH
-  const initialTokenSupply = (initialEthSupply * 10n ** 18n) / daiPrice;
+  const gasPrice = BigInt(20) * BigInt(10) ** BigInt(9); // 20 gwei
+  const daiPrice = BigInt(1) * BigInt(10) ** BigInt(15); // 1000 DAI/ETH
+  const initialEthSupply = BigInt(1) * BigInt(10) ** BigInt(17); // 0.1 ETH
+  const initialTokenSupply = (initialEthSupply * BigInt(10) ** BigInt(18)) / daiPrice;
   await deployUniswapPair(signer, uniswapRouter, asset0, initialTokenSupply, initialEthSupply);
   await deployUniswapBridge(signer, rollup, uniswapRouter);
   await deployDummyBridge(rollup, signer, [asset0, asset1]);
