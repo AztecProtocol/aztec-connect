@@ -62,7 +62,7 @@ resource "aws_ecs_task_definition" "wasabi" {
       },
       {
         "name": "ETHEREUM_HOST",
-        "value": "https://${var.DEPLOY_TAG}-mainnet-fork.aztec.network:8545"
+        "value": "https://${var.DEPLOY_TAG}-eth-host.aztec.network:8545"
       },
       {
         "name": "ROLLUP_HOST",

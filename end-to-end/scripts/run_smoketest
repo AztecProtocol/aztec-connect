@@ -9,7 +9,7 @@ fi
 
 case $VERSION_TAG in
   dev)
-    ETHEREUM_HOST=https://mainnet-fork.aztec.network:8545
+    ETHEREUM_HOST=https://$DEPLOY_TAG-eth-host.aztec.network:8545
     ;;
   testnet)
     ETHEREUM_HOST=https://goerli.infura.io/v3/$TF_VAR_INFURA_API_KEY

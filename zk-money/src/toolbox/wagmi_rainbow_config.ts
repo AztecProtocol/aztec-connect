@@ -18,7 +18,7 @@ function getChain(chainId: number): Chain {
         name: 'Aztec Ethereum Mainnet Fork',
         network: 'mainnet-fork',
         nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
-        rpcUrls: { default: 'https://aztec-connect-testnet-mainnet-fork.aztec.network' },
+        rpcUrls: { default: 'https://aztec-connect-testnet-eth-host.aztec.network' },
       };
     case 0xdef:
       return {
@@ -26,7 +26,7 @@ function getChain(chainId: number): Chain {
         name: 'Aztec Ethereum Mainnet Fork Devnet',
         network: 'mainnet-fork',
         nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
-        rpcUrls: { default: 'https://aztec-connect-dev-mainnet-fork.aztec.network' },
+        rpcUrls: { default: 'https://aztec-connect-dev-eth-host.aztec.network' },
       };
     default:
       throw new Error(`Unknown chainId: ${chainId}`);

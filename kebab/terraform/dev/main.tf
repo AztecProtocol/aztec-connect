@@ -261,7 +261,7 @@ resource "aws_lb_listener_rule" "mainnet-fork" {
 
   condition {
     host_header {
-      values = ["${var.DEPLOY_TAG}-mainnet-fork.aztec.network"]
+      values = ["${var.DEPLOY_TAG}-eth-host.aztec.network"]
     }
   }
 }

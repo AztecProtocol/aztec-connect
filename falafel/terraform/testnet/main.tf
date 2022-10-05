@@ -167,7 +167,7 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "ETHEREUM_HOST",
-        "value": "https://${var.DEPLOY_TAG}-mainnet-fork.aztec.network:8545"
+        "value": "https://${var.DEPLOY_TAG}-eth-host.aztec.network:8545"
       },
       {
         "name": "PRIVATE_KEY",
