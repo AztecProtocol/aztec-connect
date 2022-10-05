@@ -1,7 +1,8 @@
 import { RequestArguments } from '@aztec/barretenberg/blockchain';
-import { JsonRpcProvider } from '@aztec/blockchain';
 import { InterruptableSleep } from '@aztec/barretenberg/sleep';
 import { createLogger } from '@aztec/barretenberg/log';
+import { fetch } from '@aztec/barretenberg/iso_fetch';
+import { JsonRpcProvider } from '@aztec/blockchain';
 
 import { EthLogsDb, RollupLogsParamsQuery } from './logDb';
 import { RollupEventGetter } from './rollup_event_getter';
@@ -32,7 +33,8 @@ export class Server {
   private log = createLogger('Server');
 
   constructor(
-    private provider: JsonRpcProvider,
+    provider: JsonRpcProvider,
+    private ethereumHost: string,
     private logsDb: EthLogsDb,
     chainId: number,
     private readonly _allowPrivilegedMethods: boolean,
@@ -155,7 +157,15 @@ export class Server {
   }
 
   public async forwardEthRequest(args: EthRequestArguments) {
-    return await this.provider.request(args, false);
+    const body = { ...args };
+
+    const res = await fetch(this.ethereumHost, {
+      method: 'POST',
+      body: JSON.stringify(body),
+      headers: { 'content-type': 'application/json' },
+    });
+    const text = await res.text();
+    return JSON.parse(text);
   }
 
   public allowPrivilegedMethods() {

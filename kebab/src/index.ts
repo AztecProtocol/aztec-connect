@@ -53,6 +53,7 @@ async function main() {
   const logDb = new EthLogsDb(dbConn);
   const server = new Server(
     provider,
+    initialConfig.ethereumHost,
     logDb,
     chainId,
     allowPrivilegedMethods,
