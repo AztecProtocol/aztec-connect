@@ -14,7 +14,7 @@ export const YEARN_ETH_CARD: CreateRecipeArgs = {
   entryOutputAssetAddressA: KMAA.yvETH,
   createAdaptor: createYearnAdaptor,
   projectName: 'Yearn Finance',
-  gradient: ['#0040C2', '#A1B6E0'],
+  gradient: ['#7A9CC6', '#7A9CC6'],
   website: 'https://yearn.finance/',
   websiteLabel: 'yearn.finance',
   name: 'Yearn Finance',

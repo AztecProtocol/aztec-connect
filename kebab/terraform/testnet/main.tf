@@ -252,7 +252,7 @@ resource "aws_alb_target_group" "kebab" {
 }
 
 resource "aws_lb_listener_rule" "mainnet-fork" {
-  listener_arn = data.terraform_remote_state.aztec2_iac.outputs.alb_listener_arn
+  listener_arn = data.terraform_remote_state.aztec2_iac.outputs.mainnet-fork-listener-id
 
   action {
     type             = "forward"

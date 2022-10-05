@@ -13,7 +13,7 @@ import { useVariableAprText } from '../position_key_stat_configs';
 export const LIDO_CARD: CreateRecipeArgs = {
   id: 'lido-staking-x-curve.ETH-to-wStETH',
   selectBlockchainBridge: ({ bridges }) => bridges.find(x => x.id === 6),
-  gradient: ['#E97B61', '#F5CB85'],
+  gradient: ['#EE964B', '#EE964B'],
   openHandleAssetAddress: KMAA.wstETH,
   entryInputAssetAddressA: KMAA.ETH,
   entryOutputAssetAddressA: KMAA.wstETH,
