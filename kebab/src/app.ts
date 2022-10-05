@@ -48,7 +48,6 @@ export function appFactory(server: Server, prefix: string) {
 
   router.post('/', checkReady, auth, async (ctx: Koa.Context) => {
     const { method, params = [], jsonrpc, id } = ctx.request.body as EthRequestArguments;
-    let result;
     if (
       server.isReady() &&
       method?.startsWith('eth_getLogs') &&
@@ -56,12 +55,13 @@ export function appFactory(server: Server, prefix: string) {
       [ROLLUP_PROCESSED_EVENT_TOPIC, DEFI_BRIDGE_EVENT_TOPIC].includes(params[0].topics[0])
     ) {
       // do the work
-      result = await server.queryLogs(params[0]);
+      const result = await server.queryLogs(params[0]);
+      ctx.body = { jsonrpc, id, result };
     } else {
-      // forward to geth node
-      result = await server.forwardEthRequest(ctx.request.body);
+      // forward to node
+      const result = await server.forwardEthRequest(ctx.request.body);
+      ctx.body = { ...result };
     }
-    ctx.body = { jsonrpc, id, result };
   });
 
   router.get('/', (ctx: Koa.Context) => {

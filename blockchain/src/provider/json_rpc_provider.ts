@@ -10,7 +10,7 @@ export class JsonRpcProvider implements EthereumProvider {
 
   constructor(private host: string, private netMustSucceed = true) {}
 
-  public async request({ method, params }: RequestArguments, throwOnError = true): Promise<any> {
+  public async request({ method, params }: RequestArguments): Promise<any> {
     const body = {
       jsonrpc: '2.0',
       id: this.id++,
@@ -20,10 +20,7 @@ export class JsonRpcProvider implements EthereumProvider {
     log(`->`, body);
     const res = await this.fetch(body);
     log(`<-`, res);
-    // ThrowOneError = false will forward err result to original caller.
-    // This is ONLY for the case where the response has valid status 200
-    // but an error message attached.
-    if (res.error && throwOnError) {
+    if (res.error) {
       throw res.error;
     }
     return res.result;

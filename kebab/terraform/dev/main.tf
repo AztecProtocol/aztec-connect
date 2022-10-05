@@ -261,7 +261,7 @@ resource "aws_lb_listener_rule" "mainnet-fork" {
 
   condition {
     host_header {
-      values = ["${var.DEPLOY_TAG}-mainnet-fork.aztec.network"]
+      values = ["${var.DEPLOY_TAG}-eth-host.aztec.network"]
     }
   }
 }
@@ -274,7 +274,7 @@ data "aws_alb" "aztec2" {
 # mainnet-fork DNS entry.
 resource "aws_route53_record" "mainnet-fork" {
   zone_id = data.terraform_remote_state.aztec2_iac.outputs.aws_route53_zone_id
-  name    = "${var.DEPLOY_TAG}-mainnet-fork"
+  name    = "${var.DEPLOY_TAG}-eth-host"
   type    = "A"
   alias {
     name                   = data.aws_alb.aztec2.dns_name

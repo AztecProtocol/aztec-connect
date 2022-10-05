@@ -9,14 +9,14 @@ case $VERSION_TAG in
   testnet)
     NETWORK=mainnet-fork
     VERIFICATION_KEY=MockVerificationKey
-    export TF_VAR_PUBLIC_ETHEREUM_HOST=https://mainnet-fork.aztec.network:8545
-    export TF_VAR_PRIVATE_ETHEREUM_HOST=https://mainnet-fork.aztec.network:8545
+    export TF_VAR_PUBLIC_ETHEREUM_HOST=https://$DEPLOY_TAG-eth-host.aztec.network:8545
+    export TF_VAR_PRIVATE_ETHEREUM_HOST=https://$DEPLOY_TAG-eth-host.aztec.network:8545
     ;;
   dev)
     NETWORK=mainnet-fork
     VERIFICATION_KEY=MockVerificationKey
-    export TF_VAR_PUBLIC_ETHEREUM_HOST=http://$DEPLOY_TAG-blockchain.local:80
-    export TF_VAR_PRIVATE_ETHEREUM_HOST=http://$DEPLOY_TAG-blockchain.local:80
+    export TF_VAR_PUBLIC_ETHEREUM_HOST=http://$DEPLOY_TAG-eth-host.aztec.network:8545
+    export TF_VAR_PRIVATE_ETHEREUM_HOST=http://$DEPLOY_TAG-eth-host.aztec.network:8545
     ;;
   *)
     echo "No configuration for VERSION_TAG=$VERSION_TAG, skipping contract deployment."
