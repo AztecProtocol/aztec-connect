@@ -3,11 +3,19 @@ import { EthAddressAndNonce } from './agent';
 import { AgentKeyInfo, buildMnemonicPath } from './agent_key';
 import { ethDepositCost } from './assets';
 import { asyncMap } from './async_map';
+import { SwappingAgent } from './swapping_agent';
 import { PaymentAgent } from './payment_agent';
-import { UniswapAgent } from './uniswap_agent';
+import {
+  LIDO_CURVE_ETH_TO_STETH_BRIDGE_CONFIG,
+  LIDO_CURVE_STETH_TO_ETH_BRIDGE_CONFIG,
+  UNISWAP_DAI_TO_ETH_BRIDGE_CONFIG,
+  UNISWAP_ETH_TO_DAI_BRIDGE_CONFIG,
+} from './bridges';
+
+type StandardAgents = SwappingAgent | PaymentAgent;
 
 export class AgentManager {
-  private agents: Array<UniswapAgent | PaymentAgent> = [];
+  private agents: Array<StandardAgents> = [];
   public constructor(
     private sdk: AztecSdk,
     private provider: WalletProvider,
@@ -48,12 +56,27 @@ export class AgentManager {
           usersPrivateKey,
         );
       case 'uniswap':
-        return await UniswapAgent.create(
+        return await SwappingAgent.create(
           fundingAccount,
           this.sdk,
           this.provider,
           agentId,
           this.numTxsPerAgent,
+          2n,
+          UNISWAP_ETH_TO_DAI_BRIDGE_CONFIG,
+          UNISWAP_DAI_TO_ETH_BRIDGE_CONFIG,
+          usersPrivateKey,
+        );
+      case 'lidocurve':
+        return await SwappingAgent.create(
+          fundingAccount,
+          this.sdk,
+          this.provider,
+          agentId,
+          this.numTxsPerAgent,
+          2000n,
+          LIDO_CURVE_ETH_TO_STETH_BRIDGE_CONFIG,
+          LIDO_CURVE_STETH_TO_ETH_BRIDGE_CONFIG,
           usersPrivateKey,
         );
       default:

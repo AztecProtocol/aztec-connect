@@ -6,6 +6,7 @@ import { ChainProperties } from '@aztec/bridge-clients/client-dest/src/client/el
 export const BALANCER_ADDRESS = '0xBA12222222228d8Ba445958a75a0704d566BF2C8';
 export const UNISWAP_BRIDGE_ADDRESS_ID = 1;
 export const ELEMENT_BRIDGE_ADDRESS_ID = 1;
+export const LIDO_CURVE_BRIDGE_ADDRESS_ID = 5;
 
 export const ELEMENT_CHECKPOINTS = [1663361092];
 export const ELEMENT_START_TIME = 1657015486;
@@ -16,20 +17,29 @@ export interface BridgeSpec {
   bridgeAddressId: number;
 }
 
-export const bridgeConfigs: BridgeSpec[] = [
-  {
-    //bridgeCallData: '0x0000000000000000000000000000000000000000000000004000000000000001',
-    inputAsset: 0,
-    outputAsset: 1,
-    bridgeAddressId: UNISWAP_BRIDGE_ADDRESS_ID,
-  },
-  {
-    //bridgeCallData: '0x0000000000000000000000000000000000000000000000000000000100000002',
-    inputAsset: 1,
-    outputAsset: 0,
-    bridgeAddressId: UNISWAP_BRIDGE_ADDRESS_ID,
-  },
-];
+export const UNISWAP_ETH_TO_DAI_BRIDGE_CONFIG: BridgeSpec = {
+  inputAsset: 0,
+  outputAsset: 1,
+  bridgeAddressId: UNISWAP_BRIDGE_ADDRESS_ID,
+};
+
+export const UNISWAP_DAI_TO_ETH_BRIDGE_CONFIG: BridgeSpec = {
+  inputAsset: 1,
+  outputAsset: 0,
+  bridgeAddressId: UNISWAP_BRIDGE_ADDRESS_ID,
+};
+
+export const LIDO_CURVE_ETH_TO_STETH_BRIDGE_CONFIG: BridgeSpec = {
+  inputAsset: 0,
+  outputAsset: 2,
+  bridgeAddressId: LIDO_CURVE_BRIDGE_ADDRESS_ID,
+};
+
+export const LIDO_CURVE_STETH_TO_ETH_BRIDGE_CONFIG: BridgeSpec = {
+  inputAsset: 2,
+  outputAsset: 0,
+  bridgeAddressId: LIDO_CURVE_BRIDGE_ADDRESS_ID,
+};
 
 export const getBridgeCallData = (bridgeSpec: BridgeSpec) => {
   return buildBridgeCallData(bridgeSpec.bridgeAddressId, bridgeSpec.inputAsset, bridgeSpec.outputAsset, 0);

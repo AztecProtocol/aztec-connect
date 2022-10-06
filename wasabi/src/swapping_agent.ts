@@ -1,17 +1,14 @@
 import { AssetValue, AztecSdk, DefiSettlementTime, TxSettlementTime, WalletProvider } from '@aztec/sdk';
 import { Agent, AgentFees, EthAddressAndNonce, UserData } from './agent';
-import { bridgeConfigs, BridgeSpec, getBridgeCallData } from './bridges';
-
-// we need to swap 2 wei as the exchange rate means any less and the return transfer would fail
-const WEI_VALUE_TO_SWAP = 2n;
+import { BridgeSpec, getBridgeCallData } from './bridges';
 
 interface DefiAgentFees {
   agentFees: AgentFees;
-  ethToDaiFee: AssetValue;
-  daiToEthFee: AssetValue;
+  forwardSwap: AssetValue;
+  reverseSwap: AssetValue;
 }
 
-export class UniswapAgent {
+export class SwappingAgent {
   private agent: Agent;
   private user!: UserData;
   private agentFees!: DefiAgentFees;
@@ -22,6 +19,9 @@ export class UniswapAgent {
     provider: WalletProvider,
     private id: number,
     private numTransfers: number,
+    private forwardSwapValue: bigint,
+    private forwardBridgeConfig: BridgeSpec,
+    private reverseBridgeConfig: BridgeSpec,
     private privateKeyForSendngUser?: Buffer,
   ) {
     this.agent = new Agent(fundingAccount, sdk, provider, id);
@@ -37,9 +37,22 @@ export class UniswapAgent {
     provider: WalletProvider,
     id: number,
     numTransfers: number,
+    forwardSwapValue: bigint,
+    forwardBridgeConfig: BridgeSpec,
+    reverseBridgeConfig: BridgeSpec,
     privateKeyForSendngUser?: Buffer,
   ) {
-    const agent = new UniswapAgent(fundingAccount, sdk, provider, id, numTransfers, privateKeyForSendngUser);
+    const agent = new SwappingAgent(
+      fundingAccount,
+      sdk,
+      provider,
+      id,
+      numTransfers,
+      forwardSwapValue,
+      forwardBridgeConfig,
+      reverseBridgeConfig,
+      privateKeyForSendngUser,
+    );
     await agent.init();
     return agent;
   }
@@ -61,7 +74,7 @@ export class UniswapAgent {
     const fees = await this.getFees();
     const withdrawFee = fees.agentFees.withdrawFee.value;
     return (
-      BigInt(this.numTransfers) * (WEI_VALUE_TO_SWAP + fees.ethToDaiFee.value + fees.daiToEthFee.value) +
+      BigInt(this.numTransfers) * (this.forwardSwapValue + fees.forwardSwap.value + fees.reverseSwap.value) +
       withdrawFee +
       1n
     );
@@ -71,8 +84,8 @@ export class UniswapAgent {
     if (!this.agentFees) {
       const getDefiFee = async (bridgeSpec: BridgeSpec) =>
         (await this.getDefiFees(bridgeSpec))[DefiSettlementTime.DEADLINE];
-      const ethToDaiFee = await getDefiFee(bridgeConfigs[0]);
-      const daiToEthFee = await getDefiFee(bridgeConfigs[1]);
+      const forwardSwap = await getDefiFee(this.forwardBridgeConfig);
+      const reverseSwap = await getDefiFee(this.reverseBridgeConfig);
       const fees: AgentFees = {
         depositFee: (await this.sdk.getDepositFees(0))[TxSettlementTime.NEXT_ROLLUP],
         transferFee: (await this.sdk.getTransferFees(0))[TxSettlementTime.NEXT_ROLLUP],
@@ -82,8 +95,8 @@ export class UniswapAgent {
       };
       this.agentFees = {
         agentFees: fees,
-        ethToDaiFee,
-        daiToEthFee,
+        forwardSwap,
+        reverseSwap,
       };
     }
     return this.agentFees;
@@ -112,12 +125,12 @@ export class UniswapAgent {
 
       for (let i = 0; i < this.numTransfers; i++) {
         const ethToDaiController = await this.singleDefiSwap(
-          bridgeConfigs[0],
-          fees.ethToDaiFee.value,
-          WEI_VALUE_TO_SWAP,
+          this.forwardBridgeConfig,
+          fees.forwardSwap.value,
+          this.forwardSwapValue,
         );
         await ethToDaiController?.awaitSettlement();
-        const daiToEthController = await this.singleDefiSwap(bridgeConfigs[1], fees.daiToEthFee.value);
+        const daiToEthController = await this.singleDefiSwap(this.reverseBridgeConfig, fees.reverseSwap.value);
         await daiToEthController?.awaitSettlement();
       }
       await (await this.agent.sendWithdraw(this.user, this.fundingAccount.address))?.awaitSettlement();
