@@ -1,0 +1,1 @@
+../../../../../blockchain-vks/keys/VerificationKey1x1.sol

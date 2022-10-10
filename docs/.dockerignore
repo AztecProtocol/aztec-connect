@@ -1,5 +1,0 @@
-.docusaurus
-dist
-Dockerfile
-node_modules
-**/.terraform

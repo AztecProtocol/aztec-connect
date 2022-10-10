@@ -1,7 +1,0 @@
-cache
-dest
-node_modules
-./src/artifacts
-**/.terraform
-.redeploy
-Dockerfile

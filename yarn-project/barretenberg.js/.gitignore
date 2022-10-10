@@ -1,0 +1,2 @@
+src/wasm/barretenberg.wasm
+src/wasm/node_worker.js

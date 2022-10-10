@@ -1,0 +1,249 @@
+import type { CutdownAsset } from './types.js';
+import { SdkObs } from '../alt-model/top_level_context/sdk_obs.js';
+import createDebug from 'debug';
+import { EventEmitter } from 'events';
+import Cookie from 'js-cookie';
+import { Config } from '../config.js';
+import { ShieldFormValues } from './account_forms/index.js';
+import { Database } from './database/index.js';
+import { chainIdToNetwork, Network } from './networks.js';
+import {
+  initialLoginState,
+  initialWorldState,
+  LoginMode,
+  LoginState,
+  UserSession,
+  UserSessionEvent,
+} from './user_session.js';
+import { WalletId, wallets } from './wallet_providers/index.js';
+import { ToastsObs } from '../alt-model/top_level_context/toasts_obs.js';
+
+const debug = createDebug('zm:app');
+
+export enum AppAction {
+  NADA,
+  LOGIN,
+  ACCOUNT,
+}
+
+export enum AppEvent {
+  SESSION_CLOSED = 'SESSION_CLOSED',
+  SESSION_OPEN = 'SESSION_OPEN',
+  UPDATED_LOGIN_STATE = 'UPDATED_LOGIN_STATE',
+  UPDATED_USER_SESSION_DATA = 'UPDATED_USER_SESSION_DATA',
+}
+
+export interface App {
+  on(event: AppEvent.SESSION_CLOSED, listener: () => void): this;
+  on(event: AppEvent.SESSION_OPEN, listener: () => void): this;
+  on(event: AppEvent.UPDATED_LOGIN_STATE, listener: (state: LoginState) => void): this;
+  on(event: AppEvent.UPDATED_USER_SESSION_DATA, listener: () => void): this;
+}
+
+export class App extends EventEmitter {
+  readonly db: Database;
+  private session?: UserSession;
+  private loginMode = LoginMode.SIGNUP;
+  private shieldForAliasAmountPreselection?: bigint;
+  public readonly requiredNetwork: Network;
+  private readonly sessionCookieName = '_zkmoney_session_v1';
+  private readonly walletCacheName = 'zm_wallet';
+
+  constructor(
+    private readonly config: Config,
+    private readonly assets: CutdownAsset[],
+    private readonly sdkObs: SdkObs,
+    private readonly toastsObs: ToastsObs,
+    initialLoginMode: LoginMode,
+  ) {
+    super();
+    createDebug.enable(config.debugFilter);
+    this.requiredNetwork = chainIdToNetwork(config.chainId)!;
+    if (!this.requiredNetwork) {
+      throw new Error(`Unknown network for chainId ${config.chainId}.`);
+    }
+    this.db = new Database();
+    this.loginMode = initialLoginMode;
+  }
+
+  async destroy() {
+    this.removeAllListeners();
+    await this.session?.destroy();
+    if (this.db.isOpen) {
+      await this.db.close();
+    }
+  }
+
+  hasSession() {
+    return !!this.session;
+  }
+
+  getSession() {
+    return this.session;
+  }
+
+  hasCookie() {
+    return !!Cookie.get(this.sessionCookieName);
+  }
+
+  get availableWallets() {
+    const supportedWallets = window.ethereum ? wallets : wallets.filter(w => w.id !== WalletId.METAMASK);
+    return supportedWallets;
+  }
+
+  get loginState() {
+    return (
+      this.session?.getLoginState() || {
+        ...initialLoginState,
+        mode: this.loginMode,
+      }
+    );
+  }
+
+  get sdk() {
+    return this.session?.getSdk();
+  }
+
+  get provider() {
+    return this.session?.getProvider();
+  }
+
+  get keyVault() {
+    return this.session?.getKeyVault();
+  }
+
+  get stableEthereumProvider() {
+    return this.session?.getStableEthereumProvider();
+  }
+
+  get rollupService() {
+    return this.session?.getRollupService();
+  }
+
+  get providerState() {
+    return this.session?.getProviderState();
+  }
+
+  get worldState() {
+    return this.session?.getWorldState() || initialWorldState;
+  }
+
+  get accountState() {
+    return this.session?.getAccount()?.getAccountState();
+  }
+
+  get shieldForAliasForm() {
+    return this.session?.getShieldForAliasForm()?.getValues();
+  }
+
+  isProcessingAction() {
+    return this.session?.isProcessingAction() || false;
+  }
+
+  updateShieldForAliasAmountPreselection(amount: bigint) {
+    this.shieldForAliasAmountPreselection = amount;
+  }
+
+  changeLoginMode(mode: LoginMode) {
+    if (mode === this.loginMode) return;
+
+    this.loginMode = mode;
+    if (this.session) {
+      this.session.changeLoginMode(mode);
+    } else {
+      this.emit(AppEvent.UPDATED_LOGIN_STATE, this.loginState);
+    }
+  }
+
+  createSession = () => {
+    if (this.session) {
+      throw new Error('Previous session not destroyed.');
+    }
+
+    this.session = new UserSession(
+      this.assets,
+      this.config,
+      this.sdkObs,
+      this.toastsObs,
+      this.requiredNetwork,
+      this.loginMode,
+      this.db,
+      this.sessionCookieName,
+      this.walletCacheName,
+      this.shieldForAliasAmountPreselection,
+    );
+
+    for (const e in UserSessionEvent) {
+      const event = (UserSessionEvent as any)[e];
+      this.session.on(event, (...args) => {
+        switch (event) {
+          case UserSessionEvent.SESSION_CLOSED:
+            this.session = undefined;
+            debug('Session closed.');
+            this.emit(AppEvent.SESSION_CLOSED);
+            break;
+          case UserSessionEvent.SESSION_OPEN:
+            this.emit(AppEvent.SESSION_OPEN);
+            break;
+          case UserSessionEvent.UPDATED_LOGIN_STATE: {
+            const { mode } = this.session!.getLoginState();
+            this.loginMode = mode;
+            this.emit(AppEvent.UPDATED_LOGIN_STATE, ...args);
+            break;
+          }
+          default:
+            this.emit(AppEvent.UPDATED_USER_SESSION_DATA);
+        }
+      });
+    }
+  };
+
+  connectWallet = async (walletId: WalletId) => {
+    await this.session!.connectWallet(walletId);
+  };
+
+  disconnectWallet = async () => {
+    await this.session!.disconnectWallet();
+  };
+
+  setAlias = (aliasInput: string) => {
+    this.session!.setAlias(aliasInput);
+  };
+
+  confirmAlias = async (aliasInput: string) => {
+    await this.session!.confirmAlias(aliasInput);
+  };
+
+  initAccount = async () => {
+    await this.session!.initAccount();
+  };
+
+  backgroundLogin = async () => {
+    this.createSession();
+    await this.session!.backgroundLogin();
+  };
+
+  logout = async () => {
+    if (!this.session) {
+      debug('Attempt to logout before login.');
+      return;
+    }
+    const session = this.session;
+    this.session = undefined;
+    session!.removeAllListeners();
+    this.emit(AppEvent.SESSION_CLOSED);
+    await session!.close();
+  };
+
+  changeWallet = async (walletId: WalletId) => {
+    await this.session!.changeWallet(walletId);
+  };
+
+  changeShieldForAliasForm = (inputs: ShieldFormValues) => {
+    this.session!.changeShieldForAliasForm(inputs);
+  };
+
+  claimUserName = async (isRetry?: boolean) => {
+    await this.session!.claimUserName(isRetry);
+  };
+}

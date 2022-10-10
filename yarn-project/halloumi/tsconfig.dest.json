@@ -1,0 +1,5 @@
+{
+  "extends": ".",
+  "references": [{ "path": "../barretenberg.js/tsconfig.dest.json" }],
+  "exclude": ["**/*.test.*"]
+}

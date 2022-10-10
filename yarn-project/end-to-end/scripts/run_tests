@@ -1,0 +1,32 @@
+#!/bin/bash
+# This script is used to run an e2e test in CI (see config.yml and cond_spot_run_tests).
+# It sets a few environment variables used inside the docker-compose.yml, pulls images, and runs docker-compose.
+set -e
+
+export TEST=$1
+export MAINNET_FORK=$2
+export NUM_INNER_ROLLUP_TXS=${3:-3}
+export NUM_OUTER_ROLLUP_PROOFS=${4:-2}
+export VK=$5
+
+if [ "$MAINNET_FORK" = "true" ]; then
+  export CHAIN_ID='--chain.chainId=0xe2e'
+  export FORK_HOST='-f=https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35'
+  export FORK_BLOCK='--fork.blockNumber=15525911'
+fi
+
+if [ -z "$VK" ]; then
+  export PROVERLESS=true
+fi
+
+if [ -n "$COMMIT_HASH" ]; then
+  $(aws ecr get-login --region us-east-2 --no-include-email) 2> /dev/null
+
+  for REPO in halloumi kebab falafel sdk hummus end-to-end; do
+    docker pull 278380418400.dkr.ecr.us-east-2.amazonaws.com/$REPO:cache-$COMMIT_HASH
+    docker tag 278380418400.dkr.ecr.us-east-2.amazonaws.com/$REPO:cache-$COMMIT_HASH 278380418400.dkr.ecr.eu-west-2.amazonaws.com/$REPO:latest
+  done
+fi
+
+docker-compose rm -f
+docker-compose up --exit-code-from end-to-end

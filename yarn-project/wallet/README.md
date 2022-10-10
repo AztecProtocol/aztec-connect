@@ -1,0 +1,3 @@
+# wallet
+
+Example Aztec wallet.

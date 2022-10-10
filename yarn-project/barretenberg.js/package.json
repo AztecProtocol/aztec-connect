@@ -1,0 +1,110 @@
+{
+  "name": "@aztec/barretenberg",
+  "version": "2.1.0",
+  "main": "index.js",
+  "license": "GPL-2.0",
+  "type": "module",
+  "scripts": {
+    "build": "yarn clean && tsc -p tsconfig.dest.json && webpack --config webpack.config.prod.js",
+    "build:dev": "./scripts/build_dev.sh",
+    "build:dev:worker": "webpack --config webpack.config.dev.js",
+    "clean": "rm -rf ./dest .tsbuildinfo",
+    "test": "NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache",
+    "formatting": "run -T prettier --check ./src && run -T eslint --max-warnings 0 ./src"
+  },
+  "exports": {
+    "./account_id": "./dest/account_id/index.js",
+    "./address": "./dest/address/index.js",
+    "./asset": "./dest/asset/index.js",
+    "./async_map": "./dest/async_map/index.js",
+    "./bigint_buffer": "./dest/bigint_buffer/index.js",
+    "./block_source": "./dest/block_source/index.js",
+    "./blockchain": "./dest/blockchain/index.js",
+    "./bridge_call_data": "./dest/bridge_call_data/index.js",
+    "./client_proofs": "./dest/client_proofs/index.js",
+    "./crs": "./dest/crs/index.js",
+    "./crypto": "./dest/crypto/index.js",
+    "./ecc": "./dest/ecc/index.js",
+    "./environment": "./dest/environment/index.js",
+    "./errors": "./dest/errors/index.js",
+    "./fft": "./dest/fft/index.js",
+    "./fifo": "./dest/fifo/index.js",
+    "./iso_fetch": "./dest/iso_fetch/index.js",
+    "./log": "./dest/log/index.js",
+    "./merkle_tree": "./dest/merkle_tree/index.js",
+    "./mutex": "./dest/mutex/index.js",
+    "./note_algorithms": "./dest/note_algorithms/index.js",
+    "./offchain_tx_data": "./dest/offchain_tx_data/index.js",
+    "./pippenger": "./dest/pippenger/index.js",
+    "./retry": "./dest/retry/index.js",
+    "./rollup_proof": "./dest/rollup_proof/index.js",
+    "./rollup_provider": "./dest/rollup_provider/index.js",
+    "./serialize": "./dest/serialize/index.js",
+    "./sleep": "./dest/sleep/index.js",
+    "./timer": "./dest/timer/index.js",
+    "./transport": "./dest/transport/index.js",
+    "./tx_id": "./dest/tx_id/index.js",
+    "./viewing_key": "./dest/viewing_key/index.js",
+    "./wasm": "./dest/wasm/index.js",
+    "./world_state": "./dest/world_state/index.js",
+    "./world_state_db": "./dest/world_state_db/index.js"
+  },
+  "jest": {
+    "preset": "ts-jest/presets/default-esm",
+    "globals": {
+      "ts-jest": {
+        "useESM": true
+      }
+    },
+    "moduleNameMapper": {
+      "^(\\.{1,2}/.*)\\.js$": "$1"
+    },
+    "testEnvironment": "jsdom",
+    "testRegex": ".*\\.test\\.ts$",
+    "rootDir": "./src",
+    "testTimeout": 30000,
+    "slowTestThreshold": 60
+  },
+  "browserslist": [
+    "since 2017-06"
+  ],
+  "dependencies": {
+    "@types/levelup": "^4.3.0",
+    "browserify-cipher": "^1.0.1",
+    "cross-fetch": "^3.1.5",
+    "debug": "^4.3.4",
+    "detect-node": "^2.1.0",
+    "fs-extra": "10.0.0",
+    "hash.js": "^1.1.7",
+    "levelup": "^5.1.1",
+    "memdown": "^6.1.1",
+    "promise-readable": "^5.0.4",
+    "sha3": "^2.1.3",
+    "supports-color": "7.2.0",
+    "tslib": "^2.0.0"
+  },
+  "devDependencies": {
+    "@aztec/eslint-config": "workspace:^",
+    "@jest/globals": "^28.1.1",
+    "@jest/types": "^28.1.3",
+    "@rushstack/eslint-patch": "^1.1.4",
+    "@types/debug": "^4.1.7",
+    "@types/detect-node": "^2.0.0",
+    "@types/fs-extra": "9.0.11",
+    "@types/jest": "^28.1.6",
+    "@types/memdown": "^3.0.0",
+    "@types/node": "^18.7.23",
+    "buffer": "^6.0.3",
+    "copy-webpack-plugin": "^11.0.0",
+    "events": "^3.3.0",
+    "jest": "^28.1.3",
+    "jest-environment-jsdom": "^28.1.3",
+    "resolve-typescript-plugin": "^1.2.0",
+    "ts-jest": "^28.0.7",
+    "ts-loader": "^9.3.1",
+    "ts-node": "^10.9.1",
+    "typescript": "^4.7.4",
+    "webpack": "^5.74.0",
+    "webpack-cli": "^4.10.0"
+  }
+}

@@ -1,0 +1,1 @@
+../../../../../blockchain-vks/keys/VerificationKey28x32.sol

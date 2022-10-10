@@ -1,0 +1,5 @@
+.cache
+dist
+node_modules
+**/.terraform
+Dockerfile

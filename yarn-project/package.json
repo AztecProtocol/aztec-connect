@@ -1,0 +1,32 @@
+{
+  "name": "@aztec/monorepo",
+  "packageManager": "yarn@3.2.3",
+  "private": true,
+  "workspaces": [
+    "account-migrator",
+    "barretenberg.js",
+    "blockchain",
+    "eslint-config",
+    "explorer",
+    "halloumi",
+    "kebab",
+    "falafel",
+    "sdk",
+    "hummus",
+    "end-to-end",
+    "wallet",
+    "wasabi",
+    "zk-money"
+  ],
+  "devDependencies": {
+    "@babel/core": "^7.18.10",
+    "@babel/plugin-syntax-import-assertions": "^7.18.6",
+    "@babel/preset-env": "^7.18.10",
+    "@babel/preset-typescript": "^7.18.6",
+    "babel-jest": "^28.1.3",
+    "babel-plugin-transform-import-meta": "^2.2.0",
+    "eslint": "^8.21.0",
+    "prettier": "^2.7.1",
+    "typescript": "^4.7.4"
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "name": "kebab",
+  "version": "1.0.0",
+  "main": "dest/index.js",
+  "license": "GPL-2.0",
+  "type": "module",
+  "scripts": {
+    "build": "rm -rf ./dest && tsc -b tsconfig.json",
+    "clean": "rm -rf ./data ./dest",
+    "clean_db": "rm -rf ./data",
+    "formatting": "run -T prettier --check ./src && run -T eslint --max-warnings 0 ./src",
+    "start": "node ./dest",
+    "start:debug": ". ./.env && node --inspect-brk=0.0.0.0:9221 ./dest",
+    "start:dev": ". ./.env && yarn start:dev_server",
+    "start:dev_debug": ". ./.env && yarn start:dev_server_debug",
+    "start:dev_server": ". ./.env && tsc-watch -p tsconfig.json --onSuccess 'yarn start'",
+    "start:dev_server_debug": ". ./.env && tsc-watch -p tsconfig.json --onSuccess 'yarn start:debug'",
+    "start:e2e": "./scripts/start_e2e.sh"
+  },
+  "jest": {
+    "preset": "ts-jest/presets/default-esm",
+    "globals": {
+      "ts-jest": {
+        "useESM": true
+      }
+    },
+    "moduleNameMapper": {
+      "^(\\.{1,2}/.*)\\.js$": "$1"
+    },
+    "testRegex": ".*\\.test\\.ts$",
+    "rootDir": "./src"
+  },
+  "dependencies": {
+    "@aztec/barretenberg": "workspace:^",
+    "@aztec/blockchain": "workspace:^",
+    "@koa/cors": "^3.3.0",
+    "fs-extra": "^10.1.0",
+    "koa": "^2.13.4",
+    "koa-bodyparser": "^4.3.0",
+    "koa-compress": "^5.1.0",
+    "koa-router": "^7.4.0",
+    "log-timestamp": "^0.3.0",
+    "promise-readable": "^5.0.4",
+    "sqlite3": "^5.0.8",
+    "typeorm": "^0.3.7"
+  },
+  "devDependencies": {
+    "@aztec/eslint-config": "workspace:^",
+    "@rushstack/eslint-patch": "^1.1.4",
+    "@types/debug": "^4.1.5",
+    "@types/fs-extra": "^9.0.13",
+    "@types/jest": "^28.1.3",
+    "@types/koa": "^2.13.4",
+    "@types/koa-bodyparser": "^4.3.7",
+    "@types/koa-compress": "^4.0.3",
+    "@types/koa-router": "^7.4.4",
+    "@types/koa__cors": "^3.3.0",
+    "@types/node": "^18.7.23",
+    "debug": "^4.1.1",
+    "jest": "^28.1.2",
+    "ts-jest": "^28.0.5",
+    "ts-node": "^10.8.1",
+    "tsc-watch": "^5.0.3",
+    "typescript": "^4.7.4"
+  }
+}

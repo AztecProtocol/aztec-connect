@@ -1,13 +1,4 @@
-/.vscode
-.viscode
-.cache
-.parcel-cache*
-.yarn
-dest
 dist
+dest
 node_modules
 .terraform
-.env
-*.log
-*.swp
-.next
