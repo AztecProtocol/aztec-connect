@@ -5,7 +5,7 @@
 # The images output are cache images, meaning they will eventually get purged.
 # The deploy phase will tag the images such that they become permanent.
 #
-# usage: ./build <repository> [dockerfile]
+# usage: ./build <repository>
 # example: ./build barretenberg-x86_64-linux-clang
 # output image:
 #   278380418400.dkr.ecr.us-east-2.amazonaws.com/barretenberg-x86_64-linux-clang:cache-deadbeefcafebabe1337c0d3

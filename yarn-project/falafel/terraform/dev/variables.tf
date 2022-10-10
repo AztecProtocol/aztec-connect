@@ -5,7 +5,3 @@ variable "PRIVATE_KEY" {
 variable "DEPLOY_TAG" {
   type = string
 }
-
-variable "REDEPLOY" {
-  type = string
-}

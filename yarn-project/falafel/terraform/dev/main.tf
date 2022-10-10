@@ -192,10 +192,6 @@ resource "aws_ecs_task_definition" "falafel" {
       {
         "name": "PROVERLESS",
         "value": "true"
-      },
-      {
-        "name": "REDEPLOY",
-        "value": "${var.REDEPLOY}"
       }
     ],
     "mountPoints": [

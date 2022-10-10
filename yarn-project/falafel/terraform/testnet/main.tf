@@ -204,10 +204,6 @@ resource "aws_ecs_task_definition" "falafel" {
       {
         "name": "PROOF_GENERATOR_MODE",
         "value": "split"
-      },
-      {
-        "name": "REDEPLOY",
-        "value": "${var.REDEPLOY}"
       }
     ],
     "mountPoints": [

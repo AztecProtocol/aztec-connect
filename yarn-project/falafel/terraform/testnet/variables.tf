@@ -9,7 +9,3 @@ variable "SERVER_AUTH_TOKEN" {
 variable "DEPLOY_TAG" {
   type = string
 }
-
-variable "REDEPLOY" {
-  type = string
-}

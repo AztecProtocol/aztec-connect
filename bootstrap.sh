@@ -11,7 +11,7 @@ nvm install
 
 # Until we push .yarn/cache, we still need to install.
 cd yarn-project
-yarn install
+yarn install --immutable
 cd ..
 
 # We only bootstrap projects that produce artefacts needed for running end-to-end tests and frontends.

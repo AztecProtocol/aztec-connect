@@ -1,6 +1,6 @@
 #!/bin/bash
 # Builds the PROJECTS in the given order.
-# Will terminate build TARGET_PROJECT (if given).
+# Will terminate build at TARGET_PROJECT (if given).
 # Will only build TARGET_PROJECT if ONLY_TARGET given.
 # Will push TARGET_PROJECT to ECR with PUSH_LABEL (if given).
 # PROJECT elements have structure WORKING_DIR:REPO:DOCKERFILE.
