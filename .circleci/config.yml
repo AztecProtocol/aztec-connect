@@ -584,6 +584,7 @@ jobs:
       - run:
           name: 'sdk'
           command: |
+            deploy_ecr sdk
             deploy_s3 sdk
             deploy_npm sdk
       - run:
@@ -591,15 +592,21 @@ jobs:
           command: deploy wasabi
       - run:
           name: 'zk-money'
-          command: deploy_s3 zk-money
+          command: |
+            deploy_ecr sdk
+            deploy_s3 zk-money
       - run:
           name: 'hummus'
           working_directory: hummus
-          command: deploy_s3 hummus
+          command: |
+            deploy_ecr sdk
+            deploy_s3 hummus
       - run:
           name: 'explorer'
           working_directory: explorer
-          command: deploy_s3 explorer
+          command: |
+            deploy_ecr sdk
+            deploy_s3 explorer
       - run:
           name: 'faucet'
           working_directory: faucet
