@@ -1,3 +1,37 @@
+# This config consists of currently 3 workflows.
+# - system: The main Aztec infrastructure, services, frontends etc.
+# - metrics: The metrics grafana and prometheus instances, and some prometheus data sources.
+# - website: The company website.
+#
+# The default workflow is system. To trigger the other workflows, trigger a workflow from CCI
+# setting a string variable called `workflow` to another name.
+#
+# This file uses YAML anchors and aliases to prevent repetition of blocks of config:
+# https://support.atlassian.com/bitbucket-cloud/docs/yaml-anchors/
+#
+# Two primary anchors are checkout and setup_env, called as the first step of almost all jobs:
+# - checkout: A custom checkout step to reduce the amount of data downloaded to improve speed.
+# - setup_env: Sets up the common environment used by all build steps.
+#
+# Two CCI executors are used:
+# - docker (small): Used only to launch external EC2 instances for big workloads. It's the cheapest option.
+# - machine (large): Used for building in CCI itself. 4cpus, 15GB has the optimal power/cost ratio.
+#
+# The docker executor uses a custom image build in `build_image`. It's specifically streamlined for fast download
+# with just enough tools to execute the build system, and launch EC2 instances etc.
+#
+# There are some `join` steps that are just noops. They are just used to produce cleaner graph rendering in CCI.
+
+version: 2.1
+parameters:
+  workflow:
+    type: string
+    default: 'system'
+
+# This build step checks out the code from the repository. It has a hardcoded readonly key to allow the checkout.
+# Initially it just fetches the repo metadata for the current commit hash to a depth of 50 commits.
+# We need historical commit hashes to calculate diffs between previous and current commits.
+# It then checks out the fetched head to actually download the data.
 checkout: &checkout
   run:
     name: 'Checkout code'
@@ -57,16 +91,13 @@ checkout: &checkout
       git fetch --depth 50 --filter=blob:none origin $CIRCLE_SHA1
       git checkout FETCH_HEAD
 
+# Called setup_env to setup a bunch of global variables used throughout the rest of the build process.
+# It takes the required CCI environment variables as inputs, and gives them normalised names for the rest of
+# the build process. This enables easy running of the build system external to CCI, as used for powerful EC2 builds.
 setup_env: &setup_env
   run:
     name: 'Setup environment'
     command: cd .circleci && ./setup_env "$CIRCLE_SHA1" "$CIRCLE_TAG" "$CIRCLE_JOB" "$CIRCLE_REPOSITORY_URL"
-
-version: 2.1
-parameters:
-  workflow:
-    type: string
-    default: 'system'
 
 jobs:
   wasm-linux-clang:
@@ -529,6 +560,15 @@ jobs:
           name: 'Noop'
           command: echo Noop
 
+  bb-join:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: 'Noop'
+          command: echo Noop
+
   website:
     machine:
       image: ubuntu-2004:202010-01
@@ -662,7 +702,7 @@ jobs:
           name: 'grafana'
           command: deploy grafana "" is_global
 
-# Reusable config: https://support.atlassian.com/bitbucket-cloud/docs/yaml-anchors/
+# Repeatable config for defining the workflow below.
 tag_regex: &tag_regex /v[0-9]+(\.[0-9]+)*(-[a-zA-Z-]+\.[0-9]+)?/
 tag_filter: &tag_filter
   tags:
@@ -679,6 +719,12 @@ e2e_test: &e2e_test
   requires:
     - e2e-join
   filters: *tag_filter
+deploy_filters: &deploy_filters
+  branches:
+    only:
+      - defi-bridge-project
+  tags:
+    only: *tag_regex
 
 workflows:
   system:
@@ -748,10 +794,8 @@ workflows:
       - e2e-permit: *e2e_test
       - e2e-prover: *e2e_test
       - e2e-virtual-assets: *e2e_test
-      - deploy:
+      - bb-join:
           requires:
-            # Must list all projects at the end of a dependency chain.
-            - faucet
             - x86_64-linux-gcc
             - barretenberg-tests
             - stdlib-primitives-tests
@@ -761,6 +805,22 @@ workflows:
             - root-rollup-tests
             - root-rollup-full-tests
             - root-verifier-tests
+          filters: *deploy_filters
+      - yarn-join:
+          requires:
+            - explorer
+            - wallet
+            - wasabi
+            - zk-money
+            - blockchain
+            - barretenberg-js
+          filters: *deploy_filters
+      - deploy:
+          requires:
+            # Must list all projects at the end of a dependency chain.
+            - bb-join
+            - yarn-join
+            - faucet
             - e2e-account
             - e2e-browser
             - e2e-chained-txs
@@ -775,19 +835,7 @@ workflows:
             - e2e-permit
             - e2e-prover
             - e2e-virtual-assets
-            - explorer
-            - faucet
-            - wallet
-            - wasabi
-            - zk-money
-            - blockchain
-            - barretenberg-js
-          filters:
-            branches:
-              only:
-                - defi-bridge-project
-            tags:
-              only: *tag_regex
+          filters: *deploy_filters
   metrics:
     when:
       equal: [metrics, << pipeline.parameters.workflow >>]

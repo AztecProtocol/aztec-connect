@@ -4,6 +4,7 @@ set -e
 REPOSITORY=$1
 # A global deploy, doesn't namespace under a deploy tag (e.g. company website, metrics)
 IS_GLOBAL=$2
+PROJECT_DIR=$(query_manifest projectDir $REPOSITORY)
 
 extract_repo $REPOSITORY /usr/src/$(query_manifest projectDir $REPOSITORY)/dest ./dest
 
@@ -11,10 +12,11 @@ extract_repo $REPOSITORY /usr/src/$(query_manifest projectDir $REPOSITORY)/dest 
 echo $DEPLOY_TAG > ./dest/DEPLOY_TAG
 
 if [ -n "$IS_GLOBAL" ]; then
-  TF_DIR=./terraform
+  TF_DIR=$ROOT_PATH/$PROJECT_DIR/terraform
   deploy_terraform "" $TF_DIR
 else
-  deploy_terraform $REPOSITORY
+  TF_DIR=$ROOT_PATH/$PROJECT_DIR/$VERSION_TAG/terraform
+  deploy_terraform $REPOSITORY $TF_DIR
 fi
 
 pushd $TF_DIR > /dev/null

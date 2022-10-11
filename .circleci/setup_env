@@ -40,9 +40,7 @@ fi
 
 # - The deploy tag (used in api paths, subdomains), is a concatenation of the project name and version tag,
 #   e.g. aztec-connect-dev, aztec-connect-testnet, or aztec-connect-prod
-# - The terraform that will be executed (if it exists) is named after the version tag, e.g. ./terraform/dev.
 DEPLOY_TAG=$PROJECT-$VERSION_TAG
-TF_DIR=./terraform/$VERSION_TAG
 
 if [ -z "$BASH_ENV" ]; then
   BASH_ENV=$(mktemp)
@@ -65,7 +63,6 @@ echo export JOB_NAME=$JOB_NAME >> $BASH_ENV
 echo export GIT_REPOSITORY_URL=$GIT_REPOSITORY_URL >> $BASH_ENV
 echo export VERSION_TAG=$VERSION_TAG >> $BASH_ENV
 echo export DEPLOY_TAG=$DEPLOY_TAG >> $BASH_ENV
-echo export TF_DIR=$TF_DIR >> $BASH_ENV
 # Our alpine build image has jq installed, ubuntu build instances use our committed version.
 if [ ! -f /etc/alpine-release ]; then
   echo export PATH=\$PATH:$BUILD_SYSTEM_PATH/bin >> $BASH_ENV
