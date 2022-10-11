@@ -15,7 +15,7 @@ echo "deploy_s3: Extract dir: $EXTRACT_DIR"
 extract_repo $REPOSITORY /usr/src/$(query_manifest projectDir $REPOSITORY)/dest $EXTRACT_DIR
 
 # So a front-end app can discover it's deploy tag at runtime, we include a file called DEPLOY_TAG in the root.
-echo $DEPLOY_TAG > $EXTRACT_DIR/DEPLOY_TAG
+echo $DEPLOY_TAG > $EXTRACT_DIR/dest/DEPLOY_TAG
 
 if [ -n "$IS_GLOBAL" ]; then
   TF_DIR=$ROOT_PATH/$PROJECT_DIR/terraform
@@ -31,7 +31,7 @@ AWS_CLOUDFRONT_DISTRIBUTION=$(terraform output cloudfront || echo "")
 popd > /dev/null
 
 aws s3 rm s3://$AWS_BUCKET_NAME --recursive
-aws s3 cp $EXTRACT_DIR s3://$AWS_BUCKET_NAME --recursive --metadata-directive REPLACE --cache-control "no-cache" --acl public-read
+aws s3 cp $EXTRACT_DIR/dest s3://$AWS_BUCKET_NAME --recursive --metadata-directive REPLACE --cache-control "no-cache" --acl public-read
 aws s3 cp \
       s3://$AWS_BUCKET_NAME \
       s3://$AWS_BUCKET_NAME \
