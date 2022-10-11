@@ -642,19 +642,19 @@ jobs:
       - run:
           name: 'zk-money'
           command: |
-            deploy_ecr sdk
+            deploy_ecr zk-money
             deploy_s3 zk-money
       - run:
           name: 'hummus'
           working_directory: hummus
           command: |
-            deploy_ecr sdk
+            deploy_ecr hummus
             deploy_s3 hummus
       - run:
           name: 'explorer'
           working_directory: explorer
           command: |
-            deploy_ecr sdk
+            deploy_ecr explorer
             deploy_s3 explorer
       - run:
           name: 'faucet'

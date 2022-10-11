@@ -8,6 +8,8 @@
 TEST=$1
 SESSION_NAME=work
 
+cd $(git rev-parse --show-toplevel)
+
 if tmux has-session -t $SESSION_NAME > /dev/null 2>&1; then
   tmux attach -t $SESSION_NAME
 else
