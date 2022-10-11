@@ -646,19 +646,21 @@ jobs:
             deploy_s3 zk-money
       - run:
           name: 'hummus'
-          working_directory: hummus
           command: |
             deploy_ecr hummus
             deploy_s3 hummus
       - run:
+          name: 'wallet'
+          command: |
+            deploy_ecr wallet
+            deploy_s3 wallet
+      - run:
           name: 'explorer'
-          working_directory: explorer
           command: |
             deploy_ecr explorer
             deploy_s3 explorer
       - run:
           name: 'faucet'
-          working_directory: faucet
           command: deploy faucet
 
   # smoketest:
