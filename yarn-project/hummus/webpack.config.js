@@ -10,7 +10,7 @@ const require = createRequire(import.meta.url);
 
 export default {
   target: 'web',
-  mode: 'development',
+  mode: 'production',
   entry: './src/index.tsx',
   module: {
     rules: [

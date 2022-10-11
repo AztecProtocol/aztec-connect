@@ -80,7 +80,7 @@
     "projectDir": "yarn-project/end-to-end",
     "dockerfile": "end-to-end/Dockerfile",
     "rebuildPatterns": ["^yarn-project/end-to-end/"],
-    "dependencies": ["sdk", "blockchain"]
+    "dependencies": ["sdk", "falafel", "halloumi", "hummus", "kebab"]
   },
   "wasabi": {
     "buildDir": "yarn-project",
