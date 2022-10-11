@@ -3,7 +3,7 @@ set -e
 
 if [ -z "$ROLLUP_CONTRACT_ADDRESS" -a -n "$ETHEREUM_HOST" ]; then
   echo "Waiting for $ETHEREUM_HOST..."
-  [[ $ETHEREUM_HOST =~ http://(.*):(.*) ]]
+  [[ $ETHEREUM_HOST =~ https?://(.*):(.*) ]]
   while ! nc -z ${BASH_REMATCH[1]} ${BASH_REMATCH[2]}; do sleep 1; done;
 
   RESULT=$(curl -s $ETHEREUM_HOST)
