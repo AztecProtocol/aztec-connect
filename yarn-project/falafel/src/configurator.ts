@@ -160,6 +160,16 @@ export class Configurator {
    * Save the new configuration to disk.
    */
   constructor(private confPath = './data/config') {
+    if (process.env.JEST_WORKER_ID) {
+      // Ensure when we run tests, we don't create any disk state. We have to do this horrific check due
+      // to the fact the Configurator must be created globally as part of init_entities.
+      this.confVars = {
+        ...defaultStartupConfig,
+        runtimeConfig: defaultRuntimeConfig,
+      };
+      return;
+    }
+
     const dir = dirname(this.confPath);
     mkdirpSync(dir);
 

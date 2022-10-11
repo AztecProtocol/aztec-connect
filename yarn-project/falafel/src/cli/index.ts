@@ -7,17 +7,13 @@ import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { Command } from 'commander';
 import { DataSource } from 'typeorm';
 import { getOrmConfig } from '../config.js';
-import { Configurator } from '../configurator.js';
-import { initEntities } from '../entity/init_entities.js';
+import { configurator } from '../entity/init_entities.js';
 import { TypeOrmRollupDb } from '../rollup_db/index.js';
 import { SyncRollupDb } from '../rollup_db/sync_rollup_db.js';
 import { checkDuplicateNullifiers, checkNullifiersAgainstWorldState, findNearbyTxs } from './diagnostics.js';
 import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { fromBaseUnits } from '@aztec/blockchain';
 import { RollupDao } from '../entity/index.js';
-
-const configurator = new Configurator();
-initEntities(configurator.getConfVars().dbUrl);
 
 const getOrmDbConfig = () => {
   const confVars = configurator.getConfVars();
