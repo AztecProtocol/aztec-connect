@@ -6,6 +6,10 @@ REPOSITORY=$1
 IS_GLOBAL=$2
 PROJECT_DIR=$(query_manifest projectDir $REPOSITORY)
 
+echo "deploy_s3: Repository: $REPOSITORY"
+echo "deploy_s3: Project Dir: $PROJECT_DIR"
+echo "deploy_s3: Working directory: $PWD"
+
 extract_repo $REPOSITORY /usr/src/$(query_manifest projectDir $REPOSITORY)/dest ./dest
 
 # So a front-end app can discover it's deploy tag at runtime, we include a file called DEPLOY_TAG in the dest root.
