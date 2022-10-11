@@ -47,7 +47,7 @@
     "sqlite3": "^5.0.9",
     "supports-color": "7.2.0",
     "tslib": "^2.4.0",
-    "typeorm": "^0.3.7"
+    "typeorm": "^0.3.10"
   },
   "devDependencies": {
     "@aztec/eslint-config": "workspace:^",

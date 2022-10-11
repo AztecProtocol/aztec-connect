@@ -1,14 +1,14 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 
-cd  ../barretenberg/build
+pushd  ../../barretenberg/build > /dev/null
 make -j$(nproc) rollup_cli db_cli
 cd  ../build-wasm
 make -j$(nproc) barretenberg.wasm
-cd ../../falafel
+popd
 
 # Hosts
-export ETHEREUM_HOST=http://localhost:8545
+export ETHEREUM_HOST=http://localhost:8546
 
-. ./export_addresses.sh
+. ./scripts/export_addresses.sh
 tsc-watch -p tsconfig.dest.json --onSuccess 'yarn start'

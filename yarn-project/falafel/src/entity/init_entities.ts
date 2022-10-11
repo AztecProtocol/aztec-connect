@@ -1,7 +1,12 @@
-export type SupportedDb = 'mysql' | 'postgres' | 'sqlite';
-
 // Default to sqlite.
 let db: SupportedDb = 'sqlite';
+
+// It's a bit weird exporting the configurator from here, but we must ensure we initEntities before importing entities.
+import { Configurator } from '../configurator.js';
+export const configurator = new Configurator();
+initEntities(configurator.getConfVars().dbUrl);
+
+export type SupportedDb = 'mysql' | 'postgres' | 'sqlite';
 
 export function bufferColumn(opts: any = {}): [any, any] {
   switch (db) {

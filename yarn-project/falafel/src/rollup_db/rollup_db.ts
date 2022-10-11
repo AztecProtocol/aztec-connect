@@ -81,13 +81,9 @@ export class TypeOrmRollupDb implements RollupDb {
   }
 
   public async getPendingTxCount() {
-    // TODO: Remove workaround once fixed: https://github.com/typeorm/typeorm/pull/9031
-
-    // return await this.txRep.count({
-    //   where: { rollupProof: IsNull() },
-    // });
-
-    return await this.txRep.createQueryBuilder('tx').where('rollupProofInternalId IS NULL').getCount();
+    return await this.txRep.count({
+      where: { rollupProof: IsNull() },
+    });
   }
 
   public async deletePendingTxs() {
@@ -154,20 +150,11 @@ export class TypeOrmRollupDb implements RollupDb {
   }
 
   public async getPendingTxs(take?: number) {
-    // TODO: Remove workaround once fixed: https://github.com/typeorm/typeorm/pull/9031
-
-    // return await this.txRep.find({
-    //   where: { rollupProof: IsNull() },
-    //   order: { created: 'ASC' },
-    //   take,
-    // });
-
-    return await this.txRep
-      .createQueryBuilder('tx')
-      .where('rollupProofInternalId IS NULL')
-      .orderBy({ created: 'ASC' })
-      .take(take)
-      .getMany();
+    return await this.txRep.find({
+      where: { rollupProof: IsNull() },
+      order: { created: 'ASC' },
+      take,
+    });
   }
 
   public async getUnsettledNullifiers() {

@@ -42,7 +42,7 @@
     "log-timestamp": "^0.3.0",
     "promise-readable": "^5.0.4",
     "sqlite3": "^5.0.8",
-    "typeorm": "^0.3.7"
+    "typeorm": "^0.3.10"
   },
   "devDependencies": {
     "@aztec/eslint-config": "workspace:^",

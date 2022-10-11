@@ -62,7 +62,7 @@
     "sqlite3": "^5.0.9",
     "type-graphql": "^1.0.0",
     "typedi": "^0.8.0",
-    "typeorm": "^0.3.7"
+    "typeorm": "^0.3.10"
   },
   "devDependencies": {
     "@aztec/eslint-config": "workspace:^",

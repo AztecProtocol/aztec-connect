@@ -2,13 +2,6 @@ import sourceMapSupport from 'source-map-support';
 sourceMapSupport.install();
 import 'log-timestamp';
 import 'reflect-metadata';
-
-// initEntities must be happen before any entities are imported.
-import { Configurator } from './configurator.js';
-import { initEntities } from './entity/init_entities.js';
-const configurator = new Configurator();
-initEntities(configurator.getConfVars().dbUrl);
-
 import http from 'http';
 import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { EthereumBlockchain } from '@aztec/blockchain';
@@ -21,6 +14,7 @@ import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
 import { Container } from 'typedi';
 import { CachedRollupDb, TypeOrmRollupDb } from './rollup_db/index.js';
 import { InitHelpers } from '@aztec/barretenberg/environment';
+import { configurator } from './entity/init_entities.js';
 
 async function main() {
   const { ormConfig, provider, signingAddress, ethConfig } = await getComponents(configurator);
