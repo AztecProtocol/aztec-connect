@@ -477,10 +477,24 @@ export class RollupProcessor {
     const { earliestBlock } = await this.getEarliestBlock();
     const latestBlockNumber = await this.provider.getBlockNumber();
     const rollupChunkSize = this.rollupRetrievalChunkSize();
-    let start =
-      this.lastQueriedRollupId === undefined || rollupId < this.lastQueriedRollupId
-        ? earliestBlock
-        : this.lastQueriedRollupBlockNum! + 1;
+
+    // we default to starting the search from the earliest block
+    // if we have successfully found rollups before then we may be able to start further on in the chain
+    // if the requested rollupIds are more recent than previously requested then start from the
+    // cached 'last' rollup eth block number
+    // if the request id is earlier than previous ids then we have to start from the beginning again
+    let start = earliestBlock;
+    if (
+      this.lastQueriedRollupId !== undefined &&
+      rollupId >= this.lastQueriedRollupId &&
+      this.lastQueriedRollupBlockNum !== undefined
+    ) {
+      // start from the last found rollup block number + 1
+      start = this.lastQueriedRollupBlockNum! + 1;
+    } else {
+      // start from the earliest block and reset the last queried block number
+      this.lastQueriedRollupBlockNum = undefined;
+    }
     let end = Math.min(start + rollupChunkSize - 1, latestBlockNumber);
     let events: Event[] = [];
     let rollupReached = false;
@@ -492,8 +506,19 @@ export class RollupProcessor {
       this.log(`fetching rollup events between blocks ${start} and ${end}...`);
       const startTime = new Date().getTime();
       const rollupEvents = await this.rollupProcessor.queryFilter(rollupFilter, start, end);
-      this.lastQueriedRollupBlockNum = end;
       this.log(`${rollupEvents.length} fetched in ${(new Date().getTime() - startTime) / 1000}s`);
+
+      if (rollupEvents.length) {
+        // there are definitely rollups on this chain.
+        // we will return the rollups 'from' the id requested so we can safely cache that id
+        this.lastQueriedRollupId = rollupId;
+        // we can also cache the block number of the last rollup we ever find as we move forwards for use later
+        const latestBlockInBatch = rollupEvents[rollupEvents.length - 1].blockNumber;
+        this.lastQueriedRollupBlockNum =
+          this.lastQueriedRollupBlockNum === undefined
+            ? latestBlockInBatch
+            : Math.max(this.lastQueriedRollupBlockNum, latestBlockInBatch);
+      }
 
       // check if we've reached requested rollupId
       if (
@@ -508,6 +533,7 @@ export class RollupProcessor {
       }
 
       if (rollupReached) {
+        // we have reached the requested rollup, store the events.
         events = [...events, ...rollupEvents];
       }
 
@@ -516,8 +542,6 @@ export class RollupProcessor {
     }
 
     this.log(`done: ${events.length} fetched in ${(new Date().getTime() - totalStartTime) / 1000}s`);
-
-    this.lastQueriedRollupId = rollupId;
 
     return this.getRollupBlocksFromEvents(
       events.filter(e => e.args!.rollupId.toNumber() >= rollupId),

@@ -96,7 +96,12 @@ export class RollupEventGetter {
           defiBridgeEvents.length
         } defiBridge events fetched in ${(new Date().getTime() - startTime) / 1000}s`,
       );
-      this.lastQueriedBlockNum = end;
+      // cache the last eth block number where we actually received an event
+      const latestRollupBlock = rollupEvents.length ? rollupEvents[rollupEvents.length - 1].blockNumber : earliestBlock;
+      const latestDefiBlock = defiBridgeEvents.length
+        ? defiBridgeEvents[defiBridgeEvents.length - 1].blockNumber
+        : earliestBlock;
+      this.lastQueriedBlockNum = Math.max(latestRollupBlock, latestDefiBlock, this.lastQueriedBlockNum);
 
       // if db has been passed, store directly
       if (db) {
