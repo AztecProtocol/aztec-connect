@@ -24,8 +24,8 @@ export class Obs<T> implements IObs<T> {
     return new Obs(new ConstantObs(value));
   }
 
-  static input<T>(intialValue: T) {
-    return new ChainableInputObs(intialValue);
+  static input<T>(initialValue: T) {
+    return new ChainableInputObs(initialValue);
   }
 
   static promise<T>(promise: Promise<T>, initialValue: T) {
