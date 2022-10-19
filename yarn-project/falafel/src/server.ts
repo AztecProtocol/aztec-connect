@@ -10,6 +10,7 @@ import { InitialWorldState, RollupProviderStatus, RuntimeConfig } from '@aztec/b
 import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
 import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { CliProofGenerator, HttpJobServer, HttpJobServers, ProofGenerator } from '@aztec/halloumi/proof_generator';
+import { InitAccountFiles } from './environment/index.js';
 import { BridgeResolver } from './bridge/index.js';
 import { Configurator } from './configurator.js';
 import { Metrics } from './metrics/index.js';
@@ -310,7 +311,7 @@ export class Server {
 
   public async getInitialWorldState(): Promise<InitialWorldState> {
     const chainId = await this.blockchain.getChainId();
-    const accountFileName = InitHelpers.getAccountDataFile(chainId);
+    const accountFileName = InitAccountFiles.getAccountDataFile(chainId);
     const initialAccounts = accountFileName ? await InitHelpers.readData(accountFileName) : Buffer.alloc(0);
     return { initialAccounts, initialSubtreeRoots: this.worldState.getInitialStateSubtreeRoots() };
   }

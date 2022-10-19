@@ -14,6 +14,7 @@ import { Timer } from '@aztec/barretenberg/timer';
 import { WorldStateConstants } from '@aztec/barretenberg/world_state';
 import { RollupTreeId, WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { fromBaseUnits } from '@aztec/blockchain';
+import { InitAccountFiles } from './environment/index.js';
 import {
   AccountDao,
   AssetMetricsDao,
@@ -219,7 +220,7 @@ export class WorldState {
     const chainId = await this.blockchain.getChainId();
     this.log(`Chain id: ${chainId}`);
 
-    const accountDataFile = InitHelpers.getAccountDataFile(chainId);
+    const accountDataFile = InitAccountFiles.getAccountDataFile(chainId);
     if (!accountDataFile) {
       this.log(`No account initialisation file for chain ${chainId}.`);
       return;

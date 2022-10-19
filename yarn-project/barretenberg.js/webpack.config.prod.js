@@ -35,11 +35,7 @@ export default {
           // Point directly to the built file, not the symlink, else copy-on-change doesn't work...
           from: `../../barretenberg/build-wasm/bin/barretenberg.wasm`,
           to: 'wasm/barretenberg.wasm',
-        },
-        {
-          from: `./src/environment/init/data`,
-          to: 'environment/init/data',
-        },
+        }
       ],
     }),
   ],

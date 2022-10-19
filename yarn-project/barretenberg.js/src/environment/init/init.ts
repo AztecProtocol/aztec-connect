@@ -80,15 +80,6 @@ export class InitHelpers {
     return getInitData(chainId).initAccounts;
   }
 
-  public static getAccountDataFile(chainId: number) {
-    if (!getInitData(chainId).accountsData) {
-      return undefined;
-    }
-    const relPathToFile = getInitData(chainId).accountsData;
-    const fullPath = resolvePath(relPathToFile);
-    return fullPath;
-  }
-
   public static getRootDataFile(chainId: number) {
     if (!getInitData(chainId).roots) {
       return undefined;
@@ -104,19 +95,6 @@ export class InitHelpers {
     const { bytesWritten } = await fileHandle.write(data);
     await fileHandle.close();
     return bytesWritten;
-  }
-
-  public static async readData(filePath: string) {
-    const path = resolvePath(filePath);
-    try {
-      const fileHandle = await fs.open(path, 'r');
-      const data = await fileHandle.readFile();
-      await fileHandle.close();
-      return data;
-    } catch (err) {
-      console.log(`Failed to read file: ${path}. Error: ${err}`);
-      return Buffer.alloc(0);
-    }
   }
 
   public static async writeAccountTreeData(accountData: AccountData[], filePath: string) {
@@ -169,6 +147,19 @@ export class InitHelpers {
       ];
     });
     return await this.writeData(filePath, Buffer.concat(dataToWrite));
+  }
+
+  public static async readData(filePath: string) {
+    const path = resolvePath(filePath);
+    try {
+      const fileHandle = await fs.open(path, 'r');
+      const data = await fileHandle.readFile();
+      await fileHandle.close();
+      return data;
+    } catch (err) {
+      console.log(`Failed to read file: ${path}. Error: ${err}`);
+      return Buffer.alloc(0);
+    }
   }
 
   public static parseAccountTreeData(data: Buffer) {
