@@ -1,0 +1,58 @@
+{
+  "name": "@aztec/halloumi",
+  "version": "1.0.0",
+  "license": "GPL-2.0",
+  "type": "module",
+  "exports": {
+    "./proof_generator": "./dest/proof_generator/index.js"
+  },
+  "scripts": {
+    "build": "rm -rf ./dest .tsbuildinfo && tsc -b tsconfig.dest.json",
+    "formatting": "run -T prettier --check ./src && run -T eslint --max-warnings 0 ./src",
+    "build:dev": "node package.js && tsc -p tsconfig.dest.json --watch",
+    "start": "node ./dest",
+    "start:debug": "node --inspect-brk=0.0.0.0:9221 ./dest",
+    "start:dev": "tsc-watch -p tsconfig.dest.json --onSuccess 'yarn start'",
+    "start:e2e": "./scripts/start_e2e.sh",
+    "test": "NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache",
+    "clean": "rm -rf ./dest ./data .tsbuildinfo"
+  },
+  "jest": {
+    "preset": "ts-jest/presets/default-esm",
+    "globals": {
+      "ts-jest": {
+        "useESM": true
+      }
+    },
+    "moduleNameMapper": {
+      "^(\\.{1,2}/.*)\\.js$": "$1"
+    },
+    "testRegex": ".*\\.test\\.ts$",
+    "rootDir": "./src"
+  },
+  "dependencies": {
+    "@aztec/barretenberg": "workspace:^",
+    "fs-extra": "9.0.1",
+    "koa": "^2.7.0",
+    "koa-router": "^7.4.0",
+    "log-timestamp": "^0.3.0",
+    "promise-readable": "^5.0.4",
+    "source-map-support": "^0.5.21"
+  },
+  "devDependencies": {
+    "@aztec/eslint-config": "workspace:^",
+    "@jest/globals": "^28.1.2",
+    "@jest/types": "^28.1.3",
+    "@rushstack/eslint-patch": "^1.1.4",
+    "@types/fs-extra": "9.0.1",
+    "@types/jest": "^28.1.6",
+    "@types/koa": "^2.13.5",
+    "@types/koa-router": "^7.0.42",
+    "@types/node": "^18.7.23",
+    "@types/source-map-support": "^0.5.4",
+    "jest": "^28.1.3",
+    "ts-jest": "^28.0.7",
+    "tsc-watch": "^5.0.3",
+    "typescript": "^4.7.4"
+  }
+}

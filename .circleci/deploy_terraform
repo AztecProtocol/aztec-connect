@@ -2,12 +2,9 @@
 set -e
 
 REPOSITORY=$1
+TF_DIR=$2
 
-if [ -n "$2" ]; then
-  TF_DIR=$2
-fi
-
-if [ ! -d $TF_DIR ]; then
+if [ ! -d "$TF_DIR" ]; then
   echo "No terraform directory found at $TF_DIR. Skipping."
   exit 0
 fi

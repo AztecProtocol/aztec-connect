@@ -1,0 +1,10 @@
+#!/bin/bash
+set -e
+
+HOST=${1:-falafel}
+PORT=${2:-8081}
+
+echo "Waiting for port $HOST:$PORT to open..."
+while ! nc -z $HOST $PORT; do
+    sleep 1
+done

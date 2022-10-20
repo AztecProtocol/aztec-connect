@@ -1,0 +1,29 @@
+#!/bin/bash
+# Hardhat sucks and won't support ESM modules. Other tools suck and don't provide ways to override
+# the package.json type field. We can use this script to execute another script in a cjs context.
+
+set -e
+
+# trap interrupt to ensure we revert back to ESM.
+trap ctrl_c INT
+
+function enable_commonjs() {
+  tmp=$(mktemp)
+  jq '.type = "commonjs"' package.json > "$tmp" && mv "$tmp" package.json
+  echo Switched to commonjs.
+}
+
+function enable_module() {
+  tmp=$(mktemp)
+  jq '.type = "module"' package.json > "$tmp" && mv "$tmp" package.json
+  echo Switched to ESM.
+}
+
+function ctrl_c() {
+  enable_module
+  exit 0
+}
+
+enable_commonjs
+$@
+enable_module

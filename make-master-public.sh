@@ -13,14 +13,16 @@ rm -rf ./falafel
 rm -rf ./halloumi
 rm -rf ./specs
 
-rsync -av --progress ../aztec2-internal/barretenberg/ ./barretenberg --exclude /build --exclude /build-vks --exclude /build-wasm 
-rsync -av --progress ../aztec2-internal/sdk/ ./sdk --exclude /dest --exclude /dest-es --exclude /node_modules
-rsync -av --progress ../aztec2-internal/barretenberg.js/ ./barretenberg.js --exclude /dest --exclude /dest-es --exclude /node_modules
-rsync -av --progress ../aztec2-internal/blockchain/ ./blockchain --exclude /dest --exclude /dest-es  --exclude /node_modules --exclude /terraform
-rsync -av --progress ../aztec2-internal/falafel/ ./falafel --exclude /dest --exclude /dest-es  --exclude /node_modules --exclude /terraform
-rsync -av --progress ../aztec2-internal/halloumi/ ./halloumi --exclude /dest --exclude /dest-es  --exclude /node_modules --exclude /terraform
+EXCLUDES="--exclude /dest --exclude /dest-es  --exclude /node_modules --exclude /terraform --exclude /.yarn"
+
+rsync -av --progress ../aztec2-internal/barretenberg/ ./barretenberg --exclude /build --exclude /build-vks --exclude /build-wasm
+rsync -av --progress ../aztec2-internal/yarn-project/sdk/ ./sdk $EXCLUDES
+rsync -av --progress ../aztec2-internal/yarn-project/barretenberg.js/ ./barretenberg.js $EXCLUDES
+rsync -av --progress ../aztec2-internal/yarn-project/blockchain/ ./blockchain $EXCLUDES
+rsync -av --progress ../aztec2-internal/yarn-project/falafel/ ./falafel $EXCLUDES
+rsync -av --progress ../aztec2-internal/yarn-project/halloumi/ ./halloumi $EXCLUDES
 mkdir specs
-rsync -av --progress ../aztec2-internal/markdown/specs/aztec-connect/ ./specs/aztec-connect 
+rsync -av --progress ../aztec2-internal/markdown/specs/aztec-connect/ ./specs/aztec-connect
 cp ../aztec2-internal/README-publicversion.md README.md
 cp ../aztec2-internal/LICENSE LICENSE
 cp ../bootstrap-publicversion.sh bootstrap.sh

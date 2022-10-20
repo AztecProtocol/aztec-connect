@@ -19,7 +19,7 @@ ensure_repo $REPOSITORY $ECR_DEPLOY_REGION
 docker pull $IMAGE_COMMIT_URI
 
 # Login to dockerhub.
-docker login -u aztecprotocolci -p "${DOCKERHUB_PASSWORD}"
+echo "$DOCKERHUB_PASSWORD" | docker login -u aztecprotocolci --password-stdin
 
 # Push image to dockerhub.
 docker tag $IMAGE_COMMIT_URI $IMAGE_DEPLOY_URI

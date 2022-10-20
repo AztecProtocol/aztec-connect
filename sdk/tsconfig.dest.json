@@ -1,7 +1,0 @@
-{
-  "extends": ".",
-  "compilerOptions": {
-    "target": "es2018"
-  },
-  "exclude": ["src/**/*.test.ts", "src/**/fixtures/*", "src/**/test/*"]
-}
