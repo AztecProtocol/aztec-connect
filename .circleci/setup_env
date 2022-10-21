@@ -20,7 +20,7 @@ VERSION=$(cat ../VERSION)
 if [ -n "$COMMIT_TAG" ]; then
   # We're tagged e.g. v2.1.123 or v2.1.123-testnet.0.
   # First we sanity check that the tag matches the VERSION file.
-  COMMIT_TAG_VERSION=$(echo "$COMMIT_TAG" | grep -oP "v\d+.\d+")
+  COMMIT_TAG_VERSION=$(echo "$COMMIT_TAG" | grep -oE "v\d+.\d+")
   if [ "$COMMIT_TAG_VERSION" != "$VERSION" ]; then
     echo "Commit tag $COMMIT_TAG does not match repo version $VERSION."
     exit 1
@@ -28,7 +28,9 @@ if [ -n "$COMMIT_TAG" ]; then
 
   # Extract the version tag from the commit tag, if it has one, e.g. testnet.
   # If we have one, we look something like v2.1.123-testnet.0. This is a "non production" release.
-  VERSION_TAG=$(echo "$COMMIT_TAG" | grep -oP ".*-\K(.*)(?=\.\d+)" || true)
+  TEMP=${COMMIT_TAG%.*}
+  VERSION_TAG=${TEMP##*-}
+  # VERSION_TAG=$(echo "$COMMIT_TAG" | grep -oE ".*-\K(.*)(?=\.\d+)" || true)
   if [ -z "$VERSION_TAG" ]; then
     # If we don't have one, we look something like v2.1.123. This is a production release.
     VERSION_TAG=prod
