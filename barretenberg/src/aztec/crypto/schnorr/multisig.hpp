@@ -2,6 +2,7 @@
 
 #include <optional>
 #include <utility>
+#include <algorithm>
 
 #include "schnorr.hpp"
 #include "proof_of_possession.hpp"

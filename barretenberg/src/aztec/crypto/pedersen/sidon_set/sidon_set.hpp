@@ -2,6 +2,7 @@
 
 #include <array>
 #include <vector>
+#include <algorithm>
 
 #include <numeric/uintx/uintx.hpp>
 #include <ecc/fields/field.hpp>
