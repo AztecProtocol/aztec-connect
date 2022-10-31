@@ -2,6 +2,7 @@ import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import ResolveTypeScriptPlugin from 'resolve-typescript-plugin';
 import CopyWebpackPlugin from 'copy-webpack-plugin';
+import HTMLWebpackPlugin from 'html-webpack-plugin';
 import webpack from 'webpack';
 
 export default {
@@ -40,13 +41,15 @@ export default {
     new webpack.DefinePlugin({ 'process.env.NODE_DEBUG': false }),
     new webpack.ProvidePlugin({ Buffer: ['buffer', 'Buffer'] }),
     new CopyWebpackPlugin({
-      patterns: [{ from: 'src/public' }, { from: 'src/index.html' }],
+      patterns: [{ from: 'src/public' }],
     }),
+    new HTMLWebpackPlugin({ template: 'src/index.html' }),
   ],
   resolve: {
     plugins: [new ResolveTypeScriptPlugin()],
   },
   devServer: {
     historyApiFallback: true,
+    port: 3000,
   },
 };
