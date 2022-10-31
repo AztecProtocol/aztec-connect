@@ -40,7 +40,7 @@ export default {
     new webpack.DefinePlugin({ 'process.env.NODE_DEBUG': false }),
     new webpack.ProvidePlugin({ Buffer: ['buffer', 'Buffer'] }),
     new CopyWebpackPlugin({
-      patterns: [{ from: 'src/public' }],
+      patterns: [{ from: 'src/public' }, { from: 'src/index.html' }],
     }),
   ],
   resolve: {
