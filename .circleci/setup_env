@@ -23,10 +23,8 @@ if [ -n "$COMMIT_TAG" ]; then
   # We're tagged e.g. v2.1.123 or v2.1.123-testnet.0.
   # First we sanity check that the tag matches the VERSION file.
   echo "Extracting commit tag version..."
-  WITHOUT_V=${COMMIT_TAG#*v}
-  WITHOUT_VERSION_TAG=${WITHOUT_V%%-*}
+  WITHOUT_VERSION_TAG=${COMMIT_TAG%%-*}
   COMMIT_TAG_VERSION=${WITHOUT_VERSION_TAG%.*}
-  echo "WITHOUT_V=$WITHOUT_V"
   echo "WITHOUT_VERSION_TAG=$WITHOUT_VERSION_TAG"
   echo "COMMIT_TAG_VERSION=$COMMIT_TAG_VERSION"
   # COMMIT_TAG_VERSION=$(echo "$COMMIT_TAG" | grep -oE "v\d+.\d+")
