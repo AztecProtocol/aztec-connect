@@ -17,6 +17,8 @@ BUILD_SYSTEM_PATH=$(pwd)
 PROJECT=$(cat ../PROJECT)
 VERSION=$(cat ../VERSION)
 
+echo "Setting up environment COMMIT_HASH=$COMMIT_HASH, COMMIT_TAG=$COMMIT_TAG, JOB_NAME=$JOB_NAME, GIT_REPOSITORY_URL=$GIT_REPOSITORY_URL"
+
 if [ -n "$COMMIT_TAG" ]; then
   # We're tagged e.g. v2.1.123 or v2.1.123-testnet.0.
   # First we sanity check that the tag matches the VERSION file.
