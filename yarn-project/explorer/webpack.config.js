@@ -16,11 +16,15 @@ export default {
         use: [{ loader: 'ts-loader' }],
       },
       {
-        test: /\.svg$/,
-        loader: 'svg-inline-loader',
+        test: /\.(woff(2)?|ttf|eot)(\?v=\d+\.\d+\.\d+)?$/,
+        type: 'asset/resource',
       },
       {
-        test: /\.(woff(2)?|ttf|eot|svg)(\?v=\d+\.\d+\.\d+)?$/,
+        test: /\.svg$/,
+        type: 'asset/inline',
+      },
+      {
+        test: /\.png$/,
         type: 'asset/resource',
       },
     ],
