@@ -1,4 +1,4 @@
-// import '@rainbow-me/rainbowkit/dist/index.css';
+import '@rainbow-me/rainbowkit/styles.css';
 import { wallet, connectorsForWallets } from '@rainbow-me/rainbowkit';
 import { configureChains, createClient, Chain, chain } from 'wagmi';
 import { infuraProvider } from 'wagmi/providers/infura';
