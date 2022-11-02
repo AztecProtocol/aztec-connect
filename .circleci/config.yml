@@ -685,7 +685,10 @@ jobs:
       - *setup_env
       - run:
           name: 'website'
-          command: deploy_s3 website is_global
+          working_directory: website
+          command: |
+            deploy_ecr website
+            deploy_s3 website is_global
 
   deploy-metrics:
     machine:
