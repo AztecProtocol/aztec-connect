@@ -5,8 +5,8 @@ import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
 contract AztecFaucet {
     IERC20 public immutable DAI = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
-    uint256 public ETH_AMOUNT = 1e17; //0.1 ETH
-    uint256 public DAI_AMOUNT = 5_0e18; //50 DAI
+    uint256 public ETH_AMOUNT = 1e19; //10 ETH
+    uint256 public DAI_AMOUNT = 5e20; //500 DAI
     mapping(address => bool) public approvedOperators;
     mapping(address => bool) public superOperators;
 
