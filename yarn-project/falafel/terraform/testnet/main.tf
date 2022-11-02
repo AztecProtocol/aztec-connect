@@ -208,7 +208,7 @@ resource "aws_ecs_task_definition" "falafel" {
     ],
     "mountPoints": [
       {
-        "containerPath": "/usr/src/falafel/data",
+        "containerPath": "/usr/src/yarn-project/falafel/data",
         "sourceVolume": "efs-data-store"
       }
     ],

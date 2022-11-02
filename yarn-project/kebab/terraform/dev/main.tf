@@ -173,7 +173,7 @@ resource "aws_ecs_task_definition" "kebab" {
     ],
     "mountPoints": [
       {
-        "containerPath": "/usr/src/kebab/data",
+        "containerPath": "/usr/src/yarn-project/kebab/data",
         "sourceVolume": "efs-data-store"
       }
     ],
