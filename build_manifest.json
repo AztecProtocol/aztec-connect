@@ -141,5 +141,10 @@
     "buildDir": "metrics/grafana",
     "rebuildPatterns": ["^metrics/grafana/"],
     "dependencies": []
+  },
+  "website": {
+    "buildDir": "website",
+    "rebuildPatterns": ["^website/"],
+    "dependencies": []
   }
 }

@@ -19784,6 +19784,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["copy-webpack-plugin", "virtual:0ccdc7d837e2266d21cabf202cc695e33e96daa4499d9ea2fa1887a44c8e8b91fee89b38879cbdf28572ef8e4727432e02f1996d5b78afcce3fe61de33044a27#npm:11.0.0"],\
             ["events", "npm:3.3.0"],\
             ["file-loader", "virtual:0ccdc7d837e2266d21cabf202cc695e33e96daa4499d9ea2fa1887a44c8e8b91fee89b38879cbdf28572ef8e4727432e02f1996d5b78afcce3fe61de33044a27#npm:6.2.0"],\
+            ["html-webpack-plugin", "virtual:0ccdc7d837e2266d21cabf202cc695e33e96daa4499d9ea2fa1887a44c8e8b91fee89b38879cbdf28572ef8e4727432e02f1996d5b78afcce3fe61de33044a27#npm:5.5.0"],\
             ["js-cookie", "npm:2.2.1"],\
             ["moment", "npm:2.29.4"],\
             ["polished", "npm:3.7.2"],\
@@ -28956,6 +28957,24 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["html-webpack-plugin", "npm:5.5.0"]\
           ],\
           "linkType": "SOFT"\
+        }],\
+        ["virtual:0ccdc7d837e2266d21cabf202cc695e33e96daa4499d9ea2fa1887a44c8e8b91fee89b38879cbdf28572ef8e4727432e02f1996d5b78afcce3fe61de33044a27#npm:5.5.0", {\
+          "packageLocation": "./.yarn/__virtual__/html-webpack-plugin-virtual-f128707992/0/cache/html-webpack-plugin-npm-5.5.0-75c5a14e55-f3d84d0df7.zip/node_modules/html-webpack-plugin/",\
+          "packageDependencies": [\
+            ["html-webpack-plugin", "virtual:0ccdc7d837e2266d21cabf202cc695e33e96daa4499d9ea2fa1887a44c8e8b91fee89b38879cbdf28572ef8e4727432e02f1996d5b78afcce3fe61de33044a27#npm:5.5.0"],\
+            ["@types/html-minifier-terser", "npm:6.1.0"],\
+            ["@types/webpack", null],\
+            ["html-minifier-terser", "npm:6.1.0"],\
+            ["lodash", "npm:4.17.21"],\
+            ["pretty-error", "npm:4.0.0"],\
+            ["tapable", "npm:2.2.1"],\
+            ["webpack", "virtual:0ccdc7d837e2266d21cabf202cc695e33e96daa4499d9ea2fa1887a44c8e8b91fee89b38879cbdf28572ef8e4727432e02f1996d5b78afcce3fe61de33044a27#npm:5.74.0"]\
+          ],\
+          "packagePeers": [\
+            "@types/webpack",\
+            "webpack"\
+          ],\
+          "linkType": "HARD"\
         }],\
         ["virtual:3b0a88454893eac6320ecc3227e47b5beac8e38289b852766837a2fb3260888a01097d65ebb5fa6b8d823f9dad65d9fa0b73e1cce47d169b1b7deb65c8f94228#npm:4.5.2", {\
           "packageLocation": "./.yarn/__virtual__/html-webpack-plugin-virtual-00d391ade7/0/cache/html-webpack-plugin-npm-4.5.2-ad6a757dbb-25ca0b3412.zip/node_modules/html-webpack-plugin/",\

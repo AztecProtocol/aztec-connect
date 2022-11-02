@@ -16,11 +16,11 @@ REPOSITORY=$1
 DOCKERFILE=$(query_manifest dockerfile $REPOSITORY)
 PROJECT_DIR=$(query_manifest projectDir $REPOSITORY)
 
-cd $(query_manifest buildDir $REPOSITORY)
-
 echo "Repository: $REPOSITORY"
 echo "Working directory: $PWD"
 echo "Dockerfile: $DOCKERFILE"
+
+cd $(query_manifest buildDir $REPOSITORY)
 
 function fetch_image() {
   echo "Pulling: $1"

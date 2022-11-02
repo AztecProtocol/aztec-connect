@@ -587,7 +587,6 @@ jobs:
       - *setup_env
       - run:
           name: 'Build and test'
-          working_directory: website
           command: build website
 
   metrics:
@@ -623,7 +622,7 @@ jobs:
       - run:
           name: 'kebab'
           # Increment to force contract redeployment.
-          command: TF_VAR_REDEPLOY=3 deploy kebab
+          command: TF_VAR_REDEPLOY=4 deploy kebab
       - run:
           name: 'halloumi'
           command: deploy halloumi "halloumi halloumi-inner halloumi-outer"
@@ -687,7 +686,9 @@ jobs:
       - run:
           name: 'website'
           working_directory: website
-          command: deploy_s3 website is_global
+          command: |
+            deploy_ecr website
+            deploy_s3 website is_global
 
   deploy-metrics:
     machine:

@@ -66,14 +66,17 @@ export class RollupEventGetter {
   public async getAndStoreRollupBlocksFrom(blockNumber: number, db?: EthLogsDb): Promise<EthEvent[]> {
     const { earliestBlock, chunk } = this.getEarliestBlock();
     const latestBlock = await this.getLatestBlockNumber();
-    let start = Math.max(blockNumber || 0, earliestBlock);
+    const initialStart = Math.max(blockNumber || 0, earliestBlock);
+    let start = initialStart;
     let end = Math.min(start + chunk - 1, latestBlock);
+    let lastQueriedEthBlock = -1;
     const totalStartTime = new Date().getTime();
     let events: EthEvent[] = [];
-    let eventsLength = 0;
+    const eventCountMap: { [key: string]: number } = {};
+    eventCountMap[ROLLUP_PROCESSED_EVENT_TOPIC] = 0;
+    eventCountMap[DEFI_BRIDGE_EVENT_TOPIC] = 0;
 
     while (start <= latestBlock) {
-      const startTime = new Date().getTime();
       const logsRequest = (topic: string) => {
         return this.provider.request({
           method: 'eth_getLogs',
@@ -91,22 +94,20 @@ export class RollupEventGetter {
         logsRequest(ROLLUP_PROCESSED_EVENT_TOPIC),
         logsRequest(DEFI_BRIDGE_EVENT_TOPIC),
       ]);
-      this.log(
-        `${start} -> ${end} ${rollupEvents.length} rollupProcessed and ${
-          defiBridgeEvents.length
-        } defiBridge events fetched in ${(new Date().getTime() - startTime) / 1000}s`,
-      );
       // cache the last eth block number where we actually received an event
       const latestRollupBlock = rollupEvents.length ? rollupEvents[rollupEvents.length - 1].blockNumber : earliestBlock;
       const latestDefiBlock = defiBridgeEvents.length
         ? defiBridgeEvents[defiBridgeEvents.length - 1].blockNumber
         : earliestBlock;
       this.lastQueriedBlockNum = Math.max(latestRollupBlock, latestDefiBlock, this.lastQueriedBlockNum);
+      lastQueriedEthBlock = end;
+
+      eventCountMap[ROLLUP_PROCESSED_EVENT_TOPIC] += rollupEvents.length;
+      eventCountMap[DEFI_BRIDGE_EVENT_TOPIC] += defiBridgeEvents.length;
 
       // if db has been passed, store directly
       if (db) {
         const eventsToStore = [...rollupEvents, ...defiBridgeEvents];
-        eventsLength += eventsToStore.length;
         await db.addEthLogs(eventsToStore);
       } else {
         events = [...rollupEvents, ...defiBridgeEvents, ...events];
@@ -116,9 +117,13 @@ export class RollupEventGetter {
       end = Math.min(start + chunk - 1, latestBlock);
     }
 
-    this.log(
-      `done: ${db ? eventsLength : events.length} fetched in ${(new Date().getTime() - totalStartTime) / 1000}s`,
-    );
+    if (lastQueriedEthBlock !== -1) {
+      this.log(
+        `${initialStart} -> ${lastQueriedEthBlock}: ${eventCountMap[ROLLUP_PROCESSED_EVENT_TOPIC]} rollup / ${
+          eventCountMap[DEFI_BRIDGE_EVENT_TOPIC]
+        } defi events fetched in ${(new Date().getTime() - totalStartTime) / 1000}s`,
+      );
+    }
 
     return events;
   }

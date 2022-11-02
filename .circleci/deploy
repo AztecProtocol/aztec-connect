@@ -27,7 +27,7 @@ if [ -n "$IS_GLOBAL" ]; then
     deploy_service $SERVICE
   done
 else
-  deploy_terraform $REPOSITORY
+  deploy_terraform $REPOSITORY ./terraform/$VERSION_TAG
 
   # Restart services.
   for SERVICE in $SERVICES; do
