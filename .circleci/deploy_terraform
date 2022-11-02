@@ -18,6 +18,8 @@ ensure_terraform
 export TF_IN_AUTOMATION=1
 cd $TF_DIR
 
+echo "Deploying terraform found at $PWD..."
+
 # Always want to export the DEPLOY_TAG variable to terraform. It's used to easily scope releases.
 export TF_VAR_DEPLOY_TAG=$DEPLOY_TAG
 
