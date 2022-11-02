@@ -587,7 +587,6 @@ jobs:
       - *setup_env
       - run:
           name: 'Build and test'
-          working_directory: website
           command: build website
 
   metrics:
@@ -686,7 +685,6 @@ jobs:
       - *setup_env
       - run:
           name: 'website'
-          working_directory: website
           command: deploy_s3 website is_global
 
   deploy-metrics:
