@@ -1,0 +1,14 @@
+{
+  "name": "lambda",
+  "version": "1.0.0",
+  "main": "dest/index.js",
+  "license": "MIT",
+  "scripts": {
+    "build": "rm -rf ./dest && tsc",
+    "build:zip": "rm ./twitter_lambda.zip && zip -r ./twitter_lambda.zip ."
+  },
+  "devDependencies": {
+    "@types/node": "^18.7.23",
+    "typescript": "4.7.4"
+  }
+}

@@ -1,7 +1,26 @@
-setup_env: &setup_env
-  run:
-    name: 'Setup environment'
-    command: cd .circleci && ./setup_env "$CIRCLE_SHA1" "$CIRCLE_TAG" "$CIRCLE_JOB" "$CIRCLE_REPOSITORY_URL"
+# This config consists of currently 3 workflows.
+# - system: The main Aztec infrastructure, services, frontends etc.
+# - metrics: The metrics grafana and prometheus instances, and some prometheus data sources.
+# - website: The company website.
+#
+# The default workflow is system. To trigger the other workflows, trigger a workflow from CCI
+# setting a string variable called `workflow` to another name.
+#
+# This file uses YAML anchors and aliases to prevent repetition of blocks of config:
+# https://support.atlassian.com/bitbucket-cloud/docs/yaml-anchors/
+#
+# Two primary anchors are checkout and setup_env, called as the first step of almost all jobs:
+# - checkout: A custom checkout step to reduce the amount of data downloaded to improve speed.
+# - setup_env: Sets up the common environment used by all build steps.
+#
+# Two CCI executors are used:
+# - docker (small): Used only to launch external EC2 instances for big workloads. It's the cheapest option.
+# - machine (large): Used for building in CCI itself. 4cpus, 15GB has the optimal power/cost ratio.
+#
+# The docker executor uses a custom image build in `build_image`. It's specifically streamlined for fast download
+# with just enough tools to execute the build system, and launch EC2 instances etc.
+#
+# There are some `join` steps that are just noops. They are just used to produce cleaner graph rendering in CCI.
 
 version: 2.1
 parameters:
@@ -9,223 +28,263 @@ parameters:
     type: string
     default: 'system'
 
+# This build step checks out the code from the repository. It has a hardcoded readonly key to allow the checkout.
+# Initially it just fetches the repo metadata for the current commit hash to a depth of 50 commits.
+# We need historical commit hashes to calculate diffs between previous and current commits.
+# It then checks out the fetched head to actually download the data.
+checkout: &checkout
+  run:
+    name: 'Checkout code'
+    command: |
+      cd $HOME
+      mkdir -p .ssh
+      chmod 0700 .ssh
+      ssh-keyscan -t rsa github.com >> .ssh/known_hosts
+
+      # A read only key for cloning the repository.
+      echo "-----BEGIN OPENSSH PRIVATE KEY-----
+      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
+      -----END OPENSSH PRIVATE KEY-----" > .ssh/id_rsa
+
+      chmod 0600 .ssh/id_rsa
+
+      # Shallow checkout this commit.
+      mkdir -p project
+      cd project
+      git init
+      git remote add origin $CIRCLE_REPOSITORY_URL
+      git fetch --depth 50 --filter=blob:none origin $CIRCLE_SHA1
+      git checkout FETCH_HEAD
+
+# Called setup_env to setup a bunch of global variables used throughout the rest of the build process.
+# It takes the required CCI environment variables as inputs, and gives them normalised names for the rest of
+# the build process. This enables easy running of the build system external to CCI, as used for powerful EC2 builds.
+setup_env: &setup_env
+  run:
+    name: 'Setup environment'
+    command: cd .circleci && ./setup_env "$CIRCLE_SHA1" "$CIRCLE_TAG" "$CIRCLE_JOB" "$CIRCLE_REPOSITORY_URL"
+
 jobs:
   wasm-linux-clang:
     docker:
-      - image: aztecprotocol/build-image
+      - image: aztecprotocol/alpine-build-image
     resource_class: small
     steps:
-      - checkout
+      - *checkout
       - *setup_env
-      - setup_remote_docker:
-          version: 20.10.14
       - run:
           name: 'Build'
-          working_directory: barretenberg
-          command: cond_spot_run_build barretenberg-wasm-linux-clang 64 ./dockerfiles/Dockerfile.wasm-linux-clang
+          command: cond_spot_run_build barretenberg-wasm-linux-clang 64
 
   x86_64-linux-gcc:
     docker:
-      - image: aztecprotocol/build-image
+      - image: aztecprotocol/alpine-build-image
     resource_class: small
     steps:
-      - checkout
+      - *checkout
       - *setup_env
-      - setup_remote_docker:
-          version: 20.10.14
       - run:
           name: 'Build'
-          working_directory: barretenberg
-          command: cond_spot_run_build barretenberg-x86_64-linux-gcc 64 ./dockerfiles/Dockerfile.x86_64-linux-gcc
+          command: cond_spot_run_build barretenberg-x86_64-linux-gcc 64
 
   x86_64-linux-clang:
     docker:
-      - image: aztecprotocol/build-image
+      - image: aztecprotocol/alpine-build-image
     resource_class: small
     steps:
-      - checkout
+      - *checkout
       - *setup_env
-      - setup_remote_docker:
-          version: 20.10.14
       - run:
           name: 'Build'
-          working_directory: barretenberg
-          command: cond_spot_run_build barretenberg-x86_64-linux-clang 64 ./dockerfiles/Dockerfile.x86_64-linux-clang
+          command: cond_spot_run_build barretenberg-x86_64-linux-clang 64
 
   x86_64-linux-clang-assert:
     docker:
-      - image: aztecprotocol/build-image
+      - image: aztecprotocol/alpine-build-image
     resource_class: small
     steps:
-      - checkout
+      - *checkout
       - *setup_env
-      - setup_remote_docker:
-          version: 20.10.14
       - run:
           name: 'Build'
-          working_directory: barretenberg
-          command: cond_spot_run_build barretenberg-x86_64-linux-clang-assert 64 ./dockerfiles/Dockerfile.x86_64-linux-clang-assert
+          command: cond_spot_run_build barretenberg-x86_64-linux-clang-assert 64
 
   barretenberg-tests:
     docker:
-      - image: aztecprotocol/build-image
+      - image: aztecprotocol/alpine-build-image
     resource_class: small
     steps:
-      - checkout
+      - *checkout
       - *setup_env
-      - setup_remote_docker:
-          version: 20.10.14
       - run:
           name: 'Test'
-          working_directory: barretenberg
           command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert bb-tests
 
   stdlib-primitives-tests:
     docker:
-      - image: aztecprotocol/build-image
+      - image: aztecprotocol/alpine-build-image
     resource_class: small
     steps:
-      - checkout
+      - *checkout
       - *setup_env
-      - setup_remote_docker:
-          version: 20.10.14
       - run:
           name: 'Test'
-          working_directory: barretenberg
           command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert stdlib_primitives_tests
 
   stdlib-recursion-tests:
     docker:
-      - image: aztecprotocol/build-image
+      - image: aztecprotocol/alpine-build-image
     resource_class: small
     steps:
-      - checkout
+      - *checkout
       - *setup_env
-      - setup_remote_docker:
-          version: 20.10.14
       - run:
           name: 'Test'
-          working_directory: barretenberg
           command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert stdlib_recursion_tests
 
   tx-rollup-tests:
     docker:
-      - image: aztecprotocol/build-image
+      - image: aztecprotocol/alpine-build-image
     resource_class: small
     steps:
-      - checkout
+      - *checkout
       - *setup_env
-      - setup_remote_docker:
-          version: 20.10.14
       - run:
           name: 'Test'
-          working_directory: barretenberg
-          command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert rollup_proofs_tx_rollup_tests
+          command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert rollup_proofs_tx_rollup_tests --gtest_filter=-rollup_full_tests.*
+
+  tx-rollup-full-tests:
+    docker:
+      - image: aztecprotocol/alpine-build-image
+    resource_class: small
+    steps:
+      - *checkout
+      - *setup_env
+      - run:
+          name: 'Test'
+          command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert rollup_proofs_tx_rollup_tests --gtest_filter=rollup_full_tests.*
 
   root-rollup-tests:
     docker:
-      - image: aztecprotocol/build-image
+      - image: aztecprotocol/alpine-build-image
     resource_class: small
     steps:
-      - checkout
+      - *checkout
       - *setup_env
-      - setup_remote_docker:
-          version: 20.10.14
       - run:
           name: 'Test'
-          working_directory: barretenberg
           command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert rollup_proofs_root_rollup_tests --gtest_filter=-root_rollup_full_tests.*
 
   root-rollup-full-tests:
     docker:
-      - image: aztecprotocol/build-image
+      - image: aztecprotocol/alpine-build-image
     resource_class: small
     steps:
-      - checkout
+      - *checkout
       - *setup_env
-      - setup_remote_docker:
-          version: 20.10.14
       - run:
           name: 'Test'
-          working_directory: barretenberg
           command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert rollup_proofs_root_rollup_tests --gtest_filter=root_rollup_full_tests.*
 
   root-verifier-tests:
     docker:
-      - image: aztecprotocol/build-image
+      - image: aztecprotocol/alpine-build-image
     resource_class: small
     steps:
-      - checkout
+      - *checkout
       - *setup_env
-      - setup_remote_docker:
-          version: 20.10.14
       - run:
           name: 'Test'
-          working_directory: barretenberg
           command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert rollup_proofs_root_verifier_tests
+
+  blockchain-vks:
+    docker:
+      - image: aztecprotocol/alpine-build-image
+    resource_class: small
+    steps:
+      - *checkout
+      - *setup_env
+      - run:
+          name: 'Build'
+          command: cond_spot_run_build blockchain-vks 32
+
+  yarn-project-base:
+    machine:
+      image: ubuntu-2004:202010-01
+    resource_class: large
+    steps:
+      - *checkout
+      - *setup_env
+      - run:
+          name: 'Build'
+          command: build yarn-project-base
 
   barretenberg-js:
     machine:
       image: ubuntu-2004:202010-01
     resource_class: large
     steps:
-      - checkout
+      - *checkout
       - *setup_env
       - run:
           name: 'Build and test'
-          working_directory: barretenberg.js
           command: build barretenberg.js
-
-  blockchain-vks:
-    docker:
-      - image: aztecprotocol/build-image
-    resource_class: small
-    steps:
-      - checkout
-      - *setup_env
-      - setup_remote_docker:
-          version: 20.10.14
-      - run:
-          name: 'Build'
-          working_directory: blockchain-vks
-          command: cond_spot_run_build blockchain-vks 32
 
   blockchain:
     machine:
       image: ubuntu-2004:202010-01
     resource_class: large
     steps:
-      - checkout
+      - *checkout
       - *setup_env
       - run:
-          name: 'Build'
-          working_directory: blockchain
+          name: 'Build and test'
           command: build blockchain
-
-  blockchain-tests:
-    docker:
-      - image: aztecprotocol/build-image
-    resource_class: small
-    steps:
-      - checkout
-      - *setup_env
-      - setup_remote_docker:
-          version: 20.10.14
-      - run:
-          name: 'Test'
-          working_directory: blockchain
-          command: cond_spot_run_tests blockchain
 
   kebab:
     machine:
       image: ubuntu-2004:202010-01
     resource_class: large
     steps:
-      - checkout
+      - *checkout
       - *setup_env
       - run:
-          name: 'Build'
-          working_directory: kebab
+          name: 'Build and test'
           command: build kebab
 
   halloumi:
@@ -233,11 +292,10 @@ jobs:
       image: ubuntu-2004:202010-01
     resource_class: large
     steps:
-      - checkout
+      - *checkout
       - *setup_env
       - run:
           name: 'Build and test'
-          working_directory: halloumi
           command: build halloumi
 
   falafel:
@@ -245,337 +303,301 @@ jobs:
       image: ubuntu-2004:202010-01
     resource_class: large
     steps:
-      - checkout
+      - *checkout
       - *setup_env
       - run:
           name: 'Build and test'
-          working_directory: falafel
           command: build falafel
+
+  sdk:
+    machine:
+      image: ubuntu-2004:202010-01
+    resource_class: large
+    steps:
+      - *checkout
+      - *setup_env
+      - run:
+          name: 'Build and test'
+          command: build sdk
 
   wasabi:
     machine:
       image: ubuntu-2004:202010-01
     resource_class: large
     steps:
-      - checkout
+      - *checkout
       - *setup_env
       - run:
           name: 'Build and test'
-          working_directory: wasabi
           command: build wasabi
 
-  sdk:
-    docker:
-      - image: aztecprotocol/build-image
-    steps:
-      - checkout
-      - *setup_env
-      - setup_remote_docker:
-          version: 20.10.14
-      - run:
-          name: 'Build and test'
-          working_directory: sdk
-          command: build sdk
-
   hummus:
-    docker:
-      - image: aztecprotocol/build-image
+    machine:
+      image: ubuntu-2004:202010-01
+    resource_class: large
     steps:
-      - checkout
+      - *checkout
       - *setup_env
-      - setup_remote_docker:
-          version: 20.10.14
       - run:
           name: 'Build and test'
-          working_directory: hummus
           command: build hummus
 
   explorer:
-    docker:
-      - image: aztecprotocol/build-image
+    machine:
+      image: ubuntu-2004:202010-01
+    resource_class: large
     steps:
-      - checkout
+      - *checkout
       - *setup_env
-      - setup_remote_docker:
-          version: 20.10.14
       - run:
           name: 'Build and test'
-          working_directory: explorer
           command: build explorer
 
-  faucet:
-    docker:
-      - image: aztecprotocol/build-image
+  wallet:
+    machine:
+      image: ubuntu-2004:202010-01
+    resource_class: large
     steps:
-      - checkout
+      - *checkout
       - *setup_env
-      - setup_remote_docker:
-          version: 20.10.14
       - run:
           name: 'Build and test'
-          working_directory: faucet
+          command: build wallet
+
+  zk-money:
+    machine:
+      image: ubuntu-2004:202010-01
+    resource_class: large
+    steps:
+      - *checkout
+      - *setup_env
+      - run:
+          name: 'Build and test'
+          command: build zk-money
+
+  faucet:
+    machine:
+      image: ubuntu-2004:202010-01
+    resource_class: large
+    steps:
+      - *checkout
+      - *setup_env
+      - run:
+          name: 'Build and test'
           command: build faucet
 
-  docs:
-    docker:
-      - image: aztecprotocol/build-image
-    steps:
-      - checkout
-      - *setup_env
-      - setup_remote_docker:
-          version: 20.10.14
-      - run:
-          name: 'Build and test'
-          working_directory: docs
-          command: build docs
-
   end-to-end:
-    docker:
-      - image: aztecprotocol/build-image
+    machine:
+      image: ubuntu-2004:202010-01
+    resource_class: large
     steps:
-      - checkout
+      - *checkout
       - *setup_env
-      - setup_remote_docker:
-          version: 20.10.14
       - run:
           name: 'Build'
-          working_directory: end-to-end
           command: build end-to-end
 
   e2e-prover:
     docker:
-      - image: aztecprotocol/build-image
+      - image: aztecprotocol/alpine-build-image
     resource_class: small
     steps:
-      - checkout
+      - *checkout
       - *setup_env
-      - setup_remote_docker:
-          version: 20.10.14
       - run:
           name: 'Test'
-          working_directory: end-to-end
           command: cond_spot_run_tests end-to-end ./src/e2e_deposit.test.ts false 1 1 VerificationKey1x1
 
   e2e-payment:
     docker:
-      - image: aztecprotocol/build-image
+      - image: aztecprotocol/alpine-build-image
     resource_class: small
     steps:
-      - checkout
+      - *checkout
       - *setup_env
-      - setup_remote_docker:
-          version: 20.10.14
       - run:
           name: 'Test'
-          working_directory: end-to-end
           command: cond_spot_run_tests end-to-end ./src/e2e.test.ts
 
   e2e-permit:
     docker:
-      - image: aztecprotocol/build-image
+      - image: aztecprotocol/alpine-build-image
     resource_class: small
     steps:
-      - checkout
+      - *checkout
       - *setup_env
-      - setup_remote_docker:
-          version: 20.10.14
       - run:
           name: 'Test'
-          working_directory: end-to-end
           command: cond_spot_run_tests end-to-end ./src/e2e_deposit_permit.test.ts
 
   e2e-migrated-accounts:
     docker:
-      - image: aztecprotocol/build-image
+      - image: aztecprotocol/alpine-build-image
     resource_class: small
     steps:
-      - checkout
+      - *checkout
       - *setup_env
-      - setup_remote_docker:
-          version: 20.10.14
       - run:
           name: 'Test'
-          working_directory: end-to-end
           command: cond_spot_run_tests end-to-end ./src/e2e_migrated_accounts.test.ts
 
   e2e-migrate-account:
     docker:
-      - image: aztecprotocol/build-image
+      - image: aztecprotocol/alpine-build-image
     resource_class: small
     steps:
-      - checkout
+      - *checkout
       - *setup_env
-      - setup_remote_docker:
-          version: 20.10.14
       - run:
           name: 'Test'
-          working_directory: end-to-end
           command: cond_spot_run_tests end-to-end ./src/e2e_migrate_account_and_funds.test.ts
 
   e2e-account:
     docker:
-      - image: aztecprotocol/build-image
+      - image: aztecprotocol/alpine-build-image
     resource_class: small
     steps:
-      - checkout
+      - *checkout
       - *setup_env
-      - setup_remote_docker:
-          version: 20.10.14
       - run:
           name: 'Test'
-          working_directory: end-to-end
           command: cond_spot_run_tests end-to-end ./src/e2e_account.test.ts
 
   e2e-defi:
     docker:
-      - image: aztecprotocol/build-image
+      - image: aztecprotocol/alpine-build-image
     resource_class: small
     steps:
-      - checkout
+      - *checkout
       - *setup_env
-      - setup_remote_docker:
-          version: 20.10.14
       - run:
           name: 'Test'
-          working_directory: end-to-end
           command: cond_spot_run_tests end-to-end ./src/e2e_defi.test.ts
 
   e2e-non-fee-assets:
     docker:
-      - image: aztecprotocol/build-image
+      - image: aztecprotocol/alpine-build-image
     resource_class: small
     steps:
-      - checkout
+      - *checkout
       - *setup_env
-      - setup_remote_docker:
-          version: 20.10.14
       - run:
           name: 'Test'
-          working_directory: end-to-end
           command: cond_spot_run_tests end-to-end ./src/e2e_non_fee_assets.test.ts
 
   e2e-virtual-assets:
     docker:
-      - image: aztecprotocol/build-image
+      - image: aztecprotocol/alpine-build-image
     resource_class: small
     steps:
-      - checkout
+      - *checkout
       - *setup_env
-      - setup_remote_docker:
-          version: 20.10.14
       - run:
           name: 'Test'
-          working_directory: end-to-end
           command: cond_spot_run_tests end-to-end ./src/e2e_virtual_assets.test.ts
 
   e2e-chained-txs:
     docker:
-      - image: aztecprotocol/build-image
+      - image: aztecprotocol/alpine-build-image
     resource_class: small
     steps:
-      - checkout
+      - *checkout
       - *setup_env
-      - setup_remote_docker:
-          version: 20.10.14
       - run:
           name: 'Test'
-          working_directory: end-to-end
           command: cond_spot_run_tests end-to-end ./src/e2e_chained_txs.test.ts
 
   e2e-chained-txs-with-spending-keys:
     docker:
-      - image: aztecprotocol/build-image
+      - image: aztecprotocol/alpine-build-image
     resource_class: small
     steps:
-      - checkout
+      - *checkout
       - *setup_env
-      - setup_remote_docker:
-          version: 20.10.14
       - run:
           name: 'Test'
-          working_directory: end-to-end
           command: cond_spot_run_tests end-to-end ./src/e2e_chained_txs_with_spending_keys.test.ts
 
   e2e-element:
     docker:
-      - image: aztecprotocol/build-image
+      - image: aztecprotocol/alpine-build-image
     resource_class: small
     steps:
-      - checkout
+      - *checkout
       - *setup_env
-      - setup_remote_docker:
-          version: 20.10.14
       - run:
           name: 'Test'
-          working_directory: end-to-end
           command: cond_spot_run_tests end-to-end ./src/e2e_element.test.ts true
 
   e2e-lido:
     docker:
-      - image: aztecprotocol/build-image
+      - image: aztecprotocol/alpine-build-image
     resource_class: small
     steps:
-      - checkout
+      - *checkout
       - *setup_env
-      - setup_remote_docker:
-          version: 20.10.14
       - run:
           name: 'Test'
-          working_directory: end-to-end
           command: cond_spot_run_tests end-to-end ./src/e2e_lido.test.ts true
 
-  e2e-hosted-sdk:
+  e2e-browser:
     docker:
-      - image: aztecprotocol/build-image
+      - image: aztecprotocol/alpine-build-image
     resource_class: small
     steps:
-      - checkout
+      - *checkout
       - *setup_env
-      - setup_remote_docker:
-          version: 20.10.14
       - run:
           name: 'Test'
-          working_directory: end-to-end
-          command: cond_spot_run_tests end-to-end ./src/e2e_hosted_sdk.test.ts
+          command: cond_spot_run_tests end-to-end ./src/e2e_browser.test.ts
 
-  zk-money:
+  e2e-join:
     docker:
-      - image: aztecprotocol/build-image
+      - image: cimg/base:current
     resource_class: small
     steps:
-      - checkout
-      - *setup_env
-      - setup_remote_docker:
-          version: 20.10.14
       - run:
-          name: 'Build and test'
-          working_directory: zk-money
-          command: cond_spot_run_build zk-money 32
+          name: 'Noop'
+          command: echo Noop
+
+  bb-join:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: 'Noop'
+          command: echo Noop
+
+  yarn-join:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: 'Noop'
+          command: echo Noop
 
   website:
-    docker:
-      - image: aztecprotocol/build-image
+    machine:
+      image: ubuntu-2004:202010-01
+    resource_class: large
     steps:
-      - checkout
+      - *checkout
       - *setup_env
-      - setup_remote_docker:
-          version: 20.10.14
       - run:
           name: 'Build and test'
-          working_directory: website
           command: build website
 
   metrics:
-    docker:
-      - image: aztecprotocol/build-image
+    machine:
+      image: ubuntu-2004:202010-01
+    resource_class: large
     steps:
-      - checkout
+      - *checkout
       - *setup_env
-      - setup_remote_docker:
-          version: 20.10.14
       - run:
           name: 'Build coinbase-exporter'
-          working_directory: metrics/coinbase-exporter
           command: build coinbase-exporter
       - run:
           name: 'Build sidecar'
@@ -591,118 +613,76 @@ jobs:
           command: build grafana
 
   deploy:
-    docker:
-      - image: aztecprotocol/build-image
+    machine:
+      image: ubuntu-2004:202010-01
+    resource_class: medium
     steps:
-      - checkout
+      - *checkout
       - *setup_env
-      - setup_remote_docker:
-          version: 20.10.14
-      - run:
-          name: 'barretenberg-x86_64-linux-gcc'
-          working_directory: barretenberg
-          command: deploy_ecr barretenberg-x86_64-linux-gcc
-      - run:
-          name: 'barretenberg-x86_64-linux-clang'
-          working_directory: barretenberg
-          command: deploy_ecr barretenberg-x86_64-linux-clang
-      - run:
-          name: 'barretenberg-wasm-linux-clang'
-          working_directory: barretenberg
-          command: deploy_ecr barretenberg-wasm-linux-clang
-      - run:
-          name: 'barretenberg.js'
-          working_directory: barretenberg.js
-          command: |
-            deploy_ecr barretenberg.js
-            deploy_npm barretenberg.js
-      - run:
-          name: 'blockchain'
-          working_directory: blockchain
-          command: |
-            deploy blockchain
-            ./scripts/deploy_contracts
-            deploy_npm blockchain
       - run:
           name: 'kebab'
-          working_directory: kebab
-          command: |
-            deploy kebab
-            deploy_dockerhub kebab
+          # Increment to force contract redeployment.
+          command: TF_VAR_REDEPLOY=4 deploy kebab
       - run:
           name: 'halloumi'
-          working_directory: halloumi
           command: deploy halloumi "halloumi halloumi-inner halloumi-outer"
       - run:
           name: 'falafel'
-          working_directory: falafel
-          command: |
-            deploy falafel
-            deploy_dockerhub falafel
+          command: deploy falafel
       - run:
           name: 'sdk'
-          working_directory: sdk
           command: |
             deploy_ecr sdk
             deploy_s3 sdk
             deploy_npm sdk
       - run:
           name: 'wasabi'
-          working_directory: wasabi
           command: deploy wasabi
       - run:
           name: 'zk-money'
-          working_directory: zk-money
           command: |
             deploy_ecr zk-money
             deploy_s3 zk-money
       - run:
           name: 'hummus'
-          working_directory: hummus
           command: |
             deploy_ecr hummus
             deploy_s3 hummus
       - run:
+          name: 'wallet'
+          command: |
+            deploy_ecr wallet
+            deploy_s3 wallet
+      - run:
           name: 'explorer'
-          working_directory: explorer
           command: |
             deploy_ecr explorer
             deploy_s3 explorer
       - run:
           name: 'faucet'
-          working_directory: faucet
-          command: |
-            deploy faucet
-            deploy_dockerhub faucet
-      # - run:
-      #     name: 'docs'
-      #     working_directory: docs
-      #     command: |
-      #       deploy_ecr docs
-      #       deploy_s3 docs
+          command: deploy faucet
 
-  smoketest:
-    docker:
-      - image: aztecprotocol/build-image
-    resource_class: small
-    steps:
-      - checkout
-      - *setup_env
-      - setup_remote_docker:
-          version: 19.03.13
-      - run:
-          name: 'Test'
-          working_directory: end-to-end/scripts
-          command: ./run_smoketest
+  # smoketest:
+  #   docker:
+  #     - image: aztecprotocol/alpine-build-image
+  #   resource_class: small
+  #   steps:
+  #     - *checkout
+  #     - *setup_env
+  #     - setup_remote_docker:
+  #         version: 19.03.13
+  #     - run:
+  #         name: 'Test'
+  #         working_directory: end-to-end/scripts
+  #         command: ./run_smoketest
 
   deploy-website:
-    docker:
-      - image: aztecprotocol/build-image
+    machine:
+      image: ubuntu-2004:202010-01
+    resource_class: medium
     steps:
-      - checkout
+      - *checkout
       - *setup_env
-      - setup_remote_docker:
-          version: 20.10.14
       - run:
           name: 'website'
           working_directory: website
@@ -711,16 +691,14 @@ jobs:
             deploy_s3 website is_global
 
   deploy-metrics:
-    docker:
-      - image: aztecprotocol/build-image
+    machine:
+      image: ubuntu-2004:202010-01
+    resource_class: medium
     steps:
-      - checkout
+      - *checkout
       - *setup_env
-      - setup_remote_docker:
-          version: 20.10.14
       - run:
           name: 'coinbase-exporter'
-          working_directory: metrics/coinbase-exporter
           command: deploy coinbase-exporter "" is_global
       - run:
           name: 'ecs-exporter'
@@ -728,19 +706,35 @@ jobs:
           command: deploy_terraform "" ./terraform
       - run:
           name: 'sidecar'
-          working_directory: metrics/sidecar
           command: deploy_ecr metrics-sidecar
       - run:
           name: 'prometheus'
-          working_directory: metrics/prometheus
           command: deploy prometheus "" is_global
       - run:
           name: 'grafana'
-          working_directory: metrics/grafana
           command: deploy grafana "" is_global
 
+# Repeatable config for defining the workflow below.
 tag_regex: &tag_regex /v[0-9]+(\.[0-9]+)*(-[a-zA-Z-]+\.[0-9]+)?/
 tag_filter: &tag_filter
+  tags:
+    only: *tag_regex
+bb_test: &bb_test
+  requires:
+    - x86_64-linux-clang-assert
+  filters: *tag_filter
+yarn_project: &yarn_project
+  requires:
+    - yarn-project-base
+  filters: *tag_filter
+e2e_test: &e2e_test
+  requires:
+    - e2e-join
+  filters: *tag_filter
+deploy_filters: &deploy_filters
+  branches:
+    only:
+      - defi-bridge-project
   tags:
     only: *tag_regex
 
@@ -757,204 +751,103 @@ workflows:
           filters: *tag_filter
       - wasm-linux-clang:
           filters: *tag_filter
-      - barretenberg-tests:
-          requires:
-            - x86_64-linux-clang-assert
-          filters: *tag_filter
-      - stdlib-primitives-tests:
-          requires:
-            - x86_64-linux-clang-assert
-          filters: *tag_filter
-      - stdlib-recursion-tests:
-          requires:
-            - x86_64-linux-clang-assert
-          filters: *tag_filter
-      - tx-rollup-tests:
-          requires:
-            - x86_64-linux-clang-assert
-          filters: *tag_filter
-      - root-rollup-tests:
-          requires:
-            - x86_64-linux-clang-assert
-          filters: *tag_filter
-      - root-rollup-full-tests:
-          requires:
-            - x86_64-linux-clang-assert
-          filters: *tag_filter
-      - root-verifier-tests:
-          requires:
-            - x86_64-linux-clang-assert
-          filters: *tag_filter
-      - barretenberg-js:
-          requires:
-            - wasm-linux-clang
-            - x86_64-linux-clang
-          filters: *tag_filter
+      - barretenberg-tests: *bb_test
+      - stdlib-primitives-tests: *bb_test
+      - stdlib-recursion-tests: *bb_test
+      - tx-rollup-tests: *bb_test
+      - tx-rollup-full-tests: *bb_test
+      - root-rollup-tests: *bb_test
+      - root-rollup-full-tests: *bb_test
+      - root-verifier-tests: *bb_test
       - blockchain-vks:
           requires:
             - x86_64-linux-clang
           filters: *tag_filter
-      - blockchain:
+      - yarn-project-base:
           requires:
-            - barretenberg-js
+            - wasm-linux-clang
             - blockchain-vks
           filters: *tag_filter
-      - blockchain-tests:
-          requires:
-            - blockchain
-          filters: *tag_filter
-      - kebab:
-          requires:
-            - barretenberg-js
-            - blockchain
-          filters: *tag_filter
-      - halloumi:
-          requires:
-            - barretenberg-js
-          filters: *tag_filter
-      - falafel:
-          requires:
-            - blockchain
-            - halloumi
-          filters: *tag_filter
-      - sdk:
-          requires:
-            - falafel
-          filters: *tag_filter
-      - hummus:
-          requires:
-            - sdk
-          filters: *tag_filter
-      - explorer:
-          requires:
-            - sdk
-          filters: *tag_filter
+      - barretenberg-js: *yarn_project
+      - blockchain: *yarn_project
+      - kebab: *yarn_project
+      - halloumi: *yarn_project
+      - falafel: *yarn_project
+      - sdk: *yarn_project
+      - wasabi: *yarn_project
+      - hummus: *yarn_project
+      - explorer: *yarn_project
+      - zk-money: *yarn_project
+      - wallet: *yarn_project
+      # Not currently a yarn project due to using next.js, but should be.
       - faucet:
-          requires:
-            - blockchain
           filters: *tag_filter
-      # - docs:
-      #     filters: *tag_filter
-      - wasabi:
+      - end-to-end: *yarn_project
+      - e2e-join:
           requires:
-            - sdk
-          filters: *tag_filter
-      - zk-money:
-          requires:
-            - sdk
-          filters: *tag_filter
-      - end-to-end:
-          requires:
-            - sdk
             - kebab
-          filters: *tag_filter
-      - e2e-prover:
-          requires:
-            - end-to-end
+            - halloumi
+            - falafel
+            - sdk
             - hummus
-          filters: *tag_filter
-      - e2e-payment:
-          requires:
             - end-to-end
-            - hummus
           filters: *tag_filter
-      - e2e-permit:
-          requires:
-            - end-to-end
-            - hummus
-          filters: *tag_filter
-      - e2e-migrated-accounts:
-          requires:
-            - end-to-end
-            - hummus
-          filters: *tag_filter
-      - e2e-migrate-account:
-          requires:
-            - end-to-end
-            - hummus
-          filters: *tag_filter
-      - e2e-account:
-          requires:
-            - end-to-end
-            - hummus
-          filters: *tag_filter
-      - e2e-defi:
-          requires:
-            - end-to-end
-            - hummus
-          filters: *tag_filter
-      - e2e-non-fee-assets:
-          requires:
-            - end-to-end
-            - hummus
-          filters: *tag_filter
-      - e2e-virtual-assets:
-          requires:
-            - end-to-end
-            - hummus
-          filters: *tag_filter
-      - e2e-chained-txs:
-          requires:
-            - end-to-end
-            - hummus
-          filters: *tag_filter
-      - e2e-chained-txs-with-spending-keys:
-          requires:
-            - end-to-end
-            - hummus
-          filters: *tag_filter
-      - e2e-element:
-          requires:
-            - end-to-end
-            - hummus
-          filters: *tag_filter
-      - e2e-lido:
-          requires:
-            - end-to-end
-            - hummus
-          filters: *tag_filter
-      - e2e-hosted-sdk:
-          requires:
-            - end-to-end
-            - hummus
-          filters: *tag_filter
-      - deploy:
+      - e2e-account: *e2e_test
+      - e2e-browser: *e2e_test
+      - e2e-chained-txs-with-spending-keys: *e2e_test
+      - e2e-chained-txs: *e2e_test
+      - e2e-defi: *e2e_test
+      - e2e-element: *e2e_test
+      - e2e-lido: *e2e_test
+      - e2e-migrate-account: *e2e_test
+      - e2e-migrated-accounts: *e2e_test
+      - e2e-non-fee-assets: *e2e_test
+      - e2e-payment: *e2e_test
+      - e2e-permit: *e2e_test
+      - e2e-prover: *e2e_test
+      - e2e-virtual-assets: *e2e_test
+      - bb-join:
           requires:
             - x86_64-linux-gcc
             - barretenberg-tests
             - stdlib-primitives-tests
             - stdlib-recursion-tests
             - tx-rollup-tests
+            - tx-rollup-full-tests
             - root-rollup-tests
             - root-rollup-full-tests
             - root-verifier-tests
-            - blockchain-tests
-            - e2e-prover
-            - e2e-payment
-            - e2e-permit
-            - e2e-migrated-accounts
-            - e2e-migrate-account
+          filters: *deploy_filters
+      - yarn-join:
+          requires:
+            - explorer
+            - wallet
+            - wasabi
+            - zk-money
+            - blockchain
+            - barretenberg-js
+          filters: *deploy_filters
+      - deploy:
+          requires:
+            # Must list all projects at the end of a dependency chain.
+            - bb-join
+            - yarn-join
+            - faucet
             - e2e-account
+            - e2e-browser
+            - e2e-chained-txs
+            - e2e-chained-txs-with-spending-keys
             - e2e-defi
             - e2e-element
             - e2e-lido
-            - e2e-hosted-sdk
+            - e2e-migrate-account
+            - e2e-migrated-accounts
             - e2e-non-fee-assets
+            - e2e-payment
+            - e2e-permit
+            - e2e-prover
             - e2e-virtual-assets
-            - e2e-chained-txs
-            - e2e-chained-txs-with-spending-keys
-            - wasabi
-            - zk-money
-            - hummus
-            - explorer
-            - faucet
-            # - docs
-          filters:
-            branches:
-              only:
-                - defi-bridge-project
-            tags:
-              only: *tag_regex
+          filters: *deploy_filters
   metrics:
     when:
       equal: [metrics, << pipeline.parameters.workflow >>]

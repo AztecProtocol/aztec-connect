@@ -1,0 +1,16 @@
+.yarn
+!/.yarn/cache
+!/.yarn/patches
+!/.yarn/plugins
+!/.yarn/releases
+!/.yarn/sdks
+!/.yarn/versions
+
+*/data*
+*/dest
+*/dist
+*/.tsbuildinfo
+**/Dockerfile*
+**/node_modules
+**/.terraform
+blockchain/src/artifacts

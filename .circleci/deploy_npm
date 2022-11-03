@@ -2,20 +2,13 @@
 set -e
 
 readonly REPOSITORY=$1
-readonly IMAGE_COMMIT_URI=$ECR_URL/$REPOSITORY:cache-$COMMIT_HASH
 
 # Only publish tagged commits to npm.
 [ -n "$COMMIT_TAG" ] || { echo "Will only publish tagged commits to npm. Skipping." && exit 0; }
 
-# Pull the built image, do nothing if this wasn't rebuilt.
-docker pull $IMAGE_COMMIT_URI > /dev/null 2>&1 || { echo "No new image found." && exit 0; }
+extract_repo $REPOSITORY /usr/src project
 
-# Copy docker container to local file system.
-readonly TEMP_CONTAINER=$(docker create $IMAGE_COMMIT_URI)
-docker cp $TEMP_CONTAINER:/usr/src/$REPOSITORY/dest $REPOSITORY
-docker rm -v $TEMP_CONTAINER
-
-cd $REPOSITORY
+cd project/src/$(query_manifest projectDir $REPOSITORY)
 
 echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > .npmrc
 
@@ -35,7 +28,7 @@ fi
 readonly PUBLISHED_VERSION=$(npm show . version $TAG_ARG 2> /dev/null)
 readonly HIGHER_VERSION=$(npx semver ${VERSION} ${PUBLISHED_VERSION} | tail -1)
 
-# If there is already a published packaged = to given version, assume this is a re-run of a deploy, and early out.
+# If there is already a published package equal to given version, assume this is a re-run of a deploy, and early out.
 if [ "$VERSION" == "$PUBLISHED_VERSION" ]; then
   echo "Tagged version $VERSION is equal to published version $PUBLISHED_VERSION. Skipping publish."
   exit 0
@@ -55,6 +48,10 @@ jq --arg v $VERSION '.version = $v' package.json > $TMP && mv $TMP package.json
 for PKG in $(jq --raw-output ".dependencies | keys[] | select(contains(\"@aztec/\"))" package.json); do
   jq --arg v $VERSION ".dependencies[\"$PKG\"] = \$v" package.json > $TMP && mv $TMP package.json
 done
+
+# Filter on whitelist of properties.
+jq '{name, version, exports, main, homepage, author, type, license, dependencies} | with_entries( select( .value != null ) )' \
+  package.json > $TMP && mv $TMP package.json
 
 # Publish
 npm publish $TAG_ARG

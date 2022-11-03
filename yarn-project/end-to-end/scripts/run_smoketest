@@ -1,0 +1,31 @@
+#!/bin/bash
+set -ex
+
+if [ -n "$COMMIT_HASH" ]; then
+  $(aws ecr get-login --region us-east-2 --no-include-email) 2> /dev/null
+  docker pull 278380418400.dkr.ecr.us-east-2.amazonaws.com/end-to-end:cache-$COMMIT_HASH
+  docker tag 278380418400.dkr.ecr.us-east-2.amazonaws.com/end-to-end:cache-$COMMIT_HASH 278380418400.dkr.ecr.eu-west-2.amazonaws.com/end-to-end:latest
+fi
+
+case $VERSION_TAG in
+  dev)
+    ETHEREUM_HOST=https://$DEPLOY_TAG-eth-host.aztec.network:8545
+    ;;
+  testnet)
+    ETHEREUM_HOST=https://goerli.infura.io/v3/$TF_VAR_INFURA_API_KEY
+    ;;
+  *)
+    echo "No configuration for VERSION_TAG=$VERSION_TAG, skipping smoke test."
+    exit 0
+    ;;
+esac
+
+if [ -n "$MNEMONIC" ]; then
+  echo "Set MNEMONIC environment variable."
+  exit 1
+fi
+
+PRIVATE_KEY=$(docker run --rm 278380418400.dkr.ecr.eu-west-2.amazonaws.com/end-to-end yarn -s blockchain_cli pkFromAki "$MNEMONIC" ${DEPLOY_TAG}:general-accounts:smoketest-client)
+HUMMUS_HOST=https://$DEPLOY_TAG-terminal.aztec.network
+
+docker run --rm -e ETHEREUM_HOST=$ETHEREUM_HOST -e HUMMUS_HOST=$HUMMUS_HOST -e PRIVATE_KEY=$PRIVATE_KEY 278380418400.dkr.ecr.eu-west-2.amazonaws.com/end-to-end yarn test ./src/e2e_hosted_sdk.test.ts

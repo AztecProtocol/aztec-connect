@@ -1,8 +1,0 @@
-{
-  "extends": ".",
-  "compilerOptions": {
-    "module": "commonjs",
-    "outDir": "dest"
-  },
-  "exclude": ["**/*.test.ts"]
-}

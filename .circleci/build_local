@@ -1,42 +1,70 @@
 #!/bin/bash
+# Builds the PROJECTS in the given order.
+# Will terminate build at TARGET_PROJECT (if given).
+# Will only build TARGET_PROJECT if ONLY_TARGET given.
+# Will push TARGET_PROJECT to ECR with PUSH_LABEL (if given).
+# PROJECT elements have structure WORKING_DIR:REPO:DOCKERFILE.
+# If DOCKERFILE is excluded it tries to default to ./Dockerfile then ./REPO/Dockerfile
+
 set -e
 
 TARGET_PROJECT=$1
-PUSH_LABEL=$2
+ONLY_TARGET=$2
+PUSH_LABEL=$3
 
 PROJECTS=(
-  barretenberg:./dockerfiles/Dockerfile.x86_64-linux-clang:barretenberg-x86_64-linux-clang
-  barretenberg:./dockerfiles/Dockerfile.wasm-linux-clang:barretenberg-wasm-linux-clang
-  barretenberg.js
-  blockchain-vks
-  blockchain
-  halloumi
-  falafel
-  kebab
-  sdk
-  hummus
-  end-to-end
-  wasabi
-  zk-money
+  barretenberg:barretenberg:./dockerfiles/Dockerfile.x86_64-linux-clang:barretenberg-x86_64-linux-clang
+  barretenberg:barretenberg:./dockerfiles/Dockerfile.wasm-linux-clang:barretenberg-wasm-linux-clang
+  blockchain-vks:blockchain-vks
+  yarn-project:yarn-project-base
+  yarn-project:barretenberg.js
+  yarn-project:blockchain
+  yarn-project:halloumi
+  yarn-project:falafel
+  yarn-project:kebab
+  yarn-project:sdk
+  yarn-project:hummus
+  yarn-project:wallet
+  yarn-project:end-to-end
+  yarn-project:wasabi
+  yarn-project:zk-money
+  yarn-project:explorer
+  faucet:faucet
 )
 
 for E in ${PROJECTS[@]}; do
   ARR=(${E//:/ })
-  PROJECT=${ARR[0]}
-  DOCKERFILE=${ARR[1]:-./Dockerfile}
-  REPO=${ARR[2]:-$PROJECT}
+  WORKING_DIR=${ARR[0]}
+  PROJECT=${ARR[1]}
+  REPO=${ARR[3]:-$PROJECT}
+  DOCKERFILE=${ARR[2]}
 
-  cd $PROJECT
+  if [ -n "$ONLY_TARGET" -a ! "$PROJECT" = "$TARGET_PROJECT" ]; then
+    continue
+  fi
+
+  pushd $WORKING_DIR
+
+  if [ ! -f "$DOCKERFILE" ]; then
+    DOCKERFILE=./Dockerfile
+    if [ ! -f "$DOCKERFILE" ]; then
+      DOCKERFILE=./$REPO/Dockerfile
+      if [ ! -f "$DOCKERFILE" ]; then
+        echo "Dockerfile not found."
+        exit 1
+      fi
+    fi
+  fi
+
   echo
   echo
   echo
   echo "*** Building $PROJECT:$DOCKERFILE -> $REPO ***"
   echo
 
-  resolve_symlinks
   time docker build -f $DOCKERFILE -t $ECR_DEPLOY_URL/$REPO:latest .
 
-  if [ "$PROJECT" = "$TARGET_PROJECT" ]; then
+  if [ -n "$TERM_AT_TARGET" -a "$PROJECT" = "$TARGET_PROJECT" ]; then
     if [ -n "$PUSH_LABEL" ]; then
       $(aws ecr get-login --region eu-west-2 --no-include-email) 2> /dev/null
       docker tag $ECR_DEPLOY_URL/$REPO:latest $ECR_DEPLOY_URL/$REPO:$PUSH_LABEL
@@ -45,5 +73,5 @@ for E in ${PROJECTS[@]}; do
     break
   fi
 
-  cd ..
+  popd
 done

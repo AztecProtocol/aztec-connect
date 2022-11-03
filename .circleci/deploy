@@ -6,13 +6,15 @@ SERVICES=${2:-$REPOSITORY}
 # A global deploy, doesn't namespace under a deploy tag (e.g. company website, metrics)
 IS_GLOBAL=$3
 
+cd $(query_manifest projectDir $REPOSITORY)
+
 # Regardless of whether the repo changed or not, we want to update tags in the deployment repo.
 deploy_ecr $REPOSITORY
 
 # Bail out if nothing changed.
 LAST_SUCCESSFUL_COMMIT=$(last_successful_commit $REPOSITORY $DEPLOY_TAG-deployed)
 echo "Last successfully deployed commit: $LAST_SUCCESSFUL_COMMIT"
-if ! check_rebuild $LAST_SUCCESSFUL_COMMIT; then
+if ! check_rebuild "$LAST_SUCCESSFUL_COMMIT" $REPOSITORY; then
   echo "No changes detected, skipping deployment."
   exit 0
 fi
@@ -25,7 +27,7 @@ if [ -n "$IS_GLOBAL" ]; then
     deploy_service $SERVICE
   done
 else
-  deploy_terraform $REPOSITORY
+  deploy_terraform $REPOSITORY ./terraform/$VERSION_TAG
 
   # Restart services.
   for SERVICE in $SERVICES; do

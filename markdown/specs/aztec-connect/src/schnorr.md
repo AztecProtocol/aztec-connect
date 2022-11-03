@@ -151,16 +151,29 @@ We would need to derive two independent signing and PRF keys from one 256-bit se
 
 ## Signature malleability
 
-Given a valid signature $(s,e) \in  \{0,1\}^{256} \times \{0,1\}^{256}$ , it is possible to generate another valid signature $(s',e) \in  \{0,1\}^{256} \times \{0,1\}^{256}$, where $s'\neq s$ but $\mathbb{F}_r(s') = \mathbb{F}_r(s)$ (take $s'$ to be congruent to $s$ modulo $r$).
-In our context, signatures are used within the `account` and `join_split` circuits to link the public inputs to the user's spending key. 
-The signatures themselves are private inputs to the circuit and are not revealed. We do not depend on their non-malleability in this context. 
-The solution would be to check that $\text{int}(s) < r$. 
+Given a valid signature $(s,e) \in  \{0,1\}^{256} \times \{0,1\}^{256}$ , it is possible to generate another valid signature $(s',e) \in  \{0,1\}^{256} \times \{0,1\}^{256}$, 
+where $s'\neq s$ but $\mathbb{F}_r(s') = \mathbb{F}_r(s)$ (take $s'$ to be congruent to $s$ modulo $r$).
+The solution would be to check that $\text{int}(s) < r$, but this would incurr an additional range check within the circuit
+which we avoid for efficiency reasons. 
+
+In our context, signatures are used within the `account` and `join_split` circuits to link the public inputs to the user's spending key
+It is essentially a proof of knowledge of the private spending key, parametrized over the public inputs.
+The circuits ensures that the user is able to create a valid signature for the specific transaction. 
+The signatures themselves are private inputs to the circuit and are not therefore not revealed, used in other places, or checked for uniqueness. 
+The user is already able to create two different proofs for the same set of public inputs since proofs are never unique due to the ZK property.
+It is impossible to distinguish between proofs where:
+- the signature was created honestly using a deterministic nonce
+- the signature was created honestly using a random nonce
+- the signature's $s$ value was modified, given an original honestly generated signature. 
+
+Since malleability is only possible given an original valid signature signature, the user must have already approved the transaction.
+Therefore, we can also accept the modified signature. 
 
 ## Missing $R.y$ component in Pedersen hash
 
 As mentioned, we use the collision-resistant Pedersen hash to compress $R$ and $\text{pub}$ when computing the Fiat-Shamir challenge $e$. 
-We are aware that we do not embed the $y$ coordinate of $R$ and are working on a security proof to ensure this does not render the scheme insecure.
-
+For efficiency reasons, we do not pass the $y$ coordinate of $R$ into the Pedersen hash. 
+This optimization only incurs a loss of 1 bit of security, because there are only two valid values of $y$ given the $x$ coordinate of $R$. 
 
 ## Biased sampling of Fiat-Shamir challenge $e$ 
 

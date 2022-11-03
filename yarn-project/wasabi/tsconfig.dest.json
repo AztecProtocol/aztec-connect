@@ -1,0 +1,5 @@
+{
+  "extends": ".",
+  "references": [{ "path": "../blockchain/tsconfig.dest.json" }, { "path": "../sdk/tsconfig.dest.json" }],
+  "exclude": ["**/*.test.ts"]
+}

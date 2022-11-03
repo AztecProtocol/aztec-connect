@@ -1,0 +1,178 @@
+import { ProofGenerator } from './proof_generator.js';
+import { randomBytes } from '@aztec/barretenberg/crypto';
+import { createDebugLogger } from '@aztec/barretenberg/log';
+import { InterruptError } from '@aztec/barretenberg/errors';
+import { Command, Protocol } from './http_job_protocol.js';
+import http from 'http';
+import Koa, { DefaultState, Context } from 'koa';
+import Router from 'koa-router';
+import { PromiseReadable } from 'promise-readable';
+import { InterruptableSleep } from '@aztec/barretenberg/sleep';
+import { MemoryFifo } from '@aztec/barretenberg/fifo';
+
+interface Job {
+  // A unique, random 32 byte job id. Ensures we never conflict request/response ids in event of restarts.
+  id: Buffer;
+  // The command id.
+  cmd: Command;
+  // If a job becomes older than the ackTimeout, it's time is reset and it's issued to another worker.
+  timestamp: number;
+  // The request data to be sent to the worker.
+  data?: Buffer;
+  // Once the worker returns data, we call resolve to unblock the caller.
+  resolve: (result: Buffer) => void;
+  // Not used, but could be used to throw an error to the caller.
+  reject: (err: Error) => void;
+}
+
+/**
+ * An HTTP server which maintains a list of jobs (function calls as per the ProofGenerator interface).
+ * These jobs can be requested, serviced, and responses returned by clients.
+ * A job request will block if no work is available. The block will awake every second to search for expired jobs.
+ * Every job request is serialized to ensure that a single client will poll the job queue at any one time.
+ * If a new job arrives in the meantime, the block will also be awoken to then return the new job.
+ */
+export class HttpJobServer implements ProofGenerator {
+  private jobs: Job[] = [];
+  private server: http.Server;
+  private log = createDebugLogger('http_job_server');
+  private running = true;
+  private serialQueue = new MemoryFifo<() => Promise<void>>();
+  private interruptableSleep = new InterruptableSleep();
+  private runningPromise: Promise<void>;
+
+  constructor(private port = 8082, private ackTimeout = 5000) {
+    const router = new Router<DefaultState, Context>();
+
+    router.get('/get-job', async (ctx: Koa.Context) => {
+      ctx.body = await this.serialExecute(() => this.getWork());
+      ctx.status = 200;
+      this.log('get-job returned');
+    });
+
+    router.post('/job-complete', async (ctx: Koa.Context) => {
+      const stream = new PromiseReadable(ctx.req);
+      const buf = (await stream.readAll()) as Buffer;
+      this.completeJob(buf);
+      ctx.status = 200;
+    });
+
+    router.get('/ping', (ctx: Koa.Context) => {
+      const jobId = Buffer.from(ctx.query['job-id'] as string, 'hex');
+      this.ping(jobId);
+      ctx.status = 200;
+    });
+
+    const app = new Koa();
+    app.use(router.routes());
+    app.use(router.allowedMethods());
+
+    this.server = http.createServer(app.callback());
+
+    // Start processing serialization queue.
+    this.runningPromise = this.serialQueue.process(fn => fn());
+  }
+
+  private serialExecute<T>(fn: () => Promise<T>): Promise<T> {
+    return new Promise((resolve, reject) => {
+      this.serialQueue.put(async () => {
+        try {
+          const res = await fn();
+          resolve(res);
+        } catch (e) {
+          reject(e);
+        }
+      });
+    });
+  }
+
+  private async getWork() {
+    this.log('received request for work');
+    // A request for work. Serve back the newest new (timestamp 0) or expired job.
+    while (this.running) {
+      const now = new Date().getTime();
+      const job = this.jobs.find(j => now - j.timestamp > this.ackTimeout);
+      if (job) {
+        job.timestamp = now;
+        return Protocol.pack(job.id, job.cmd, job.data);
+      } else {
+        // No jobs. Block for 1 second, or until awoken.
+        this.log('sleep');
+        await this.interruptableSleep.sleep(1000);
+        this.log('awoke');
+      }
+    }
+    return Buffer.alloc(0);
+  }
+
+  private completeJob(buf: Buffer) {
+    this.log('received result for job: ', Protocol.logUnpack(buf).id);
+    const { id, cmd, data } = Protocol.unpack(buf);
+
+    const index = this.jobs.findIndex(j => id.equals(j.id));
+    if (index === -1) {
+      return;
+    }
+
+    // Remove the completed job from the job set.
+    const [job] = this.jobs.splice(index, 1);
+
+    if (cmd === Command.ACK) {
+      job.resolve(data);
+      this.log('resolved');
+    } else {
+      job.reject(new Error(data.toString('utf8')));
+    }
+  }
+
+  private ping(jobId: Buffer) {
+    this.log('ping for job:', jobId.toString('hex'));
+    const job = this.jobs.find(j => j.id.equals(jobId));
+    if (job) {
+      job.timestamp = new Date().getTime();
+    }
+  }
+
+  public start() {
+    this.server.listen(this.port);
+    console.log(`Proof job server listening on port ${this.port}.`);
+    return Promise.resolve();
+  }
+
+  public async stop() {
+    this.log('stop called');
+    this.running = false;
+    this.server.close();
+    this.serialQueue.cancel();
+    this.interruptableSleep.interrupt();
+    await this.runningPromise;
+    this.log('stop complete');
+  }
+
+  public interrupt() {
+    for (const job of this.jobs) {
+      job.reject(new InterruptError('Interrupted.'));
+    }
+    return Promise.resolve();
+  }
+
+  public getJoinSplitVk() {
+    return this.createJob(Command.GET_JOIN_SPLIT_VK);
+  }
+
+  public getAccountVk() {
+    return this.createJob(Command.GET_ACCOUNT_VK);
+  }
+
+  public createProof(data: Buffer): Promise<Buffer> {
+    return this.createJob(Command.CREATE_PROOF, data);
+  }
+
+  private createJob(cmd: Command, data?: Buffer): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+      const job = { id: randomBytes(32), timestamp: 0, cmd, data, resolve, reject };
+      this.jobs.push(job);
+      this.interruptableSleep.interrupt();
+    });
+  }
+}

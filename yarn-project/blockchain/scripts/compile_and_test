@@ -1,0 +1,8 @@
+#!/bin/bash
+set -e
+
+cd ./src/contracts/verifier/fixtures
+./create_fixture.sh true true
+cd ../../../../
+./scripts/compile
+NODE_NO_WARNINGS=1 yarn jest --silent $@

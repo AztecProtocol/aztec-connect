@@ -1,0 +1,150 @@
+{
+  "barretenberg-x86_64-linux-clang": {
+    "buildDir": "barretenberg",
+    "dockerfile": "dockerfiles/Dockerfile.x86_64-linux-clang",
+    "rebuildPatterns": ["^barretenberg/"],
+    "dependencies": []
+  },
+  "barretenberg-x86_64-linux-clang-assert": {
+    "buildDir": "barretenberg",
+    "dockerfile": "dockerfiles/Dockerfile.x86_64-linux-clang-assert",
+    "rebuildPatterns": ["^barretenberg/"],
+    "dependencies": []
+  },
+  "barretenberg-x86_64-linux-gcc": {
+    "buildDir": "barretenberg",
+    "dockerfile": "dockerfiles/Dockerfile.x86_64-linux-gcc",
+    "rebuildPatterns": ["^barretenberg/"],
+    "dependencies": []
+  },
+  "barretenberg-wasm-linux-clang": {
+    "buildDir": "barretenberg",
+    "dockerfile": "dockerfiles/Dockerfile.wasm-linux-clang",
+    "rebuildPatterns": ["^barretenberg/"],
+    "dependencies": []
+  },
+  "blockchain-vks": {
+    "buildDir": "blockchain-vks",
+    "dockerfile": "Dockerfile",
+    "rebuildPatterns": ["^blockchain-vks/"],
+    "dependencies": ["barretenberg-x86_64-linux-clang"]
+  },
+  "yarn-project-base": {
+    "buildDir": "yarn-project",
+    "dockerfile": "yarn-project-base/Dockerfile",
+    "rebuildPatterns": ["^yarn-project/yarn-project-base/", "^yarn-project/yarn.lock"],
+    "dependencies": ["barretenberg-x86_64-linux-clang", "barretenberg-wasm-linux-clang", "blockchain-vks"]
+  },
+  "barretenberg.js": {
+    "buildDir": "yarn-project",
+    "dockerfile": "barretenberg.js/Dockerfile",
+    "rebuildPatterns": ["^yarn-project/barretenberg.js/"],
+    "dependencies": ["yarn-project-base"]
+  },
+  "blockchain": {
+    "buildDir": "yarn-project",
+    "dockerfile": "blockchain/Dockerfile",
+    "rebuildPatterns": ["^yarn-project/blockchain/"],
+    "dependencies": ["barretenberg.js"]
+  },
+  "kebab": {
+    "buildDir": "yarn-project",
+    "projectDir": "yarn-project/kebab",
+    "dockerfile": "kebab/Dockerfile",
+    "rebuildPatterns": ["^yarn-project/kebab/"],
+    "dependencies": ["barretenberg.js", "blockchain"]
+  },
+  "halloumi": {
+    "buildDir": "yarn-project",
+    "projectDir": "yarn-project/halloumi",
+    "dockerfile": "halloumi/Dockerfile",
+    "rebuildPatterns": ["^yarn-project/halloumi/"],
+    "dependencies": ["barretenberg.js"]
+  },
+  "falafel": {
+    "buildDir": "yarn-project",
+    "projectDir": "yarn-project/falafel",
+    "dockerfile": "falafel/Dockerfile",
+    "rebuildPatterns": ["^yarn-project/falafel/"],
+    "dependencies": ["barretenberg.js", "blockchain", "halloumi"]
+  },
+  "sdk": {
+    "buildDir": "yarn-project",
+    "projectDir": "yarn-project/sdk",
+    "dockerfile": "sdk/Dockerfile",
+    "rebuildPatterns": ["^yarn-project/sdk/"],
+    "dependencies": ["barretenberg.js", "blockchain"]
+  },
+  "end-to-end": {
+    "buildDir": "yarn-project",
+    "projectDir": "yarn-project/end-to-end",
+    "dockerfile": "end-to-end/Dockerfile",
+    "rebuildPatterns": ["^yarn-project/end-to-end/"],
+    "dependencies": ["sdk", "falafel", "halloumi", "hummus", "kebab"]
+  },
+  "wasabi": {
+    "buildDir": "yarn-project",
+    "projectDir": "yarn-project/wasabi",
+    "dockerfile": "wasabi/Dockerfile",
+    "rebuildPatterns": ["^yarn-project/wasabi/"],
+    "dependencies": ["sdk", "blockchain"]
+  },
+  "hummus": {
+    "buildDir": "yarn-project",
+    "projectDir": "yarn-project/hummus",
+    "dockerfile": "hummus/Dockerfile",
+    "rebuildPatterns": ["^yarn-project/hummus/"],
+    "dependencies": ["sdk"]
+  },
+  "explorer": {
+    "buildDir": "yarn-project",
+    "projectDir": "yarn-project/explorer",
+    "dockerfile": "explorer/Dockerfile",
+    "rebuildPatterns": ["^yarn-project/explorer/"],
+    "dependencies": ["sdk"]
+  },
+  "zk-money": {
+    "buildDir": "yarn-project",
+    "projectDir": "yarn-project/zk-money",
+    "dockerfile": "zk-money/Dockerfile",
+    "rebuildPatterns": ["^yarn-project/zk-money/"],
+    "dependencies": ["sdk"]
+  },
+  "wallet": {
+    "buildDir": "yarn-project",
+    "projectDir": "yarn-project/wallet",
+    "dockerfile": "wallet/Dockerfile",
+    "rebuildPatterns": ["^yarn-project/wallet/"],
+    "dependencies": ["sdk"]
+  },
+  "faucet": {
+    "buildDir": "faucet",
+    "rebuildPatterns": ["^faucet/"],
+    "dependencies": []
+  },
+  "coinbase-exporter": {
+    "buildDir": "metrics/coinbase-exporter",
+    "rebuildPatterns": ["^metrics/coinbase-exporter/"],
+    "dependencies": []
+  },
+  "metrics-sidecar": {
+    "buildDir": "metrics/sidecar",
+    "rebuildPatterns": ["^metrics/sidecar/"],
+    "dependencies": []
+  },
+  "prometheus": {
+    "buildDir": "metrics/prometheus",
+    "rebuildPatterns": ["^metrics/prometheus/"],
+    "dependencies": []
+  },
+  "grafana": {
+    "buildDir": "metrics/grafana",
+    "rebuildPatterns": ["^metrics/grafana/"],
+    "dependencies": []
+  },
+  "website": {
+    "buildDir": "website",
+    "rebuildPatterns": ["^website/"],
+    "dependencies": []
+  }
+}

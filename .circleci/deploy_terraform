@@ -2,12 +2,9 @@
 set -e
 
 REPOSITORY=$1
+TF_DIR=$2
 
-if [ -n "$2" ]; then
-  TF_DIR=$2
-fi
-
-if [ ! -d $TF_DIR ]; then
+if [ ! -d "$TF_DIR" ]; then
   echo "No terraform directory found at $TF_DIR. Skipping."
   exit 0
 fi
@@ -20,6 +17,8 @@ fi
 ensure_terraform
 export TF_IN_AUTOMATION=1
 cd $TF_DIR
+
+echo "Deploying terraform found at $PWD..."
 
 # Always want to export the DEPLOY_TAG variable to terraform. It's used to easily scope releases.
 export TF_VAR_DEPLOY_TAG=$DEPLOY_TAG
