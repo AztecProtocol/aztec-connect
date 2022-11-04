@@ -37,12 +37,14 @@
   },
   "barretenberg.js": {
     "buildDir": "yarn-project",
+    "projectDir": "yarn-project/barretenberg.js",
     "dockerfile": "barretenberg.js/Dockerfile",
     "rebuildPatterns": ["^yarn-project/barretenberg.js/"],
     "dependencies": ["yarn-project-base"]
   },
   "blockchain": {
     "buildDir": "yarn-project",
+    "projectDir": "yarn-project/blockchain",
     "dockerfile": "blockchain/Dockerfile",
     "rebuildPatterns": ["^yarn-project/blockchain/"],
     "dependencies": ["barretenberg.js"]
