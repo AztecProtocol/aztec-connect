@@ -620,6 +620,16 @@ jobs:
       - *checkout
       - *setup_env
       - run:
+          name: 'blockchain'
+          command: |
+            deploy_ecr blockchain
+            deploy_npm blockchain
+      - run:
+          name: 'barretenberg.js'
+          command: |
+            deploy_ecr barretenberg.js
+            deploy_npm barretenberg.js
+      - run:
           name: 'kebab'
           # Increment to force contract redeployment.
           command: TF_VAR_REDEPLOY=4 deploy kebab
