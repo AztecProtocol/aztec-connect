@@ -38,8 +38,16 @@ export class Web3Signer implements EthereumSigner {
     const signature = Buffer.from(result.slice(2), 'hex');
     const r = signature.slice(0, 32);
     const s = signature.slice(32, 64);
-    const v = signature.slice(64, 65);
-    const sig: EthereumSignature = { v, r, s };
+    const v = signature[signature.length - 1];
+
+    const sig: EthereumSignature = { v: Buffer.from([v]), r, s };
+
+    // Ganache is not signature standard compliant. Returns 00 or 01 as v.
+    // Need to adjust to make v 27 or 28.
+    if (v <= 1) {
+      sig.v = Buffer.from([v + 27]);
+    }
+
     return sig;
   }
 
