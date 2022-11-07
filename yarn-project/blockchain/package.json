@@ -11,7 +11,7 @@
     "compile": "./scripts/as_cjs ./scripts/compile",
     "clean": "rm -rf ./cache ./data ./dest ./src/artifacts .tsbuildinfo",
     "start:ganache": "ganache-cli -h 0.0.0.0 -l 12000000 -e 10000 -m 'test test test test test test test test test test test junk'",
-    "start:ganache:fork": "ganache-cli -f https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35 --chain.chainId 0xe2e --fork.blockNumber 15525911 -h 0.0.0.0 -l 15000000 -e 10000 -m 'test test test test test test test test test test test junk'",
+    "start:ganache:fork": "ganache-cli -f https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35 --chain.chainId 0xe2e --fork.blockNumber 15918000 -h 0.0.0.0 -l 15000000 -e 10000 -m 'test test test test test test test test test test test junk'",
     "start:hardhat:fork": "yarn hardhat node",
     "test": "./scripts/as_cjs ./scripts/compile_and_test",
     "deploy": "node ./dest/deploy/index.js",

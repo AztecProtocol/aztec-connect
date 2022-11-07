@@ -24,6 +24,10 @@ EventEmitter.defaultMaxListeners = 30;
 
 const { ETHEREUM_HOST = 'http://localhost:8545', ROLLUP_HOST = 'http://localhost:8081' } = process.env;
 
+const TEST_START_TIME = new Date('Mon Nov 07 2022').getTime() / 1000; // before the DAI tranche has expired
+const DAI_TRANCHE_EXPIRY = 1677243924; // Element Dai Feb 23 expiry time (unix timestamp)
+const EXPIRED_TRANCHE_EXPIRY = 1663361092; // Element Dai Sep 22 expiry time, used to generate a failed element interaction for testing refund
+
 /**
  * Run the following:
  * blockchain: yarn start:ganache:fork
@@ -84,15 +88,9 @@ describe('end-to-end async defi tests', () => {
       totalQuantityRequested: 5000n * 10n ** 18n,
       tokenAddress: EthAddress.fromString(MainnetAddresses.Tokens.DAI),
       assetId: sdk.getAssetIdByAddress(EthAddress.fromString(MainnetAddresses.Tokens.DAI)),
-      expiry: 1663361092,
+      expiry: DAI_TRANCHE_EXPIRY,
     };
-    const lusdSpec: AssetSpec = {
-      totalQuantityRequested: 10n * 10n ** 18n,
-      tokenAddress: EthAddress.fromString(MainnetAddresses.Tokens['LUSD3CRV-F']),
-      assetId: sdk.getAssetIdByAddress(EthAddress.fromString(MainnetAddresses.Tokens['LUSD3CRV-F'])),
-      expiry: 1663348630,
-    };
-    const assetSpecs: AssetSpec[] = [daiSpec, lusdSpec].sort((a, b) => a.expiry - b.expiry);
+    const assetSpecs: AssetSpec[] = [daiSpec].sort((a, b) => a.expiry - b.expiry);
 
     const elementBridgeCallData = 1;
 
@@ -167,7 +165,7 @@ describe('end-to-end async defi tests', () => {
     await Promise.all(tokenDepositControllers.map(controller => controller.awaitSettlement()));
 
     // Ensure the time is before the first expiry.
-    const startTime = new Date('Fri Jul 01 2022').getTime() / 1000;
+    const startTime = TEST_START_TIME;
     debug(`setting blockchain time to ${formatTime(startTime)}...`);
     await setBlockchainTime(startTime, provider);
 
@@ -234,17 +232,23 @@ describe('end-to-end async defi tests', () => {
     const failedDefiController = await (async () => {
       const bridgeCallData = new BridgeCallData(
         elementBridgeCallData,
-        lusdSpec.assetId,
-        lusdSpec.assetId,
+        daiSpec.assetId,
+        daiSpec.assetId,
         undefined,
         undefined,
-        1632834462,
+        EXPIRED_TRANCHE_EXPIRY,
       );
-      const tokenAssetValue = await sdk.getBalance(userId, lusdSpec.assetId);
-      const tokenDepositFee = (await sdk.getDefiFees(bridgeCallData, { userId, assetValue: tokenAssetValue }))[
-        DefiSettlementTime.INSTANT
-      ];
-      const controller = sdk.createDefiController(userId, signer, bridgeCallData, tokenAssetValue, tokenDepositFee);
+      const amountToDepositToExpiredTranche: AssetValue = { assetId: daiSpec.assetId, value: 1n };
+      const tokenDepositFee = (
+        await sdk.getDefiFees(bridgeCallData, { userId, assetValue: amountToDepositToExpiredTranche })
+      )[DefiSettlementTime.INSTANT];
+      const controller = sdk.createDefiController(
+        userId,
+        signer,
+        bridgeCallData,
+        amountToDepositToExpiredTranche,
+        tokenDepositFee,
+      );
       await controller.createProof();
       await controller.send();
       return controller;

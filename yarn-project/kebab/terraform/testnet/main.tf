@@ -111,7 +111,7 @@ resource "aws_ecs_task_definition" "kebab" {
     "name": "${var.DEPLOY_TAG}-mainnet-fork",
     "image": "trufflesuite/ganache",
     "essential": true,
-    "command": ["-p=8545", "-f=https://mainnet.infura.io/v3/${var.INFURA_API_KEY}", "--chain.chainId=0xA57EC", "--fork.blockNumber=15525911", "--database.dbPath=/data", "-h=0.0.0.0", "-l=12000000", "-a=0"],
+    "command": ["-p=8545", "-f=https://mainnet.infura.io/v3/${var.INFURA_API_KEY}", "--chain.chainId=0xA57EC", "--fork.blockNumber=15918000", "--database.dbPath=/data", "-h=0.0.0.0", "-l=12000000", "-a=0"],
     "mountPoints": [
       {
         "containerPath": "/data",

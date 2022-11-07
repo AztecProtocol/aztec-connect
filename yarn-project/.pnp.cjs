@@ -762,7 +762,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["@aztec/bridge-clients", "npm:0.1.47"],\
             ["@aztec/barretenberg", "npm:2.1.0-testnet.29"],\
             ["@ethersproject/abi", "npm:5.5.0"],\
-            ["@ethersproject/providers", "npm:5.7.1"],\
+            ["@ethersproject/providers", "npm:5.7.2"],\
             ["ethers", "npm:5.5.0"],\
             ["tslib", "npm:2.4.0"]\
           ],\
@@ -779,7 +779,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["@typechain/ethers-v5", "virtual:5f340a36c7951dfc548edff7230072b5454d55d9463c531885f38fac43fa94e16f955f4208f986821210cd0b6cf1ea2b0bfdd6b95f477bc18c7685146a74e730#npm:9.0.0"],\
             ["@typechain/hardhat", "virtual:5f340a36c7951dfc548edff7230072b5454d55d9463c531885f38fac43fa94e16f955f4208f986821210cd0b6cf1ea2b0bfdd6b95f477bc18c7685146a74e730#npm:4.0.0"],\
             ["ethers", "npm:5.6.9"],\
-            ["hardhat", "virtual:5f340a36c7951dfc548edff7230072b5454d55d9463c531885f38fac43fa94e16f955f4208f986821210cd0b6cf1ea2b0bfdd6b95f477bc18c7685146a74e730#npm:2.11.1"],\
+            ["hardhat", "virtual:5f340a36c7951dfc548edff7230072b5454d55d9463c531885f38fac43fa94e16f955f4208f986821210cd0b6cf1ea2b0bfdd6b95f477bc18c7685146a74e730#npm:2.12.2"],\
             ["isomorphic-fetch", "npm:3.0.0"],\
             ["ts-node", "virtual:5f340a36c7951dfc548edff7230072b5454d55d9463c531885f38fac43fa94e16f955f4208f986821210cd0b6cf1ea2b0bfdd6b95f477bc18c7685146a74e730#npm:10.9.1"],\
             ["tslib", "npm:2.4.0"],\
@@ -9838,7 +9838,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["@ethersproject/transactions", "npm:5.6.2"],\
             ["@ethersproject/web", "npm:5.6.1"],\
             ["bech32", "npm:1.1.4"],\
-            ["ws", "virtual:7ba09fa2d7752902868a69fa9d869609091144850ab3c24fda35b732a68f27f35b587e1475d08772fb49797b0809d63ba79750ed0faad72a34c129814f0896af#npm:7.4.6"]\
+            ["ws", "virtual:88293ff29fa54efecc98d655f7a7551b282025b3465bc23ca5bb7a89a31c17930a7319e98225cf138bf4e6ccead5b30ae3c800738697b87af3441226d65f7ee3#npm:7.4.6"]\
           ],\
           "linkType": "HARD"\
         }],\
@@ -9864,7 +9864,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["@ethersproject/transactions", "npm:5.6.2"],\
             ["@ethersproject/web", "npm:5.6.1"],\
             ["bech32", "npm:1.1.4"],\
-            ["ws", "virtual:7ba09fa2d7752902868a69fa9d869609091144850ab3c24fda35b732a68f27f35b587e1475d08772fb49797b0809d63ba79750ed0faad72a34c129814f0896af#npm:7.4.6"]\
+            ["ws", "virtual:88293ff29fa54efecc98d655f7a7551b282025b3465bc23ca5bb7a89a31c17930a7319e98225cf138bf4e6ccead5b30ae3c800738697b87af3441226d65f7ee3#npm:7.4.6"]\
           ],\
           "linkType": "HARD"\
         }],\
@@ -9891,7 +9891,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["@ethersproject/transactions", "npm:5.6.2"],\
             ["@ethersproject/web", "npm:5.6.1"],\
             ["bech32", "npm:1.1.4"],\
-            ["ws", "virtual:7ba09fa2d7752902868a69fa9d869609091144850ab3c24fda35b732a68f27f35b587e1475d08772fb49797b0809d63ba79750ed0faad72a34c129814f0896af#npm:7.4.6"]\
+            ["ws", "virtual:88293ff29fa54efecc98d655f7a7551b282025b3465bc23ca5bb7a89a31c17930a7319e98225cf138bf4e6ccead5b30ae3c800738697b87af3441226d65f7ee3#npm:7.4.6"]\
           ],\
           "linkType": "HARD"\
         }],\
@@ -9918,7 +9918,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["@ethersproject/transactions", "npm:5.7.0"],\
             ["@ethersproject/web", "npm:5.7.0"],\
             ["bech32", "npm:1.1.4"],\
-            ["ws", "virtual:7ba09fa2d7752902868a69fa9d869609091144850ab3c24fda35b732a68f27f35b587e1475d08772fb49797b0809d63ba79750ed0faad72a34c129814f0896af#npm:7.4.6"]\
+            ["ws", "virtual:88293ff29fa54efecc98d655f7a7551b282025b3465bc23ca5bb7a89a31c17930a7319e98225cf138bf4e6ccead5b30ae3c800738697b87af3441226d65f7ee3#npm:7.4.6"]\
           ],\
           "linkType": "HARD"\
         }],\
@@ -9945,7 +9945,34 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["@ethersproject/transactions", "npm:5.7.0"],\
             ["@ethersproject/web", "npm:5.7.0"],\
             ["bech32", "npm:1.1.4"],\
-            ["ws", "virtual:7ba09fa2d7752902868a69fa9d869609091144850ab3c24fda35b732a68f27f35b587e1475d08772fb49797b0809d63ba79750ed0faad72a34c129814f0896af#npm:7.4.6"]\
+            ["ws", "virtual:88293ff29fa54efecc98d655f7a7551b282025b3465bc23ca5bb7a89a31c17930a7319e98225cf138bf4e6ccead5b30ae3c800738697b87af3441226d65f7ee3#npm:7.4.6"]\
+          ],\
+          "linkType": "HARD"\
+        }],\
+        ["npm:5.7.2", {\
+          "packageLocation": "./.yarn/cache/@ethersproject-providers-npm-5.7.2-88293ff29f-1754c731a5.zip/node_modules/@ethersproject/providers/",\
+          "packageDependencies": [\
+            ["@ethersproject/providers", "npm:5.7.2"],\
+            ["@ethersproject/abstract-provider", "npm:5.7.0"],\
+            ["@ethersproject/abstract-signer", "npm:5.7.0"],\
+            ["@ethersproject/address", "npm:5.7.0"],\
+            ["@ethersproject/base64", "npm:5.7.0"],\
+            ["@ethersproject/basex", "npm:5.7.0"],\
+            ["@ethersproject/bignumber", "npm:5.7.0"],\
+            ["@ethersproject/bytes", "npm:5.7.0"],\
+            ["@ethersproject/constants", "npm:5.7.0"],\
+            ["@ethersproject/hash", "npm:5.7.0"],\
+            ["@ethersproject/logger", "npm:5.7.0"],\
+            ["@ethersproject/networks", "npm:5.7.0"],\
+            ["@ethersproject/properties", "npm:5.7.0"],\
+            ["@ethersproject/random", "npm:5.7.0"],\
+            ["@ethersproject/rlp", "npm:5.7.0"],\
+            ["@ethersproject/sha2", "npm:5.7.0"],\
+            ["@ethersproject/strings", "npm:5.7.0"],\
+            ["@ethersproject/transactions", "npm:5.7.0"],\
+            ["@ethersproject/web", "npm:5.7.0"],\
+            ["bech32", "npm:1.1.4"],\
+            ["ws", "virtual:88293ff29fa54efecc98d655f7a7551b282025b3465bc23ca5bb7a89a31c17930a7319e98225cf138bf4e6ccead5b30ae3c800738697b87af3441226d65f7ee3#npm:7.4.6"]\
           ],\
           "linkType": "HARD"\
         }]\
@@ -11625,7 +11652,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["@nomicfoundation/ethereumjs-rlp", "npm:4.0.0"],\
             ["@nomicfoundation/ethereumjs-util", "npm:8.0.0"],\
             ["abstract-level", "npm:1.0.3"],\
-            ["bigint-crypto-utils", "npm:3.1.5"],\
+            ["bigint-crypto-utils", "npm:3.1.7"],\
             ["ethereum-cryptography", "npm:0.1.3"]\
           ],\
           "linkType": "HARD"\
@@ -11736,110 +11763,110 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
         }]\
       ]],\
       ["@nomicfoundation/solidity-analyzer", [\
-        ["npm:0.0.3", {\
-          "packageLocation": "./.yarn/cache/@nomicfoundation-solidity-analyzer-npm-0.0.3-2025da568a-dd3e1e6aa7.zip/node_modules/@nomicfoundation/solidity-analyzer/",\
+        ["npm:0.1.0", {\
+          "packageLocation": "./.yarn/cache/@nomicfoundation-solidity-analyzer-npm-0.1.0-cb8d861385-42dc5ba40e.zip/node_modules/@nomicfoundation/solidity-analyzer/",\
           "packageDependencies": [\
-            ["@nomicfoundation/solidity-analyzer", "npm:0.0.3"],\
-            ["@nomicfoundation/solidity-analyzer-darwin-arm64", "npm:0.0.3"],\
-            ["@nomicfoundation/solidity-analyzer-darwin-x64", "npm:0.0.3"],\
-            ["@nomicfoundation/solidity-analyzer-freebsd-x64", "npm:0.0.3"],\
-            ["@nomicfoundation/solidity-analyzer-linux-arm64-gnu", "npm:0.0.3"],\
-            ["@nomicfoundation/solidity-analyzer-linux-arm64-musl", "npm:0.0.3"],\
-            ["@nomicfoundation/solidity-analyzer-linux-x64-gnu", "npm:0.0.3"],\
-            ["@nomicfoundation/solidity-analyzer-linux-x64-musl", "npm:0.0.3"],\
-            ["@nomicfoundation/solidity-analyzer-win32-arm64-msvc", "npm:0.0.3"],\
-            ["@nomicfoundation/solidity-analyzer-win32-ia32-msvc", "npm:0.0.3"],\
-            ["@nomicfoundation/solidity-analyzer-win32-x64-msvc", "npm:0.0.3"]\
+            ["@nomicfoundation/solidity-analyzer", "npm:0.1.0"],\
+            ["@nomicfoundation/solidity-analyzer-darwin-arm64", "npm:0.1.0"],\
+            ["@nomicfoundation/solidity-analyzer-darwin-x64", "npm:0.1.0"],\
+            ["@nomicfoundation/solidity-analyzer-freebsd-x64", "npm:0.1.0"],\
+            ["@nomicfoundation/solidity-analyzer-linux-arm64-gnu", "npm:0.1.0"],\
+            ["@nomicfoundation/solidity-analyzer-linux-arm64-musl", "npm:0.1.0"],\
+            ["@nomicfoundation/solidity-analyzer-linux-x64-gnu", "npm:0.1.0"],\
+            ["@nomicfoundation/solidity-analyzer-linux-x64-musl", "npm:0.1.0"],\
+            ["@nomicfoundation/solidity-analyzer-win32-arm64-msvc", "npm:0.1.0"],\
+            ["@nomicfoundation/solidity-analyzer-win32-ia32-msvc", "npm:0.1.0"],\
+            ["@nomicfoundation/solidity-analyzer-win32-x64-msvc", "npm:0.1.0"]\
           ],\
           "linkType": "HARD"\
         }]\
       ]],\
       ["@nomicfoundation/solidity-analyzer-darwin-arm64", [\
-        ["npm:0.0.3", {\
-          "packageLocation": "./.yarn/unplugged/@nomicfoundation-solidity-analyzer-darwin-arm64-npm-0.0.3-86eeb18447/node_modules/@nomicfoundation/solidity-analyzer-darwin-arm64/",\
+        ["npm:0.1.0", {\
+          "packageLocation": "./.yarn/unplugged/@nomicfoundation-solidity-analyzer-darwin-arm64-npm-0.1.0-2a7a18bfb0/node_modules/@nomicfoundation/solidity-analyzer-darwin-arm64/",\
           "packageDependencies": [\
-            ["@nomicfoundation/solidity-analyzer-darwin-arm64", "npm:0.0.3"]\
+            ["@nomicfoundation/solidity-analyzer-darwin-arm64", "npm:0.1.0"]\
           ],\
           "linkType": "HARD"\
         }]\
       ]],\
       ["@nomicfoundation/solidity-analyzer-darwin-x64", [\
-        ["npm:0.0.3", {\
-          "packageLocation": "./.yarn/unplugged/@nomicfoundation-solidity-analyzer-darwin-x64-npm-0.0.3-5d47ea957b/node_modules/@nomicfoundation/solidity-analyzer-darwin-x64/",\
+        ["npm:0.1.0", {\
+          "packageLocation": "./.yarn/unplugged/@nomicfoundation-solidity-analyzer-darwin-x64-npm-0.1.0-67c41bf710/node_modules/@nomicfoundation/solidity-analyzer-darwin-x64/",\
           "packageDependencies": [\
-            ["@nomicfoundation/solidity-analyzer-darwin-x64", "npm:0.0.3"]\
+            ["@nomicfoundation/solidity-analyzer-darwin-x64", "npm:0.1.0"]\
           ],\
           "linkType": "HARD"\
         }]\
       ]],\
       ["@nomicfoundation/solidity-analyzer-freebsd-x64", [\
-        ["npm:0.0.3", {\
-          "packageLocation": "./.yarn/unplugged/@nomicfoundation-solidity-analyzer-freebsd-x64-npm-0.0.3-b9918bff5d/node_modules/@nomicfoundation/solidity-analyzer-freebsd-x64/",\
+        ["npm:0.1.0", {\
+          "packageLocation": "./.yarn/unplugged/@nomicfoundation-solidity-analyzer-freebsd-x64-npm-0.1.0-33b6be371e/node_modules/@nomicfoundation/solidity-analyzer-freebsd-x64/",\
           "packageDependencies": [\
-            ["@nomicfoundation/solidity-analyzer-freebsd-x64", "npm:0.0.3"]\
+            ["@nomicfoundation/solidity-analyzer-freebsd-x64", "npm:0.1.0"]\
           ],\
           "linkType": "HARD"\
         }]\
       ]],\
       ["@nomicfoundation/solidity-analyzer-linux-arm64-gnu", [\
-        ["npm:0.0.3", {\
-          "packageLocation": "./.yarn/unplugged/@nomicfoundation-solidity-analyzer-linux-arm64-gnu-npm-0.0.3-5688aa7614/node_modules/@nomicfoundation/solidity-analyzer-linux-arm64-gnu/",\
+        ["npm:0.1.0", {\
+          "packageLocation": "./.yarn/unplugged/@nomicfoundation-solidity-analyzer-linux-arm64-gnu-npm-0.1.0-13ffa38a6b/node_modules/@nomicfoundation/solidity-analyzer-linux-arm64-gnu/",\
           "packageDependencies": [\
-            ["@nomicfoundation/solidity-analyzer-linux-arm64-gnu", "npm:0.0.3"]\
+            ["@nomicfoundation/solidity-analyzer-linux-arm64-gnu", "npm:0.1.0"]\
           ],\
           "linkType": "HARD"\
         }]\
       ]],\
       ["@nomicfoundation/solidity-analyzer-linux-arm64-musl", [\
-        ["npm:0.0.3", {\
-          "packageLocation": "./.yarn/unplugged/@nomicfoundation-solidity-analyzer-linux-arm64-musl-npm-0.0.3-3ed5c975e4/node_modules/@nomicfoundation/solidity-analyzer-linux-arm64-musl/",\
+        ["npm:0.1.0", {\
+          "packageLocation": "./.yarn/unplugged/@nomicfoundation-solidity-analyzer-linux-arm64-musl-npm-0.1.0-4525d2f7e1/node_modules/@nomicfoundation/solidity-analyzer-linux-arm64-musl/",\
           "packageDependencies": [\
-            ["@nomicfoundation/solidity-analyzer-linux-arm64-musl", "npm:0.0.3"]\
+            ["@nomicfoundation/solidity-analyzer-linux-arm64-musl", "npm:0.1.0"]\
           ],\
           "linkType": "HARD"\
         }]\
       ]],\
       ["@nomicfoundation/solidity-analyzer-linux-x64-gnu", [\
-        ["npm:0.0.3", {\
-          "packageLocation": "./.yarn/unplugged/@nomicfoundation-solidity-analyzer-linux-x64-gnu-npm-0.0.3-7de88a3433/node_modules/@nomicfoundation/solidity-analyzer-linux-x64-gnu/",\
+        ["npm:0.1.0", {\
+          "packageLocation": "./.yarn/unplugged/@nomicfoundation-solidity-analyzer-linux-x64-gnu-npm-0.1.0-5eb9e7834b/node_modules/@nomicfoundation/solidity-analyzer-linux-x64-gnu/",\
           "packageDependencies": [\
-            ["@nomicfoundation/solidity-analyzer-linux-x64-gnu", "npm:0.0.3"]\
+            ["@nomicfoundation/solidity-analyzer-linux-x64-gnu", "npm:0.1.0"]\
           ],\
           "linkType": "HARD"\
         }]\
       ]],\
       ["@nomicfoundation/solidity-analyzer-linux-x64-musl", [\
-        ["npm:0.0.3", {\
-          "packageLocation": "./.yarn/unplugged/@nomicfoundation-solidity-analyzer-linux-x64-musl-npm-0.0.3-898bef498d/node_modules/@nomicfoundation/solidity-analyzer-linux-x64-musl/",\
+        ["npm:0.1.0", {\
+          "packageLocation": "./.yarn/unplugged/@nomicfoundation-solidity-analyzer-linux-x64-musl-npm-0.1.0-948af59b5b/node_modules/@nomicfoundation/solidity-analyzer-linux-x64-musl/",\
           "packageDependencies": [\
-            ["@nomicfoundation/solidity-analyzer-linux-x64-musl", "npm:0.0.3"]\
+            ["@nomicfoundation/solidity-analyzer-linux-x64-musl", "npm:0.1.0"]\
           ],\
           "linkType": "HARD"\
         }]\
       ]],\
       ["@nomicfoundation/solidity-analyzer-win32-arm64-msvc", [\
-        ["npm:0.0.3", {\
-          "packageLocation": "./.yarn/unplugged/@nomicfoundation-solidity-analyzer-win32-arm64-msvc-npm-0.0.3-b2d0930ba3/node_modules/@nomicfoundation/solidity-analyzer-win32-arm64-msvc/",\
+        ["npm:0.1.0", {\
+          "packageLocation": "./.yarn/unplugged/@nomicfoundation-solidity-analyzer-win32-arm64-msvc-npm-0.1.0-8ddb2423d0/node_modules/@nomicfoundation/solidity-analyzer-win32-arm64-msvc/",\
           "packageDependencies": [\
-            ["@nomicfoundation/solidity-analyzer-win32-arm64-msvc", "npm:0.0.3"]\
+            ["@nomicfoundation/solidity-analyzer-win32-arm64-msvc", "npm:0.1.0"]\
           ],\
           "linkType": "HARD"\
         }]\
       ]],\
       ["@nomicfoundation/solidity-analyzer-win32-ia32-msvc", [\
-        ["npm:0.0.3", {\
-          "packageLocation": "./.yarn/unplugged/@nomicfoundation-solidity-analyzer-win32-ia32-msvc-npm-0.0.3-3c32800bbc/node_modules/@nomicfoundation/solidity-analyzer-win32-ia32-msvc/",\
+        ["npm:0.1.0", {\
+          "packageLocation": "./.yarn/unplugged/@nomicfoundation-solidity-analyzer-win32-ia32-msvc-npm-0.1.0-cc71abdf19/node_modules/@nomicfoundation/solidity-analyzer-win32-ia32-msvc/",\
           "packageDependencies": [\
-            ["@nomicfoundation/solidity-analyzer-win32-ia32-msvc", "npm:0.0.3"]\
+            ["@nomicfoundation/solidity-analyzer-win32-ia32-msvc", "npm:0.1.0"]\
           ],\
           "linkType": "HARD"\
         }]\
       ]],\
       ["@nomicfoundation/solidity-analyzer-win32-x64-msvc", [\
-        ["npm:0.0.3", {\
-          "packageLocation": "./.yarn/unplugged/@nomicfoundation-solidity-analyzer-win32-x64-msvc-npm-0.0.3-a08137121b/node_modules/@nomicfoundation/solidity-analyzer-win32-x64-msvc/",\
+        ["npm:0.1.0", {\
+          "packageLocation": "./.yarn/unplugged/@nomicfoundation-solidity-analyzer-win32-x64-msvc-npm-0.1.0-571599cfc1/node_modules/@nomicfoundation/solidity-analyzer-win32-x64-msvc/",\
           "packageDependencies": [\
-            ["@nomicfoundation/solidity-analyzer-win32-x64-msvc", "npm:0.0.3"]\
+            ["@nomicfoundation/solidity-analyzer-win32-x64-msvc", "npm:0.1.0"]\
           ],\
           "linkType": "HARD"\
         }]\
@@ -14840,7 +14867,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["@types/lodash", null],\
             ["@types/typechain", null],\
             ["fs-extra", "npm:9.1.0"],\
-            ["hardhat", "virtual:5f340a36c7951dfc548edff7230072b5454d55d9463c531885f38fac43fa94e16f955f4208f986821210cd0b6cf1ea2b0bfdd6b95f477bc18c7685146a74e730#npm:2.11.1"],\
+            ["hardhat", "virtual:5f340a36c7951dfc548edff7230072b5454d55d9463c531885f38fac43fa94e16f955f4208f986821210cd0b6cf1ea2b0bfdd6b95f477bc18c7685146a74e730#npm:2.12.2"],\
             ["lodash", null],\
             ["typechain", "virtual:5f340a36c7951dfc548edff7230072b5454d55d9463c531885f38fac43fa94e16f955f4208f986821210cd0b6cf1ea2b0bfdd6b95f477bc18c7685146a74e730#npm:7.0.1"]\
           ],\
@@ -20884,20 +20911,20 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
         }]\
       ]],\
       ["bigint-crypto-utils", [\
-        ["npm:3.1.5", {\
-          "packageLocation": "./.yarn/cache/bigint-crypto-utils-npm-3.1.5-cd73eb7a6b-38c92711a6.zip/node_modules/bigint-crypto-utils/",\
+        ["npm:3.1.7", {\
+          "packageLocation": "./.yarn/cache/bigint-crypto-utils-npm-3.1.7-e3ef667154-10fa35d3e3.zip/node_modules/bigint-crypto-utils/",\
           "packageDependencies": [\
-            ["bigint-crypto-utils", "npm:3.1.5"],\
-            ["bigint-mod-arith", "npm:3.1.0"]\
+            ["bigint-crypto-utils", "npm:3.1.7"],\
+            ["bigint-mod-arith", "npm:3.1.2"]\
           ],\
           "linkType": "HARD"\
         }]\
       ]],\
       ["bigint-mod-arith", [\
-        ["npm:3.1.0", {\
-          "packageLocation": "./.yarn/cache/bigint-mod-arith-npm-3.1.0-a78369cbf9-2dc79460b9.zip/node_modules/bigint-mod-arith/",\
+        ["npm:3.1.2", {\
+          "packageLocation": "./.yarn/cache/bigint-mod-arith-npm-3.1.2-c77f54df39-badddd745f.zip/node_modules/bigint-mod-arith/",\
           "packageDependencies": [\
-            ["bigint-mod-arith", "npm:3.1.0"]\
+            ["bigint-mod-arith", "npm:3.1.2"]\
           ],\
           "linkType": "HARD"\
         }]\
@@ -28384,17 +28411,17 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           ],\
           "linkType": "SOFT"\
         }],\
-        ["npm:2.11.1", {\
-          "packageLocation": "./.yarn/cache/hardhat-npm-2.11.1-95a1848210-fc35526bcc.zip/node_modules/hardhat/",\
+        ["npm:2.12.2", {\
+          "packageLocation": "./.yarn/cache/hardhat-npm-2.12.2-0005e54d8b-cd45bf9d4f.zip/node_modules/hardhat/",\
           "packageDependencies": [\
-            ["hardhat", "npm:2.11.1"]\
+            ["hardhat", "npm:2.12.2"]\
           ],\
           "linkType": "SOFT"\
         }],\
-        ["virtual:5f340a36c7951dfc548edff7230072b5454d55d9463c531885f38fac43fa94e16f955f4208f986821210cd0b6cf1ea2b0bfdd6b95f477bc18c7685146a74e730#npm:2.11.1", {\
-          "packageLocation": "./.yarn/__virtual__/hardhat-virtual-446590b9f1/0/cache/hardhat-npm-2.11.1-95a1848210-fc35526bcc.zip/node_modules/hardhat/",\
+        ["virtual:5f340a36c7951dfc548edff7230072b5454d55d9463c531885f38fac43fa94e16f955f4208f986821210cd0b6cf1ea2b0bfdd6b95f477bc18c7685146a74e730#npm:2.12.2", {\
+          "packageLocation": "./.yarn/__virtual__/hardhat-virtual-680d666061/0/cache/hardhat-npm-2.12.2-0005e54d8b-cd45bf9d4f.zip/node_modules/hardhat/",\
           "packageDependencies": [\
-            ["hardhat", "virtual:5f340a36c7951dfc548edff7230072b5454d55d9463c531885f38fac43fa94e16f955f4208f986821210cd0b6cf1ea2b0bfdd6b95f477bc18c7685146a74e730#npm:2.11.1"],\
+            ["hardhat", "virtual:5f340a36c7951dfc548edff7230072b5454d55d9463c531885f38fac43fa94e16f955f4208f986821210cd0b6cf1ea2b0bfdd6b95f477bc18c7685146a74e730#npm:2.12.2"],\
             ["@ethersproject/abi", "npm:5.6.4"],\
             ["@metamask/eth-sig-util", "npm:4.0.1"],\
             ["@nomicfoundation/ethereumjs-block", "npm:4.0.0"],\
@@ -28407,7 +28434,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["@nomicfoundation/ethereumjs-tx", "npm:4.0.0"],\
             ["@nomicfoundation/ethereumjs-util", "npm:8.0.0"],\
             ["@nomicfoundation/ethereumjs-vm", "npm:6.0.0"],\
-            ["@nomicfoundation/solidity-analyzer", "npm:0.0.3"],\
+            ["@nomicfoundation/solidity-analyzer", "npm:0.1.0"],\
             ["@sentry/node", "npm:5.30.0"],\
             ["@types/bn.js", "npm:5.1.0"],\
             ["@types/lru-cache", "npm:5.1.1"],\
@@ -46689,10 +46716,10 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           ],\
           "linkType": "HARD"\
         }],\
-        ["virtual:7ba09fa2d7752902868a69fa9d869609091144850ab3c24fda35b732a68f27f35b587e1475d08772fb49797b0809d63ba79750ed0faad72a34c129814f0896af#npm:7.4.6", {\
-          "packageLocation": "./.yarn/__virtual__/ws-virtual-e447ee6a95/0/cache/ws-npm-7.4.6-9c9a725604-3a990b32ed.zip/node_modules/ws/",\
+        ["virtual:88293ff29fa54efecc98d655f7a7551b282025b3465bc23ca5bb7a89a31c17930a7319e98225cf138bf4e6ccead5b30ae3c800738697b87af3441226d65f7ee3#npm:7.4.6", {\
+          "packageLocation": "./.yarn/__virtual__/ws-virtual-e1e964a4e5/0/cache/ws-npm-7.4.6-9c9a725604-3a990b32ed.zip/node_modules/ws/",\
           "packageDependencies": [\
-            ["ws", "virtual:7ba09fa2d7752902868a69fa9d869609091144850ab3c24fda35b732a68f27f35b587e1475d08772fb49797b0809d63ba79750ed0faad72a34c129814f0896af#npm:7.4.6"],\
+            ["ws", "virtual:88293ff29fa54efecc98d655f7a7551b282025b3465bc23ca5bb7a89a31c17930a7319e98225cf138bf4e6ccead5b30ae3c800738697b87af3441226d65f7ee3#npm:7.4.6"],\
             ["@types/bufferutil", null],\
             ["@types/utf-8-validate", null],\
             ["bufferutil", null],\
