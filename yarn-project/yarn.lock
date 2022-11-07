@@ -391,9 +391,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@aztec/bridge-clients@npm:0.1.62":
-  version: 0.1.62
-  resolution: "@aztec/bridge-clients@npm:0.1.62"
+"@aztec/bridge-clients@npm:0.1.65":
+  version: 0.1.65
+  resolution: "@aztec/bridge-clients@npm:0.1.65"
   dependencies:
     "@aztec/barretenberg": 2.1.37
     "@ethersproject/providers": ^5.6.8
@@ -406,7 +406,7 @@ __metadata:
     ts-node: ^10.9.1
     typechain: ^7.0.1
     typescript: ^4.7.4
-  checksum: b45b2495140b93ad27b9c14afab4196ad73f0a1731716f6833c2ecef6900b447033bfbe33fc635f9873151fba1dc80362ce183ee27f6ea143875044fd1969a26
+  checksum: f9c5afea46bf388e1bc7db570836caafacbe8c7725749d38ed93532e90878e03ab9ce38fe6e4b5ace350ae5e535a9755648244b43ff38c620d606f88c69589f5
   languageName: node
   linkType: hard
 
@@ -32817,7 +32817,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "zk.money@workspace:zk-money"
   dependencies:
-    "@aztec/bridge-clients": 0.1.62
+    "@aztec/bridge-clients": 0.1.65
     "@aztec/sdk": "workspace:^"
     "@babel/plugin-syntax-import-assertions": ^7.18.6
     "@ethersproject/abstract-signer": ^5.7.0

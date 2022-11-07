@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@aztec/bridge-clients": "0.1.62",
+    "@aztec/bridge-clients": "0.1.65",
     "@aztec/sdk": "workspace:^",
     "@rainbow-me/rainbowkit": "^0.4.2",
     "@types/jsan": "^3.1.2",
