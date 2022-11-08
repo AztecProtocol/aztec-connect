@@ -12,14 +12,15 @@ export class ServerBlockSource extends EventEmitter implements BlockSource {
   private interruptResolve = () => {};
   protected baseUrl: string;
 
-  constructor(baseUrl: URL, private pollInterval = 10000) {
+  constructor(baseUrl: URL, private pollInterval = 10000, protected version = '') {
     super();
     this.baseUrl = baseUrl.toString().replace(/\/$/, '');
   }
 
   public async getLatestRollupId() {
     const url = new URL(`${this.baseUrl}/get-blocks`);
-    const response = await this.awaitSucceed(() => fetch(url.toString()));
+    const init = this.version ? ({ headers: { version: this.version } } as RequestInit) : {};
+    const response = await this.awaitSucceed(() => fetch(url.toString(), init));
     const result = Buffer.from(await response.arrayBuffer());
     const des = new Deserializer(result);
     return des.int32();
@@ -62,6 +63,11 @@ export class ServerBlockSource extends EventEmitter implements BlockSource {
     while (true) {
       try {
         const response = await fn();
+        if (response.status == 409) {
+          const body = await response.json();
+          this.emit('versionMismatch', body.error);
+          throw new Error(body.error);
+        }
         if (response.status !== 200) {
           throw new Error(`Bad status code: ${response.status}`);
         }
@@ -78,7 +84,8 @@ export class ServerBlockSource extends EventEmitter implements BlockSource {
     if (from !== undefined) {
       url.searchParams.append('from', from.toString());
     }
-    const response = await this.awaitSucceed(() => fetch(url.toString()));
+    const init = this.version ? ({ headers: { version: this.version } } as RequestInit) : {};
+    const response = await this.awaitSucceed(() => fetch(url.toString(), init));
     const result = Buffer.from(await response.arrayBuffer());
     const des = new Deserializer(result);
     des.int32();

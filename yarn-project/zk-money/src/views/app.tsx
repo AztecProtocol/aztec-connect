@@ -104,6 +104,17 @@ export class AppView extends PureComponent<AppProps, AppState> {
   }
 
   async componentDidMount() {
+    this.app.on(AppEvent.VERSION_MISMATCH, () => {
+      if (
+        window.confirm(
+          'Version mismatch between zk.money and rollup server.\n\n' +
+            'Press OK to refresh the page (or Ctrl+Shift+R)!\n\n' +
+            '(If this issue persists it may be a problem with your ISP)',
+        )
+      ) {
+        window.location.reload();
+      }
+    });
     this.app.on(AppEvent.SESSION_CLOSED, () => {
       this.onSessionClosed();
       this.channel.postMessage({ name: CrossTabEvent.LOGGED_OUT });

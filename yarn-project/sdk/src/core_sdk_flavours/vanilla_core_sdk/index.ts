@@ -10,6 +10,7 @@ import { default as levelup, LevelUp } from 'levelup';
 import { CoreSdk, CoreSdkOptions } from '../../core_sdk/index.js';
 import { DexieDatabase, SQLDatabase } from '../../database/index.js';
 import { getNumWorkers } from '../get_num_workers.js';
+import { SDK_VERSION } from '../../version.js';
 import { createDebugLogger } from '@aztec/barretenberg/log';
 import { default as memdown } from 'memdown';
 import { default as leveldown } from 'leveldown';
@@ -72,7 +73,7 @@ export async function createVanillaCoreSdk(options: VanillaCoreSdkOptions) {
   const db = await getDb(memoryDb, identifier);
 
   const host = new URL(serverUrl);
-  const rollupProvider = new ServerRollupProvider(host, pollInterval);
+  const rollupProvider = new ServerRollupProvider(host, pollInterval, SDK_VERSION);
 
   const coreSdk = new CoreSdk(
     leveldb,
@@ -101,7 +102,7 @@ async function createWorkerlessSdk(options: VanillaCoreSdkOptions) {
   const db = await getDb(memoryDb, identifier);
 
   const host = new URL(serverUrl);
-  const rollupProvider = new ServerRollupProvider(host, pollInterval);
+  const rollupProvider = new ServerRollupProvider(host, pollInterval, SDK_VERSION);
 
   const coreSdk = new CoreSdk(leveldb, db, rollupProvider, wasm, noteDecryptor, pedersen, pippenger, fftFactory);
   await coreSdk.init(options);

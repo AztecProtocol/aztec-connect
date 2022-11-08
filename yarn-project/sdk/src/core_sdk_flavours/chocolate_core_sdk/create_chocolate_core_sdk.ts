@@ -10,6 +10,7 @@ import {
 } from '../job_queue/index.js';
 import { getDb, getLevelDb } from '../vanilla_core_sdk/index.js';
 import { ChocolateCoreSdkOptions } from './chocolate_core_sdk_options.js';
+import { SDK_VERSION } from '../../version.js';
 
 /**
  * Construct a chocolate version of the sdk.
@@ -29,7 +30,7 @@ export async function createChocolateCoreSdk(jobQueue: JobQueue, options: Chocol
   const db = await getDb();
 
   const host = new URL(serverUrl);
-  const rollupProvider = new ServerRollupProvider(host, pollInterval);
+  const rollupProvider = new ServerRollupProvider(host, pollInterval, SDK_VERSION);
 
   const coreSdk = new CoreSdk(leveldb, db, rollupProvider, wasm, noteDecryptor, pedersen, pippenger, fftFactory);
   await coreSdk.init(options);

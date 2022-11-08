@@ -14,19 +14,52 @@ import {
 } from './rollup_provider.js';
 import { rollupProviderStatusFromJson } from './rollup_provider_status.js';
 
-export async function getRollupProviderStatus(baseUrl: string) {
-  const response = await fetch(`${baseUrl}/status`);
-  try {
-    const body = await response.json();
-    return rollupProviderStatusFromJson(body);
-  } catch (err: any) {
-    throw new Error(`Bad response from ${baseUrl}: ${err.message}`);
+/* Custom error for server/client version mismatches
+ */
+export class ClientVersionMismatchError extends Error {
+  constructor(message: string) {
+    super(`Version mismatch with server. Error: ${message}`);
   }
 }
 
+/* Make a request to the rollup provider's status endpoint
+ *
+ * @remarks
+ * Construct a request to the status endpoint, submit it, check for errors and returns the status as a JS object
+ *
+ * @param baseUrl - rollup provider server URL string to make request to
+ * @param clientVersion - optional version tag to insert into request header to be validated by rollup provider server
+ * if this version is provided and does not match server version, server should respond with 409 Conflict
+ *
+ * @returns object containing status of rollup provider
+ *
+ * @throws {@link Error}
+ * Thrown if a failure occurs when interpreting the request response as JSON
+ *
+ * @throws {@link ClientVersionMismatchError}
+ * Thrown if the rollup provider server returns a '409 Conflict' due to a server/client version mismatch
+ */
+export async function getRollupProviderStatus(baseUrl: string, clientVersion?: string) {
+  const url = `${baseUrl}/status`;
+  const init = clientVersion ? ({ headers: { version: clientVersion } } as RequestInit) : {};
+  const response = await fetch(url, init);
+
+  let body: any;
+  try {
+    body = await response.json();
+  } catch (err: any) {
+    throw new Error(`Bad response from ${baseUrl}: ${err.message}`);
+  }
+
+  if (response.status == 409) {
+    throw new ClientVersionMismatchError(body.error);
+  }
+  return rollupProviderStatusFromJson(body);
+}
+
 export class ServerRollupProvider extends ServerBlockSource implements RollupProvider {
-  constructor(baseUrl: URL, pollInterval = 10000) {
-    super(baseUrl, pollInterval);
+  constructor(baseUrl: URL, pollInterval = 10000, version = '') {
+    super(baseUrl, pollInterval, version);
   }
 
   async sendTxs(txs: Tx[]) {
@@ -107,10 +140,22 @@ export class ServerRollupProvider extends ServerBlockSource implements RollupPro
 
   private async fetch(path: string, data?: any) {
     const url = new URL(`${this.baseUrl}${path}`);
-    const init = data ? { method: 'POST', body: JSON.stringify(data) } : undefined;
+
+    const init = this.version ? ({ headers: { version: this.version } } as RequestInit) : {};
+    if (data) {
+      init['method'] = 'POST';
+      init['body'] = JSON.stringify(data);
+    }
+
     const response = await fetch(url.toString(), init).catch(() => undefined);
+
     if (!response) {
       throw new Error('Failed to contact rollup provider.');
+    }
+    if (response.status == 409) {
+      const body = await response.json();
+      this.emit('versionMismatch', body.error);
+      throw new ClientVersionMismatchError(body.error);
     }
     if (response.status === 400) {
       const body = await response.json();

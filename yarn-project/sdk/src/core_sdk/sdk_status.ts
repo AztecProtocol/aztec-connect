@@ -1,6 +1,8 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 
 export enum SdkEvent {
+  // The SDK version does not match the rollup provider version
+  VERSION_MISMATCH = 'SDKEVENT_VERSION_MISMATCH',
   // A users state has changed.
   UPDATED_USER_STATE = 'SDKEVENT_UPDATED_USER_STATE',
   // The world state has updated. Used for displaying sync progress.
