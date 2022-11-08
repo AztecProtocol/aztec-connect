@@ -458,95 +458,69 @@ export class RollupProcessor {
   private rollupRetrievalChunkSize = () => 100000;
 
   /**
+   * Returns all rollup blocks from (and including) the given rollupId, with >= minConfirmations.
    *
-   * @param rollupId rollup ID to start getting blocks from, to final block
-   * @param minConfirmations minimum confirmations required for valid blocks
-   * @returns all Aztec rollup blocks from (and including) rollupId to last one
+   * A normal geth node has terrible performance when searching event logs. To ensure we are not dependent
+   * on third party services such as Infura, we apply an algorithm to mitigate the poor performance.
+   * The algorithm will search for rollup events from the end of the chain, in chunks of blocks.
+   * If it finds a rollup <= to the given rollupId, we can stop searching.
    *
-   * To avoid dependance on 3rd party services like Infura, we use our own geth node to server eth_requests.
-   * Instead of requesting directly from the geth node, that would cause very poor performance, we have a
-   * proxy (called Kebab) in front of the geth node that Aztec services speak to. The proxy stores all Aztec blocks
-   * in a DB and serves them when requested, resulting in much better performance, compared to a geth node.
+   * The worst case situation is when requesting all rollups from rollup 0, or when there are no events to find.
+   * In this case, we will have ever degrading performance as we search from the end of the chain to the
+   * block returned by getEarliestBlock() (hardcoded on mainnet). This is a rare case however.
    *
-   * We request data in chunks to avoid any memory overload, as the aztec chain is growing.
+   * The more normal case is we're given a rollupId that is not 0. In this case we know an event must exist.
+   * Further, the usage pattern is that anyone making the request will be doing so with an ever increasing rollupId.
+   * This lends itself well to searching backwards from the end of the chain.
+   *
+   * The chunk size affects performance. If no previous query has been made, or the rollupId < the previous requested
+   * rollupId, the chunk size is to 100,000. This is the case when the class is queried the first time.
+   * 100,000 blocks is ~10 days of blocks, so assuming there's been a rollup in the last 10 days, or the client is not
+   * over 10 days behind, a single query will suffice. Benchmarks suggest this will take ~2 seconds per chunk.
    *
    * If a previous query has been made and the rollupId >= previous query, the first chunk will be from the last result
    * rollups block to the end of the chain. This provides best performance for polling clients.
    */
   public async getRollupBlocksFrom(rollupId: number, minConfirmations: number) {
-    const { earliestBlock } = await this.getEarliestBlock();
-    const latestBlockNumber = await this.provider.getBlockNumber();
-    const rollupChunkSize = this.rollupRetrievalChunkSize();
-
-    // we default to starting the search from the earliest block
-    // if we have successfully found rollups before then we may be able to start further on in the chain
-    // if the requested rollupIds are more recent than previously requested then start from the
-    // cached 'last' rollup eth block number
-    // if the request id is earlier than previous ids then we have to start from the beginning again
-    let start = earliestBlock;
-    if (
-      this.lastQueriedRollupId !== undefined &&
-      rollupId >= this.lastQueriedRollupId &&
-      this.lastQueriedRollupBlockNum !== undefined
-    ) {
-      // start from the last found rollup block number + 1
-      start = this.lastQueriedRollupBlockNum! + 1;
-    } else {
-      // start from the earliest block and reset the last queried block number
-      this.lastQueriedRollupBlockNum = undefined;
-    }
-    let end = Math.min(start + rollupChunkSize - 1, latestBlockNumber);
+    const { earliestBlock, chunk } = await this.getEarliestBlock();
+    let end = await this.provider.getBlockNumber();
+    let start =
+      this.lastQueriedRollupId === undefined || rollupId < this.lastQueriedRollupId
+        ? Math.max(end - chunk, earliestBlock)
+        : this.lastQueriedRollupBlockNum!;
     let events: Event[] = [];
-    let rollupReached = false;
 
     const totalStartTime = new Date().getTime();
-
-    while (start <= latestBlockNumber) {
+    while (end > earliestBlock) {
       const rollupFilter = this.rollupProcessor.filters.RollupProcessed();
       this.log(`fetching rollup events between blocks ${start} and ${end}...`);
       const startTime = new Date().getTime();
       const rollupEvents = await this.rollupProcessor.queryFilter(rollupFilter, start, end);
       this.log(`${rollupEvents.length} fetched in ${(new Date().getTime() - startTime) / 1000}s`);
 
-      if (rollupEvents.length) {
-        // there are definitely rollups on this chain.
-        // we will return the rollups 'from' the id requested so we can safely cache that id
+      events = [...rollupEvents, ...events];
+
+      if (events.length && events[0].args!.rollupId.toNumber() <= rollupId) {
         this.lastQueriedRollupId = rollupId;
-        // we can also cache the block number of the last rollup we ever find as we move forwards for use later
-        const latestBlockInBatch = rollupEvents[rollupEvents.length - 1].blockNumber;
-        this.lastQueriedRollupBlockNum =
-          this.lastQueriedRollupBlockNum === undefined
-            ? latestBlockInBatch
-            : Math.max(this.lastQueriedRollupBlockNum, latestBlockInBatch);
+        this.lastQueriedRollupBlockNum = events[events.length - 1].blockNumber;
+        break;
       }
-
-      // check if we've reached requested rollupId
-      if (
-        !rollupReached &&
-        rollupEvents.length &&
-        rollupEvents[rollupEvents.length - 1].args!.rollupId.toNumber() >= rollupId
-      ) {
-        rollupReached = true;
-        const index = rollupEvents.findIndex(({ args }) => args!.rollupId.toNumber() === rollupId);
-        // discard earlier blocks
-        rollupEvents.splice(0, index);
-      }
-
-      if (rollupReached) {
-        // we have reached the requested rollup, store the events.
-        events = [...events, ...rollupEvents];
-      }
-
-      start = end + 1;
-      end = Math.min(start + rollupChunkSize - 1, latestBlockNumber);
+      end = Math.max(start - 1, earliestBlock);
+      start = Math.max(end - chunk, earliestBlock);
     }
 
-    this.log(`done: ${events.length} fetched in ${(new Date().getTime() - totalStartTime) / 1000}s`);
-
-    return this.getRollupBlocksFromEvents(
-      events.filter(e => e.args!.rollupId.toNumber() >= rollupId),
-      minConfirmations,
+    const eventsOfInterest = events.filter(e => e.args!.rollupId.toNumber() >= rollupId);
+    this.log(
+      `done: ${events.length} fetched in ${(new Date().getTime() - totalStartTime) / 1000}s, of interest: ${
+        eventsOfInterest.length
+      }`,
     );
+
+    const validRollups = await this.getRollupBlocksFromEvents(eventsOfInterest, minConfirmations);
+    if (validRollups.length) {
+      this.log(`retrieved ${validRollups.length} new rollups from rollup id ${rollupId}`);
+    }
+    return validRollups;
   }
 
   /**

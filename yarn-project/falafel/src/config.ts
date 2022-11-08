@@ -74,6 +74,7 @@ export async function getComponents(configurator: Configurator) {
     dbUrl,
     proverless,
     rollupCallDataLimit,
+    version,
   } = confVars;
   const ormConfig = getOrmConfig(dbUrl, typeOrmLogging);
   const { provider, signingAddress } = await getProvider(ethereumHost, privateKey);
@@ -91,6 +92,7 @@ export async function getComponents(configurator: Configurator) {
   console.log(`Fee paying asset ids: ${feePayingAssetIds}`);
   console.log(`Price feed addresses: ${priceFeedContractAddresses.map(a => a.toString()).join(',') || 'none'}`);
   console.log(`Proverless: ${proverless}`);
+  console.log(`Falafel version: ${version}`);
 
   if (priceFeedContractAddresses.length < feePayingAssetIds.length) {
     throw new Error('There should be one price feed contract address per fee paying asset.');

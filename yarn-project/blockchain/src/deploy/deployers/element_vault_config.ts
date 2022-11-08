@@ -211,6 +211,19 @@ export const ElementVaultConfig = {
         weightedPoolFactory: '0x8E9aa87E45e92bad84D5F8DD1bff34Fb92637dE9',
         convergentCurvePoolFactory: '0xE88628700eaE9213169D715148ac5A5F47B5dCd9',
       },
+      {
+        expiration: 1677243924,
+        address: '0x09459654777Bb2669AD8aD0b54E876D4b5Ff77F4',
+        trancheFactory: '0x62F161BF3692E4015BefB05A03a94A40f520d1c0',
+        ptPool: {
+          address: '0x7F4A33deE068C4fA012d64677C61519a578dfA35',
+          poolId: '0x7f4a33dee068c4fa012d64677c61519a578dfa35000200000000000000000346',
+          fee: '0.1',
+          timeStretch: 99.9409,
+        },
+        weightedPoolFactory: '0x8E9aa87E45e92bad84D5F8DD1bff34Fb92637dE9',
+        convergentCurvePoolFactory: '0xE88628700eaE9213169D715148ac5A5F47B5dCd9',
+      },
     ],
     eurscrv: [
       {
@@ -407,6 +420,19 @@ export const ElementVaultConfig = {
         weightedPoolFactory: '0x8E9aa87E45e92bad84D5F8DD1bff34Fb92637dE9',
         convergentCurvePoolFactory: '0xE88628700eaE9213169D715148ac5A5F47B5dCd9',
       },
+      {
+        expiration: 1677243924,
+        address: '0x724e3073317d4B1A8d0c6E89B137eA5af1f4051e',
+        trancheFactory: '0x62F161BF3692E4015BefB05A03a94A40f520d1c0',
+        ptPool: {
+          address: '0x07f589eA6B789249C83992dD1eD324c3b80FD06b',
+          poolId: '0x07f589ea6b789249c83992dd1ed324c3b80fd06b00020000000000000000034e',
+          fee: '0.1',
+          timeStretch: 42.02060041070439,
+        },
+        weightedPoolFactory: '0x8E9aa87E45e92bad84D5F8DD1bff34Fb92637dE9',
+        convergentCurvePoolFactory: '0xE88628700eaE9213169D715148ac5A5F47B5dCd9',
+      },
     ],
     usdc: [
       {
@@ -490,6 +516,19 @@ export const ElementVaultConfig = {
           poolId: '0x56df5ef1a0a86c2a5dd9cc001aa8152545bdbdec000200000000000000000168',
           fee: '0.1',
           timeStretch: 88.75,
+        },
+        weightedPoolFactory: '0x8E9aa87E45e92bad84D5F8DD1bff34Fb92637dE9',
+        convergentCurvePoolFactory: '0xE88628700eaE9213169D715148ac5A5F47B5dCd9',
+      },
+      {
+        expiration: 1677243756,
+        address: '0xB83809806A076A1413437Ea3E553d6bF41993A21',
+        trancheFactory: '0x62F161BF3692E4015BefB05A03a94A40f520d1c0',
+        ptPool: {
+          address: '0x5746aFD392B13946AaCBdA40317751dB27D8B918',
+          poolId: '0x5746afd392b13946aacbda40317751db27d8b91800020000000000000000034c',
+          fee: '0.1',
+          timeStretch: 99.94088746329692,
         },
         weightedPoolFactory: '0x8E9aa87E45e92bad84D5F8DD1bff34Fb92637dE9',
         convergentCurvePoolFactory: '0xE88628700eaE9213169D715148ac5A5F47B5dCd9',

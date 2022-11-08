@@ -12,6 +12,7 @@ import stEthGradientIcon from '../../images/steth_gradient.svg';
 import stEthWhiteIcon from '../../images/steth_white.svg';
 import yearnGradientIcon from '../../images/yearn_gradient.svg';
 import eulerGradientIcon from '../../images/euler_gradient.svg';
+import aaveGradientIcon from '../../images/aave_token_gradient.svg';
 import questionMarkBlackIcon from '../../images/question_mark_black.svg';
 import questionMarkWhiteIcon from '../../images/question_mark_white.svg';
 import { KNOWN_MAINNET_ASSET_ADDRESS_STRS as S } from './known_asset_addresses.js';
@@ -67,6 +68,9 @@ export function getAssetIconGradient(address: EthAddress) {
     case S.weDAI:
     case S.wewstETH:
       return eulerGradientIcon;
+    case S.wa2DAI:
+    case S.wa2WETH:
+      return aaveGradientIcon;
     default:
       return questionMarkBlackIcon;
   }
@@ -81,6 +85,7 @@ export function getAssetPreferredFractionalDigitsFromStr(addressStr: string) {
     case S.DAI:
     case S.yvDAI:
     case S.weDAI:
+    case S.wa2DAI:
       return 2;
     case S.renBTC:
       return 8;
@@ -91,6 +96,7 @@ export function getAssetPreferredFractionalDigitsFromStr(addressStr: string) {
     case S.wETH:
     case S.weWETH:
     case S.wewstETH:
+    case S.wa2WETH:
       return 6;
   }
 }

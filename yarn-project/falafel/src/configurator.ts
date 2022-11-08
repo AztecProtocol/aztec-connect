@@ -10,8 +10,10 @@ import {
 import { EthAddress } from '@aztec/barretenberg/address';
 import fsExtra from 'fs-extra';
 const { mkdirpSync, pathExistsSync, readJsonSync, writeJsonSync } = fsExtra;
+import { FALAFEL_VERSION } from './version.js';
 
 interface StartupConfig {
+  version: string;
   port: number;
   dbUrl?: string;
   rollupContractAddress: EthAddress;
@@ -37,6 +39,7 @@ export interface ConfVars extends StartupConfig {
 }
 
 const defaultStartupConfig: StartupConfig = {
+  version: FALAFEL_VERSION,
   port: 8081,
   rollupContractAddress: EthAddress.ZERO,
   permitHelperContractAddress: EthAddress.ZERO,
@@ -80,6 +83,7 @@ const defaultRuntimeConfig: RuntimeConfig = {
 
 function getStartupConfigEnvVars(): Partial<StartupConfig> {
   const {
+    FALAFEL_VERSION_OVERRIDE,
     DB_URL,
     ROLLUP_CONTRACT_ADDRESS,
     PERMIT_HELPER_CONTRACT_ADDRESS,
@@ -101,6 +105,7 @@ function getStartupConfigEnvVars(): Partial<StartupConfig> {
   } = process.env;
 
   const envVars: Partial<StartupConfig> = {
+    version: FALAFEL_VERSION_OVERRIDE,
     port: PORT ? +PORT : undefined,
     dbUrl: DB_URL,
     rollupContractAddress: ROLLUP_CONTRACT_ADDRESS ? EthAddress.fromString(ROLLUP_CONTRACT_ADDRESS) : undefined,

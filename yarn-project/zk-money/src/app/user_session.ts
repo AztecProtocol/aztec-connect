@@ -82,6 +82,7 @@ export interface WorldState {
 export const initialWorldState: WorldState = { syncedToRollup: -1, latestRollup: -1, accountSyncedToRollup: -1 };
 
 export enum UserSessionEvent {
+  VERSION_MISMATCH = 'VERSION_MISMATCH',
   UPDATED_LOGIN_STATE = 'UPDATED_LOGIN_STATE',
   UPDATED_PROVIDER = 'UPDATED_PROVIDER',
   UPDATED_PROVIDER_STATE = 'UPDATED_PROVIDER_STATE',
@@ -93,6 +94,7 @@ export enum UserSessionEvent {
 }
 
 export interface UserSession {
+  on(event: UserSessionEvent.VERSION_MISMATCH, listener: () => void): this;
   on(event: UserSessionEvent.UPDATED_LOGIN_STATE, listener: (state: LoginState) => void): this;
   on(event: UserSessionEvent.UPDATED_PROVIDER, listener: () => void): this;
   on(event: UserSessionEvent.UPDATED_PROVIDER_STATE, listener: (state: ProviderState) => void): this;
@@ -685,6 +687,11 @@ export class UserSession extends EventEmitter {
     }
 
     this.sdk = await this.awaitSdkCreated();
+
+    this.sdk.on(SdkEvent.VERSION_MISMATCH, () => {
+      debug('ClientVersionMismatch detected');
+      this.emit(UserSessionEvent.VERSION_MISMATCH);
+    });
 
     // If local rollupContractAddress is empty, it is a new device or the data just got wiped out.
     if (await this.rollupContractAddressChanged()) {

@@ -63,7 +63,7 @@ export async function deployMainnetE2e(
   await permitHelper.preApprove(elementTokenAddresses['mim-3lp3crv-f'], { gasLimit });
 
   const expiryCutOff = new Date('01 Sept 2022 00:00:00 GMT');
-  await deployElementBridge(signer, rollup, ['dai', 'lusd3crv-f'], expiryCutOff);
+  await deployElementBridge(signer, rollup, ['dai'], expiryCutOff);
   await deployLidoBridge(signer, rollup);
   await deployCurveBridge(signer, rollup);
 
