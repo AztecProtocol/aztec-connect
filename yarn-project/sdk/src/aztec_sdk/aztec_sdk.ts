@@ -36,6 +36,7 @@ import { TxValueCalculator, GetMaxTxValueOptions } from './tx_value_calculator.j
 export { GetFeesOptions, GetMaxTxValueOptions };
 
 export interface AztecSdk {
+  on(event: SdkEvent.VERSION_MISMATCH, listener: () => void): this;
   on(event: SdkEvent.UPDATED_USER_STATE, listener: (userId: GrumpkinAddress) => void): this;
   on(event: SdkEvent.UPDATED_WORLD_STATE, listener: (syncedToRollup: number, latestRollupId: number) => void): this;
   on(event: SdkEvent.DESTROYED, listener: () => void): this;

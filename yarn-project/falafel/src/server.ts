@@ -22,6 +22,7 @@ import { WorldState } from './world_state.js';
 import { AddressCheckProviders, AztecBlacklistProvider, RateLimiter } from './compliance/index.js';
 
 export class Server {
+  public version: string;
   private blake: Blake2s;
   private worldState: WorldState;
   private txReceiver: TxReceiver;
@@ -45,6 +46,7 @@ export class Server {
     private log = createLogger('Server'),
   ) {
     const {
+      version,
       proofGeneratorMode,
       numInnerRollupTxs,
       numOuterRollupProofs,
@@ -63,6 +65,8 @@ export class Server {
         blacklist = [],
       },
     } = configurator.getConfVars();
+
+    this.version = version;
 
     const noteAlgo = new NoteAlgorithms(barretenberg);
     this.blake = new Blake2s(barretenberg);
@@ -256,7 +260,8 @@ export class Server {
     const blockchainStatus = this.blockchain.getBlockchainStatus();
     const nextPublish = this.worldState.getNextPublishTime();
     const txPoolProfile = await this.worldState.getTxPoolProfile();
-    const { runtimeConfig, proverless, numInnerRollupTxs, numOuterRollupProofs } = this.configurator.getConfVars();
+    const { version, runtimeConfig, proverless, numInnerRollupTxs, numOuterRollupProofs } =
+      this.configurator.getConfVars();
 
     const { bridgeConfigs, defaultDeFiBatchSize } = runtimeConfig;
     const thirdPartyBridgeConfigs = txPoolProfile.pendingBridgeStats
@@ -284,6 +289,7 @@ export class Server {
     );
 
     return {
+      version,
       blockchainStatus,
       runtimeConfig: {
         ...runtimeConfig,

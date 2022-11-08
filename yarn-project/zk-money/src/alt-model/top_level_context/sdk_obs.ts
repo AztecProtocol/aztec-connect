@@ -1,4 +1,11 @@
-import { AztecSdk, createAztecSdk, JsonRpcProvider, SdkEvent, SdkFlavour } from '@aztec/sdk';
+import {
+  AztecSdk,
+  createAztecSdk,
+  JsonRpcProvider,
+  SdkEvent,
+  SdkFlavour,
+  ClientVersionMismatchError,
+} from '@aztec/sdk';
 import { chainIdToNetwork } from '../../app/networks.js';
 import { Obs } from '../../app/util/index.js';
 import createDebug from 'debug';
@@ -25,8 +32,19 @@ export function createSdkObs(config: Config): SdkObs {
       sdkObs.next(sdk);
       sdk.addListener(SdkEvent.DESTROYED, () => sdkObs.next(undefined));
     })
-    .catch(e => {
-      debug('Failed to create sdk', e);
+    .catch(err => {
+      if (err instanceof ClientVersionMismatchError) {
+        if (
+          window.confirm(
+            'Version mismatch between zk.money and rollup server.\n\n' +
+              'Press OK to refresh the page (or Ctrl+Shift+R)!\n\n' +
+              '(If this issue persists it may be a problem with your ISP)',
+          )
+        ) {
+          window.location.reload();
+        }
+      }
+      debug('Failed to create sdk', err);
       return undefined;
     });
   // Wrapping the input obs hides its `next` method

@@ -27,6 +27,7 @@ export enum AppAction {
 }
 
 export enum AppEvent {
+  VERSION_MISMATCH = 'VERSION_MISMATCH',
   SESSION_CLOSED = 'SESSION_CLOSED',
   SESSION_OPEN = 'SESSION_OPEN',
   UPDATED_LOGIN_STATE = 'UPDATED_LOGIN_STATE',
@@ -34,6 +35,7 @@ export enum AppEvent {
 }
 
 export interface App {
+  on(event: AppEvent.VERSION_MISMATCH, listener: () => void): this;
   on(event: AppEvent.SESSION_CLOSED, listener: () => void): this;
   on(event: AppEvent.SESSION_OPEN, listener: () => void): this;
   on(event: AppEvent.UPDATED_LOGIN_STATE, listener: (state: LoginState) => void): this;
@@ -177,6 +179,10 @@ export class App extends EventEmitter {
       const event = (UserSessionEvent as any)[e];
       this.session.on(event, (...args) => {
         switch (event) {
+          case UserSessionEvent.VERSION_MISMATCH: {
+            this.emit(AppEvent.VERSION_MISMATCH);
+            break;
+          }
           case UserSessionEvent.SESSION_CLOSED:
             this.session = undefined;
             debug('Session closed.');

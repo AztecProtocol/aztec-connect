@@ -118,6 +118,7 @@ export const partialRuntimeConfigFromJson = ({
 });
 
 export interface RollupProviderStatus {
+  version: string;
   blockchainStatus: BlockchainStatus;
   nextPublishTime: Date;
   nextPublishNumber: number;
@@ -132,6 +133,7 @@ export interface RollupProviderStatus {
 }
 
 export interface RollupProviderStatusJson {
+  version: string;
   blockchainStatus: BlockchainStatusJson;
   nextPublishTime: string;
   nextPublishNumber: number;

@@ -1,3 +1,4 @@
+export { SDK_VERSION } from './version.js';
 export * from './aztec_sdk/index.js';
 export * from './controllers/index.js';
 export { SdkEvent, SdkStatus } from './core_sdk/index.js';

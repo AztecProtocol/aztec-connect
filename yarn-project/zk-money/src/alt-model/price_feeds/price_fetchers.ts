@@ -86,6 +86,10 @@ export function createAssetPriceObs(
       return boundCreateUnderlyingAssetPriceObs(S.DAI, 'euler.DAI-to-weDAI');
     case S.wewstETH:
       return boundCreateUnderlyingAssetPriceObs(S.wstETH, 'euler.wstETH-to-wewstETH');
+    case S.wa2WETH:
+      return boundCreateUnderlyingAssetPriceObs(S.wETH, 'aave.ETH-to-wa2ETH');
+    case S.wa2DAI:
+      return boundCreateUnderlyingAssetPriceObs(S.DAI, 'aave.DAI-to-wa2DAI');
     case S.wstETH:
       return createWstEthPriceObs(provider, chainLinkPollerCache);
     default:

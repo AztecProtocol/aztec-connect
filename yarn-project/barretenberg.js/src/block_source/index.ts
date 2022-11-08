@@ -91,6 +91,7 @@ export interface BlockSource extends EventEmitter {
   stop(): Promise<void>;
 
   on(event: 'block', fn: (block: Block) => void): this;
+  on(event: 'versionMismatch', fn: (error: string) => void): this;
 
   removeAllListeners(): this;
 

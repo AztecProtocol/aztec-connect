@@ -125,6 +125,10 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
         }
       };
     }
+    this.rollupProvider.on('versionMismatch', error => {
+      this.debug(error);
+      this.emit(SdkEvent.VERSION_MISMATCH);
+    });
   }
 
   /**

@@ -1,6 +1,7 @@
 {
   "name": "@aztec/sdk",
   "version": "2.1.0",
+  "main": "./dest/index.js",
   "exports": {
     "node": "./dest/index.js",
     "default": "./dest/main.js"

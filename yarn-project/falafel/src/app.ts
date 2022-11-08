@@ -56,6 +56,25 @@ const fromTxJson = (data: TxJson): Tx => ({
 export async function appFactory(server: Server, prefix: string, metrics: Metrics, serverAuthToken: string) {
   const router = new Router<DefaultState, Context>({ prefix });
 
+  /* Ensure the version header (if present) matches the server version.
+   * If the version header is not present, skip this validation.
+   */
+  const validateVersion = async (ctx: Koa.Context, next: () => Promise<void>) => {
+    const version = ctx.request.headers['version'];
+
+    if (version && server.version !== version) {
+      ctx.status = 409; // 409 Conflict
+      ctx.body = {
+        error: `Falafel (${server.version}) / SDK (${version}) version mismatch. Hard refresh your browser or update SDK.`,
+      };
+    } else {
+      await next();
+    }
+  };
+
+  // Apply version validation to all endpoints
+  router.use(validateVersion);
+
   const validateAuth = async (ctx: Koa.Context, next: () => Promise<void>) => {
     const authToken = ctx.request.headers['server-auth-token'];
 

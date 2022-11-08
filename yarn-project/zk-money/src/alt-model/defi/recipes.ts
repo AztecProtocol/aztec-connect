@@ -7,6 +7,7 @@ import { ELEMENT_CARD, OLD_ELEMENT_CARD } from './card_configs/element.js';
 import { YEARN_DAI_CARD, YEARN_ETH_CARD } from './card_configs/yearn.js';
 import { SEVEN_DAY_DCA_CARD_DAI_TO_ETH, SEVEN_DAY_DCA_CARD_ETH_TO_DAI } from './card_configs/seven_day_dca.js';
 import { EULER_DAI_CARD, EULER_ETH_CARD, EULER_WSTETH_CARD } from './card_configs/euler.js';
+import { AAVE_ETH_CARD, AAVE_DAI_CARD } from './card_configs/aave.js';
 
 const debug = createDebug('zm:recipes');
 
@@ -69,6 +70,8 @@ function createRecipe(
 }
 
 const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
+  AAVE_ETH_CARD,
+  AAVE_DAI_CARD,
   EULER_ETH_CARD,
   EULER_WSTETH_CARD,
   EULER_DAI_CARD,
