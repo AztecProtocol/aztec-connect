@@ -12,7 +12,7 @@ import { useVariableAprText } from '../position_key_stat_configs.js';
 
 export const AAVE_ETH_CARD: CreateRecipeArgs = {
   id: 'aave.ETH-to-wa2ETH',
-  selectBlockchainBridge: ({ bridges }) => bridges.find(x => x.id === 10),
+  selectBlockchainBridge: ({ bridges }) => bridges.find(x => x.id === 13),
   gradient: ['#9b559c', '#9b559c'],
   openHandleAssetAddress: KMAA.wa2WETH,
   entryInputAssetAddressA: KMAA.ETH,
