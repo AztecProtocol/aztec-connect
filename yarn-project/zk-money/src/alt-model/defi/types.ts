@@ -12,7 +12,7 @@ import type { BridgeDataAdaptorCreator } from './bridge_data_adaptors/types.js';
 type FormattedRecipePropertyHook = (recipe: DefiRecipe) => string | undefined;
 
 export interface KeyStatConfig {
-  label: string;
+  useLabel: FormattedRecipePropertyHook;
   skeletonSizingContent: string;
   useFormattedValue: FormattedRecipePropertyHook;
 }
@@ -92,6 +92,16 @@ type AuxDataResolver =
       selectOpt: (opts: number[]) => number | undefined;
     };
 
+export type DefiPublishStatsCacheArgs = [
+  number, // periodSeconds
+  number, // bridgeAddressId
+  number | undefined, // inputAssetIdA
+  number | undefined, // inputAssetIdB
+  number | undefined, // outputAssetIdA
+  number | undefined, // outputAssetIdB
+  number | undefined, // auxData
+];
+
 export interface DefiRecipe {
   id: string;
   unlisted?: boolean;
@@ -124,6 +134,7 @@ export interface DefiRecipe {
   useExitInteractionPredictionInfo?: InteractionPredictionInfoHook;
   positionKeyStat: PositionKeyStatConfig;
   getAsyncResolutionDate?: (tx: UserDefiTx) => number | Date | undefined;
+  getDefiPublishStatsCacheArgs: (bridgeCallData: BridgeCallData) => DefiPublishStatsCacheArgs;
 }
 
 export interface CreateRecipeArgs

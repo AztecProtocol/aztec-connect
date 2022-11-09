@@ -1,20 +1,33 @@
 import { Blockchain } from '@aztec/barretenberg/blockchain';
+import { isVirtualAsset } from '@aztec/barretenberg/asset';
+import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { BridgeConfig } from '@aztec/barretenberg/rollup_provider';
 
 export class BridgeResolver {
-  constructor(
-    private bridgeConfigs: BridgeConfig[],
-    private blockchain: Blockchain,
-    public defaultDeFiBatchSize: number,
-  ) {}
+  constructor(private bridgeConfigs: BridgeConfig[], private blockchain: Blockchain) {}
 
+  // The aim here is to find a bridge config that corresponds to the provided bridge call data
+  // We match on the bridge id exactly and where all bridge call data assets exist
+  // in the permitted assets of the bridge config
+  // The exception to the above is that virtual assets are ignored
   public getBridgeConfig(bridgeCallData: bigint) {
-    return this.bridgeConfigs.find(bc => bc.bridgeCallData == bridgeCallData);
+    const completeBridgeData = BridgeCallData.fromBigInt(bridgeCallData);
+    const bridgeCallDataAssets = [
+      completeBridgeData.inputAssetIdA,
+      completeBridgeData.inputAssetIdB,
+      completeBridgeData.outputAssetIdA,
+      completeBridgeData.outputAssetIdB,
+    ].filter(asset => asset !== undefined && !isVirtualAsset(asset));
+    return this.bridgeConfigs.find(bc => {
+      return (
+        completeBridgeData.bridgeAddressId === bc.bridgeAddressId &&
+        bridgeCallDataAssets.every(bridgeCallDataAsset => bc.permittedAssets.includes(bridgeCallDataAsset!))
+      );
+    });
   }
 
-  public getBridgeBatchSize(bridgeCallData: bigint) {
-    const bridgeConfig = this.bridgeConfigs.find(bc => bc.bridgeCallData == bridgeCallData);
-    return bridgeConfig?.numTxs ?? this.defaultDeFiBatchSize;
+  public async getBridgeSubsidy(bridgeCallData: bigint) {
+    return await this.blockchain.getBridgeSubsidy(bridgeCallData);
   }
 
   public getBridgeConfigs() {
@@ -23,33 +36,35 @@ export class BridgeResolver {
 
   public getFullBridgeGas(bridgeCallData: bigint) {
     const bridgeConfig = this.getBridgeConfig(bridgeCallData);
-    return bridgeConfig?.gas ?? this.getFullBridgeGasFromContract(bridgeCallData);
+    if (!bridgeConfig) {
+      throw new Error(`Failed to retrieve bridge cost for bridge ${bridgeCallData.toString()}`);
+    }
+    return bridgeConfig.gas ?? this.getFullBridgeGasFromContract(bridgeCallData);
   }
 
   public getFullBridgeGasFromContract(bridgeCallData: bigint) {
     return this.blockchain.getBridgeGas(bridgeCallData);
   }
 
-  public setConf(defaultDeFiBatchSize: number, bridgeConfigs: BridgeConfig[]) {
-    this.defaultDeFiBatchSize = defaultDeFiBatchSize;
+  public setConf(bridgeConfigs: BridgeConfig[]) {
     this.bridgeConfigs = bridgeConfigs;
   }
 
   public getMinBridgeTxGas(bridgeCallData: bigint) {
     const bridgeConfig = this.getBridgeConfig(bridgeCallData)!;
-    const blockchainStatus = this.blockchain.getBlockchainStatus();
-    if (blockchainStatus.allowThirdPartyContracts || bridgeConfig) {
-      const bridgeGas = this.getFullBridgeGas(bridgeCallData);
-      const numBridgeTxs = bridgeConfig ? bridgeConfig.numTxs : this.defaultDeFiBatchSize;
-      const requiredGas = bridgeGas / numBridgeTxs;
-      return Math.ceil(requiredGas);
-    } else {
+    if (!bridgeConfig) {
       throw new Error('Cannot get gas. Unrecognised DeFi-bridge');
     }
+
+    const bridgeGas = this.getFullBridgeGas(bridgeCallData);
+    const numBridgeTxs = bridgeConfig.numTxs;
+    const requiredGas = bridgeGas / numBridgeTxs;
+    return Math.ceil(requiredGas);
   }
 
-  public getBridgeDescription(encodedBridgeCallData: bigint) {
-    const bridgeConfig = this.getBridgeConfig(encodedBridgeCallData);
-    return bridgeConfig?.description;
+  public async getBridgeDescription(encodedBridgeCallData: bigint) {
+    const bridgeCallData = BridgeCallData.fromBigInt(encodedBridgeCallData);
+    const bridgeData = await this.blockchain.getBridgeData(bridgeCallData.bridgeAddressId);
+    return bridgeData?.description;
   }
 }

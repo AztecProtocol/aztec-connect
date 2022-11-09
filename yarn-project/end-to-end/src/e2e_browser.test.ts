@@ -113,7 +113,7 @@ describe('hummus terminal test', () => {
     await sendCommand(`balance 0`);
     await sendCommand(`balance 1`);
 
-    await sendCommand(`defi 0.01 1 0 1`);
+    await sendCommand(`defi 0.01 5 0 1`);
     await page.evaluate(() => window.aztecSdk.awaitAllUserTxsSettled());
 
     // Flushing claim through with a withdraw.

@@ -38,6 +38,18 @@ export interface RollupTxs {
   offchainDataTxs: Buffer[];
 }
 
+export interface BridgeData {
+  address: EthAddress;
+  addressId: number;
+  description: string;
+}
+
+export interface BridgeSubsidy {
+  addressId: number;
+  criteria: number;
+  subsidy: number;
+}
+
 export interface Blockchain extends BlockSource, BlockchainStatusSource, EthereumSigner {
   getProvider(): EthereumProvider;
 
@@ -90,4 +102,8 @@ export interface Blockchain extends BlockSource, BlockchainStatusSource, Ethereu
   getFeeData(): Promise<FeeData>;
 
   getBridgeGas(bridgeCallData: bigint): number;
+
+  getBridgeSubsidy(bridgeCallData: bigint): Promise<BridgeSubsidy>;
+
+  getBridgeData(bridgeAddressId: number): Promise<BridgeData>;
 }

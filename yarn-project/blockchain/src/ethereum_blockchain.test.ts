@@ -80,6 +80,7 @@ describe('ethereum_blockchain', () => {
     contracts = {
       init: jest.fn(),
       updateAssets: jest.fn(),
+      updatePerEthBlockState: jest.fn(),
       getPerRollupState: jest.fn().mockResolvedValue({ nextRollupId: 0 }),
       getPerBlockState: jest.fn().mockResolvedValue({
         escapeOpen: false,
@@ -91,6 +92,7 @@ describe('ethereum_blockchain', () => {
       getPermitHelperContractAddress: jest.fn().mockReturnValue(EthAddress.random()),
       getFeeDistributorContractAddress: jest.fn().mockReturnValue(EthAddress.random()),
       getVerifierContractAddress: jest.fn().mockReturnValue(EthAddress.random()),
+      getBridgeDataProviderAddress: jest.fn().mockReturnValue(EthAddress.random()),
       getBlockNumber: jest.fn().mockImplementation(() => Promise.resolve(blocks.length)),
       getChainId: jest.fn().mockResolvedValue(999),
       getTransactionReceipt: jest.fn(),
@@ -224,7 +226,7 @@ describe('ethereum_blockchain', () => {
     const statusBefore = blockchain.getBlockchainStatus();
     expect(statusBefore.assets.length).toBe(0);
     expect(statusBefore.bridges.length).toBe(0);
-    contracts.updateAssets.mockClear();
+    contracts.updatePerEthBlockState.mockClear();
 
     contracts.getAssets.mockReturnValueOnce(blockchainAssets);
     contracts.getSupportedBridges.mockResolvedValueOnce(blockchainBridges);
@@ -238,6 +240,6 @@ describe('ethereum_blockchain', () => {
     const statusAfter = blockchain.getBlockchainStatus();
     expect(statusAfter.assets).toEqual(blockchainAssets);
     expect(statusAfter.bridges).toEqual(blockchainBridges);
-    expect(contracts.updateAssets).toHaveBeenCalledTimes(1);
+    expect(contracts.updatePerEthBlockState).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,12 +1,18 @@
 import { AliasHash } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { Blockchain } from '@aztec/barretenberg/blockchain';
+import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { AccountVerifier, JoinSplitVerifier } from '@aztec/barretenberg/client_proofs';
 import { Blake2s } from '@aztec/barretenberg/crypto';
 import { InitHelpers } from '@aztec/barretenberg/environment';
 import { createLogger } from '@aztec/barretenberg/log';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
-import { InitialWorldState, RollupProviderStatus, RuntimeConfig } from '@aztec/barretenberg/rollup_provider';
+import {
+  BridgePublishQuery,
+  InitialWorldState,
+  RollupProviderStatus,
+  RuntimeConfig,
+} from '@aztec/barretenberg/rollup_provider';
 import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
 import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { CliProofGenerator, HttpJobServer, HttpJobServers, ProofGenerator } from '@aztec/halloumi/proof_generator';
@@ -58,7 +64,6 @@ export class Server {
         maxFeePerGas,
         maxPriorityFeePerGas,
         gasLimit,
-        defaultDeFiBatchSize,
         bridgeConfigs,
         rollupBeneficiary = signingAddress,
         depositLimit,
@@ -70,7 +75,7 @@ export class Server {
 
     const noteAlgo = new NoteAlgorithms(barretenberg);
     this.blake = new Blake2s(barretenberg);
-    this.bridgeResolver = new BridgeResolver(bridgeConfigs, blockchain, defaultDeFiBatchSize);
+    this.bridgeResolver = new BridgeResolver(bridgeConfigs, blockchain);
 
     this.txFeeResolver = this.createTxFeeResolver();
 
@@ -183,7 +188,6 @@ export class Server {
         maxFeePerGas,
         maxPriorityFeePerGas,
         gasLimit,
-        defaultDeFiBatchSize,
         bridgeConfigs,
         rollupBeneficiary = this.signingAddress,
         depositLimit,
@@ -197,7 +201,7 @@ export class Server {
 
     this.worldState.setTxFeeResolver(this.txFeeResolver);
     this.txReceiver.setTxFeeResolver(this.txFeeResolver);
-    this.bridgeResolver.setConf(defaultDeFiBatchSize, bridgeConfigs);
+    this.bridgeResolver.setConf(bridgeConfigs);
     this.pipelineFactory.setConf(
       this.txFeeResolver,
       publishInterval,
@@ -263,31 +267,21 @@ export class Server {
     const { version, runtimeConfig, proverless, numInnerRollupTxs, numOuterRollupProofs } =
       this.configurator.getConfVars();
 
-    const { bridgeConfigs, defaultDeFiBatchSize } = runtimeConfig;
-    const thirdPartyBridgeConfigs = txPoolProfile.pendingBridgeStats
-      .filter(({ bridgeCallData }) => !bridgeConfigs.find(bc => bc.bridgeCallData === bridgeCallData))
-      .map(({ bridgeCallData }) => ({
-        bridgeCallData,
-        numTxs: defaultDeFiBatchSize,
-        gas: this.blockchain.getBridgeGas(bridgeCallData),
-        rollupFrequency: 0,
-      }));
-    const bridgeStatus = [...bridgeConfigs, ...thirdPartyBridgeConfigs].map(
-      ({ bridgeCallData, numTxs, gas, rollupFrequency }) => {
-        const rt = nextPublish.bridgeTimeouts.get(bridgeCallData);
-        const stat = txPoolProfile.pendingBridgeStats.find(s => s.bridgeCallData === bridgeCallData);
-        return {
-          bridgeCallData,
-          numTxs,
-          gasThreshold: gas,
-          gasAccrued: stat?.gasAccrued || 0,
-          rollupFrequency,
-          nextRollupNumber: rt?.rollupNumber,
-          nextPublishTime: rt?.timeout,
-        };
-      },
-    );
-
+    const { bridgeConfigs } = runtimeConfig;
+    const bridgeStatus = txPoolProfile.pendingBridgeStats.flatMap(s => {
+      const bridgeCallData = BridgeCallData.fromBigInt(s.bridgeCallData);
+      const bridgeConfig = bridgeConfigs.find(bc => bc.bridgeAddressId === bridgeCallData.bridgeAddressId);
+      return bridgeConfig
+        ? [
+            {
+              bridgeCallData: bridgeCallData.toBigInt(),
+              numTxs: bridgeConfig.numTxs,
+              gasThreshold: this.bridgeResolver.getFullBridgeGas(bridgeCallData.toBigInt()),
+              gasAccrued: s.gasAccrued,
+            },
+          ]
+        : [];
+    });
     return {
       version,
       blockchainStatus,
@@ -320,6 +314,10 @@ export class Server {
     const accountFileName = InitAccountFiles.getAccountDataFile(chainId);
     const initialAccounts = accountFileName ? await InitHelpers.readData(accountFileName) : Buffer.alloc(0);
     return { initialAccounts, initialSubtreeRoots: this.worldState.getInitialStateSubtreeRoots() };
+  }
+
+  public async queryBridgeStats(query: BridgePublishQuery) {
+    return await this.worldState.queryBridgeStats(query);
   }
 
   public async getUnsettledTxs() {

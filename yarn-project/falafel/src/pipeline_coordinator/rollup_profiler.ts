@@ -2,12 +2,14 @@ import { TxFeeResolver } from '../tx_fee_resolver/index.js';
 import { RollupTx } from './bridge_tx_queue.js';
 import { isDefiDepositTx, numTxTypes } from '@aztec/barretenberg/blockchain';
 import { ProofData } from '@aztec/barretenberg/client_proofs';
+import { BridgeSubsidyProvider } from '../bridge/bridge_subsidy_provider.js';
 
 export interface BridgeProfile {
   bridgeCallData: bigint;
   numTxs: number;
   gasThreshold: number;
   gasAccrued: number;
+  gasSubsidy: number;
   earliestTx: Date;
   latestTx: Date;
 }
@@ -50,6 +52,7 @@ export function profileRollup(
   feeResolver: TxFeeResolver,
   innerRollupSize: number,
   rollupSize: number,
+  bridgeSubsidyProvider: BridgeSubsidyProvider,
 ) {
   const rollupProfile: RollupProfile = emptyProfile(rollupSize);
   rollupProfile.totalTxs = allTxs.length;
@@ -94,7 +97,7 @@ export function profileRollup(
     // here we use the unadjusted tx gas as we are trying to accumulate the real gas consumption of the rollup
     rollupProfile.totalGas += feeResolver.getUnadjustedTxGas(assetId, tx.tx.txType);
     rollupProfile.totalCallData += feeResolver.getTxCallData(tx.tx.txType);
-    // each tx can have an adjusted amunt of gas due to call data limits etc.
+    // each tx can have an adjusted amount of gas due to call data limits etc.
     // we need to factor this in, it effectively pays for additional rollup slots
     const txGasAdjustment =
       feeResolver.getAdjustedTxGas(assetId, tx.tx.txType) - feeResolver.getUnadjustedTxGas(assetId, tx.tx.txType);
@@ -106,30 +109,38 @@ export function profileRollup(
       console.log(`Invalid bridge call data encountered on DEFI transaction!`);
     } else {
       const bridgeCallData = tx.bridgeCallData;
+      // the bridge gas cost needs to include subsidy as it is used to determine profitability
+      const fullGasCostOfBridgeInteraction = feeResolver.getFullBridgeGas(tx.bridgeCallData);
       let bridgeProfile = bridgeProfiles.get(bridgeCallData);
       if (!bridgeProfile) {
-        // thie bridge gas cost needs to include subsidy as it is used to determine profitability
-        const bridgeGasCost = feeResolver.getFullBridgeGas(tx.bridgeCallData);
+        const claimedSubsidy = bridgeSubsidyProvider.getClaimedSubsidy(tx.bridgeCallData);
         bridgeProfile = {
           bridgeCallData,
           numTxs: 0,
-          gasThreshold: bridgeGasCost,
+          gasThreshold: fullGasCostOfBridgeInteraction,
           gasAccrued: 0,
+          gasSubsidy: claimedSubsidy,
           earliestTx: new Date(tx.tx.created),
           latestTx: new Date(tx.tx.created),
         };
         bridgeProfiles.set(bridgeCallData, bridgeProfile);
         // we are going to incur the cost of the bridge here so reduce our gas balance
-        rollupProfile.gasBalance -= bridgeGasCost;
+        rollupProfile.gasBalance -= fullGasCostOfBridgeInteraction;
+        // and increase by any claimed subsidy
+        rollupProfile.gasBalance += claimedSubsidy;
         // we need to add the total un-subsidised bridge gas cost to the total gas
         rollupProfile.totalGas += feeResolver.getFullBridgeGasFromContract(tx.bridgeCallData);
       }
       bridgeProfile.numTxs++;
       // this is the gas provided above and beyond the gas constant for defi deposits
-      const gasTowardsBridge = feeResolver.getSingleBridgeTxGas(tx.bridgeCallData) + tx.excessGas;
-      bridgeProfile.gasAccrued += gasTowardsBridge;
+      // it incoporates the minimum gas required for the specified bridge + the excess provided
+      const totalGasProvidedWithTx = feeResolver.getSingleBridgeTxGas(tx.bridgeCallData) + tx.excessGas;
       // add this back onto the gas balance for the rollup
-      rollupProfile.gasBalance += gasTowardsBridge;
+      rollupProfile.gasBalance += totalGasProvidedWithTx;
+      // when accruing the gas towards the bridge, cap at the total bridge gas
+      // any additional excess is notionally applied to the rollup.
+      const gasTowardsBridge = Math.min(totalGasProvidedWithTx, fullGasCostOfBridgeInteraction);
+      bridgeProfile.gasAccrued += gasTowardsBridge;
 
       if (bridgeProfile.earliestTx.getTime() > tx.tx.created.getTime()) {
         bridgeProfile.earliestTx = new Date(tx.tx.created);

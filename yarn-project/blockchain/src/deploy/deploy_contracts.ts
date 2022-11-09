@@ -64,7 +64,7 @@ export async function deployContracts(
   console.error(`Initial null root: ${roots.nullRoot.toString('hex')}`);
   console.error(`Initial root root: ${roots.rootsRoot.toString('hex')}`);
 
-  const { rollup, priceFeeds, feeDistributor, permitHelper, faucet } = await deploy(
+  const { rollup, priceFeeds, feeDistributor, permitHelper, faucet, bridgeDataProvider } = await deploy(
     chainId,
     signer,
     treeInitData,
@@ -79,6 +79,7 @@ export async function deployContracts(
     FEE_DISTRIBUTOR_ADDRESS: feeDistributor.address,
     PRICE_FEED_CONTRACT_ADDRESSES: priceFeeds.map(p => p).join(','),
     FAUCET_CONTRACT_ADDRESS: faucet.address,
+    BRIDGE_DATA_PROVIDER_CONTRACT_ADDRESS: bridgeDataProvider.address,
   };
 
   return envVars;

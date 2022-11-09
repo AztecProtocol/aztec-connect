@@ -474,6 +474,17 @@ jobs:
           name: 'Test'
           command: cond_spot_run_tests end-to-end ./src/e2e_defi.test.ts
 
+  e2e-defi-subsidy:
+    docker:
+      - image: aztecprotocol/alpine-build-image
+    resource_class: small
+    steps:
+      - *checkout
+      - *setup_env
+      - run:
+          name: 'Test'
+          command: cond_spot_run_tests end-to-end ./src/e2e_defi_subsidy.test.ts
+
   e2e-non-fee-assets:
     docker:
       - image: aztecprotocol/alpine-build-image
@@ -807,6 +818,7 @@ workflows:
       - e2e-chained-txs-with-spending-keys: *e2e_test
       - e2e-chained-txs: *e2e_test
       - e2e-defi: *e2e_test
+      - e2e-defi-subsidy: *e2e_test
       - e2e-element: *e2e_test
       - e2e-lido: *e2e_test
       - e2e-migrate-account: *e2e_test
@@ -848,6 +860,7 @@ workflows:
             - e2e-chained-txs
             - e2e-chained-txs-with-spending-keys
             - e2e-defi
+            - e2e-defi-subsidy
             - e2e-element
             - e2e-lido
             - e2e-migrate-account

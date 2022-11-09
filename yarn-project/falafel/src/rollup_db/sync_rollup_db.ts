@@ -147,6 +147,10 @@ export class SyncRollupDb {
     return this.synchronise(() => this.rollupDb.getRollupsByRollupIds(ids));
   }
 
+  public getSettledRollupsAfterTime(time: Date, descending = false) {
+    return this.synchronise(() => this.rollupDb.getSettledRollupsAfterTime(time, descending));
+  }
+
   public getNumSettledRollups() {
     return this.synchronise(() => this.rollupDb.getNumSettledRollups());
   }

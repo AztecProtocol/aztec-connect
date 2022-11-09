@@ -6,9 +6,10 @@ import { EulerBridgeData } from '@aztec/bridge-clients/client-dest/src/client/eu
 import { CreateRecipeArgs } from '../types.js';
 import { useDefaultExpectedAssetYield, useDefaultLiquidity } from '../defi_info_hooks.js';
 import { formatBulkPrice_compact, formatPercentage_2dp } from '../../../app/util/formatters.js';
-import { keyStatConfig_nextBatch } from '../key_stat_configs.js';
+import { keyStatConfig_averageWait } from '../key_stat_configs.js';
 import { bindInteractionPredictionHook_expectedOutput } from '../interaction_prediction_configs.js';
 import { useVariableAprText } from '../position_key_stat_configs.js';
+import { createDefiPublishStatsCacheArgsBuilder } from '../defi_publish_stats_utils.js';
 
 export const EULER_ETH_CARD: CreateRecipeArgs = {
   id: 'euler.ETH-to-weETH',
@@ -40,7 +41,7 @@ export const EULER_ETH_CARD: CreateRecipeArgs = {
   cardButtonLabel: 'Earn',
   keyStats: {
     keyStat1: {
-      label: 'APY',
+      useLabel: () => 'APY',
       skeletonSizingContent: '2.34%',
       useFormattedValue: recipe => {
         const apr = useDefaultExpectedAssetYield(recipe);
@@ -49,7 +50,7 @@ export const EULER_ETH_CARD: CreateRecipeArgs = {
       },
     },
     keyStat2: {
-      label: 'L1 Liquidity',
+      useLabel: () => 'L1 Liquidity',
       skeletonSizingContent: '$11B',
       useFormattedValue: recipe => {
         const liquidity = useDefaultLiquidity(recipe.id);
@@ -57,7 +58,7 @@ export const EULER_ETH_CARD: CreateRecipeArgs = {
         return formatBulkPrice_compact(liquidity);
       },
     },
-    keyStat3: keyStatConfig_nextBatch,
+    keyStat3: keyStatConfig_averageWait,
   },
   useEnterInteractionPredictionInfo: bindInteractionPredictionHook_expectedOutput({
     direction: 'enter',
@@ -73,6 +74,7 @@ export const EULER_ETH_CARD: CreateRecipeArgs = {
     useOpenText: useVariableAprText,
     useExitText: useVariableAprText,
   },
+  getDefiPublishStatsCacheArgs: createDefiPublishStatsCacheArgsBuilder({ ignoreAuxData: false }),
 };
 
 export const EULER_WSTETH_CARD: CreateRecipeArgs = {

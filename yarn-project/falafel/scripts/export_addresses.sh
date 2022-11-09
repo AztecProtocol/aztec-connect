@@ -1,22 +1,7 @@
 #!/bin/bash
 set -e
 
-if [ -z "$ROLLUP_CONTRACT_ADDRESS" -a -n "$ETHEREUM_HOST" ]; then
-  echo "Waiting for $ETHEREUM_HOST..."
-  [[ $ETHEREUM_HOST =~ https?://(.*):(.*) ]]
-  while ! nc -z ${BASH_REMATCH[1]} ${BASH_REMATCH[2]}; do sleep 1; done;
-
-  RESULT=$(curl -s $ETHEREUM_HOST)
-
-  ROLLUP_CONTRACT_ADDRESS_VALUE=$(echo $RESULT | jq -r '.redeployConfig.rollupContractAddress')
-  PERMIT_HELPER_ADDRESS_VALUE=$(echo $RESULT | jq -r '.redeployConfig.permitHelperAddress')
-  PRICE_FEED_CONTRACT_ADDRESSES_VALUE=$(echo $RESULT | jq -r '.redeployConfig.priceFeedContractAddresses')
-
-  echo "ROLLUP_CONTRACT_ADDRESS=$ROLLUP_CONTRACT_ADDRESS_VALUE"
-  echo "PERMIT_HELPER_CONTRACT_ADDRESS=$PERMIT_HELPER_ADDRESS_VALUE"
-  echo "PRICE_FEED_CONTRACT_ADDRESSES=$PRICE_FEED_CONTRACT_ADDRESSES_VALUE"
-
-  export ROLLUP_CONTRACT_ADDRESS=$ROLLUP_CONTRACT_ADDRESS_VALUE
-  export PERMIT_HELPER_CONTRACT_ADDRESS=$PERMIT_HELPER_ADDRESS_VALUE
-  export PRICE_FEED_CONTRACT_ADDRESSES=$PRICE_FEED_CONTRACT_ADDRESSES_VALUE
-fi
+. ./scripts/export_address.sh ROLLUP_CONTRACT_ADDRESS rollupContractAddress
+. ./scripts/export_address.sh PERMIT_HELPER_CONTRACT_ADDRESS permitHelperAddress
+. ./scripts/export_address.sh PRICE_FEED_CONTRACT_ADDRESSES priceFeedContractAddresses
+. ./scripts/export_address.sh BRIDGE_DATA_PROVIDER_CONTRACT_ADDRESS bridgeDataProviderContractAddress

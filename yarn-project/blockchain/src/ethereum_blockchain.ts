@@ -56,6 +56,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     config: EthereumBlockchainConfig,
     rollupContractAddress: EthAddress,
     permitHelperContractAddress: EthAddress,
+    bridgeDataProvider: EthAddress,
     priceFeedContractAddresses: EthAddress[],
     provider: EthereumProvider,
   ) {
@@ -64,6 +65,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
       rollupContractAddress,
       permitHelperContractAddress,
       priceFeedContractAddresses,
+      bridgeDataProvider,
       provider,
       confirmations,
     );
@@ -95,6 +97,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
       rollupContractAddress: this.contracts.getRollupContractAddress(),
       permitHelperContractAddress: this.contracts.getPermitHelperContractAddress(),
       verifierContractAddress: await this.contracts.getVerifierContractAddress(),
+      bridgeDataProvider: this.contracts.getBridgeDataProviderAddress(),
       ...(await this.getPerRollupState(latestBlock)),
       ...(await this.getPerEthBlockState()),
     };
@@ -222,7 +225,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   }
 
   private async updatePerEthBlockState() {
-    await this.contracts.updateAssets();
+    await this.contracts.updatePerEthBlockState();
     this.status = {
       ...this.status,
       ...(await this.getPerEthBlockState()),
@@ -372,5 +375,13 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
       throw new Error(`Failed to retrieve bridge cost for bridge ${bridgeCallData.toString()}`);
     }
     return gasLimit;
+  }
+
+  public async getBridgeSubsidy(bridgeCallData: bigint) {
+    return await this.contracts.getBridgeSubsidy(bridgeCallData);
+  }
+
+  public async getBridgeData(bridgeAddressId: number) {
+    return await this.contracts.getBridgeData(bridgeAddressId);
   }
 }

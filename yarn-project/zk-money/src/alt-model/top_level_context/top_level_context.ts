@@ -9,8 +9,9 @@ import type { RemoteAssetsObs } from './remote_assets_obs.js';
 import type { AmountFactory } from '../assets/amount_factory.js';
 import type { PriceFeedObsCache } from '../price_feeds/index.js';
 import type { GasPricePoller } from '../gas/gas_price_obs.js';
-import { ToastsObs } from './toasts_obs.js';
-import { ChainLinkPollerCache } from '../../alt-model/price_feeds/chain_link_poller_cache.js';
+import type { ToastsObs } from './toasts_obs.js';
+import type { ChainLinkPollerCache } from '../../alt-model/price_feeds/chain_link_poller_cache.js';
+import type { DefiPulishStatsPollerCache } from '../defi/defi_publish_stats_poller_cache.js';
 
 export interface TopLevelContextValue {
   config: Config;
@@ -25,6 +26,7 @@ export interface TopLevelContextValue {
   gasPricePoller: GasPricePoller;
   bridgeDataAdaptorsMethodCaches: BridgeDataAdaptorsMethodCaches;
   defiRecipes: DefiRecipe[];
+  defiPulishStatsPollerCache: DefiPulishStatsPollerCache;
 }
 
 export const TopLevelContext = createContext(

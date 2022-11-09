@@ -12,6 +12,7 @@ import {
   deployVerifier,
   deployAztecFaucet,
   deployAceOfZk,
+  deployMockDataProvider,
 } from './deployers/index.js';
 
 const gasLimit = 5000000;
@@ -68,10 +69,16 @@ export async function deployMainnet(
   await permitHelper.preApprove(LIDO_WSTETH_ADDRESS, { gasLimit });
 
   const expiryCutOff = new Date('01 Sept 2022 00:00:00 GMT');
-  await deployElementBridge(signer, rollup, ['dai'], expiryCutOff);
-  await deployLidoBridge(signer, rollup, LIDO_REFERRAL_ADDRESS);
-  await deployAceOfZk(signer, rollup);
-  await deployCurveBridge(signer, rollup);
+  const elementBridge = await deployElementBridge(signer, rollup, ['dai'], expiryCutOff);
+  const lidoBridge = await deployLidoBridge(signer, rollup, LIDO_REFERRAL_ADDRESS);
+  const zkBridge = await deployAceOfZk(signer, rollup);
+  const curveBridge = await deployCurveBridge(signer, rollup);
+
+  const bridgeDataProvider = await deployMockDataProvider(signer);
+  await bridgeDataProvider.setBridgeData(1, elementBridge.address, 50000, 'Element Bridge');
+  await bridgeDataProvider.setBridgeData(2, lidoBridge.address, 50000, 'Lido Bridge');
+  await bridgeDataProvider.setBridgeData(3, zkBridge.address, 50000, 'Ace of ZK Bridge');
+  await bridgeDataProvider.setBridgeData(4, curveBridge.address, 50000, 'Curve Bridge');
 
   const MULTI_SIG_ADDRESS = (await signer.getChainId()) == 1 ? MAIN_MULTI_SIG_ADDRESS : DEV_NET_TEMP_MULTI_SIG_ADDRESS;
 
@@ -97,5 +104,5 @@ export async function deployMainnet(
 
   const faucet = await deployAztecFaucet(signer, faucetOperator);
 
-  return { rollup, priceFeeds, feeDistributor, permitHelper, faucet };
+  return { rollup, priceFeeds, feeDistributor, permitHelper, faucet, bridgeDataProvider };
 }

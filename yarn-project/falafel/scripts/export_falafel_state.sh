@@ -9,4 +9,4 @@ fi
 echo "Exporting world state from $ENV to ${TEMP_DIR}..."
 # pull the world state across to mainframe
 mkdir $TEMP_DIR
-scp -r ec2-user@bastion:/home/ec2-user/ac-$ENV-falafel-data/world_state.db $TEMP_DIR
+scp -r ec2-user@bastion:/home/ec2-user/ac-$ENV-falafel-data $TEMP_DIR

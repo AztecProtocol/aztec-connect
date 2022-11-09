@@ -2,7 +2,14 @@ import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { assetValueFromJson } from '@aztec/barretenberg/asset';
 import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { SchnorrSignature } from '@aztec/barretenberg/crypto';
-import { depositTxFromJson, rollupProviderStatusFromJson, Tx, txToJson } from '@aztec/barretenberg/rollup_provider';
+import {
+  BridgePublishQuery,
+  BridgePublishQueryResult,
+  depositTxFromJson,
+  rollupProviderStatusFromJson,
+  Tx,
+  txToJson,
+} from '@aztec/barretenberg/rollup_provider';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import EventEmitter from 'events';
 import { coreUserTxFromJson } from '../core_tx/index.js';
@@ -97,6 +104,10 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
   public async getDefiFees(bridgeCallData: BridgeCallData) {
     const fees = await this.backend.getDefiFees(bridgeCallData.toString());
     return fees.map(assetValueFromJson);
+  }
+
+  public async queryDefiPublishStats(query: BridgePublishQuery): Promise<BridgePublishQueryResult> {
+    return await this.backend.queryDefiPublishStats(query);
   }
 
   public async getPendingDepositTxs() {

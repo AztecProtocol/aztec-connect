@@ -71,3 +71,7 @@ export function useBridgeDataAdaptorsMethodCaches() {
 export function useDefiRecipes() {
   return useTopLevelContext().defiRecipes;
 }
+
+export function useDefiPulishStatsPollerCache() {
+  return useTopLevelContext().defiPulishStatsPollerCache;
+}

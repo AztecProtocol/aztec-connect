@@ -1,4 +1,4 @@
-import type { BridgeStatus, RollupProviderStatus } from '@aztec/sdk';
+import type { RollupProviderStatus } from '@aztec/sdk';
 
 const APPROX_ROLLUP_PROOF_DURATION_MS = 1000 * 60 * 7;
 
@@ -20,42 +20,4 @@ export function estimateTxSettlementTimes(rollupProviderStatus?: RollupProviderS
   const instantSettlementTime = new Date(nowMs + APPROX_ROLLUP_PROOF_DURATION_MS);
   const nextSettlementTime = estimateNextSettlementTime(nextPublishTimeMs, nowMs, runtimeConfig.publishInterval);
   return { instantSettlementTime, nextSettlementTime };
-}
-
-function estimateDefiBatchSettlementTime(
-  rollupProviderStatus?: RollupProviderStatus,
-  bridgeStatus?: BridgeStatus,
-  nextSettlementTime?: Date,
-) {
-  if (!rollupProviderStatus || !bridgeStatus) return;
-  const fastTrack = bridgeStatus.gasAccrued >= bridgeStatus.gasThreshold;
-  const { rollupFrequency } = bridgeStatus;
-  const publishIntervalSeconds = rollupProviderStatus.runtimeConfig.publishInterval;
-
-  if (fastTrack) {
-    return nextSettlementTime;
-  } else if (bridgeStatus.nextPublishTime) {
-    return new Date(bridgeStatus.nextPublishTime.getTime() + APPROX_ROLLUP_PROOF_DURATION_MS);
-  } else if (rollupFrequency > 0 && publishIntervalSeconds > 0 && nextSettlementTime && !fastTrack) {
-    const defiBatchInterval = rollupFrequency * (publishIntervalSeconds * 1000);
-    return new Date(nextSettlementTime.getTime() + defiBatchInterval);
-  }
-  return nextSettlementTime;
-}
-
-interface EstimatedDefiSettlementTimes extends EstimatedTxSettlementTimes {
-  batchSettlementTime?: Date;
-}
-
-export function estimateDefiSettlementTimes(
-  rollupProviderStatus?: RollupProviderStatus,
-  bridgeStatus?: BridgeStatus,
-): EstimatedDefiSettlementTimes {
-  const { instantSettlementTime, nextSettlementTime } = estimateTxSettlementTimes(rollupProviderStatus);
-  const batchSettlementTime = estimateDefiBatchSettlementTime(rollupProviderStatus, bridgeStatus, nextSettlementTime);
-  return {
-    instantSettlementTime,
-    nextSettlementTime,
-    batchSettlementTime,
-  };
 }

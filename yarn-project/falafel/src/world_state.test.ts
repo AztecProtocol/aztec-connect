@@ -137,40 +137,10 @@ const DEFAULT_DEFI_BATCH_SIZE = 10;
 
 const bridgeConfigs: BridgeConfig[] = [
   {
-    bridgeCallData: 1n,
+    bridgeAddressId: 1,
     numTxs: 5,
     gas: 1000000,
-    rollupFrequency: 2,
-  },
-  {
-    bridgeCallData: 2n,
-    numTxs: 10,
-    gas: 5000000,
-    rollupFrequency: 3,
-  },
-  {
-    bridgeCallData: 3n,
-    numTxs: 3,
-    gas: 90000,
-    rollupFrequency: 4,
-  },
-  {
-    bridgeCallData: 4n,
-    numTxs: 6,
-    gas: 3000000,
-    rollupFrequency: 1,
-  },
-  {
-    bridgeCallData: 5n,
-    numTxs: 2,
-    gas: 8000000,
-    rollupFrequency: 7,
-  },
-  {
-    bridgeCallData: 6n,
-    numTxs: 20,
-    gas: 3000000,
-    rollupFrequency: 8,
+    permittedAssets: [0, 1],
   },
 ];
 
@@ -211,13 +181,13 @@ const mockTx = (
   } as any as TxDao);
 
 const getSingleBridgeCost = (bridgeCallData: bigint) => {
-  const bridgeConfig = bridgeConfigs.find(bc => bc.bridgeCallData === bridgeCallData);
+  const bridge = BridgeCallData.fromBigInt(bridgeCallData);
+  const bridgeConfig = bridgeConfigs.find(bc => bc.bridgeAddressId === bridge.bridgeAddressId);
   if (!bridgeConfig) {
     throw new Error(`Requested cost for invalid bridgeCallData: ${bridgeCallData.toString()}`);
   }
   const { gas, numTxs } = bridgeConfig;
-  const single = gas / numTxs;
-  return gas % numTxs ? single + 1 : single;
+  return Math.ceil(gas! / numTxs);
 };
 
 describe('world_state', () => {
@@ -318,13 +288,15 @@ describe('world_state', () => {
 
     txFeeResolver = {
       getSingleBridgeTxGas: jest.fn((bridgeCallData: bigint) => {
-        const bridgeConfig = bridgeConfigs.find(b => b.bridgeCallData === bridgeCallData);
+        const bridge = BridgeCallData.fromBigInt(bridgeCallData);
+        const bridgeConfig = bridgeConfigs.find(b => b.bridgeAddressId === bridge.bridgeAddressId);
         const gas = bridgeConfig?.gas ?? DEFAULT_BRIDGE_GAS_LIMIT;
         const numTxs = bridgeConfig?.numTxs ?? DEFAULT_DEFI_BATCH_SIZE;
         return gas / numTxs;
       }),
       getFullBridgeGas: jest.fn((bridgeCallData: bigint) => {
-        const bridgeConfig = bridgeConfigs.find(b => b.bridgeCallData === bridgeCallData);
+        const bridge = BridgeCallData.fromBigInt(bridgeCallData);
+        const bridgeConfig = bridgeConfigs.find(b => b.bridgeAddressId === bridge.bridgeAddressId);
         return bridgeConfig?.gas ?? DEFAULT_BRIDGE_GAS_LIMIT;
       }),
     } as Mockify<TxFeeResolver>;
@@ -710,7 +682,11 @@ describe('world_state', () => {
     txPoolProfile = await worldState.getTxPoolProfile();
     expect(txPoolProfile.pendingTxCount).toBe(1);
 
-    const bridgeCallData1 = bridgeConfigs[0].bridgeCallData;
+    const bridgeCallData1 = new BridgeCallData(
+      bridgeConfigs[0].bridgeAddressId,
+      bridgeConfigs[0].permittedAssets[0],
+      bridgeConfigs[0].permittedAssets[1],
+    ).toBigInt();
     pendingTxs = [
       buildTxDao({
         proofId: ProofId.DEPOSIT,
@@ -725,7 +701,7 @@ describe('world_state', () => {
     txPoolProfile = await worldState.getTxPoolProfile();
     expect(txPoolProfile.pendingTxCount).toBe(2);
     expect(txPoolProfile.pendingBridgeStats).toEqual([
-      { bridgeCallData: bridgeCallData1, gasAccrued: bridgeConfigs[0].gas / bridgeConfigs[0].numTxs },
+      { bridgeCallData: bridgeCallData1, gasAccrued: bridgeConfigs[0].gas! / bridgeConfigs[0].numTxs },
     ]);
 
     // check all txs are accrued while the bridge is pending
@@ -753,7 +729,7 @@ describe('world_state', () => {
     txPoolProfile = await worldState.getTxPoolProfile();
     expect(txPoolProfile.pendingTxCount).toBe(2);
     expect(txPoolProfile.pendingBridgeStats).toEqual([
-      { bridgeCallData: bridgeCallData1, gasAccrued: (bridgeConfigs[0].gas / bridgeConfigs[0].numTxs) * 2 },
+      { bridgeCallData: bridgeCallData1, gasAccrued: (bridgeConfigs[0].gas! / bridgeConfigs[0].numTxs) * 2 },
     ]);
   });
 });

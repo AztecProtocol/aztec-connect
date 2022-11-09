@@ -6,14 +6,15 @@ import { KNOWN_MAINNET_ASSET_ADDRESSES as KMAA } from '../../../alt-model/known_
 import { BridgeInteraction, CreateRecipeArgs, DefiRecipe } from '../types.js';
 import { formatDate_short, formatPercentage_1dp } from '../../../app/util/formatters.js';
 import { useCurrentAssetYield, useDefaultAuxDataOption, useDefaultTermApr, useTermApr } from '../defi_info_hooks.js';
-import { keyStatConfig_nextBatch } from '../key_stat_configs.js';
+import { keyStatConfig_averageWait } from '../key_stat_configs.js';
 import { UserDefiTx } from '@aztec/sdk';
 import { Amount } from '../../../alt-model/assets/index.js';
+import { createDefiPublishStatsCacheArgsBuilder } from '../defi_publish_stats_utils.js';
 
 export const ELEMENT_CARD: CreateRecipeArgs = {
   id: 'element-finance.DAI-to-DAI',
   isAsync: true,
-  selectBlockchainBridge: ({ bridges }) => bridges.find(x => x.id === 9),
+  selectBlockchainBridge: ({ bridges }) => bridges.find(x => x.id === 1),
   entryInputAssetAddressA: KMAA.DAI,
   entryOutputAssetAddressA: KMAA.DAI,
   createAdaptor: createElementAdaptor,
@@ -36,7 +37,7 @@ export const ELEMENT_CARD: CreateRecipeArgs = {
   cardButtonLabel: 'Earn',
   keyStats: {
     keyStat1: {
-      label: 'APR',
+      useLabel: () => 'APR',
       skeletonSizingContent: '2.34%',
       useFormattedValue: recipe => {
         const termApr = useDefaultTermApr(recipe);
@@ -45,7 +46,7 @@ export const ELEMENT_CARD: CreateRecipeArgs = {
       },
     },
     keyStat2: {
-      label: 'Maturity',
+      useLabel: () => 'Maturity',
       skeletonSizingContent: '16 Sept 2022',
       useFormattedValue: recipe => {
         const auxData = useDefaultAuxDataOption(recipe.id);
@@ -53,7 +54,7 @@ export const ELEMENT_CARD: CreateRecipeArgs = {
         return formatDate_short(auxData * 1000);
       },
     },
-    keyStat3: keyStatConfig_nextBatch,
+    keyStat3: keyStatConfig_averageWait,
   },
   positionKeyStat: {
     type: 'async',
@@ -69,6 +70,7 @@ export const ELEMENT_CARD: CreateRecipeArgs = {
     };
   },
   getAsyncResolutionDate: tx => tx.bridgeCallData.auxData * 1000,
+  getDefiPublishStatsCacheArgs: createDefiPublishStatsCacheArgsBuilder({ ignoreAuxData: true }),
 };
 
 export const OLD_ELEMENT_CARD: CreateRecipeArgs = {

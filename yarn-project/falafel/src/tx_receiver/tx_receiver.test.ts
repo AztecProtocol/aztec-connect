@@ -910,16 +910,6 @@ describe('tx receiver', () => {
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
     });
 
-    it('accept a defi deposit tx with unrecognised bridge if third party contracts are allowed', async () => {
-      const txs = [mockDefiDepositTx()];
-      bridgeResolver.getBridgeConfig.mockReturnValue(undefined);
-      blockchain.getBlockchainStatus.mockReturnValue({ assets, allowThirdPartyContracts: true });
-
-      await txReceiver.receiveTxs(createTxRequest(txs, 'id1'));
-      expect(rollupDb.addTxs).toHaveBeenCalledTimes(1);
-      expect(rollupDb.addTxs).toHaveBeenCalledWith([expect.objectContaining({ id: txs[0].proof.txId })]);
-    });
-
     it('reject a defi deposit tx with inconsistent offchain data', async () => {
       const partialState = randomBytes(32);
       const partialStateSecretEphPubKey = GrumpkinAddress.random();

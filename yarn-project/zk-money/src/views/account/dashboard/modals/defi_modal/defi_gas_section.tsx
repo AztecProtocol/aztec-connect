@@ -7,8 +7,12 @@ import { MiniL2BalanceIndicator } from '../sections/amount_section/mini_balance_
 import { SectionInfo } from '../modal_molecules/section_info/index.js';
 import { DefiGasSaving } from './defi_gas_saving.js';
 import { useRollupProviderStatus } from '../../../../../alt-model/index.js';
-import { estimateDefiSettlementTimes } from '../../../../../alt-model/estimate_settlement_times.js';
+import { estimateTxSettlementTimes } from '../../../../../alt-model/estimate_settlement_times.js';
 import { FeeOptionContent } from '../sections/gas_section/fee_option_content/index.js';
+import {
+  useDefiBatchAverageTimeout,
+  useDefiBatchData,
+} from '../../../../../features/defi/bridge_count_down/bridge_count_down_hooks.js';
 
 function renderInfo(props: DefiGasSectionProps) {
   const selectedFeeAmount = props.feeAmounts?.[props.speed];
@@ -38,22 +42,19 @@ interface DefiGasSectionProps {
 export function DefiGasSection(props: DefiGasSectionProps) {
   const { speed, onChangeSpeed, feeAmounts } = props;
   const rpStatus = useRollupProviderStatus();
-  const bridgeCallDataNum = props.bridgeCallData?.toBigInt();
-  const bridgeStatus = rpStatus?.bridgeStatus.find(x => x.bridgeCallData === bridgeCallDataNum);
-  const { instantSettlementTime, nextSettlementTime, batchSettlementTime } = estimateDefiSettlementTimes(
-    rpStatus,
-    bridgeStatus,
-  );
+  const { instantSettlementTime, nextSettlementTime } = estimateTxSettlementTimes(rpStatus);
+  const batchData = useDefiBatchData(props.bridgeCallData);
+  const batchAverageTimeout = useDefiBatchAverageTimeout(props.recipe, props.bridgeCallData);
 
   const options: RadioButtonOption<DefiSettlementTime>[] = [];
 
-  if (batchSettlementTime && nextSettlementTime && batchSettlementTime.getTime() === nextSettlementTime.getTime()) {
+  if (batchData?.isFastTrack) {
     options.push({
       id: DefiSettlementTime.DEADLINE,
       content: (
         <FeeOptionContent
           label="Batched"
-          expectedTimeOfSettlement={batchSettlementTime}
+          expectedTimeOfSettlement={nextSettlementTime}
           feeAmount={feeAmounts?.[DefiSettlementTime.DEADLINE]}
         />
       ),
@@ -64,7 +65,7 @@ export function DefiGasSection(props: DefiGasSectionProps) {
       content: (
         <FeeOptionContent
           label="Batched"
-          expectedTimeOfSettlement={batchSettlementTime}
+          averageTimeoutSeconds={batchAverageTimeout}
           feeAmount={feeAmounts?.[DefiSettlementTime.DEADLINE]}
         />
       ),

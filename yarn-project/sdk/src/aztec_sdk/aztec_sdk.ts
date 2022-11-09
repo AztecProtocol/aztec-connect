@@ -5,7 +5,13 @@ import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { Blake2s, keccak256, randomBytes } from '@aztec/barretenberg/crypto';
 import { retryUntil } from '@aztec/barretenberg/retry';
-import { DefiSettlementTime, Tx, TxSettlementTime } from '@aztec/barretenberg/rollup_provider';
+import {
+  BridgePublishQuery,
+  BridgePublishQueryResult,
+  DefiSettlementTime,
+  Tx,
+  TxSettlementTime,
+} from '@aztec/barretenberg/rollup_provider';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
 import { ClientEthereumBlockchain, validateSignature, Web3Signer } from '@aztec/blockchain';
@@ -147,6 +153,10 @@ export class AztecSdk extends EventEmitter {
     return txFees.map(fees =>
       fees.map((fee): AssetValue => ({ ...fee, value: roundUp(fee.value, feeSignificantFigures) })),
     );
+  }
+
+  public async queryDefiPublishStats(query: BridgePublishQuery): Promise<BridgePublishQueryResult> {
+    return await this.core.queryDefiPublishStats(query);
   }
 
   public async userExists(accountPublicKey: GrumpkinAddress) {

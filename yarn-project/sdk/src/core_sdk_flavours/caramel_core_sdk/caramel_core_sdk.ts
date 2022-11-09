@@ -1,4 +1,4 @@
-import { TxJson } from '@aztec/barretenberg/rollup_provider';
+import { BridgePublishQuery, BridgePublishQueryResult, TxJson } from '@aztec/barretenberg/rollup_provider';
 import { EventEmitter } from 'events';
 import { LevelUp } from 'levelup';
 import { CoreSdkOptions, CoreSdkSerializedInterface, CoreSdkServerStub, SdkEvent } from '../../core_sdk/index.js';
@@ -74,6 +74,10 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
 
   public async getDefiFees(bridgeCallData: string) {
     return await this.core.getDefiFees(bridgeCallData);
+  }
+
+  public async queryDefiPublishStats(query: BridgePublishQuery): Promise<BridgePublishQueryResult> {
+    return await this.core.queryDefiPublishStats(query);
   }
 
   public async getPendingDepositTxs() {

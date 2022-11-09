@@ -86,7 +86,6 @@ describe('get call data', () => {
     for (let i = 0; i < txTypes.length; i++) {
       const expectedValue = expectedGasValues[i];
       const actualValue = getGasOverhead(i, assetGasLimit);
-      console.log(`tx type ${TxType[i]}, overhead ${actualValue}`);
       expect(expectedValue).toBeDefined();
       expect(actualValue).toBe(expectedValue);
     }
