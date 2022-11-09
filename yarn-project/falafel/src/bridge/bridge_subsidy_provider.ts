@@ -4,7 +4,7 @@ import { BridgeResolver } from './bridge_resolver.js';
 
 interface BridgeCriteria {
   bridgeAddressId: number;
-  criteria: number;
+  criteria: bigint;
 }
 
 const bridgeCriteriaToString = (bridgeCriteria: BridgeCriteria) => {

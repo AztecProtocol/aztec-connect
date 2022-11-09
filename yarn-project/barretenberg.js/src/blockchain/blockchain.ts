@@ -46,7 +46,7 @@ export interface BridgeData {
 
 export interface BridgeSubsidy {
   addressId: number;
-  criteria: number;
+  criteria: bigint;
   subsidy: number;
 }
 

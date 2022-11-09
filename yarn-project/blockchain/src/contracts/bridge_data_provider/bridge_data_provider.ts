@@ -51,7 +51,7 @@ export class BridgeDataProvider {
       this.subsidyCache[bridgeCallDataAsString] = {
         addressId: bd.bridgeAddressId,
         subsidy: subsidy.toNumber(),
-        criteria: criteria.toNumber(),
+        criteria: criteria.toBigInt(),
       } as BridgeSubsidy;
     }
     return this.subsidyCache[bridgeCallDataAsString];

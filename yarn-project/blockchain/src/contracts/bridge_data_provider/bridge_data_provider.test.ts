@@ -9,6 +9,12 @@ const toNumber = (value: number) => {
   };
 };
 
+const toBigInt = (value: bigint) => {
+  return {
+    toBigInt: () => value,
+  };
+};
+
 const bridgeDatas: {
   [key: number]: {
     bridgeAddress: string;
@@ -31,7 +37,7 @@ const bridgeDatas: {
 const bridgeCallData1 = new BridgeCallData(1, 0, 0, 0, 0, 0);
 const bridgeCallData2 = new BridgeCallData(2, 0, 0, 0, 0, 0);
 
-const subsidies: { [key: string]: { subsidy: { toNumber: () => number }; criteria: { toNumber: () => number } } } = {};
+const subsidies: { [key: string]: { subsidy: { toNumber: () => number }; criteria: { toBigInt: () => bigint } } } = {};
 
 describe('bridge_data_provider', () => {
   const mockContract = {
@@ -53,8 +59,8 @@ describe('bridge_data_provider', () => {
   };
 
   beforeEach(() => {
-    subsidies[bridgeCallData1.toString()] = { subsidy: toNumber(50000), criteria: toNumber(1) };
-    subsidies[bridgeCallData2.toString()] = { subsidy: toNumber(150000), criteria: toNumber(2) };
+    subsidies[bridgeCallData1.toString()] = { subsidy: toNumber(50000), criteria: toBigInt(1n) };
+    subsidies[bridgeCallData2.toString()] = { subsidy: toNumber(150000), criteria: toBigInt(2n) };
     mockContract.getBridge.mockClear();
     mockContract.getAccumulatedSubsidyAmount.mockClear();
   });
@@ -80,12 +86,12 @@ describe('bridge_data_provider', () => {
     const subsidy1 = await bridgeDataProvider.getBridgeSubsidy(bridgeCallData1.toBigInt());
     expect(subsidy1).toMatchObject({
       subsidy: 50000,
-      criteria: 1,
+      criteria: 1n,
     });
     const subsidy2 = await bridgeDataProvider.getBridgeSubsidy(bridgeCallData2.toBigInt());
     expect(subsidy2).toMatchObject({
       subsidy: 150000,
-      criteria: 2,
+      criteria: 2n,
     });
   });
 
@@ -96,7 +102,7 @@ describe('bridge_data_provider', () => {
       const subsidy1 = await bridgeDataProvider.getBridgeSubsidy(bridgeCallData1.toBigInt());
       expect(subsidy1).toMatchObject({
         subsidy: 50000,
-        criteria: 1,
+        criteria: 1n,
       });
     }
     // should have only called the contract once
@@ -105,7 +111,7 @@ describe('bridge_data_provider', () => {
       const subsidy2 = await bridgeDataProvider.getBridgeSubsidy(bridgeCallData2.toBigInt());
       expect(subsidy2).toMatchObject({
         subsidy: 150000,
-        criteria: 2,
+        criteria: 2n,
       });
     }
     // should have only called the contract once more
@@ -117,28 +123,28 @@ describe('bridge_data_provider', () => {
 
     expect(await bridgeDataProvider.getBridgeSubsidy(bridgeCallData1.toBigInt())).toMatchObject({
       subsidy: 50000,
-      criteria: 1,
+      criteria: 1n,
     });
     expect(mockContract.getAccumulatedSubsidyAmount).toBeCalledTimes(1);
     expect(await bridgeDataProvider.getBridgeSubsidy(bridgeCallData2.toBigInt())).toMatchObject({
       subsidy: 150000,
-      criteria: 2,
+      criteria: 2n,
     });
     expect(mockContract.getAccumulatedSubsidyAmount).toBeCalledTimes(2);
 
     // set new subsidy values
-    subsidies[bridgeCallData1.toString()] = { subsidy: toNumber(340000), criteria: toNumber(1) };
-    subsidies[bridgeCallData2.toString()] = { subsidy: toNumber(268000), criteria: toNumber(2) };
+    subsidies[bridgeCallData1.toString()] = { subsidy: toNumber(340000), criteria: toBigInt(1n) };
+    subsidies[bridgeCallData2.toString()] = { subsidy: toNumber(268000), criteria: toBigInt(2n) };
 
     // values are still cached from previously
     expect(await bridgeDataProvider.getBridgeSubsidy(bridgeCallData1.toBigInt())).toMatchObject({
       subsidy: 50000,
-      criteria: 1,
+      criteria: 1n,
     });
     expect(mockContract.getAccumulatedSubsidyAmount).toBeCalledTimes(2);
     expect(await bridgeDataProvider.getBridgeSubsidy(bridgeCallData2.toBigInt())).toMatchObject({
       subsidy: 150000,
-      criteria: 2,
+      criteria: 2n,
     });
     expect(mockContract.getAccumulatedSubsidyAmount).toBeCalledTimes(2);
 
@@ -148,12 +154,12 @@ describe('bridge_data_provider', () => {
     // new values should be requested from the contract
     expect(await bridgeDataProvider.getBridgeSubsidy(bridgeCallData1.toBigInt())).toMatchObject({
       subsidy: 340000,
-      criteria: 1,
+      criteria: 1n,
     });
     expect(mockContract.getAccumulatedSubsidyAmount).toBeCalledTimes(3);
     expect(await bridgeDataProvider.getBridgeSubsidy(bridgeCallData2.toBigInt())).toMatchObject({
       subsidy: 268000,
-      criteria: 2,
+      criteria: 2n,
     });
     expect(mockContract.getAccumulatedSubsidyAmount).toBeCalledTimes(4);
   });

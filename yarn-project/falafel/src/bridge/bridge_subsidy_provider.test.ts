@@ -39,10 +39,10 @@ const bridgeCallDatas = [
 ];
 
 const bridgeSubsidyMappings = new Map<string, BridgeSubsidy>([
-  [bridgeCallDatas[0].toString(), { addressId: 1, criteria: 5, subsidy: 50000 }],
-  [bridgeCallDatas[1].toString(), { addressId: 1, criteria: 6, subsidy: 175000 }],
-  [bridgeCallDatas[2].toString(), { addressId: 2, criteria: 6, subsidy: 50000 }],
-  [bridgeCallDatas[3].toString(), { addressId: 2, criteria: 6, subsidy: 50000 }],
+  [bridgeCallDatas[0].toString(), { addressId: 1, criteria: 5n, subsidy: 50000 }],
+  [bridgeCallDatas[1].toString(), { addressId: 1, criteria: 6n, subsidy: 175000 }],
+  [bridgeCallDatas[2].toString(), { addressId: 2, criteria: 6n, subsidy: 50000 }],
+  [bridgeCallDatas[3].toString(), { addressId: 2, criteria: 6n, subsidy: 50000 }],
 ]);
 
 type Mockify<T> = {

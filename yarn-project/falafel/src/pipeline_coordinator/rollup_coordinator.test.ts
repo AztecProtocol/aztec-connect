@@ -122,7 +122,7 @@ const generateValidBridgeCallData = (bridgeConfig: BridgeConfig) => {
   );
 };
 
-const generateBridgeSubsidy = (subsidyGas: number, bridgeCallData: bigint, criteria: number) => {
+const generateBridgeSubsidy = (subsidyGas: number, bridgeCallData: bigint, criteria: bigint) => {
   const fullCallData = BridgeCallData.fromBigInt(bridgeCallData);
   return { subsidy: subsidyGas, criteria, addressId: fullCallData.bridgeAddressId } as BridgeSubsidy;
 };
@@ -328,7 +328,7 @@ describe('rollup_coordinator', () => {
       getBridgeDescription: jest.fn().mockReturnValue(undefined),
       getBridgeSubsidy: jest
         .fn()
-        .mockImplementation(() => Promise.resolve({ subsidy: 0, addressId: 1, criteria: 1 } as BridgeSubsidy)),
+        .mockImplementation(() => Promise.resolve({ subsidy: 0, addressId: 1, criteria: 1n } as BridgeSubsidy)),
     } as any;
 
     metrics = {
@@ -658,7 +658,7 @@ describe('rollup_coordinator', () => {
       // then we get some more txs. Of course we still have the defis from before
       // the defis by themselves don't cover the cost of the bridge, but we will set the subsidy so that the additional cost is covered
       bridgeResolver.getBridgeSubsidy.mockImplementationOnce(() =>
-        Promise.resolve(generateBridgeSubsidy(getSingleBridgeCost(bridgeCallData), bridgeCallData, 1)),
+        Promise.resolve(generateBridgeSubsidy(getSingleBridgeCost(bridgeCallData), bridgeCallData, 1n)),
       );
       pendingTxs = [
         mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
@@ -688,10 +688,10 @@ describe('rollup_coordinator', () => {
       // the defis by themselves don't cover the cost of the bridge, but we will set the subsidy so that the additional cost is covered
       // this will be called for each bridge call data value
       bridgeResolver.getBridgeSubsidy.mockImplementationOnce((bridgeCallData: bigint) =>
-        Promise.resolve(generateBridgeSubsidy(getSingleBridgeCost(bridgeCallData), bridgeCallData, 1)),
+        Promise.resolve(generateBridgeSubsidy(getSingleBridgeCost(bridgeCallData), bridgeCallData, 1n)),
       );
       bridgeResolver.getBridgeSubsidy.mockImplementationOnce((bridgeCallData: bigint) =>
-        Promise.resolve(generateBridgeSubsidy(getSingleBridgeCost(bridgeCallData), bridgeCallData, 1)),
+        Promise.resolve(generateBridgeSubsidy(getSingleBridgeCost(bridgeCallData), bridgeCallData, 1n)),
       );
       const pendingTxs = [
         mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
@@ -735,13 +735,13 @@ describe('rollup_coordinator', () => {
       // the defis by themselves don't cover the cost of the bridge, but we will set the subsidy so that the additional cost is covered
       // this will be called for each bridge call data value
       bridgeResolver.getBridgeSubsidy.mockImplementationOnce((bridgeCallData: bigint) =>
-        Promise.resolve(generateBridgeSubsidy(getSingleBridgeCost(bridgeCallData), bridgeCallData, 1)),
+        Promise.resolve(generateBridgeSubsidy(getSingleBridgeCost(bridgeCallData), bridgeCallData, 1n)),
       );
       bridgeResolver.getBridgeSubsidy.mockImplementationOnce((bridgeCallData: bigint) =>
-        Promise.resolve(generateBridgeSubsidy(getSingleBridgeCost(bridgeCallData), bridgeCallData, 1)),
+        Promise.resolve(generateBridgeSubsidy(getSingleBridgeCost(bridgeCallData), bridgeCallData, 1n)),
       );
       bridgeResolver.getBridgeSubsidy.mockImplementationOnce((bridgeCallData: bigint) =>
-        Promise.resolve(generateBridgeSubsidy(getSingleBridgeCost(bridgeCallData), bridgeCallData, 1)),
+        Promise.resolve(generateBridgeSubsidy(getSingleBridgeCost(bridgeCallData), bridgeCallData, 1n)),
       );
 
       // we will create 2 sets of txs that are using bridge address id bridgeConfig[2].bridgeAddressId
@@ -1902,7 +1902,7 @@ describe('rollup_coordinator', () => {
 
       bridgeResolver.getBridgeSubsidy.mockImplementationOnce(() =>
         Promise.resolve(
-          generateBridgeSubsidy(getBridgeCost(bridgeCallDatas[2].toBigInt()), bridgeCallDatas[2].toBigInt(), 1),
+          generateBridgeSubsidy(getBridgeCost(bridgeCallDatas[2].toBigInt()), bridgeCallDatas[2].toBigInt(), 1n),
         ),
       );
 
@@ -1956,7 +1956,7 @@ describe('rollup_coordinator', () => {
       // subsidise the bridge so that it is in the rollup and we should publish it
       bridgeResolver.getBridgeSubsidy.mockImplementationOnce(() =>
         Promise.resolve(
-          generateBridgeSubsidy(getBridgeCost(bridgeCallDatas[1].toBigInt()), bridgeCallDatas[1].toBigInt(), 1),
+          generateBridgeSubsidy(getBridgeCost(bridgeCallDatas[1].toBigInt()), bridgeCallDatas[1].toBigInt(), 1n),
         ),
       );
 
@@ -2006,7 +2006,7 @@ describe('rollup_coordinator', () => {
       // set the bridge as subsidised
       bridgeResolver.getBridgeSubsidy.mockImplementationOnce(() =>
         Promise.resolve(
-          generateBridgeSubsidy(getBridgeCost(bridgeCallDatas[1].toBigInt()), bridgeCallDatas[1].toBigInt(), 1),
+          generateBridgeSubsidy(getBridgeCost(bridgeCallDatas[1].toBigInt()), bridgeCallDatas[1].toBigInt(), 1n),
         ),
       );
 
@@ -2043,12 +2043,12 @@ describe('rollup_coordinator', () => {
       // set the bridge to be subsidised for both calls
       bridgeResolver.getBridgeSubsidy.mockImplementationOnce(() =>
         Promise.resolve(
-          generateBridgeSubsidy(getBridgeCost(bridgeCallDatas[2].toBigInt()), bridgeCallDatas[2].toBigInt(), 1),
+          generateBridgeSubsidy(getBridgeCost(bridgeCallDatas[2].toBigInt()), bridgeCallDatas[2].toBigInt(), 1n),
         ),
       );
       bridgeResolver.getBridgeSubsidy.mockImplementationOnce(() =>
         Promise.resolve(
-          generateBridgeSubsidy(getBridgeCost(bridgeCallDatas[2].toBigInt()), bridgeCallDatas[2].toBigInt(), 1),
+          generateBridgeSubsidy(getBridgeCost(bridgeCallDatas[2].toBigInt()), bridgeCallDatas[2].toBigInt(), 1n),
         ),
       );
 
@@ -2091,7 +2091,7 @@ describe('rollup_coordinator', () => {
           generateBridgeSubsidy(
             (bridgeConfigs[2].numTxs - 1) * getSingleBridgeCost(bridgeCallDatas[2].toBigInt()),
             bridgeCallDatas[2].toBigInt(),
-            1,
+            1n,
           ),
         );
       });
@@ -2100,7 +2100,7 @@ describe('rollup_coordinator', () => {
           generateBridgeSubsidy(
             (bridgeConfigs[0].numTxs - 1) * getSingleBridgeCost(bridgeCallDatas[0].toBigInt()),
             bridgeCallDatas[0].toBigInt(),
-            1,
+            1n,
           ),
         );
       });
@@ -2149,7 +2149,7 @@ describe('rollup_coordinator', () => {
           generateBridgeSubsidy(
             (bridgeConfigs[2].numTxs - 1) * getSingleBridgeCost(bridgeCallDatas[2].toBigInt()),
             bridgeCallDatas[2].toBigInt(),
-            1,
+            1n,
           ),
         );
       });
@@ -2167,7 +2167,7 @@ describe('rollup_coordinator', () => {
           generateBridgeSubsidy(
             (bridgeConfigs[2].numTxs - 1) * getSingleBridgeCost(alternativeCallData.toBigInt()),
             alternativeCallData.toBigInt(),
-            1,
+            1n,
           ),
         );
       });
@@ -2215,7 +2215,7 @@ describe('rollup_coordinator', () => {
           generateBridgeSubsidy(
             (bridgeConfigs[2].numTxs - 1) * getSingleBridgeCost(bridgeCallDatas[2].toBigInt()),
             bridgeCallDatas[2].toBigInt(),
-            1,
+            1n,
           ),
         );
       });
@@ -2233,7 +2233,7 @@ describe('rollup_coordinator', () => {
           generateBridgeSubsidy(
             (bridgeConfigs[2].numTxs - 1) * getSingleBridgeCost(alternativeCallData.toBigInt()),
             alternativeCallData.toBigInt(),
-            2,
+            2n,
           ),
         );
       });
@@ -2326,11 +2326,11 @@ describe('rollup_coordinator', () => {
       const bridge1Subsidy = (bridgeConfigs[1].numTxs - 1) * gasPerTx;
       // first call is for bridge [2], 0 subsidy
       bridgeResolver.getBridgeSubsidy.mockImplementationOnce(() => {
-        return Promise.resolve(generateBridgeSubsidy(0, bridgeCallDatas[2].toBigInt(), 1));
+        return Promise.resolve(generateBridgeSubsidy(0, bridgeCallDatas[2].toBigInt(), 1n));
       });
       // second call
       bridgeResolver.getBridgeSubsidy.mockImplementationOnce(() => {
-        return Promise.resolve(generateBridgeSubsidy(bridge1Subsidy, bridgeCallDatas[1].toBigInt(), 1));
+        return Promise.resolve(generateBridgeSubsidy(bridge1Subsidy, bridgeCallDatas[1].toBigInt(), 1n));
       });
       const pendingTxs = [
         mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0, creationTime: new Date('2021-06-20T11:43:00+01:00') }),
@@ -3363,7 +3363,7 @@ describe('rollup_coordinator', () => {
     it('should ignore defi tx if it breaches gas limit even with timeout', async () => {
       const bridgeCallData = bridgeCallDatas[0].toBigInt();
       bridgeResolver.getBridgeSubsidy.mockImplementationOnce((bridgeCallData: bigint) =>
-        Promise.resolve(generateBridgeSubsidy(getBridgeCost(bridgeCallData), bridgeCallData, 1)),
+        Promise.resolve(generateBridgeSubsidy(getBridgeCost(bridgeCallData), bridgeCallData, 1n)),
       );
       const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeCallData);
       // set the gas value for deposits so we can only fit 3 in a rollup
@@ -3451,7 +3451,7 @@ describe('rollup_coordinator', () => {
     it('should ignore defi tx if it breaches call data limit even with subsidy', async () => {
       const bridgeCallData = bridgeCallDatas[0].toBigInt();
       bridgeResolver.getBridgeSubsidy.mockImplementationOnce((bridgeCallData: bigint) =>
-        Promise.resolve(generateBridgeSubsidy(getBridgeCost(bridgeCallData), bridgeCallData, 1)),
+        Promise.resolve(generateBridgeSubsidy(getBridgeCost(bridgeCallData), bridgeCallData, 1n)),
       );
       const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeCallData);
       // set the call data for deposits so we can only fit 3 in a rollup
