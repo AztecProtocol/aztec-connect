@@ -1,4 +1,4 @@
-import { getRollupProviderStatus } from '@aztec/sdk';
+import { SDK_VERSION, getRollupProviderStatus } from '@aztec/sdk';
 import { KNOWN_MAINNET_ASSET_ADDRESS_STRS as S } from './alt-model/known_assets/known_asset_addresses.js';
 import { toBaseUnits } from './app/units.js';
 
@@ -166,5 +166,6 @@ export async function getEnvironment() {
   return {
     config,
     initialRollupProviderStatus,
+    staleFrontend: initialRollupProviderStatus.version !== SDK_VERSION,
   };
 }

@@ -37,7 +37,7 @@ export function createSdkObs(config: Config): SdkObs {
         if (
           window.confirm(
             'Version mismatch between zk.money and rollup server.\n\n' +
-              'Press OK to refresh the page (or Ctrl+Shift+R)!\n\n' +
+              'Press OK to refresh the page!\n\n' +
               '(If this issue persists it may be a problem with your ISP)',
           )
         ) {

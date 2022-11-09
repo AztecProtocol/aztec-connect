@@ -38,7 +38,7 @@ export interface ConfVars extends StartupConfig {
 }
 
 const defaultStartupConfig: StartupConfig = {
-  version: FALAFEL_VERSION,
+  version: '',
   port: 8081,
   rollupContractAddress: EthAddress.ZERO,
   permitHelperContractAddress: EthAddress.ZERO,
@@ -106,7 +106,7 @@ function getStartupConfigEnvVars(): Partial<StartupConfig> {
   } = process.env;
 
   const envVars: Partial<StartupConfig> = {
-    version: FALAFEL_VERSION_OVERRIDE,
+    version: FALAFEL_VERSION_OVERRIDE || FALAFEL_VERSION, // if no override, always use FALAFEL_VERSION
     port: PORT ? +PORT : undefined,
     dbUrl: DB_URL,
     rollupContractAddress: ROLLUP_CONTRACT_ADDRESS ? EthAddress.fromString(ROLLUP_CONTRACT_ADDRESS) : undefined,
