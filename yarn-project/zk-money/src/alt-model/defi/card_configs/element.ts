@@ -14,7 +14,7 @@ import { createDefiPublishStatsCacheArgsBuilder } from '../defi_publish_stats_ut
 export const ELEMENT_CARD: CreateRecipeArgs = {
   id: 'element-finance.DAI-to-DAI',
   isAsync: true,
-  selectBlockchainBridge: ({ bridges }) => bridges.find(x => x.id === 1),
+  selectBlockchainBridge: ({ bridges }) => bridges.find(x => x.id === 9),
   entryInputAssetAddressA: KMAA.DAI,
   entryOutputAssetAddressA: KMAA.DAI,
   createAdaptor: createElementAdaptor,
