@@ -6,7 +6,7 @@ import style from './bridge_key_stats.module.scss';
 
 const cx = bindStyle(style);
 
-function renderItem(label: string, value: React.ReactNode) {
+function renderItem(label: string | undefined, value: React.ReactNode) {
   return (
     <div className={style.item}>
       <div className={style.label}>{label}</div>
@@ -16,8 +16,9 @@ function renderItem(label: string, value: React.ReactNode) {
 }
 
 function KeyStatItem(props: { stat: KeyStatConfig; recipe: DefiRecipe }) {
-  const { label, skeletonSizingContent, useFormattedValue } = props.stat;
+  const { useLabel, skeletonSizingContent, useFormattedValue } = props.stat;
   const value = useFormattedValue(props.recipe);
+  const label = useLabel(props.recipe);
   return renderItem(label, value !== undefined ? value : <SkeletonRect sizingContent={skeletonSizingContent} />);
 }
 

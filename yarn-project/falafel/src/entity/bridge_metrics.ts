@@ -71,4 +71,12 @@ export class BridgeMetricsDao {
 
   @Column({ default: true })
   public publishedByProvider!: boolean;
+
+  // subsidy allocated in USD for bridge in rollup
+  @Column('float', { nullable: true })
+  public usdSubsidy?: number;
+
+  // total subsidy allocated in USD for bridge
+  @Column('float', { nullable: true })
+  public totalUsdSubsidy?: number;
 }

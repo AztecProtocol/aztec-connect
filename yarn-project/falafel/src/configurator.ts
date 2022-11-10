@@ -1,8 +1,6 @@
 import { dirname } from 'path';
 import {
   RuntimeConfig,
-  bridgeConfigFromJson,
-  bridgeConfigToJson,
   privacySetsFromJson,
   privacySetsToJson,
   getDefaultPrivacySets,
@@ -19,6 +17,7 @@ interface StartupConfig {
   rollupContractAddress: EthAddress;
   permitHelperContractAddress: EthAddress;
   priceFeedContractAddresses: EthAddress[];
+  bridgeDataProviderAddress: EthAddress;
   ethereumHost: string;
   ethereumPollInterval?: number;
   proofGeneratorMode: string;
@@ -39,11 +38,12 @@ export interface ConfVars extends StartupConfig {
 }
 
 const defaultStartupConfig: StartupConfig = {
-  version: FALAFEL_VERSION,
+  version: '',
   port: 8081,
   rollupContractAddress: EthAddress.ZERO,
   permitHelperContractAddress: EthAddress.ZERO,
   priceFeedContractAddresses: [],
+  bridgeDataProviderAddress: EthAddress.ZERO,
   ethereumHost: 'http://localhost:8546',
   ethereumPollInterval: 10000,
   proofGeneratorMode: 'normal',
@@ -88,6 +88,7 @@ function getStartupConfigEnvVars(): Partial<StartupConfig> {
     ROLLUP_CONTRACT_ADDRESS,
     PERMIT_HELPER_CONTRACT_ADDRESS,
     PRICE_FEED_CONTRACT_ADDRESSES,
+    BRIDGE_DATA_PROVIDER_CONTRACT_ADDRESS,
     ETHEREUM_HOST,
     ETHEREUM_POLL_INTERVAL,
     PROOF_GENERATOR_MODE,
@@ -105,7 +106,7 @@ function getStartupConfigEnvVars(): Partial<StartupConfig> {
   } = process.env;
 
   const envVars: Partial<StartupConfig> = {
-    version: FALAFEL_VERSION_OVERRIDE,
+    version: FALAFEL_VERSION_OVERRIDE || FALAFEL_VERSION, // if no override, always use FALAFEL_VERSION
     port: PORT ? +PORT : undefined,
     dbUrl: DB_URL,
     rollupContractAddress: ROLLUP_CONTRACT_ADDRESS ? EthAddress.fromString(ROLLUP_CONTRACT_ADDRESS) : undefined,
@@ -114,6 +115,9 @@ function getStartupConfigEnvVars(): Partial<StartupConfig> {
       : undefined,
     priceFeedContractAddresses: PRICE_FEED_CONTRACT_ADDRESSES
       ? PRICE_FEED_CONTRACT_ADDRESSES.split(',').map(EthAddress.fromString)
+      : undefined,
+    bridgeDataProviderAddress: BRIDGE_DATA_PROVIDER_CONTRACT_ADDRESS
+      ? EthAddress.fromString(BRIDGE_DATA_PROVIDER_CONTRACT_ADDRESS)
       : undefined,
     ethereumHost: ETHEREUM_HOST,
     ethereumPollInterval: ETHEREUM_POLL_INTERVAL ? +ETHEREUM_POLL_INTERVAL : undefined,
@@ -254,6 +258,9 @@ export class Configurator {
       permitHelperContractAddress: conf.permitHelperContractAddress
         ? EthAddress.fromString(conf.permitHelperContractAddress)
         : undefined,
+      bridgeDataProviderAddress: conf.bridgeDataProviderAddress
+        ? EthAddress.fromString(conf.bridgeDataProviderAddress)
+        : undefined,
       priceFeedContractAddresses: conf.priceFeedContractAddresses.map(EthAddress.fromString),
       privateKey: Buffer.from(conf.privateKey, 'hex'),
       runtimeConfig: {
@@ -261,7 +268,6 @@ export class Configurator {
         maxFeeGasPrice: BigInt(conf.runtimeConfig.maxFeeGasPrice),
         maxFeePerGas: BigInt(conf.runtimeConfig.maxFeePerGas),
         maxPriorityFeePerGas: BigInt(conf.runtimeConfig.maxPriorityFeePerGas),
-        bridgeConfigs: conf.runtimeConfig.bridgeConfigs.map(bridgeConfigFromJson),
         privacySets: privacySetsFromJson(conf.runtimeConfig.privacySets),
         rollupBeneficiary: conf.runtimeConfig.rollupBeneficiary
           ? EthAddress.fromString(conf.runtimeConfig.rollupBeneficiary)
@@ -284,6 +290,7 @@ export class Configurator {
       permitHelperContractAddress: conf.permitHelperContractAddress
         ? conf.permitHelperContractAddress.toString()
         : undefined,
+      bridgeDataProviderAddress: conf.bridgeDataProviderAddress ? conf.bridgeDataProviderAddress.toString() : undefined,
       priceFeedContractAddresses: conf.priceFeedContractAddresses.map(a => a.toString()),
       privateKey: conf.privateKey.toString('hex'),
       runtimeConfig: {
@@ -292,7 +299,6 @@ export class Configurator {
         maxFeeGasPrice: conf.runtimeConfig.maxFeeGasPrice.toString(),
         maxFeePerGas: conf.runtimeConfig.maxFeePerGas.toString(),
         maxPriorityFeePerGas: conf.runtimeConfig.maxPriorityFeePerGas.toString(),
-        bridgeConfigs: conf.runtimeConfig.bridgeConfigs.map(bridgeConfigToJson),
         privacySets: privacySetsToJson(conf.runtimeConfig.privacySets),
         rollupBeneficiary: conf.runtimeConfig.rollupBeneficiary
           ? conf.runtimeConfig.rollupBeneficiary.toString()

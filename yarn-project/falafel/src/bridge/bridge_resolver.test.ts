@@ -1,40 +1,124 @@
 import { Blockchain } from '@aztec/barretenberg/blockchain';
+import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { BridgeConfig } from '@aztec/barretenberg/rollup_provider';
 import { BridgeResolver } from './bridge_resolver.js';
 import { jest } from '@jest/globals';
 
 const bridgeConfigs: BridgeConfig[] = [
   {
-    bridgeCallData: 1n,
+    bridgeAddressId: 1,
     numTxs: 5,
     gas: 500000,
-    rollupFrequency: 2,
+    permittedAssets: [0, 1],
   },
   {
-    bridgeCallData: 2n,
+    bridgeAddressId: 2,
     numTxs: 10,
     gas: 0,
-    rollupFrequency: 4,
+    permittedAssets: [1, 2],
   },
   {
-    bridgeCallData: 3n,
-    numTxs: 40,
-    gas: 500000,
-    rollupFrequency: 2,
-  },
-  {
-    bridgeCallData: 4n,
-    numTxs: 40,
-    gas: 250000,
-    rollupFrequency: 4,
-  },
-  {
-    bridgeCallData: 5n,
-    numTxs: 3,
-    gas: 100000,
-    rollupFrequency: 4,
+    bridgeAddressId: 3,
+    numTxs: 10,
+    gas: undefined,
+    permittedAssets: [1, 2],
   },
 ];
+
+const minVirtualAssetId = 1 << 29;
+
+const generateSampleBridgeCallDatas = () => {
+  return [
+    {
+      callData: new BridgeCallData(
+        bridgeConfigs[0].bridgeAddressId,
+        bridgeConfigs[0].permittedAssets[0],
+        bridgeConfigs[0].permittedAssets[1],
+        undefined,
+        undefined,
+        1,
+      ).toBigInt(),
+      index: 0,
+    },
+    {
+      callData: new BridgeCallData(
+        bridgeConfigs[1].bridgeAddressId,
+        bridgeConfigs[1].permittedAssets[0],
+        bridgeConfigs[1].permittedAssets[1],
+        undefined,
+        undefined,
+        1,
+      ).toBigInt(),
+      index: 1,
+    },
+    {
+      callData: new BridgeCallData(
+        bridgeConfigs[0].bridgeAddressId,
+        bridgeConfigs[0].permittedAssets[1],
+        bridgeConfigs[0].permittedAssets[0],
+        undefined,
+        undefined,
+        1,
+      ).toBigInt(),
+      index: 0,
+    },
+    {
+      callData: new BridgeCallData(
+        bridgeConfigs[1].bridgeAddressId,
+        bridgeConfigs[1].permittedAssets[1],
+        bridgeConfigs[1].permittedAssets[0],
+        undefined,
+        undefined,
+        1,
+      ).toBigInt(),
+      index: 1,
+    },
+    {
+      callData: new BridgeCallData(
+        bridgeConfigs[0].bridgeAddressId,
+        bridgeConfigs[0].permittedAssets[1],
+        bridgeConfigs[0].permittedAssets[1],
+        undefined,
+        undefined,
+        1,
+      ).toBigInt(),
+      index: 0,
+    },
+    {
+      callData: new BridgeCallData(
+        bridgeConfigs[1].bridgeAddressId,
+        bridgeConfigs[1].permittedAssets[0],
+        bridgeConfigs[1].permittedAssets[0],
+        undefined,
+        undefined,
+        1,
+      ).toBigInt(),
+      index: 1,
+    },
+    {
+      callData: new BridgeCallData(
+        bridgeConfigs[0].bridgeAddressId,
+        bridgeConfigs[0].permittedAssets[0],
+        bridgeConfigs[0].permittedAssets[1],
+        bridgeConfigs[0].permittedAssets[0],
+        bridgeConfigs[0].permittedAssets[1],
+        1,
+      ).toBigInt(),
+      index: 0,
+    },
+    {
+      callData: new BridgeCallData(
+        bridgeConfigs[1].bridgeAddressId,
+        bridgeConfigs[1].permittedAssets[0],
+        bridgeConfigs[1].permittedAssets[1],
+        bridgeConfigs[1].permittedAssets[0],
+        bridgeConfigs[1].permittedAssets[1],
+        1,
+      ).toBigInt(),
+      index: 1,
+    },
+  ];
+};
 
 type Mockify<T> = {
   [P in keyof T]: ReturnType<typeof jest.fn>;
@@ -45,25 +129,173 @@ const DEFAULT_BRIDGE_GAS_LIMIT = 200000;
 describe('Bridge Resolver', () => {
   let blockchain: Mockify<Blockchain>;
   let bridgeResolver: BridgeResolver;
-  const defaultDeFiBatchSize = 10;
-  const thirdPartyBridgeCallData = 123n;
 
   beforeEach(() => {
     jest.spyOn(console, 'log').mockImplementation(() => {});
 
     blockchain = {
-      getBridgeGas: jest.fn().mockReturnValue(DEFAULT_BRIDGE_GAS_LIMIT),
+      getBridgeGas: jest.fn((bridgeCallData: bigint) => {
+        const fullCallData = BridgeCallData.fromBigInt(bridgeCallData);
+        if (bridgeConfigs.find(x => x.bridgeAddressId === fullCallData.bridgeAddressId)) {
+          return DEFAULT_BRIDGE_GAS_LIMIT;
+        }
+        throw new Error(`Failed to retrieve bridge cost for bridge ${bridgeCallData.toString()}`);
+      }),
       getBlockchainStatus: jest.fn().mockReturnValue({
         allowThirdPartyContracts: false,
       }),
     } as any;
 
-    bridgeResolver = new BridgeResolver(bridgeConfigs, blockchain as any, defaultDeFiBatchSize);
+    bridgeResolver = new BridgeResolver(bridgeConfigs, blockchain as any);
   });
 
   it('returns correct bridge config', () => {
-    expect(bridgeResolver.getBridgeConfig(bridgeConfigs[0].bridgeCallData)).toEqual(bridgeConfigs[0]);
-    expect(bridgeResolver.getBridgeConfig(bridgeConfigs[1].bridgeCallData)).toEqual(bridgeConfigs[1]);
+    const callDatas = generateSampleBridgeCallDatas();
+    for (const cd of callDatas) {
+      expect(bridgeResolver.getBridgeConfig(cd.callData)).toEqual(bridgeConfigs[cd.index]);
+    }
+  });
+
+  it('should return undefined if bridge config not found', () => {
+    expect(
+      bridgeResolver.getBridgeConfig(
+        new BridgeCallData(
+          5, // invalid bridge address id
+          0,
+          0,
+          0,
+          0,
+          1,
+        ).toBigInt(),
+      ),
+    ).toEqual(undefined);
+
+    expect(
+      bridgeResolver.getBridgeConfig(
+        new BridgeCallData(
+          1,
+          10, // invalid asset id
+          0,
+          0,
+          0,
+          1,
+        ).toBigInt(),
+      ),
+    ).toEqual(undefined);
+
+    expect(
+      bridgeResolver.getBridgeConfig(
+        new BridgeCallData(
+          1,
+          0,
+          10, // invalid asset id
+          0,
+          0,
+          1,
+        ).toBigInt(),
+      ),
+    ).toEqual(undefined);
+
+    expect(
+      bridgeResolver.getBridgeConfig(
+        new BridgeCallData(
+          1,
+          0,
+          0,
+          10, // invalid asset id
+          0,
+          1,
+        ).toBigInt(),
+      ),
+    ).toEqual(undefined);
+
+    expect(
+      bridgeResolver.getBridgeConfig(
+        new BridgeCallData(
+          1,
+          0,
+          0,
+          0,
+          10, // invalid asset id
+          1,
+        ).toBigInt(),
+      ),
+    ).toEqual(undefined);
+  });
+
+  it('ignores aux data when validating bridge config', () => {
+    expect(bridgeResolver.getBridgeConfig(new BridgeCallData(1, 0, 0, 0, 0, 98765).toBigInt())).toEqual(
+      bridgeConfigs[0],
+    );
+  });
+
+  it('ignores virtual assets when validating bridge config', () => {
+    expect(
+      bridgeResolver.getBridgeConfig(
+        new BridgeCallData(
+          1,
+          1 + minVirtualAssetId, // virtual asset id
+          0,
+          0,
+          0,
+          1,
+        ).toBigInt(),
+      ),
+    ).toEqual(bridgeConfigs[0]);
+
+    expect(
+      bridgeResolver.getBridgeConfig(
+        new BridgeCallData(
+          1,
+          0,
+          2 + minVirtualAssetId, // virtual asset id
+          0,
+          0,
+          1,
+        ).toBigInt(),
+      ),
+    ).toEqual(bridgeConfigs[0]);
+
+    expect(
+      bridgeResolver.getBridgeConfig(
+        new BridgeCallData(
+          1,
+          0,
+          0,
+          3 + minVirtualAssetId, // virtual asset id
+          0,
+          1,
+        ).toBigInt(),
+      ),
+    ).toEqual(bridgeConfigs[0]);
+
+    expect(
+      bridgeResolver.getBridgeConfig(
+        new BridgeCallData(
+          1,
+          0,
+          0,
+          0,
+          4 + minVirtualAssetId, // virtual asset id
+          1,
+        ).toBigInt(),
+      ),
+    ).toEqual(bridgeConfigs[0]);
+  });
+
+  it('validates non-virtual assets when virtual assets are present', () => {
+    expect(
+      bridgeResolver.getBridgeConfig(
+        new BridgeCallData(
+          1,
+          10, // invalid asset id
+          0,
+          0,
+          1 + minVirtualAssetId, // virtual asset id
+          1,
+        ).toBigInt(),
+      ),
+    ).toEqual(undefined);
   });
 
   it('returns all bridge configs', () => {
@@ -71,33 +303,87 @@ describe('Bridge Resolver', () => {
   });
 
   it('returns correct full bridge gas', () => {
-    expect(bridgeResolver.getFullBridgeGas(bridgeConfigs[0].bridgeCallData)).toEqual(bridgeConfigs[0].gas);
-    expect(bridgeResolver.getFullBridgeGas(bridgeConfigs[1].bridgeCallData)).toEqual(bridgeConfigs[1].gas);
-    expect(bridgeResolver.getFullBridgeGas(thirdPartyBridgeCallData)).toEqual(DEFAULT_BRIDGE_GAS_LIMIT);
+    const callDatas = generateSampleBridgeCallDatas();
+    for (const cd of callDatas) {
+      expect(bridgeResolver.getFullBridgeGas(cd.callData)).toEqual(bridgeConfigs[cd.index].gas);
+    }
+  });
+
+  it('return full bridge gas from contract if not overridden in config', () => {
+    const bd = new BridgeCallData(
+      3, // address of bridge that does not override gas value
+      1,
+      2,
+      1,
+      2,
+      1,
+    ).toBigInt();
+    expect(bridgeResolver.getFullBridgeGas(bd)).toEqual(DEFAULT_BRIDGE_GAS_LIMIT);
+  });
+
+  it('ignores virtual assets to return correct full bridge gas', () => {
+    expect(
+      bridgeResolver.getFullBridgeGas(
+        new BridgeCallData(
+          1,
+          0,
+          0,
+          0,
+          1 + minVirtualAssetId, // virtual asset id
+          1,
+        ).toBigInt(),
+      ),
+    ).toEqual(bridgeConfigs[0].gas);
+  });
+
+  it('should throw if requesting full bridge gas for invalid bridge', () => {
+    const invalidAddress = new BridgeCallData(
+      5, // invalid bridge address id
+      0,
+      0,
+      0,
+      0,
+      1,
+    );
+    expect(() => {
+      bridgeResolver.getFullBridgeGas(invalidAddress.toBigInt());
+    }).toThrow(`Failed to retrieve bridge cost for bridge ${invalidAddress.toBigInt().toString()}`);
+    const invalidAsset = new BridgeCallData(1, 10, 0, 0, 0, 1);
+    expect(() => {
+      bridgeResolver.getFullBridgeGas(invalidAsset.toBigInt());
+    }).toThrow(`Failed to retrieve bridge cost for bridge ${invalidAsset.toBigInt().toString()}`);
   });
 
   it('returns correct single tx gas in the bridge config', () => {
-    for (const bridgeConfig of bridgeConfigs) {
-      expect(bridgeResolver.getMinBridgeTxGas(bridgeConfig.bridgeCallData)).toEqual(
-        Math.ceil(bridgeConfig.gas / bridgeConfig.numTxs),
+    const callDatas = generateSampleBridgeCallDatas();
+    for (const cd of callDatas) {
+      expect(bridgeResolver.getMinBridgeTxGas(cd.callData)).toEqual(
+        bridgeConfigs[cd.index].gas! / bridgeConfigs[cd.index].numTxs,
       );
     }
   });
 
-  it('returns correct single tx gas NOT in the bridge config and when the allowThirdPartyContracts flag is set', () => {
-    const unregisteredBridgeGas = 100000;
-    blockchain.getBridgeGas.mockReturnValueOnce(unregisteredBridgeGas);
-    blockchain.getBlockchainStatus.mockReturnValueOnce({ allowThirdPartyContracts: true });
-
-    expect(bridgeResolver.getMinBridgeTxGas(thirdPartyBridgeCallData)).toEqual(
-      unregisteredBridgeGas / defaultDeFiBatchSize,
-    );
+  it('should throw if requesting min tx gas for invalid bridge', () => {
+    expect(() => {
+      bridgeResolver.getMinBridgeTxGas(new BridgeCallData(5, 0, 0, 0, 0, 1).toBigInt());
+    }).toThrow('Cannot get gas. Unrecognised DeFi-bridge');
+    expect(() => {
+      bridgeResolver.getMinBridgeTxGas(new BridgeCallData(0, 10, 0, 0, 0, 1).toBigInt());
+    }).toThrow('Cannot get gas. Unrecognised DeFi-bridge');
   });
 
-  it('throws for a tx NOT in the bridge config and when the allowThirdPartyContracts flag is FALSE', () => {
-    blockchain.getBlockchainStatus.mockReturnValue({ allowThirdPartyContracts: false });
-    expect(() => bridgeResolver.getMinBridgeTxGas(BigInt(bridgeConfigs.length + 1))).toThrow(
-      'Cannot get gas. Unrecognised DeFi-bridge',
-    );
+  it('ignores virtual assets to return correct min bridge gas', () => {
+    expect(
+      bridgeResolver.getMinBridgeTxGas(
+        new BridgeCallData(
+          1,
+          0,
+          0,
+          0,
+          1 + minVirtualAssetId, // virtual asset id
+          1,
+        ).toBigInt(),
+      ),
+    ).toEqual(bridgeConfigs[0].gas! / bridgeConfigs[0].numTxs);
   });
 });

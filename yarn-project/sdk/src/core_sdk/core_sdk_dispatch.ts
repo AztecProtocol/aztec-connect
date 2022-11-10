@@ -1,4 +1,4 @@
-import { TxJson } from '@aztec/barretenberg/rollup_provider';
+import { BridgePublishQuery, BridgePublishQueryResult, TxJson } from '@aztec/barretenberg/rollup_provider';
 import { EventEmitter } from 'events';
 import { DispatchMsg } from '../core_sdk_flavours/transport.js';
 import { NoteJson } from '../note/index.js';
@@ -61,6 +61,10 @@ export class CoreSdkDispatch extends EventEmitter implements CoreSdkSerializedIn
 
   public async getDefiFees(bridgeCallData: string) {
     return await this.request('getDefiFees', [bridgeCallData]);
+  }
+
+  public async queryDefiPublishStats(query: BridgePublishQuery): Promise<BridgePublishQueryResult> {
+    return await this.request('queryDefiPublishStats', [query]);
   }
 
   public async getPendingDepositTxs() {

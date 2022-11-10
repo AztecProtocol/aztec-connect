@@ -19,6 +19,7 @@ export interface RedeployConfig {
   permitHelperContractAddress?: EthAddress;
   feeDistributorAddress?: EthAddress;
   faucetContractAddress?: EthAddress;
+  bridgeDataProviderContractAddress?: EthAddress;
 }
 
 const defaultStartupConfig: StartupConfig = {
@@ -37,6 +38,7 @@ const defaultRedeployConfig: RedeployConfig = {
   permitHelperContractAddress: EthAddress.ZERO,
   feeDistributorAddress: EthAddress.ZERO,
   faucetContractAddress: EthAddress.ZERO,
+  bridgeDataProviderContractAddress: EthAddress.ZERO,
 };
 
 function getStartupConfigEnvVars(): Partial<StartupConfig> {
@@ -131,6 +133,9 @@ export class Configurator {
         faucetContractAddress: conf.redeployConfig.faucetContractAddress
           ? EthAddress.fromString(conf.redeployConfig.faucetContractAddress)
           : EthAddress.ZERO,
+        bridgeDataProviderContractAddress: conf.redeployConfig.bridgeDataProviderContractAddress
+          ? EthAddress.fromString(conf.redeployConfig.bridgeDataProviderContractAddress)
+          : EthAddress.ZERO,
         priceFeedContractAddresses: conf.redeployConfig.priceFeedContractAddresses
           ? conf.redeployConfig.priceFeedContractAddresses.map(EthAddress.fromString)
           : [],
@@ -151,6 +156,7 @@ export class Configurator {
         permitHelperContractAddress: conf.redeployConfig.permitHelperContractAddress?.toString(),
         feeDistributorAddress: conf.redeployConfig.feeDistributorAddress?.toString(),
         faucetContractAddress: conf.redeployConfig.faucetContractAddress?.toString(),
+        bridgeDataProviderContractAddress: conf.redeployConfig?.bridgeDataProviderContractAddress?.toString(),
         priceFeedContractAddresses: conf.redeployConfig.priceFeedContractAddresses
           ? conf.redeployConfig.priceFeedContractAddresses.map(x => x.toString())
           : undefined,

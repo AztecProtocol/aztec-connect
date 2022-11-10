@@ -1,5 +1,3 @@
-import { BridgeResolver } from '../bridge/index.js';
-
 export interface RollupTimeout {
   rollupNumber: number;
   timeout: Date;
@@ -7,10 +5,9 @@ export interface RollupTimeout {
 
 export interface RollupTimeouts {
   baseTimeout: RollupTimeout | undefined;
-  bridgeTimeouts: Map<bigint, RollupTimeout>;
 }
 
-// this class accepts a rollup publish interval and the set of bridge configurations
+// this class accepts a rollup publish interval
 // it then provides an interface to query the 'last' and 'next' set of publish timeouts
 // the 'last' timeout lets us know when txs need to be published immediately
 // the 'next' timeout lets users know the latest point at which their txs will go on chain
@@ -18,44 +15,16 @@ export interface RollupTimeouts {
 export class PublishTimeManager {
   private epoch = new Date(0); // Unix Epoch
 
-  constructor(private readonly rollupTimeoutDurationSecs: number, private readonly bridgeResolver: BridgeResolver) {}
-
-  private calculateBridgeTimeouts(baseTimeout: RollupTimeout, last: boolean) {
-    const bridgeTimeouts = new Map<bigint, RollupTimeout>();
-    for (const bc of this.bridgeResolver.getBridgeConfigs()) {
-      if (bc.rollupFrequency < 1) {
-        continue;
-      }
-      let rollupOffset = -(baseTimeout.rollupNumber % bc.rollupFrequency);
-      if (!last) {
-        rollupOffset += bc.rollupFrequency;
-      }
-      let rollupNum = Math.trunc(baseTimeout.rollupNumber / bc.rollupFrequency);
-      if (!last) {
-        rollupNum++;
-      }
-      const bridgeTimeout = new Date(
-        baseTimeout.timeout.getTime() + rollupOffset * this.rollupTimeoutDurationSecs * 1000,
-      );
-      const bt: RollupTimeout = {
-        timeout: bridgeTimeout,
-        rollupNumber: rollupNum,
-      };
-      bridgeTimeouts.set(bc.bridgeCallData, bt);
-    }
-    return bridgeTimeouts;
-  }
+  constructor(private readonly rollupTimeoutDurationSecs: number) {}
 
   calculateLastTimeouts() {
     if (this.rollupTimeoutDurationSecs < 1) {
       return this.createEmptyTimeouts();
     }
     const baseTimeout = this.calculateBaseTimeoutAndRollup();
-    const bridgeTimeouts = this.calculateBridgeTimeouts(baseTimeout, true);
 
     const t: RollupTimeouts = {
       baseTimeout,
-      bridgeTimeouts,
     };
     return t;
   }
@@ -65,14 +34,12 @@ export class PublishTimeManager {
       return this.createEmptyTimeouts();
     }
     const timeout = this.calculateBaseTimeoutAndRollup();
-    const bridgeTimeouts = this.calculateBridgeTimeouts(timeout, false);
     const nextTimeout = {
       timeout: new Date(timeout.timeout.getTime() + this.rollupTimeoutDurationSecs * 1000),
       rollupNumber: timeout.rollupNumber + 1,
     };
     const t: RollupTimeouts = {
       baseTimeout: nextTimeout,
-      bridgeTimeouts,
     };
     return t;
   }
@@ -80,7 +47,6 @@ export class PublishTimeManager {
   private createEmptyTimeouts() {
     return {
       baseTimeout: undefined,
-      bridgeTimeouts: new Map<bigint, RollupTimeout>(),
     } as RollupTimeouts;
   }
 

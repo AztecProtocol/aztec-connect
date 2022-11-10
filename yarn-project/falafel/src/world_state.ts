@@ -2,6 +2,7 @@ import { EthAddress } from '@aztec/barretenberg/address';
 import { toBigIntBE, toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { Blockchain, TxType } from '@aztec/barretenberg/blockchain';
 import { Block } from '@aztec/barretenberg/block_source';
+import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { DefiDepositProofData, JoinSplitProofData, ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
 import { InitHelpers } from '@aztec/barretenberg/environment';
 import { MemoryFifo } from '@aztec/barretenberg/fifo';
@@ -9,6 +10,7 @@ import { createLogger } from '@aztec/barretenberg/log';
 import { DefiInteractionNote, NoteAlgorithms, TreeClaimNote } from '@aztec/barretenberg/note_algorithms';
 import { OffchainDefiDepositData } from '@aztec/barretenberg/offchain_tx_data';
 import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
+import { BridgePublishQuery, BridgePublishQueryResult } from '@aztec/barretenberg/rollup_provider';
 import { serializeBufferArrayToVector } from '@aztec/barretenberg/serialize';
 import { Timer } from '@aztec/barretenberg/timer';
 import { WorldStateConstants } from '@aztec/barretenberg/world_state';
@@ -183,6 +185,60 @@ export class WorldState {
     }
 
     return this.txPoolProfile;
+  }
+
+  public async queryBridgeStats(query: BridgePublishQuery) {
+    const currentTime = new Date();
+    const queryThreshold = new Date(currentTime.getTime() - query.periodSeconds * 1000);
+    const rollups = await this.rollupDb.getSettledRollupsAfterTime(queryThreshold);
+    const interactionsByBridgeCallData: { [key: string]: [Date] } = {};
+    let totalTimePeriod = 0;
+    let numInteractionPeriods = 0;
+    let totalGas = 0;
+    for (const rollup of rollups) {
+      const rollupProofData = RollupProofData.decode(rollup.rollupProof.encodedProofData);
+      for (const bcd of rollupProofData.bridgeCallDatas.map(x => BridgeCallData.fromBuffer(x))) {
+        let gasForBridge = 0;
+        try {
+          gasForBridge = this.txFeeResolver.getFullBridgeGas(bcd.toBigInt());
+        } catch (error) {
+          continue;
+        }
+        if (bcd.bridgeAddressId !== query.bridgeAddressId) {
+          continue;
+        }
+        if (query.inputAssetIdA !== undefined && query.inputAssetIdA !== bcd.inputAssetIdA) {
+          continue;
+        }
+        if (query.inputAssetIdB !== undefined && query.inputAssetIdB !== bcd.inputAssetIdB) {
+          continue;
+        }
+        if (query.outputAssetIdA !== undefined && query.outputAssetIdA !== bcd.outputAssetIdA) {
+          continue;
+        }
+        if (query.outputAssetIdB !== undefined && query.outputAssetIdB !== bcd.outputAssetIdB) {
+          continue;
+        }
+        if (query.auxData !== undefined && query.auxData !== bcd.auxData) {
+          continue;
+        }
+        const bcdString = bcd.toString();
+        if (interactionsByBridgeCallData[bcdString] === undefined) {
+          interactionsByBridgeCallData[bcdString] = [rollup.mined!];
+          continue;
+        }
+        interactionsByBridgeCallData[bcdString].push(rollup.mined!);
+        const newArray = interactionsByBridgeCallData[bcdString];
+        totalTimePeriod += (newArray[newArray.length - 1].getTime() - newArray[newArray.length - 2].getTime()) / 1000;
+        numInteractionPeriods++;
+        totalGas += gasForBridge;
+      }
+    }
+    return {
+      averageTimeout: numInteractionPeriods === 0 ? 0 : totalTimePeriod / numInteractionPeriods,
+      averageGasPerHour: totalTimePeriod === 0 ? 0 : totalGas / (1000 * 60 * 60),
+      query,
+    } as BridgePublishQueryResult;
   }
 
   public async stop(flushQueue = false) {

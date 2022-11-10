@@ -13,7 +13,18 @@ const FALAFEL_UNREACHABLE_MSG = {
   message: 'Cannot reach rollup provider. Please try again later.',
 };
 
-type FailureReason = { type: 'unsupported'; supportStatus: SupportStatus } | { type: 'falafel-down' };
+const STALE_FRONTEND_MSG = {
+  type: MessageType.ERROR,
+  message:
+    'Version mismatch between zk.money and rollup server. ' +
+    'Refresh the page! ' +
+    '(If this issue persists it may be a problem with your ISP)',
+};
+
+type FailureReason =
+  | { type: 'unsupported'; supportStatus: SupportStatus }
+  | { type: 'falafel-down' }
+  | { type: 'stale-frontend' };
 
 interface AppInitFailedProps {
   reason: FailureReason;
@@ -47,6 +58,16 @@ export function AppInitFailed({ reason, explorerUrl }: AppInitFailedProps) {
                   type: ToastType.ERROR,
                   text: FALAFEL_UNREACHABLE_MSG.message,
                   key: 'falafel-unreachable',
+                  isHeavy: true,
+                },
+              ]
+            : showingReason && reason.type === 'stale-frontend'
+            ? [
+                {
+                  isClosable: true,
+                  type: ToastType.ERROR,
+                  text: STALE_FRONTEND_MSG.message,
+                  key: 'client-version-mismatch',
                   isHeavy: true,
                 },
               ]

@@ -52,6 +52,11 @@ export class CachedRollupDb extends SyncRollupDb {
     return Promise.resolve(rollups.slice(skip, take ? skip + take : undefined));
   }
 
+  public getSettledRollupsAfterTime(time: Date, descending = false) {
+    const rollups = this.settledRollups.filter(x => x.mined !== undefined && x.mined.getTime() >= time.getTime());
+    return Promise.resolve(descending ? rollups.slice().reverse() : rollups);
+  }
+
   public getNumSettledRollups() {
     return Promise.resolve(this.settledRollups.length);
   }

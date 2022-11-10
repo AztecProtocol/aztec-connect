@@ -62,4 +62,5 @@ export async function deployElementBridge(
       );
     }
   }
+  return elementBridge;
 }

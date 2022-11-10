@@ -70,6 +70,7 @@ export async function getComponents(configurator: Configurator) {
     rollupContractAddress,
     permitHelperContractAddress,
     priceFeedContractAddresses,
+    bridgeDataProviderAddress,
     typeOrmLogging,
     dbUrl,
     proverless,
@@ -92,6 +93,7 @@ export async function getComponents(configurator: Configurator) {
   console.log(`Fee paying asset ids: ${feePayingAssetIds}`);
   console.log(`Price feed addresses: ${priceFeedContractAddresses.map(a => a.toString()).join(',') || 'none'}`);
   console.log(`Proverless: ${proverless}`);
+  console.log(`Bridge data provider address: ${bridgeDataProviderAddress}`);
   console.log(`Falafel version: ${version}`);
 
   if (priceFeedContractAddresses.length < feePayingAssetIds.length) {

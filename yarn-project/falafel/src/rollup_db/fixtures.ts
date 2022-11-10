@@ -102,14 +102,16 @@ export const randomRollupProof = (txs: TxDao[], dataStartIndex = 0, rollupSize =
   });
 };
 
-export const randomRollup = (rollupId: number, rollupProof: RollupProofDao) =>
+export const randomRollup = (rollupId: number, rollupProof: RollupProofDao, mined: Date | undefined) =>
   new RollupDao({
     id: rollupId,
     dataRoot: randomBytes(32),
     rollupProof,
     created: new Date(),
+    mined,
     assetMetrics: [],
     bridgeMetrics: [],
+    interactionResult: randomBytes(32 * 32),
   });
 
 export const randomClaim = () =>

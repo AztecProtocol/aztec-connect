@@ -1,0 +1,40 @@
+{
+  "bridgeConfigs": [
+    {
+      "bridgeAddressId": 1,
+      "gas": 500000,
+      "numTxs": 5,
+      "permittedAssets": [1, 3, 4]
+    },
+    {
+      "bridgeAddressId": 2,
+      "gas": 500000,
+      "numTxs": 5,
+      "permittedAssets": [0, 2]
+    },
+    {
+      "bridgeAddressId": 3,
+      "gas": 500000,
+      "numTxs": 5,
+      "permittedAssets": [0, 2]
+    },
+    {
+      "bridgeAddressId": 4,
+      "gas": 500000,
+      "numTxs": 5,
+      "permittedAssets": [0, 2]
+    },
+    {
+      "bridgeAddressId": 5,
+      "gas": 500000,
+      "numTxs": 5,
+      "permittedAssets": [0, 1]
+    },
+    {
+      "bridgeAddressId": 6,
+      "gas": 500000,
+      "numTxs": 5,
+      "permittedAssets": [0, 1, 2]
+    }
+  ]
+}

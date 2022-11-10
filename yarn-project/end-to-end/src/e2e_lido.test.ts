@@ -124,7 +124,7 @@ describe('end-to-end defi tests', () => {
     // Rollup 2.
     // Account 0 swaps wstETH to ETH.
     {
-      const wstETHToEthBridge = new BridgeCallData(3, wstETHAssetId, ethAssetId);
+      const wstETHToEthBridge = new BridgeCallData(4, wstETHAssetId, ethAssetId);
 
       const { inputAssetIdA, outputAssetIdA } = wstETHToEthBridge;
 

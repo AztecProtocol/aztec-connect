@@ -12,6 +12,7 @@ import {
 import { Web3Provider } from '@ethersproject/providers';
 import { Web3Signer } from '../signer/index.js';
 import { EthAsset, TokenAsset } from './asset/index.js';
+import { BridgeDataProvider } from './bridge_data_provider/bridge_data_provider.js';
 import { EthPriceFeed, GasPriceFeed, TokenPriceFeed } from './price_feed/index.js';
 import { RollupProcessor } from './rollup_processor/index.js';
 
@@ -29,6 +30,7 @@ export class Contracts {
     private assets: Asset[],
     private readonly gasPriceFeed: GasPriceFeed,
     private readonly priceFeeds: PriceFeed[],
+    private readonly bridgeDataProvider: BridgeDataProvider,
     private readonly ethereumProvider: EthereumProvider,
     private readonly confirmations: number,
   ) {
@@ -40,10 +42,12 @@ export class Contracts {
     rollupContractAddress: EthAddress,
     permitHelperContractAddress: EthAddress,
     priceFeedContractAddresses: EthAddress[],
+    bridgeDataProviderAddress: EthAddress,
     ethereumProvider: EthereumProvider,
     confirmations: number,
   ) {
     const rollupProcessor = new RollupProcessor(rollupContractAddress, ethereumProvider, permitHelperContractAddress);
+    const bridgeDataProvider = new BridgeDataProvider(bridgeDataProviderAddress, ethereumProvider);
 
     const assets = [new EthAsset(ethereumProvider)];
 
@@ -54,7 +58,15 @@ export class Contracts {
       ...tokenPriceFeedAddresses.map(a => new TokenPriceFeed(a, ethereumProvider)),
     ];
 
-    const contracts = new Contracts(rollupProcessor, assets, gasPriceFeed, priceFeeds, ethereumProvider, confirmations);
+    const contracts = new Contracts(
+      rollupProcessor,
+      assets,
+      gasPriceFeed,
+      priceFeeds,
+      bridgeDataProvider,
+      ethereumProvider,
+      confirmations,
+    );
 
     await contracts.updateAssets();
     return contracts;
@@ -95,12 +107,21 @@ export class Contracts {
     };
   }
 
+  public async updatePerEthBlockState() {
+    await this.updateAssets();
+    this.bridgeDataProvider.updatePerEthBlockState();
+  }
+
   public getRollupBalance(assetId: number) {
     return this.assets[assetId].balanceOf(this.rollupProcessor.address);
   }
 
   public getRollupContractAddress() {
     return this.rollupProcessor.address;
+  }
+
+  public getBridgeDataProviderAddress() {
+    return this.bridgeDataProvider.address;
   }
 
   public getPermitHelperContractAddress() {
@@ -221,5 +242,13 @@ export class Contracts {
 
   public async getRevertError(txHash: TxHash) {
     return await this.rollupProcessor.getRevertError(txHash);
+  }
+
+  public async getBridgeSubsidy(bridgeCallData: bigint) {
+    return await this.bridgeDataProvider.getBridgeSubsidy(bridgeCallData);
+  }
+
+  public async getBridgeData(bridgeAddressId: number) {
+    return await this.bridgeDataProvider.getBridgeData(bridgeAddressId);
   }
 }

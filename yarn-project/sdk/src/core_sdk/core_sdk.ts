@@ -14,7 +14,7 @@ import { OffchainAccountData } from '@aztec/barretenberg/offchain_tx_data';
 import { Pippenger } from '@aztec/barretenberg/pippenger';
 import { retryUntil } from '@aztec/barretenberg/retry';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
-import { RollupProvider, Tx } from '@aztec/barretenberg/rollup_provider';
+import { BridgePublishQuery, BridgePublishQueryResult, RollupProvider, Tx } from '@aztec/barretenberg/rollup_provider';
 import { InterruptableSleep } from '@aztec/barretenberg/sleep';
 import { Timer } from '@aztec/barretenberg/timer';
 import { TxId } from '@aztec/barretenberg/tx_id';
@@ -1208,5 +1208,9 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
 
     const aliases = rollups.map((rollup, i) => processRollup(rollup, offchainTxData[i])).flat();
     await this.db.addAliases(aliases);
+  }
+
+  public async queryDefiPublishStats(query: BridgePublishQuery): Promise<BridgePublishQueryResult> {
+    return await this.rollupProvider.queryDefiPublishStats(query);
   }
 }

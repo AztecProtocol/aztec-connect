@@ -15,12 +15,18 @@ const PROD_EXPLORER_URL = 'https://aztec-connect-prod-explorer.aztec.network/';
 async function rootRender() {
   try {
     const supportStatusProm = getSupportStatus();
-    const { config, initialRollupProviderStatus } = await getEnvironment();
+    const { config, initialRollupProviderStatus, staleFrontend } = await getEnvironment();
     const supportStatus = await supportStatusProm;
     if (supportStatus !== 'supported') {
       return (
         <BrowserRouter>
           <AppInitFailed reason={{ type: 'unsupported', supportStatus }} explorerUrl={PROD_EXPLORER_URL} />
+        </BrowserRouter>
+      );
+    } else if (staleFrontend) {
+      return (
+        <BrowserRouter>
+          <AppInitFailed reason={{ type: 'stale-frontend' }} explorerUrl={PROD_EXPLORER_URL} />
         </BrowserRouter>
       );
     }

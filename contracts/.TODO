@@ -1,0 +1,1 @@
+Need to figure out how we want to generate the encoded rollup proof datas such that we don't need to import barretenberg.js. For now, we just include a set proofs that match the verification keys in the implementation.

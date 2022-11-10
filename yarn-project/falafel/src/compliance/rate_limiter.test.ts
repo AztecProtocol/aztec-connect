@@ -20,7 +20,7 @@ describe('Rate Limiter', () => {
   let spy: any;
   const realDate = global.Date;
   beforeEach(() => {
-    //jest.spyOn(console, 'log').mockImplementation(() => {});
+    jest.spyOn(console, 'log').mockImplementation(() => {});
 
     spy = jest.spyOn(global, 'Date').mockImplementation((...args): any => {
       if (args.length) {

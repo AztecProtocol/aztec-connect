@@ -1,10 +1,11 @@
 import { AssetValue } from '@aztec/barretenberg/asset';
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { TxType } from '@aztec/barretenberg/blockchain';
+import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { DefiDepositProofData, ProofData } from '@aztec/barretenberg/client_proofs';
+import { BridgeSubsidyProvider } from '../bridge/bridge_subsidy_provider.js';
 import { TxDao } from '../entity/index.js';
 import { TxFeeResolver } from '../tx_fee_resolver/index.js';
-import { RollupTimeout } from './publish_time_manager.js';
 
 export interface RollupTx {
   excessGas: number;
@@ -64,7 +65,8 @@ export class BridgeTxQueue {
   constructor(
     private readonly bridgeCallData: bigint,
     private readonly feeResolver: TxFeeResolver,
-    private readonly bridgeTimeout?: RollupTimeout,
+    private readonly bridgeSubsidyProvider: BridgeSubsidyProvider,
+    private log = console.log,
   ) {}
 
   public getQueueStats() {
@@ -90,7 +92,7 @@ export class BridgeTxQueue {
 
   // we need to traverse our queue of txs and attempt to complete a defi batch
   // completing a batch means producing a set of txs that make the batch profitable whilst still keeping within bridge size and rollup size
-  public getTxsToRollup(
+  public async getTxsToRollup(
     maxRemainingTransactions: number,
     assetIds: Set<number>,
     maxAssets: number,
@@ -105,6 +107,8 @@ export class BridgeTxQueue {
     // start off with the bridge interaction gas and add on the gas for each tx
     // we need to get the bridge gas usage from the contract as this is not overridden by subsidy
     let totalGasUsedByTxs = this.feeResolver.getFullBridgeGasFromContract(this.bridgeCallData);
+    // this full bridge gas is used to determine profitability so we need the value that includes subsidy
+    const fullGasCostOfBridgeInteraction = this.feeResolver.getFullBridgeGas(this.bridgeCallData);
     // this figure holds the total calldata used by the selected txs
     let totalCallDataUsedByTxs = 0;
     for (let i = 0; i < this.txQueue.length && txsToConsider.length < maxRemainingTransactions; i++) {
@@ -128,14 +132,26 @@ export class BridgeTxQueue {
       // here we accumulate the amount of gas on the tx that is attributable to the bridge
       // i.e. we are not counting the gas that would be used by the verifier etc.
       // all we are trying to test here is 'do we have enough gas to run the bridge interaction'
-      gasFromTxs += this.feeResolver.getSingleBridgeTxGas(this.bridgeCallData) + tx.excessGas;
+      const gasAttributableToBridge = this.feeResolver.getSingleBridgeTxGas(this.bridgeCallData) + tx.excessGas;
+      gasFromTxs += Math.min(gasAttributableToBridge, fullGasCostOfBridgeInteraction);
       totalGasUsedByTxs = newGasUsedValue;
       totalCallDataUsedByTxs = newCallDataUsed;
     }
-    // this full bridge gas is used to determine profitability so we need the value that includes subsidy
-    const fullBridgeGas = this.feeResolver.getFullBridgeGas(this.bridgeCallData);
-    if (gasFromTxs >= fullBridgeGas) {
+
+    // get the available subsidy
+    const availableSubsidy = await this.bridgeSubsidyProvider.getBridgeSubsidy(this.bridgeCallData);
+    const totalGasFromTxsAndSubsidy = gasFromTxs + availableSubsidy;
+    if (txsToConsider.length && totalGasFromTxsAndSubsidy >= fullGasCostOfBridgeInteraction) {
       this.txQueue.splice(0, txsToConsider.length);
+      // claim the subsidy for this bridge call data
+      const claimed = this.bridgeSubsidyProvider.claimBridgeSubsidy(this.bridgeCallData);
+      if (availableSubsidy > 0 && !claimed) {
+        this.log(
+          `Failed to claim expected subsidy of ${availableSubsidy} for bridge call data ${BridgeCallData.fromBigInt(
+            this.bridgeCallData,
+          ).toString()}`,
+        );
+      }
       return {
         txsToRollup: txsToConsider,
         resourcesConsumed: {
@@ -155,12 +171,5 @@ export class BridgeTxQueue {
         bridgeCallDatas: [],
       },
     } as BridgeQueueResult;
-  }
-
-  public transactionHasTimedOut(tx: RollupTx) {
-    if (!this.bridgeTimeout?.timeout) {
-      return false;
-    }
-    return tx.tx.created.getTime() < this.bridgeTimeout.timeout.getTime();
   }
 }

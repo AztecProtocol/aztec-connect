@@ -5,6 +5,7 @@ import { BridgeCallData } from '../bridge_call_data/index.js';
 import { fetch } from '../iso_fetch/index.js';
 import { Tx } from '../rollup_provider/index.js';
 import { TxId } from '../tx_id/index.js';
+import { BridgePublishQuery, BridgePublishQueryResult } from './bridge_publish_stats_query.js';
 import {
   depositTxFromJson,
   pendingTxFromJson,
@@ -79,6 +80,11 @@ export class ServerRollupProvider extends ServerBlockSource implements RollupPro
     const response = await this.fetch('/defi-fees', { bridgeCallData: bridgeCallData.toString() });
     const defiFees = (await response.json()) as AssetValueJson[];
     return defiFees.map(assetValueFromJson);
+  }
+
+  async queryDefiPublishStats(query: BridgePublishQuery): Promise<BridgePublishQueryResult> {
+    const response = await this.fetch('/bridge-query', query);
+    return (await response.json()) as BridgePublishQueryResult;
   }
 
   async getStatus() {

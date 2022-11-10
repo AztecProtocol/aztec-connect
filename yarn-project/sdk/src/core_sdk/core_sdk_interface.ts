@@ -2,7 +2,13 @@ import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetValue } from '@aztec/barretenberg/asset';
 import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { SchnorrSignature } from '@aztec/barretenberg/crypto';
-import { DepositTx, RollupProviderStatus, Tx } from '@aztec/barretenberg/rollup_provider';
+import {
+  BridgePublishQuery,
+  BridgePublishQueryResult,
+  DepositTx,
+  RollupProviderStatus,
+  Tx,
+} from '@aztec/barretenberg/rollup_provider';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { CoreUserTx } from '../core_tx/index.js';
 import { Note } from '../note/index.js';
@@ -186,4 +192,6 @@ export interface CoreSdkInterface {
   ): Promise<Note | undefined>;
 
   getUserTxs(userId: GrumpkinAddress): Promise<CoreUserTx[]>;
+
+  queryDefiPublishStats(query: BridgePublishQuery): Promise<BridgePublishQueryResult>;
 }

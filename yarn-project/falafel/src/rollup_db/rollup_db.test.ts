@@ -153,7 +153,7 @@ describe('rollup_db', () => {
     for (let i = 0; i < 6; ++i) {
       const rollupProof = randomRollupProof([]);
       await rollupDb.addRollupProof(rollupProof);
-      const rollup = randomRollup(i, rollupProof);
+      const rollup = randomRollup(i, rollupProof, undefined);
       await rollupDb.addRollup(rollup);
       rollups.push(rollup);
     }
@@ -161,6 +161,41 @@ describe('rollup_db', () => {
     const saved = await rollupDb.getRollupsByRollupIds([1, 2, 5]);
     expect(saved.length).toBe(3);
     expect(saved.map(r => r.id)).toEqual(expect.arrayContaining([1, 2, 5]));
+  });
+
+  it('should get settled rollups after time', async () => {
+    const rollups: RollupDao[] = [];
+    const startDate = new Date('2022-10-19T10:01:01.500Z');
+    const times: Array<Date | undefined> = Array.from(
+      { length: 10 },
+      (_, i) => new Date(startDate.getTime() + i * 1000),
+    );
+    times[1] = undefined;
+    times[7] = undefined;
+    for (let i = 0; i < 10; ++i) {
+      const rollupProof = randomRollupProof([]);
+      await rollupDb.addRollupProof(rollupProof);
+      const rollup = randomRollup(i, rollupProof, times[i]);
+      await rollupDb.addRollup(rollup);
+      rollups.push(rollup);
+    }
+
+    // should only return the rollups mined >= the given time (undefined times should be ignored)
+    const saved = await rollupDb.getSettledRollupsAfterTime(times[3]!);
+    expect(saved.length).toBe(6);
+    expect(saved.map(r => r.id)).toEqual(expect.arrayContaining([3, 4, 5, 6, 8, 9]));
+
+    const saved2 = await rollupDb.getSettledRollupsAfterTime(times[0]!);
+    expect(saved2.length).toBe(8);
+    expect(saved2.map(r => r.id)).toEqual(expect.arrayContaining([0, 2, 3, 4, 5, 6, 8, 9]));
+
+    const saved3 = await rollupDb.getSettledRollupsAfterTime(times[9]!);
+    expect(saved3.length).toBe(1);
+    expect(saved3.map(r => r.id)).toEqual(expect.arrayContaining([9]));
+
+    const saved4 = await rollupDb.getSettledRollupsAfterTime(times[6]!);
+    expect(saved4.length).toBe(3);
+    expect(saved4.map(r => r.id)).toEqual(expect.arrayContaining([6, 8, 9]));
   });
 
   it('should add rollup proof and insert its txs', async () => {
@@ -229,7 +264,7 @@ describe('rollup_db', () => {
     {
       await rollupDb.addTx(tx1);
       const rollupProof = randomRollupProof([tx1], 0);
-      const rollup = randomRollup(0, rollupProof);
+      const rollup = randomRollup(0, rollupProof, undefined);
       await rollupDb.addRollup(rollup);
     }
 
@@ -237,7 +272,7 @@ describe('rollup_db', () => {
     {
       await rollupDb.addTx(tx2);
       const rollupProof = randomRollupProof([tx2], 1);
-      const rollup = randomRollup(0, rollupProof);
+      const rollup = randomRollup(0, rollupProof, undefined);
       await rollupDb.addRollup(rollup);
       await rollupDb.confirmMined(rollup.id, 0, 0n, new Date(), TxHash.random(), [], [tx2.id], [], [], randomBytes(32));
     }
@@ -315,7 +350,7 @@ describe('rollup_db', () => {
       TxType.DEFI_CLAIM,
     ].map(txType => randomTx({ txType }));
     const rollupProof = randomRollupProof(txs, 0);
-    const rollup = randomRollup(0, rollupProof);
+    const rollup = randomRollup(0, rollupProof, undefined);
     await rollupDb.addRollup(rollup);
 
     const newRollup = (await rollupDb.getRollup(0))!;
@@ -335,7 +370,7 @@ describe('rollup_db', () => {
     }
 
     const rollupProof = randomRollupProof(txs, 0);
-    const rollup = randomRollup(0, rollupProof);
+    const rollup = randomRollup(0, rollupProof, undefined);
 
     expect(await rollupDb.getAccountCount()).toBe(2);
 
@@ -354,7 +389,7 @@ describe('rollup_db', () => {
     {
       const txs = [tx0, tx1];
       const rollupProof = randomRollupProof(txs, 0);
-      const rollup = randomRollup(0, rollupProof);
+      const rollup = randomRollup(0, rollupProof, undefined);
 
       await rollupDb.addRollup(rollup);
 
@@ -364,7 +399,7 @@ describe('rollup_db', () => {
 
     {
       const rollupProof = randomRollupProof([tx0, tx1], 0);
-      const rollup = randomRollup(0, rollupProof);
+      const rollup = randomRollup(0, rollupProof, undefined);
 
       await rollupDb.addRollup(rollup);
 
@@ -377,7 +412,7 @@ describe('rollup_db', () => {
     const tx0 = randomTx();
     const tx1 = randomTx();
     const rollupProof = randomRollupProof([tx0, tx1], 0);
-    const rollup = randomRollup(0, rollupProof);
+    const rollup = randomRollup(0, rollupProof, undefined);
 
     // Before adding to db, lets re-order the txs to ensure we get them back in "rollup order".
     {
@@ -414,7 +449,7 @@ describe('rollup_db', () => {
     const tx0 = randomTx();
     const tx1 = randomTx();
     const rollupProof = randomRollupProof([tx0, tx1], 0);
-    const rollup = randomRollup(0, rollupProof);
+    const rollup = randomRollup(0, rollupProof, undefined);
 
     await rollupDb.addRollup(rollup);
 
@@ -446,7 +481,7 @@ describe('rollup_db', () => {
 
     expect(await rollupDb.getUnsettledTxCount()).toBe(1);
 
-    const rollup = randomRollup(0, rollupProof);
+    const rollup = randomRollup(0, rollupProof, undefined);
     await rollupDb.addRollup(rollup);
 
     expect(await rollupDb.getUnsettledTxCount()).toBe(1);
@@ -465,9 +500,9 @@ describe('rollup_db', () => {
     await rollupDb.addTx(tx2);
 
     const rollupProof0 = randomRollupProof([tx0], 0);
-    const rollup0 = randomRollup(0, rollupProof0);
+    const rollup0 = randomRollup(0, rollupProof0, undefined);
     const rollupProof1 = randomRollupProof([tx1], 1);
-    const rollup1 = randomRollup(1, rollupProof1);
+    const rollup1 = randomRollup(1, rollupProof1, undefined);
 
     await rollupDb.addRollup(rollup0);
     await rollupDb.addRollup(rollup1);
@@ -509,7 +544,7 @@ describe('rollup_db', () => {
     const rollupProof = randomRollupProof([tx0], 0);
     await rollupDb.addRollupProof(rollupProof);
 
-    const rollup = randomRollup(0, rollupProof);
+    const rollup = randomRollup(0, rollupProof, undefined);
     await rollupDb.addRollup(rollup);
 
     expect(await rollupDb.getUnsettledTxCount()).toBe(1);
@@ -616,7 +651,7 @@ describe('rollup_db', () => {
     const rollupProof1 = randomRollupProof([txs[5], txs[6]], 0);
     await rollupDb.addRollupProof(rollupProof1);
 
-    const rollup = randomRollup(0, rollupProof0);
+    const rollup = randomRollup(0, rollupProof0, undefined);
     await rollupDb.addRollup(rollup);
     const settledTxIds = rollupProof0.txs.map(tx => tx.id);
     await rollupDb.confirmMined(
