@@ -195,7 +195,7 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "BRIDGE_DATA_PROVIDER_CONTRACT_ADDRESS",
-        "value": "0x584644e23591ba8751e8a49dcdd431fc37b062ec"
+        "value": "0x1c6182e3ceaf416b10963731e8283722e274964e"
       }
     ],
     "mountPoints": [

@@ -39,10 +39,10 @@ const bridgeCallDatas = [
 ];
 
 const bridgeSubsidyMappings = new Map<string, BridgeSubsidy>([
-  [bridgeCallDatas[0].toString(), { addressId: 1, criteria: 5n, subsidy: 50000 }],
-  [bridgeCallDatas[1].toString(), { addressId: 1, criteria: 6n, subsidy: 175000 }],
-  [bridgeCallDatas[2].toString(), { addressId: 2, criteria: 6n, subsidy: 50000 }],
-  [bridgeCallDatas[3].toString(), { addressId: 2, criteria: 6n, subsidy: 50000 }],
+  [bridgeCallDatas[0].toString(), { addressId: 1, criteria: 5n, subsidyInGas: 50000, subsidyInWei: 100000n }],
+  [bridgeCallDatas[1].toString(), { addressId: 1, criteria: 6n, subsidyInGas: 175000, subsidyInWei: 100000n }],
+  [bridgeCallDatas[2].toString(), { addressId: 2, criteria: 6n, subsidyInGas: 50000, subsidyInWei: 100000n }],
+  [bridgeCallDatas[3].toString(), { addressId: 2, criteria: 6n, subsidyInGas: 50000, subsidyInWei: 100000n }],
 ]);
 
 type Mockify<T> = {
@@ -71,7 +71,7 @@ describe('Bridge Subsidy Provider', () => {
     const bridgeSubsidyProvider = new BridgeSubsidyProvider(bridgeResolver as any);
     for (const bridgeCallData of bridgeCallDatas) {
       expect(await bridgeSubsidyProvider.getBridgeSubsidy(bridgeCallData.toBigInt())).toEqual(
-        bridgeSubsidyMappings.get(bridgeCallData.toString())?.subsidy,
+        bridgeSubsidyMappings.get(bridgeCallData.toString())?.subsidyInGas,
       );
     }
   });
@@ -79,7 +79,7 @@ describe('Bridge Subsidy Provider', () => {
   it('should no longer return subsidy for same bridge address id and criteria once claimed', async () => {
     const bridgeSubsidyProvider = new BridgeSubsidyProvider(bridgeResolver as any);
     // the following bridge call datas should have the same subsidy as they are the same bridge id and criteria
-    const expectedSubsidy = bridgeSubsidyMappings.get(bridgeCallDatas[2].toString())?.subsidy;
+    const expectedSubsidy = bridgeSubsidyMappings.get(bridgeCallDatas[2].toString())?.subsidyInGas;
     const firstBridgeCallData = bridgeCallDatas[2];
     const secondBridgeCallData = bridgeCallDatas[3];
     // the bridge subsidy should be returned for both bridges
@@ -96,7 +96,7 @@ describe('Bridge Subsidy Provider', () => {
     expect(await bridgeSubsidyProvider.getBridgeSubsidy(firstBridgeCallData.toBigInt())).toEqual(0);
 
     // subsidy for other bridge is not affected
-    const expectedSubsidy2 = bridgeSubsidyMappings.get(bridgeCallDatas[0].toString())?.subsidy;
+    const expectedSubsidy2 = bridgeSubsidyMappings.get(bridgeCallDatas[0].toString())?.subsidyInGas;
     expect(await bridgeSubsidyProvider.getBridgeSubsidy(bridgeCallDatas[0].toBigInt())).toEqual(expectedSubsidy2);
   });
 
@@ -105,8 +105,8 @@ describe('Bridge Subsidy Provider', () => {
     const firstBridgeCallData = bridgeCallDatas[2];
     const secondBridgeCallData = bridgeCallDatas[3];
     const thirdBridgeCallData = bridgeCallDatas[0];
-    const expectedSubsidy1 = bridgeSubsidyMappings.get(firstBridgeCallData.toString())?.subsidy;
-    const expectedSubsidy2 = bridgeSubsidyMappings.get(thirdBridgeCallData.toString())?.subsidy;
+    const expectedSubsidy1 = bridgeSubsidyMappings.get(firstBridgeCallData.toString())?.subsidyInGas;
+    const expectedSubsidy2 = bridgeSubsidyMappings.get(thirdBridgeCallData.toString())?.subsidyInGas;
     // the bridge subsidy should be returned for both bridges
     expect(await bridgeSubsidyProvider.getBridgeSubsidy(firstBridgeCallData.toBigInt())).toEqual(expectedSubsidy1);
     expect(await bridgeSubsidyProvider.getBridgeSubsidy(secondBridgeCallData.toBigInt())).toEqual(expectedSubsidy1);

@@ -124,7 +124,12 @@ const generateValidBridgeCallData = (bridgeConfig: BridgeConfig) => {
 
 const generateBridgeSubsidy = (subsidyGas: number, bridgeCallData: bigint, criteria: bigint) => {
   const fullCallData = BridgeCallData.fromBigInt(bridgeCallData);
-  return { subsidy: subsidyGas, criteria, addressId: fullCallData.bridgeAddressId } as BridgeSubsidy;
+  return {
+    subsidyInGas: subsidyGas,
+    subsidyInWei: BigInt(subsidyGas * 1000),
+    criteria,
+    addressId: fullCallData.bridgeAddressId,
+  } as BridgeSubsidy;
 };
 
 const bridgeCallDatas = bridgeConfigs.map(bc => generateValidBridgeCallData(bc));
@@ -328,7 +333,9 @@ describe('rollup_coordinator', () => {
       getBridgeDescription: jest.fn().mockReturnValue(undefined),
       getBridgeSubsidy: jest
         .fn()
-        .mockImplementation(() => Promise.resolve({ subsidy: 0, addressId: 1, criteria: 1n } as BridgeSubsidy)),
+        .mockImplementation(() =>
+          Promise.resolve({ subsidyInGas: 0, subsidyInWei: 0n, addressId: 1, criteria: 1n } as BridgeSubsidy),
+        ),
     } as any;
 
     metrics = {
