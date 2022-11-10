@@ -473,7 +473,8 @@ export class RollupCoordinator {
     this.log(`RollupCoordinator:   calldata: ${rollupProfile.totalCallData} bytes`);
     for (const bp of rollupProfile.bridgeProfiles.values()) {
       const bridgeDescription = await this.bridgeResolver.getBridgeDescription(bp.bridgeCallData);
-      this.log(`RollupCoordinator: Defi bridge published: ${bridgeDescription || bp.bridgeCallData.toString()}`);
+      const descriptionLog = bridgeDescription ? `(${bridgeDescription})` : '';
+      this.log(`RollupCoordinator: Defi bridge published: ${bp.bridgeCallData.toString()} ${descriptionLog}`);
       this.log(`RollupCoordinator:   numTxs: ${bp.numTxs}`);
       this.log(
         `RollupCoordinator:   gas balance (subsidy): ${bp.gasAccrued + bp.gasSubsidy - bp.gasThreshold} (${
