@@ -1,4 +1,5 @@
 #! /bin/bash
+set -e
 
 HOST=${2:-localhost}
 PORT=${3:-8081}

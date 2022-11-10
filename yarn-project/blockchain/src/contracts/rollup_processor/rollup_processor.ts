@@ -482,7 +482,8 @@ export class RollupProcessor {
    * rollups block to the end of the chain. This provides best performance for polling clients.
    */
   public async getRollupBlocksFrom(rollupId: number, minConfirmations: number) {
-    const { earliestBlock, chunk } = await this.getEarliestBlock();
+    const { earliestBlock } = await this.getEarliestBlock();
+    const chunk = this.rollupRetrievalChunkSize();
     let end = await this.provider.getBlockNumber();
     let start =
       this.lastQueriedRollupId === undefined || rollupId < this.lastQueriedRollupId
