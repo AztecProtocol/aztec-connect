@@ -9,6 +9,7 @@ The Aztec 2.0 system consists of the following sub projects.
 - `documentation` - Documentation frontend website.
 - `end-to-end` - End to end tests. Uses docker to launch ganache, falafel, and run test suite against them.
 - `falafel` - Rollup server.
+- `kebab` - Proxy server sitting between falafel and ETH node.
 - `hummus` - Webpack proof of concept website and terminal using `sdk`.
 - `iac` - Project wide Terraform (infrastructure as code).
 - `mainframe` - Terraform and bootstrap scripts for development mainframe.
