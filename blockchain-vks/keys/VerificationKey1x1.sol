@@ -1,4 +1,4 @@
-// Verification Key Hash: 146c80259119d98465cf584ab7da1d0df775e9c42ac765ea77e80ada89c51183
+// Verification Key Hash: 1f1a94b50cdcf5ae5d6c740f61a0dbdd87e0704f1ae50773341a876aae2df472
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2022 Aztec
 pragma solidity >=0.8.4;
