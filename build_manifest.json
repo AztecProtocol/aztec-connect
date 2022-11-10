@@ -23,6 +23,12 @@
     "rebuildPatterns": ["^barretenberg/"],
     "dependencies": []
   },
+  "contracts": {
+    "buildDir": "contracts",
+    "dockerfile": "Dockerfile",
+    "rebuildPatterns": ["^contracts/"],
+    "dependencies": [""]
+  },
   "blockchain-vks": {
     "buildDir": "blockchain-vks",
     "dockerfile": "Dockerfile",

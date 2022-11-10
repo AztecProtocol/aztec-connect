@@ -243,6 +243,17 @@ jobs:
           name: 'Build'
           command: cond_spot_run_build blockchain-vks 32
 
+  contracts:
+    machine:
+      image: ubuntu-2004:202010-01
+    resource_class: large
+    steps:
+      - *checkout
+      - *setup_env
+      - run:
+          name: 'Build'
+          command: build contracts
+
   yarn-project-base:
     machine:
       image: ubuntu-2004:202010-01
@@ -783,6 +794,8 @@ workflows:
       - blockchain-vks:
           requires:
             - x86_64-linux-clang
+          filters: *tag_filter
+      - contracts:
           filters: *tag_filter
       - yarn-project-base:
           requires:
