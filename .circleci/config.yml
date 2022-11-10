@@ -243,6 +243,17 @@ jobs:
           name: 'Build'
           command: cond_spot_run_build blockchain-vks 32
 
+  contracts:
+    machine:
+      image: ubuntu-2004:202010-01
+    resource_class: large
+    steps:
+      - *checkout
+      - *setup_env
+      - run:
+          name: 'Build'
+          command: build contracts
+
   yarn-project-base:
     machine:
       image: ubuntu-2004:202010-01
@@ -473,6 +484,17 @@ jobs:
       - run:
           name: 'Test'
           command: cond_spot_run_tests end-to-end ./src/e2e_defi.test.ts
+
+  e2e-defi-subsidy:
+    docker:
+      - image: aztecprotocol/alpine-build-image
+    resource_class: small
+    steps:
+      - *checkout
+      - *setup_env
+      - run:
+          name: 'Test'
+          command: cond_spot_run_tests end-to-end ./src/e2e_defi_subsidy.test.ts
 
   e2e-non-fee-assets:
     docker:
@@ -773,6 +795,8 @@ workflows:
           requires:
             - x86_64-linux-clang
           filters: *tag_filter
+      - contracts:
+          filters: *tag_filter
       - yarn-project-base:
           requires:
             - wasm-linux-clang
@@ -807,6 +831,7 @@ workflows:
       - e2e-chained-txs-with-spending-keys: *e2e_test
       - e2e-chained-txs: *e2e_test
       - e2e-defi: *e2e_test
+      - e2e-defi-subsidy: *e2e_test
       - e2e-element: *e2e_test
       - e2e-lido: *e2e_test
       - e2e-migrate-account: *e2e_test
@@ -848,6 +873,7 @@ workflows:
             - e2e-chained-txs
             - e2e-chained-txs-with-spending-keys
             - e2e-defi
+            - e2e-defi-subsidy
             - e2e-element
             - e2e-lido
             - e2e-migrate-account

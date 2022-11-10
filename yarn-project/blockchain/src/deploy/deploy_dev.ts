@@ -14,6 +14,7 @@ import {
   deployErc20,
   deployCompoundBridge,
   deployAztecFaucet,
+  deployMockDataProvider,
 } from './deployers/index.js';
 
 const escapeBlockLower = 2160;
@@ -55,10 +56,23 @@ export async function deployDev(
   const daiPrice = BigInt(1) * BigInt(10) ** BigInt(15); // 1000 DAI/ETH
   const initialEthSupply = BigInt(1) * BigInt(10) ** BigInt(17); // 0.1 ETH
   const initialTokenSupply = (initialEthSupply * BigInt(10) ** BigInt(18)) / daiPrice;
+
+  const bridgeDataProvider = await deployMockDataProvider(signer);
+
+  // in order to maintain the same sequence on bridge address ids, we need to deploy some dummy bridges into slots 1-4
+  for (let i = 0; i < 4; i++) {
+    const dummyBridge = await deployDummyBridge(rollup, signer, [asset0, asset1]);
+    await bridgeDataProvider.setBridgeData(i + 1, dummyBridge.address, 50000, 'Dummy Bridge');
+  }
+
   await deployUniswapPair(signer, uniswapRouter, asset0, initialTokenSupply, initialEthSupply);
-  await deployUniswapBridge(signer, rollup, uniswapRouter);
-  await deployDummyBridge(rollup, signer, [asset0, asset1]);
-  await deployCompoundBridge(signer, rollup);
+  const uniswapBridge = await deployUniswapBridge(signer, rollup, uniswapRouter);
+  const dummyBridge = await deployDummyBridge(rollup, signer, [asset0, asset1]);
+  const compoundBridge = await deployCompoundBridge(signer, rollup);
+
+  await bridgeDataProvider.setBridgeData(5, uniswapBridge.address, 50000, 'Uniswap Bridge');
+  await bridgeDataProvider.setBridgeData(6, dummyBridge.address, 50000, 'Dummy Bridge');
+  await bridgeDataProvider.setBridgeData(7, compoundBridge.address, 50000, 'Compund Bridge');
 
   const gasPriceFeedContact = await deployMockPriceFeed(signer, gasPrice);
   const daiPriceFeedContact = await deployMockPriceFeed(signer, daiPrice);
@@ -66,5 +80,5 @@ export async function deployDev(
 
   const faucet = await deployAztecFaucet(signer, faucetOperator);
 
-  return { rollup, priceFeeds, feeDistributor, permitHelper, faucet };
+  return { rollup, priceFeeds, feeDistributor, permitHelper, faucet, bridgeDataProvider };
 }

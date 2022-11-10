@@ -16,9 +16,10 @@ import { useDefaultAuxDataOption } from '../defi_info_hooks.js';
 import { MAX_MODE } from '../../../alt-model/forms/constants.js';
 import { useRollupProviderStatus, useRollupProviderStatusPoller } from '../../../alt-model/rollup_provider_hooks.js';
 import { useMaxSpendableValue } from '../../../alt-model/balance_hooks.js';
-import { estimateDefiSettlementTimes } from '../../../alt-model/estimate_settlement_times.js';
+import { estimateTxSettlementTimes } from '../../../alt-model/estimate_settlement_times.js';
 import { useMaxDefiValue } from './max_defi_value_hooks.js';
 import { Amount } from '../../../alt-model/assets/index.js';
+import { useDefiBatchData } from '../../../features/defi/bridge_count_down/bridge_count_down_hooks.js';
 
 const debug = createDebug('zm:defi_form_hooks');
 
@@ -95,12 +96,8 @@ export function useDefiForm(recipe: DefiRecipe, direction: FlowDirection) {
   const lockedComposerPayload = lockedComposer?.payload;
 
   const rpStatus = useRollupProviderStatus();
-  const bridgeCallDataNum = bridgeCallData?.toBigInt();
-  const bridgeStatus = rpStatus?.bridgeStatus.find(x => x.bridgeCallData === bridgeCallDataNum);
-  const { instantSettlementTime, nextSettlementTime, batchSettlementTime } = estimateDefiSettlementTimes(
-    rpStatus,
-    bridgeStatus,
-  );
+  const { instantSettlementTime, nextSettlementTime } = estimateTxSettlementTimes(rpStatus);
+  const batchData = useDefiBatchData(bridgeCallData);
 
   const attemptLock = () => {
     setAttemptedLock(true);
@@ -142,7 +139,10 @@ export function useDefiForm(recipe: DefiRecipe, direction: FlowDirection) {
     }
     lockedComposer.compose().then(txId => {
       if (txId) {
-        const timeToSettlement = [batchSettlementTime, nextSettlementTime, instantSettlementTime][fields.speed];
+        const timeOpts = batchData?.isFastTrack
+          ? [nextSettlementTime, nextSettlementTime, instantSettlementTime]
+          : [undefined, nextSettlementTime, instantSettlementTime];
+        const timeToSettlement = timeOpts[fields.speed];
         if (timeToSettlement) {
           localStorage.setItem(txId.toString(), timeToSettlement.toString());
         }

@@ -33,3 +33,5 @@ export { default as HashInputsContract } from './artifacts/contracts/test/HashIn
 export { default as IDefiBridge } from './artifacts/contracts/interfaces/IDefiBridge.sol/IDefiBridge.json' assert { type: 'json' };
 export { default as PermitHelper } from './artifacts/contracts/periphery/PermitHelper.sol/PermitHelper.json' assert { type: 'json' };
 export { default as AztecFaucetJson } from './artifacts/contracts/periphery/AztecFaucet.sol/AztecFaucet.json' assert { type: 'json' };
+export { default as MockBridgeDataProvider } from './artifacts/contracts/test/MockBridgeDataProvider.sol/MockBridgeDataProvider.json' assert { type: 'json' };
+export { default as IBridgeDataProvider } from './artifacts/contracts/interfaces/IBridgeDataProvider.sol/IBridgeDataProvider.json' assert { type: 'json' };

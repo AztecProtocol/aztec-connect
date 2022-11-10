@@ -5,7 +5,7 @@ import { TxHash, TxType } from '@aztec/barretenberg/blockchain';
 import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
 import { serializeBufferArrayToVector } from '@aztec/barretenberg/serialize';
 import { WorldStateConstants } from '@aztec/barretenberg/world_state';
-import { DataSource, In, IsNull, LessThan, MoreThanOrEqual, Not, Repository } from 'typeorm';
+import { DataSource, In, IsNull, LessThan, Between, MoreThanOrEqual, Not, Repository } from 'typeorm';
 import {
   AccountDao,
   AssetMetricsDao,
@@ -274,6 +274,38 @@ export class TypeOrmRollupDb implements RollupDb {
       rollup.rollupProof.afterLoad();
     }
     return result;
+  }
+
+  public async getSettledRollupsAfterTime(time: Date, descending = false) {
+    let end = (await this.getNextRollupId()) - 1;
+    let foundRollups: RollupDao[] = [];
+    while (end >= 0) {
+      const start = Math.max(end - 1000, 0);
+      const rollups = await this.rollupRep.find({
+        where: [{ mined: Not(IsNull()), id: Between(start, end) }],
+        order: { id: descending ? 'DESC' : 'ASC' },
+        relations: ['rollupProof'],
+      });
+      foundRollups = [...rollups, ...foundRollups];
+      end = start - 1;
+      if (foundRollups.length) {
+        const earliestRollup = foundRollups[0];
+        if (earliestRollup.mined!.getTime() < time.getTime()) {
+          break;
+        }
+      }
+    }
+
+    foundRollups = foundRollups.filter(x => x.mined!.getTime() >= time.getTime());
+
+    // Loading these as part of relations above leaks GB's of memory.
+    // One would think the following would be much slower, but it's not actually that bad.
+    for (const rollup of foundRollups) {
+      rollup.rollupProof.txs = await this.txRep.find({ where: { rollupProof: { id: rollup.rollupProof.id } } });
+      // Enforce tx ordering.
+      rollup.rollupProof.afterLoad();
+    }
+    return foundRollups;
   }
 
   /**

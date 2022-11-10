@@ -2,7 +2,7 @@ import { ProgressBar } from '../../../../../../ui-components/index.js';
 import { BridgeCallData, DefiSettlementTime, TxSettlementTime } from '@aztec/sdk';
 import { useRollupProviderStatus } from '../../../../../../alt-model/index.js';
 import { InformationSection } from '../information_section/index.js';
-import { useCountDownData } from '../../../../../../features/defi/bridge_count_down/bridge_count_down_hooks.js';
+import { useDefiBatchData } from '../../../../../../features/defi/bridge_count_down/bridge_count_down_hooks.js';
 import style from './settlement_time_information_section.module.scss';
 
 interface SettlementTimeInformationSectionProps {
@@ -60,7 +60,7 @@ export function SettlementTimeInformationSection(props: SettlementTimeInformatio
 }
 
 export function RecipeSettlementTimeInformationSection(props: RecipeSettlementTimeInformationSectionProps) {
-  const data = useCountDownData(props.bridgeCallData);
+  const data = useDefiBatchData(props.bridgeCallData);
   if (!data) return <></>;
   const { totalSlots } = data;
   const takenSlots = props.selectedSpeed === DefiSettlementTime.DEADLINE ? data.takenSlots : totalSlots;

@@ -44,7 +44,7 @@ export class PipelineCoordinator {
     private maxGasPerRollup: number,
     private metrics: Metrics,
   ) {
-    this.publishTimeManager = new PublishTimeManager(this.publishInterval, this.bridgeResolver);
+    this.publishTimeManager = new PublishTimeManager(this.publishInterval);
     this.nextRollupProfile = emptyProfile(this.numInnerRollupTxs * this.numOuterRollupProofs);
   }
 

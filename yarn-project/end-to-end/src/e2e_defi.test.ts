@@ -74,14 +74,14 @@ describe('end-to-end defi tests', () => {
     const debugBalance = async (assetId: number, account: number) =>
       debug(`account ${account} balance: ${sdk.fromBaseUnits(await sdk.getBalance(userIds[account], assetId), true)}`);
 
-    const bridgeAddressId = 1;
+    const bridgeAddressId = 5;
     const ethAssetId = 0;
     const daiAssetId = 1;
     const btcAssetId = 2;
     const ethToDaiBridge = new BridgeCallData(bridgeAddressId, ethAssetId, daiAssetId);
     const daiToEthBridge = new BridgeCallData(bridgeAddressId, daiAssetId, ethAssetId);
 
-    const dummyBridgeAddressId = 2;
+    const dummyBridgeAddressId = 6;
     const daiAndEthToBtcBridge = new BridgeCallData(dummyBridgeAddressId, daiAssetId, btcAssetId, ethAssetId);
 
     // Rollup 1.
@@ -142,8 +142,8 @@ describe('end-to-end defi tests', () => {
     }
 
     // Rollup 2.
-    // Accounts 0 swaps DAI and ETH to BTC.
-    // Account 0 and 1 swap DAI to ETH.
+    // Account 0 swaps DAI and ETH to BTC.
+    // Accounts 0 and 1 swap DAI to ETH.
     {
       const defiControllers: DefiController[] = [];
       const initialEthBalances: AssetValue[] = [];

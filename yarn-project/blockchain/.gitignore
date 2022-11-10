@@ -1,7 +1,3 @@
 cache
-artifacts
+src/artifacts
 **/fixtures/*.dat
-.openzeppelin
-data
-out
-broadcast

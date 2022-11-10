@@ -3,6 +3,7 @@ import { AssetValue } from '../asset/index.js';
 import { BlockSource } from '../block_source/index.js';
 import { BridgeCallData } from '../bridge_call_data/index.js';
 import { TxId } from '../tx_id/index.js';
+import { BridgePublishQuery, BridgePublishQueryResult } from './bridge_publish_stats_query.js';
 import { RollupProviderStatus } from './rollup_provider_status.js';
 
 export enum TxSettlementTime {
@@ -129,4 +130,5 @@ export interface RollupProvider extends BlockSource {
   isAccountRegistered(accountPublicKey: GrumpkinAddress): Promise<boolean>;
   isAliasRegistered(alias: string): Promise<boolean>;
   isAliasRegisteredToAccount(accountPublicKey: GrumpkinAddress, alias: string): Promise<boolean>;
+  queryDefiPublishStats(query: BridgePublishQuery): Promise<BridgePublishQueryResult>;
 }

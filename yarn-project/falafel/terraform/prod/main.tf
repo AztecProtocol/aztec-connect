@@ -186,6 +186,10 @@ resource "aws_ecs_task_definition" "falafel" {
         "value": "0x169e633a2d1e6c10dd91238ba11c4a708dfef37c,0x773616E4d11A78F511299002da57A0a94577F1f4"
       },
       {
+        "name": "BRIDGE_DATA_PROVIDER_CONTRACT_ADDRESS",
+        "value": "0x8b2e54fa4398c8f7502f30ac94cb1f354390c8ab"
+      },
+      {
         "name": "PRIVATE_KEY",
         "value": "${var.PRIVATE_KEY_MAINNET_AC}"
       },

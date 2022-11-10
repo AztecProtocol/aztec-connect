@@ -1,0 +1,9 @@
+#! /bin/bash
+
+HOST=${2:-localhost}
+PORT=${3:-8081}
+
+export DEBUG="bb:e2e*" 
+export NODE_NO_WARNINGS=1 
+./scripts/configure_e2e_bridges ./scripts/test_bridge_configs.json $HOST $PORT
+node --experimental-vm-modules $(yarn bin jest) --no-cache --runInBand $1

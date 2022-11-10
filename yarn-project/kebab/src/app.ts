@@ -81,6 +81,7 @@ export function appFactory(server: Server, prefix: string) {
       feeDistributorAddress: serverConfig.feeDistributorAddress?.toString(),
       permitHelperAddress: serverConfig.permitHelperContractAddress?.toString(),
       faucetContractAddress: serverConfig.faucetContractAddress?.toString(),
+      bridgeDataProviderContractAddress: serverConfig.bridgeDataProviderContractAddress?.toString(),
     };
     ctx.body = {
       serviceName: 'kebab',

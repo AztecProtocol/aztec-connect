@@ -16,6 +16,7 @@ import { PublishTimeManager, RollupTimeouts } from './publish_time_manager.js';
 import { profileRollup, RollupProfile } from './rollup_profiler.js';
 import { RollupDao } from '../entity/index.js';
 import { InterruptError } from '@aztec/barretenberg/errors';
+import { BridgeSubsidyProvider } from '../bridge/bridge_subsidy_provider.js';
 
 enum RollupCoordinatorState {
   BUILDING,
@@ -25,7 +26,6 @@ enum RollupCoordinatorState {
 
 export class RollupCoordinator {
   private processedTxs: RollupTx[] = [];
-  private bridgeQueues = new Map<bigint, BridgeTxQueue>();
   private totalSlots: number;
   private state = RollupCoordinatorState.BUILDING;
   private interrupted = false;
@@ -71,23 +71,34 @@ export class RollupCoordinator {
 
   public async processPendingTxs(pendingTxs: TxDao[], flush = false): Promise<RollupProfile> {
     const rollupTimeouts = this.publishTimeManager.calculateLastTimeouts();
-    this.initialiseBridgeQueues(rollupTimeouts);
+    const bridgeSubsidyProvider = new BridgeSubsidyProvider(this.bridgeResolver);
+    const bridgeQueues = new Map<bigint, BridgeTxQueue>();
 
-    const { txs, bridgeCallDatas, assetIds } = this.getNextTxsToRollup(pendingTxs, flush);
+    const { txs, bridgeCallDatas, assetIds } = await this.getNextTxsToRollup(
+      pendingTxs,
+      flush,
+      bridgeSubsidyProvider,
+      bridgeQueues,
+    );
 
     this.checkpoint();
-    return await this.aggregateAndPublish(txs, bridgeCallDatas, assetIds, rollupTimeouts, flush);
+    return await this.aggregateAndPublish(
+      txs,
+      bridgeCallDatas,
+      assetIds,
+      rollupTimeouts,
+      flush,
+      bridgeSubsidyProvider,
+      bridgeQueues,
+    );
   }
 
-  private initialiseBridgeQueues(rollupTimeouts: RollupTimeouts) {
-    this.bridgeQueues = new Map<bigint, BridgeTxQueue>();
-    for (const { bridgeCallData } of this.bridgeResolver.getBridgeConfigs()) {
-      const bt = rollupTimeouts.bridgeTimeouts.get(bridgeCallData);
-      this.bridgeQueues.set(bridgeCallData, new BridgeTxQueue(bridgeCallData, this.feeResolver, bt));
-    }
-  }
-
-  private getNextTxsToRollup(pendingTxs: TxDao[], flush: boolean) {
+  private async getNextTxsToRollup(
+    pendingTxs: TxDao[],
+    flush: boolean,
+    bridgeSubsidyProvider: BridgeSubsidyProvider,
+    bridgeQueues: Map<bigint, BridgeTxQueue>,
+  ) {
     // Gas should be thought of as "layer 2 gas". It's a universal unit of cost for producing a rollup.
     // The initial gasUsed, in an empty rollup, is the cost of verification.
     // Hence total slots * verification gas per slot.
@@ -169,8 +180,15 @@ export class RollupCoordinator {
         addTx();
       } else {
         // Returns a set of txs to be added to the rollup. e.g. all the defi txs for a bridge, once it's profitable.
-        txs = this.handleNewDefiTx(tx, this.totalSlots - txs.length, flush, resourceConsumption, txs);
-        // txs.push(...txsToAdd);
+        txs = await this.handleNewDefiTx(
+          tx,
+          this.totalSlots - txs.length,
+          flush,
+          resourceConsumption,
+          txs,
+          bridgeSubsidyProvider,
+          bridgeQueues,
+        );
       }
     }
 
@@ -183,13 +201,15 @@ export class RollupCoordinator {
 
   // If txs are added in this function, then the provided resource consumption will be updated to include the resources
   // consumed by those txs.
-  private handleNewDefiTx(
+  private async handleNewDefiTx(
     tx: TxDao,
     remainingTxSlots: number,
     flush: boolean,
     currentConsumption: RollupResources,
     txsForRollup: RollupTx[],
-  ): RollupTx[] {
+    bridgeSubsidyProvider: BridgeSubsidyProvider,
+    bridgeQueues: Map<bigint, BridgeTxQueue>,
+  ): Promise<RollupTx[]> {
     // We have a new defi interaction, we need to determine if it can be accepted and if so whether it gets queued or
     // goes straight on chain.
     const proof = new ProofData(tx.proofData);
@@ -197,7 +217,6 @@ export class RollupCoordinator {
     const rollupTx = createDefiRollupTx(tx, defiProof);
     const bridgeCallData = rollupTx.bridgeCallData!;
     const bridgeAlreadyPresentInRollup = currentConsumption.bridgeCallDatas.some(id => id === bridgeCallData);
-    // const txsForRollup: RollupTx[] = [];
 
     const addTxs = (txs: RollupTx[]) => {
       for (const tx of txs) {
@@ -261,18 +280,11 @@ export class RollupCoordinator {
       return txsForRollup;
     }
 
-    let bridgeQueue = this.bridgeQueues.get(bridgeCallData);
+    let bridgeQueue = bridgeQueues.get(bridgeCallData);
 
     if (!bridgeQueue) {
-      // We don't have a bridge config for this!!
-      this.bridgeQueues.set(bridgeCallData, new BridgeTxQueue(bridgeCallData, this.feeResolver));
-      bridgeQueue = this.bridgeQueues.get(bridgeCallData)!;
-    }
-
-    //if we are beyond the timeout interval for this bridge then add it straight in
-    if (bridgeQueue.transactionHasTimedOut(rollupTx)) {
-      checkAndAddTxs([rollupTx]);
-      return txsForRollup;
+      bridgeQueue = new BridgeTxQueue(bridgeCallData, this.feeResolver, bridgeSubsidyProvider);
+      bridgeQueues.set(bridgeCallData, bridgeQueue);
     }
 
     // Add this tx to the queue for this bridge and work out if we can put any more txs into the current batch or create
@@ -280,7 +292,7 @@ export class RollupCoordinator {
     bridgeQueue.addDefiTx(rollupTx);
     const gasRemainingInRollup = this.maxGasForRollup - currentConsumption.gasUsed;
     const callDataRemainingInRollup = this.maxCallDataForRollup - currentConsumption.callDataUsed;
-    const bridgeQueueResult = bridgeQueue.getTxsToRollup(
+    const bridgeQueueResult = await bridgeQueue.getTxsToRollup(
       remainingTxSlots,
       currentConsumption.assetIds,
       RollupProofData.NUMBER_OF_ASSETS,
@@ -320,13 +332,21 @@ export class RollupCoordinator {
     assetIds: Set<number>,
     rollupTimeouts: RollupTimeouts,
     flush: boolean,
+    bridgeSubsidyProvider: BridgeSubsidyProvider,
+    bridgeQueues: Map<bigint, BridgeTxQueue>,
   ) {
     if (txsToRollup.length > this.totalSlots) {
       // This shouldn't happen!
       throw new Error(`txsToRollup.length > numRemainingSlots: ${txsToRollup.length} > ${this.totalSlots}`);
     }
 
-    const rollupProfile = profileRollup(txsToRollup, this.feeResolver, this.numInnerRollupTxs, this.totalSlots);
+    const rollupProfile = profileRollup(
+      txsToRollup,
+      this.feeResolver,
+      this.numInnerRollupTxs,
+      this.totalSlots,
+      bridgeSubsidyProvider,
+    );
 
     if (!rollupProfile.totalTxs) {
       // No txs at all.
@@ -337,7 +357,7 @@ export class RollupCoordinator {
       await this.metrics.recordRollupMetrics(
         rollupProfile,
         this.bridgeResolver,
-        Array.from(this.bridgeQueues.values()).map(bq => bq.getQueueStats()),
+        Array.from(bridgeQueues.values()).map(bq => bq.getQueueStats()),
       );
     } catch (err) {
       this.log('Error recording rollup metrics: ', err.message);
@@ -366,7 +386,7 @@ export class RollupCoordinator {
       return rollupProfile;
     }
 
-    this.printRollupState(rollupProfile, deadline, flush, outOfGas || outOfCallData || outOfSlots);
+    await this.printRollupState(rollupProfile, deadline, flush, outOfGas || outOfCallData || outOfSlots);
 
     // Track txs currently being processed. Gives clients a view into what's being processed.
     this.processedTxs = [...txsToRollup];
@@ -418,6 +438,7 @@ export class RollupCoordinator {
           rollupDao.rollupProof?.txs ?? [],
           rollupDao.id,
           this.feeResolver,
+          bridgeSubsidyProvider,
         );
       } catch (err) {
         this.log('RollupCoordinator: Error when registering published rollup metrics', err);
@@ -440,7 +461,7 @@ export class RollupCoordinator {
     return await this.rollupPublisher.publishRollup(rollupDao, rollupProfile.totalGas);
   }
 
-  private printRollupState(rollupProfile: RollupProfile, timeout: boolean, flush: boolean, limit: boolean) {
+  private async printRollupState(rollupProfile: RollupProfile, timeout: boolean, flush: boolean, limit: boolean) {
     this.log(`RollupCoordinator: Creating rollup...`);
     this.log(`RollupCoordinator:   rollupSize: ${rollupProfile.rollupSize}`);
     this.log(`RollupCoordinator:   numTxs: ${rollupProfile.totalTxs}`);
@@ -451,10 +472,15 @@ export class RollupCoordinator {
     this.log(`RollupCoordinator:   estimated L1 gas: ${rollupProfile.totalGas}`);
     this.log(`RollupCoordinator:   calldata: ${rollupProfile.totalCallData} bytes`);
     for (const bp of rollupProfile.bridgeProfiles.values()) {
-      const bridgeDescription = this.bridgeResolver.getBridgeDescription(bp.bridgeCallData);
-      this.log(`RollupCoordinator: Defi bridge published: ${bridgeDescription || bp.bridgeCallData.toString()}`);
+      const bridgeDescription = await this.bridgeResolver.getBridgeDescription(bp.bridgeCallData);
+      const descriptionLog = bridgeDescription ? `(${bridgeDescription})` : '';
+      this.log(`RollupCoordinator: Defi bridge published: ${bp.bridgeCallData.toString()} ${descriptionLog}`);
       this.log(`RollupCoordinator:   numTxs: ${bp.numTxs}`);
-      this.log(`RollupCoordinator:   gas balance: ${bp.gasAccrued - bp.gasThreshold}`);
+      this.log(
+        `RollupCoordinator:   gas balance (subsidy): ${bp.gasAccrued + bp.gasSubsidy - bp.gasThreshold} (${
+          bp.gasSubsidy
+        })`,
+      );
     }
   }
 
@@ -468,26 +494,9 @@ export class RollupCoordinator {
       return false;
     }
 
-    // for each bridge, test the earliest tx time against the appropriate bridge timeout
-    for (const bp of rollupProfile.bridgeProfiles.values()) {
-      const timeout = rollupTimeouts.bridgeTimeouts.get(bp.bridgeCallData);
-      if (!timeout) {
-        continue;
-      }
-      if (bp.earliestTx.getTime() < timeout.timeout.getTime()) {
-        return true;
-      }
-    }
-
-    // do we have a non defi tx that has timed out
-    const nonDefis = rollupTxs.filter(tx => tx.tx.txType != TxType.DEFI_DEPOSIT);
-    for (const tx of nonDefis) {
-      if (tx.tx.created.getTime() < rollupTimeouts.baseTimeout.timeout.getTime()) {
-        return true;
-      }
-    }
-
-    // no txs have deadlined
-    return false;
+    // do we have a non defi tx that has timed out?
+    return rollupTxs
+      .filter(tx => tx.tx.txType !== TxType.DEFI_DEPOSIT)
+      .some(tx => tx.tx.created.getTime() < rollupTimeouts.baseTimeout!.timeout.getTime());
   }
 }

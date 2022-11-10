@@ -50,10 +50,14 @@ export async function deployToBlockchain(prevRedeploy?: number) {
     console.log(`PERMIT_HELPER_CONTRACT_ADDRESS: ${addresses.PERMIT_HELPER_CONTRACT_ADDRESS}`);
     console.log(`FEE_DISTRIBUTOR_ADDRESS: ${addresses.FEE_DISTRIBUTOR_ADDRESS}`);
     console.log(`PRICE_FEED_CONTRACT_ADDRESSES: ${addresses.PRICE_FEED_CONTRACT_ADDRESSES}`);
+    console.log(`BRIDGE_DATA_PROVIDER_CONTRACT_ADDRESS: ${addresses.BRIDGE_DATA_PROVIDER_CONTRACT_ADDRESS}`);
     redeployConfig.faucetContractAddress = EthAddress.fromString(addresses.FAUCET_CONTRACT_ADDRESS!);
     redeployConfig.rollupContractAddress = EthAddress.fromString(addresses.ROLLUP_CONTRACT_ADDRESS!);
     redeployConfig.feeDistributorAddress = EthAddress.fromString(addresses.FEE_DISTRIBUTOR_ADDRESS!);
     redeployConfig.permitHelperContractAddress = EthAddress.fromString(addresses.PERMIT_HELPER_CONTRACT_ADDRESS!);
+    redeployConfig.bridgeDataProviderContractAddress = EthAddress.fromString(
+      addresses.BRIDGE_DATA_PROVIDER_CONTRACT_ADDRESS,
+    );
     redeployConfig.priceFeedContractAddresses = addresses
       .PRICE_FEED_CONTRACT_ADDRESSES!.split(',')
       .map(EthAddress.fromString);

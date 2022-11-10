@@ -11,6 +11,7 @@ import {
   deployVerifier,
   elementTokenAddresses,
   deployAztecFaucet,
+  deployMockDataProvider,
 } from './deployers/index.js';
 
 const gasLimit = 5000000;
@@ -63,13 +64,19 @@ export async function deployMainnetE2e(
   await permitHelper.preApprove(elementTokenAddresses['mim-3lp3crv-f'], { gasLimit });
 
   const expiryCutOff = new Date('01 Sept 2022 00:00:00 GMT');
-  await deployElementBridge(signer, rollup, ['dai'], expiryCutOff);
-  await deployLidoBridge(signer, rollup);
-  await deployCurveBridge(signer, rollup);
+  const elementBridge = await deployElementBridge(signer, rollup, ['dai'], expiryCutOff);
+  const lidoBridge = await deployLidoBridge(signer, rollup);
+  const curveBridge = await deployCurveBridge(signer, rollup);
+
+  const bridgeDataProvider = await deployMockDataProvider(signer);
+  await bridgeDataProvider.setBridgeData(1, elementBridge.address, 50000, 'Element Bridge');
+  await bridgeDataProvider.setBridgeData(2, lidoBridge.address, 50000, 'Lido Bridge ETH -> stETH');
+  await bridgeDataProvider.setBridgeData(3, lidoBridge.address, 50000, 'Lido Bridge stETH -> ETH');
+  await bridgeDataProvider.setBridgeData(4, curveBridge.address, 50000, 'Curve Bridge');
 
   const priceFeeds = [FAST_GAS_PRICE_FEED_ADDRESS, DAI_PRICE_FEED_ADDRESS];
 
   const faucet = await deployAztecFaucet(signer, faucetOperator);
 
-  return { rollup, priceFeeds, feeDistributor, permitHelper, faucet };
+  return { rollup, priceFeeds, feeDistributor, permitHelper, faucet, bridgeDataProvider };
 }

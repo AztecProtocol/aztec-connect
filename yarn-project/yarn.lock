@@ -343,7 +343,7 @@ __metadata:
   resolution: "@aztec/blockchain@workspace:blockchain"
   dependencies:
     "@aztec/barretenberg": "workspace:^"
-    "@aztec/bridge-clients": 0.1.47
+    "@aztec/bridge-clients": ^0.1.63
     "@aztec/eslint-config": "workspace:^"
     "@ethersproject/abstract-provider": 5.5.1
     "@ethersproject/contracts": 5.5.0
@@ -407,6 +407,25 @@ __metadata:
     typechain: ^7.0.1
     typescript: ^4.7.4
   checksum: f9c5afea46bf388e1bc7db570836caafacbe8c7725749d38ed93532e90878e03ab9ce38fe6e4b5ace350ae5e535a9755648244b43ff38c620d606f88c69589f5
+  languageName: node
+  linkType: hard
+
+"@aztec/bridge-clients@npm:^0.1.63":
+  version: 0.1.63
+  resolution: "@aztec/bridge-clients@npm:0.1.63"
+  dependencies:
+    "@aztec/barretenberg": 2.1.37
+    "@ethersproject/providers": ^5.6.8
+    "@openzeppelin/contracts": ^4.7.2
+    "@typechain/ethers-v5": ^9.0.0
+    "@typechain/hardhat": ^4.0.0
+    ethers: ^5.6.9
+    hardhat: ^2.10.1
+    isomorphic-fetch: ^3.0.0
+    ts-node: ^10.9.1
+    typechain: ^7.0.1
+    typescript: ^4.7.4
+  checksum: b6b58083a7bed7a7ed9349d2937a669b5b79170afbcb0c50cfd36bff901ec05df655ebcabe07343fd304c9a89124583152436ae331d318f64f5a5b2636a151ee
   languageName: node
   linkType: hard
 

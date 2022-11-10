@@ -3,9 +3,10 @@ import yearnGradientLogo from '../../../images/yearn_gradient.svg';
 import { createYearnAdaptor } from '../bridge_data_adaptors/yearn_adaptor.js';
 import { KNOWN_MAINNET_ASSET_ADDRESSES as KMAA } from '../../../alt-model/known_assets/known_asset_addresses.js';
 import { CreateRecipeArgs } from '../types.js';
-import { keyStatConfig_apr, keyStatConfig_liquidity, keyStatConfig_nextBatch } from '../key_stat_configs.js';
+import { keyStatConfig_apr, keyStatConfig_liquidity, keyStatConfig_averageWait } from '../key_stat_configs.js';
 import { bindInteractionPredictionHook_expectedOutput } from '../interaction_prediction_configs.js';
 import { useVariableAprText } from '../position_key_stat_configs.js';
+import { createDefiPublishStatsCacheArgsBuilder } from '../defi_publish_stats_utils.js';
 
 export const YEARN_ETH_CARD: CreateRecipeArgs = {
   id: 'yearn-finance.ETH-to-yvETH',
@@ -31,9 +32,9 @@ export const YEARN_ETH_CARD: CreateRecipeArgs = {
   enterAuxDataResolver: { type: 'static', value: 0 },
   exitAuxDataResolver: { type: 'static', value: 1 },
   keyStats: {
-    keyStat1: { ...keyStatConfig_apr, label: 'APY' },
+    keyStat1: { ...keyStatConfig_apr, useLabel: () => 'APY' },
     keyStat2: keyStatConfig_liquidity,
-    keyStat3: keyStatConfig_nextBatch,
+    keyStat3: keyStatConfig_averageWait,
   },
   useEnterInteractionPredictionInfo: bindInteractionPredictionHook_expectedOutput({
     direction: 'enter',
@@ -49,6 +50,7 @@ export const YEARN_ETH_CARD: CreateRecipeArgs = {
     useOpenText: useVariableAprText,
     useExitText: useVariableAprText,
   },
+  getDefiPublishStatsCacheArgs: createDefiPublishStatsCacheArgsBuilder({ ignoreAuxData: false }),
 };
 
 export const YEARN_DAI_CARD: CreateRecipeArgs = {

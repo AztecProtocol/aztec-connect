@@ -177,7 +177,9 @@ export async function appFactory(server: Server, prefix: string, metrics: Metric
 
   router.patch('/runtime-config', recordMetric, validateAuth, async (ctx: Koa.Context) => {
     const stream = new PromiseReadable(ctx.req);
-    const runtimeConfig = partialRuntimeConfigFromJson(JSON.parse((await stream.readAll()) as string));
+    const input = (await stream.readAll()) as string;
+    const inputJSON = JSON.parse(input);
+    const runtimeConfig = partialRuntimeConfigFromJson(inputJSON);
     await server.setRuntimeConfig(runtimeConfig);
     ctx.status = 200;
   });
@@ -220,6 +222,15 @@ export async function appFactory(server: Server, prefix: string, metrics: Metric
   router.get('/get-initial-world-state', recordMetric, async (ctx: Koa.Context) => {
     const response = await server.getInitialWorldState();
     ctx.body = initialWorldStateToBuffer(response);
+    ctx.status = 200;
+  });
+
+  router.post('/bridge-query', recordMetric, async (ctx: Koa.Context) => {
+    const stream = new PromiseReadable(ctx.req);
+    const data = JSON.parse((await stream.readAll()) as string);
+    const response = await server.queryBridgeStats(data);
+    ctx.set('content-type', 'application/json');
+    ctx.body = response;
     ctx.status = 200;
   });
 

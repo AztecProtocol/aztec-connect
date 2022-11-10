@@ -22,6 +22,7 @@ async function main() {
     rollupContractAddress,
     permitHelperContractAddress,
     priceFeedContractAddresses,
+    bridgeDataProviderAddress,
     apiPrefix,
     serverAuthToken,
     port,
@@ -34,6 +35,7 @@ async function main() {
     ethConfig,
     rollupContractAddress,
     permitHelperContractAddress,
+    bridgeDataProviderAddress,
     priceFeedContractAddresses,
     provider,
   );

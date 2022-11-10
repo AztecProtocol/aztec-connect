@@ -4,12 +4,13 @@ import ethToDaiBanner from '../../../images/eth_to_dai_banner.svg';
 import { createDcaAdaptor } from '../bridge_data_adaptors/dca_adaptor.js';
 import { KNOWN_MAINNET_ASSET_ADDRESSES as KMAA } from '../../../alt-model/known_assets/known_asset_addresses.js';
 import { CreateRecipeArgs } from '../types.js';
-import { keyStatConfig_nextBatch } from '../key_stat_configs.js';
+import { keyStatConfig_averageWait } from '../key_stat_configs.js';
 import { useChainLinkPollerCache } from '../../../alt-model/top_level_context/index.js';
 import { CHAIN_LINK_ORACLE_ADDRESSES } from '../../../alt-model/price_feeds/chain_link_oracles.js';
 import { useMaybeObs } from '../../../app/util/index.js';
 import { formatBaseUnits } from '../../../app/index.js';
 import { Amount } from '../../../alt-model/assets/index.js';
+import { createDefiPublishStatsCacheArgsBuilder } from '../defi_publish_stats_utils.js';
 
 export const SEVEN_DAY_DCA_CARD_DAI_TO_ETH: CreateRecipeArgs = {
   id: 'seven-day-dca.DAI-to-ETH',
@@ -37,12 +38,12 @@ export const SEVEN_DAY_DCA_CARD_DAI_TO_ETH: CreateRecipeArgs = {
   cardButtonLabel: 'Invest',
   keyStats: {
     keyStat1: {
-      label: 'Duration',
+      useLabel: () => 'Duration',
       skeletonSizingContent: '7 Days',
       useFormattedValue: () => '7 Days',
     },
     keyStat2: {
-      label: 'DAI for 1 ETH',
+      useLabel: () => 'DAI for 1 ETH',
       skeletonSizingContent: '$11B',
       useFormattedValue: () => {
         const daiFor1Eth = useDaiFor1Eth();
@@ -50,7 +51,7 @@ export const SEVEN_DAY_DCA_CARD_DAI_TO_ETH: CreateRecipeArgs = {
         return formatDai_2dp(daiFor1Eth);
       },
     },
-    keyStat3: keyStatConfig_nextBatch,
+    keyStat3: keyStatConfig_averageWait,
   },
   positionKeyStat: {
     type: 'async',
@@ -69,6 +70,7 @@ export const SEVEN_DAY_DCA_CARD_DAI_TO_ETH: CreateRecipeArgs = {
     if (!tx.settled) return;
     return tx.settled?.getTime() + SEVEN_DAYS_MS;
   },
+  getDefiPublishStatsCacheArgs: createDefiPublishStatsCacheArgsBuilder({ ignoreAuxData: false }),
 };
 
 export const SEVEN_DAY_DCA_CARD_ETH_TO_DAI: CreateRecipeArgs = {
@@ -82,7 +84,7 @@ export const SEVEN_DAY_DCA_CARD_ETH_TO_DAI: CreateRecipeArgs = {
   keyStats: {
     ...SEVEN_DAY_DCA_CARD_DAI_TO_ETH.keyStats,
     keyStat2: {
-      label: 'ETH for 1k DAI',
+      useLabel: () => 'ETH for 1k DAI',
       skeletonSizingContent: '$11B',
       useFormattedValue: () => {
         const daiFor1Eth = useEthFor1Dai();

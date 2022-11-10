@@ -1,5 +1,5 @@
 import { toBigIntBE, toBufferBE } from '@aztec/barretenberg/bigint_buffer';
-import { TxType } from '@aztec/barretenberg/blockchain';
+import { BridgeSubsidy, TxType } from '@aztec/barretenberg/blockchain';
 import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
 import { InterruptError } from '@aztec/barretenberg/errors';
@@ -16,7 +16,7 @@ import { RollupAggregator } from '../rollup_aggregator.js';
 import { RollupCreator } from '../rollup_creator.js';
 import { RollupPublisher } from '../rollup_publisher.js';
 import { TxFeeResolver } from '../tx_fee_resolver/index.js';
-import { PublishTimeManager, RollupTimeout, RollupTimeouts } from './publish_time_manager.js';
+import { PublishTimeManager, RollupTimeouts } from './publish_time_manager.js';
 import { RollupCoordinator } from './rollup_coordinator.js';
 import { jest } from '@jest/globals';
 
@@ -28,40 +28,40 @@ type Mockify<T> = {
 
 const bridgeConfigs: BridgeConfig[] = [
   {
-    bridgeCallData: 1n,
+    bridgeAddressId: 1,
     numTxs: 5,
     gas: 1000000,
-    rollupFrequency: 2,
+    permittedAssets: [0, 1],
   },
   {
-    bridgeCallData: 2n,
+    bridgeAddressId: 2,
     numTxs: 10,
     gas: 5000000,
-    rollupFrequency: 3,
+    permittedAssets: [0, 1],
   },
   {
-    bridgeCallData: 3n,
+    bridgeAddressId: 3,
     numTxs: 3,
     gas: 90000,
-    rollupFrequency: 4,
+    permittedAssets: [0, 1],
   },
   {
-    bridgeCallData: 4n,
+    bridgeAddressId: 4,
     numTxs: 6,
     gas: 3000000,
-    rollupFrequency: 1,
+    permittedAssets: [0, 1],
   },
   {
-    bridgeCallData: 5n,
+    bridgeAddressId: 5,
     numTxs: 2,
     gas: 8000000,
-    rollupFrequency: 7,
+    permittedAssets: [0, 1],
   },
   {
-    bridgeCallData: 6n,
+    bridgeAddressId: 6,
     numTxs: 20,
     gas: 3000000,
-    rollupFrequency: 8,
+    permittedAssets: [0, 1],
   },
 ];
 
@@ -73,10 +73,10 @@ const padBridgeConfigs = () => {
   // some tests need >numberOfBridgeCalls bridge calls so we'll add numberOfBridgeCalls configs on top of the existing 6.
   for (let i = 1; i <= numberOfBridgeCalls + 1; i++) {
     bridgeConfigs.push({
-      bridgeCallData: BigInt(i + 6),
+      bridgeAddressId: i + 6,
       numTxs: 1, // arbitrary
       gas: 90000, // arbitrary
-      rollupFrequency: 4, // arbitrary
+      permittedAssets: [0, 1], // arbitrary
     });
   }
 };
@@ -91,22 +91,48 @@ const HUGE_GAS = 10000000;
 const NON_FEE_PAYING_ASSET = 999;
 
 const getBridgeCost = (bridgeCallData: bigint) => {
-  const bridgeConfig = bridgeConfigs.find(bc => bc.bridgeCallData === bridgeCallData);
+  const bridgeConfig = bridgeConfigs.find(
+    bc => bc.bridgeAddressId === BridgeCallData.fromBigInt(bridgeCallData).bridgeAddressId,
+  );
   if (!bridgeConfig) {
     throw new Error(`Requested cost for invalid bridgeCallData: ${bridgeCallData.toString()}`);
   }
-  return bridgeConfig.gas;
+  return bridgeConfig.gas!;
 };
 
 const getSingleBridgeCost = (bridgeCallData: bigint) => {
-  const bridgeConfig = bridgeConfigs.find(bc => bc.bridgeCallData === bridgeCallData);
+  const bridgeConfig = bridgeConfigs.find(
+    bc => bc.bridgeAddressId === BridgeCallData.fromBigInt(bridgeCallData).bridgeAddressId,
+  );
   if (!bridgeConfig) {
     throw new Error(`Requested cost for invalid bridgeCallData: ${bridgeCallData.toString()}`);
   }
   const { gas, numTxs } = bridgeConfig;
-  const single = gas / numTxs;
-  return gas % numTxs ? single + 1 : single;
+  return Math.ceil(gas! / numTxs);
 };
+
+const generateValidBridgeCallData = (bridgeConfig: BridgeConfig) => {
+  return new BridgeCallData(
+    bridgeConfig.bridgeAddressId,
+    bridgeConfig.permittedAssets[0],
+    bridgeConfig.permittedAssets[1],
+    undefined,
+    undefined,
+    0,
+  );
+};
+
+const generateBridgeSubsidy = (subsidyGas: number, bridgeCallData: bigint, criteria: bigint) => {
+  const fullCallData = BridgeCallData.fromBigInt(bridgeCallData);
+  return {
+    subsidyInGas: subsidyGas,
+    subsidyInWei: BigInt(subsidyGas * 1000),
+    criteria,
+    addressId: fullCallData.bridgeAddressId,
+  } as BridgeSubsidy;
+};
+
+const bridgeCallDatas = bridgeConfigs.map(bc => generateValidBridgeCallData(bc));
 
 const randomInt = (to = 2 ** 32 - 1) => Math.floor(Math.random() * (to + 1));
 
@@ -157,12 +183,6 @@ describe('rollup_coordinator', () => {
 
   let rollupTimeouts: RollupTimeouts = {
     baseTimeout: { timeout: new Date('2021-06-20T10:00:00+00:00'), rollupNumber: 1 },
-    bridgeTimeouts: new Map<bigint, RollupTimeout>([
-      [bridgeConfigs[0].bridgeCallData, { timeout: new Date('2021-06-20T10:00:00+00:00'), rollupNumber: 1 }],
-      [bridgeConfigs[1].bridgeCallData, { timeout: new Date('2021-06-20T09:00:00+00:00'), rollupNumber: 1 }],
-      [bridgeConfigs[2].bridgeCallData, { timeout: new Date('2021-06-20T09:30:00+00:00'), rollupNumber: 1 }],
-      [bridgeConfigs[3].bridgeCallData, { timeout: new Date('2021-06-20T08:00:00+00:00'), rollupNumber: 1 }],
-    ]),
   };
 
   const callDataValues: { [key: number]: number } = {
@@ -311,7 +331,11 @@ describe('rollup_coordinator', () => {
     bridgeResolver = {
       getBridgeConfigs: jest.fn().mockReturnValue(bridgeConfigs),
       getBridgeDescription: jest.fn().mockReturnValue(undefined),
-      defaultDefiBatchSize: 5,
+      getBridgeSubsidy: jest
+        .fn()
+        .mockImplementation(() =>
+          Promise.resolve({ subsidyInGas: 0, subsidyInWei: 0n, addressId: 1, criteria: 1n } as BridgeSubsidy),
+        ),
     } as any;
 
     metrics = {
@@ -378,8 +402,8 @@ describe('rollup_coordinator', () => {
         }
         // We'll allow the number of bridgeCallDatas to exceed the max number of bridge calls per block by 2.
         // So 2 of our txs _should_ be rejected from the first (and only) rollup of this test.
-        const bridgeCallData = BigInt(((j - 1) % (numberOfBridgeCalls + 2)) + 1); // 1, 2, ..., 31, 32, 33, 34.
-        pendingTxs.push(mockDefiBridgeTx(i, HUGE_GAS, bridgeCallData));
+        const bridgeCallData = bridgeCallDatas[(j - 1) % (numberOfBridgeCalls + 2)]; // indices 0, 1, 2, ..., 30, 31, 32, 33.
+        pendingTxs.push(mockDefiBridgeTx(i, HUGE_GAS, bridgeCallData.toBigInt()));
         j++;
       }
 
@@ -391,7 +415,7 @@ describe('rollup_coordinator', () => {
         .filter(tx => {
           const proof = new ProofData(tx.proofData);
           // We can safely coerce to a number, because we know these are small numbers in this test:
-          const bid = Number(BridgeCallData.fromBuffer(proof.bridgeCallData).toBigInt());
+          const bid = Number(BridgeCallData.fromBuffer(proof.bridgeCallData).bridgeAddressId);
           // ... except for the non-defi txs, which have huge bridgeCallDatas (much greater than 1000, say):
           return bid <= numberOfBridgeCalls || bid > 1000;
         })
@@ -404,7 +428,7 @@ describe('rollup_coordinator', () => {
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual(
         Array(numberOfBridgeCalls)
           .fill(0)
-          .map((_, i) => bridgeConfigs[i].bridgeCallData),
+          .map((_, i) => bridgeCallDatas[i].toBigInt()),
       );
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -429,9 +453,8 @@ describe('rollup_coordinator', () => {
         // We'll allow the number of bridgeCallDatas to exceed the max number of bridge calls per block by 1.
         // So _one_ of our txs _should_ be rejected from the first (and only) rollup of this test.
         const index = (j - 1) % (numberOfBridgeCalls + 1); // 0, 1, 2, ..., 31, 32.
-        allTxs.push(
-          mockDefiBridgeTx(i, DEFI_TX_PLUS_BASE_GAS + bridgeConfigs[index].gas, bridgeConfigs[index].bridgeCallData),
-        );
+        const bridgeCallData = bridgeCallDatas[index];
+        allTxs.push(mockDefiBridgeTx(i, DEFI_TX_PLUS_BASE_GAS + bridgeConfigs[index].gas!, bridgeCallData.toBigInt()));
         j++;
       }
 
@@ -467,7 +490,7 @@ describe('rollup_coordinator', () => {
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual(
         Array(numberOfBridgeCalls)
           .fill(0)
-          .map((_, i) => bridgeConfigs[i].bridgeCallData),
+          .map((_, i) => bridgeCallDatas[i].toBigInt()),
       );
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -486,8 +509,8 @@ describe('rollup_coordinator', () => {
         }
         // We'll allow the number of bridgeCallDatas to exceed the max number of bridge calls per block by 2.
         // So 2 of our txs _should_ be rejected from the first (and only) rollup of this test.
-        const bridgeCallData = BigInt(((j - 1) % (numberOfBridgeCalls + 2)) + 1); // 1, 2, ..., 31, 32, 33, 34.
-        pendingTxs.push(mockDefiBridgeTx(i, HUGE_GAS, bridgeCallData));
+        const bridgeCallData = bridgeCallDatas[(j - 1) % (numberOfBridgeCalls + 2)]; // indices 0, 1, 2, ..., 30, 31, 32, 33.
+        pendingTxs.push(mockDefiBridgeTx(i, HUGE_GAS, bridgeCallData.toBigInt()));
         j++;
       }
 
@@ -498,7 +521,7 @@ describe('rollup_coordinator', () => {
         .filter(tx => {
           const proof = new ProofData(tx.proofData);
           // We can safely coerce to a number, because we know these are small numbers in this test:
-          const bid = Number(BridgeCallData.fromBuffer(proof.bridgeCallData).toBigInt());
+          const bid = Number(BridgeCallData.fromBuffer(proof.bridgeCallData).bridgeAddressId);
           // ... except for the non-defi txs, which have huge bridgeCallDatas (much greater than 1000, say):
           return bid <= numberOfBridgeCalls || bid > 1000;
         })
@@ -511,7 +534,7 @@ describe('rollup_coordinator', () => {
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual(
         Array(numberOfBridgeCalls)
           .fill(0)
-          .map((_, i) => bridgeConfigs[i].bridgeCallData),
+          .map((_, i) => bridgeCallDatas[i].toBigInt()),
       );
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
@@ -522,14 +545,14 @@ describe('rollup_coordinator', () => {
       const pendingTxs = [
         mockTx(0, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
         mockTx(1, { txType: TxType.ACCOUNT, txFeeAssetId: 0 }),
-        mockDefiBridgeTx(2, HUGE_GAS, bridgeConfigs[0].bridgeCallData, 0),
+        mockDefiBridgeTx(2, HUGE_GAS, bridgeCallDatas[0].toBigInt(), 0),
         mockTx(3, { txType: TxType.DEFI_CLAIM, txFeeAssetId: 0 }),
         mockTx(4, { txType: TxType.WITHDRAW_HIGH_GAS, txFeeAssetId: 0 }),
         mockTx(5, { txType: TxType.DEFI_CLAIM, txFeeAssetId: 0 }),
         mockTx(6, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
         mockTx(7, { txType: TxType.WITHDRAW_TO_WALLET, txFeeAssetId: 0 }),
         mockTx(8, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }),
-        mockDefiBridgeTx(9, HUGE_GAS, bridgeConfigs[0].bridgeCallData, 0),
+        mockDefiBridgeTx(9, HUGE_GAS, bridgeCallDatas[0].toBigInt(), 0),
         mockTx(10, { txType: TxType.DEFI_CLAIM, txFeeAssetId: 0 }),
       ];
       const rp = await coordinator.processPendingTxs(pendingTxs);
@@ -548,14 +571,14 @@ describe('rollup_coordinator', () => {
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
-        bridgeConfigs[0].bridgeCallData,
+        bridgeCallDatas[0].toBigInt(),
         ...Array(numberOfBridgeCalls - 1).fill(0n),
       ]);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
 
     it("will not rollup defi deposit proofs if the bridge isn't profitable", async () => {
-      const bridgeCallData = bridgeConfigs[0].bridgeCallData;
+      const bridgeCallData = bridgeCallDatas[0].toBigInt();
       const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeCallData);
 
       const pendingTxs = [
@@ -575,7 +598,7 @@ describe('rollup_coordinator', () => {
     });
 
     it('will rollup defi txs once the bridge is profitable', async () => {
-      const bridgeCallData = bridgeConfigs[2].bridgeCallData;
+      const bridgeCallData = bridgeCallDatas[2].toBigInt();
       const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeCallData);
 
       let pendingTxs = [
@@ -620,6 +643,171 @@ describe('rollup_coordinator', () => {
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
 
+    it('will rollup defi txs if subsidised', async () => {
+      const bridgeCallData = bridgeCallDatas[2].toBigInt();
+      const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeCallData);
+
+      let pendingTxs = [
+        mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockTx(1, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockDefiBridgeTxLocal(2, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallData)),
+        mockDefiBridgeTxLocal(3, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallData)),
+        mockTx(4, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockTx(5, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+      ];
+
+      // the bridge txs wouldnt be covered as we are missing 1 bridge tx and the normal txs we
+      // still only have 2x2 when when we needed 4x2 so nothing will be published
+      let rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(false);
+      expectProcessedTxIds([]);
+
+      // then we get some more txs. Of course we still have the defis from before
+      // the defis by themselves don't cover the cost of the bridge, but we will set the subsidy so that the additional cost is covered
+      bridgeResolver.getBridgeSubsidy.mockImplementationOnce(() =>
+        Promise.resolve(generateBridgeSubsidy(getSingleBridgeCost(bridgeCallData), bridgeCallData, 1n)),
+      );
+      pendingTxs = [
+        mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockTx(1, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockDefiBridgeTxLocal(2, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallData)),
+        mockTx(3, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockTx(4, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockDefiBridgeTxLocal(5, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallData)),
+        mockTx(6, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockTx(7, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+      ];
+      rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(true);
+      expectProcessedTxIds([0, 1, 3, 4, 2, 5, 6, 7]);
+      expect(rollupCreator.create).toHaveBeenCalledTimes(4);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
+        bridgeCallData,
+        ...Array(numberOfBridgeCalls - 1).fill(0n),
+      ]);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+    });
+
+    it('will include multiple subsidised bridges', async () => {
+      // then we get some more txs. Of course we still have the defis from before
+      // the defis by themselves don't cover the cost of the bridge, but we will set the subsidy so that the additional cost is covered
+      // this will be called for each bridge call data value
+      bridgeResolver.getBridgeSubsidy.mockImplementationOnce((bridgeCallData: bigint) =>
+        Promise.resolve(generateBridgeSubsidy(getSingleBridgeCost(bridgeCallData), bridgeCallData, 1n)),
+      );
+      bridgeResolver.getBridgeSubsidy.mockImplementationOnce((bridgeCallData: bigint) =>
+        Promise.resolve(generateBridgeSubsidy(getSingleBridgeCost(bridgeCallData), bridgeCallData, 1n)),
+      );
+      const pendingTxs = [
+        mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockTx(1, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockTx(2, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockDefiBridgeTx(
+          3,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[2].toBigInt()),
+          bridgeCallDatas[2].toBigInt(),
+        ),
+        mockTx(4, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockDefiBridgeTx(
+          5,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[2].toBigInt()),
+          bridgeCallDatas[2].toBigInt(),
+        ),
+        mockTx(6, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockDefiBridgeTx(
+          7,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[4].toBigInt()),
+          bridgeCallDatas[4].toBigInt(),
+        ),
+      ];
+      const rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(true);
+      expect(rp.totalTxs).toEqual(8);
+      expectProcessedTxIds([0, 1, 2, 4, 3, 5, 6, 7]);
+      expect(rollupCreator.create).toHaveBeenCalledTimes(4);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
+        bridgeCallDatas[2].toBigInt(),
+        bridgeCallDatas[4].toBigInt(),
+        ...Array(numberOfBridgeCalls - 2).fill(0n),
+      ]);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+    });
+
+    it('only one bridge call data can be subsidised per bridge address', async () => {
+      // then we get some more txs. Of course we still have the defis from before
+      // the defis by themselves don't cover the cost of the bridge, but we will set the subsidy so that the additional cost is covered
+      // this will be called for each bridge call data value
+      bridgeResolver.getBridgeSubsidy.mockImplementationOnce((bridgeCallData: bigint) =>
+        Promise.resolve(generateBridgeSubsidy(getSingleBridgeCost(bridgeCallData), bridgeCallData, 1n)),
+      );
+      bridgeResolver.getBridgeSubsidy.mockImplementationOnce((bridgeCallData: bigint) =>
+        Promise.resolve(generateBridgeSubsidy(getSingleBridgeCost(bridgeCallData), bridgeCallData, 1n)),
+      );
+      bridgeResolver.getBridgeSubsidy.mockImplementationOnce((bridgeCallData: bigint) =>
+        Promise.resolve(generateBridgeSubsidy(getSingleBridgeCost(bridgeCallData), bridgeCallData, 1n)),
+      );
+
+      // we will create 2 sets of txs that are using bridge address id bridgeConfig[2].bridgeAddressId
+      // only one will be subsidised
+      const alternativeBridgeCallData = new BridgeCallData(
+        bridgeConfigs[2].bridgeAddressId,
+        bridgeConfigs[2].permittedAssets[1],
+        bridgeConfigs[2].permittedAssets[0],
+        undefined,
+        undefined,
+        15,
+      ).toBigInt();
+      const pendingTxs = [
+        mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockDefiBridgeTx(
+          1,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[2].toBigInt()),
+          alternativeBridgeCallData,
+        ),
+        mockDefiBridgeTx(
+          2,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[2].toBigInt()),
+          alternativeBridgeCallData,
+        ),
+        mockDefiBridgeTx(
+          3,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[2].toBigInt()),
+          bridgeCallDatas[2].toBigInt(),
+        ),
+        mockTx(4, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockDefiBridgeTx(
+          5,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[2].toBigInt()),
+          bridgeCallDatas[2].toBigInt(),
+        ),
+        mockTx(6, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockDefiBridgeTx(
+          7,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[4].toBigInt()),
+          bridgeCallDatas[4].toBigInt(),
+        ),
+        mockTx(8, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockTx(9, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+      ];
+      const rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(true);
+      expect(rp.totalTxs).toEqual(8);
+      expectProcessedTxIds([0, 1, 2, 4, 6, 7, 8, 9]);
+      expect(rollupCreator.create).toHaveBeenCalledTimes(4);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
+        alternativeBridgeCallData,
+        bridgeCallDatas[4].toBigInt(),
+        ...Array(numberOfBridgeCalls - 2).fill(0n),
+      ]);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+    });
+
     it('will add defi txs to a bridge queue if the bridge is not in the config', async () => {
       const bridgeCallData = 12345678n;
       const mockBridgeGas = 10000000;
@@ -653,7 +841,7 @@ describe('rollup_coordinator', () => {
     });
 
     it('will continue to add defi txs to profitable bridge', async () => {
-      const bridgeCallData = bridgeConfigs[2].bridgeCallData;
+      const bridgeCallData = bridgeCallDatas[2].toBigInt();
       const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeCallData);
 
       const pendingTxs = [
@@ -680,7 +868,7 @@ describe('rollup_coordinator', () => {
     });
 
     it('will fill bridge batch even after batch is profitable', async () => {
-      const bridgeCallData = bridgeConfigs[2].bridgeCallData;
+      const bridgeCallData = bridgeCallDatas[2].toBigInt();
       const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeCallData);
 
       const pendingTxs = [
@@ -708,7 +896,7 @@ describe('rollup_coordinator', () => {
     });
 
     it('will only keep filling profitable bridge batch', async () => {
-      const bridgeCallData = bridgeConfigs[2].bridgeCallData;
+      const bridgeCallData = bridgeCallDatas[2].toBigInt();
       const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeCallData);
 
       const pendingTxs = [
@@ -716,23 +904,23 @@ describe('rollup_coordinator', () => {
         mockDefiBridgeTxLocal(1, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallData)),
         mockDefiBridgeTx(
           2,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[0].bridgeCallData),
-          bridgeConfigs[0].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[0].toBigInt()),
+          bridgeCallDatas[0].toBigInt(),
         ),
         mockDefiBridgeTxLocal(3, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallData)),
         mockTx(4, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
         mockDefiBridgeTx(
           5,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[0].bridgeCallData),
-          bridgeConfigs[0].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[0].toBigInt()),
+          bridgeCallDatas[0].toBigInt(),
         ),
         mockDefiBridgeTxLocal(6, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallData)),
         mockDefiBridgeTxLocal(7, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallData)),
         mockTx(8, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
         mockDefiBridgeTx(
           9,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[0].bridgeCallData),
-          bridgeConfigs[0].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[0].toBigInt()),
+          bridgeCallDatas[0].toBigInt(),
         ),
         mockTx(10, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
       ];
@@ -751,7 +939,7 @@ describe('rollup_coordinator', () => {
     });
 
     it('will only keep filling profitable bridge batch across invocations', async () => {
-      const bridgeCallData = bridgeConfigs[2].bridgeCallData;
+      const bridgeCallData = bridgeCallDatas[2].toBigInt();
       const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeCallData);
 
       let pendingTxs = [
@@ -776,15 +964,15 @@ describe('rollup_coordinator', () => {
         mockDefiBridgeTxLocal(1, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallData)),
         mockDefiBridgeTx(
           2,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[0].bridgeCallData),
-          bridgeConfigs[0].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[0].toBigInt()),
+          bridgeCallDatas[0].toBigInt(),
         ),
         mockDefiBridgeTxLocal(3, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallData)),
         mockTx(4, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
         mockDefiBridgeTx(
           5,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[0].bridgeCallData),
-          bridgeConfigs[0].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[0].toBigInt()),
+          bridgeCallDatas[0].toBigInt(),
         ),
         // we dont need these extra bridge transaction as bridge call data 2 only requires 3 txs
         // to be profitable
@@ -793,8 +981,8 @@ describe('rollup_coordinator', () => {
         mockTx(8, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
         mockDefiBridgeTx(
           9,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[0].bridgeCallData),
-          bridgeConfigs[0].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[0].toBigInt()),
+          bridgeCallDatas[0].toBigInt(),
         ),
         mockTx(10, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
       ];
@@ -808,14 +996,14 @@ describe('rollup_coordinator', () => {
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
-        bridgeConfigs[2].bridgeCallData,
+        bridgeCallDatas[2].toBigInt(),
         ...Array(numberOfBridgeCalls - 1).fill(0n),
       ]);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
 
     it('will only fill bridge batch up to rollup size', async () => {
-      const bridgeCallData = bridgeConfigs[2].bridgeCallData;
+      const bridgeCallData = bridgeCallDatas[2].toBigInt();
       const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeCallData);
 
       const pendingTxs = [
@@ -823,23 +1011,23 @@ describe('rollup_coordinator', () => {
         mockDefiBridgeTxLocal(1, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallData)),
         mockDefiBridgeTx(
           2,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[0].bridgeCallData),
-          bridgeConfigs[0].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[0].toBigInt()),
+          bridgeCallDatas[0].toBigInt(),
         ),
         mockDefiBridgeTxLocal(3, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallData)),
         mockTx(4, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
         mockDefiBridgeTx(
           5,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[0].bridgeCallData),
-          bridgeConfigs[0].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[0].toBigInt()),
+          bridgeCallDatas[0].toBigInt(),
         ),
         mockDefiBridgeTxLocal(6, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallData)),
         mockDefiBridgeTxLocal(7, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallData)),
         mockTx(8, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
         mockDefiBridgeTx(
           9,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[0].bridgeCallData),
-          bridgeConfigs[0].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[0].toBigInt()),
+          bridgeCallDatas[0].toBigInt(),
         ),
         mockDefiBridgeTxLocal(10, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallData)),
         mockDefiBridgeTxLocal(11, DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallData)),
@@ -853,14 +1041,14 @@ describe('rollup_coordinator', () => {
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
-        bridgeConfigs[2].bridgeCallData,
+        bridgeCallData,
         ...Array(numberOfBridgeCalls - 1).fill(0n),
       ]);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
 
     it('will not split bridge batch over rollups', async () => {
-      const bridgeCallData = bridgeConfigs[2].bridgeCallData;
+      const bridgeCallData = bridgeCallDatas[2].toBigInt();
       const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeCallData);
 
       const pendingTxs = [
@@ -891,43 +1079,43 @@ describe('rollup_coordinator', () => {
       const pendingTxs = [
         mockDefiBridgeTx(
           0,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[4].bridgeCallData),
-          bridgeConfigs[4].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[4].toBigInt()),
+          bridgeCallDatas[4].toBigInt(),
         ),
         mockDefiBridgeTx(
           1,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[2].bridgeCallData),
-          bridgeConfigs[2].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[2].toBigInt()),
+          bridgeCallDatas[2].toBigInt(),
         ),
         mockDefiBridgeTx(
           2,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[2].bridgeCallData),
-          bridgeConfigs[2].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[2].toBigInt()),
+          bridgeCallDatas[2].toBigInt(),
         ),
         mockDefiBridgeTx(
           3,
-          DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeConfigs[0].bridgeCallData),
-          bridgeConfigs[0].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeCallDatas[0].toBigInt()),
+          bridgeCallDatas[0].toBigInt(),
         ),
         mockDefiBridgeTx(
           4,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[4].bridgeCallData),
-          bridgeConfigs[4].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[4].toBigInt()),
+          bridgeCallDatas[4].toBigInt(),
         ),
         mockDefiBridgeTx(
           5,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[2].bridgeCallData),
-          bridgeConfigs[2].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[2].toBigInt()),
+          bridgeCallDatas[2].toBigInt(),
         ),
         mockDefiBridgeTx(
           6,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[4].bridgeCallData),
-          bridgeConfigs[4].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[4].toBigInt()),
+          bridgeCallDatas[4].toBigInt(),
         ),
         mockDefiBridgeTx(
           7,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[4].bridgeCallData),
-          bridgeConfigs[4].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[4].toBigInt()),
+          bridgeCallDatas[4].toBigInt(),
         ),
       ];
       const rp = await coordinator.processPendingTxs(pendingTxs);
@@ -938,9 +1126,9 @@ describe('rollup_coordinator', () => {
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
-        bridgeConfigs[0].bridgeCallData,
-        bridgeConfigs[4].bridgeCallData,
-        bridgeConfigs[2].bridgeCallData,
+        bridgeCallDatas[0].toBigInt(),
+        bridgeCallDatas[4].toBigInt(),
+        bridgeCallDatas[2].toBigInt(),
         ...Array(numberOfBridgeCalls - 3).fill(0n),
       ]);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
@@ -950,46 +1138,46 @@ describe('rollup_coordinator', () => {
       const pendingTxs = [
         mockDefiBridgeTx(
           0,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[4].bridgeCallData),
-          bridgeConfigs[4].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[4].toBigInt()),
+          bridgeCallDatas[4].toBigInt(),
           1,
         ),
         mockDefiBridgeTx(
           1,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[2].bridgeCallData),
-          bridgeConfigs[2].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[2].toBigInt()),
+          bridgeCallDatas[2].toBigInt(),
         ),
         mockDefiBridgeTx(
           2,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[2].bridgeCallData),
-          bridgeConfigs[2].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[2].toBigInt()),
+          bridgeCallDatas[2].toBigInt(),
         ),
         mockDefiBridgeTx(
           3,
-          DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeConfigs[0].bridgeCallData),
-          bridgeConfigs[0].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeCallDatas[0].toBigInt()),
+          bridgeCallDatas[0].toBigInt(),
         ),
         mockDefiBridgeTx(
           4,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[4].bridgeCallData),
-          bridgeConfigs[4].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[4].toBigInt()),
+          bridgeCallDatas[4].toBigInt(),
           1,
         ),
         mockDefiBridgeTx(
           5,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[2].bridgeCallData),
-          bridgeConfigs[2].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[2].toBigInt()),
+          bridgeCallDatas[2].toBigInt(),
         ),
         mockDefiBridgeTx(
           6,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[4].bridgeCallData),
-          bridgeConfigs[4].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[4].toBigInt()),
+          bridgeCallDatas[4].toBigInt(),
           1,
         ),
         mockDefiBridgeTx(
           7,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[4].bridgeCallData),
-          bridgeConfigs[4].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[4].toBigInt()),
+          bridgeCallDatas[4].toBigInt(),
           1,
         ),
       ];
@@ -1001,9 +1189,9 @@ describe('rollup_coordinator', () => {
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0, 1]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
-        bridgeConfigs[0].bridgeCallData,
-        bridgeConfigs[4].bridgeCallData,
-        bridgeConfigs[2].bridgeCallData,
+        bridgeCallDatas[0].toBigInt(),
+        bridgeCallDatas[4].toBigInt(),
+        bridgeCallDatas[2].toBigInt(),
         ...Array(numberOfBridgeCalls - 3).fill(0n),
       ]);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
@@ -1013,48 +1201,48 @@ describe('rollup_coordinator', () => {
       const pendingTxs = [
         mockDefiBridgeTx(
           0,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[4].bridgeCallData),
-          bridgeConfigs[4].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[4].toBigInt()),
+          bridgeCallDatas[4].toBigInt(),
           1,
         ),
         mockDefiBridgeTx(
           1,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[2].bridgeCallData),
-          bridgeConfigs[2].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[2].toBigInt()),
+          bridgeCallDatas[2].toBigInt(),
         ),
         mockDefiBridgeTx(
           2,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[2].bridgeCallData),
-          bridgeConfigs[2].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[2].toBigInt()),
+          bridgeCallDatas[2].toBigInt(),
           NON_FEE_PAYING_ASSET,
         ),
         mockDefiBridgeTx(
           3,
-          DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeConfigs[0].bridgeCallData),
-          bridgeConfigs[0].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeCallDatas[0].toBigInt()),
+          bridgeCallDatas[0].toBigInt(),
         ),
         mockDefiBridgeTx(
           4,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[4].bridgeCallData),
-          bridgeConfigs[4].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[4].toBigInt()),
+          bridgeCallDatas[4].toBigInt(),
           1,
         ),
         mockDefiBridgeTx(
           5,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[2].bridgeCallData),
-          bridgeConfigs[2].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[2].toBigInt()),
+          bridgeCallDatas[2].toBigInt(),
           NON_FEE_PAYING_ASSET + 1,
         ),
         mockDefiBridgeTx(
           6,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[4].bridgeCallData),
-          bridgeConfigs[4].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[4].toBigInt()),
+          bridgeCallDatas[4].toBigInt(),
           1,
         ),
         mockDefiBridgeTx(
           7,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[4].bridgeCallData),
-          bridgeConfigs[4].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[4].toBigInt()),
+          bridgeCallDatas[4].toBigInt(),
           1,
         ),
       ];
@@ -1066,9 +1254,9 @@ describe('rollup_coordinator', () => {
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0, 1]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
-        bridgeConfigs[0].bridgeCallData,
-        bridgeConfigs[4].bridgeCallData,
-        bridgeConfigs[2].bridgeCallData,
+        bridgeCallDatas[0].toBigInt(),
+        bridgeCallDatas[4].toBigInt(),
+        bridgeCallDatas[2].toBigInt(),
         ...Array(numberOfBridgeCalls - 3).fill(0n),
       ]);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
@@ -1090,8 +1278,8 @@ describe('rollup_coordinator', () => {
 
     it('single defi tx can publish if it covers rollup + bridge costs', async () => {
       let fullCost = (numInnerRollupTxs * numOuterRollupProofs - 1) * BASE_GAS; // all other slots
-      fullCost += DEFI_TX_PLUS_BASE_GAS + bridgeConfigs[1].gas; // our slot
-      const pendingTxs = [mockDefiBridgeTx(0, fullCost, bridgeConfigs[1].bridgeCallData)];
+      fullCost += DEFI_TX_PLUS_BASE_GAS + bridgeConfigs[1].gas!; // our slot
+      const pendingTxs = [mockDefiBridgeTx(0, fullCost, bridgeCallDatas[1].toBigInt())];
       const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
       expectProcessedTxIds([0]);
@@ -1100,7 +1288,7 @@ describe('rollup_coordinator', () => {
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
-        bridgeConfigs[1].bridgeCallData,
+        bridgeCallDatas[1].toBigInt(),
         ...Array(numberOfBridgeCalls - 1).fill(0n),
       ]);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
@@ -1108,9 +1296,9 @@ describe('rollup_coordinator', () => {
 
     it('single defi tx can publish if it covers rollup + bridge costs 2', async () => {
       let almostFullCost = (numInnerRollupTxs * numOuterRollupProofs - 3) * BASE_GAS; // pays for all but 3 slots
-      almostFullCost += DEFI_TX_PLUS_BASE_GAS + bridgeConfigs[1].gas; // pays for defi deposit slot + whole bridge
+      almostFullCost += DEFI_TX_PLUS_BASE_GAS + bridgeConfigs[1].gas!; // pays for defi deposit slot + whole bridge
       const pendingTxs = [
-        mockDefiBridgeTx(0, almostFullCost, bridgeConfigs[1].bridgeCallData),
+        mockDefiBridgeTx(0, almostFullCost, bridgeCallDatas[1].toBigInt()),
         mockTx(1, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
       ];
       let rp = await coordinator.processPendingTxs(pendingTxs);
@@ -1134,7 +1322,7 @@ describe('rollup_coordinator', () => {
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
-        bridgeConfigs[1].bridgeCallData,
+        bridgeCallDatas[1].toBigInt(),
         ...Array(numberOfBridgeCalls - 1).fill(0n),
       ]);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
@@ -1142,13 +1330,13 @@ describe('rollup_coordinator', () => {
 
     it('single defi tx can publish if it covers rollup + bridge costs 3', async () => {
       let almostFullCost = (numInnerRollupTxs * numOuterRollupProofs - 2) * BASE_GAS; // pays for all but 2 slots
-      almostFullCost += DEFI_TX_PLUS_BASE_GAS + bridgeConfigs[1].gas; // pays for defi deposit slot + whole bridge
+      almostFullCost += DEFI_TX_PLUS_BASE_GAS + bridgeConfigs[1].gas!; // pays for defi deposit slot + whole bridge
 
       // we have removed the base cost of 2 txs above from the excess which we have compensated for
       // as per the calculation that happens inside mockDefiBridgeTx() but then we add the defi tx
       // and a transfer tx back in to cover these missing costs.
       const pendingTxs = [
-        mockDefiBridgeTx(0, almostFullCost, bridgeConfigs[1].bridgeCallData),
+        mockDefiBridgeTx(0, almostFullCost, bridgeCallDatas[1].toBigInt()),
         mockTx(1, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
       ];
       const rp = await coordinator.processPendingTxs(pendingTxs);
@@ -1163,7 +1351,7 @@ describe('rollup_coordinator', () => {
 
     it('single defi tx can publish if it covers rollup + bridge costs 3', async () => {
       let almostFullCost = (numInnerRollupTxs * numOuterRollupProofs - 1) * BASE_GAS; // needs 1 more tx to make profitable
-      almostFullCost += DEFI_TX_PLUS_BASE_GAS + bridgeConfigs[1].gas; // bridge cost
+      almostFullCost += DEFI_TX_PLUS_BASE_GAS + bridgeConfigs[1].gas!; // bridge cost
 
       // in the mockDefiBridgeTx helper here we will calculate excessGas as:
       // excessGas: fee - (DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallData)),
@@ -1174,7 +1362,7 @@ describe('rollup_coordinator', () => {
       // so what we should end up with here as the excess is just the bridge fee, which is
       // exactly what we want.
       {
-        const pendingTxs = [mockDefiBridgeTx(0, almostFullCost, bridgeConfigs[1].bridgeCallData)];
+        const pendingTxs = [mockDefiBridgeTx(0, almostFullCost, bridgeCallDatas[1].toBigInt())];
 
         const rp = await coordinator.processPendingTxs(pendingTxs);
         expect(rp.published).toBe(true);
@@ -1190,7 +1378,7 @@ describe('rollup_coordinator', () => {
       // subtracting a single gas from the tx and check that it fails
       {
         almostFullCost -= 1;
-        const pendingTxs = [mockDefiBridgeTx(0, almostFullCost, bridgeConfigs[1].bridgeCallData)];
+        const pendingTxs = [mockDefiBridgeTx(0, almostFullCost, bridgeCallDatas[1].toBigInt())];
 
         const rp = await coordinator.processPendingTxs(pendingTxs);
         expect(rp.published).toBe(false);
@@ -1269,8 +1457,8 @@ describe('rollup_coordinator', () => {
         mockTx(0, { txType: TxType.TRANSFER, excessGas: fullCost, txFeeAssetId: 0 }),
         mockDefiBridgeTx(
           1,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[0].bridgeCallData),
-          bridgeConfigs[0].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[0].toBigInt()),
+          bridgeCallDatas[0].toBigInt(),
         ),
       ];
       const rp = await coordinator.processPendingTxs(pendingTxs);
@@ -1288,48 +1476,48 @@ describe('rollup_coordinator', () => {
       const pendingTxs = [
         mockDefiBridgeTx(
           0,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[2].bridgeCallData),
-          bridgeConfigs[2].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[2].toBigInt()),
+          bridgeCallDatas[2].toBigInt(),
         ),
         mockDefiBridgeTx(
           1,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[2].bridgeCallData),
-          bridgeConfigs[2].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[2].toBigInt()),
+          bridgeCallDatas[2].toBigInt(),
         ),
         mockDefiBridgeTx(
           2,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[3].bridgeCallData),
-          bridgeConfigs[3].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[3].toBigInt()),
+          bridgeCallDatas[3].toBigInt(),
         ),
         mockDefiBridgeTx(
           3,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[3].bridgeCallData),
-          bridgeConfigs[3].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[3].toBigInt()),
+          bridgeCallDatas[3].toBigInt(),
         ),
         mockDefiBridgeTx(
           4,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[3].bridgeCallData),
-          bridgeConfigs[3].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[3].toBigInt()),
+          bridgeCallDatas[3].toBigInt(),
         ),
         mockDefiBridgeTx(
           5,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[3].bridgeCallData),
-          bridgeConfigs[3].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[3].toBigInt()),
+          bridgeCallDatas[3].toBigInt(),
         ),
         mockDefiBridgeTx(
           6,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[3].bridgeCallData),
-          bridgeConfigs[3].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[3].toBigInt()),
+          bridgeCallDatas[3].toBigInt(),
         ),
         mockDefiBridgeTx(
           7,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[2].bridgeCallData),
-          bridgeConfigs[2].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[2].toBigInt()),
+          bridgeCallDatas[2].toBigInt(),
         ),
         mockDefiBridgeTx(
           8,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[3].bridgeCallData),
-          bridgeConfigs[3].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[3].toBigInt()),
+          bridgeCallDatas[3].toBigInt(),
         ),
         mockTx(9, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
         mockTx(10, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
@@ -1369,7 +1557,6 @@ describe('rollup_coordinator', () => {
     let oldTime = new Date();
     let oldTimeouts: RollupTimeouts = {
       baseTimeout: { timeout: new Date(0), rollupNumber: 1 },
-      bridgeTimeouts: new Map<bigint, RollupTimeout>(),
     };
 
     beforeEach(() => {
@@ -1381,12 +1568,6 @@ describe('rollup_coordinator', () => {
       oldTimeouts = rollupTimeouts;
       rollupTimeouts = {
         baseTimeout: { timeout: new Date('2021-06-20T10:00:00+00:00'), rollupNumber: 1 },
-        bridgeTimeouts: new Map<bigint, RollupTimeout>([
-          [bridgeConfigs[0].bridgeCallData, { timeout: new Date('2021-06-20T10:00:00+00:00'), rollupNumber: 1 }],
-          [bridgeConfigs[1].bridgeCallData, { timeout: new Date('2021-06-20T09:00:00+00:00'), rollupNumber: 1 }],
-          [bridgeConfigs[2].bridgeCallData, { timeout: new Date('2021-06-20T09:30:00+00:00'), rollupNumber: 1 }],
-          [bridgeConfigs[3].bridgeCallData, { timeout: new Date('2021-06-20T08:00:00+00:00'), rollupNumber: 1 }],
-        ]),
       };
 
       const getTimeouts = () => rollupTimeouts;
@@ -1564,7 +1745,6 @@ describe('rollup_coordinator', () => {
       // set the rollup timeout to be no timeout
       rollupTimeouts = {
         baseTimeout: undefined,
-        bridgeTimeouts: new Map<bigint, RollupTimeout>(),
       };
       // and set current time 100 years from now
       currentTime = new Date('2121-06-20T11:45:00+01:00');
@@ -1587,8 +1767,8 @@ describe('rollup_coordinator', () => {
         mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
         mockDefiBridgeTx(
           1,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[2].bridgeCallData),
-          bridgeConfigs[2].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[2].toBigInt()),
+          bridgeCallDatas[2].toBigInt(),
         ),
       ];
       let rp = await coordinator.processPendingTxs(pendingTxs);
@@ -1619,212 +1799,151 @@ describe('rollup_coordinator', () => {
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
 
-    it('defi txs are not compared against rollup timeout', async () => {
+    it('defi txs are not compared against rollup timeout if bridge cost is not met', async () => {
       // from above - let currentTime = new Date('2021-06-20T11:45:00+01:00');
 
       // in this test we will
       // 1. set the rollup timeout to be 12:00:00
-      // 2. set the bridge timeout to be 06:00:00
-      // 3. add a regular tx to the pool at time 12:15:00
-      // 4. add a bridge tx to the pool at time 06:30:00 that covers the full bridge cost
-      // 5. set the current time to be 12:35:00
-      // 6. check that a rollup is not produced as neither tx times out based on their appropriate timeouts
-      // 7. set the bridge timeout to 12:00:00 (the same as the rollup timeout, after the time of the bridge tx)
-      // 8. check that a rollup is produced
-      // set the rollup timeout
+      // 2. add a bridge tx to the pool at time 06:30:00 that covers a single bridge cost
+      // 3. set the current time to be 12:35:00
+      // 4. check that a rollup is not produced as the tx does not cover the bridge cost
       const rollupTimeout = new Date('2021-06-20T12:00:00+01:00');
-      const bridgeTimeout = new Date('2021-06-20T06:00:00+01:00');
 
       // the regular tx
       const pendingTxs = [
         mockDefiBridgeTx(
           0,
-          DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeConfigs[2].bridgeCallData),
-          bridgeConfigs[2].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[2].toBigInt()),
+          bridgeCallDatas[2].toBigInt(),
           0,
           new Date('2021-06-20T06:30:00+01:00'),
         ),
-        mockTx(1, { txType: TxType.TRANSFER, txFeeAssetId: 0, creationTime: new Date('2021-06-20T12:15:00+01:00') }),
       ];
 
       // set the rollup timeout to the following
       rollupTimeouts = {
         ...rollupTimeouts,
         baseTimeout: { timeout: rollupTimeout, rollupNumber: 1 },
-        bridgeTimeouts: new Map<bigint, RollupTimeout>([
-          [bridgeConfigs[2].bridgeCallData, { timeout: bridgeTimeout, rollupNumber: 1 }],
-        ]),
       };
       // and set current time after the rollup timeout
       currentTime = new Date('2021-06-20T12:35:00+01:00');
 
       // shouldn't publish now
-      let rp = await coordinator.processPendingTxs(pendingTxs);
+      const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
+    });
 
-      // change the timeouts so that the bridge timeout is the same as the rollup timeout
+    it('defi txs are not compared against rollup timeout if bridge cost is met', async () => {
+      // from above - let currentTime = new Date('2021-06-20T11:45:00+01:00');
+
+      // in this test we will
+      // 1. set the rollup timeout to be 12:00:00
+      // 2. add a bridge tx to the pool at time 06:30:00 that covers a full single bridge cost
+      // 3. set the current time to be 12:35:00
+      // 4. check that a rollup is not produced as the tx does not cover the full rollup cost
+      const rollupTimeout = new Date('2021-06-20T12:00:00+01:00');
+
+      // the regular tx
+      const pendingTxs = [
+        mockDefiBridgeTx(
+          0,
+          DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeCallDatas[2].toBigInt()),
+          bridgeCallDatas[2].toBigInt(),
+          0,
+          new Date('2021-06-20T06:30:00+01:00'),
+        ),
+      ];
+
+      // set the rollup timeout to the following
       rollupTimeouts = {
         ...rollupTimeouts,
         baseTimeout: { timeout: rollupTimeout, rollupNumber: 1 },
-        bridgeTimeouts: new Map<bigint, RollupTimeout>([
-          [bridgeConfigs[2].bridgeCallData, { timeout: rollupTimeout, rollupNumber: 1 }],
-        ]),
       };
+      // and set current time after the rollup timeout
+      currentTime = new Date('2021-06-20T12:35:00+01:00');
 
       // run again and we should have published the rollup as the defi tx is now older than the bridge timeout
-      rp = await coordinator.processPendingTxs(pendingTxs);
-      expect(rp.published).toBe(true);
-      expectProcessedTxIds([0, 1]);
-
-      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
-        bridgeConfigs[2].bridgeCallData,
-        ...Array(numberOfBridgeCalls - 1).fill(0n),
-      ]);
-      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
-    });
-
-    it('defi txs are not counted against rollup timeout 2', async () => {
-      // from above - let currentTime = new Date('2021-06-20T11:45:00+01:00');
-
-      // this test differs from the one above in that we have 2 bridge txs.
-      // the first has a timestamp before the rollup timeout but does not cover the cost
-      // the second has a timestamp after the rollup and completes the batch cost
-
-      // in this test we will
-      // 1. set the rollup timeout to be 12:00:00
-      // 2. set the bridge timeout to be 06:00:00
-      // 3. add a regular tx to the pool at time 12:15:00
-      // 4. add a bridge tx to the pool at time 06:30:00
-      // 5. add a second bridge tx to the pool that completes the bridge cost at time 12:20:00
-      // 5. set the current time to be 12:35:00
-      // 6. check that a rollup is not produced as no txs time out based on their appropriate timeouts
-      // 7. set the bridge timeout to 12:00:00 (the same as the rollup timeout, after the time of the first bridge tx)
-      // 8. check that a rollup is produced
-      // set the rollup timeout
-      const rollupTimeout = new Date('2021-06-20T12:00:00+01:00');
-      const bridgeTimeout = new Date('2021-06-20T06:00:00+01:00');
-
-      // the regular tx
-      const pendingTxs = [
-        mockDefiBridgeTx(
-          0,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[5].bridgeCallData),
-          bridgeConfigs[5].bridgeCallData,
-          0,
-          new Date('2021-06-20T06:30:00+01:00'),
-        ),
-        mockTx(1, { txType: TxType.TRANSFER, txFeeAssetId: 0, creationTime: new Date('2021-06-20T12:15:00+01:00') }),
-        mockDefiBridgeTx(
-          2,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[5].bridgeCallData),
-          bridgeConfigs[5].bridgeCallData,
-          0,
-          new Date('2021-06-20T12:20:00+01:00'),
-        ),
-      ];
-
-      // set the rollup timeout to the following
-      rollupTimeouts = {
-        ...rollupTimeouts,
-        baseTimeout: { timeout: rollupTimeout, rollupNumber: 1 },
-        bridgeTimeouts: new Map<bigint, RollupTimeout>([
-          [bridgeConfigs[5].bridgeCallData, { timeout: bridgeTimeout, rollupNumber: 1 }],
-        ]),
-      };
-      // and set current time after the rollup timeout
-      currentTime = new Date('2021-06-20T12:35:00+01:00');
-
-      // shouldn't publish now
-      let rp = await coordinator.processPendingTxs(pendingTxs);
-      expect(rp.published).toBe(false);
-
-      // change the timeouts so that the bridge timeout is the same as the rollup timeout
-      rollupTimeouts = {
-        ...rollupTimeouts,
-        baseTimeout: { timeout: rollupTimeout, rollupNumber: 1 },
-        bridgeTimeouts: new Map<bigint, RollupTimeout>([
-          [bridgeConfigs[5].bridgeCallData, { timeout: rollupTimeout, rollupNumber: 1 }],
-        ]),
-      };
-
-      // run again and we should have published it
-      rp = await coordinator.processPendingTxs(pendingTxs);
-      expect(rp.published).toBe(true);
-      expectProcessedTxIds([0, 1, 2]);
-
-      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
-        bridgeConfigs[5].bridgeCallData,
-        ...Array(numberOfBridgeCalls - 1).fill(0n),
-      ]);
-      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
-    });
-
-    it('should timeout defi tx on a bridge timeout', async () => {
-      // from above - let currentTime = new Date('2021-06-20T11:45:00+01:00');
-      // mockTx default creation time to new Date(new Date('2021-06-20T11:43:00+01:00').getTime() + id)
-
-      const pendingTxs = [
-        mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
-        mockDefiBridgeTx(
-          1,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[2].bridgeCallData),
-          bridgeConfigs[2].bridgeCallData,
-        ),
-      ];
-      let rp = await coordinator.processPendingTxs(pendingTxs);
+      const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
       expectProcessedTxIds([]);
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(0);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(0);
-
-      // set the rollup timeout and bridge timeouts to the following
-      rollupTimeouts = {
-        ...rollupTimeouts,
-        baseTimeout: { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 },
-        bridgeTimeouts: new Map<bigint, RollupTimeout>([
-          [bridgeConfigs[2].bridgeCallData, { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 }],
-        ]),
-      };
-      // and set current time just after the timeout
-      currentTime = new Date('2021-06-20T12:00:01+01:00');
-
-      // run again and we should have published it
-      rp = await coordinator.processPendingTxs(pendingTxs);
-      expect(rp.published).toBe(true);
-      expectProcessedTxIds([0, 1]);
-
-      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
-        bridgeConfigs[2].bridgeCallData,
-        ...Array(numberOfBridgeCalls - 1).fill(0n),
-      ]);
-      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
 
-    it('should publish non-timed out regular txs with timed out bridge', async () => {
+    it('defi txs are not compared against rollup timeout if bridge cost is met through subsidy', async () => {
       // from above - let currentTime = new Date('2021-06-20T11:45:00+01:00');
-      // mockTx default creation time to new Date(new Date('2021-06-20T11:43:00+01:00').getTime() + id)
+
+      // in this test we will
+      // 1. set the rollup timeout to be 12:00:00
+      // 2. add a bridge tx to the pool at time 06:30:00 that covers a full single bridge cost
+      // 3. set the current time to be 12:35:00
+      // 4. check that a rollup is not produced as the tx does not cover the bridge cost
+      // 5. set the subsidy to cover the bridge
+      // 6. check that a rollup is still not produced as the rollup cost is not met
+      const rollupTimeout = new Date('2021-06-20T12:00:00+01:00');
+
+      // the regular tx
+      const pendingTxs = [
+        mockDefiBridgeTx(
+          0,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[2].toBigInt()),
+          bridgeCallDatas[2].toBigInt(),
+          0,
+          new Date('2021-06-20T06:30:00+01:00'),
+        ),
+      ];
+
+      // set the rollup timeout to the following
+      rollupTimeouts = {
+        ...rollupTimeouts,
+        baseTimeout: { timeout: rollupTimeout, rollupNumber: 1 },
+      };
+      // and set current time after the rollup timeout
+      currentTime = new Date('2021-06-20T12:35:00+01:00');
+
+      // shouldn't publish now
+      let rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(false);
+
+      bridgeResolver.getBridgeSubsidy.mockImplementationOnce(() =>
+        Promise.resolve(
+          generateBridgeSubsidy(getBridgeCost(bridgeCallDatas[2].toBigInt()), bridgeCallDatas[2].toBigInt(), 1n),
+        ),
+      );
+
+      // run again and we should still not have published
+      rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(false);
+      expectProcessedTxIds([]);
+
+      expect(rollupCreator.create).toHaveBeenCalledTimes(0);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(0);
+    });
+
+    it('should publish subsidised bridge with timed out regular txs', async () => {
+      // from above - let currentTime = new Date('2021-06-20T11:45:00+01:00');
 
       const pendingTxs = [
-        mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0, creationTime: new Date('2021-06-20T10:43:00+01:00') }),
         mockDefiBridgeTx(
           1,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[1].bridgeCallData),
-          bridgeConfigs[1].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[1].toBigInt()),
+          bridgeCallDatas[1].toBigInt(),
           0,
           new Date('2021-06-20T10:43:00+01:00'),
         ),
       ];
+
+      // set the rollup timeout to 09:00 to ensure we are not timed out
+
+      rollupTimeouts = {
+        ...rollupTimeouts,
+        baseTimeout: { timeout: new Date('2021-06-20T09:00:00+01:00'), rollupNumber: 1 },
+      };
+
       let rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
       expectProcessedTxIds([]);
@@ -1833,19 +1952,22 @@ describe('rollup_coordinator', () => {
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(0);
 
-      // set both timeouts to 11:00:00
+      // set timeout to 11:00:00
       // current ime is 11:45:00
-      // the payment tx time is 11:43:00
-      // only the bridge tx is timedout
+      // both tx times are 10:43:00
       rollupTimeouts = {
         ...rollupTimeouts,
         baseTimeout: { timeout: new Date('2021-06-20T11:00:00+01:00'), rollupNumber: 1 },
-        bridgeTimeouts: new Map<bigint, RollupTimeout>([
-          [bridgeConfigs[1].bridgeCallData, { timeout: new Date('2021-06-20T11:00:00+01:00'), rollupNumber: 1 }],
-        ]),
       };
 
-      // we shoul dhave pubished all txs
+      // subsidise the bridge so that it is in the rollup and we should publish it
+      bridgeResolver.getBridgeSubsidy.mockImplementationOnce(() =>
+        Promise.resolve(
+          generateBridgeSubsidy(getBridgeCost(bridgeCallDatas[1].toBigInt()), bridgeCallDatas[1].toBigInt(), 1n),
+        ),
+      );
+
+      // we should have pubished all txs
       rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
       expectProcessedTxIds([0, 1]);
@@ -1854,13 +1976,13 @@ describe('rollup_coordinator', () => {
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
-        bridgeConfigs[1].bridgeCallData,
+        bridgeCallDatas[1].toBigInt(),
         ...Array(numberOfBridgeCalls - 1).fill(0n),
       ]);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
 
-    it('all bridge txs ahould be included in timed out bridge', async () => {
+    it('all bridge txs ahould be included in subsidised bridge', async () => {
       // from above - let currentTime = new Date('2021-06-20T11:45:00+01:00');
       // mockTx default creation time to new Date(new Date('2021-06-20T11:43:00+01:00').getTime() + id)
 
@@ -1869,38 +1991,34 @@ describe('rollup_coordinator', () => {
         mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
         mockDefiBridgeTx(
           1,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[1].bridgeCallData),
-          bridgeConfigs[1].bridgeCallData, // this tx wil have timed out
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[1].toBigInt()),
+          bridgeCallDatas[1].toBigInt(),
         ),
         mockDefiBridgeTx(
           2,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[1].bridgeCallData),
-          bridgeConfigs[1].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[1].toBigInt()),
+          bridgeCallDatas[1].toBigInt(),
           0,
-          new Date('2021-06-20T12:10:00+01:00'), // this tx hasn't timed out
         ),
       ];
-      let rp = await coordinator.processPendingTxs(pendingTxs);
-      expect(rp.published).toBe(false);
-      expectProcessedTxIds([]);
 
-      expect(rollupCreator.create).toHaveBeenCalledTimes(0);
-      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
-      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(0);
-
-      // set the rollup timeout and bridge timeouts to the following
+      // set the rollup timeout such that the above txs are timed out
       rollupTimeouts = {
         ...rollupTimeouts,
         baseTimeout: { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 },
-        bridgeTimeouts: new Map<bigint, RollupTimeout>([
-          [bridgeConfigs[1].bridgeCallData, { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 }],
-        ]),
       };
       // and set current time just after the timeout
       currentTime = new Date('2021-06-20T12:11:01+01:00');
 
+      // set the bridge as subsidised
+      bridgeResolver.getBridgeSubsidy.mockImplementationOnce(() =>
+        Promise.resolve(
+          generateBridgeSubsidy(getBridgeCost(bridgeCallDatas[1].toBigInt()), bridgeCallDatas[1].toBigInt(), 1n),
+        ),
+      );
+
       // run again and we should have published it
-      rp = await coordinator.processPendingTxs(pendingTxs);
+      const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
       expectProcessedTxIds([0, 1, 2]);
 
@@ -1908,35 +2026,43 @@ describe('rollup_coordinator', () => {
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
-        bridgeConfigs[1].bridgeCallData,
+        bridgeCallDatas[1].toBigInt(),
         ...Array(numberOfBridgeCalls - 1).fill(0n),
       ]);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
 
-    it('should only timeout defi tx on a bridge timeout', async () => {
+    it('should not publish subsidised bridges solely on rollup timeout', async () => {
       // from above - let currentTime = new Date('2021-06-20T11:45:00+01:00');
       // mockTx default creation time to new Date(new Date('2021-06-20T11:43:00+01:00').getTime() + id)
 
+      // the defi tx pays a single bridge cost
       const pendingTxs = [
         mockDefiBridgeTx(
           1,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[2].bridgeCallData),
-          bridgeConfigs[2].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[2].toBigInt()),
+          bridgeCallDatas[2].toBigInt(),
           0,
           new Date('2021-06-20T11:43:00+01:00'),
         ),
       ];
 
-      // set the rollup timeout and bridge timeouts to the following
-      // the bridge timeout is earlier than the bridge tx time, so it has not timed out
-      // the rollup timeout is later than the bridge tx time
+      // set the bridge to be subsidised for both calls
+      bridgeResolver.getBridgeSubsidy.mockImplementationOnce(() =>
+        Promise.resolve(
+          generateBridgeSubsidy(getBridgeCost(bridgeCallDatas[2].toBigInt()), bridgeCallDatas[2].toBigInt(), 1n),
+        ),
+      );
+      bridgeResolver.getBridgeSubsidy.mockImplementationOnce(() =>
+        Promise.resolve(
+          generateBridgeSubsidy(getBridgeCost(bridgeCallDatas[2].toBigInt()), bridgeCallDatas[2].toBigInt(), 1n),
+        ),
+      );
+
+      // the rollup timeout is earlier than the bridge tx time
       rollupTimeouts = {
         ...rollupTimeouts,
-        baseTimeout: { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 },
-        bridgeTimeouts: new Map<bigint, RollupTimeout>([
-          [bridgeConfigs[2].bridgeCallData, { timeout: new Date('2021-06-20T11:00:00+01:00'), rollupNumber: 1 }],
-        ]),
+        baseTimeout: { timeout: new Date('2021-06-20T11:00:00+01:00'), rollupNumber: 1 },
       };
       // and set current time just after the rollup timeout
       currentTime = new Date('2021-06-20T12:30:01+01:00');
@@ -1949,133 +2075,66 @@ describe('rollup_coordinator', () => {
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(0);
 
-      // now set the rollup timeout and bridge timeouts to the following
-      // the bridge timeout is later than the bridge tx time, so it has timed out
       // the rollup timeout is later than the bridge tx time
       rollupTimeouts = {
         ...rollupTimeouts,
         baseTimeout: { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 },
-        bridgeTimeouts: new Map<bigint, RollupTimeout>([
-          [bridgeConfigs[2].bridgeCallData, { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 }],
-        ]),
       };
 
-      // run again and we should have published it
+      // run again and we should still not have published it
       rp = await coordinator.processPendingTxs(pendingTxs);
-      expect(rp.published).toBe(true);
-      expectProcessedTxIds([1]);
-
-      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
-        bridgeConfigs[2].bridgeCallData,
-        ...Array(numberOfBridgeCalls - 1).fill(0n),
-      ]);
-      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
-    });
-
-    it('should only timeout defi tx on a bridge timeout even if bridge is fully paid for', async () => {
-      // from above - let currentTime = new Date('2021-06-20T11:45:00+01:00');
-      // mockTx default creation time to new Date(new Date('2021-06-20T11:43:00+01:00').getTime() + id)
-
-      // the defi tx pays the full bridge cost
-      const pendingTxs = [
-        mockDefiBridgeTx(
-          1,
-          DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeConfigs[2].bridgeCallData),
-          bridgeConfigs[2].bridgeCallData,
-          0,
-          new Date('2021-06-20T11:43:00+01:00'),
-        ),
-      ];
-
-      // set the rollup timeout and bridge timeouts to the following
-      // the bridge timeout is earlier than the bridge tx time, so it has not timed out
-      // the rollup timeout is later than the bridge tx time
-      rollupTimeouts = {
-        ...rollupTimeouts,
-        baseTimeout: { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 },
-        bridgeTimeouts: new Map<bigint, RollupTimeout>([
-          [bridgeConfigs[2].bridgeCallData, { timeout: new Date('2021-06-20T11:00:00+01:00'), rollupNumber: 1 }],
-        ]),
-      };
-      // and set current time just after the rollup timeout
-      currentTime = new Date('2021-06-20T12:30:01+01:00');
-
-      let rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(false);
       expectProcessedTxIds([]);
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(0);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(0);
-
-      // now set the rollup timeout and bridge timeouts to the following
-      // the bridge timeout is later than the bridge tx time, so it not timed out
-      // the rollup timeout is later than the bridge tx time
-      rollupTimeouts = {
-        ...rollupTimeouts,
-        baseTimeout: { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 },
-        bridgeTimeouts: new Map<bigint, RollupTimeout>([
-          [bridgeConfigs[2].bridgeCallData, { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 }],
-        ]),
-      };
-
-      // run again and we should have published it
-      rp = await coordinator.processPendingTxs(pendingTxs);
-      expect(rp.published).toBe(true);
-      expectProcessedTxIds([1]);
-
-      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
-        bridgeConfigs[2].bridgeCallData,
-        ...Array(numberOfBridgeCalls - 1).fill(0n),
-      ]);
-      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
 
-    it('should timeout multiple bridges', async () => {
-      // from above - let currentTime = new Date('2021-06-20T11:45:00+01:00');
-      // mockTx default creation time to new Date(new Date('2021-06-20T11:43:00+01:00').getTime() + id)
-
+    it('should subsidise multiple bridges', async () => {
+      // setup the bridge subsidies
+      bridgeResolver.getBridgeSubsidy.mockImplementationOnce(() => {
+        return Promise.resolve(
+          generateBridgeSubsidy(
+            (bridgeConfigs[2].numTxs - 1) * getSingleBridgeCost(bridgeCallDatas[2].toBigInt()),
+            bridgeCallDatas[2].toBigInt(),
+            1n,
+          ),
+        );
+      });
+      bridgeResolver.getBridgeSubsidy.mockImplementationOnce(() => {
+        return Promise.resolve(
+          generateBridgeSubsidy(
+            (bridgeConfigs[0].numTxs - 1) * getSingleBridgeCost(bridgeCallDatas[0].toBigInt()),
+            bridgeCallDatas[0].toBigInt(),
+            1n,
+          ),
+        );
+      });
       const pendingTxs = [
         mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
         mockDefiBridgeTx(
           1,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[2].bridgeCallData),
-          bridgeConfigs[2].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[2].toBigInt()),
+          bridgeCallDatas[2].toBigInt(),
         ),
         mockDefiBridgeTx(
           2,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[0].bridgeCallData),
-          bridgeConfigs[0].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[0].toBigInt()),
+          bridgeCallDatas[0].toBigInt(),
         ),
       ];
-      let rp = await coordinator.processPendingTxs(pendingTxs);
-      expect(rp.published).toBe(false);
-      expectProcessedTxIds([]);
-
-      expect(rollupCreator.create).toHaveBeenCalledTimes(0);
-      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
-      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(0);
 
       // set the rollup timeout and bridge timeouts to the following
       rollupTimeouts = {
         ...rollupTimeouts,
         baseTimeout: { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 },
-        bridgeTimeouts: new Map<bigint, RollupTimeout>([
-          [bridgeConfigs[0].bridgeCallData, { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 }],
-          [bridgeConfigs[2].bridgeCallData, { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 }],
-        ]),
       };
       // and set current time just after the timeout
       currentTime = new Date('2021-06-20T12:00:01+01:00');
 
       // run again and we should have published it
-      rp = await coordinator.processPendingTxs(pendingTxs);
+      const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
       expectProcessedTxIds([0, 1, 2]);
 
@@ -2083,30 +2142,160 @@ describe('rollup_coordinator', () => {
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
-        bridgeConfigs[2].bridgeCallData,
-        bridgeConfigs[0].bridgeCallData,
+        bridgeCallDatas[2].toBigInt(),
+        bridgeCallDatas[0].toBigInt(),
         ...Array(numberOfBridgeCalls - 2).fill(0n),
       ]);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
 
-    it('should not timeout bridge txs where the bridge has no timeout', async () => {
-      // from above - let currentTime = new Date('2021-06-20T11:45:00+01:00');
-      // mockTx default creation time to new Date(new Date('2021-06-20T11:43:00+01:00').getTime() + id)
+    it('should not include bridge that competes for subsidy with another bridge', async () => {
+      // setup the bridge subsidies
+      bridgeResolver.getBridgeSubsidy.mockImplementationOnce(() => {
+        return Promise.resolve(
+          generateBridgeSubsidy(
+            (bridgeConfigs[2].numTxs - 1) * getSingleBridgeCost(bridgeCallDatas[2].toBigInt()),
+            bridgeCallDatas[2].toBigInt(),
+            1n,
+          ),
+        );
+      });
+      // the second subsidy uses the same bridge address id and criteria meaning it competes for subsidy
+      const alternativeCallData = new BridgeCallData(
+        bridgeConfigs[2].bridgeAddressId,
+        bridgeConfigs[2].permittedAssets[1],
+        bridgeConfigs[2].permittedAssets[0],
+        undefined,
+        undefined,
+        0,
+      );
+      bridgeResolver.getBridgeSubsidy.mockImplementationOnce(() => {
+        return Promise.resolve(
+          generateBridgeSubsidy(
+            (bridgeConfigs[2].numTxs - 1) * getSingleBridgeCost(alternativeCallData.toBigInt()),
+            alternativeCallData.toBigInt(),
+            1n,
+          ),
+        );
+      });
+      const pendingTxs = [
+        mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockDefiBridgeTx(
+          1,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[2].toBigInt()),
+          bridgeCallDatas[2].toBigInt(),
+        ),
+        mockDefiBridgeTx(
+          2,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(alternativeCallData.toBigInt()),
+          alternativeCallData.toBigInt(),
+        ),
+      ];
 
+      // set the rollup timeout and bridge timeouts to the following
+      rollupTimeouts = {
+        ...rollupTimeouts,
+        baseTimeout: { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 },
+      };
+      // and set current time just after the timeout
+      currentTime = new Date('2021-06-20T12:00:01+01:00');
+
+      // we should only include the first bridge, the second would not be subsidised
+      const rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(true);
+      expectProcessedTxIds([0, 1]);
+
+      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
+        bridgeCallDatas[2].toBigInt(),
+        ...Array(numberOfBridgeCalls - 1).fill(0n),
+      ]);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+    });
+
+    it('should include bridges for the same bridge address id but with different criteria', async () => {
+      // setup the bridge subsidies
+      bridgeResolver.getBridgeSubsidy.mockImplementationOnce(() => {
+        return Promise.resolve(
+          generateBridgeSubsidy(
+            (bridgeConfigs[2].numTxs - 1) * getSingleBridgeCost(bridgeCallDatas[2].toBigInt()),
+            bridgeCallDatas[2].toBigInt(),
+            1n,
+          ),
+        );
+      });
+      // the second subsidy uses the same bridge address id and criteria meaning it competes for subsidy
+      const alternativeCallData = new BridgeCallData(
+        bridgeConfigs[2].bridgeAddressId,
+        bridgeConfigs[2].permittedAssets[1],
+        bridgeConfigs[2].permittedAssets[0],
+        undefined,
+        undefined,
+        0,
+      );
+      bridgeResolver.getBridgeSubsidy.mockImplementationOnce(() => {
+        return Promise.resolve(
+          generateBridgeSubsidy(
+            (bridgeConfigs[2].numTxs - 1) * getSingleBridgeCost(alternativeCallData.toBigInt()),
+            alternativeCallData.toBigInt(),
+            2n,
+          ),
+        );
+      });
+      const pendingTxs = [
+        mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+        mockDefiBridgeTx(
+          1,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[2].toBigInt()),
+          bridgeCallDatas[2].toBigInt(),
+        ),
+        mockDefiBridgeTx(
+          2,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(alternativeCallData.toBigInt()),
+          alternativeCallData.toBigInt(),
+        ),
+      ];
+
+      // set the rollup timeout and bridge timeouts to the following
+      rollupTimeouts = {
+        ...rollupTimeouts,
+        baseTimeout: { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 },
+      };
+      // and set current time just after the timeout
+      currentTime = new Date('2021-06-20T12:00:01+01:00');
+
+      // we should only include the first bridge, the second would not be subsidised
+      const rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(true);
+      expectProcessedTxIds([0, 1, 2]);
+
+      expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
+        bridgeCallDatas[2].toBigInt(),
+        alternativeCallData.toBigInt(),
+        ...Array(numberOfBridgeCalls - 2).fill(0n),
+      ]);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not include bridge txs where there are no subsidies', async () => {
       const pendingTxs = [
         mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0, creationTime: new Date('2021-06-20T11:43:00+01:00') }),
         mockDefiBridgeTx(
           1,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[2].bridgeCallData),
-          bridgeConfigs[2].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[2].toBigInt()),
+          bridgeCallDatas[2].toBigInt(),
           0,
           new Date('2021-06-20T11:43:00+01:00'),
         ),
         mockDefiBridgeTx(
           2,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[1].bridgeCallData),
-          bridgeConfigs[1].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[1].toBigInt()),
+          bridgeCallDatas[1].toBigInt(),
           0,
           new Date('2021-06-20T11:43:00+01:00'),
         ),
@@ -2119,13 +2308,10 @@ describe('rollup_coordinator', () => {
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(0);
 
-      // set the rollup timeout and bridge timeouts to the following (no timeout for bridge [2])
+      // set the rollup timeout
       rollupTimeouts = {
         ...rollupTimeouts,
         baseTimeout: { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 },
-        bridgeTimeouts: new Map<bigint, RollupTimeout>([
-          [bridgeConfigs[1].bridgeCallData, { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 }],
-        ]),
       };
       // and set current time just after the timeout
       currentTime = new Date('2021-06-20T12:00:01+01:00');
@@ -2133,61 +2319,54 @@ describe('rollup_coordinator', () => {
       // run again and we should have published it
       rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
-      expectProcessedTxIds([0, 2]);
+      expectProcessedTxIds([0]);
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
-      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
-        bridgeConfigs[1].bridgeCallData,
-        ...Array(numberOfBridgeCalls - 1).fill(0n),
-      ]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([...Array(numberOfBridgeCalls).fill(0n)]);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
 
-    it('should not timeout bridge txs where the bridge is not timed out', async () => {
-      // from above - let currentTime = new Date('2021-06-20T11:45:00+01:00');
-      // mockTx default creation time to new Date(new Date('2021-06-20T11:43:00+01:00').getTime() + id)
-
+    it('should not include bridge txs where the bridge is not subsidised', async () => {
+      const gasPerTx = getSingleBridgeCost(bridgeCallDatas[1].toBigInt());
+      const bridge1Subsidy = (bridgeConfigs[1].numTxs - 1) * gasPerTx;
+      // first call is for bridge [2], 0 subsidy
+      bridgeResolver.getBridgeSubsidy.mockImplementationOnce(() => {
+        return Promise.resolve(generateBridgeSubsidy(0, bridgeCallDatas[2].toBigInt(), 1n));
+      });
+      // second call
+      bridgeResolver.getBridgeSubsidy.mockImplementationOnce(() => {
+        return Promise.resolve(generateBridgeSubsidy(bridge1Subsidy, bridgeCallDatas[1].toBigInt(), 1n));
+      });
       const pendingTxs = [
         mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0, creationTime: new Date('2021-06-20T11:43:00+01:00') }),
         mockDefiBridgeTx(
           1,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[2].bridgeCallData),
-          bridgeConfigs[2].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[2].toBigInt()),
+          bridgeCallDatas[2].toBigInt(),
           0,
           new Date('2021-06-20T11:43:00+01:00'),
         ),
         mockDefiBridgeTx(
           2,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[1].bridgeCallData),
-          bridgeConfigs[1].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[1].toBigInt()),
+          bridgeCallDatas[1].toBigInt(),
           0,
           new Date('2021-06-20T11:43:00+01:00'),
         ),
       ];
-      let rp = await coordinator.processPendingTxs(pendingTxs);
-      expect(rp.published).toBe(false);
-      expectProcessedTxIds([]);
 
-      expect(rollupCreator.create).toHaveBeenCalledTimes(0);
-      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
-      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(0);
-
-      // set the rollup timeout and bridge timeouts to the following (no timeout for bridge [2])
+      // set the rollup timeout
       rollupTimeouts = {
         ...rollupTimeouts,
         baseTimeout: { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 },
-        bridgeTimeouts: new Map<bigint, RollupTimeout>([
-          [bridgeConfigs[1].bridgeCallData, { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 }],
-          [bridgeConfigs[2].bridgeCallData, { timeout: new Date('2021-06-20T11:00:00+01:00'), rollupNumber: 1 }],
-        ]),
       };
       // and set current time just after the timeout
       currentTime = new Date('2021-06-20T12:00:01+01:00');
 
       // run again and we should have published it
-      rp = await coordinator.processPendingTxs(pendingTxs);
+      const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
       expectProcessedTxIds([0, 2]);
 
@@ -2195,85 +2374,10 @@ describe('rollup_coordinator', () => {
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
-        bridgeConfigs[1].bridgeCallData,
+        bridgeCallDatas[1].toBigInt(),
         ...Array(numberOfBridgeCalls - 1).fill(0n),
       ]);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
-    });
-
-    describe('rollup timeouts with larger topology', () => {
-      // A separate describe block for these, as we need to increase the rollup topology to a 2x32 to push the numberOfBridgeCalls = 32 limit.
-
-      const numInnerRollupTxs = numberOfBridgeCalls;
-      const numOuterRollupProofs = 2;
-
-      beforeEach(() => {
-        coordinator = newRollupCoordinator(numInnerRollupTxs, numOuterRollupProofs);
-      });
-
-      it('will not timeout defi deposit txs if we have more than the allowed distinct bridge call datas', async () => {
-        // from above - let currentTime = new Date('2021-06-20T11:45:00+01:00');
-        // mockTx default creation time to new Date(new Date('2021-06-20T11:43:00+01:00').getTime() + id)
-
-        const allTxs = [];
-        let j = 1; // for incrementing the bridgeCallData
-        for (let i = 0; i < numberOfBridgeCalls * 2; i++) {
-          // We'll allow the number of bridgeCallDatas to exceed the max number of bridge calls per block by 2.
-          // So 2 of our txs _should_ be rejected from the first (and only) rollup of this test.
-          const index = (j - 1) % (numberOfBridgeCalls + 2); // 0, 1, 2, ..., 31, 32, 33.
-          const { bridgeCallData, gas } = bridgeConfigs[index];
-          allTxs.push(mockDefiBridgeTx(i, DEFI_TX_PLUS_BASE_GAS + gas, bridgeCallData));
-          j++;
-        }
-
-        // Note:
-        //   allTxs[32] contains bridgeCallData 33
-        //   allTxs[33] contains bridgeCallData 34
-
-        const pendingTxs = allTxs;
-
-        // set the rollup timeout and bridge timeouts to the following
-        rollupTimeouts = {
-          ...rollupTimeouts,
-          baseTimeout: { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 },
-          bridgeTimeouts: new Map<bigint, RollupTimeout>([
-            [bridgeConfigs[4].bridgeCallData, { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 }],
-          ]),
-        };
-        // and set current time just after the timeout.
-        // bridgeCallDatas 33 & 34 are in timeout but we can't fit them in as we have exceeded the max number of bridge call datas
-        currentTime = new Date('2021-06-20T12:00:01+01:00');
-
-        // this call will trigger the rollup
-        const rp = await coordinator.processPendingTxs(pendingTxs);
-        expect(rp.published).toBe(true);
-
-        // Expect all txs but those with bridgeCallData = 33 or 34.
-        const expectedTxs = pendingTxs.filter(tx => {
-          const proof = new ProofData(tx.proofData);
-          // We can safely coerce to a number, because we know these are small numbers in this test:
-          const bid = Number(BridgeCallData.fromBuffer(proof.bridgeCallData).toBigInt());
-          // ... except for the non-defi txs, which have huge bridgeCallDatas (much greater than 1000, say):
-          return bid <= numberOfBridgeCalls || bid > 1000;
-        });
-
-        expect(coordinator.getProcessedTxs().length).toBe(expectedTxs.length);
-        expect(coordinator.getProcessedTxs().map(tx => tx.id.toString('hex'))).toEqual(
-          expectedTxs.map(tx => tx.id.toString('hex')),
-        );
-
-        expect(rollupCreator.create).toHaveBeenCalledTimes(2);
-        expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
-        expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
-
-        expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
-        expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual(
-          Array(numberOfBridgeCalls)
-            .fill(0)
-            .map((_, i) => bridgeConfigs[i].bridgeCallData),
-        );
-        expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
-      });
     });
   });
 
@@ -2289,7 +2393,7 @@ describe('rollup_coordinator', () => {
       // Create 4 defi deposit txs with different bridge call datas.
       const defiTxs = bridgeConfigs
         .slice(0, 4)
-        .map((bc, i) => mockDefiBridgeTx(i, bc.gas + DEFI_TX_PLUS_BASE_GAS, bc.bridgeCallData));
+        .map((bc, i) => mockDefiBridgeTx(i, bc.gas! + DEFI_TX_PLUS_BASE_GAS, bridgeCallDatas[i].toBigInt()));
 
       // Create a chain of 4 txs. The 3rd one is a defi deposit tx.
       const commitments = [...Array(4)].map(() => randomBytes(32));
@@ -2371,8 +2475,8 @@ describe('rollup_coordinator', () => {
       const pendingTxs = [
         mockDefiBridgeTx(
           1,
-          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeConfigs[2].bridgeCallData),
-          bridgeConfigs[2].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getSingleBridgeCost(bridgeCallDatas[2].toBigInt()),
+          bridgeCallDatas[2].toBigInt(),
         ),
       ];
       let rp = await coordinator.processPendingTxs(pendingTxs);
@@ -2392,7 +2496,7 @@ describe('rollup_coordinator', () => {
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
-        bridgeConfigs[2].bridgeCallData,
+        bridgeCallDatas[2].toBigInt(),
         ...Array(numberOfBridgeCalls - 1).fill(0n),
       ]);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
@@ -2637,7 +2741,6 @@ describe('rollup_coordinator', () => {
       rollupTimeouts = {
         ...rollupTimeouts,
         baseTimeout: { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 },
-        bridgeTimeouts: new Map<bigint, RollupTimeout>(),
       };
       // and set current time just after the timeout
       currentTime = new Date('2021-06-20T12:00:01+01:00');
@@ -2698,7 +2801,6 @@ describe('rollup_coordinator', () => {
       rollupTimeouts = {
         ...rollupTimeouts,
         baseTimeout: { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 },
-        bridgeTimeouts: new Map<bigint, RollupTimeout>(),
       };
       // and set current time just after the timeout
       currentTime = new Date('2021-06-20T12:00:01+01:00');
@@ -2887,7 +2989,7 @@ describe('rollup_coordinator', () => {
 
     it('defi bridge gas is included against rollup limit', async () => {
       // gas of this bridge is 1000000
-      const bridgeCallData = bridgeConfigs[0].bridgeCallData;
+      const bridgeCallData = bridgeCallDatas[0].toBigInt();
       const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeCallData);
 
       gasValues[TxType.DEPOSIT] = 250000; //DEPOSIT
@@ -2922,7 +3024,7 @@ describe('rollup_coordinator', () => {
     });
 
     it('defi bridge gas is taken from contract and included against rollup limit', async () => {
-      const bridgeCallData = bridgeConfigs[0].bridgeCallData;
+      const bridgeCallData = bridgeCallDatas[0].toBigInt();
       const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeCallData);
 
       // set the gas limit for this bridge call data to 900000 on the contract
@@ -2962,7 +3064,7 @@ describe('rollup_coordinator', () => {
     });
 
     it('defi bridge gas is taken from contract and included against rollup limit 2', async () => {
-      const bridgeCallData = bridgeConfigs[0].bridgeCallData;
+      const bridgeCallData = bridgeCallDatas[0].toBigInt();
       const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeCallData);
 
       // set the gas limit for thie bridge call data to 1500000 on the contract
@@ -3002,7 +3104,7 @@ describe('rollup_coordinator', () => {
     });
 
     it('defi deposit call data is included against rollup limit', async () => {
-      const bridgeCallData = bridgeConfigs[0].bridgeCallData;
+      const bridgeCallData = bridgeCallDatas[0].toBigInt();
       const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeCallData);
 
       callDataValues[TxType.DEPOSIT] = 25000; //DEPOSIT
@@ -3037,7 +3139,7 @@ describe('rollup_coordinator', () => {
     });
 
     it('should publish defi once remaining gas is lower than any tx type', async () => {
-      const bridgeCallData = bridgeConfigs[0].bridgeCallData;
+      const bridgeCallData = bridgeCallDatas[0].toBigInt();
       const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeCallData);
 
       gasValues[TxType.DEPOSIT] = 250000; //DEPOSIT
@@ -3072,7 +3174,7 @@ describe('rollup_coordinator', () => {
     });
 
     it('should publish defi once remaining call data is lower than any tx type', async () => {
-      const bridgeCallData = bridgeConfigs[0].bridgeCallData;
+      const bridgeCallData = bridgeCallDatas[0].toBigInt();
       const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeCallData);
       // set the call data value for deposits so we can only fit 3 in a rollup
       callDataValues[TxType.DEPOSIT] = 25000; //DEPOSIT
@@ -3106,7 +3208,7 @@ describe('rollup_coordinator', () => {
     });
 
     it('should ignore defi tx if it breaches gas limit', async () => {
-      const bridgeCallData = bridgeConfigs[0].bridgeCallData;
+      const bridgeCallData = bridgeCallDatas[0].toBigInt();
       const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeCallData);
       // set the gas value for deposits so we can only fit 3 in a rollup
       gasValues[TxType.DEPOSIT] = 200000; //DEPOSIT
@@ -3145,7 +3247,7 @@ describe('rollup_coordinator', () => {
     });
 
     it('should ignore defi tx if it breaches call data limit', async () => {
-      const bridgeCallData = bridgeConfigs[0].bridgeCallData;
+      const bridgeCallData = bridgeCallDatas[0].toBigInt();
       const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeCallData);
       // set the call data for deposits so we can only fit 3 in a rollup
       callDataValues[TxType.DEPOSIT] = 25000; //DEPOSIT
@@ -3184,7 +3286,7 @@ describe('rollup_coordinator', () => {
     });
 
     it('should ignore defi tx for additional bridge if it breaches call data limit', async () => {
-      const bridgeCallData = bridgeConfigs[0].bridgeCallData;
+      const bridgeCallData = bridgeCallDatas[0].toBigInt();
       const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeCallData);
       // set the call data for deposits so we can only fit 3 in a rollup
       callDataValues[TxType.DEPOSIT] = 25000; //DEPOSIT
@@ -3206,8 +3308,8 @@ describe('rollup_coordinator', () => {
         mockTx(5, { txType: TxType.DEPOSIT, txFeeAssetId: 0 }), // adds 25000. this gets us to 95000
         mockDefiBridgeTx(
           6,
-          DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeConfigs[1].bridgeCallData),
-          bridgeConfigs[1].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeCallDatas[1].toBigInt()),
+          bridgeCallDatas[1].toBigInt(),
         ), // pays for 2nd complete bridge, but uses too much call data
       ];
 
@@ -3227,7 +3329,7 @@ describe('rollup_coordinator', () => {
     });
 
     it('should ignore defi tx if it breaches gas limit even with flush', async () => {
-      const bridgeCallData = bridgeConfigs[0].bridgeCallData;
+      const bridgeCallData = bridgeCallDatas[0].toBigInt();
       const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeCallData);
       // set the gas value for deposits so we can only fit 3 in a rollup
       gasValues[TxType.DEPOSIT] = 200000; //DEPOSIT
@@ -3266,7 +3368,10 @@ describe('rollup_coordinator', () => {
     });
 
     it('should ignore defi tx if it breaches gas limit even with timeout', async () => {
-      const bridgeCallData = bridgeConfigs[0].bridgeCallData;
+      const bridgeCallData = bridgeCallDatas[0].toBigInt();
+      bridgeResolver.getBridgeSubsidy.mockImplementationOnce((bridgeCallData: bigint) =>
+        Promise.resolve(generateBridgeSubsidy(getBridgeCost(bridgeCallData), bridgeCallData, 1n)),
+      );
       const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeCallData);
       // set the gas value for deposits so we can only fit 3 in a rollup
       gasValues[TxType.DEPOSIT] = 200000; //DEPOSIT
@@ -3292,9 +3397,6 @@ describe('rollup_coordinator', () => {
       rollupTimeouts = {
         ...rollupTimeouts,
         baseTimeout: { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 },
-        bridgeTimeouts: new Map<bigint, RollupTimeout>([
-          [bridgeCallData, { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 }],
-        ]),
       };
       // and set current time just after the timeout
       currentTime = new Date('2021-06-20T12:00:01+01:00');
@@ -3315,7 +3417,7 @@ describe('rollup_coordinator', () => {
     });
 
     it('should ignore defi tx if it breaches call data limit even with flush', async () => {
-      const bridgeCallData = bridgeConfigs[0].bridgeCallData;
+      const bridgeCallData = bridgeCallDatas[0].toBigInt();
       const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeCallData);
       // set the call data for deposits so we can only fit 3 in a rollup
       callDataValues[TxType.DEPOSIT] = 25000; //DEPOSIT
@@ -3353,8 +3455,11 @@ describe('rollup_coordinator', () => {
       ]);
     });
 
-    it('should ignore defi tx if it breaches call data limit even with timeout', async () => {
-      const bridgeCallData = bridgeConfigs[0].bridgeCallData;
+    it('should ignore defi tx if it breaches call data limit even with subsidy', async () => {
+      const bridgeCallData = bridgeCallDatas[0].toBigInt();
+      bridgeResolver.getBridgeSubsidy.mockImplementationOnce((bridgeCallData: bigint) =>
+        Promise.resolve(generateBridgeSubsidy(getBridgeCost(bridgeCallData), bridgeCallData, 1n)),
+      );
       const mockDefiBridgeTxLocal = (id: number, gas: number) => mockDefiBridgeTx(id, gas, bridgeCallData);
       // set the call data for deposits so we can only fit 3 in a rollup
       callDataValues[TxType.DEPOSIT] = 25000; //DEPOSIT
@@ -3380,9 +3485,6 @@ describe('rollup_coordinator', () => {
       rollupTimeouts = {
         ...rollupTimeouts,
         baseTimeout: { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 },
-        bridgeTimeouts: new Map<bigint, RollupTimeout>([
-          [bridgeCallData, { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 }],
-        ]),
       };
       // and set current time just after the timeout
       currentTime = new Date('2021-06-20T12:00:01+01:00');
@@ -3419,13 +3521,13 @@ describe('rollup_coordinator', () => {
         mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }), // adds 300000
         mockDefiBridgeTx(
           1,
-          DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeConfigs[3].bridgeCallData),
-          bridgeConfigs[3].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeCallDatas[3].toBigInt()),
+          bridgeCallDatas[3].toBigInt(),
         ), // pays for complete bridge. adds 3000000 + 100000 gas
         mockDefiBridgeTx(
           2,
-          DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeConfigs[1].bridgeCallData),
-          bridgeConfigs[1].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeCallDatas[1].toBigInt()),
+          bridgeCallDatas[1].toBigInt(),
         ), // would need to add 1000000 + 100000 so is not included
         mockTx(3, { txType: TxType.TRANSFER, txFeeAssetId: 0 }), // adds 300000. this gets us to 3700000 + 5 * BASE_GAS
       ];
@@ -3439,7 +3541,7 @@ describe('rollup_coordinator', () => {
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
-        bridgeConfigs[3].bridgeCallData,
+        bridgeCallDatas[3].toBigInt(),
         ...Array(numberOfBridgeCalls - 1).fill(0n),
       ]);
     });
@@ -3462,13 +3564,13 @@ describe('rollup_coordinator', () => {
         mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }), // adds 300000
         mockDefiBridgeTx(
           1,
-          DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeConfigs[3].bridgeCallData),
-          bridgeConfigs[3].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeCallDatas[3].toBigInt()),
+          bridgeCallDatas[3].toBigInt(),
         ), // pays for complete bridge. adds 3000000 + 100000 gas
         mockDefiBridgeTx(
           2,
-          DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeConfigs[1].bridgeCallData),
-          bridgeConfigs[1].bridgeCallData,
+          DEFI_TX_PLUS_BASE_GAS + getBridgeCost(bridgeCallDatas[1].toBigInt()),
+          bridgeCallDatas[1].toBigInt(),
         ), // would need to add 1000000 + 100000 so is not included
         mockTx(3, { txType: TxType.TRANSFER, txFeeAssetId: 0 }), // adds 300000. this gets us to 3700000 + 5 * BASE_GAS
       ];
@@ -3482,7 +3584,7 @@ describe('rollup_coordinator', () => {
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual([
-        bridgeConfigs[3].bridgeCallData,
+        bridgeCallDatas[3].toBigInt(),
         ...Array(numberOfBridgeCalls - 1).fill(0n),
       ]);
     });

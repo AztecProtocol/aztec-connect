@@ -20,7 +20,6 @@ import { LogDescription } from 'ethers/lib/utils.js';
 import { RollupProcessor } from '../contracts/index.js';
 import { akiToKey } from './key_derivation.js';
 import { RollupProcessorJson, AztecFaucetJson } from '../abis.js';
-import { AssetValue } from '@aztec/bridge-clients/client-dest/src/client/bridge-data.js';
 
 const { PRIVATE_KEY } = process.env;
 
@@ -93,14 +92,14 @@ export const createElementBridgeData = (
   rollupAddress: EthAddress,
   elementBridgeAddress: EthAddress,
   provider: EthereumProvider,
-  batchSize: number,
+  falafelGraphQLEndpoint: string,
 ) => {
   return ElementBridgeData.create(
     provider,
     elementBridgeAddress as any,
     EthAddress.fromString(MainnetAddresses.Contracts['BALANCER']) as any,
     rollupAddress as any,
-    { eventBatchSize: batchSize },
+    falafelGraphQLEndpoint,
   );
 };
 
@@ -112,15 +111,15 @@ export async function profileElement(
   rollupAddress: EthAddress,
   elementAddress: EthAddress,
   provider: EthereumProvider,
+  falafelGraphQLEndpoint: string,
   from: number,
   to?: number,
-  batchSize = 10,
 ) {
   const convertEvents = await retrieveEvents(elementAddress, 'Element', provider, 'LogConvert', from, to);
   const finaliseEvents = await retrieveEvents(elementAddress, 'Element', provider, 'LogFinalise', from, to);
   const poolEvents = await retrieveEvents(elementAddress, 'Element', provider, 'LogPoolAdded', from, to);
   const rollupBridgeEvents = await retrieveEvents(rollupAddress, 'Rollup', provider, 'DefiBridgeProcessed', from, to);
-  const elementBridgeData = createElementBridgeData(rollupAddress, elementAddress, provider, batchSize);
+  const elementBridgeData = createElementBridgeData(rollupAddress, elementAddress, provider, falafelGraphQLEndpoint);
 
   const interactions: {
     [key: string]: {
@@ -201,10 +200,18 @@ export async function profileElement(
       interactions[log.nonce.toString()].finalValue = rollupLog.outputValue;
     }
   }
-  const promises: { [key: string]: Promise<AssetValue[]> } = {};
+  interface BridgeAssetValue {
+    assetId: number;
+    value: bigint;
+  }
+  const promises: { [key: string]: Promise<BridgeAssetValue[]> } = {};
   for (const log of convertLogs) {
     if (!interactions[log.nonce.toString()]?.finalised) {
-      promises[log.nonce.toString()] = elementBridgeData.getInteractionPresentValue(log.nonce.toBigInt());
+      const inputValue = interactions[log.nonce.toString()].inputValue!;
+      promises[log.nonce.toString()] = elementBridgeData.getInteractionPresentValue(
+        log.nonce.toBigInt(),
+        inputValue,
+      ) as unknown as Promise<BridgeAssetValue[]>;
     }
   }
   console.log(`calculating interaction present values...`);
@@ -213,7 +220,7 @@ export async function profileElement(
   for (const nonce of nonces) {
     const presentValue = await promises[nonce];
     if (presentValue.length > 0) {
-      interactions[nonce].presentValue = presentValue[0].amount;
+      interactions[nonce].presentValue = presentValue[0].value;
     }
   }
   const summary = {
@@ -451,19 +458,19 @@ async function main() {
     .description('provides details of element defi interactions')
     .argument('<rollupAddress>', 'the address of the deployed rollup contract, as a hex string')
     .argument('<elementAddress>', 'the address of the deployed element bridge contract, as a hex string')
+    .argument('<falafelGraphQLEndpoint>', 'the graph QL endpoint of Falafel in the required environemnt')
     .argument('<from>', 'the block number to search from')
     .argument('[to]', 'the block number to search to, defaults to the latest block')
-    .argument('[batchSize]', 'the batch size used for scanning events on chain')
     .argument('[url]', 'your ganache url', 'http://localhost:8545')
-    .action(async (rollupAddress, elementAddress, from, to, batchSize, url) => {
+    .action(async (rollupAddress, elementAddress, falafelGraphQLEndpoint, from, to, url) => {
       const provider = getProvider(url);
       await profileElement(
         EthAddress.fromString(rollupAddress),
         EthAddress.fromString(elementAddress),
         provider,
+        falafelGraphQLEndpoint,
         parseInt(from),
         to ? parseInt(to) : undefined,
-        batchSize ? parseInt(batchSize) : 10,
       );
     });
 

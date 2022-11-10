@@ -204,6 +204,10 @@ resource "aws_ecs_task_definition" "falafel" {
       {
         "name": "PROOF_GENERATOR_MODE",
         "value": "split"
+      },
+      {
+        "name": "BRIDGE_DATA_PROVIDER_CONTRACT_ADDRESS",
+        "value": "0xa33b20ba45ca9c265bbf7b35a75717590edfc868"
       }
     ],
     "mountPoints": [

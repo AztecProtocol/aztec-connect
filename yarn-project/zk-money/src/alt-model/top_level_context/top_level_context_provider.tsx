@@ -13,6 +13,7 @@ import { AmountFactory } from '../assets/amount_factory.js';
 import { RollupProviderStatus } from '@aztec/sdk';
 import { ToastsObs } from './toasts_obs.js';
 import { createChainLinkPollerCache } from '../../alt-model/price_feeds/chain_link_poller_cache.js';
+import { createDefiPublishStatsPollerCache } from '../defi/defi_publish_stats_poller_cache.js';
 
 function createTopLevelContextValue(
   config: Config,
@@ -44,6 +45,7 @@ function createTopLevelContextValue(
     chainLinkPollerCache,
     bridgeDataAdaptorsMethodCaches.underlyingAmountPollerCache,
   );
+  const defiPulishStatsPollerCache = createDefiPublishStatsPollerCache(sdkObs);
 
   return {
     config,
@@ -58,6 +60,7 @@ function createTopLevelContextValue(
     gasPricePoller,
     bridgeDataAdaptorsMethodCaches,
     defiRecipes,
+    defiPulishStatsPollerCache,
   };
 }
 
