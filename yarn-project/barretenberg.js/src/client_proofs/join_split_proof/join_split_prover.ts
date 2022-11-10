@@ -1,5 +1,4 @@
 import { Transfer } from '../../transport/index.js';
-import { SchnorrSignature } from '../../crypto/index.js';
 import { UnrolledProver } from '../prover/index.js';
 import { JoinSplitTx } from './join_split_tx.js';
 
@@ -12,7 +11,7 @@ export class JoinSplitProver {
 
   public async computeKey() {
     const worker = this.prover.getWorker();
-    await worker.call('join_split__init_proving_key', this.mock);
+    await worker.asyncCall('join_split__init_proving_key', this.mock);
   }
 
   public async releaseKey() {
@@ -49,12 +48,12 @@ export class JoinSplitProver {
     return Buffer.from(await worker.sliceMemory(0, 32));
   }
 
-  public async createProof(tx: JoinSplitTx, signature: SchnorrSignature) {
-    const buf = Buffer.concat([tx.toBuffer(), signature.toBuffer()]);
+  public async createProof(tx: JoinSplitTx) {
+    const buf = tx.toBuffer();
     const worker = this.prover.getWorker();
     const mem = await worker.call('bbmalloc', buf.length);
     await worker.transferToHeap(buf, mem);
-    const proverPtr = await worker.call('join_split__new_prover', mem, this.mock);
+    const proverPtr = await worker.asyncCall('join_split__new_prover', mem, this.mock);
     await worker.call('bbfree', mem);
     const proof = await this.prover.createProof(proverPtr);
     await worker.call('join_split__delete_prover', proverPtr);

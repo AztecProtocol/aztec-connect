@@ -1,5 +1,5 @@
 import { DataSource } from 'typeorm';
-import { SQLDatabase, getOrmConfig } from '../sql_database/index.js';
+import { SQLDatabase, getOrmConfig } from '../node/index.js';
 import { databaseTestSuite } from './test_suite.js';
 
 let connection: DataSource;

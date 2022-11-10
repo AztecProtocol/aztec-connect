@@ -3,7 +3,7 @@ import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { AccountProver, JoinSplitProver, ProofId, UnrolledProver } from '@aztec/barretenberg/client_proofs';
-import { Crs } from '@aztec/barretenberg/crs';
+import { NetCrs } from '@aztec/barretenberg/crs';
 import { keccak256, Blake2s, Pedersen, randomBytes, Schnorr } from '@aztec/barretenberg/crypto';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
 import { InitHelpers } from '@aztec/barretenberg/environment';
@@ -891,8 +891,8 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
 
   private async getCrsData(circuitSize: number) {
     this.debug('downloading crs data...');
-    const crs = new Crs(circuitSize);
-    await crs.download();
+    const crs = new NetCrs(circuitSize);
+    await crs.init();
     this.debug('done.');
     return Buffer.from(crs.getData());
   }

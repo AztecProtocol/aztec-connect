@@ -6,7 +6,7 @@ describe('pippenger', () => {
   it('should not blow up', async () => {
     const numPoints = 4 * 1024;
     const crs = new Crs(numPoints);
-    await crs.download();
+    await crs.init();
 
     const wasm = await createWorker();
     const pippenger = new SinglePippenger(wasm);

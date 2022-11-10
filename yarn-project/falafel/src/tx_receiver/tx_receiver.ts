@@ -54,7 +54,7 @@ export class TxReceiver {
 
   public async init() {
     const crs = new Crs(0);
-    await crs.downloadG2Data();
+    await crs.init();
 
     this.worker = await createWorker('0', this.barretenberg.module);
 

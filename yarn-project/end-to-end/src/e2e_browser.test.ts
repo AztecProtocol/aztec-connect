@@ -44,6 +44,7 @@ describe('hummus terminal test', () => {
     browser = await puppeteer.launch({
       headless: true,
       executablePath: process.env.CHROME_BIN,
+      // TODO: Test if --no-zygote stops zombie chrome processes lingering...
       args: ['--no-sandbox', '--headless', '--disable-gpu', '--disable-dev-shm-usage'],
     });
     page = await browser.newPage();

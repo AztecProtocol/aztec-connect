@@ -7,7 +7,7 @@ export class AccountVerifier {
   public async computeKey(pippenger: SinglePippenger, g2Data: Uint8Array) {
     this.worker = pippenger.getWorker();
     await this.worker.transferToHeap(g2Data, 0);
-    await this.worker.call('account__init_verification_key', pippenger.getPointer(), 0);
+    await this.worker.asyncCall('account__init_verification_key', pippenger.getPointer(), 0);
   }
 
   public async getKey() {

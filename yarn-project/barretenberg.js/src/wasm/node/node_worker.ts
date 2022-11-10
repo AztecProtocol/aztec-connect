@@ -1,6 +1,6 @@
 import { parentPort } from 'worker_threads';
-import { NodeListener, DispatchMsg, TransportServer } from '../transport/index.js';
-import { BarretenbergWasm } from './barretenberg_wasm.js';
+import { NodeListener, DispatchMsg, TransportServer } from '../../transport/index.js';
+import { BarretenbergWasm } from '../barretenberg_wasm.js';
 
 if (!parentPort) {
   throw new Error('InvalidWorker');

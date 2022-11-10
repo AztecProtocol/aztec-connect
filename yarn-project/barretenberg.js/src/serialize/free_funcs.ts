@@ -7,6 +7,13 @@ export function boolToByte(b: boolean) {
   return buf;
 }
 
+// For serializing numbers to 32 bit little-endian form.
+export function numToUInt32LE(n: number, bufferSize = 4) {
+  const buf = Buffer.alloc(bufferSize);
+  buf.writeUInt32LE(n, bufferSize - 4);
+  return buf;
+}
+
 // For serializing numbers to 32 bit big-endian form.
 export function numToUInt32BE(n: number, bufferSize = 4) {
   const buf = Buffer.alloc(bufferSize);

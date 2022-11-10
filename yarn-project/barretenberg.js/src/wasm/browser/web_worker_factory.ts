@@ -1,6 +1,6 @@
-import { BarretenbergWasm } from './barretenberg_wasm.js';
-import { createDispatchProxy, DispatchMsg, TransportClient, WorkerConnector } from '../transport/index.js';
-import { BarretenbergWorker } from './barretenberg_worker.js';
+import { BarretenbergWasm } from '../barretenberg_wasm.js';
+import { createDispatchProxy, DispatchMsg, TransportClient, WorkerConnector } from '../../transport/index.js';
+import { BarretenbergWorker } from '../barretenberg_worker.js';
 
 export async function createWebWorker() {
   const worker = new Worker(`/web_worker.js`);

@@ -1,8 +1,8 @@
 import { Worker } from 'worker_threads';
-import { BarretenbergWasm } from './barretenberg_wasm.js';
-import { createDispatchProxy, DispatchMsg, TransportClient } from '../transport/index.js';
-import { NodeConnector } from '../transport/index.js';
-import { BarretenbergWorker } from './barretenberg_worker.js';
+import { BarretenbergWasm } from '../barretenberg_wasm.js';
+import { createDispatchProxy, DispatchMsg, TransportClient } from '../../transport/index.js';
+import { NodeConnector } from '../../transport/index.js';
+import { BarretenbergWorker } from '../barretenberg_worker.js';
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 

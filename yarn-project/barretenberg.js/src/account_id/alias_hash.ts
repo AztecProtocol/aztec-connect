@@ -15,7 +15,7 @@ export class AliasHash {
   }
 
   static fromAlias(alias: string, blake2s: Blake2s) {
-    return new AliasHash(blake2s.hashToField(Buffer.from(alias)).slice(0, 28));
+    return new AliasHash(blake2s.hashToField(Buffer.from(alias)).subarray(0, 28));
   }
 
   static fromString(hash: string) {

@@ -2,3 +2,5 @@ dist
 dest
 node_modules
 .terraform
+.cache
+.clangd

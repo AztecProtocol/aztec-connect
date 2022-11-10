@@ -1,12 +1,14 @@
 import { fetch } from '../iso_fetch/index.js';
+import { readFile } from 'fs/promises';
+import { existsSync } from 'fs';
 
-export class Crs {
+export class NetCrs {
   private data!: Uint8Array;
   private g2Data!: Uint8Array;
 
   constructor(public readonly numPoints: number) {}
 
-  async download() {
+  async init() {
     // We need (circuitSize + 1) number of g1 points.
     const g1Start = 28;
     const g1End = g1Start + (this.numPoints + 1) * 64 - 1;
@@ -42,5 +44,54 @@ export class Crs {
 
   getG2Data() {
     return this.g2Data;
+  }
+}
+
+export class FileCrs {
+  private data!: Uint8Array;
+  private g2Data!: Uint8Array;
+
+  constructor(public readonly numPoints: number, private path: string) {}
+
+  async init() {
+    // We need (circuitSize + 1) number of g1 points.
+    const g1Start = 28;
+    const g1End = g1Start + (this.numPoints + 1) * 64;
+
+    const data = await readFile(this.path);
+    this.data = data.subarray(g1Start, g1End);
+
+    const g2Start = 28 + 5040000 * 64;
+    const g2End = g2Start + 128;
+    this.g2Data = data.subarray(g2Start, g2End);
+  }
+
+  getData() {
+    return this.data;
+  }
+
+  getG2Data() {
+    return this.g2Data;
+  }
+}
+
+export class Crs {
+  private SRS_PATH = '../../barretenberg/srs_db/ignition/transcript00.dat';
+  private crs: FileCrs | NetCrs;
+
+  constructor(public readonly numPoints: number) {
+    this.crs = existsSync(this.SRS_PATH) ? new FileCrs(numPoints, this.SRS_PATH) : new NetCrs(numPoints);
+  }
+
+  init() {
+    return this.crs.init();
+  }
+
+  getData() {
+    return this.crs.getData();
+  }
+
+  getG2Data() {
+    return this.crs.getG2Data();
   }
 }

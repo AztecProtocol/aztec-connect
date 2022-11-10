@@ -1,5 +1,5 @@
-import { DispatchMsg, TransportServer, WorkerListener } from '../transport/index.js';
-import { BarretenbergWasm } from './barretenberg_wasm.js';
+import { DispatchMsg, TransportServer, WorkerListener } from '../../transport/index.js';
+import { BarretenbergWasm } from '../barretenberg_wasm.js';
 
 async function dispatch({ fn, args }: DispatchMsg) {
   if (fn === '__destroyWorker__') {
