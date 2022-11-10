@@ -69,7 +69,7 @@ export class BridgeSubsidyProvider {
       if (currentBridgeSubsidy === undefined) {
         return 0;
       }
-      this.cache[mapKey] = currentBridgeSubsidy.subsidy;
+      this.cache[mapKey] = currentBridgeSubsidy.subsidyInGas;
     }
 
     // we now have all the required data cached

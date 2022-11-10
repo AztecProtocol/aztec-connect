@@ -47,10 +47,11 @@ export class BridgeDataProvider {
     const bd = BridgeCallData.fromBigInt(bridgeCallData);
     const bridgeCallDataAsString = bd.toString();
     if (this.subsidyCache[bridgeCallDataAsString] === undefined) {
-      const [criteria, subsidy] = await this.contract.getAccumulatedSubsidyAmount(bridgeCallData);
+      const [criteria, subsidyInWei, subsidyInGas] = await this.contract.getAccumulatedSubsidyAmount(bridgeCallData);
       this.subsidyCache[bridgeCallDataAsString] = {
         addressId: bd.bridgeAddressId,
-        subsidy: subsidy.toNumber(),
+        subsidyInGas: subsidyInGas.toNumber(),
+        subsidyInWei: subsidyInWei.toBigInt(),
         criteria: criteria.toBigInt(),
       } as BridgeSubsidy;
     }

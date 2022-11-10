@@ -47,7 +47,8 @@ export interface BridgeData {
 export interface BridgeSubsidy {
   addressId: number;
   criteria: bigint;
-  subsidy: number;
+  subsidyInWei: bigint;
+  subsidyInGas: number;
 }
 
 export interface Blockchain extends BlockSource, BlockchainStatusSource, EthereumSigner {

@@ -9,6 +9,6 @@ interface IBridgeDataProvider {
         string label;
     }
 
-    function getAccumulatedSubsidyAmount(uint256 _bridgeCallData) external view returns (uint256, uint256);
+    function getAccumulatedSubsidyAmount(uint256 _bridgeCallData) external view returns (uint256, uint256, uint256);
     function getBridge(uint256 _bridgeAddressId) external view returns (BridgeData memory);
 }

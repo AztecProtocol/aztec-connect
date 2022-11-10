@@ -187,7 +187,7 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "BRIDGE_DATA_PROVIDER_CONTRACT_ADDRESS",
-        "value": "0x9092E8E72000AAE776E4785662582e8f49a19258"
+        "value": "0x8b2e54fa4398c8f7502f30ac94cb1f354390c8ab"
       },
       {
         "name": "PRIVATE_KEY",

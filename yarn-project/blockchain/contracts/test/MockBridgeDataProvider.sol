@@ -27,9 +27,11 @@ contract MockBridgeDataProvider is IBridgeDataProvider {
     function updateSubsidy(uint256 _bridgeAddressId, uint256 _subsidy) public {
         subsidies[_bridgeAddressId] = _subsidy;
     }
-    function getAccumulatedSubsidyAmount(uint256 _bridgeCallData) external view returns (uint256, uint256) {
+    function getAccumulatedSubsidyAmount(uint256 _bridgeCallData) external view returns (uint256, uint256, uint256) {
         uint256 bridgeAddressId = _bridgeCallData & MASK_THIRTY_TWO_BITS;
-        return (5, subsidies[bridgeAddressId]);
+        uint256 gasSubsidy = subsidies[bridgeAddressId];
+        uint256 ethSubsidy = gasSubsidy * block.basefee;
+        return (5, ethSubsidy, gasSubsidy);
     }
     function getBridge(uint256 _bridgeAddressId) external view returns (BridgeData memory) {
         return bridges[_bridgeAddressId];
