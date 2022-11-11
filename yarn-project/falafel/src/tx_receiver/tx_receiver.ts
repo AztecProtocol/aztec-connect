@@ -84,7 +84,7 @@ export class TxReceiver {
       for (let i = 0; i < txs.length; ++i) {
         const { proof } = txs[i];
         const txType = await getTxTypeFromProofData(proof, this.blockchain);
-        this.metrics.txReceived(txType);
+        this.metrics.txReceived(txType, txRequest.requestSender.originUrl);
         this.log(`Received tx (${i + 1}/${txs.length}): ${proof.txId.toString('hex')}, type: ${TxType[txType]}`);
         txTypes.push(txType);
       }
@@ -118,8 +118,8 @@ export class TxReceiver {
       // need to do this as the last thing before adding to the db
       // otherwise we could add to the rate limiter and then reject the txs for other reasons
       const numDeposits = txTypes.filter(x => x === TxType.DEPOSIT).length;
-      if (numDeposits !== 0 && !this.rateLimiter.add(txRequest.requestSender, numDeposits)) {
-        const currentValue = this.rateLimiter.getCurrentValue(txRequest.requestSender);
+      if (numDeposits !== 0 && !this.rateLimiter.add(txRequest.requestSender.clientIp, numDeposits)) {
+        const currentValue = this.rateLimiter.getCurrentValue(txRequest.requestSender.clientIp);
         this.log(
           `Rejecting tx request from ${txRequest.requestSender}, attempted to submit ${numDeposits} deposits. ${currentValue} deposits already submitted`,
         );
