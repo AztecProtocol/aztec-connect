@@ -4,7 +4,7 @@ export interface Network {
   isFrequent?: boolean;
 }
 
-export const networks: Network[] = [
+const networks: Network[] = [
   { chainId: 1, network: 'mainnet' },
   { chainId: 3, network: 'ropsten' },
   { chainId: 4, network: 'rinkeby' },
@@ -17,8 +17,4 @@ export const networks: Network[] = [
 
 export const chainIdToNetwork = (chainId: number) => {
   return networks.find(network => network.chainId === chainId);
-};
-
-export const getNetwork = (network: string) => {
-  return networks.find(n => n.network === network);
 };

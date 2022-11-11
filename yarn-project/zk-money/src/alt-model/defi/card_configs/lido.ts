@@ -1,6 +1,5 @@
 import lidoXCurveLogo from '../../../images/lido_x_curve_logo.svg';
 import lidoMiniLogo from '../../../images/lido_mini_logo.png';
-import ethToDaiBanner from '../../../images/eth_to_dai_banner.svg';
 import { KNOWN_MAINNET_ASSET_ADDRESSES as KMAA } from '../../../alt-model/known_assets/known_asset_addresses.js';
 import { createLidoAdaptor } from '../bridge_data_adaptors/lido_adaptor.js';
 import { CreateRecipeArgs } from '../types.js';
@@ -35,7 +34,6 @@ export const LIDO_CARD: CreateRecipeArgs = {
   exitDesc: 'Unwrap zkwstETH and swap on Curve to get back zkETH.',
   longDescription:
     'Swap ETH for liquid staked ETH (stETH) on Curve and earn daily staking rewards. stETH is wrapped into wstETH, allowing you to earn staking yields without locking assets.',
-  bannerImg: ethToDaiBanner,
   logo: lidoXCurveLogo,
   miniLogo: lidoMiniLogo,
   cardTag: 'Staking',

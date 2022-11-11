@@ -1,6 +1,6 @@
-import { Button } from '../../../../../../components/index.js';
-import { FaqHint } from '../../../../../../ui-components/index.js';
-import style from './footer_section.module.css';
+import { useWalletInteractionIsOngoing } from '../../../../../../alt-model/wallet_interaction_hooks.js';
+import { FaqHint, Button } from '../../../../../../ui-components/index.js';
+import style from './footer_section.module.scss';
 
 interface FooterSectionProps {
   onNext: () => void;
@@ -9,6 +9,8 @@ interface FooterSectionProps {
 }
 
 export function FooterSection(props: FooterSectionProps) {
+  const walletInteractionIsOngoing = useWalletInteractionIsOngoing();
+
   return (
     <div className={style.root}>
       <FaqHint />
@@ -17,9 +19,8 @@ export function FooterSection(props: FooterSectionProps) {
         <Button
           className={style.nextButton}
           text="Next"
-          theme="gradient"
           onClick={props.onNext}
-          disabled={props.nextDisabled}
+          disabled={props.nextDisabled || walletInteractionIsOngoing}
         />
       </div>
     </div>

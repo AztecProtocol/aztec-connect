@@ -1,11 +1,17 @@
-import { AztecSdk, GrumpkinAddress, EthAddress, TransferController, WithdrawController } from '@aztec/sdk';
-import { Amount } from '../assets/index.js';
-import { createSigningKeys } from '../../app/key_vault.js';
+import type { Signer } from '@ethersproject/abstract-signer';
+import {
+  AztecSdk,
+  GrumpkinAddress,
+  EthAddress,
+  TransferController,
+  WithdrawController,
+  EthersAdapter,
+} from '@aztec/sdk';
 import createDebug from 'debug';
-import { Provider } from '../../app/provider.js';
 import { SendComposerPhase, SendComposerStateObs } from './send_composer_state_obs.js';
 import { SendMode } from './send_mode.js';
 import { createSigningRetryableGenerator } from '../forms/composer_helpers.js';
+import { Amount } from '../assets/index.js';
 
 const debug = createDebug('zm:send_composer');
 
@@ -25,10 +31,10 @@ export type SendComposerPayload = Readonly<{
   feeAmount: Amount;
 }>;
 
-export interface SendComposerDeps {
+interface SendComposerDeps {
   sdk: AztecSdk;
   userId: GrumpkinAddress;
-  awaitCorrectProvider: () => Promise<Provider>;
+  awaitCorrectSigner: () => Promise<Signer>;
 }
 
 export class SendComposer {
@@ -42,12 +48,18 @@ export class SendComposer {
     this.stateObs.clearError();
     try {
       const { targetAmount, feeAmount, recipient } = this.payload;
-      const { sdk, userId, awaitCorrectProvider } = this.deps;
+      const { sdk, userId, awaitCorrectSigner } = this.deps;
 
       this.stateObs.setPhase(SendComposerPhase.GENERATING_KEY);
-      const provider = await awaitCorrectProvider();
-      const { privateKey } = await this.withRetryableSigning(() => createSigningKeys(provider, sdk));
-      const signer = await sdk.createSchnorrSigner(privateKey);
+
+      const signer = await awaitCorrectSigner();
+      const ethersAdapter = new EthersAdapter(signer.provider!);
+      const address = await signer.getAddress();
+
+      const { privateKey } = await this.withRetryableSigning(async () => {
+        return await sdk.generateSpendingKeyPair(EthAddress.fromString(address), ethersAdapter);
+      });
+      const schnorrSigner = await sdk.createSchnorrSigner(privateKey);
 
       this.stateObs.setPhase(SendComposerPhase.CREATING_PROOF);
       let controller: TransferController | WithdrawController;
@@ -55,7 +67,7 @@ export class SendComposer {
       if (recipient.sendMode === SendMode.SEND) {
         controller = sdk.createTransferController(
           userId,
-          signer,
+          schnorrSigner,
           targetAmount.toAssetValue(),
           feeAmount.toAssetValue(),
           recipient.userId,
@@ -64,7 +76,7 @@ export class SendComposer {
       } else {
         controller = sdk.createWithdrawController(
           userId,
-          signer,
+          schnorrSigner,
           targetAmount.toAssetValue(),
           feeAmount.toAssetValue(),
           recipient.address,

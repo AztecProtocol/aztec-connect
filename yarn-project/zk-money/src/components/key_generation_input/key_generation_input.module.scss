@@ -1,0 +1,20 @@
+@use '../../ui-components/styles/mixins';
+
+.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.result {
+  height: 100%;
+  display: grid;
+  grid-template-columns: 1fr 50px;
+  gap: 10px;
+  justify-content: center;
+}
+
+.accountResult {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}

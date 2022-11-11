@@ -1,0 +1,32 @@
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  animation: spin 1s infinite linear;
+}
+
+.extraSmall {
+  height: 15px;
+}
+
+.small {
+  height: 20px;
+}
+
+.medium {
+  height: 25px;
+}
+
+.large {
+  height: 30px;
+}
+
+.extraLarge {
+  height: 35px;
+}

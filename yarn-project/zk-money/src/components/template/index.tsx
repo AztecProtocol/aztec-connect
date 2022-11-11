@@ -1,11 +1,12 @@
 import React, { useLayoutEffect, useState } from 'react';
 import { default as styled } from 'styled-components';
-import { colours, gradients, Theme } from '../../styles/index.js';
+import { debounce } from 'lodash';
 import { ContentWrapper } from './content_wrapper.js';
 import { Footer } from './footer.js';
-import { debounce } from 'lodash';
 import { isSafari } from '../../device_support.js';
 import { Pages } from '../../views/views.js';
+import { Theme } from '../../ui-components/index.js';
+import { colours, gradients } from '../../ui-components/styles/colour.js';
 
 export * from './content_wrapper.js';
 
@@ -92,8 +93,8 @@ export const Template: React.FunctionComponent<TemplateProps> = ({
   return (
     <>
       <Root theme={theme}>
-        <ContentRoot fullWidth={fullWidth}>{!isLoading && children}</ContentRoot>
-        {!isLoading && <Footer explorerUrl={explorerUrl} />}
+        <ContentRoot fullWidth={fullWidth}>{children}</ContentRoot>
+        <Footer explorerUrl={explorerUrl} />
       </Root>
       <Background isResizing={isResizing} theme={theme} isSafari={isSafari} />
     </>

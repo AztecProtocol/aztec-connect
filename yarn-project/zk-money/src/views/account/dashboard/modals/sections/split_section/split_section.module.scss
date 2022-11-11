@@ -4,8 +4,8 @@
 }
 
 .leftPanel {
-  flex: 0 0 60%;
-  padding: 14px 24px;
+  flex: 0 0 66%;
+  padding: 40px 24px 14px 24px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -19,4 +19,15 @@
   border-top-right-radius: 20px;
   border-bottom-right-radius: 20px;
   position: relative;
+}
+
+@media (max-width: 768px) {
+  .leftPanel {
+    flex: initial;
+    width: 100%;
+  }
+
+  .rightPanel {
+    display: none;
+  }
 }

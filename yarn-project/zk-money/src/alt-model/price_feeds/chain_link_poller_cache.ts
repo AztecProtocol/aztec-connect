@@ -1,9 +1,9 @@
 import createDebug from 'debug';
 import type { Provider } from '@ethersproject/providers';
-import { Contract } from 'ethers';
 import { LazyInitCacheMap } from '../../app/util/lazy_init_cache_map.js';
 import { Obs } from '../../app/util/index.js';
 import { Poller } from '../../app/util/poller.js';
+import { Contract } from 'ethers';
 
 const debug = createDebug('chain_link_poller_cache');
 

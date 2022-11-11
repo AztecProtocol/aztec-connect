@@ -1,0 +1,96 @@
+@use '../../styles/mixins.scss';
+
+.button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  cursor: pointer;
+  user-select: none;
+  padding: 16px 32px;
+  height: 48px;
+  border-radius: 10px;
+  transition: transform 0.2s, box-shadow 0.2s;
+  @include mixins.shadow_border;
+
+  &:hover {
+    box-shadow: 0px 4px 10px rgb(0 0 0 / 15%);
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    box-shadow: 0px 4px 10px rgb(0 0 0 / 15%);
+    transform: translateY(0px);
+  }
+}
+
+.secondary {
+  background: #ffffff;
+}
+
+.primary {
+  background: linear-gradient(134.14deg, #940dff 18.37%, #0094ff 82.04%);
+}
+
+.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+
+  &:hover {
+    transform: translateY(0px);
+  }
+}
+
+.text {
+  letter-spacing: 1px;
+  white-space: break-spaces;
+  font-size: 14px;
+  line-height: 24px;
+  font-weight: 450;
+}
+
+.primary > .text {
+  color: #ffffff;
+}
+
+.secondary > .text {
+  @include mixins.gradient_font;
+}
+
+.outlined {
+  position: relative;
+  z-index: 1;
+
+  &:before {
+    content: '';
+    position: absolute;
+    border-radius: inherit;
+    top: 1px;
+    right: 1px;
+    bottom: 1px;
+    left: 1px;
+    z-index: -1;
+  }
+}
+
+.loading {
+  cursor: default;
+  pointer-events: none;
+
+  &:hover {
+    transform: translateY(0px);
+  }
+}
+
+.large {
+  height: 44px;
+}
+
+.medium {
+  height: 36px;
+}
+
+.small {
+  height: 28px;
+}

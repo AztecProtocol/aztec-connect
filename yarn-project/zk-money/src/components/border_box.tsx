@@ -1,5 +1,7 @@
 import { default as styled } from 'styled-components';
-import { borderRadiuses, Theme, themeColours } from '../styles/index.js';
+import { Theme } from '../ui-components/index.js';
+import { borderRadiuses } from '../ui-components/styles/layout.js';
+import { themeColours } from '../ui-components/styles/theme.js';
 
 export const BorderBox = styled.div<{ area?: string }>`
   border: 1px solid ${themeColours[Theme.WHITE].border};

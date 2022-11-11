@@ -1,6 +1,5 @@
 import eulerLogo from '../../../images/euler_logo.svg';
 import eulerMiniLogo from '../../../images/euler_mini_logo.png';
-import ethToDaiBanner from '../../../images/eth_to_dai_banner.svg';
 import { KNOWN_MAINNET_ASSET_ADDRESSES as KMAA } from '../../../alt-model/known_assets/known_asset_addresses.js';
 import { EulerBridgeData } from '@aztec/bridge-clients/client-dest/src/client/euler/euler-bridge-data.js';
 import { CreateRecipeArgs } from '../types.js';
@@ -34,7 +33,6 @@ export const EULER_ETH_CARD: CreateRecipeArgs = {
   shortDesc: 'Lend ETH on Euler and earn yield by holding weWETH in exchange.',
   exitDesc: 'Unwrap weWETH to recieve your underlying ETH.',
   longDescription: 'Lend ETH on Euler and earn yield by holding weWETH in exchange.',
-  bannerImg: ethToDaiBanner,
   logo: eulerLogo,
   miniLogo: eulerMiniLogo,
   cardTag: 'Lending',

@@ -1,0 +1,19 @@
+.accessAccountForm {
+  padding: 40px 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 40px;
+}
+
+.message {
+  font-size: 18px;
+}
+
+.buttons {
+  display: flex;
+  width: 100%;
+  gap: 20px;
+  justify-content: flex-end;
+}

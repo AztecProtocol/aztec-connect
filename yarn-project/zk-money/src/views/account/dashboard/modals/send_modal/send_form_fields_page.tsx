@@ -1,19 +1,18 @@
 import React from 'react';
-import { InputTheme } from '../../../../../components/index.js';
+import { TxSettlementTime } from '@aztec/sdk';
 import { SplitSection } from '../sections/split_section/index.js';
-import { AmountSection } from '../../../../../views/account/dashboard/modals/sections/amount_section/index.js';
 import { TxGasSection } from '../../../../../views/account/dashboard/modals/sections/gas_section/index.js';
-import { Toggle } from '../../../../../components/index.js';
+import { Toggle } from '../../../../../ui-components/index.js';
 import { DescriptionSection, RecipientSection } from '../sections/index.js';
 import { PrivacyInformationSection } from '../sections/privacy_information_section/index.js';
 import { TransactionSettlementTimeInformationSection } from '../sections/settlement_time_information_section/index.js';
 import { StrOrMax } from '../../../../../alt-model/forms/constants.js';
-import { TxSettlementTime } from '@aztec/sdk';
 import { SendFormDerivedData, SendMode, SendFormFeedback } from '../../../../../alt-model/send/index.js';
-import style from './send_form_fields_page.module.scss';
 import { FooterSection } from '../sections/footer_section/index.js';
+import { AmountSelection } from '../../../../../components/index.js';
+import style from './send_form_fields_page.module.scss';
 
-export interface SendProps {
+interface SendProps {
   state: SendFormDerivedData;
   feedback: SendFormFeedback;
   isValid: boolean;
@@ -63,7 +62,6 @@ export const SendFormFieldsPage: React.FunctionComponent<SendProps> = ({
         leftPanel={
           <>
             <RecipientSection
-              theme={InputTheme.WHITE}
               recipientStr={state.fields.recipientStr}
               isLoading={state.isLoadingRecipient}
               isValid={!!state.recipient}
@@ -74,12 +72,11 @@ export const SendFormFieldsPage: React.FunctionComponent<SendProps> = ({
                 onChangeRecipient(value.replace(/^@+/, ''));
               }}
             />
-            <AmountSection
+            <AmountSelection
               maxAmount={state.maxOutput ?? 0n}
               asset={asset}
-              amountStrOrMax={state.fields.amountStrOrMax}
-              onChangeAmountStrOrMax={onChangeAmount}
-              amountStrAnnotation={undefined}
+              amountStringOrMax={state.fields.amountStrOrMax}
+              onChangeAmountStringOrMax={onChangeAmount}
               message={feedback.amount}
               balanceType="L2"
             />
@@ -97,6 +94,7 @@ export const SendFormFieldsPage: React.FunctionComponent<SendProps> = ({
         leftPanel={
           <TxGasSection
             balanceType="L2"
+            asset={asset}
             speed={state.fields.speed}
             onChangeSpeed={onChangeSpeed}
             feeAmounts={state.feeAmounts}

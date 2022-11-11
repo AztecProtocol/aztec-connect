@@ -1,17 +1,18 @@
 import { BridgeCallData, DefiSettlementTime } from '@aztec/sdk';
 import { useSdk } from '../../../alt-model/top_level_context/index.js';
 import { useMemo } from 'react';
-import { useApp } from '../../../alt-model/app_context.js';
 import { FEE_SIG_FIGURES } from '../../../alt-model/forms/constants.js';
 import { useSpendableBalance } from '../../../alt-model/balance_hooks.js';
 import { usePolledCallback } from '../../../app/util/polling_hooks.js';
+import { useAccountState } from '../../account_state/index.js';
 
 const POLL_INTERVAL = 1000 * 60;
 
 export function useMaxDefiValue(bridgeCallData: BridgeCallData | undefined, speed: DefiSettlementTime) {
   useSdk();
   const sdk = useSdk();
-  const { userId } = useApp();
+  const accountState = useAccountState();
+  const userId = accountState?.userId;
   const spendableBalanceA = useSpendableBalance(bridgeCallData?.inputAssetIdA);
   const spendableBalanceB = useSpendableBalance(bridgeCallData?.inputAssetIdB);
   const poll = useMemo(() => {

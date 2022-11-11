@@ -126,7 +126,6 @@ export interface DefiRecipe {
   cardButtonLabel: string;
   shortDesc: string;
   exitDesc?: string;
-  bannerImg: string;
   longDescription: string;
   hideUnderlyingOnExit?: boolean;
   keyStats: KeyStatsConfig;

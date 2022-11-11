@@ -1,21 +1,38 @@
-import type { Provider } from '../../../app/index.js';
+import type { Signer } from '@ethersproject/abstract-signer';
 import { useEffect, useRef } from 'react';
-import { useApp } from '../../../alt-model/app_context.js';
-import { useProviderState } from '../../../alt-model/provider_hooks.js';
-import { Semaphore } from '../../../app/util/index.js';
+import { useSigner, useAccount } from 'wagmi';
+import { EthAddress } from '@aztec/sdk';
+import { Semaphore, Obs, ChainableInputObs } from '../../../app/util/index.js';
+import { useAccountState } from '../../account_state/account_state_hooks.js';
 
 export function useAwaitCorrectProvider() {
-  const { keyVault, provider } = useApp();
-  const providerState = useProviderState();
-  const address = providerState?.account;
-  const ref = useRef<Semaphore<Provider>>();
+  const accountState = useAccountState();
+  const { data: signer } = useSigner();
+  const { address } = useAccount();
+
+  const ref = useRef<Semaphore<Signer>>();
   if (!ref.current) ref.current = new Semaphore();
   useEffect(() => {
-    if (keyVault && address?.equals(keyVault.signerAddress) && provider) {
-      ref.current?.open(provider);
+    if (!address || !accountState?.ethAddressUsedForAccountKey) {
+      return;
+    }
+    const ethAddress = EthAddress.fromString(address);
+    if (ethAddress.equals(accountState.ethAddressUsedForAccountKey) && signer) {
+      ref.current?.open(signer);
     } else {
       ref.current?.close();
     }
-  }, [keyVault, address, provider]);
+  }, [address, signer, accountState?.ethAddressUsedForAccountKey]);
   return ref.current.wait;
+}
+
+export type ActiveSignerObs = Obs<Signer | undefined | null>;
+
+export function useActiveSignerObs(): ActiveSignerObs {
+  const { data: signer } = useSigner();
+  const obsRef = useRef<ChainableInputObs<Signer | undefined | null>>();
+  if (!obsRef.current) obsRef.current = Obs.input(signer);
+  const obs = obsRef.current;
+  useEffect(() => obs.next(signer), [obs, signer]);
+  return obs;
 }

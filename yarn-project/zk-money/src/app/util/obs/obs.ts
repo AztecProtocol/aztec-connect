@@ -52,6 +52,18 @@ export class Obs<T> implements IObs<T> {
     return new Obs(new FilterObs(this, filter));
   }
 
+  async whenDefined<TWithoutUndefined = Exclude<T, undefined>>(): Promise<TWithoutUndefined> {
+    if (this.value !== undefined) return this.value as unknown as TWithoutUndefined;
+    const fullfiller = new Fullfiller<TWithoutUndefined>();
+    const unlisten = this.listen(value => {
+      if (value !== undefined) {
+        unlisten();
+        fullfiller.resolve(value as unknown as TWithoutUndefined);
+      }
+    });
+    return fullfiller.promise;
+  }
+
   async whenNext(): Promise<T> {
     const fullfiller = new Fullfiller<T>();
     const unlisten = this.listen(value => {
@@ -62,7 +74,7 @@ export class Obs<T> implements IObs<T> {
   }
 }
 
-class ChainableInputObs<T> extends Obs<T> {
+export class ChainableInputObs<T> extends Obs<T> {
   constructor(initialValue: T) {
     super(new InputObs(initialValue));
   }

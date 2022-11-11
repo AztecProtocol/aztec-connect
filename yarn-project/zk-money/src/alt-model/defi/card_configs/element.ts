@@ -1,6 +1,5 @@
 import elementFiLogo from '../../../images/element_fi_logo.svg';
 import elementMiniLogo from '../../../images/element_mini_logo.png';
-import ethToDaiBanner from '../../../images/eth_to_dai_banner.svg';
 import { createElementAdaptor } from '../bridge_data_adaptors/element_adaptor.js';
 import { KNOWN_MAINNET_ASSET_ADDRESSES as KMAA } from '../../../alt-model/known_assets/known_asset_addresses.js';
 import { BridgeInteraction, CreateRecipeArgs, DefiRecipe } from '../types.js';
@@ -30,7 +29,6 @@ export const ELEMENT_CARD: CreateRecipeArgs = {
   shortDesc: 'Deposit zkDai to Element for fixed yield. Funds are locked in Element and returned at the maturity date.',
   longDescription:
     'Element allows you to invest assets for a fixed yield. Deposit an asset today and receive it back on the maturity date with a fixed APR.',
-  bannerImg: ethToDaiBanner,
   logo: elementFiLogo,
   miniLogo: elementMiniLogo,
   cardTag: 'Fixed Yield',

@@ -1,31 +1,25 @@
+import { TxSettlementTime } from '@aztec/sdk';
 import type {
   ShieldFormFeedback,
   ShieldFormFields,
   ShieldFormValidationResult,
 } from '../../../../../alt-model/shield/index.js';
 import type { StrOrMax } from '../../../../../alt-model/forms/constants.js';
-import { TxSettlementTime } from '@aztec/sdk';
-import { useState } from 'react';
-import { WalletId, wallets } from '../../../../../app/index.js';
-import { InputTheme, WalletAccountIndicator } from '../../../../../components/index.js';
-import {
-  AmountSection,
-  TxGasSection,
-  RecipientSection,
-} from '../../../../../views/account/dashboard/modals/sections/index.js';
-import { RemoteAsset } from '../../../../../alt-model/types.js';
+import { TxGasSection, RecipientSection } from '../../../../../views/account/dashboard/modals/sections/index.js';
 import { TransactionSettlementTimeInformationSection } from '../sections/settlement_time_information_section/index.js';
 import { SplitSection } from '../sections/split_section/index.js';
-import { useProviderState, useApp } from '../../../../../alt-model/index.js';
 import { ShieldPrivacySection } from './shield_privacy_section/index.js';
 import { FooterSection } from '../sections/footer_section/index.js';
+import { AmountSelection } from '../../../../../components/index.js';
+import { useAccountStateManager } from '../../../../../alt-model/top_level_context/index.js';
+import { useObs } from '../../../../../app/util/index.js';
+import { useCachedAlias } from '../../../../../alt-model/alias_hooks.js';
 import style from './shield.module.scss';
 
 interface ShieldPage1Props {
   fields: ShieldFormFields;
   feedback: ShieldFormFeedback;
   validationResult: ShieldFormValidationResult;
-  assets: RemoteAsset[];
   onNext(): void;
   onChangeAmountStrOrMax(value: StrOrMax): void;
   onChangeRecipientAlias(value: string): void;
@@ -33,73 +27,63 @@ interface ShieldPage1Props {
   onChangeAsset(asset: number): void;
 }
 
+function getRecipientMessage(isShieldingToHimself: boolean, aliasNotSettled: boolean) {
+  if (isShieldingToHimself) {
+    return aliasNotSettled
+      ? `Your alias hasn't settled yet, please shield funds using your Aztec Account Address instead.`
+      : 'You will be the recipient of this transaction.';
+  }
+  return '';
+}
+
 export function ShieldPage1({
   fields,
   feedback,
   validationResult,
-  assets,
   onNext,
   onChangeAmountStrOrMax,
   onChangeRecipientAlias,
   onChangeSpeed,
   onChangeAsset,
 }: ShieldPage1Props) {
-  const { userSession, provider } = useApp();
-
-  const providerState = useProviderState();
   const asset = validationResult.input.targetAsset;
-  const address = providerState?.account;
-  const walletId = providerState?.walletId;
-  const [isWalletSelectorOpen, setWalletSelectorOpen] = useState(false);
+  const accountStateManager = useAccountStateManager();
+  const accountState = useObs(accountStateManager.stateObs);
+  const cachedAlias = useCachedAlias();
 
   if (!asset) {
     return <>Loading...</>;
   }
 
-  const toggleWalletDropdown = () => {
-    setWalletSelectorOpen(prevValue => !prevValue);
-  };
-
-  const options = (window.ethereum ? wallets : wallets.filter(w => w.id !== WalletId.METAMASK)).map(wallet => ({
-    value: wallet.id,
-    label: wallet.nameShort,
-  }));
+  const footerFeedback = `${feedback.walletAccount ? feedback.walletAccount + '. ' : ''}${feedback.footer || ''}`;
+  const hasWrittenRecipient = fields.recipientAlias.length > 0;
+  const recipientWasFound = !!validationResult.input.recipientUserId;
+  const isShieldingToHimself =
+    hasWrittenRecipient &&
+    (fields.recipientAlias === accountState?.userId.toString() || fields.recipientAlias === cachedAlias);
+  const aliasNotSettled = !recipientWasFound && isShieldingToHimself;
 
   return (
     <div className={style.contentWrapper}>
-      <WalletAccountIndicator
-        className={style.walletAccountIndicator}
-        address={address?.toString() ?? ''}
-        walletId={walletId as WalletId}
-        options={options}
-        onClick={toggleWalletDropdown}
-        onChange={async id => {
-          await provider?.disconnect();
-          userSession?.changeWallet(id, true);
-        }}
-        onClose={toggleWalletDropdown}
-        isOpen={isWalletSelectorOpen}
-      />
       <SplitSection
         leftPanel={
           <>
             <RecipientSection
-              theme={InputTheme.WHITE}
               recipientType="L2"
               recipientStr={fields.recipientAlias}
+              message={getRecipientMessage(isShieldingToHimself, aliasNotSettled)}
               isLoading={validationResult.input.isLoadingRecipientUserId}
-              isValid={!!validationResult.input.recipientUserId}
+              isValid={recipientWasFound}
               onChangeValue={onChangeRecipientAlias}
             />
-            <AmountSection
+            <AmountSelection
               maxAmount={validationResult.maxL2Output ?? 0n}
               asset={asset}
-              assets={assets}
-              amountStrOrMax={fields.amountStrOrMax}
+              amountStringOrMax={fields.amountStrOrMax}
               allowAssetSelection={true}
+              allowWalletSelection={true}
               onChangeAsset={onChangeAsset}
-              onChangeAmountStrOrMax={onChangeAmountStrOrMax}
-              hidePrivacy
+              onChangeAmountStringOrMax={onChangeAmountStrOrMax}
               message={feedback.amount}
               balanceType="L1"
             />
@@ -113,14 +97,14 @@ export function ShieldPage1({
             balanceType={validationResult.targetAssetIsPayingFee ? 'L1' : 'L2'}
             speed={fields.speed}
             onChangeSpeed={onChangeSpeed}
+            asset={asset}
             feeAmounts={validationResult.input.feeAmounts}
             targetAssetIsErc20={asset.id !== 0}
-            deductionIsFromL1={validationResult.targetAssetIsPayingFee}
           />
         }
         rightPanel={<TransactionSettlementTimeInformationSection selectedSpeed={fields.speed} />}
       />
-      <FooterSection onNext={onNext} nextDisabled={!validationResult.isValid} feedback={feedback.footer} />
+      <FooterSection onNext={onNext} nextDisabled={!validationResult.isValid} feedback={footerFeedback} />
     </div>
   );
 }

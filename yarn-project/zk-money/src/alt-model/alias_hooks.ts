@@ -1,12 +1,12 @@
-import type { GrumpkinAddress } from '@aztec/sdk';
-import { formatAliasInput, isValidAliasInput } from '../app/index.js';
-import { createGatedSetter } from '../app/util/index.js';
 import { useEffect, useState } from 'react';
-import { useApp } from './app_context.js';
-import { useSdk } from './top_level_context/index.js';
+import { GrumpkinAddress } from '@aztec/sdk';
+import { formatAliasInput, isValidAliasInput } from '../app/index.js';
+import { createGatedSetter, useObs } from '../app/util/index.js';
+import { useAccountState } from './account_state/index.js';
+import { useSdk, useAliasManager } from './top_level_context/index.js';
 
-export function useUserIdForAlias(aliasInput: string, debounceMs: number, allowOwnAlias?: boolean) {
-  const { alias: userAlias, userId } = useApp();
+export function useUserIdForRecipientStr(recipientStr: string, debounceMs: number, allowOwnAlias?: boolean) {
+  const accountState = useAccountState();
   const sdk = useSdk();
   const [userIdFetchState, setUserIdFetchState] = useState<{
     userId?: GrumpkinAddress;
@@ -14,29 +14,38 @@ export function useUserIdForAlias(aliasInput: string, debounceMs: number, allowO
   }>({
     isLoading: false,
   });
-  const alias = formatAliasInput(aliasInput);
+  const isGrumpkinAddress = GrumpkinAddress.isAddress(recipientStr);
+  const formattedRecipientStr = isGrumpkinAddress ? recipientStr : formatAliasInput(recipientStr);
   useEffect(() => {
-    if (!isValidAliasInput(alias)) {
+    if (!isValidAliasInput(formattedRecipientStr) && !isGrumpkinAddress) {
       setUserIdFetchState({ isLoading: false });
-      return;
-    }
-    if (userAlias === alias) {
-      if (allowOwnAlias) {
-        setUserIdFetchState({ isLoading: false, userId });
-      } else {
-        setUserIdFetchState({ isLoading: false, userId: undefined });
-      }
       return;
     }
     const gatedSetter = createGatedSetter(setUserIdFetchState);
     gatedSetter.set({ isLoading: true });
+
     const task = setTimeout(() => {
-      sdk?.getAccountPublicKey(alias).then(userId => gatedSetter.set({ isLoading: false, userId }));
+      if (isGrumpkinAddress) {
+        gatedSetter.set({ isLoading: false, userId: GrumpkinAddress.fromString(formattedRecipientStr) });
+      } else {
+        sdk?.getAccountPublicKey(formattedRecipientStr).then(userId => {
+          const isErrorState = accountState?.userId && userId?.equals(accountState?.userId) && !allowOwnAlias;
+          gatedSetter.set({ isLoading: false, userId: isErrorState ? undefined : userId });
+        });
+      }
     }, debounceMs);
     return () => {
       gatedSetter.close();
       clearTimeout(task);
     };
-  }, [sdk, alias, userAlias, allowOwnAlias, userId, debounceMs]);
+  }, [sdk, isGrumpkinAddress, formattedRecipientStr, allowOwnAlias, accountState?.userId, debounceMs]);
   return userIdFetchState;
+}
+
+export function useCachedAlias(): string | undefined {
+  const accountState = useAccountState();
+  const aliasManager = useAliasManager();
+  const aliasByUserId = useObs(aliasManager.aliasByUserIdStringObs);
+  if (!accountState) return;
+  return aliasByUserId[accountState.userId.toString()];
 }

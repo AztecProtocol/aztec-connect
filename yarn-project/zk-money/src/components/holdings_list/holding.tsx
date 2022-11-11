@@ -1,14 +1,16 @@
 import type { AssetValue } from '@aztec/sdk';
+import { SkeletonRect, Button, ButtonTheme, ButtonSize } from '../../ui-components/index.js';
 import { formatBulkPrice } from '../../app/index.js';
 import { useAmountBulkPrice, useSpendableBalance } from '../../alt-model/index.js';
 import { RemoteAsset } from '../../alt-model/types.js';
-import { Button, ShieldedAssetIcon } from '../index.js';
+import { ShieldedAssetIcon } from '../index.js';
 import { SHIELDABLE_ASSET_ADDRESSES } from '../../alt-model/known_assets/known_asset_addresses.js';
 import { useAmount } from '../../alt-model/asset_hooks.js';
-import style from './holding.module.scss';
 import { Amount } from '../../alt-model/assets/index.js';
 import { getIsDust } from '../../alt-model/assets/asset_helpers.js';
-import { SkeletonRect } from '../../ui-components/index.js';
+import { useWalletInteractionIsOngoing } from '../../alt-model/wallet_interaction_hooks.js';
+import { useAccountState } from '../../alt-model/account_state/account_state_hooks.js';
+import style from './holding.module.scss';
 
 interface HoldingProps {
   assetValue: AssetValue;
@@ -19,8 +21,12 @@ interface HoldingProps {
 
 export function Holding({ assetValue, onSend, onShield, onGoToEarn }: HoldingProps) {
   const amount = useAmount(assetValue);
+  const walletInteractionIsOngoing = useWalletInteractionIsOngoing();
   const asset = amount?.info;
   const spendableBalance = useSpendableBalance(assetValue.assetId);
+  const accountState = useAccountState();
+  const isSynced = accountState && !accountState.isSyncing;
+
   const spendableAmount = spendableBalance && asset ? new Amount(spendableBalance, asset) : undefined;
   const spendableBalanceIsDust =
     !spendableAmount || (asset ? getIsDust(spendableAmount.toAssetValue(), asset) : undefined);
@@ -47,22 +53,31 @@ export function Holding({ assetValue, onSend, onShield, onGoToEarn }: HoldingPro
       <div className={style.buttonsWrapper}>
         {shieldSupported && (
           <Button
-            theme={'white'}
-            size={'s'}
             className={style.button}
+            theme={ButtonTheme.Secondary}
+            size={ButtonSize.Medium}
             onClick={() => onShield?.(asset)}
             text={'Shield'}
+            disabled={walletInteractionIsOngoing || !isSynced}
           />
         )}
         {!spendableBalanceIsDust && (
           <>
-            <Button theme={'white'} size={'s'} className={style.button} onClick={() => onSend?.(asset)} text={'Send'} />
             <Button
-              theme={'white'}
-              size={'s'}
+              className={style.button}
+              onClick={() => onSend?.(asset)}
+              size={ButtonSize.Medium}
+              theme={ButtonTheme.Secondary}
+              text={'Send'}
+              disabled={walletInteractionIsOngoing || !isSynced}
+            />
+            <Button
               className={style.button}
               onClick={() => onGoToEarn?.(asset)}
+              theme={ButtonTheme.Secondary}
+              size={ButtonSize.Medium}
               text={'Earn'}
+              disabled={walletInteractionIsOngoing || !isSynced}
             />
           </>
         )}

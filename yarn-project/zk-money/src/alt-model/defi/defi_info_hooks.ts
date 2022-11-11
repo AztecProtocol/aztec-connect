@@ -52,10 +52,6 @@ function useBridgeMarket(recipeId: string, auxData?: number) {
   const poller = auxData !== undefined ? marketSizePollerCache.get([recipeId, auxData]) : undefined;
   return useMaybeObs(poller?.obs);
 }
-export function useDefaultBridgeMarket(recipeId: string) {
-  const auxData = useDefaultAuxDataOption(recipeId);
-  return useBridgeMarket(recipeId, auxData);
-}
 
 function useLiquidity(recipeId: string, auxData?: number) {
   const market = useBridgeMarket(recipeId, auxData);
@@ -121,11 +117,6 @@ export function useInteractionPresentValue(recipe: DefiRecipe, tx: UserDefiTx) {
       ? interactionPresentValuePollerCache.get([recipe.id, interactionNonce, tx.depositValue.value])
       : undefined;
   return useMaybeObs(poller?.obs);
-}
-
-export function useDefaultExpectedOutput(recipe: DefiRecipe, flowDirection: FlowDirection, inputValue?: bigint) {
-  const auxData = useDefaultAuxDataOption(recipe.id);
-  return useExpectedOutput(recipe.id, flowDirection, auxData, inputValue);
 }
 
 export function useUnderlyingAmount(recipe: DefiRecipe, inputValue: bigint | undefined) {

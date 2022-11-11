@@ -45,6 +45,9 @@ export function getAssetIconWhite(address: EthAddress) {
       return stEthWhiteIcon;
     case S.renBTC:
       return rbtcWhiteIcon;
+    case S.yvDAI:
+    case S.yvETH:
+      return yearnGradientIcon;
     default:
       return questionMarkWhiteIcon;
   }

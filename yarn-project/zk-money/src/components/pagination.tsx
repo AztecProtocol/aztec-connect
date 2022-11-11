@@ -1,6 +1,7 @@
 import React from 'react';
 import { default as styled, css } from 'styled-components';
-import { FontSize, fontWeights, spacings } from '../styles/index.js';
+import { spacings } from '../ui-components/styles/layout.js';
+import { fontWeights, FontSize } from '../ui-components/styles/typography.js';
 import { Text } from './text.js';
 
 const PaginationRoot = styled.div`

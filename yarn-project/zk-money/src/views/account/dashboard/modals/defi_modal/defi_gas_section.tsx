@@ -1,35 +1,16 @@
+import moment from 'moment';
+import { BridgeCallData, DefiSettlementTime } from '@aztec/sdk';
 import type { Amount } from '../../../../../alt-model/assets/index.js';
 import type { DefiRecipe } from '../../../../../alt-model/defi/types.js';
-import { BridgeCallData, DefiSettlementTime } from '@aztec/sdk';
-import { VerticalRadioButtons, RadioButtonOption } from '../../../../../ui-components/index.js';
-import { InputSection } from '../sections/input_section/index.js';
-import { MiniL2BalanceIndicator } from '../sections/amount_section/mini_balance_indicators.js';
-import { SectionInfo } from '../modal_molecules/section_info/index.js';
-import { DefiGasSaving } from './defi_gas_saving.js';
-import { useRollupProviderStatus } from '../../../../../alt-model/index.js';
+import { useAmountBulkPrice, useRollupProviderStatus } from '../../../../../alt-model/index.js';
 import { estimateTxSettlementTimes } from '../../../../../alt-model/estimate_settlement_times.js';
-import { FeeOptionContent } from '../sections/gas_section/fee_option_content/index.js';
 import {
   useDefiBatchAverageTimeout,
   useDefiBatchData,
 } from '../../../../../features/defi/bridge_count_down/bridge_count_down_hooks.js';
-
-function renderInfo(props: DefiGasSectionProps) {
-  const selectedFeeAmount = props.feeAmounts?.[props.speed];
-  switch (props.speed) {
-    case DefiSettlementTime.DEADLINE:
-      return (
-        <>
-          <p>Default speed. Split fees with others doing the same transaction.</p>
-          <DefiGasSaving feeAmount={selectedFeeAmount} bridgeAddressId={props.bridgeCallData?.bridgeAddressId} />
-        </>
-      );
-    case DefiSettlementTime.NEXT_ROLLUP:
-      return <p>Fast. Settle in the next Aztec rollup.</p>;
-    case DefiSettlementTime.INSTANT:
-      return <p>Fastest. Settle immediately on Ethereum.</p>;
-  }
-}
+import { useWalletInteractionIsOngoing } from '../../../../../alt-model/wallet_interaction_hooks.js';
+import { FeeSelector, FeeSelectorStatus, RadioButtonOption } from '../../../../../ui-components/index.js';
+import { formatBulkPrice } from '../../../../../app/index.js';
 
 interface DefiGasSectionProps {
   speed: DefiSettlementTime;
@@ -39,70 +20,90 @@ interface DefiGasSectionProps {
   bridgeCallData?: BridgeCallData;
 }
 
+function formatExpectedTimeOfSettlement(expectedTimeOfSettlement?: Date) {
+  if (expectedTimeOfSettlement) return moment(expectedTimeOfSettlement).fromNow(true);
+  return '';
+}
+
+function formatAverageTimeoutSeconds(averageTimeoutSeconds?: number) {
+  if (averageTimeoutSeconds) return '~' + moment(Date.now() + averageTimeoutSeconds * 1000).fromNow(true);
+  if (averageTimeoutSeconds === 0) return 'TBD';
+  return '';
+}
+
+function formatFeeAmount(feeAmount?: Amount) {
+  return feeAmount?.format({ layer: 'L2' });
+}
+
+function formatFeeBulkPrice(feeBulkPrice?: bigint) {
+  return feeBulkPrice !== undefined ? `$${formatBulkPrice(feeBulkPrice)}` : undefined;
+}
+
 export function DefiGasSection(props: DefiGasSectionProps) {
   const { speed, onChangeSpeed, feeAmounts } = props;
+  const walletInteractionIsOngoing = useWalletInteractionIsOngoing();
   const rpStatus = useRollupProviderStatus();
+
   const { instantSettlementTime, nextSettlementTime } = estimateTxSettlementTimes(rpStatus);
   const batchData = useDefiBatchData(props.bridgeCallData);
   const batchAverageTimeout = useDefiBatchAverageTimeout(props.recipe, props.bridgeCallData);
+
+  const feeBulkPriceDeadline = useAmountBulkPrice(feeAmounts?.[DefiSettlementTime.DEADLINE]);
+  const feeBulkPriceNextRollup = useAmountBulkPrice(feeAmounts?.[DefiSettlementTime.NEXT_ROLLUP]);
+  const feeBulkPriceInstant = useAmountBulkPrice(feeAmounts?.[DefiSettlementTime.INSTANT]);
 
   const options: RadioButtonOption<DefiSettlementTime>[] = [];
 
   if (batchData?.isFastTrack) {
     options.push({
       id: DefiSettlementTime.DEADLINE,
-      content: (
-        <FeeOptionContent
-          label="Batched"
-          expectedTimeOfSettlement={nextSettlementTime}
-          feeAmount={feeAmounts?.[DefiSettlementTime.DEADLINE]}
-        />
-      ),
+      content: {
+        label: 'Batched',
+        timeStr: formatExpectedTimeOfSettlement(nextSettlementTime),
+        feeAmountStr: formatFeeAmount(feeAmounts?.[DefiSettlementTime.DEADLINE]),
+        feeBulkPriceStr: formatFeeBulkPrice(feeBulkPriceDeadline),
+      },
     });
   } else {
     options.push({
       id: DefiSettlementTime.DEADLINE,
-      content: (
-        <FeeOptionContent
-          label="Batched"
-          averageTimeoutSeconds={batchAverageTimeout}
-          feeAmount={feeAmounts?.[DefiSettlementTime.DEADLINE]}
-        />
-      ),
+      content: {
+        label: 'Batched',
+        timeStr: formatAverageTimeoutSeconds(batchAverageTimeout),
+        feeAmountStr: formatFeeAmount(feeAmounts?.[DefiSettlementTime.DEADLINE]),
+        feeBulkPriceStr: formatFeeBulkPrice(feeBulkPriceDeadline),
+      },
     });
     options.push({
       id: DefiSettlementTime.NEXT_ROLLUP,
-      content: (
-        <FeeOptionContent
-          label="Fast Track"
-          expectedTimeOfSettlement={nextSettlementTime}
-          feeAmount={feeAmounts?.[DefiSettlementTime.NEXT_ROLLUP]}
-        />
-      ),
+      content: {
+        label: 'Fast speed',
+        timeStr: formatExpectedTimeOfSettlement(nextSettlementTime),
+        feeAmountStr: formatFeeAmount(feeAmounts?.[DefiSettlementTime.NEXT_ROLLUP]),
+        feeBulkPriceStr: formatFeeBulkPrice(feeBulkPriceNextRollup),
+      },
     });
   }
 
   options.push({
     id: DefiSettlementTime.INSTANT,
-    content: (
-      <FeeOptionContent
-        label="Instant"
-        expectedTimeOfSettlement={instantSettlementTime}
-        feeAmount={feeAmounts?.[DefiSettlementTime.INSTANT]}
-      />
-    ),
+    content: {
+      label: 'Fastest speed',
+      timeStr: formatExpectedTimeOfSettlement(instantSettlementTime),
+      feeAmountStr: formatFeeAmount(feeAmounts?.[DefiSettlementTime.INSTANT]),
+      feeBulkPriceStr: formatFeeBulkPrice(feeBulkPriceInstant),
+    },
   });
 
   return (
-    <InputSection
-      title="Transaction Fee"
-      titleComponent={<MiniL2BalanceIndicator asset={feeAmounts?.[0]?.info} />}
-      component={
-        <>
-          <VerticalRadioButtons value={speed} onChangeValue={onChangeSpeed} options={options} />
-          <SectionInfo>{renderInfo(props)}</SectionInfo>
-        </>
-      }
+    <FeeSelector
+      label={'Select a speed for your transaction'}
+      sublabel={`There are several options to choose from, depending on your budget`}
+      value={speed}
+      disabled={walletInteractionIsOngoing}
+      status={speed !== undefined ? FeeSelectorStatus.Success : undefined}
+      onChangeValue={onChangeSpeed}
+      options={options}
     />
   );
 }
