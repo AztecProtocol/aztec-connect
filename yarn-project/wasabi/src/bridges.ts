@@ -42,14 +42,14 @@ export const LIDO_CURVE_STETH_TO_ETH_BRIDGE_CONFIG: BridgeSpec = {
 };
 
 export const getBridgeCallData = (bridgeSpec: BridgeSpec) => {
-  return buildBridgeCallData(bridgeSpec.bridgeAddressId, bridgeSpec.inputAsset, bridgeSpec.outputAsset, 0);
+  return buildBridgeCallData(bridgeSpec.bridgeAddressId, bridgeSpec.inputAsset, bridgeSpec.outputAsset, 0n);
 };
 
 export const buildBridgeCallData = (
   bridgeAddressId: number,
   inputAsset: number,
   outputAsset: number,
-  auxData: number,
+  auxData: bigint,
 ) => {
   return new BridgeCallData(bridgeAddressId, inputAsset, outputAsset, undefined, undefined, auxData);
 };
@@ -70,7 +70,7 @@ export const assetSpecs: { [key: number]: bigint } = {
 
 export interface AgentElementConfig {
   assetId: number;
-  expiry?: number;
+  expiry?: bigint;
   assetQuantity: bigint; // amount of asset to use for entire tranche
 }
 
@@ -126,10 +126,10 @@ export const retrieveElementConfig = async (sdk: AztecSdk, provider: EthereumPro
       createAztecAsset(assetId, assetAddress),
       createAztecAsset(0, EthAddress.ZERO, AztecAssetType.NOT_USED),
     );
-    return expiries.map(exp => {
+    return expiries.map((exp: bigint) => {
       return {
         assetId,
-        expiry: Number(exp),
+        expiry: exp,
         assetQuantity: 0n,
       } as AgentElementConfig;
     });

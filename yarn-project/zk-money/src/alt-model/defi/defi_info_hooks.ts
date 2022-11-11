@@ -42,18 +42,18 @@ export function useDefaultEnterBridgeCallData(recipe: DefiRecipe) {
       flow.enter.outA.id,
       undefined,
       undefined,
-      Number(auxData),
+      BigInt(auxData),
     );
   }, [recipe, auxData]);
 }
 
-function useBridgeMarket(recipeId: string, auxData?: number) {
+function useBridgeMarket(recipeId: string, auxData?: bigint) {
   const { marketSizePollerCache } = useBridgeDataAdaptorsMethodCaches();
   const poller = auxData !== undefined ? marketSizePollerCache.get([recipeId, auxData]) : undefined;
   return useMaybeObs(poller?.obs);
 }
 
-function useLiquidity(recipeId: string, auxData?: number) {
+function useLiquidity(recipeId: string, auxData?: bigint) {
   const market = useBridgeMarket(recipeId, auxData);
   const amount = useAmount(market?.[0]);
   return useAmountBulkPrice(amount);
@@ -80,7 +80,7 @@ export function useDefaultExpectedAssetYield(recipe: DefiRecipe) {
   return useExpectedAssetYield(recipe);
 }
 
-export function useTermApr(recipe: DefiRecipe, auxData: number | undefined, inputValue: bigint | undefined) {
+export function useTermApr(recipe: DefiRecipe, auxData: bigint | undefined, inputValue: bigint | undefined) {
   const { termAprPollerCache } = useBridgeDataAdaptorsMethodCaches();
   const poller =
     auxData === undefined || inputValue === undefined
@@ -98,7 +98,7 @@ export function useDefaultTermApr(recipe: DefiRecipe) {
 export function useExpectedOutput(
   recipeId: string,
   flowDirection: FlowDirection,
-  auxData?: number,
+  auxData?: bigint,
   inputValue?: bigint,
 ) {
   const { expectedOutputPollerCache } = useBridgeDataAdaptorsMethodCaches();

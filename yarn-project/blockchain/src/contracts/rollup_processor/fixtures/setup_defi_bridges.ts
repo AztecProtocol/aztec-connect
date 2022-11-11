@@ -19,7 +19,7 @@ export interface MockBridgeParams {
   returnInputValue?: bigint;
   isAsync?: boolean;
   maxTxs?: number;
-  auxData?: number;
+  auxData?: bigint;
   bridgeGasLimit?: number;
 }
 
@@ -40,7 +40,7 @@ export const deployMockBridge = async (
     returnInputValue = 0n,
     isAsync = false,
     maxTxs = 100,
-    auxData = 0,
+    auxData = 0n,
     bridgeGasLimit = 300000,
   }: MockBridgeParams = {},
 ) => {

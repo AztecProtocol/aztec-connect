@@ -20,7 +20,7 @@ export const SEVEN_DAY_DCA_CARD_DAI_TO_ETH: CreateRecipeArgs = {
   createAdaptor: createDcaAdaptor,
   enterAuxDataResolver: {
     type: 'static',
-    value: 7, // Duration in ticks (days)
+    value: 7n, // Duration in ticks (days)
   },
   projectName: '7 Day DCA',
   gradient: ['#3BB273', '#3BB273'],

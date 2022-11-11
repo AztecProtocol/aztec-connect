@@ -177,7 +177,7 @@ describe('rollup_processor: defi bridge with loans', () => {
         outputValueA: inputValue,
         outputValueB: BigInt(0),
         inputAssetIdB: numberOfBridgeCalls + virtualAssetIdFlag,
-        auxData: AUX_DATA_SELECTOR.CLOSE_LOAN,
+        auxData: BigInt(AUX_DATA_SELECTOR.CLOSE_LOAN),
       });
       await bridge2.recordInterestRate(numberOfBridgeCalls, 10); // interest rate = 10 %
 
@@ -277,7 +277,7 @@ describe('rollup_processor: defi bridge with loans', () => {
         outputAssetIdA: 1,
         outputValueA: collateralValue1,
         inputAssetIdB: numberOfBridgeCalls + virtualAssetIdFlag,
-        auxData: AUX_DATA_SELECTOR.CLOSE_LOAN,
+        auxData: BigInt(AUX_DATA_SELECTOR.CLOSE_LOAN),
       });
       await repayBridge1.recordInterestRate(numberOfBridgeCalls, 10); // interest rate = 10 %
 
@@ -286,7 +286,7 @@ describe('rollup_processor: defi bridge with loans', () => {
         outputAssetIdA: 0,
         outputValueA: collateralValue2,
         inputAssetIdB: 5 + virtualAssetIdFlag,
-        auxData: AUX_DATA_SELECTOR.CLOSE_LOAN,
+        auxData: BigInt(AUX_DATA_SELECTOR.CLOSE_LOAN),
       });
       await repayBridge2.recordInterestRate(5, 20); // interest rate = 20 %
 

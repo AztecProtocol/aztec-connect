@@ -5,7 +5,7 @@ export interface BridgePublishQuery {
   inputAssetIdB?: number;
   outputAssetIdA?: number;
   outputAssetIdB?: number;
-  auxData?: number;
+  auxData?: bigint;
 }
 
 export interface BridgePublishQueryResult {

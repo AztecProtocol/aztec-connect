@@ -28,8 +28,8 @@ export const YEARN_ETH_CARD: CreateRecipeArgs = {
   cardButtonLabel: 'Earn',
   selectBlockchainBridge: ({ bridges }) => bridges.find(x => x.id === 7),
   selectExitBlockchainBridge: ({ bridges }) => bridges.find(x => x.id === 8),
-  enterAuxDataResolver: { type: 'static', value: 0 },
-  exitAuxDataResolver: { type: 'static', value: 1 },
+  enterAuxDataResolver: { type: 'static', value: 0n },
+  exitAuxDataResolver: { type: 'static', value: 1n },
   keyStats: {
     keyStat1: { ...keyStatConfig_apr, useLabel: () => 'APY' },
     keyStat2: keyStatConfig_liquidity,

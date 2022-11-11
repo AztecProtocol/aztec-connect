@@ -45,7 +45,7 @@ function useDefiFormBridgeCallData(
   const bridgeAddressId = isExit ? recipe.exitBridgeAddressId ?? recipe.bridgeAddressId : recipe.bridgeAddressId;
   return useMemo(() => {
     if (auxData === undefined) return undefined;
-    return new BridgeCallData(bridgeAddressId, inA.id, outA.id, undefined, undefined, Number(auxData));
+    return new BridgeCallData(bridgeAddressId, inA.id, outA.id, undefined, undefined, BigInt(auxData));
   }, [auxData, bridgeAddressId, inA, outA]);
 }
 

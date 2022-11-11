@@ -49,7 +49,7 @@ export const ELEMENT_CARD: CreateRecipeArgs = {
       useFormattedValue: recipe => {
         const auxData = useDefaultAuxDataOption(recipe.id);
         if (auxData === undefined) return;
-        return formatDate_short(auxData * 1000);
+        return formatDate_short(Number(auxData) * 1000);
       },
     },
     keyStat3: keyStatConfig_averageWait,
@@ -67,7 +67,7 @@ export const ELEMENT_CARD: CreateRecipeArgs = {
       formattedValue: useFormattedRoi(recipe, interaction),
     };
   },
-  getAsyncResolutionDate: tx => tx.bridgeCallData.auxData * 1000,
+  getAsyncResolutionDate: tx => Number(tx.bridgeCallData.auxData) * 1000,
   getDefiPublishStatsCacheArgs: createDefiPublishStatsCacheArgsBuilder({ ignoreAuxData: true }),
 };
 
@@ -104,7 +104,7 @@ function useFormattedRoi(recipe: DefiRecipe, interaction: BridgeInteraction) {
   const termApr = useTermApr(recipe, auxData, inputValue);
   if (termApr === undefined) return;
   const nowSec = Date.now() / 1000;
-  const timeUntilMaturityInYears = (auxData - nowSec) / YEAR_IN_SECS;
+  const timeUntilMaturityInYears = (Number(auxData) - nowSec) / YEAR_IN_SECS;
   const roiAfterMaturity = BigInt(Math.floor(Number(inputValue) * (termApr / 100) * timeUntilMaturityInYears));
   return new Amount(roiAfterMaturity, recipe.flow.enter.outA).format({ uniform: true });
 }

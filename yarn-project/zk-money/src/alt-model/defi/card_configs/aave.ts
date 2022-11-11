@@ -20,11 +20,11 @@ export const AAVE_ETH_CARD: CreateRecipeArgs = {
   createAdaptor: provider => AaveV2BridgeData.create(provider),
   enterAuxDataResolver: {
     type: 'static',
-    value: 0, // Deposit flow
+    value: 0n, // Deposit flow
   },
   exitAuxDataResolver: {
     type: 'static',
-    value: 1, // Exit flow
+    value: 1n, // Exit flow
   },
   projectName: 'Aave',
   website: 'https://www.aave.com/',
