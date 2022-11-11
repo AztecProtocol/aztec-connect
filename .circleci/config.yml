@@ -154,16 +154,7 @@ jobs:
       - run:
           name: 'Test'
           command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert bb-tests
-  ci-failsafe-tests:
-    docker:
-      - image: aztecprotocol/alpine-build-image
-    resource_class: small
-    steps:
-      - *checkout
-      - *setup_env
-      - run:
-          name: 'Test'
-          command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert ci_failsafe_tests
+
   stdlib-primitives-tests:
     docker:
       - image: aztecprotocol/alpine-build-image
@@ -800,16 +791,6 @@ workflows:
       - root-rollup-tests: *bb_test
       - root-rollup-full-tests: *bb_test
       - root-verifier-tests: *bb_test
-      - ci-failsafe-tests:
-          requires:
-            - barretenberg-tests
-            - stdlib-primitives-tests
-            - stdlib-recursion-tests
-            - tx-rollup-tests
-            - tx-rollup-full-tests
-            - root-rollup-tests
-            - root-rollup-full-tests
-            - root-verifier-tests
       - blockchain-vks:
           requires:
             - x86_64-linux-clang
