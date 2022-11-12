@@ -291,7 +291,7 @@ describe('join_split_proof', () => {
    * The default max memory is defined in the WorkerPool and the wasm engine will throw if it exceeds this.
    * Our aim is to get this down even further by swapping data in and out of backing storage.
    */
-  describe.only('join_split_proof_generation_pooled_workers_low_mem', () => {
+  describe('join_split_proof_generation_pooled_workers_low_mem', () => {
     let pool!: WorkerPool;
     let pippenger!: PooledPippenger;
     let fft!: PooledFft;
