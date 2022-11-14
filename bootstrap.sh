@@ -22,6 +22,7 @@ cd ..
 PROJECTS=(
   "barretenberg:./bootstrap.sh db_cli rollup_cli"
   "yarn-project/barretenberg.js:./bootstrap.sh"
+  "contracts:./bootstrap.sh"
   "yarn-project/blockchain:yarn build"
   "yarn-project/sdk:yarn build"
 )
