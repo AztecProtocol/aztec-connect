@@ -1,4 +1,4 @@
-FROM ghcr.io/foundry-rs/foundry:nightly-70f4fb55fa87e0e980f7f9fcccc5429bb1a48dbe as builder
+FROM ghcr.io/foundry-rs/foundry:nightly-52b57b14c4c64a61fff8efa167d2a7937b191ce8 as builder
 RUN apk update && apk add --no-cache build-base git curl bash 
 WORKDIR /usr/src/contracts
 RUN git init

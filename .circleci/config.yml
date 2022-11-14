@@ -801,6 +801,7 @@ workflows:
           requires:
             - wasm-linux-clang
             - blockchain-vks
+            - contracts
           filters: *tag_filter
       - barretenberg-js: *yarn_project
       - blockchain: *yarn_project

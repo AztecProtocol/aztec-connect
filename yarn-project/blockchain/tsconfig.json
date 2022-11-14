@@ -21,11 +21,8 @@
   "references": [{ "path": "../barretenberg.js/tsconfig.dest.json" }],
   "include": [
     "src",
-    "src/abis/*.json",
-    "src/artifacts/*/*/*.json",
-    "src/artifacts/*/*/*/*.json",
-    "src/artifacts/*/*/*/*/*.json",
-    "src/artifacts/*/*/*/*/*/*.json"
+    "src/abis/mocks/*.json",
+    "src/abis/contracts/*/*.json",
   ],
   "files": ["./hardhat.config.ts"]
 }

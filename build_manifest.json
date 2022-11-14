@@ -39,7 +39,7 @@
     "buildDir": "yarn-project",
     "dockerfile": "yarn-project-base/Dockerfile",
     "rebuildPatterns": ["^yarn-project/yarn-project-base/", "^yarn-project/yarn.lock"],
-    "dependencies": ["barretenberg-x86_64-linux-clang", "barretenberg-wasm-linux-clang", "blockchain-vks"]
+    "dependencies": ["barretenberg-x86_64-linux-clang", "barretenberg-wasm-linux-clang", "blockchain-vks", "contracts"]
   },
   "barretenberg.js": {
     "buildDir": "yarn-project",

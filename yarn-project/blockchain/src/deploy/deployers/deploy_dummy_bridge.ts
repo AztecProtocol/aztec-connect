@@ -1,8 +1,8 @@
 import { Contract, ContractFactory, Signer } from 'ethers';
-import { MockDefiBridge } from '../../abis.js';
+import { DummyDefiBridge } from '../../abis.js';
 
 const gasLimit = 5000000;
-const dummyDefiBridgeLibrary = new ContractFactory(MockDefiBridge.abi, MockDefiBridge.bytecode);
+const dummyDefiBridgeLibrary = new ContractFactory(DummyDefiBridge.abi, DummyDefiBridge.bytecode);
 
 export async function deployDummyBridge(rollupProcessor: Contract, signer: Signer, assets: Contract[]) {
   console.error('Deploying DummyDefiBridge...');

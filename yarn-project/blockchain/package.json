@@ -7,7 +7,7 @@
   "scripts": {
     "build": "yarn clean && yarn compile && tsc -b tsconfig.dest.json",
     "build:dev": "tsc -p tsconfig.dest.json --watch",
-    "formatting": "run -T prettier --check ./src && run -T eslint --max-warnings 12 ./src",
+    "formatting": "run -T prettier --check ./src && run -T eslint --max-warnings 11 ./src",
     "compile": "./scripts/as_cjs ./scripts/compile",
     "clean": "rm -rf ./cache ./data ./dest ./src/artifacts .tsbuildinfo",
     "start:ganache": "ganache-cli -h :: -l 12000000 -e 10000 -m 'test test test test test test test test test test test junk'",
@@ -16,7 +16,8 @@
     "test": "./scripts/as_cjs ./scripts/compile_and_test",
     "deploy": "node ./dest/deploy/index.js",
     "blockchain_cli": "node ./dest/cli/index.js",
-    "verify:goerli": "hardhat verify --network goerli --contract contracts/RollupProcessor.sol:RollupProcessor"
+    "verify:goerli": "hardhat verify --network goerli --contract contracts/RollupProcessor.sol:RollupProcessor",
+    "vk:build:fixtures": "cd src/verifier-fixtures && ./create_fixture.sh"
   },
   "bin": {
     "blockchain_cli": "./dest/cli/index.js",

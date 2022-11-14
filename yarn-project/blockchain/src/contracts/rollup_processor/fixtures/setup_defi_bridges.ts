@@ -1,10 +1,11 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
-import { Signer } from 'ethers';
+import { ContractFactory, Signer } from 'ethers';
 import { ethers } from 'hardhat';
 import { RollupProcessor } from '../rollup_processor.js';
 import { DefiBridge } from '../../defi_bridge/index.js';
 import { EthersAdapter } from '../../../provider/index.js';
+import { MockDefiBridge, ERC20Permit } from '../../../abis.js';
 
 export interface MockBridgeParams {
   inputAssetIdA?: number;
@@ -44,7 +45,7 @@ export const deployMockBridge = async (
     bridgeGasLimit = 300000,
   }: MockBridgeParams = {},
 ) => {
-  const DefiBridge = await ethers.getContractFactory('MockDefiBridge', publisher);
+  const DefiBridge = new ContractFactory(MockDefiBridge.abi, MockDefiBridge.bytecode, publisher);
   const bridge = await DefiBridge.deploy(
     rollupProcessor.address.toString(),
     canConvert,
@@ -76,7 +77,7 @@ export const deployMockBridge = async (
     if (assetAddress.equals(EthAddress.ZERO)) {
       await publisher.sendTransaction({ value: `0x${amount.toString(16)}`, to: bridge.address });
     } else {
-      const ERC20Mintable = await ethers.getContractFactory('ERC20Mintable');
+      const ERC20Mintable = new ContractFactory(ERC20Permit.abi, ERC20Permit.bytecode);
       const erc20 = new ethers.Contract(assetAddress.toString(), ERC20Mintable.interface, publisher);
       await erc20.mint(bridge.address, amount);
     }

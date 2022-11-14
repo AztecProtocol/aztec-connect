@@ -44,6 +44,8 @@ export async function deployDev(
     true,
     true,
   );
+  await rollup.setCapped(false);
+
   const feeDistributor = await deployFeeDistributor(signer, rollup, uniswapRouter.address);
 
   await rollup.setRollupProvider(rollupProvider ? rollupProvider.toString() : await signer.getAddress(), true);
