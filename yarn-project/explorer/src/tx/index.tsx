@@ -1,13 +1,14 @@
-import React, { useEffect } from 'react';
-import { useQuery } from 'react-apollo';
+import React, { useEffect, useState } from 'react';
 import { default as styled } from 'styled-components';
+import { default as useFetch } from 'use-http';
 import { BlockStatusIndicator, getBlockStatus } from '../block_status/index.js';
 import { Button, Text } from '../components/index.js';
 import { breakpoints, spacings } from '../styles/index.js';
 import { Sections, Section, SectionTitle } from '../template/index.js';
-import { GET_TX, TX_POLL_INTERVAL, TxQueryData, TxQueryVars } from './query.js';
+import { Tx as TxInterface } from './types.js';
 import { TxDetailsPlaceholder } from './tx_details_placeholder.js';
 import { TxDetails } from './tx_details.js';
+import { POLL_INTERVAL } from '../config.js';
 
 const TxTitle = styled.div`
   display: flex;
@@ -44,19 +45,32 @@ interface TxProps {
 }
 
 export const Tx: React.FunctionComponent<TxProps> = ({ id }) => {
-  const { loading, error, data, stopPolling, startPolling } = useQuery<TxQueryData, TxQueryVars>(GET_TX, {
-    variables: { id },
-  });
+  const [tx, setTx] = useState<TxInterface>();
+
+  const { get, response, loading, error } = useFetch();
+
+  const fetchTx = async (txId: string) => {
+    const res = await get(`/tx/${txId}`);
+    if (response.ok) setTx(res);
+  };
+
+  // init
+  useEffect(() => {
+    fetchTx(id).catch(() => `Error fetching tx details: ${id}`);
+  }, []);
 
   useEffect(() => {
-    if (!data?.tx?.block?.mined) {
-      startPolling(TX_POLL_INTERVAL);
+    let interval: number | null = null;
+    if (!tx?.block?.mined) {
+      interval = window.setInterval(fetchTx, POLL_INTERVAL);
     }
 
     return () => {
-      stopPolling();
+      if (interval !== null) {
+        clearInterval(interval);
+      }
     };
-  }, [data, startPolling, stopPolling]);
+  }, [tx]);
 
   const breadcrumbs = [
     {
@@ -64,8 +78,8 @@ export const Tx: React.FunctionComponent<TxProps> = ({ id }) => {
       to: '/',
     },
     {
-      text: data?.tx?.block ? `Block ${data.tx.block.id}` : 'Block',
-      to: data?.tx?.block ? `/block/${data.tx.block.id}` : undefined,
+      text: tx?.block ? `Block ${tx.block.id}` : 'Block',
+      to: tx?.block ? `/block/${tx.block.id}` : undefined,
     },
     {
       text: `0x${id.slice(0, 8)}...`,
@@ -75,7 +89,7 @@ export const Tx: React.FunctionComponent<TxProps> = ({ id }) => {
 
   const txTitleNode = <StyledSectionTitle breadcrumbs={breadcrumbs} />;
 
-  if (loading || !data) {
+  if (loading || !tx) {
     return (
       <Sections>
         <Section title={txTitleNode}>
@@ -94,8 +108,6 @@ export const Tx: React.FunctionComponent<TxProps> = ({ id }) => {
       </Sections>
     );
   }
-
-  const { tx } = data;
 
   if (!tx) {
     return (

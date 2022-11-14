@@ -31,6 +31,7 @@ export default {
   },
   output: {
     path: resolve(dirname(fileURLToPath(import.meta.url)), './dest'),
+    publicPath: '/',
     filename: 'index.js',
   },
   plugins: [

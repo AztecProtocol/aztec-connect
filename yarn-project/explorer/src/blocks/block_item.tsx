@@ -14,7 +14,7 @@ import chevronRightIcon from '../images/chevron_right.svg';
 import clockIcon from '../images/clock.svg';
 import { TimeAgo } from '../relative_time/index.js';
 import { spacings, sizeLte, fontSizes, lineHeights, colours, breakpoints } from '../styles/index.js';
-import { Block } from './query.js';
+import { Block } from './types.js';
 
 const itemRootStyle = css`
   ${contentStyle}

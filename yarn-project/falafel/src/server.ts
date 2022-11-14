@@ -264,6 +264,9 @@ export class Server {
     const blockchainStatus = this.blockchain.getBlockchainStatus();
     const nextPublish = this.worldState.getNextPublishTime();
     const txPoolProfile = await this.worldState.getTxPoolProfile();
+    const totalTxs = await this.rollupDb.getTotalTxCount();
+    const totalBlocks = await this.rollupDb.getNumSettledRollups();
+
     const { version, runtimeConfig, proverless, numInnerRollupTxs, numOuterRollupProofs } =
       this.configurator.getConfVars();
 
@@ -293,6 +296,8 @@ export class Server {
       numUnsettledTxs: txPoolProfile.numTxs,
       numTxsInNextRollup: txPoolProfile.numTxsInNextRollup,
       pendingTxCount: txPoolProfile.pendingTxCount,
+      totalTxs,
+      totalBlocks,
       nextPublishTime: nextPublish.baseTimeout ? nextPublish.baseTimeout.timeout : new Date(0),
       nextPublishNumber: nextPublish.baseTimeout ? nextPublish.baseTimeout.rollupNumber : 0,
       bridgeStatus,
@@ -350,8 +355,22 @@ export class Server {
     return this.worldState.getBlockBuffers(from, take);
   }
 
+  public async getRollups(from: number, take: number) {
+    const data = await this.rollupDb.getRollups(take!, from!, true);
+    return data;
+  }
+
+  public async getRollupById(rollupId: number) {
+    const rollup = await this.rollupDb.getRollup(rollupId);
+    return rollup;
+  }
   public async getLatestRollupId() {
     return (await this.rollupDb.getNextRollupId()) - 1;
+  }
+
+  public async getTxById(txId: string) {
+    const tx = await this.rollupDb.getTx(Buffer.from(txId.replace(/^0x/i, ''), 'hex'));
+    return tx;
   }
 
   public async receiveTxs(txRequest: TxRequest) {

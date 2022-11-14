@@ -1,10 +1,12 @@
-import React, { useEffect } from 'react';
-import { useQuery } from 'react-apollo';
+import React, { useEffect, useState } from 'react';
 import { default as styled } from 'styled-components';
+import { default as useFetch } from 'use-http';
+
 import { Text } from '../components/index.js';
+import { POLL_INTERVAL } from '../config.js';
 import { spacings } from '../styles/index.js';
 import { BlockItem, BlockItemPlaceholder } from './block_item.js';
-import { GET_BLOCKS, BLOCKS_POLL_INTERVAL, BlocksQueryData, BlocksQueryVars } from './query.js';
+import { Block } from './types.js';
 
 const BlockRowRoot = styled.div`
   margin-top: -${spacings.s};
@@ -24,24 +26,33 @@ interface BlockListProps {
 }
 
 export const BlockList: React.FunctionComponent<BlockListProps> = ({ page, blocksPerPage }) => {
-  const { loading, error, data, startPolling, stopPolling } = useQuery<BlocksQueryData, BlocksQueryVars>(GET_BLOCKS, {
-    variables: {
-      take: blocksPerPage,
-      skip: Math.max(0, blocksPerPage * (page - 1)),
-    },
-  });
+  const [blocks, setBlocks] = useState<Block[]>([]);
+
+  const { get, response, loading, error } = useFetch();
+
+  const fetchBlocks = async () => {
+    const data = await get(`/rollups?skip=${Math.max(0, blocksPerPage * (page - 1))}&take=${blocksPerPage}`);
+    if (response.ok) setBlocks(data);
+  };
+
+  // initialize
+  useEffect(() => {
+    fetchBlocks().catch(() => console.log('Error fetching initial blocks'));
+  }, []);
 
   useEffect(() => {
+    let interval: number | null = null;
     if (page === 1) {
-      startPolling(BLOCKS_POLL_INTERVAL);
+      interval = window.setInterval(fetchBlocks, POLL_INTERVAL);
     }
-
     return () => {
-      stopPolling();
+      if (interval !== null) {
+        clearInterval(interval);
+      }
     };
-  }, [page, startPolling, stopPolling]);
+  }, [page]);
 
-  if (loading || !data) {
+  if (loading || !blocks.length) {
     return (
       <BlockRowRoot>
         {[...Array(blocksPerPage)].map((_, i) => (
@@ -52,7 +63,6 @@ export const BlockList: React.FunctionComponent<BlockListProps> = ({ page, block
       </BlockRowRoot>
     );
   }
-
   if (error) {
     return (
       <BlockRowRoot>
@@ -67,10 +77,9 @@ export const BlockList: React.FunctionComponent<BlockListProps> = ({ page, block
       </BlockRowRoot>
     );
   }
-
   return (
     <BlockRowRoot>
-      {data.blocks.map(block => (
+      {blocks.map(block => (
         <BlockRow key={block.id}>
           <BlockItem block={block} />
         </BlockRow>

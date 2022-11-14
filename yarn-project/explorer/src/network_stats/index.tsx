@@ -1,7 +1,8 @@
 import moment from 'moment';
-import React, { useEffect } from 'react';
-import { useQuery } from 'react-apollo';
+import React, { useEffect, useState } from 'react';
 import { default as styled } from 'styled-components';
+import { default as useFetch } from 'use-http';
+
 import { Stat, DeviceWidth } from '../components/index.js';
 import blocksIcon from '../images/cube.svg';
 import txsIcon from '../images/money.svg';
@@ -9,7 +10,8 @@ import pendingTxsIcon from '../images/traffic.svg';
 import blockTimeIcon from '../images/clock.svg';
 import { Countdown } from '../relative_time/index.js';
 import { breakpoints, spacings, sizeLte } from '../styles/index.js';
-import { GET_NETWORK_STAT, NETWORK_STAT_POLL_INTERVAL, NetworkStatsQueryData } from './query.js';
+import { POLL_INTERVAL } from '../config.js';
+import { NetworkStatsQueryData } from './types.js';
 
 const StatsRoot = styled.div`
   display: flex;
@@ -35,15 +37,28 @@ const StyledStat = styled(Stat)`
 `;
 
 export const NetworkStats: React.FunctionComponent = () => {
-  const { loading, error, data, startPolling, stopPolling } = useQuery<NetworkStatsQueryData>(GET_NETWORK_STAT);
+  const [status, setStatus] = useState<NetworkStatsQueryData>();
 
+  const { get, response, loading, error } = useFetch();
+
+  const fetchNetworkStats = async () => {
+    const data = await get('/status');
+    if (response.ok) setStatus(data);
+  };
+
+  // initialize stats
   useEffect(() => {
-    startPolling(NETWORK_STAT_POLL_INTERVAL);
+    fetchNetworkStats().catch(() => console.log('Error fetching status'));
+  }, []);
+
+  // poll stats
+  useEffect(() => {
+    const interval = setInterval(fetchNetworkStats, POLL_INTERVAL);
 
     return () => {
-      stopPolling();
+      clearInterval(interval);
     };
-  }, [startPolling, stopPolling]);
+  });
 
   return (
     <DeviceWidth>
@@ -56,21 +71,21 @@ export const NetworkStats: React.FunctionComponent = () => {
               size={statSize}
               icon={blocksIcon}
               label="BLOCKS"
-              value={error || loading ? '' : data && data.totalBlocks}
+              value={error || loading ? '' : status && status.totalBlocks}
             />
             <StyledStat
               theme="primary"
               size={statSize}
               icon={txsIcon}
               label="TRANSACTIONS"
-              value={error || loading ? '' : data && data.totalTxs}
+              value={error || loading ? '' : status && status.totalTxs}
             />
             <StyledStat
               theme="secondary"
               size={statSize}
               icon={pendingTxsIcon}
               label="PENDING TXS"
-              value={error || loading ? '' : data && data.serverStatus.pendingTxCount}
+              value={error || loading ? '' : status && status.pendingTxCount}
             />
             <StyledStat
               theme="secondary"
@@ -78,11 +93,11 @@ export const NetworkStats: React.FunctionComponent = () => {
               icon={blockTimeIcon}
               label={'NEXT BLOCK IN'}
               value={
-                error || loading || !data || (data && !data.serverStatus.nextPublishTime) ? (
+                error || loading || !status || (status && !status.nextPublishTime) ? (
                   'Idle'
                 ) : (
                   <Countdown
-                    time={moment(data.serverStatus.nextPublishTime)}
+                    time={moment(status.nextPublishTime)}
                     size={statSize}
                     unitSize={statSize === 'l' ? 'm' : 'xs'}
                     gaps={[86400, 3600, 120, 0]}
