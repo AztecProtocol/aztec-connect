@@ -11,7 +11,7 @@ const debug = createDebug('zm:expected_yield_poller_cache');
 const POLL_INTERVAL = 5 * 60 * 1000;
 
 export function createTermAprPollerCache(recipes: DefiRecipe[], adaptorCache: BridgeDataAdaptorCache) {
-  return new LazyInitDeepCacheMap(([recipeId, auxData, inputValue]: [string, number, bigint]) => {
+  return new LazyInitDeepCacheMap(([recipeId, auxData, inputValue]: [string, bigint, bigint]) => {
     const recipe = recipes.find(x => x.id === recipeId);
     const adaptor = adaptorCache.get(recipeId);
     if (!adaptor || !recipe) return undefined;

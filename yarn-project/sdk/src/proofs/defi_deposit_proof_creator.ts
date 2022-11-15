@@ -65,7 +65,8 @@ export class DefiDepositProofCreator {
   ) {
     debug('creating proof...');
     const start = new Date().getTime();
-    const proof = await this.prover.createProof(tx, signature!);
+    tx.signature = signature!;
+    const proof = await this.prover.createProof(tx);
     debug(`created proof: ${new Date().getTime() - start}ms`);
     debug(`proof size: ${proof.length}`);
 

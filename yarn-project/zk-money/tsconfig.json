@@ -17,5 +17,6 @@
     "useUnknownInCatchVariables": false,
     "noImplicitAny": false
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": ["./src/ui-components/**/*.stories.tsx", "./src/ui-components/**/*.stories.mdx"]
 }

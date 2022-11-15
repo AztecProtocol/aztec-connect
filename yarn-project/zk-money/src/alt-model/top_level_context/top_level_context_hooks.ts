@@ -16,6 +16,14 @@ export function useSdk() {
   return useObs(sdkObs);
 }
 
+export function useAccountStateManager() {
+  return useContext(TopLevelContext).accountStateManager;
+}
+
+export function useAliasManager() {
+  return useContext(TopLevelContext).aliasManager;
+}
+
 export function useRemoteAssets() {
   const { remoteAssetsObs } = useTopLevelContext();
   return useObs(remoteAssetsObs);
@@ -24,6 +32,11 @@ export function useRemoteAssets() {
 export function useToasts() {
   const { toastsObs } = useTopLevelContext();
   return useObs(toastsObs);
+}
+
+export function useWalletInteractionToasts() {
+  const { walletInteractionToastsObs } = useTopLevelContext();
+  return useObs(walletInteractionToastsObs);
 }
 
 export function useRemoteAssetForId(assetId: number) {

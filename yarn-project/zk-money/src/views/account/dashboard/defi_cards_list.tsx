@@ -1,17 +1,17 @@
 import { useMemo } from 'react';
-import { Section, SectionTitle, SearchInput } from '../../../ui-components/index.js';
+import { useNavigate } from 'react-router-dom';
+import { Section, SectionTitle, SearchInput, Select } from '../../../ui-components/index.js';
 import { Obs, useMaybeObs } from '../../../app/util/index.js';
-import { DefiCard, Select } from '../../../components/index.js';
+import { DefiCard } from '../../../components/index.js';
 import { DefiRecipe } from '../../../alt-model/defi/types.js';
 import { useBridgeDataAdaptorsMethodCaches, useDefiRecipes } from '../../../alt-model/top_level_context/index.js';
-import style from './defi_cards_list.module.scss';
-import { useLocation, useNavigate } from 'react-router-dom';
 import {
   filterRecipes,
   RecipeFilters,
   recipeFiltersToSearchStr,
   searchStrToRecipeFilters,
 } from '../../../alt-model/defi/recipe_filters.js';
+import style from './defi_cards_list.module.scss';
 
 interface DefiCardsListProps {
   isLoggedIn: boolean;
@@ -40,6 +40,7 @@ function InvestmentsFilter({ filters, onChangeFilters, recipes }: InvestmentsFil
         placeholder="Type"
         value={filters.type}
         options={typeOpts}
+        allowEmptyValue={true}
         onChange={type => onChangeFilters({ ...filters, type })}
       />
       <Select
@@ -47,6 +48,7 @@ function InvestmentsFilter({ filters, onChangeFilters, recipes }: InvestmentsFil
         placeholder="Project"
         value={filters.project}
         options={projectOpts}
+        allowEmptyValue={true}
         onChange={project => onChangeFilters({ ...filters, project })}
       />
       <Select
@@ -54,6 +56,7 @@ function InvestmentsFilter({ filters, onChangeFilters, recipes }: InvestmentsFil
         placeholder="Asset"
         value={filters.assetSymbol}
         options={assetSymbolOpts}
+        allowEmptyValue={true}
         onChange={assetSymbol => onChangeFilters({ ...filters, assetSymbol })}
       />
       <SearchInput onChange={search => onChangeFilters({ ...filters, search })} />
@@ -62,9 +65,9 @@ function InvestmentsFilter({ filters, onChangeFilters, recipes }: InvestmentsFil
 }
 
 function useRecipeFilters() {
-  const { search } = useLocation();
   const navigate = useNavigate();
-  const filters = searchStrToRecipeFilters(search);
+  const queryString = window.location.search;
+  const filters = searchStrToRecipeFilters(queryString);
   const changeFilters = (filters: RecipeFilters) => {
     const searchStr = recipeFiltersToSearchStr(filters);
     navigate(searchStr);

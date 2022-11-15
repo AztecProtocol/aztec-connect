@@ -13,7 +13,7 @@ import { Network } from '../config.js';
 import { DetailsSection } from '../template/index.js';
 import etherscanIcon from '../images/etherscan.svg';
 import { ProofData, ProofDataPlaceholder } from '../proof_data/index.js';
-import { Block } from './query.js';
+import { Block } from './types.js';
 
 export const getEtherscanLink = (network: Network, ethTxHash: string) => {
   const { etherscanUrl } = network;

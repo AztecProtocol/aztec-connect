@@ -1,6 +1,7 @@
 import { AliasHash } from '../../account_id/index.js';
 import { EthAddress, GrumpkinAddress } from '../../address/index.js';
 import { toBigIntBE, toBufferBE } from '../../bigint_buffer/index.js';
+import { SchnorrSignature } from '../../crypto/index.js';
 import { HashPath } from '../../merkle_tree/index.js';
 import { ClaimNoteTxData, TreeNote } from '../../note_algorithms/index.js';
 import { numToUInt32BE } from '../../serialize/index.js';
@@ -26,6 +27,7 @@ export class JoinSplitTx {
     public spendingPublicKey: GrumpkinAddress,
     public backwardLink: Buffer,
     public allowChain: number,
+    public signature = SchnorrSignature.EMPTY,
   ) {}
 
   toBuffer() {
@@ -56,6 +58,8 @@ export class JoinSplitTx {
 
       this.backwardLink,
       numToUInt32BE(this.allowChain),
+
+      this.signature.toBuffer(),
     ]);
   }
 
@@ -101,9 +105,11 @@ export class JoinSplitTx {
     dataStart += accountPath.adv;
     const spendingPublicKey = new GrumpkinAddress(buf.slice(dataStart, dataStart + 64));
     dataStart += 64;
-    const backwardLink = buf.slice(dataStart, dataStart + 32);
+    const backwardLink = buf.subarray(dataStart, dataStart + 32);
     dataStart += 32;
     const allowChain = buf.readUInt32BE(dataStart);
+    dataStart += 4;
+    const signature = new SchnorrSignature(buf.subarray(dataStart));
     return new JoinSplitTx(
       proofId,
       publicValue,
@@ -124,6 +130,7 @@ export class JoinSplitTx {
       spendingPublicKey,
       backwardLink,
       allowChain,
+      signature,
     );
   }
 }

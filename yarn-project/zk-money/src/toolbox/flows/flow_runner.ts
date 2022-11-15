@@ -16,6 +16,10 @@ export class FlowRunner<TArgs extends unknown[], TEmitted, TReturn> {
   stateObs = Obs.input<FlowRunnerState<TEmitted>>({});
   constructor(private readonly flow: Flow<TArgs, TEmitted, TReturn>) {}
 
+  reset() {
+    this.stateObs.next({});
+  }
+
   async run(...args: TArgs) {
     const { throwIfCancelled, cancel } = createThrowIfCancelled();
     this.stateObs.next({ running: true, cancel });
@@ -33,6 +37,7 @@ export class FlowRunner<TArgs extends unknown[], TEmitted, TReturn> {
       } else {
         debug('FlowRunner caught throw:', error);
         this.stateObs.next({ error });
+        throw error;
       }
     }
   }

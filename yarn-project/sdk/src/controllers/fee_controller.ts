@@ -55,7 +55,7 @@ export class FeeController {
     }
 
     this.txIds = await this.core.sendProofs(this.feeProofOutputs, this.proofTxs);
-    return this.txIds[0];
+    return this.txIds[this.feeProofOutputs.length - 1];
   }
 
   public async awaitSettlement(timeout?: number) {

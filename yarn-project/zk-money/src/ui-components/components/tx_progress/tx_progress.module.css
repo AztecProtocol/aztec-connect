@@ -1,0 +1,21 @@
+.root {
+  display: flex;
+  width: 100%;
+  justify-content: space-evenly;
+  align-items: center;
+  gap: 20px;
+}
+
+.icon {
+  opacity: 0.2;
+}
+
+.isActive {
+  opacity: 0.6;
+}
+
+.separator {
+  height: 1px;
+  flex-grow: 1;
+  background-color: #ccc;
+}

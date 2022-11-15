@@ -2,7 +2,6 @@ import { AssetValue, UserTx, ProofId } from '@aztec/sdk';
 // import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { useEffect, useMemo, useState } from 'react';
 import { listenAccountUpdated } from './event_utils.js';
-import { useApp } from './app_context.js';
 import { useRemoteAssets, useSdk } from './top_level_context/index.js';
 import { getIsDust } from './assets/asset_helpers.js';
 import { useAccountState } from './account_state/index.js';
@@ -50,7 +49,10 @@ function squashValues(assetValues: AssetValue[]) {
 }
 
 export function useBalance(assetId?: number) {
-  return useBalances()?.find(assetValue => assetValue.assetId === assetId)?.value;
+  const balances = useBalances();
+
+  if (!balances) return;
+  return balances.find(assetValue => assetValue.assetId === assetId)?.value ?? 0n;
 }
 
 export function useBalances() {
@@ -70,22 +72,22 @@ export function useSpendableBalance(assetId: number | undefined) {
 
 // maxSpendableValue is the highest chainable value in a single tx minus joinsplit fees
 export function useMaxSpendableValue(assetId?: number) {
-  const { userId } = useApp();
   const sdk = useSdk();
+  const accountState = useAccountState();
   const [maxSpendableValue, setMaxSpendableValue] = useState<bigint>();
   useEffect(() => {
-    if (sdk && userId) {
+    if (sdk && accountState?.userId) {
       if (assetId !== undefined) {
         const spendingKeyRequired = true;
         const updateMaxSpendableValue = () =>
-          sdk.getMaxSpendableValue(userId, assetId, spendingKeyRequired).then(setMaxSpendableValue);
+          sdk.getMaxSpendableValue(accountState.userId, assetId, spendingKeyRequired).then(setMaxSpendableValue);
         updateMaxSpendableValue();
-        return listenAccountUpdated(sdk, userId, updateMaxSpendableValue);
+        return listenAccountUpdated(sdk, accountState.userId, updateMaxSpendableValue);
       } else {
         setMaxSpendableValue(undefined);
       }
     }
-  }, [sdk, userId, assetId]);
+  }, [sdk, accountState?.userId, assetId]);
   return maxSpendableValue;
 }
 

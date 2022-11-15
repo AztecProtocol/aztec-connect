@@ -1,6 +1,7 @@
 FROM 278380418400.dkr.ecr.eu-west-2.amazonaws.com/barretenberg-x86_64-linux-clang
 FROM 278380418400.dkr.ecr.eu-west-2.amazonaws.com/barretenberg-wasm-linux-clang
 FROM 278380418400.dkr.ecr.eu-west-2.amazonaws.com/blockchain-vks
+FROM 278380418400.dkr.ecr.eu-west-2.amazonaws.com/contracts
 
 FROM node:18-alpine
 RUN apk update && apk add --no-cache build-base git python3 curl bash jq
@@ -9,6 +10,7 @@ COPY --from=0 /usr/src/barretenberg/srs_db/download_ignition.sh /usr/src/barrete
 COPY --from=0 /usr/src/barretenberg/build/bin /usr/src/barretenberg/build/bin
 COPY --from=1 /usr/src/barretenberg/build/bin /usr/src/barretenberg/build-wasm/bin
 COPY --from=2 /usr/src/blockchain-vks/keys /usr/src/blockchain-vks/keys
+COPY --from=3 /usr/src/contracts/out /usr/src/contracts/out
 WORKDIR /usr/src/yarn-project
 # We only want to copy the package.json's, to ensure we only rebuild this image if project dependencies changed.
 COPY account-migrator/package.json account-migrator/package.json

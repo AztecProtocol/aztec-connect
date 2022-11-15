@@ -2,10 +2,11 @@ import { randomBytes } from '../random/index.js';
 
 export class SchnorrSignature {
   public static SIZE = 64;
+  public static EMPTY = new SchnorrSignature(Buffer.alloc(64));
 
   constructor(private buffer: Buffer) {
     if (buffer.length !== SchnorrSignature.SIZE) {
-      throw new Error('Invalid signature buffer.');
+      throw new Error(`Invalid signature buffer of length ${buffer.length}.`);
     }
   }
 

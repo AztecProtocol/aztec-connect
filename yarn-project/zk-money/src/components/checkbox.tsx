@@ -1,8 +1,10 @@
 import React from 'react';
 import { default as styled } from 'styled-components';
 import checkedIcon from '../images/check.svg';
-import { gradients, spacings, Theme, themeColours } from '../styles/index.js';
-import { InputTheme } from './input/index.js';
+import { Theme } from '../ui-components/index.js';
+import { gradients } from '../ui-components/styles/colour.js';
+import { spacings } from '../ui-components/styles/layout.js';
+import { themeColours } from '../ui-components/styles/theme.js';
 import { Text } from './text.js';
 
 type CheckboxAlign = 'left' | 'right';
@@ -13,7 +15,6 @@ const Root = styled.div`
 `;
 
 interface StyledCheckboxProps {
-  theme: InputTheme;
   checked: boolean;
 }
 
@@ -23,12 +24,7 @@ const StyledCheckbox = styled.div<StyledCheckboxProps>`
   height: 24px;
   border-radius: 6px;
   cursor: pointer;
-  ${({ theme, checked }) => {
-    if (theme === InputTheme.LIGHT) {
-      return `
-        background: rgba(255, 255, 255, 0.2);
-      `;
-    }
+  ${({ checked }) => {
     if (checked) {
       return `background: linear-gradient(134.14deg, ${gradients.primary.from} 18.37%, ${gradients.primary.to} 82.04%);`;
     }
@@ -54,7 +50,6 @@ const MessageRight = styled(Text)`
 
 interface CheckboxProps {
   className?: string;
-  theme?: InputTheme;
   align?: CheckboxAlign;
   text?: string;
   checked: boolean;
@@ -63,7 +58,6 @@ interface CheckboxProps {
 
 export const Checkbox: React.FunctionComponent<CheckboxProps> = ({
   className,
-  theme = InputTheme.WHITE,
   align = 'left',
   text,
   checked,
@@ -72,7 +66,7 @@ export const Checkbox: React.FunctionComponent<CheckboxProps> = ({
 }) => (
   <Root className={className}>
     {!!text && align === 'left' && <MessageLeft text={text} size="s" />}
-    <StyledCheckbox {...rest} theme={theme} checked={checked} onClick={() => onChangeValue(!checked)}>
+    <StyledCheckbox {...rest} checked={checked} onClick={() => onChangeValue(!checked)}>
       {checked && <Checked src={checkedIcon} />}
     </StyledCheckbox>
     {!!text && align === 'right' && <MessageRight text={text} size="s" />}

@@ -30,7 +30,6 @@ function deploy(
     case 0xdef:
       return deployMainnet(signer, treeInitData, vk, faucetOperator, rollupProvider);
     case 0xe2e:
-    case 0x7a69:
       return deployMainnetE2e(signer, treeInitData, vk, faucetOperator, rollupProvider);
     default:
       return deployDev(signer, treeInitData, vk, faucetOperator, rollupProvider);

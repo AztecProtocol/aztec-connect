@@ -6,7 +6,7 @@ import { Asset } from '@aztec/barretenberg/blockchain';
 import { randomBytes } from '@aztec/barretenberg/crypto';
 import { Contract, Signer } from 'ethers';
 import { ethers } from 'hardhat';
-import WETH9 from '../../../abis/WETH9.json';
+import { WETH9 } from '../../../abis.js';
 
 async function createPair(owner: Signer, factory: Contract, asset: Asset, weth: Contract, initialTotalSupply: bigint) {
   const assetAddress = asset.getStaticInfo().address.toString();

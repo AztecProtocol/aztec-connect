@@ -47,6 +47,8 @@ export async function deployMainnetE2e(
     true,
     true,
   );
+  await rollup.setCapped(false);
+
   const feeDistributor = await deployFeeDistributor(signer, rollup, UNISWAP_ROUTER_ADDRESS);
 
   await rollup.setRollupProvider(rollupProvider ? rollupProvider.toString() : await signer.getAddress(), true, {
@@ -54,13 +56,13 @@ export async function deployMainnetE2e(
   });
   await rollup.grantRole(await rollup.LISTER_ROLE(), await signer.getAddress(), { gasLimit });
 
-  await rollup.setSupportedAsset(DAI_ADDRESS, 0, { gasLimit });
+  await rollup.setSupportedAsset(DAI_ADDRESS, 55_000, { gasLimit });
   await permitHelper.preApprove(DAI_ADDRESS, { gasLimit });
-  await rollup.setSupportedAsset(LIDO_WSTETH_ADDRESS, 0, { gasLimit });
+  await rollup.setSupportedAsset(LIDO_WSTETH_ADDRESS, 55_000, { gasLimit });
   await permitHelper.preApprove(LIDO_WSTETH_ADDRESS, { gasLimit });
-  await rollup.setSupportedAsset(elementTokenAddresses['lusd3crv-f'], 0, { gasLimit });
+  await rollup.setSupportedAsset(elementTokenAddresses['lusd3crv-f'], 55_000, { gasLimit });
   await permitHelper.preApprove(elementTokenAddresses['lusd3crv-f'], { gasLimit });
-  await rollup.setSupportedAsset(elementTokenAddresses['mim-3lp3crv-f'], 0, { gasLimit });
+  await rollup.setSupportedAsset(elementTokenAddresses['mim-3lp3crv-f'], 55_000, { gasLimit });
   await permitHelper.preApprove(elementTokenAddresses['mim-3lp3crv-f'], { gasLimit });
 
   const expiryCutOff = new Date('01 Sept 2022 00:00:00 GMT');

@@ -1,51 +1,20 @@
 import { ContractFactory, Signer } from 'ethers';
-import { MockVerifier, StandardVerifier } from '../../abis.js';
-import { Keys } from '../../contracts/verifier/verification_keys.js';
-
-function linkBytecode(artifact: any, libraries: any) {
-  let bytecode = artifact.bytecode;
-  for (const entry of Object.entries(artifact.linkReferences)) {
-    const [, fileReferences]: any = entry;
-    for (const fileEntry of Object.entries(fileReferences)) {
-      const [libName, fixups]: any = fileEntry;
-      const addr = libraries[libName];
-      if (addr === undefined) {
-        continue;
-      }
-
-      for (const fixup of fixups) {
-        bytecode =
-          bytecode.substr(0, 2 + fixup.start * 2) +
-          addr.substr(2) +
-          bytecode.substr(2 + (fixup.start + fixup.length) * 2);
-      }
-    }
-  }
-
-  return bytecode;
-}
+import { MockVerifier, Verifier1x1, Verifier28x32 } from '../../abis.js';
 
 export async function deployVerifier(signer: Signer, vk: string) {
   console.error(`Deploying ${vk}...`);
-  const VerificationKey = Keys[vk];
-  const StandardVerificationKeyLibrary = new ContractFactory(VerificationKey.abi, VerificationKey.bytecode, signer);
-  const StandardVerificationKeyLib = await StandardVerificationKeyLibrary.deploy();
-  console.error(`${vk} address: ${StandardVerificationKeyLib.address}`);
+  let verifierFactory: ContractFactory;
 
-  console.error('Deploying StandardVerifier...');
-  const linkedVBytecode = linkBytecode(StandardVerifier, {
-    VerificationKey: StandardVerificationKeyLib.address,
-  });
-  const verifierFactory = new ContractFactory(StandardVerifier.abi, linkedVBytecode, signer);
+  if (vk === 'VerificationKey1x1') {
+    verifierFactory = new ContractFactory(Verifier1x1.abi, Verifier1x1.bytecode.object, signer);
+  } else if (vk === 'VerificationKey28x32') {
+    verifierFactory = new ContractFactory(Verifier28x32.abi, Verifier28x32.bytecode.object, signer);
+  } else if (vk === 'MockVerificationKey') {
+    verifierFactory = new ContractFactory(MockVerifier.abi, MockVerifier.bytecode.object, signer);
+  } else {
+    throw new Error('No verifier chosen');
+  }
   const verifier = await verifierFactory.deploy();
   console.error(`StandardVerifier contract address: ${verifier.address}`);
-  return verifier;
-}
-
-export async function deployMockVerifier(signer: Signer) {
-  console.error('Deploying MockVerifier...');
-  const verifierFactory = new ContractFactory(MockVerifier.abi, MockVerifier.bytecode, signer);
-  const verifier = await verifierFactory.deploy();
-  console.error(`MockVerifier contract address: ${verifier.address}`);
   return verifier;
 }

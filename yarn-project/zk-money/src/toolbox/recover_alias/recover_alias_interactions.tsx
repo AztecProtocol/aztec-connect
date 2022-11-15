@@ -4,9 +4,9 @@ import { SignerSubmit } from '../signer_submit/index.js';
 import type { AztecSdk } from '@aztec/sdk';
 import { CachingRecoverAliasFlow, RecoverAliasFlowState } from '../../toolbox/flows/caching_recover_alias_flow.js';
 import { AliasChecker } from './alias_checker.js';
-import style from './recover_alias_interactions.module.css';
 import { FlowRunner, FlowRunnerState } from '../../toolbox/flows/flow_runner.js';
 import { getDepositAndSignFlowMessage } from '../../toolbox/flows/deposit_and_sign_flow_messages.js';
+import style from './recover_alias_interactions.module.css';
 
 function getMessageForFlowState(flowState?: RecoverAliasFlowState): string | undefined {
   switch (flowState?.phase) {

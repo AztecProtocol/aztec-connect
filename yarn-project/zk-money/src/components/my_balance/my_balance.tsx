@@ -4,11 +4,14 @@ import {
   CardHeaderSize,
   Hyperlink,
   InteractiveTooltip,
+  Loader,
+  LoaderSize,
   SkeletonRect,
-  useUniqueId,
 } from '../../ui-components/index.js';
 import { useTotalValuation, useTotalSpendableValuation } from '../../alt-model/total_account_valuation_hooks.js';
 import style from './my_balance.module.scss';
+import { useAccountStateManager } from '../../alt-model/top_level_context/index.js';
+import { useObs } from '../../app/util/index.js';
 
 function TooltipContent() {
   return (
@@ -24,41 +27,12 @@ function TooltipContent() {
   );
 }
 
-function GradientSpinner() {
-  const id = useUniqueId();
-  return (
-    <svg
-      width={25}
-      height={25}
-      className={style.spinner}
-      viewBox="0 0 25 25"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <linearGradient id={`${id}`} x1="5" y1="20" x2="20" y2="5" gradientUnits="userSpaceOnUse">
-        <stop stopColor="#944AF2" />
-        <stop offset="1" stopColor="#448FFF" />
-      </linearGradient>
-      <path
-        opacity={0.2}
-        fillRule="evenodd"
-        clipRule="evenodd"
-        d="M12.5 25C19.404 25 25 19.404 25 12.5S19.404 0 12.5 0 0 5.596 0 12.5 5.596 25 12.5 25Zm0-4a8.5 8.5 0 1 0 0-17 8.5 8.5 0 0 0 0 17Z"
-        fill={`url(#${id})`}
-      />
-      <path
-        fillRule="evenodd"
-        clipRule="evenodd"
-        d="M3.237 20.893A12.468 12.468 0 0 0 12.5 25C19.404 25 25 19.404 25 12.5 25 5.836 19.785.39 13.214.02v4.01a8.5 8.5 0 1 1-7.648 13.387l-2.33 3.476Z"
-        fill={`url(#${id})`}
-      />
-    </svg>
-  );
-}
-
 export function MyBalance() {
   const { bulkPrice: totalValuation, loading, firstPriceReady } = useTotalValuation();
   const { bulkPrice: totalSpendableValuation } = useTotalSpendableValuation();
+  const accountStateManager = useAccountStateManager();
+  const accountState = useObs(accountStateManager.stateObs);
+  const isSynced = accountState && !accountState.isSyncing;
 
   return (
     <Card
@@ -71,7 +45,7 @@ export function MyBalance() {
               {firstPriceReady ? (
                 <>
                   {`$${formatBulkPrice(totalValuation)}`}
-                  {loading && <GradientSpinner />}
+                  {(loading || !isSynced) && <Loader size={LoaderSize.Small} />}
                 </>
               ) : (
                 <SkeletonRect sizingContent="$1000.00" />
@@ -92,7 +66,7 @@ export function MyBalance() {
           </div>
         </div>
       }
-      headerSize={CardHeaderSize.LARGE}
+      headerSize={CardHeaderSize.MEDIUM}
     />
   );
 }

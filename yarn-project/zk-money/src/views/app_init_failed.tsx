@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Navbar, ToastGroup, ToastType } from '../ui-components/index.js';
+import { Navbar, ToastGroup, ToastGroupPosition, ToastType } from '../ui-components/index.js';
 import { MessageType } from '../app/index.js';
 import { Template } from '../components/index.js';
-import { Theme } from '../styles/index.js';
+import { Theme } from '../ui-components/index.js';
 import { Home } from '../views/home.js';
 import { SupportStatus } from '../device_support.js';
 import { UnsupportedPopup } from './unsupported_popup/index.js';
@@ -42,33 +42,33 @@ export function AppInitFailed({ reason, explorerUrl }: AppInitFailedProps) {
 
   return (
     <Template theme={Theme.GRADIENT} explorerUrl={explorerUrl}>
-      <Navbar path={window.location.pathname} theme={Theme.GRADIENT} isLoggingIn={false} isLoggedIn={false} />
+      <Navbar path={window.location.pathname} theme={Theme.GRADIENT} />
       <Home onSignup={handleInteraction} />
       {showingReason && reason.type === 'unsupported' && (
         <UnsupportedPopup onClose={handleClosePopup} supportStatus={reason.supportStatus} />
       )}
-
       <ToastGroup
+        position={ToastGroupPosition.BottomCenter}
         onCloseToast={handleClosePopup}
         toasts={
           showingReason && reason.type === 'falafel-down'
             ? [
                 {
-                  isClosable: true,
+                  closable: true,
                   type: ToastType.ERROR,
                   text: FALAFEL_UNREACHABLE_MSG.message,
                   key: 'falafel-unreachable',
-                  isHeavy: true,
+                  heavy: true,
                 },
               ]
             : showingReason && reason.type === 'stale-frontend'
             ? [
                 {
-                  isClosable: true,
+                  closable: true,
                   type: ToastType.ERROR,
                   text: STALE_FRONTEND_MSG.message,
                   key: 'client-version-mismatch',
-                  isHeavy: true,
+                  heavy: true,
                 },
               ]
             : []

@@ -1,5 +1,5 @@
 import { default as styled } from 'styled-components';
-import { Spacing, spacings } from '../styles/index.js';
+import { Spacing, spacings } from '../ui-components/styles/layout.js';
 
 interface PaddedBlockProps {
   size?: Spacing;

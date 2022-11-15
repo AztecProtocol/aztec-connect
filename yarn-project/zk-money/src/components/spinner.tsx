@@ -1,6 +1,6 @@
 import { rgba } from 'polished';
 import { default as styled, keyframes } from 'styled-components';
-import { colours, gradients } from '../styles/index.js';
+import { gradients, colours } from '../ui-components/styles/colour.js';
 
 export const spinnerSizes = {
   xxs: '24px',

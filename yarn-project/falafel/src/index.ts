@@ -11,7 +11,6 @@ import { Server } from './server.js';
 import { getComponents } from './config.js';
 import { Metrics } from './metrics/index.js';
 import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
-import { Container } from 'typedi';
 import { CachedRollupDb, TypeOrmRollupDb } from './rollup_db/index.js';
 import { InitHelpers } from '@aztec/barretenberg/environment';
 import { configurator } from './entity/init_entities.js';
@@ -75,9 +74,6 @@ async function main() {
   process.once('SIGTERM', shutdown);
   process.once('SIGUSR1', shutdownAndClearDb);
 
-  Container.set({ id: 'connection', factory: () => dataSource });
-  Container.set({ id: 'rollupDb', factory: () => rollupDb });
-  Container.set({ id: 'server', factory: () => server });
   const app = await appFactory(server, apiPrefix, metrics, serverAuthToken);
 
   const httpServer = http.createServer(app.callback());

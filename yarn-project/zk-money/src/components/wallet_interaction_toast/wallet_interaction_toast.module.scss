@@ -1,0 +1,44 @@
+.signatureToast {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-right: 20px;
+}
+
+.interactions {
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+  justify-content: flex-end;
+}
+
+.progressWrapper {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  gap: 5px;
+  justify-content: space-between;
+  margin: 20px 0 10px 0;
+}
+
+.line {
+  width: 100%;
+  height: 3px;
+  background-color: #dadada;
+}
+
+.selected {
+  background-color: black;
+}
+
+.textToast {
+  margin-right: 20px;
+}
+
+.failed {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  align-items: self-end;
+  margin-right: 20px;
+}

@@ -63,9 +63,9 @@ export async function deployMainnet(
     gasLimit,
   });
 
-  await rollup.setSupportedAsset(DAI_ADDRESS, 0, { gasLimit });
+  await rollup.setSupportedAsset(DAI_ADDRESS, 55_000, { gasLimit });
   await permitHelper.preApprove(DAI_ADDRESS, { gasLimit });
-  await rollup.setSupportedAsset(LIDO_WSTETH_ADDRESS, 0, { gasLimit });
+  await rollup.setSupportedAsset(LIDO_WSTETH_ADDRESS, 55_000, { gasLimit });
   await permitHelper.preApprove(LIDO_WSTETH_ADDRESS, { gasLimit });
 
   const expiryCutOff = new Date('01 Sept 2022 00:00:00 GMT');

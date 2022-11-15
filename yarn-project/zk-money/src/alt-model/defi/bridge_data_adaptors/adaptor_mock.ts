@@ -14,8 +14,8 @@ export class BridgeDataFieldGettersMock implements BridgeDataFieldGetters {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-  ): Promise<number[]> {
-    return [0];
+  ): Promise<bigint[]> {
+    return [0n];
   }
 
   auxDataConfig: AuxDataConfig[] = [];
@@ -25,7 +25,7 @@ export class BridgeDataFieldGettersMock implements BridgeDataFieldGetters {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-    auxData: number,
+    auxData: bigint,
     inputValue: bigint,
   ): Promise<bigint[]> {
     return [];
@@ -47,7 +47,7 @@ export class BridgeDataFieldGettersMock implements BridgeDataFieldGetters {
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
-    auxData: number,
+    auxData: bigint,
   ): Promise<AssetValue[]> {
     return [{ assetId: 0, value: 12379654321234567898765n }];
   }

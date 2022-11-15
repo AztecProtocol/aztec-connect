@@ -3,17 +3,16 @@ import { useShieldForm, ShieldComposerPhase } from '../../../../../alt-model/shi
 import { Modal } from '../../../../../components/index.js';
 import { ShieldConfirmationPage } from './shield_confirmation_page/index.js';
 import { ShieldPage1 } from './shield_page1.js';
-import { useRemoteAssets } from '../../../../../alt-model/top_level_context/index.js';
 import { ShieldModalHeader } from './shield_modal_header.js';
 
 interface ShieldModalProps {
-  onClose: () => void;
   preselectedAssetId?: number;
+  preselectedRecipient?: string;
+  onClose: () => void;
   onShieldComplete?: () => void;
 }
 
 export function ShieldModal(props: ShieldModalProps) {
-  const assets = useRemoteAssets();
   const { onClose } = props;
   const {
     fields,
@@ -26,17 +25,13 @@ export function ShieldModal(props: ShieldModalProps) {
     feedback,
     submit,
     unlock,
-  } = useShieldForm(props.preselectedAssetId, props.onShieldComplete);
+  } = useShieldForm(props.preselectedAssetId, props.preselectedRecipient, props.onShieldComplete);
 
   const phase = composerState?.phase;
   const isIdle = phase === ShieldComposerPhase.IDLE;
   const canClose = phase === undefined || isIdle || phase === ShieldComposerPhase.DONE;
   const canGoBack = locked && isIdle;
   const handleBack = canGoBack ? unlock : undefined;
-
-  if (!assets) {
-    return null;
-  }
 
   const cardContent =
     locked && composerState && lockedComposerPayload ? (
@@ -51,7 +46,6 @@ export function ShieldModal(props: ShieldModalProps) {
       <ShieldPage1
         fields={fields}
         feedback={feedback}
-        assets={assets}
         validationResult={validationResult}
         onNext={attemptLock}
         onChangeAmountStrOrMax={setters.amountStrOrMax}

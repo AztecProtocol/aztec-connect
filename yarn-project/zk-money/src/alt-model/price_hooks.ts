@@ -1,8 +1,8 @@
+import { useMemo } from 'react';
 import { AssetValue } from '@aztec/sdk';
 import { convertToBulkPrice } from '../app/index.js';
 import { Obs, useMaybeObs } from '../app/util/index.js';
 import { mapToObj } from '../app/util/objects.js';
-import { useMemo } from 'react';
 import { Amount } from './assets/index.js';
 import { useRollupProviderStatus } from './rollup_provider_hooks.js';
 import { usePriceFeedObsCache, useRemoteAssets } from './top_level_context/index.js';

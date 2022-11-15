@@ -2,7 +2,8 @@ import React, { useEffect } from 'react';
 import { default as styled } from 'styled-components';
 import closeIcon from '../images/close.svg';
 import closeIconWhite from '../images/close_white.svg';
-import { spacings, Theme } from '../styles/index.js';
+import { Theme } from '../ui-components/index.js';
+import { spacings } from '../ui-components/styles/layout.js';
 import { Overlay } from './overlay.js';
 import { Text } from './text.js';
 

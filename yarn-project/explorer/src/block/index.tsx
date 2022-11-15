@@ -1,6 +1,7 @@
-import React, { useEffect } from 'react';
-import { useQuery } from 'react-apollo';
+import React, { useEffect, useState } from 'react';
 import { default as styled } from 'styled-components';
+import { default as useFetch } from 'use-http';
+
 import { BlockStatusIndicator, getBlockStatus } from '../block_status/index.js';
 import { Button, Text } from '../components/index.js';
 import { NetworkContext } from '../context.js';
@@ -8,7 +9,8 @@ import { breakpoints, spacings } from '../styles/index.js';
 import { Sections, Section, SectionTitle } from '../template/index.js';
 import { TxList } from '../tx_list/index.js';
 import { BlockDetails, BlockDetailsPlaceholder, getEtherscanLink } from './block_details.js';
-import { GET_BLOCK, BLOCK_POLL_INTERVAL, BlockQueryData, BlockQueryVars } from './query.js';
+import { POLL_INTERVAL } from '../config.js';
+import { Block as BlockInterface } from './types.js';
 
 const BlockTitle = styled.div`
   display: flex;
@@ -58,19 +60,30 @@ interface BlockProps {
 }
 
 export const Block: React.FunctionComponent<BlockProps> = ({ id }) => {
-  const { loading, error, data, stopPolling, startPolling } = useQuery<BlockQueryData, BlockQueryVars>(GET_BLOCK, {
-    variables: { id },
-  });
+  const [blockData, setBlockData] = useState<BlockInterface | null>(null);
+
+  const { get, loading, error, response } = useFetch();
+
+  const fetchBlock = async () => {
+    const data = await get(`/rollup/${id}`);
+    if (response.ok) setBlockData(data);
+  };
 
   useEffect(() => {
-    if (!data?.block?.mined) {
-      startPolling(BLOCK_POLL_INTERVAL);
+    let interval: number | null = null;
+    if ((!blockData && !loading && !error) || !blockData?.mined) {
+      fetchBlock().catch(err => console.log(`Error fetching block ${id}: `, err));
+    } else if (!blockData.mined) {
+      interval = window.setInterval(fetchBlock, POLL_INTERVAL);
+    } else if (blockData.mined && interval) {
+      clearInterval(interval);
     }
-
     return () => {
-      stopPolling();
+      if (interval) {
+        clearInterval(interval);
+      }
     };
-  }, [data, startPolling, stopPolling]);
+  });
 
   const blockTitle = (
     <StyledSectionTitle
@@ -87,7 +100,7 @@ export const Block: React.FunctionComponent<BlockProps> = ({ id }) => {
     />
   );
 
-  if (loading || !data) {
+  if (loading || !blockData) {
     return (
       <Sections>
         <Section title={blockTitle}>
@@ -98,6 +111,7 @@ export const Block: React.FunctionComponent<BlockProps> = ({ id }) => {
   }
 
   if (error) {
+    console.log(error);
     return (
       <Sections>
         <Section title={blockTitle}>
@@ -107,9 +121,7 @@ export const Block: React.FunctionComponent<BlockProps> = ({ id }) => {
     );
   }
 
-  const { block } = data;
-
-  if (!block) {
+  if (!blockData) {
     return (
       <Sections>
         <Section title={blockTitle}>
@@ -122,8 +134,8 @@ export const Block: React.FunctionComponent<BlockProps> = ({ id }) => {
     );
   }
 
-  const { ethTxHash } = block;
-  const status = getBlockStatus(block);
+  const { ethTxHash } = blockData;
+  const status = getBlockStatus(blockData);
   const statusIndicator = <StyledBlockStatusIndicator status={status} size="s" />;
 
   return (
@@ -144,12 +156,12 @@ export const Block: React.FunctionComponent<BlockProps> = ({ id }) => {
         return (
           <Sections>
             <Section title={titleNode}>
-              <BlockDetails block={block} network={network} />
+              <BlockDetails block={blockData} network={network} />
               <TxListTitleRoot>
                 <Text text="Transactions" weight="semibold" />
-                <Text text={`${block.txs.length}`} />
+                <Text text={`${blockData.txs.length}`} />
               </TxListTitleRoot>
-              <TxList txs={block.txs} />
+              <TxList txs={blockData.txs} />
             </Section>
           </Sections>
         );

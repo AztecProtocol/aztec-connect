@@ -1,0 +1,23 @@
+@use '../../styles/mixins';
+
+.link {
+  color: black;
+}
+
+.link:active {
+  color: black;
+}
+
+.label {
+  @include mixins.gradient_font;
+  font-size: 18px;
+  font-weight: 500;
+  color: inherit;
+  text-decoration: inherit;
+}
+
+.icon {
+  width: 40px;
+  margin-left: 10px;
+  margin-bottom: -12.5px;
+}

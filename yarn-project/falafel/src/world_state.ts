@@ -609,9 +609,9 @@ export class WorldState {
   }
 
   private async confirmOrAddRollupToDb(rollup: RollupProofData, offchainTxData: Buffer[], block: Block) {
-    const { txHash, encodedRollupProofData, created } = block;
+    const { txHash, encodedRollupProofData, created, interactionResult } = block;
 
-    const assetMetrics = await this.getAssetMetrics(rollup, block.interactionResult);
+    const assetMetrics = await this.getAssetMetrics(rollup, interactionResult);
 
     // Get by rollup hash, as a competing rollup may have the same rollup number.
     const rollupProof = await this.rollupDb.getRollupProof(rollup.rollupHash, true);
@@ -640,7 +640,7 @@ export class WorldState {
         block.gasPrice,
         block.created,
         block.txHash,
-        block.interactionResult,
+        interactionResult,
         txIds,
         assetMetrics,
         bridgeMetrics,
@@ -684,7 +684,7 @@ export class WorldState {
         ethTxHash: txHash,
         mined: block.created,
         created: block.created,
-        interactionResult: serializeBufferArrayToVector(block.interactionResult.map(r => r.toBuffer())),
+        interactionResult: serializeBufferArrayToVector(interactionResult.map(r => r.toBuffer())),
         gasPrice: toBufferBE(block.gasPrice, 32),
         gasUsed: block.gasUsed,
         assetMetrics,
@@ -702,7 +702,28 @@ export class WorldState {
 
   private async getAssetMetrics(rollup: RollupProofData, interactionResults: DefiInteractionNote[]) {
     const result: AssetMetricsDao[] = [];
-    for (const assetId of rollup.assetIds.filter(id => id != 1 << 30)) {
+    const assetIds = new Set<number>();
+    const { assets = [] } = this.blockchain.getBlockchainStatus();
+
+    const isValidId = (id: number) => id < assets.length;
+
+    // add rollup assetIds
+    rollup.assetIds.filter(isValidId).forEach(assetId => assetIds.add(assetId));
+
+    // add defi interaction assets to assetIds
+    interactionResults.forEach(({ bridgeCallData }) => {
+      bridgeCallData.inputAssetIdA < assets.length && assetIds.add(bridgeCallData.inputAssetIdA);
+      bridgeCallData.outputAssetIdA < assets.length && assetIds.add(bridgeCallData.outputAssetIdA);
+
+      bridgeCallData.inputAssetIdB !== undefined &&
+        isValidId(bridgeCallData.inputAssetIdB) &&
+        assetIds.add(bridgeCallData.inputAssetIdB);
+      bridgeCallData.outputAssetIdB !== undefined &&
+        isValidId(bridgeCallData.outputAssetIdB) &&
+        assetIds.add(bridgeCallData.outputAssetIdB);
+    });
+
+    for (const assetId of assetIds) {
       const previous = await this.rollupDb.getAssetMetrics(assetId);
       const assetMetrics = previous ? previous : new AssetMetricsDao();
       assetMetrics.rollup = new RollupDao();

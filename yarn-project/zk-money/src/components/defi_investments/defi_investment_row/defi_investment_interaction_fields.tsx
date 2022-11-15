@@ -1,12 +1,14 @@
+import { useState } from 'react';
+import { TxId, UserDefiInteractionResultState, UserDefiTx } from '@aztec/sdk';
 import type { DefiRecipe } from '../../../alt-model/defi/types.js';
 import type {
   DefiPosition,
   DefiPosition_Interactable,
   DefiPosition_NonInteractable,
 } from '../../../alt-model/defi/open_position_hooks.js';
-import { useState } from 'react';
-import { Hyperlink, HyperlinkIcon, Tooltip } from '../../../ui-components/index.js';
+import { Hyperlink, HyperlinkIcon, Tooltip, Button } from '../../../ui-components/index.js';
 import { useExplorerTxLink } from '../../../alt-model/explorer_link_hooks.js';
+import { useWalletInteractionIsOngoing } from '../../../alt-model/wallet_interaction_hooks.js';
 import { useRollupProviderStatus } from '../../../alt-model/index.js';
 import {
   getTicksIcon,
@@ -14,17 +16,10 @@ import {
   getTimeUntilNextRollup,
   getTimeUntilTransactionEstimation,
 } from './helpers.js';
-import { TxId, UserDefiInteractionResultState, UserDefiTx } from '@aztec/sdk';
 import { useAsset } from '../../../alt-model/asset_hooks.js';
-import { Button } from '../../../components/index.js';
 import style from './defi_investment_interaction_fields.module.scss';
 
 const dateFormatter = new Intl.DateTimeFormat('default', { day: 'numeric', month: 'short', year: '2-digit' });
-
-export interface InteractionStatus {
-  icon: string;
-  status: string;
-}
 
 function ClosableInteractionField({
   position,
@@ -33,9 +28,10 @@ function ClosableInteractionField({
   position: DefiPosition_Interactable;
   onOpenDefiExitModal: (recipe: DefiRecipe) => void;
 }) {
+  const walletInteractionIsOngoing = useWalletInteractionIsOngoing();
   return (
     <Button
-      size="s"
+      disabled={walletInteractionIsOngoing}
       className={style.claimButton}
       onClick={() => onOpenDefiExitModal(position.recipe)}
       text={'Claim & Exit'}

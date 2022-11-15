@@ -1,0 +1,49 @@
+.root {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.signingMessageSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.signingMessageContent {
+  font-size: 14px;
+  line-height: 18px;
+  padding: 10px 20px;
+  border-radius: 5px;
+  background-color: #f8f8f8;
+  word-break: break-word;
+}
+
+.footer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.interactionSection {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.signatureToast {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-right: 20px;
+  align-items: self-end;
+}
+
+.interactions {
+  display: flex;
+  flex-direction: row;
+  justify-content: right;
+  gap: 20px;
+}

@@ -1,6 +1,6 @@
 import { createDebugLogger } from '../log/index.js';
-import { createNodeWorker } from './node_worker_factory.js';
-import { createWebWorker } from './web_worker_factory.js';
+import { createNodeWorker } from './node/index.js';
+import { createWebWorker } from './browser/index.js';
 import isNode from 'detect-node';
 
 export async function createWorker(id?: string, module?: WebAssembly.Module, initialMem?: number, maxMem?: number) {

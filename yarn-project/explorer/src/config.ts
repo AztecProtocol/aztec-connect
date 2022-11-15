@@ -13,7 +13,7 @@ async function getDeployTag() {
   if (process.env.NODE_ENV === 'production') {
     return await fetch('/DEPLOY_TAG').then(resp => resp.text());
   } else {
-    return 'aztec-connect-dev';
+    return '';
   }
 }
 
@@ -21,7 +21,7 @@ export async function getNetwork(): Promise<Network> {
   const deployTag = await getDeployTag();
 
   const rollupProviderUrl = deployTag ? `https://api.aztec.network/${deployTag}/falafel` : 'http://localhost:8081';
-  const endpoint = `${rollupProviderUrl}/graphql`;
+  const endpoint = `${rollupProviderUrl}`;
   const { blockchainStatus } = await getRollupProviderStatus(rollupProviderUrl);
   const { chainId } = blockchainStatus;
 

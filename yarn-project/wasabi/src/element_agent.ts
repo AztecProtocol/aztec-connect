@@ -168,7 +168,7 @@ export class ElementAgent {
 
   private async getDefiFee(
     assetId: number,
-    expiry: number,
+    expiry: bigint,
     settlementTime: DefiSettlementTime = DefiSettlementTime.DEADLINE,
   ) {
     const fee = (await this.sdk.getDefiFees(buildBridgeCallData(ELEMENT_BRIDGE_ADDRESS_ID, assetId, assetId, expiry)))[
@@ -205,13 +205,13 @@ export class ElementAgent {
     return assetFees + ethDepositFee + ethWithdrawFee;
   }
 
-  private async singleDefiDeposit(assetId: number, expiry: number, deposit: bigint) {
+  private async singleDefiDeposit(assetId: number, expiry: bigint, deposit: bigint) {
     const bridgeCallData = buildBridgeCallData(ELEMENT_BRIDGE_ADDRESS_ID, assetId, assetId, expiry);
     const fee = await this.getDefiFee(assetId, expiry);
     const inputAssetInfo = this.sdk.getAssetInfo(assetId);
     console.log(
       `agent ${this.id} depositing ${deposit} of asset ${inputAssetInfo.name} with expiry ${formatTime(
-        expiry,
+        Number(expiry),
       )} with fee ${fee.value}`,
     );
     const controller = this.sdk.createDefiController(
@@ -226,7 +226,7 @@ export class ElementAgent {
     return controller;
   }
 
-  private async makeElementDeposit(assetId: number, expiry: number, deposit: bigint) {
+  private async makeElementDeposit(assetId: number, expiry: bigint, deposit: bigint) {
     while (true) {
       try {
         return await this.singleDefiDeposit(assetId, expiry, deposit);

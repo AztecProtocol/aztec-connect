@@ -1,8 +1,9 @@
+import { useMemo } from 'react';
+import { RollupProviderStatus } from '@aztec/sdk';
+import { JsonRpcProvider } from '@ethersproject/providers';
 import { createBridgeDataAdaptorsMethodCaches } from '../../alt-model/defi/bridge_data_adaptors/caches/bridge_data_adaptors_method_caches.js';
 import { createDefiRecipes } from '../../alt-model/defi/recipes.js';
 import { createPriceFeedObsCache } from '../../alt-model/price_feeds/index.js';
-import { useMemo } from 'react';
-import { JsonRpcProvider } from '@ethersproject/providers';
 import { Config } from '../../config.js';
 import { createRemoteAssetsObs } from './remote_assets_obs.js';
 import { createSdkRemoteStatusPoller } from './remote_status_poller.js';
@@ -10,9 +11,10 @@ import { createSdkObs } from './sdk_obs.js';
 import { TopLevelContext, TopLevelContextValue } from './top_level_context.js';
 import { createGasPricePoller } from '../gas/gas_price_obs.js';
 import { AmountFactory } from '../assets/amount_factory.js';
-import { RollupProviderStatus } from '@aztec/sdk';
 import { ToastsObs } from './toasts_obs.js';
 import { createChainLinkPollerCache } from '../../alt-model/price_feeds/chain_link_poller_cache.js';
+import { AccountStateManager } from '../account_state/account_state_manager.js';
+import { AliasManager } from '../account_state/alias_manager.js';
 import { createDefiPublishStatsPollerCache } from '../defi/defi_publish_stats_poller_cache.js';
 
 function createTopLevelContextValue(
@@ -21,7 +23,11 @@ function createTopLevelContextValue(
 ): TopLevelContextValue {
   const stableEthereumProvider = new JsonRpcProvider(config.ethereumHost);
   const sdkObs = createSdkObs(config);
+  const accountStateManager = new AccountStateManager(sdkObs);
+  const aliasManager = new AliasManager();
+  accountStateManager.attemptRecoverSession(); // TODO: consider where this should live
   const toastsObs = new ToastsObs();
+  const walletInteractionToastsObs = new ToastsObs();
   const remoteStatusPoller = createSdkRemoteStatusPoller(sdkObs, initialRollupProviderStatus);
   const remoteStatusObs = remoteStatusPoller.obs;
   const remoteAssetsObs = createRemoteAssetsObs(remoteStatusObs);
@@ -51,7 +57,10 @@ function createTopLevelContextValue(
     config,
     stableEthereumProvider,
     sdkObs,
+    accountStateManager,
+    aliasManager,
     toastsObs,
+    walletInteractionToastsObs,
     remoteStatusPoller,
     remoteAssetsObs,
     amountFactory,

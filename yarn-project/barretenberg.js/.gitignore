@@ -1,2 +1,2 @@
 src/wasm/barretenberg.wasm
-src/wasm/node_worker.js
+src/wasm/node/node_worker.js

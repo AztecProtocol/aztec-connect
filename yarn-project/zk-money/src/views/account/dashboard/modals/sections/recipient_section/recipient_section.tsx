@@ -1,16 +1,10 @@
-import {
-  InputTheme,
-  InputWrapper,
-  InputStatusIcon,
-  MaskedInput,
-  InputStatus,
-} from '../../../../../../components/index.js';
-import { InputSection } from '../input_section/index.js';
+import { useWalletInteractionIsOngoing } from '../../../../../../alt-model/wallet_interaction_hooks.js';
+import { Field, FieldStatus } from '../../../../../../ui-components/index.js';
+import { getPrefixFromRecipient, removePrefixFromRecipient } from './helpers.js';
 
 type RecipientType = 'L1' | 'L2';
 
 interface RecipientSectionProps {
-  theme: InputTheme;
   recipientType: RecipientType;
   message?: string;
   recipientStr: string;
@@ -20,17 +14,10 @@ interface RecipientSectionProps {
   onChangeValue: (value: string) => void;
 }
 
-const getRecipientInputStatus = (isLoading: boolean, isValid: boolean, hasWarning: boolean) => {
-  if (isLoading) return InputStatus.LOADING;
-  if (hasWarning) return InputStatus.WARNING;
-  if (isValid) return InputStatus.SUCCESS;
-  return InputStatus.ERROR;
-};
-
 function getRecipientPlaceholder(type: RecipientType) {
   switch (type) {
     case 'L2':
-      return `Enter Alias`;
+      return `Enter Alias or Aztec Address`;
     case 'L1':
       return `Enter Ethereum Address`;
     default:
@@ -38,29 +25,33 @@ function getRecipientPlaceholder(type: RecipientType) {
   }
 }
 
+const getRecipientInputStatus = (isLoading: boolean, isValid: boolean, hasWarning: boolean) => {
+  if (isLoading) return FieldStatus.Loading;
+  if (hasWarning) return FieldStatus.Warning;
+  if (isValid) return FieldStatus.Success;
+  return FieldStatus.Error;
+};
+
 export function RecipientSection(props: RecipientSectionProps) {
-  const { recipientType, onChangeValue, theme } = props;
+  const { recipientType, onChangeValue } = props;
+  const walletInteractionIsOngoing = useWalletInteractionIsOngoing();
+  const status = getRecipientInputStatus(props.isLoading, props.isValid, !!props.hasWarning);
+
+  const handleValueChange = (value: string) => {
+    const recipient = removePrefixFromRecipient(value);
+    onChangeValue(recipient);
+  };
 
   return (
-    <InputSection
-      title={'Recipient'}
-      component={
-        <InputWrapper theme={theme}>
-          <InputStatusIcon
-            status={getRecipientInputStatus(props.isLoading, props.isValid, !!props.hasWarning)}
-            // TODO: why would we want an inactive state?
-            inactive={props.recipientStr.length === 0}
-          />
-          <MaskedInput
-            theme={theme}
-            value={props.recipientStr}
-            prefix={recipientType === 'L1' ? '' : '@'}
-            onChangeValue={onChangeValue}
-            placeholder={getRecipientPlaceholder(recipientType)}
-          />
-        </InputWrapper>
-      }
-      errorMessage={props.message}
+    <Field
+      label={'Recipient'}
+      disabled={walletInteractionIsOngoing}
+      message={props.message}
+      value={props.recipientStr}
+      status={status}
+      placeholder={getRecipientPlaceholder(recipientType)}
+      prefix={getPrefixFromRecipient(recipientType, props.recipientStr)}
+      onChangeValue={handleValueChange}
     />
   );
 }

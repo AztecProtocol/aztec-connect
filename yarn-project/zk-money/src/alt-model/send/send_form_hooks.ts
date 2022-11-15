@@ -1,27 +1,26 @@
+import { useMemo, useState } from 'react';
 import createDebug from 'debug';
 import { GrumpkinAddress, EthAddress, TxSettlementTime } from '@aztec/sdk';
-import { useApp } from '../app_context.js';
 import { useAsset } from '../asset_hooks.js';
 import { useMaxSpendableValue } from '../balance_hooks.js';
 import { useAwaitCorrectProvider } from '../defi/defi_form/correct_provider_hooks.js';
 import { useTrackedFieldChangeHandlers } from '../form_fields_hooks.js';
 import { isKnownAssetAddressString } from '../known_assets/known_asset_addresses.js';
 import { useRollupProviderStatus, useRollupProviderStatusPoller } from '../rollup_provider_hooks.js';
-import { useSdk, useAmountFactory } from '../top_level_context/index.js';
+import { useSdk, useAmountFactory, useConfig } from '../top_level_context/index.js';
 import { SendMode } from './send_mode.js';
-import { useMemo, useState } from 'react';
 import { Recipient, SendComposer } from './send_form_composer.js';
 import { SendFormFields, validateSendForm } from './send_form_validation.js';
 import { useMaybeObs } from '../../app/util/index.js';
 import { SendComposerPhase } from './send_composer_state_obs.js';
 import { getSendFormFeedback } from './send_form_feedback.js';
-import { useUserIdForAlias } from '../alias_hooks.js';
 import { estimateTxSettlementTimes } from '../estimate_settlement_times.js';
 import { useSendFeeAmounts } from './tx_fee_hooks.js';
 import { useAccountState } from '../account_state/index.js';
 import { useMaxSendValue } from './max_send_value_hooks.js';
 import { MAX_MODE } from '../forms/constants.js';
 import { Amount } from '../assets/index.js';
+import { useUserIdForRecipientStr } from '../alias_hooks.js';
 
 const debug = createDebug('zm:send_form_hooks');
 
@@ -41,7 +40,9 @@ function getRecipient(sendMode: SendMode, address?: EthAddress, userId?: Grumpki
 }
 
 export function useSendForm(preselectedAssetId?: number) {
-  const { userId, config } = useApp();
+  const accountState = useAccountState();
+  const userId = accountState?.userId || '';
+  const config = useConfig();
   const [fields, setFields] = useState<SendFormFields>({
     amountStrOrMax: '',
     speed: TxSettlementTime.NEXT_ROLLUP,
@@ -55,12 +56,12 @@ export function useSendForm(preselectedAssetId?: number) {
 
   const sdk = useSdk();
   const rpStatusPoller = useRollupProviderStatusPoller();
-  const awaitCorrectProvider = useAwaitCorrectProvider();
+  const awaitCorrectSigner = useAwaitCorrectProvider();
   const amountFactory = useAmountFactory();
 
   const { recipientStr, sendMode } = fields;
   const recipientEthAddress = useMemo(() => getEthAddress(recipientStr, sendMode), [recipientStr, sendMode]);
-  const { userId: recipientUserId, isLoading: isLoadingRecipient } = useUserIdForAlias(fields.recipientStr, 200);
+  const { userId: recipientUserId, isLoading: isLoadingRecipient } = useUserIdForRecipientStr(fields.recipientStr, 200);
   const recipient = getRecipient(fields.sendMode, recipientEthAddress, recipientUserId);
 
   const rpStatus = useRollupProviderStatus();
@@ -108,18 +109,18 @@ export function useSendForm(preselectedAssetId?: number) {
       debug('Attempted to recreate DefiComposer');
       return;
     }
-    if (!validationResult.state.validComposerPayload || !sdk || !awaitCorrectProvider || !userId) {
+    if (!validationResult.state.validComposerPayload || !sdk || !awaitCorrectSigner || !userId) {
       debug('Attempted to create DefiComposer with incomplete dependencies', {
         validationResult,
         sdk,
-        awaitCorrectProvider,
+        awaitCorrectSigner,
         accountPublicKey: userId,
       });
       return;
     }
     const composer = new SendComposer(validationResult.state.validComposerPayload, {
       sdk,
-      awaitCorrectProvider,
+      awaitCorrectSigner,
       userId,
     });
     setLockedComposer(composer);

@@ -10,11 +10,11 @@
     "clean_db": "rm -rf ./data",
     "formatting": "run -T prettier --check ./src && run -T eslint --max-warnings 0 ./src",
     "start": "node ./dest",
-    "start:debug": ". ./.env && node --inspect-brk=0.0.0.0:9221 ./dest",
-    "start:dev": ". ./.env && yarn start:dev_server",
-    "start:dev_debug": ". ./.env && yarn start:dev_server_debug",
-    "start:dev_server": ". ./.env && tsc-watch -p tsconfig.json --onSuccess 'yarn start'",
-    "start:dev_server_debug": ". ./.env && tsc-watch -p tsconfig.json --onSuccess 'yarn start:debug'",
+    "start:debug": "node --inspect-brk=0.0.0.0:9221 ./dest",
+    "start:dev": "yarn start:dev_server",
+    "start:dev_debug": "yarn start:dev_server_debug",
+    "start:dev_server": "tsc-watch -p tsconfig.json --onSuccess 'yarn start'",
+    "start:dev_server_debug": "tsc-watch -p tsconfig.json --onSuccess 'yarn start:debug'",
     "start:e2e": "./scripts/start_e2e.sh"
   },
   "jest": {

@@ -1,9 +1,9 @@
+import { default as styled } from 'styled-components';
 import { getAssetIconGradient, getAssetIconWhite } from '../alt-model/known_assets/known_asset_display_data.js';
 import { RemoteAsset } from '../alt-model/types.js';
-import { default as styled } from 'styled-components';
 import zkShieldGradientIcon from '../images/zk_shield_gradient.svg';
 import zkShieldWhiteIcon from '../images/zk_shield_white.svg';
-import { Size } from '../styles/index.js';
+import { Size } from '../ui-components/styles/layout.js';
 
 const iconSizes = {
   xxl: '92px',

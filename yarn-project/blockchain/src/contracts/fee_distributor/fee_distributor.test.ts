@@ -1,4 +1,4 @@
-import { Contract, Signer } from 'ethers';
+import { Contract, ContractFactory, Signer } from 'ethers';
 import { ethers } from 'hardhat';
 import { EthAddress } from '@aztec/barretenberg/address';
 import { Asset } from '@aztec/barretenberg/blockchain';
@@ -7,6 +7,7 @@ import { setupFeeDistributor } from './fixtures/setup_fee_distributor.js';
 import { setupUniswap } from './fixtures/setup_uniswap.js';
 import { FeeDistributor } from './fee_distributor.js';
 import { evmRevert, evmSnapshot } from '../../ganache/hardhat_chain_manipulation.js';
+import { IWETH } from '../../abis.js';
 
 describe('fee_distributor', () => {
   let feeDistributor: FeeDistributor;
@@ -139,7 +140,8 @@ describe('fee_distributor', () => {
   });
 
   it('convert weth balance to eth', async () => {
-    const weth = await ethers.getContractAt('IWETH', (await feeDistributor.WETH()).toString(), signers[0]);
+    const wethFactory = new ContractFactory(IWETH.abi, IWETH.bytecode);
+    const weth = new Contract((await feeDistributor.WETH()).toString(), wethFactory.interface, signers[0]);
 
     const balance = 10n;
     await weth.deposit({ value: balance.toString() });

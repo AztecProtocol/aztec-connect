@@ -35,3 +35,7 @@ export {
   RollupProcessor,
   EthAsset,
 } from '@aztec/blockchain';
+
+// Exporting for medici.
+export { joinSplitProofInputToJson, joinSplitProofInputFromJson } from './proofs/index.js';
+export { BarretenbergWasm } from '@aztec/barretenberg/wasm';

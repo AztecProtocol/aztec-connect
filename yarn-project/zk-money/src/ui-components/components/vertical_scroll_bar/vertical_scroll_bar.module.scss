@@ -1,0 +1,15 @@
+@use '../../styles/colors.scss';
+
+.root {
+  height: 100%;
+  width: 10px;
+  border-radius: 5px;
+  background-color: #d3d3d350;
+}
+
+.bar {
+  width: 10px;
+  border-radius: 5px;
+  background: linear-gradient(191.14deg, colors.$gradient_from 11.12%, colors.$gradient_to 58.22%);
+  cursor: pointer;
+}

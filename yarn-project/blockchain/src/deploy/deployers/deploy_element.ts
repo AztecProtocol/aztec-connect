@@ -1,3 +1,4 @@
+// eslint-disable-next-line camelcase
 import * as Element from '@aztec/bridge-clients/client-dest/typechain-types/factories/ElementBridge__factory.js';
 import { ElementVaultConfig } from './element_vault_config.js';
 import { Contract, Signer } from 'ethers';

@@ -1,7 +1,6 @@
 export * from './gradient_disclosure_icon.js';
 export * from './done_icon.js';
 export * from './error_icon.js';
-export * from './loading_spinner_icon.js';
 export * from './done_gradient_icon.js';
 export * from './metamask_icon.js';
 export * from './wallet_connect_icon.js';

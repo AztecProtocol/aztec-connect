@@ -1,17 +1,18 @@
+import { useMemo } from 'react';
 import type { AssetValue, BridgeCallData } from '@aztec/sdk';
 import { useAmounts, useSdk } from '../../../alt-model/top_level_context/index.js';
-import { useMemo } from 'react';
 import { usePolledCallback } from '../../../app/util/polling_hooks.js';
-import { useApp } from '../../../alt-model/app_context.js';
-import { FEE_SIG_FIGURES } from '../../../alt-model/forms/constants.js';
 import { useSpendableBalance } from '../../../alt-model/balance_hooks.js';
+import { useAccountState } from '../../account_state/account_state_hooks.js';
+import { FEE_SIG_FIGURES } from '../../forms/constants.js';
 
 const POLL_INTERVAL = 1000 * 60;
 
 export function useDefiFeeAmounts(bridgeCallData: BridgeCallData | undefined, deposit: AssetValue | undefined) {
   useSdk();
   const sdk = useSdk();
-  const { userId } = useApp();
+  const accountState = useAccountState();
+  const userId = accountState?.userId;
   const spendableBalanceA = useSpendableBalance(bridgeCallData?.inputAssetIdA);
   const spendableBalanceB = useSpendableBalance(bridgeCallData?.inputAssetIdB);
   const poll = useMemo(() => {

@@ -4,7 +4,7 @@ import { SdkObs } from './sdk_obs.js';
 
 // AztecSdk.getRemoteStatus is a network request, hence this class
 // is used to share the polled response and prevent hammering.
-export type RemoteStatusObsValue = RollupProviderStatus;
+type RemoteStatusObsValue = RollupProviderStatus;
 export type RemoteStatusPoller = Poller<RemoteStatusObsValue>;
 export type RemoteStatusObs = RemoteStatusPoller['obs'];
 

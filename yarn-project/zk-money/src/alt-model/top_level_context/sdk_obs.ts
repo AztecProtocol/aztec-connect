@@ -15,7 +15,7 @@ const debug = createDebug('zm:sdk_obs');
 
 const hostedSdkEnabled = !!localStorage.getItem('hosted_sdk_enabled');
 
-export type SdkObsValue = AztecSdk | undefined;
+type SdkObsValue = AztecSdk | undefined;
 export type SdkObs = Obs<SdkObsValue>;
 
 export function createSdkObs(config: Config): SdkObs {
@@ -29,24 +29,34 @@ export function createSdkObs(config: Config): SdkObs {
     minConfirmation: chainIdToNetwork(config.chainId)?.isFrequent ? 1 : undefined,
   })
     .then(sdk => {
+      sdk.run(); // TODO: move this until after registration
       sdkObs.next(sdk);
       sdk.addListener(SdkEvent.DESTROYED, () => sdkObs.next(undefined));
+      sdk.on(SdkEvent.VERSION_MISMATCH, () => {
+        debug('ClientVersionMismatch detected');
+        handleVersionMismatch();
+      });
     })
     .catch(err => {
       if (err instanceof ClientVersionMismatchError) {
-        if (
-          window.confirm(
-            'Version mismatch between zk.money and rollup server.\n\n' +
-              'Press OK to refresh the page!\n\n' +
-              '(If this issue persists it may be a problem with your ISP)',
-          )
-        ) {
-          window.location.reload();
-        }
+        debug('ClientVersionMismatch detected');
+        handleVersionMismatch();
       }
       debug('Failed to create sdk', err);
       return undefined;
     });
   // Wrapping the input obs hides its `next` method
   return new Obs(sdkObs);
+}
+
+function handleVersionMismatch() {
+  if (
+    window.confirm(
+      'Version mismatch between zk.money and rollup server.\n\n' +
+        'Press OK to refresh the page!\n\n' +
+        '(If this issue persists it may be a problem with your ISP)',
+    )
+  ) {
+    window.location.reload();
+  }
 }

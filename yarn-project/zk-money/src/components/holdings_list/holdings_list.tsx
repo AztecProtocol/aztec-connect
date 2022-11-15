@@ -1,11 +1,11 @@
 import type { DefiRecipe } from '../../alt-model/defi/types.js';
 import { useState } from 'react';
-import { Toggle } from '../../components/index.js';
 import { TokenList } from './token_list.js';
-import style from './holdings_list.module.scss';
 import { DefiInvestments } from '../../components/defi_investments/index.js';
 import { useBalances } from '../../alt-model/index.js';
 import { useOpenPositions } from '../../alt-model/defi/open_position_hooks.js';
+import { Toggle } from '../../ui-components/index.js';
+import style from './holdings_list.module.scss';
 
 const VIEWS = [
   { label: 'Tokens', value: 'tokens' },

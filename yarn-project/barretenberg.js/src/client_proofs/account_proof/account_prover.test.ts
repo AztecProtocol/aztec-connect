@@ -6,7 +6,7 @@ import { default as memdown } from 'memdown';
 import { AliasHash } from '../../account_id/index.js';
 import { GrumpkinAddress } from '../../address/index.js';
 import { Crs } from '../../crs/index.js';
-import { Blake2s, Pedersen, Schnorr, SinglePedersen } from '../../crypto/index.js';
+import { Blake2s, Pedersen, Schnorr, sha256, SinglePedersen } from '../../crypto/index.js';
 import { PooledFft } from '../../fft/index.js';
 import { MerkleTree } from '../../merkle_tree/index.js';
 import { NoteAlgorithms } from '../../note_algorithms/index.js';
@@ -38,7 +38,7 @@ describe('account proof', () => {
     const circuitSize = AccountProver.getCircuitSize();
 
     crs = new Crs(circuitSize);
-    await crs.download();
+    await crs.init();
 
     barretenberg = await BarretenbergWasm.new();
 
@@ -61,8 +61,12 @@ describe('account proof', () => {
     accountProver = new AccountProver(prover);
     accountVerifier = new AccountVerifier();
 
+    debug('creating keys...');
+    const start = new Date().getTime();
     await accountProver.computeKey();
     await accountVerifier.computeKey(pippenger.pool[0], crs.getG2Data());
+    debug(`created circuit keys: ${new Date().getTime() - start}ms`);
+    debug(`vk hash: ${sha256(await accountVerifier.getKey()).toString('hex')}`);
   });
 
   afterAll(async () => {
@@ -74,14 +78,6 @@ describe('account proof', () => {
     const publicKey = new GrumpkinAddress(schnorr.computePublicKey(privateKey));
     return { privateKey, publicKey };
   };
-
-  it('should get key data', async () => {
-    const provingKey = await accountProver.getKey();
-    expect(provingKey.length).toBeGreaterThan(0);
-
-    const verificationKey = await accountVerifier.getKey();
-    expect(verificationKey.length).toBeGreaterThan(0);
-  });
 
   it('create and verify an account proof', async () => {
     const tree = new MerkleTree(levelup(memdown()), pedersen, 'data', 32);

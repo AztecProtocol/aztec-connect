@@ -11,7 +11,7 @@ const debug = createDebug('zm:market_size_poller_cache');
 const POLL_INTERVAL = 5 * 60 * 1000;
 
 export function createMarketSizePollerCache(recipes: DefiRecipe[], adaptorCache: BridgeDataAdaptorCache) {
-  return new LazyInitDeepCacheMap(([recipeId, auxData]: [string, number]) => {
+  return new LazyInitDeepCacheMap(([recipeId, auxData]: [string, bigint]) => {
     const adaptor = adaptorCache.get(recipeId);
     const recipe = recipes.find(x => x.id === recipeId);
     if (!adaptor || !recipe) return undefined;

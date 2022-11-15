@@ -314,7 +314,7 @@ export class Metrics {
     this.txReceivedCounter = new Counter({
       name: 'tx_received',
       help: 'Transaction received counter',
-      labelNames: ['tx_type'],
+      labelNames: ['tx_type', 'tx_origin'],
     });
 
     this.bridgeTotalTxCounter = new Counter({
@@ -394,8 +394,8 @@ export class Metrics {
     this.httpEndpointCounter.labels(path).inc();
   }
 
-  txReceived(txType: TxType) {
-    this.txReceivedCounter.labels(TxType[txType]).inc();
+  txReceived(txType: TxType, txOrigin: string) {
+    this.txReceivedCounter.labels(TxType[txType], txOrigin).inc();
   }
 
   bridgeMetricLabelsToReset() {

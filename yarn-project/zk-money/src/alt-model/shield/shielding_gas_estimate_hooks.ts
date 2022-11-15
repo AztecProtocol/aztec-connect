@@ -43,7 +43,7 @@ async function getApproveProofGasEstimate(contract: Contract) {
     const bigNumber = await contract.estimateGas.approveProof(proofHash);
     return BigInt(bigNumber.toString());
   } catch (e) {
-    debug('../../approveProof gas estimate failed:', e);
+    debug('approveProof gas estimate failed:', e);
     // Probably not enough balance.
     return 55000n;
   }
@@ -56,7 +56,7 @@ function costPlus10Percent(gas?: bigint, gasUnitPrice?: bigint) {
 
 const POLL_INTERVAL = 1000 * 60 * 10;
 
-export function useEstimatedShieldingGasCosts(depositor?: EthAddress, assetId?: number) {
+export function useEstimatedShieldingGasCosts(depositor: EthAddress | undefined, assetId: number | undefined) {
   const stableEthereumProvider = useStableEthereumProvider();
   const gasUnitPrice = useGasUnitPrice();
   const rpStatus = useRollupProviderStatus();

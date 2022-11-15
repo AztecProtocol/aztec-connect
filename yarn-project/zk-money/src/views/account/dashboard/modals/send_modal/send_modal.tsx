@@ -1,9 +1,8 @@
-import { Card, CardHeaderSize } from '../../../../../ui-components/index.js';
+import { Card, CardHeaderSize, Theme } from '../../../../../ui-components/index.js';
 import { Modal } from '../../../../../components/index.js';
 import { SendFormFieldsPage } from './send_form_fields_page.js';
 import { SendComposerPhase, useSendForm } from '../../../../../alt-model/send/index.js';
 import { SendConfirmationPage } from './send_confirmation_page.js';
-import { Theme } from '../../../../../styles/index.js';
 import { SendModalHeader } from './send_modal_header.js';
 
 interface SendModalProps {
