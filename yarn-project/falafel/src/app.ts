@@ -9,6 +9,8 @@ import {
   rollupProviderStatusToJson,
   TxJson,
   initialWorldStateToBuffer,
+  bridgePublishQueryFromJson,
+  bridgePublishQueryResultToJson,
 } from '@aztec/barretenberg/rollup_provider';
 import { numToInt32BE, serializeBufferArrayToVector } from '@aztec/barretenberg/serialize';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
@@ -303,9 +305,10 @@ export async function appFactory(server: Server, prefix: string, metrics: Metric
   router.post('/bridge-query', recordMetric, async (ctx: Koa.Context) => {
     const stream = new PromiseReadable(ctx.req);
     const data = JSON.parse((await stream.readAll()) as string);
-    const response = await server.queryBridgeStats(data);
+    const query = bridgePublishQueryFromJson(data);
+    const response = await server.queryBridgeStats(query);
     ctx.set('content-type', 'application/json');
-    ctx.body = response;
+    ctx.body = bridgePublishQueryResultToJson(response);
     ctx.status = 200;
   });
 

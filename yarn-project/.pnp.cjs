@@ -407,6 +407,27 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           ],\
           "linkType": "HARD"\
         }],\
+        ["npm:2.1.45", {\
+          "packageLocation": "./.yarn/cache/@aztec-barretenberg-npm-2.1.45-ae9a2f4225-29c9aa5d1b.zip/node_modules/@aztec/barretenberg/",\
+          "packageDependencies": [\
+            ["@aztec/barretenberg", "npm:2.1.45"],\
+            ["@types/detect-node", "npm:2.0.0"],\
+            ["@types/levelup", "npm:4.3.3"],\
+            ["buffer-browserify", "npm:0.2.5"],\
+            ["debug", "virtual:e9a07d9e500f265638a80b6a2d60a63d2c1402dd6a58d2f05af9d82e52be33df29a16291c32b33b9e23f1a0efea054868bd3312893433fe0583e4dba376fe47e#npm:4.3.4"],\
+            ["detect-node", "npm:2.1.0"],\
+            ["fs-extra", "npm:10.0.0"],\
+            ["is-node", "npm:1.0.2"],\
+            ["levelup", "npm:5.1.1"],\
+            ["memdown", "npm:6.1.1"],\
+            ["node-fetch", "npm:2.6.1"],\
+            ["promise-readable", "npm:5.0.4"],\
+            ["sha3", "npm:2.1.4"],\
+            ["threads", "npm:1.7.0"],\
+            ["tslib", "npm:2.4.0"]\
+          ],\
+          "linkType": "HARD"\
+        }],\
         ["workspace:barretenberg.js", {\
           "packageLocation": "./barretenberg.js/",\
           "packageDependencies": [\
@@ -527,23 +548,21 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           ],\
           "linkType": "HARD"\
         }],\
-        ["npm:0.1.65", {\
-          "packageLocation": "./.yarn/cache/@aztec-bridge-clients-npm-0.1.65-29e17203aa-f9c5afea46.zip/node_modules/@aztec/bridge-clients/",\
+        ["npm:0.1.71", {\
+          "packageLocation": "./.yarn/cache/@aztec-bridge-clients-npm-0.1.71-dd8fa1216a-1fac3fb01e.zip/node_modules/@aztec/bridge-clients/",\
           "packageDependencies": [\
-            ["@aztec/bridge-clients", "npm:0.1.65"],\
-            ["@aztec/barretenberg", "npm:2.1.37"],\
+            ["@aztec/bridge-clients", "npm:0.1.71"],\
+            ["@aztec/barretenberg", "npm:2.1.45"],\
             ["@ethersproject/abi", "npm:5.5.0"],\
-            ["@ethersproject/providers", "npm:5.6.8"],\
-            ["@openzeppelin/contracts", "npm:4.7.3"],\
-            ["@typechain/ethers-v5", "virtual:3d37d124b63511ad845ed82937e0ca797526f169ee1f0121affccc3f0d254daaa507227ac65f8fb699fe82ab4ed5d1c4624db427994a6c23bdd84b02c977c589#npm:9.0.0"],\
-            ["@typechain/hardhat", "virtual:3d37d124b63511ad845ed82937e0ca797526f169ee1f0121affccc3f0d254daaa507227ac65f8fb699fe82ab4ed5d1c4624db427994a6c23bdd84b02c977c589#npm:4.0.0"],\
-            ["ethers", "npm:5.6.9"],\
-            ["hardhat", "virtual:3d37d124b63511ad845ed82937e0ca797526f169ee1f0121affccc3f0d254daaa507227ac65f8fb699fe82ab4ed5d1c4624db427994a6c23bdd84b02c977c589#npm:2.12.2"],\
+            ["@ethersproject/providers", "npm:5.7.1"],\
+            ["@openzeppelin/contracts", "npm:4.8.0"],\
+            ["@typechain/ethers-v5", "virtual:dd8fa1216a11fd0dae98fcdbacbb07860d2b6acb87df1c750a71d7f03a0824509a3d4d74933cb31ea1f482c0b6bd77844a75e3c988dcf5f7e0adf03db3557055#npm:10.1.1"],\
+            ["ethers", "npm:5.7.2"],\
             ["isomorphic-fetch", "npm:3.0.0"],\
-            ["ts-node", "virtual:3d37d124b63511ad845ed82937e0ca797526f169ee1f0121affccc3f0d254daaa507227ac65f8fb699fe82ab4ed5d1c4624db427994a6c23bdd84b02c977c589#npm:10.9.1"],\
+            ["ts-node", "virtual:dd8fa1216a11fd0dae98fcdbacbb07860d2b6acb87df1c750a71d7f03a0824509a3d4d74933cb31ea1f482c0b6bd77844a75e3c988dcf5f7e0adf03db3557055#npm:10.9.1"],\
             ["tslib", "npm:2.4.0"],\
-            ["typechain", "virtual:3d37d124b63511ad845ed82937e0ca797526f169ee1f0121affccc3f0d254daaa507227ac65f8fb699fe82ab4ed5d1c4624db427994a6c23bdd84b02c977c589#npm:7.0.1"],\
-            ["typescript", "patch:typescript@npm%3A4.7.4#~builtin<compat/typescript>::version=4.7.4&hash=a1c5e5"]\
+            ["typechain", "virtual:dd8fa1216a11fd0dae98fcdbacbb07860d2b6acb87df1c750a71d7f03a0824509a3d4d74933cb31ea1f482c0b6bd77844a75e3c988dcf5f7e0adf03db3557055#npm:8.1.1"],\
+            ["typescript", "patch:typescript@npm%3A4.8.4#~builtin<compat/typescript>::version=4.8.4&hash=a1c5e5"]\
           ],\
           "linkType": "HARD"\
         }]\
@@ -11817,6 +11836,13 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["@openzeppelin/contracts", "npm:4.7.3"]\
           ],\
           "linkType": "HARD"\
+        }],\
+        ["npm:4.8.0", {\
+          "packageLocation": "./.yarn/cache/@openzeppelin-contracts-npm-4.8.0-9f4e6c7d80-dfab51a7f9.zip/node_modules/@openzeppelin/contracts/",\
+          "packageDependencies": [\
+            ["@openzeppelin/contracts", "npm:4.8.0"]\
+          ],\
+          "linkType": "HARD"\
         }]\
       ]],\
       ["@openzeppelin/contracts-upgradeable", [\
@@ -14642,6 +14668,13 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
         }]\
       ]],\
       ["@typechain/ethers-v5", [\
+        ["npm:10.1.1", {\
+          "packageLocation": "./.yarn/cache/@typechain-ethers-v5-npm-10.1.1-dd2d5dde72-6264294a03.zip/node_modules/@typechain/ethers-v5/",\
+          "packageDependencies": [\
+            ["@typechain/ethers-v5", "npm:10.1.1"]\
+          ],\
+          "linkType": "SOFT"\
+        }],\
         ["npm:9.0.0", {\
           "packageLocation": "./.yarn/cache/@typechain-ethers-v5-npm-9.0.0-a871f2b650-8b04bf0879.zip/node_modules/@typechain/ethers-v5/",\
           "packageDependencies": [\
@@ -14667,6 +14700,41 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["ts-essentials", "virtual:7edabce0c6867517ced4c6f3acf0e2592b348d1fa181e4571958d3ccc098033d667f62c5bb541ad4487163bc60bd50c1ca31a4e46ed36f5de01d5adf6a7333b4#npm:7.0.3"],\
             ["typechain", "virtual:3d37d124b63511ad845ed82937e0ca797526f169ee1f0121affccc3f0d254daaa507227ac65f8fb699fe82ab4ed5d1c4624db427994a6c23bdd84b02c977c589#npm:7.0.1"],\
             ["typescript", "patch:typescript@npm%3A4.7.4#~builtin<compat/typescript>::version=4.7.4&hash=a1c5e5"]\
+          ],\
+          "packagePeers": [\
+            "@ethersproject/abi",\
+            "@ethersproject/bytes",\
+            "@ethersproject/providers",\
+            "@types/ethers",\
+            "@types/ethersproject__abi",\
+            "@types/ethersproject__bytes",\
+            "@types/ethersproject__providers",\
+            "@types/typechain",\
+            "@types/typescript",\
+            "ethers",\
+            "typechain",\
+            "typescript"\
+          ],\
+          "linkType": "HARD"\
+        }],\
+        ["virtual:dd8fa1216a11fd0dae98fcdbacbb07860d2b6acb87df1c750a71d7f03a0824509a3d4d74933cb31ea1f482c0b6bd77844a75e3c988dcf5f7e0adf03db3557055#npm:10.1.1", {\
+          "packageLocation": "./.yarn/__virtual__/@typechain-ethers-v5-virtual-7cd1261e16/0/cache/@typechain-ethers-v5-npm-10.1.1-dd2d5dde72-6264294a03.zip/node_modules/@typechain/ethers-v5/",\
+          "packageDependencies": [\
+            ["@typechain/ethers-v5", "virtual:dd8fa1216a11fd0dae98fcdbacbb07860d2b6acb87df1c750a71d7f03a0824509a3d4d74933cb31ea1f482c0b6bd77844a75e3c988dcf5f7e0adf03db3557055#npm:10.1.1"],\
+            ["@ethersproject/abi", "npm:5.5.0"],\
+            ["@ethersproject/bytes", null],\
+            ["@ethersproject/providers", "npm:5.7.1"],\
+            ["@types/ethers", null],\
+            ["@types/ethersproject__abi", null],\
+            ["@types/ethersproject__bytes", null],\
+            ["@types/ethersproject__providers", null],\
+            ["@types/typechain", null],\
+            ["@types/typescript", null],\
+            ["ethers", "npm:5.7.2"],\
+            ["lodash", "npm:4.17.21"],\
+            ["ts-essentials", "virtual:7cd1261e16b0fa1b4c47401a89b65c5b766badda169379a33580ce207f4fc912676a9c2119d896f9adeff27bbc7146501e0c47a2b0cd2c2301e37d24cc3c2433#npm:7.0.3"],\
+            ["typechain", "virtual:dd8fa1216a11fd0dae98fcdbacbb07860d2b6acb87df1c750a71d7f03a0824509a3d4d74933cb31ea1f482c0b6bd77844a75e3c988dcf5f7e0adf03db3557055#npm:8.1.1"],\
+            ["typescript", "patch:typescript@npm%3A4.8.4#~builtin<compat/typescript>::version=4.8.4&hash=a1c5e5"]\
           ],\
           "packagePeers": [\
             "@ethersproject/abi",\
@@ -25949,6 +26017,43 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["@ethersproject/wordlists", "npm:5.7.0"]\
           ],\
           "linkType": "HARD"\
+        }],\
+        ["npm:5.7.2", {\
+          "packageLocation": "./.yarn/cache/ethers-npm-5.7.2-eba7d781ee-b7c08cf3e2.zip/node_modules/ethers/",\
+          "packageDependencies": [\
+            ["ethers", "npm:5.7.2"],\
+            ["@ethersproject/abi", "npm:5.7.0"],\
+            ["@ethersproject/abstract-provider", "npm:5.7.0"],\
+            ["@ethersproject/abstract-signer", "npm:5.7.0"],\
+            ["@ethersproject/address", "npm:5.7.0"],\
+            ["@ethersproject/base64", "npm:5.7.0"],\
+            ["@ethersproject/basex", "npm:5.7.0"],\
+            ["@ethersproject/bignumber", "npm:5.7.0"],\
+            ["@ethersproject/bytes", "npm:5.7.0"],\
+            ["@ethersproject/constants", "npm:5.7.0"],\
+            ["@ethersproject/contracts", "npm:5.7.0"],\
+            ["@ethersproject/hash", "npm:5.7.0"],\
+            ["@ethersproject/hdnode", "npm:5.7.0"],\
+            ["@ethersproject/json-wallets", "npm:5.7.0"],\
+            ["@ethersproject/keccak256", "npm:5.7.0"],\
+            ["@ethersproject/logger", "npm:5.7.0"],\
+            ["@ethersproject/networks", "npm:5.7.1"],\
+            ["@ethersproject/pbkdf2", "npm:5.7.0"],\
+            ["@ethersproject/properties", "npm:5.7.0"],\
+            ["@ethersproject/providers", "npm:5.7.2"],\
+            ["@ethersproject/random", "npm:5.7.0"],\
+            ["@ethersproject/rlp", "npm:5.7.0"],\
+            ["@ethersproject/sha2", "npm:5.7.0"],\
+            ["@ethersproject/signing-key", "npm:5.7.0"],\
+            ["@ethersproject/solidity", "npm:5.7.0"],\
+            ["@ethersproject/strings", "npm:5.7.0"],\
+            ["@ethersproject/transactions", "npm:5.7.0"],\
+            ["@ethersproject/units", "npm:5.7.0"],\
+            ["@ethersproject/wallet", "npm:5.7.0"],\
+            ["@ethersproject/web", "npm:5.7.1"],\
+            ["@ethersproject/wordlists", "npm:5.7.0"]\
+          ],\
+          "linkType": "HARD"\
         }]\
       ]],\
       ["ethjs-util", [\
@@ -27433,6 +27538,19 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
         }]\
       ]],\
       ["glob", [\
+        ["npm:7.1.7", {\
+          "packageLocation": "./.yarn/cache/glob-npm-7.1.7-5698ad9c48-b61f48973b.zip/node_modules/glob/",\
+          "packageDependencies": [\
+            ["glob", "npm:7.1.7"],\
+            ["fs.realpath", "npm:1.0.0"],\
+            ["inflight", "npm:1.0.6"],\
+            ["inherits", "npm:2.0.4"],\
+            ["minimatch", "npm:3.1.2"],\
+            ["once", "npm:1.4.0"],\
+            ["path-is-absolute", "npm:1.0.1"]\
+          ],\
+          "linkType": "HARD"\
+        }],\
         ["npm:7.2.0", {\
           "packageLocation": "./.yarn/cache/glob-npm-7.2.0-bb4644d239-78a8ea9423.zip/node_modules/glob/",\
           "packageDependencies": [\
@@ -42231,6 +42349,19 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           ],\
           "linkType": "SOFT"\
         }],\
+        ["virtual:7cd1261e16b0fa1b4c47401a89b65c5b766badda169379a33580ce207f4fc912676a9c2119d896f9adeff27bbc7146501e0c47a2b0cd2c2301e37d24cc3c2433#npm:7.0.3", {\
+          "packageLocation": "./.yarn/__virtual__/ts-essentials-virtual-faedcae296/0/cache/ts-essentials-npm-7.0.3-dbefe5cb3b-74d75868ac.zip/node_modules/ts-essentials/",\
+          "packageDependencies": [\
+            ["ts-essentials", "virtual:7cd1261e16b0fa1b4c47401a89b65c5b766badda169379a33580ce207f4fc912676a9c2119d896f9adeff27bbc7146501e0c47a2b0cd2c2301e37d24cc3c2433#npm:7.0.3"],\
+            ["@types/typescript", null],\
+            ["typescript", "patch:typescript@npm%3A4.8.4#~builtin<compat/typescript>::version=4.8.4&hash=a1c5e5"]\
+          ],\
+          "packagePeers": [\
+            "@types/typescript",\
+            "typescript"\
+          ],\
+          "linkType": "HARD"\
+        }],\
         ["virtual:7edabce0c6867517ced4c6f3acf0e2592b348d1fa181e4571958d3ccc098033d667f62c5bb541ad4487163bc60bd50c1ca31a4e46ed36f5de01d5adf6a7333b4#npm:7.0.3", {\
           "packageLocation": "./.yarn/__virtual__/ts-essentials-virtual-e07f170ae8/0/cache/ts-essentials-npm-7.0.3-dbefe5cb3b-74d75868ac.zip/node_modules/ts-essentials/",\
           "packageDependencies": [\
@@ -42618,6 +42749,42 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             "typescript"\
           ],\
           "linkType": "HARD"\
+        }],\
+        ["virtual:dd8fa1216a11fd0dae98fcdbacbb07860d2b6acb87df1c750a71d7f03a0824509a3d4d74933cb31ea1f482c0b6bd77844a75e3c988dcf5f7e0adf03db3557055#npm:10.9.1", {\
+          "packageLocation": "./.yarn/__virtual__/ts-node-virtual-284a7f347e/0/cache/ts-node-npm-10.9.1-6c268be7f4-090adff130.zip/node_modules/ts-node/",\
+          "packageDependencies": [\
+            ["ts-node", "virtual:dd8fa1216a11fd0dae98fcdbacbb07860d2b6acb87df1c750a71d7f03a0824509a3d4d74933cb31ea1f482c0b6bd77844a75e3c988dcf5f7e0adf03db3557055#npm:10.9.1"],\
+            ["@cspotcode/source-map-support", "npm:0.8.1"],\
+            ["@swc/core", null],\
+            ["@swc/wasm", null],\
+            ["@tsconfig/node10", "npm:1.0.9"],\
+            ["@tsconfig/node12", "npm:1.0.11"],\
+            ["@tsconfig/node14", "npm:1.0.3"],\
+            ["@tsconfig/node16", "npm:1.0.3"],\
+            ["@types/node", null],\
+            ["@types/swc__core", null],\
+            ["@types/swc__wasm", null],\
+            ["@types/typescript", null],\
+            ["acorn", "npm:8.7.1"],\
+            ["acorn-walk", "npm:8.2.0"],\
+            ["arg", "npm:4.1.3"],\
+            ["create-require", "npm:1.1.1"],\
+            ["diff", "npm:4.0.2"],\
+            ["make-error", "npm:1.3.6"],\
+            ["typescript", "patch:typescript@npm%3A4.8.4#~builtin<compat/typescript>::version=4.8.4&hash=a1c5e5"],\
+            ["v8-compile-cache-lib", "npm:3.0.1"],\
+            ["yn", "npm:3.1.1"]\
+          ],\
+          "packagePeers": [\
+            "@swc/core",\
+            "@swc/wasm",\
+            "@types/node",\
+            "@types/swc__core",\
+            "@types/swc__wasm",\
+            "@types/typescript",\
+            "typescript"\
+          ],\
+          "linkType": "HARD"\
         }]\
       ]],\
       ["ts-pnp", [\
@@ -42935,6 +43102,13 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           ],\
           "linkType": "SOFT"\
         }],\
+        ["npm:8.1.1", {\
+          "packageLocation": "./.yarn/cache/typechain-npm-8.1.1-b18ce10d3d-77984239d9.zip/node_modules/typechain/",\
+          "packageDependencies": [\
+            ["typechain", "npm:8.1.1"]\
+          ],\
+          "linkType": "SOFT"\
+        }],\
         ["virtual:3d37d124b63511ad845ed82937e0ca797526f169ee1f0121affccc3f0d254daaa507227ac65f8fb699fe82ab4ed5d1c4624db427994a6c23bdd84b02c977c589#npm:7.0.1", {\
           "packageLocation": "./.yarn/__virtual__/typechain-virtual-12d408afac/0/cache/typechain-npm-7.0.1-597e160f84-86f13506bd.zip/node_modules/typechain/",\
           "packageDependencies": [\
@@ -42951,6 +43125,29 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["ts-command-line-args", "npm:2.3.1"],\
             ["ts-essentials", "virtual:7edabce0c6867517ced4c6f3acf0e2592b348d1fa181e4571958d3ccc098033d667f62c5bb541ad4487163bc60bd50c1ca31a4e46ed36f5de01d5adf6a7333b4#npm:7.0.3"],\
             ["typescript", "patch:typescript@npm%3A4.7.4#~builtin<compat/typescript>::version=4.7.4&hash=a1c5e5"]\
+          ],\
+          "packagePeers": [\
+            "@types/typescript",\
+            "typescript"\
+          ],\
+          "linkType": "HARD"\
+        }],\
+        ["virtual:dd8fa1216a11fd0dae98fcdbacbb07860d2b6acb87df1c750a71d7f03a0824509a3d4d74933cb31ea1f482c0b6bd77844a75e3c988dcf5f7e0adf03db3557055#npm:8.1.1", {\
+          "packageLocation": "./.yarn/__virtual__/typechain-virtual-db9e7ee669/0/cache/typechain-npm-8.1.1-b18ce10d3d-77984239d9.zip/node_modules/typechain/",\
+          "packageDependencies": [\
+            ["typechain", "virtual:dd8fa1216a11fd0dae98fcdbacbb07860d2b6acb87df1c750a71d7f03a0824509a3d4d74933cb31ea1f482c0b6bd77844a75e3c988dcf5f7e0adf03db3557055#npm:8.1.1"],\
+            ["@types/prettier", "npm:2.7.0"],\
+            ["@types/typescript", null],\
+            ["debug", "virtual:e9a07d9e500f265638a80b6a2d60a63d2c1402dd6a58d2f05af9d82e52be33df29a16291c32b33b9e23f1a0efea054868bd3312893433fe0583e4dba376fe47e#npm:4.3.4"],\
+            ["fs-extra", "npm:7.0.1"],\
+            ["glob", "npm:7.1.7"],\
+            ["js-sha3", "npm:0.8.0"],\
+            ["lodash", "npm:4.17.21"],\
+            ["mkdirp", "npm:1.0.4"],\
+            ["prettier", "npm:2.7.1"],\
+            ["ts-command-line-args", "npm:2.3.1"],\
+            ["ts-essentials", "virtual:7cd1261e16b0fa1b4c47401a89b65c5b766badda169379a33580ce207f4fc912676a9c2119d896f9adeff27bbc7146501e0c47a2b0cd2c2301e37d24cc3c2433#npm:7.0.3"],\
+            ["typescript", "patch:typescript@npm%3A4.8.4#~builtin<compat/typescript>::version=4.8.4&hash=a1c5e5"]\
           ],\
           "packagePeers": [\
             "@types/typescript",\
@@ -43292,6 +43489,13 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           "packageLocation": "./.yarn/cache/typescript-patch-56273a7c66-9096d8f6c1.zip/node_modules/typescript/",\
           "packageDependencies": [\
             ["typescript", "patch:typescript@npm%3A4.7.4#~builtin<compat/typescript>::version=4.7.4&hash=a1c5e5"]\
+          ],\
+          "linkType": "HARD"\
+        }],\
+        ["patch:typescript@npm%3A4.8.4#~builtin<compat/typescript>::version=4.8.4&hash=a1c5e5", {\
+          "packageLocation": "./.yarn/cache/typescript-patch-5b3c915f01-563a0ef47a.zip/node_modules/typescript/",\
+          "packageDependencies": [\
+            ["typescript", "patch:typescript@npm%3A4.8.4#~builtin<compat/typescript>::version=4.8.4&hash=a1c5e5"]\
           ],\
           "linkType": "HARD"\
         }]\
@@ -46553,7 +46757,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           "packageLocation": "./zk-money/",\
           "packageDependencies": [\
             ["zk.money", "workspace:zk-money"],\
-            ["@aztec/bridge-clients", "npm:0.1.65"],\
+            ["@aztec/bridge-clients", "npm:0.1.71"],\
             ["@aztec/sdk", "workspace:sdk"],\
             ["@babel/plugin-syntax-import-assertions", "virtual:9bf5e241e2dc17b833e112da24bae967b9d49b46aa3f05606e86f481d7497e582e0889d30fdb3a89cc6757535ad24586561398b64b10d45c0fcde85b5efce039#npm:7.18.6"],\
             ["@ethersproject/abstract-signer", "npm:5.7.0"],\
