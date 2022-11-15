@@ -23,17 +23,17 @@
     "rebuildPatterns": ["^barretenberg/"],
     "dependencies": []
   },
-  "contracts": {
-    "buildDir": "contracts",
-    "dockerfile": "Dockerfile",
-    "rebuildPatterns": ["^contracts/"],
-    "dependencies": [""]
-  },
   "blockchain-vks": {
     "buildDir": "blockchain-vks",
     "dockerfile": "Dockerfile",
     "rebuildPatterns": ["^blockchain-vks/"],
     "dependencies": ["barretenberg-x86_64-linux-clang"]
+  },
+  "contracts": {
+    "buildDir": "contracts",
+    "dockerfile": "Dockerfile",
+    "rebuildPatterns": ["^contracts/"],
+    "dependencies": ["blockchain-vks"]
   },
   "yarn-project-base": {
     "buildDir": "yarn-project",
@@ -54,6 +54,13 @@
     "dockerfile": "blockchain/Dockerfile",
     "rebuildPatterns": ["^yarn-project/blockchain/"],
     "dependencies": ["barretenberg.js"]
+  },
+  "contracts-verifier-test": {
+    "buildDir": "yarn-project",
+    "projectDir": "yarn-project/contracts-verifier-test",
+    "dockerfile": "contracts-verifier-test/Dockerfile",
+    "rebuildPatterns": ["^yarn-project/contracts-verifier-test/"],
+    "dependencies": ["barretenberg.js", "contracts"]
   },
   "kebab": {
     "buildDir": "yarn-project",

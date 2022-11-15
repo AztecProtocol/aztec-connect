@@ -10,12 +10,13 @@ COPY --from=0 /usr/src/barretenberg/srs_db/download_ignition.sh /usr/src/barrete
 COPY --from=0 /usr/src/barretenberg/build/bin /usr/src/barretenberg/build/bin
 COPY --from=1 /usr/src/barretenberg/build/bin /usr/src/barretenberg/build-wasm/bin
 COPY --from=2 /usr/src/blockchain-vks/keys /usr/src/blockchain-vks/keys
-COPY --from=3 /usr/src/contracts/out /usr/src/contracts/out
+COPY --from=3 /usr/src/contracts /usr/src/contracts
 WORKDIR /usr/src/yarn-project
 # We only want to copy the package.json's, to ensure we only rebuild this image if project dependencies changed.
 COPY account-migrator/package.json account-migrator/package.json
 COPY barretenberg.js/package.json barretenberg.js/package.json
 COPY blockchain/package.json blockchain/package.json
+COPY contracts-verifier-test/package.json contracts-verifier-test/package.json
 COPY explorer/package.json explorer/package.json
 COPY halloumi/package.json halloumi/package.json
 COPY kebab/package.json kebab/package.json
