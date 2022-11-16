@@ -125,7 +125,7 @@ export async function appFactory(server: Server, prefix: string, metrics: Metric
     const postData = JSON.parse((await stream.readAll()) as string);
     const txs = postData.map(fromTxJson);
     const clientIp = requestIp.getClientIp(ctx.request);
-    const { origin } = ctx;
+    const { origin } = ctx.headers;
     const txRequest: TxRequest = {
       txs,
       requestSender: {
