@@ -67,7 +67,7 @@ export async function appFactory(server: Server, prefix: string, metrics: Metric
     if (version && server.version !== version) {
       ctx.status = 409; // 409 Conflict
       ctx.body = {
-        error: `Falafel (${server.version}) / SDK (${version}) version mismatch. Hard refresh your browser or update SDK.`,
+        error: `Rollup provider / SDK version mismatch. Hard refresh your browser or update SDK.`,
       };
     } else {
       await next();
