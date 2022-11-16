@@ -1,8 +1,9 @@
 import { Retryable } from '../../../../../../app/util/promises/retryable.js';
-import { Button } from '../../../../../../components/index.js';
+import { Button } from '../../../../../../ui-components/index.js';
 
 interface RetrySigningButtonProps {
   signingRetryable: Retryable<unknown>;
+  disabled: boolean;
 }
 
 const WARNING_TEXT =
@@ -13,5 +14,5 @@ export function RetrySigningButton(props: RetrySigningButtonProps) {
     const confirmed = window.confirm(WARNING_TEXT);
     if (confirmed) props.signingRetryable.retry();
   };
-  return <Button text="Try signing again" onClick={handleClick} />;
+  return <Button text="Try Signing Again" onClick={handleClick} disabled={props.disabled} />;
 }

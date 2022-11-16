@@ -7,7 +7,7 @@ import { ProofTypeTag } from '../proof_type/index.js';
 import { DetailsSection } from '../template/index.js';
 import { AccountDetails } from './account_details.js';
 import { DepositDetails } from './deposit_details.js';
-import { Tx } from './query.js';
+import { Tx } from './types.js';
 import { WithdrawDetails } from './withdraw_detail.js';
 import { DefiDepositDetails } from './defi_deposit_details.js';
 

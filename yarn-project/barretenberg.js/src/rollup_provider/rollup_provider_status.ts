@@ -124,6 +124,8 @@ export interface RollupProviderStatus {
   bridgeStatus: BridgeStatus[];
   proverless: boolean;
   rollupSize: number;
+  totalTxs: number;
+  totalBlocks: number;
 }
 
 export interface RollupProviderStatusJson {
@@ -139,6 +141,8 @@ export interface RollupProviderStatusJson {
   bridgeStatus: BridgeStatusJson[];
   proverless: boolean;
   rollupSize: number;
+  totalTxs: number;
+  totalBlocks: number;
 }
 
 export const rollupProviderStatusToJson = ({

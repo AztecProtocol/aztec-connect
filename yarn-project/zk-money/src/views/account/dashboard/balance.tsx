@@ -1,20 +1,24 @@
+import { ProofId } from '@aztec/sdk';
+import { useState, useEffect } from 'react';
 import type { DefiRecipe } from '../../../alt-model/defi/types.js';
 import { useSdk } from '../../../alt-model/top_level_context/index.js';
-import { Spinner, SpinnerTheme } from '../../../components/index.js';
-import { useState } from 'react';
 import { HoldingsList } from '../../../components/holdings_list/holdings_list.js';
 import { MyBalance } from '../../../components/my_balance/index.js';
 import { ShieldMore } from '../../../components/shield_more/index.js';
 import { TransactionHistorySection } from '../../../components/transaction_history/index.js';
 import { SendModal } from './modals/send_modal/index.js';
 import { ShieldModal } from './modals/shield_modal/index.js';
+import { useAccountState } from '../../../alt-model/account_state/index.js';
+import { AccessAccountForm } from './access_account_form.js';
+import { Loader, LoaderSize } from '../../../ui-components/index.js';
+import { useCachedAlias } from '../../../alt-model/alias_hooks.js';
 import style from './balance.module.scss';
+import { useUserTxs } from '../../../alt-model/user_tx_hooks.js';
 
 function LoadingFallback() {
   return (
     <div className={style.loadingRoot}>
-      <Spinner theme={SpinnerTheme.GRADIENT} size="m" />
-      Getting things ready...
+      <Loader size={LoaderSize.ExtraLarge} />
     </div>
   );
 }
@@ -26,6 +30,7 @@ type ModalActivation =
     }
   | {
       type: 'shield';
+      recipient: string;
       assetId?: number;
     };
 
@@ -34,21 +39,52 @@ function renderModal(activation: ModalActivation | undefined, onClose: () => voi
     case 'send':
       return <SendModal assetId={activation.assetId} onClose={onClose} />;
     case 'shield':
-      return <ShieldModal preselectedAssetId={activation.assetId} onClose={onClose} />;
+      return (
+        <ShieldModal
+          preselectedRecipient={activation.recipient}
+          preselectedAssetId={activation.assetId}
+          onClose={onClose}
+        />
+      );
   }
 }
-
 interface BalanceProps {
   onOpenDefiExitModal: (recipe: DefiRecipe) => void;
 }
 
+function getFormattedId(userId) {
+  if (!userId) return '';
+  return userId.toString().replace('0x', 'aztec:0x');
+}
+
 export function Balance(props: BalanceProps) {
   const [modalActivation, setModalActivation] = useState<ModalActivation>();
+  const [isRegistrationSettled, setIsRegistrationSettled] = useState<boolean>(false);
+  const accountState = useAccountState();
+  const cachedAlias = useCachedAlias();
+  const formattedAddress = getFormattedId(accountState?.userId);
+  const txs = useUserTxs();
   const isLoading = !useSdk();
+
+  useEffect(() => {
+    if (!txs) return;
+    const registrationTx = txs.find(tx => tx.proofId === ProofId.ACCOUNT);
+    if (!registrationTx) return;
+    setIsRegistrationSettled(!!registrationTx.settled);
+  }, [txs]);
+
   if (isLoading) return <LoadingFallback />;
 
+  if (!accountState || !accountState.isRegistered)
+    return (
+      <div className={style.accessAccountFormWrapper}>
+        <AccessAccountForm />
+      </div>
+    );
+
   const handleOpenShieldModal = (assetId?: number) => {
-    setModalActivation({ type: 'shield', assetId });
+    const recipient = isRegistrationSettled && cachedAlias ? cachedAlias : formattedAddress;
+    setModalActivation({ type: 'shield', assetId, recipient });
   };
 
   const handleOpenSendModal = (assetId: number) => {

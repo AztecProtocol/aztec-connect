@@ -18,7 +18,7 @@ export const KNOWN_MAINNET_ASSET_ADDRESS_STRS = {
 } as const;
 
 type KnownAssetAddressKey = keyof typeof KNOWN_MAINNET_ASSET_ADDRESS_STRS;
-export type KnownAssetAddressString = typeof KNOWN_MAINNET_ASSET_ADDRESS_STRS[KnownAssetAddressKey];
+type KnownAssetAddressString = typeof KNOWN_MAINNET_ASSET_ADDRESS_STRS[KnownAssetAddressKey];
 
 const addressStrs: string[] = Object.values(KNOWN_MAINNET_ASSET_ADDRESS_STRS);
 export function isKnownAssetAddressString(addressStr?: string): addressStr is KnownAssetAddressString {

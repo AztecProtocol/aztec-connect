@@ -26,3 +26,9 @@
 .toggle {
   width: 40%;
 }
+
+@media (max-width: 768px) {
+  .description {
+    display: none;
+  }
+}

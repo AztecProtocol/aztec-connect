@@ -1,6 +1,5 @@
 import dcaLogo from '../../../images/dca_logo.png';
 import dcaMiniLogo from '../../../images/dca_mini_logo.png';
-import ethToDaiBanner from '../../../images/eth_to_dai_banner.svg';
 import { createDcaAdaptor } from '../bridge_data_adaptors/dca_adaptor.js';
 import { KNOWN_MAINNET_ASSET_ADDRESSES as KMAA } from '../../../alt-model/known_assets/known_asset_addresses.js';
 import { CreateRecipeArgs } from '../types.js';
@@ -21,7 +20,7 @@ export const SEVEN_DAY_DCA_CARD_DAI_TO_ETH: CreateRecipeArgs = {
   createAdaptor: createDcaAdaptor,
   enterAuxDataResolver: {
     type: 'static',
-    value: 7, // Duration in ticks (days)
+    value: 7n, // Duration in ticks (days)
   },
   projectName: '7 Day DCA',
   gradient: ['#3BB273', '#3BB273'],
@@ -31,7 +30,6 @@ export const SEVEN_DAY_DCA_CARD_DAI_TO_ETH: CreateRecipeArgs = {
   shortDesc: 'Dollar-Cost Averaging: Automate ETH purchases to smooth out short-term price movements.',
   longDescription:
     "Your DAI deposit is divided across 7 daily DAI to ETH swaps, purchasing more ETH when its price is low and less when its high. The contract's pool uses external trades and uniswap as a fallbacks.",
-  bannerImg: ethToDaiBanner,
   logo: dcaLogo,
   miniLogo: dcaMiniLogo,
   cardTag: '7 Day DCA',

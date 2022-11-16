@@ -1,0 +1,37 @@
+.buttons {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  gap: 30px;
+}
+
+.message {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+}
+
+.title {
+  font-weight: 450;
+  font-size: 18px;
+  text-align: center;
+}
+
+.subtitle {
+  font-weight: 400;
+  font-size: 16px;
+  text-align: center;
+}
+
+.formWarning {
+  max-width: 610px;
+}
+
+@media (max-width: 900px) {
+  .buttons {
+    flex-direction: column;
+    align-items: center;
+  }
+}

@@ -10,7 +10,7 @@ import { TransactionReceipt, TransactionResponse, TransactionRequest } from '@et
 import { Web3Provider } from '@ethersproject/providers';
 import createDebug from 'debug';
 import { BytesLike, Contract, Event, utils } from 'ethers';
-import { RollupProcessorJson as RollupProcessorAbi, PermitHelper } from '../../abis.js';
+import { RollupProcessorV2 as RollupProcessorAbi, PermitHelper } from '../../abis.js';
 import { decodeErrorFromContract, decodeErrorFromContractByTxHash } from '../decode_error.js';
 import { DefiInteractionEvent } from '@aztec/barretenberg/block_source';
 import { solidityFormatSignatures } from './solidity_format_signatures.js';
@@ -64,11 +64,11 @@ export class RollupProcessor {
   }
 
   async escapeBlockLowerBound() {
-    return await this.rollupProcessor.escapeBlockLowerBound();
+    return (await this.rollupProcessor.escapeBlockLowerBound()).toBigInt();
   }
 
   async escapeBlockUpperBound() {
-    return await this.rollupProcessor.escapeBlockUpperBound();
+    return (await this.rollupProcessor.escapeBlockUpperBound()).toBigInt();
   }
 
   async hasRole(role: BytesLike, address: EthAddress) {
@@ -482,7 +482,8 @@ export class RollupProcessor {
    * rollups block to the end of the chain. This provides best performance for polling clients.
    */
   public async getRollupBlocksFrom(rollupId: number, minConfirmations: number) {
-    const { earliestBlock, chunk } = await this.getEarliestBlock();
+    const { earliestBlock } = await this.getEarliestBlock();
+    const chunk = this.rollupRetrievalChunkSize();
     let end = await this.provider.getBlockNumber();
     let start =
       this.lastQueriedRollupId === undefined || rollupId < this.lastQueriedRollupId

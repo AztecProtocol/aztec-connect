@@ -118,7 +118,7 @@ const generateValidBridgeCallData = (bridgeConfig: BridgeConfig) => {
     bridgeConfig.permittedAssets[1],
     undefined,
     undefined,
-    0,
+    0n,
   );
 };
 
@@ -759,7 +759,7 @@ describe('rollup_coordinator', () => {
         bridgeConfigs[2].permittedAssets[0],
         undefined,
         undefined,
-        15,
+        15n,
       ).toBigInt();
       const pendingTxs = [
         mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
@@ -2167,7 +2167,7 @@ describe('rollup_coordinator', () => {
         bridgeConfigs[2].permittedAssets[0],
         undefined,
         undefined,
-        0,
+        0n,
       );
       bridgeResolver.getBridgeSubsidy.mockImplementationOnce(() => {
         return Promise.resolve(
@@ -2233,7 +2233,7 @@ describe('rollup_coordinator', () => {
         bridgeConfigs[2].permittedAssets[0],
         undefined,
         undefined,
-        0,
+        0n,
       );
       bridgeResolver.getBridgeSubsidy.mockImplementationOnce(() => {
         return Promise.resolve(

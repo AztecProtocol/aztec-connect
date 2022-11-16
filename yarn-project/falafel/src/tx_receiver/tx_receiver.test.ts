@@ -30,8 +30,8 @@ const currentDate = () => {
   return new Date(testDate);
 };
 
-const createTxRequest = (txs: Tx[], requestSender: string) => {
-  return { txs, requestSender } as TxRequest;
+const createTxRequest = (txs: Tx[], clientIp: string) => {
+  return { txs, requestSender: { clientIp } } as TxRequest;
 };
 
 describe('tx receiver', () => {

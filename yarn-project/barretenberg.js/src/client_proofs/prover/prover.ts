@@ -47,7 +47,7 @@ export class Prover {
   }
 
   private async proverCall(name: string, ...args: any[]) {
-    return await this.wasm.call(this.callPrefix + name, ...args);
+    return await this.wasm.asyncCall(this.callPrefix + name, ...args);
   }
 
   public async createProof(proverPtr: number) {
@@ -122,13 +122,17 @@ export class Prover {
       jobs.push({ coefficients, inverse: true, i });
     }
 
-    await Promise.all(
+    const finaliserFuncs = await Promise.all(
       jobs.map(({ inverse, coefficients, constant, i }) =>
         inverse
           ? this.doIfft(proverPtr, i, circuitSize, coefficients)
           : this.doFft(proverPtr, i, circuitSize, coefficients, constant!),
       ),
     );
+
+    for (const fn of finaliserFuncs) {
+      await fn();
+    }
   }
 
   private async doFft(
@@ -139,18 +143,22 @@ export class Prover {
     constant: Uint8Array,
   ) {
     const result = await this.fft.fft(coefficients, constant);
-    const resultPtr = await this.wasm.call('bbmalloc', circuitSize * 32);
-    await this.transferToHeap(result, resultPtr);
-    await this.proverCall('prover_put_fft_data', proverPtr, resultPtr, i);
-    await this.wasm.call('bbfree', resultPtr);
+    return async () => {
+      const resultPtr = await this.wasm.call('bbmalloc', circuitSize * 32);
+      await this.transferToHeap(result, resultPtr);
+      await this.proverCall('prover_put_fft_data', proverPtr, resultPtr, i);
+      await this.wasm.call('bbfree', resultPtr);
+    };
   }
 
   private async doIfft(proverPtr: number, i: number, circuitSize: number, coefficients: Uint8Array) {
     const result = await this.fft.ifft(coefficients);
-    const resultPtr = await this.wasm.call('bbmalloc', circuitSize * 32);
-    await this.transferToHeap(result, resultPtr);
-    await this.proverCall('prover_put_ifft_data', proverPtr, resultPtr, i);
-    await this.wasm.call('bbfree', resultPtr);
+    return async () => {
+      const resultPtr = await this.wasm.call('bbmalloc', circuitSize * 32);
+      await this.transferToHeap(result, resultPtr);
+      await this.proverCall('prover_put_ifft_data', proverPtr, resultPtr, i);
+      await this.wasm.call('bbfree', resultPtr);
+    };
   }
 
   private async transferToHeap(buf: Buffer | Uint8Array, ptr: number) {

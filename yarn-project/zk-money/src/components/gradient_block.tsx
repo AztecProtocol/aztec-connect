@@ -1,5 +1,6 @@
 import { default as styled } from 'styled-components';
-import { BorderRadius, borderRadiuses, colours, gradients, Spacing, spacings } from '../styles/index.js';
+import { gradients, colours } from '../ui-components/styles/colour.js';
+import { Spacing, BorderRadius, spacings, borderRadiuses } from '../ui-components/styles/layout.js';
 
 interface GradientBlockProps {
   padding?: Spacing;

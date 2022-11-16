@@ -272,7 +272,7 @@ export class TerminalHandler {
     addressIdStr: string,
     inputAssetStr: string,
     outputAssetStr: string,
-    auxData = '',
+    auxData = BigInt(0),
   ) {
     await this.assertRegistered();
     const inputAsset = +inputAssetStr;
@@ -283,7 +283,7 @@ export class TerminalHandler {
       +outputAssetStr,
       undefined,
       undefined,
-      +auxData,
+      auxData,
     );
     const fee = (
       await this.sdk.getDefiFees(bridgeCallData, { userId: this.user.id, userSpendingKeyRequired: true, assetValue })

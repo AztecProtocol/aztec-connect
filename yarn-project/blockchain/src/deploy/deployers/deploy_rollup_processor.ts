@@ -1,5 +1,5 @@
 import { Contract, ContractFactory, Signer } from 'ethers';
-import { RollupProcessorJson, RollupProcessorV2Json } from '../../abis.js';
+import { RollupProcessor, RollupProcessorV2 } from '../../abis.js';
 import { ProxyAdmin } from '../../contracts/rollup_processor/proxy_admin.js';
 import { EthAddress } from '@aztec/barretenberg/address';
 import { deployPermitHelper } from './deploy_permit_helper.js';
@@ -19,7 +19,7 @@ export async function deployRollupProcessor(
   useLatest: boolean,
 ) {
   console.error('Deploying RollupProcessor...');
-  const rollupFactory = new ContractFactory(RollupProcessorJson.abi, RollupProcessorJson.bytecode, signer);
+  const rollupFactory = new ContractFactory(RollupProcessor.abi, RollupProcessor.bytecode, signer);
 
   const proxyAdmin = new ProxyAdmin(signer);
   await proxyAdmin.deployInstance();
@@ -45,7 +45,7 @@ export async function deployRollupProcessor(
 
   // Upgrade to the newest version
   if (useLatest) {
-    const rollupV2Factory = new ContractFactory(RollupProcessorV2Json.abi, RollupProcessorV2Json.bytecode, signer);
+    const rollupV2Factory = new ContractFactory(RollupProcessorV2.abi, RollupProcessorV2.bytecode, signer);
     rollup = await proxyAdmin.upgradeAndInitializeWithConstructor(
       EthAddress.fromString(rollup.address),
       rollupV2Factory,

@@ -1,16 +1,14 @@
 import React from 'react';
 import { default as styled, css } from 'styled-components';
+import { Colour, gradients, colours } from '../ui-components/styles/colour.js';
 import {
-  fontSizes,
   FontSize,
-  lineHeights,
-  fontFamily,
-  fontWeights,
   FontWeight,
-  colours,
-  Colour,
-  gradients,
-} from '../styles/index.js';
+  fontSizes,
+  lineHeights,
+  fontWeights,
+  fontFamily,
+} from '../ui-components/styles/typography.js';
 
 export type TextColour = Colour | 'gradient';
 

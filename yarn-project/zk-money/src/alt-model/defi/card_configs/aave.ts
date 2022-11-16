@@ -1,6 +1,5 @@
 import aaveLogo from '../../../images/aave_logo_white.svg';
 import aaveMiniLogo from '../../../images/aave_mini_logo.png';
-import ethToDaiBanner from '../../../images/eth_to_dai_banner.svg';
 import { KNOWN_MAINNET_ASSET_ADDRESSES as KMAA } from '../../../alt-model/known_assets/known_asset_addresses.js';
 import { AaveV2BridgeData } from '@aztec/bridge-clients/client-dest/src/client/aavev2/aavev2-bridge-data.js';
 import { CreateRecipeArgs } from '../types.js';
@@ -21,11 +20,11 @@ export const AAVE_ETH_CARD: CreateRecipeArgs = {
   createAdaptor: provider => AaveV2BridgeData.create(provider),
   enterAuxDataResolver: {
     type: 'static',
-    value: 0, // Deposit flow
+    value: 0n, // Deposit flow
   },
   exitAuxDataResolver: {
     type: 'static',
-    value: 1, // Exit flow
+    value: 1n, // Exit flow
   },
   projectName: 'Aave',
   website: 'https://www.aave.com/',
@@ -34,7 +33,6 @@ export const AAVE_ETH_CARD: CreateRecipeArgs = {
   shortDesc: 'Lend ETH on Aave and earn yield by holding wa2WETH in exchange.',
   exitDesc: 'Unwrap wa2WETH to recieve your underlying ETH.',
   longDescription: 'Lend ETH on Aave and earn yield by holding wa2WETH in exchange.',
-  bannerImg: ethToDaiBanner,
   logo: aaveLogo,
   miniLogo: aaveMiniLogo,
   cardTag: 'Lending',

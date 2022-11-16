@@ -85,11 +85,11 @@ export type BridgeFlowAssets =
 type AuxDataResolver =
   | {
       type: 'static';
-      value: number;
+      value: bigint;
     }
   | {
       type: 'bridge-data-select';
-      selectOpt: (opts: number[]) => number | undefined;
+      selectOpt: (opts: bigint[]) => bigint | undefined;
     };
 
 export type DefiPublishStatsCacheArgs = [
@@ -99,7 +99,7 @@ export type DefiPublishStatsCacheArgs = [
   number | undefined, // inputAssetIdB
   number | undefined, // outputAssetIdA
   number | undefined, // outputAssetIdB
-  number | undefined, // auxData
+  bigint | undefined, // auxData
 ];
 
 export interface DefiRecipe {
@@ -126,7 +126,6 @@ export interface DefiRecipe {
   cardButtonLabel: string;
   shortDesc: string;
   exitDesc?: string;
-  bannerImg: string;
   longDescription: string;
   hideUnderlyingOnExit?: boolean;
   keyStats: KeyStatsConfig;

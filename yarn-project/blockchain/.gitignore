@@ -1,3 +1,3 @@
 cache
-src/artifacts
-**/fixtures/*.dat
+src/verifier-fixtures/*.dat
+.openzeppelin

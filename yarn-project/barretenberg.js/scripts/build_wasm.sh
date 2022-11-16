@@ -4,16 +4,20 @@
 # Skip building db_cli if second arg is set.
 set -e
 
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  export BREW_PREFIX=$(brew --prefix)
+fi
+
 pushd ../../barretenberg/build
 if [ -z "$1" ]; then
   cmake ..
 fi
 if [ -z "$2" ]; then
-  make -j$(nproc) db_cli
+  cmake --build . --parallel --target db_cli
 fi
 cd ../build-wasm
 if [ -z "$1" ]; then
   cmake ..
 fi
-make -j$(nproc) barretenberg.wasm
+cmake --build . --parallel --target barretenberg.wasm
 popd

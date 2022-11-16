@@ -8,5 +8,10 @@ export interface Tx {
 
 export interface TxRequest {
   txs: Tx[];
-  requestSender: string;
+  requestSender: RequestSender;
+}
+
+export interface RequestSender {
+  clientIp: string;
+  originUrl: string;
 }

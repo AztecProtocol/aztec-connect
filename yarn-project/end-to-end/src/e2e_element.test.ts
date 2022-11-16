@@ -172,7 +172,14 @@ describe('end-to-end async defi tests', () => {
     // Deposit half of our balance for each asset into element.
     const defiDepositControllers = await asyncMap(assetSpecs, async ({ tokenAddress, expiry }, i) => {
       const assetId = sdk.getAssetIdByAddress(tokenAddress);
-      const bridgeCallData = new BridgeCallData(elementBridgeCallData, assetId, assetId, undefined, undefined, expiry);
+      const bridgeCallData = new BridgeCallData(
+        elementBridgeCallData,
+        assetId,
+        assetId,
+        undefined,
+        undefined,
+        BigInt(expiry),
+      );
       await debugBalance(assetId);
       const balance = await sdk.getBalance(userId, assetId);
       const tokenAssetValue = { assetId, value: balance.value / 2n };
@@ -236,7 +243,7 @@ describe('end-to-end async defi tests', () => {
         daiSpec.assetId,
         undefined,
         undefined,
-        EXPIRED_TRANCHE_EXPIRY,
+        BigInt(EXPIRED_TRANCHE_EXPIRY),
       );
       const amountToDepositToExpiredTranche: AssetValue = { assetId: daiSpec.assetId, value: 1n };
       const tokenDepositFee = (

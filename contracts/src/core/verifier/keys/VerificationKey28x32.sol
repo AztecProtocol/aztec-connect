@@ -1,11 +1,11 @@
-// Verification Key Hash: 8b48e45d647c2412e4c7225e1906f30b07428c8a0c50386a07f879594defe4e2
+// Verification Key Hash: 2fcf22dcccdc2ad1e00374e4a8a3211e41c620ad2e84bdf5e9cc401301c96c59
 // SPDX-License-Identifier: Apache-2.0
 // Copyright 2022 Aztec
 pragma solidity >=0.8.4;
 
 library VerificationKey28x32 {
     function verificationKeyHash() internal pure returns(bytes32) {
-        return 0x8b48e45d647c2412e4c7225e1906f30b07428c8a0c50386a07f879594defe4e2;
+        return 0x2fcf22dcccdc2ad1e00374e4a8a3211e41c620ad2e84bdf5e9cc401301c96c59;
     }
 
     function loadVerificationKey(uint256 _vk, uint256 _omegaInverseLoc) internal pure {
@@ -16,8 +16,8 @@ library VerificationKey28x32 {
             mstore(add(_vk, 0x60), 0x30644e121894ba67550ff245e0f5eb5a25832df811e8df9dd100d30c2c14d821) // vk.domain_inverse
             mstore(add(_vk, 0x80), 0x0f7c715011823362f824b9de259a685032eedb928431724439a567967852d773) // vk.Q1.x
             mstore(add(_vk, 0xa0), 0x17ec42a324359512a7d093faa7e55103b1f017af1bfaa5e1ccd31cc9e4ff8df0) // vk.Q1.y
-            mstore(add(_vk, 0xc0), 0x0b1014dbfcc530434846aebf30cccdef0dea4bdc3e98d4fdd0a33461313256cb) // vk.Q2.x
-            mstore(add(_vk, 0xe0), 0x3020e74443306d746b167f427dfa5247d7807deb27fcb0cea67668d058e0b1f0) // vk.Q2.y
+            mstore(add(_vk, 0xc0), 0x12bba50d7bc3e87e00bd3ce419001f3b2c59201b5ddf8cd1bba70f74061c7e7b) // vk.Q2.x
+            mstore(add(_vk, 0xe0), 0x2c3cd5dbb0d5a28b93f57660812ad5ae468aa908c5cf3ec3499973af026d9e2a) // vk.Q2.y
             mstore(add(_vk, 0x100), 0x07c448ca9631b9d24fc45d555f1b1952134eaf083c3bd46a000fcf5434a94478) // vk.Q3.x
             mstore(add(_vk, 0x120), 0x0e18227b6c1a461c1cbb59826cac7ebabe89e6490d80312be1504d0f7fb98059) // vk.Q3.y
             mstore(add(_vk, 0x140), 0x24a14b8c3bc0ee2a31a5a8bb1c69a1519a814de7c78cb5fe3248b1717893e7f8) // vk.QM.x

@@ -8,7 +8,7 @@ import { Card, CardHeaderSize } from '../../../../../ui-components/index.js';
 import { Modal } from '../../../../../components/index.js';
 import { DefiConfirmationPage } from './defi_confirmation_page/index.js';
 
-interface DefiModalProps {
+export interface DefiModalProps {
   recipe: DefiRecipe;
   flowDirection: FlowDirection;
   onClose: () => void;

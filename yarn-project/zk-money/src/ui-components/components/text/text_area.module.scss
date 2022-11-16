@@ -1,0 +1,10 @@
+@use '../../styles/mixins';
+
+.textWrapper {
+  letter-spacing: 1px;
+  white-space: break-spaces;
+}
+
+.gradient {
+  @include mixins.gradient_font;
+}

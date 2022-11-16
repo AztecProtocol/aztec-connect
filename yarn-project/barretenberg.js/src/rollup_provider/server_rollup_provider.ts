@@ -5,7 +5,12 @@ import { BridgeCallData } from '../bridge_call_data/index.js';
 import { fetch } from '../iso_fetch/index.js';
 import { Tx } from '../rollup_provider/index.js';
 import { TxId } from '../tx_id/index.js';
-import { BridgePublishQuery, BridgePublishQueryResult } from './bridge_publish_stats_query.js';
+import {
+  BridgePublishQuery,
+  BridgePublishQueryResult,
+  bridgePublishQueryToJson,
+  bridgePublshQueryResultFromJson,
+} from './bridge_publish_stats_query.js';
 import {
   depositTxFromJson,
   pendingTxFromJson,
@@ -19,7 +24,7 @@ import { rollupProviderStatusFromJson } from './rollup_provider_status.js';
  */
 export class ClientVersionMismatchError extends Error {
   constructor(message: string) {
-    super(`Version mismatch with server. Error: ${message}`);
+    super(`Version mismatch with rollup provider. Error: ${message}`);
   }
 }
 
@@ -83,8 +88,9 @@ export class ServerRollupProvider extends ServerBlockSource implements RollupPro
   }
 
   async queryDefiPublishStats(query: BridgePublishQuery): Promise<BridgePublishQueryResult> {
-    const response = await this.fetch('/bridge-query', query);
-    return (await response.json()) as BridgePublishQueryResult;
+    const response = await this.fetch('/bridge-query', bridgePublishQueryToJson(query));
+    const jsonResponse = await response.json();
+    return bridgePublshQueryResultFromJson(jsonResponse);
   }
 
   async getStatus() {

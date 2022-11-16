@@ -1,36 +1,32 @@
 import { EthAddress } from '@aztec/sdk';
-import { Provider } from '../../app/index.js';
 import { Network } from '../../app/networks.js';
 import { delay } from '../../app/util/index.js';
+import { ActiveSignerObs } from '../defi/defi_form/correct_provider_hooks.js';
 
 export class WalletAccountEnforcer {
   constructor(
-    private readonly provider: Provider,
+    private readonly activeSignerObs: ActiveSignerObs,
     private readonly enforcedAddress: EthAddress,
     private readonly enforcedNetwork: Network,
     private readonly prompt: (prompt: string) => void,
   ) {}
 
   async ensure() {
-    let isSameAccount = this.provider.account?.equals(this.enforcedAddress);
-    let isSameNetwork = this.provider?.network?.chainId === this.enforcedNetwork.chainId;
-
-    while (!isSameAccount || !isSameNetwork) {
-      if (!this.provider.account) {
-        throw new Error('Wallet disconnected.');
-      }
-
-      if (!isSameAccount) {
-        const addressStr = this.enforcedAddress.toString();
-        const abbreviatedAddress = `${addressStr.slice(0, 6)}...${addressStr.slice(-4)}`;
+    while (true) {
+      const signer = this.activeSignerObs.value;
+      const activeAddressStr = await signer?.getAddress();
+      const enforcedAddressStr = this.enforcedAddress.toString();
+      const activeChainId = await signer?.getChainId();
+      const isCorrectAccount = !!signer && enforcedAddressStr === activeAddressStr;
+      const isCorrectNetwork = this.enforcedNetwork.chainId === activeChainId;
+      if (!isCorrectAccount) {
+        const abbreviatedAddress = `${enforcedAddressStr.slice(0, 6)}...${enforcedAddressStr.slice(-4)}`;
         this.prompt(`Please switch your wallet's account to ${abbreviatedAddress}.`);
-      } else {
+      } else if (isCorrectNetwork) {
         this.prompt(`Please switch your wallet's network to ${this.enforcedNetwork.network}...`);
       }
-
+      if (isCorrectAccount && isCorrectNetwork) return signer;
       await delay(1000);
-      isSameAccount = this.provider.account?.equals(this.enforcedAddress);
-      isSameNetwork = this.provider?.network?.chainId === this.enforcedNetwork.chainId;
     }
   }
 }

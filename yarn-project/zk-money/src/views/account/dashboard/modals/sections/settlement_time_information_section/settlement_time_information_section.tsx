@@ -1,18 +1,23 @@
-import { ProgressBar } from '../../../../../../ui-components/index.js';
 import { BridgeCallData, DefiSettlementTime, TxSettlementTime } from '@aztec/sdk';
+import { ProgressBar } from '../../../../../../ui-components/index.js';
 import { useRollupProviderStatus } from '../../../../../../alt-model/index.js';
 import { InformationSection } from '../information_section/index.js';
+import { DefiGasSaving } from '../../defi_modal/defi_gas_saving.js';
+import { Amount } from '../../../../../../alt-model/assets/amount.js';
 import { useDefiBatchData } from '../../../../../../features/defi/bridge_count_down/bridge_count_down_hooks.js';
 import style from './settlement_time_information_section.module.scss';
 
 interface SettlementTimeInformationSectionProps {
   remainingSlots: number;
+  bridgeCallData?: BridgeCallData;
+  feeAmounts?: (Amount | undefined)[] | undefined[];
   progress: number;
   speed: DefiSettlementTime;
 }
 
 interface RecipeSettlementTimeInformationSectionProps {
   bridgeCallData?: BridgeCallData;
+  feeAmounts?: (Amount | undefined)[] | undefined[];
   selectedSpeed: DefiSettlementTime;
 }
 
@@ -23,6 +28,8 @@ interface TransactionSettlementTimeInformationSectionProps {
 interface SettlementProgressBarProps {
   remainingSlots: number;
   progress: number;
+  bridgeCallData?: BridgeCallData;
+  feeAmounts?: (Amount | undefined)[] | undefined[];
   speed: DefiSettlementTime;
 }
 
@@ -39,6 +46,10 @@ function SettlementProgressBar(props: SettlementProgressBarProps) {
       {fastTrackEnabled && <div className={style.title}>🚀 🎉 Fast Track enabled! 🚀 🎉</div>}
       <ProgressBar className={style.bar} progress={props.progress} />
       {props.progress === 1 && <div className={style.text}>You're getting faster settlement as a result.</div>}
+      <DefiGasSaving
+        feeAmount={props.feeAmounts?.[props.speed]}
+        bridgeAddressId={props.bridgeCallData?.bridgeAddressId}
+      />
       {props.progress !== 1 && (
         <div className={style.text}>Pay a Fast Track or Instant fee to send the batch more quickly.</div>
       )}
@@ -51,7 +62,13 @@ export function SettlementTimeInformationSection(props: SettlementTimeInformatio
     <InformationSection
       title="Batch"
       content={
-        <SettlementProgressBar speed={props.speed} remainingSlots={props.remainingSlots} progress={props.progress} />
+        <SettlementProgressBar
+          feeAmounts={props.feeAmounts}
+          bridgeCallData={props.bridgeCallData}
+          speed={props.speed}
+          remainingSlots={props.remainingSlots}
+          progress={props.progress}
+        />
       }
       buttonLabel="Learn more"
       helpLink="https://docs.aztec.network/zk-money/fees"
@@ -67,7 +84,13 @@ export function RecipeSettlementTimeInformationSection(props: RecipeSettlementTi
   const progress = takenSlots / totalSlots;
   const remainingSlots = totalSlots - takenSlots;
   return (
-    <SettlementTimeInformationSection speed={props.selectedSpeed} remainingSlots={remainingSlots} progress={progress} />
+    <SettlementTimeInformationSection
+      feeAmounts={props.feeAmounts}
+      bridgeCallData={props.bridgeCallData}
+      speed={props.selectedSpeed}
+      remainingSlots={remainingSlots}
+      progress={progress}
+    />
   );
 }
 

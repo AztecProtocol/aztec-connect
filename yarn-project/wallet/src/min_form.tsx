@@ -291,7 +291,7 @@ export function MinForm({ chainId, rpc, serverUrl }: MinFormProps) {
                   await controller.send();
                   log(`awaiting settlement...`);
                   await controller.awaitSettlement();
-                  setUserState({ ...userState, isRegistered: true });
+                  setUserState({ ...userStateRef.current!, isRegistered: true });
                   setState(State.CAN_SEND);
                 } catch (err: any) {
                   log(err.message);

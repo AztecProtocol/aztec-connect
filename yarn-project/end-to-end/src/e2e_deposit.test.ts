@@ -25,9 +25,9 @@ const {
  *
  * Run the following:
  * blockchain: yarn start:ganache
- * kebab: yarn start:e2e
- * halloumi: yarn start:e2e
- * falafel: yarn start:e2e
+ * kebab: ./scripts start_e2e_prover.sh
+ * halloumi: ./scripts start_e2e_prover.sh
+ * falafel: ./scripts start_e2e_prover.sh
  * end-to-end: yarn test ./src/e2e_deposit.test.ts
  */
 

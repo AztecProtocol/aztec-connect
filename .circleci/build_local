@@ -16,7 +16,7 @@ PROJECTS=(
   barretenberg:barretenberg:./dockerfiles/Dockerfile.x86_64-linux-clang:barretenberg-x86_64-linux-clang
   barretenberg:barretenberg:./dockerfiles/Dockerfile.wasm-linux-clang:barretenberg-wasm-linux-clang
   blockchain-vks:blockchain-vks
-  contracts
+  contracts:contracts
   yarn-project:yarn-project-base
   yarn-project:barretenberg.js
   yarn-project:blockchain

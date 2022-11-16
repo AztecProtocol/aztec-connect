@@ -266,6 +266,7 @@ describe('world_state', () => {
         return pendingDeposits[key] ?? 0n;
       });
       stop = jest.fn();
+      getBlockchainStatus = jest.fn<any>().mockResolvedValue({ assets: [] });
     })() as Mockify<Blockchain>;
 
     pipeline = {

@@ -12,7 +12,7 @@ export class AccountProver {
 
   public async computeKey() {
     const worker = this.prover.getWorker();
-    await worker.call('account__init_proving_key', this.mock);
+    await worker.asyncCall('account__init_proving_key', this.mock);
   }
 
   public async releaseKey() {
@@ -54,7 +54,7 @@ export class AccountProver {
     const buf = Buffer.concat([tx.toBuffer(), signature.toBuffer()]);
     const mem = await worker.call('bbmalloc', buf.length);
     await worker.transferToHeap(buf, mem);
-    const proverPtr = await worker.call('account__new_prover', mem, this.mock);
+    const proverPtr = await worker.asyncCall('account__new_prover', mem, this.mock);
     await worker.call('bbfree', mem);
     const proof = await this.prover.createProof(proverPtr);
     await worker.call('account__delete_prover', proverPtr);

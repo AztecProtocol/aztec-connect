@@ -4,9 +4,8 @@ import type { ShieldComposerPayload } from './shield_composer.js';
 import type { EthAddress, GrumpkinAddress, TxSettlementTime } from '@aztec/sdk';
 import type { RemoteAsset } from '../types.js';
 import type { StrOrMax } from '../forms/constants.js';
-import type { KeyVault } from '../../app/key_vault.js';
-import { Amount } from '../assets/amount.js';
 import { max, min } from '../../app/index.js';
+import { Amount } from '../assets/amount.js';
 import { amountFromStrOrMaxRoundedDown, getPrecisionIsTooHigh } from '../forms/helpers.js';
 
 export interface ShieldFormFields {
@@ -22,11 +21,11 @@ interface ShieldFormValidationInputs {
   targetAsset: RemoteAsset;
   l1Balance?: bigint;
   l1PendingBalance?: bigint;
-  keyVault?: KeyVault;
   approveProofGasCost?: bigint;
   depositFundsGasCost?: bigint;
   feeAmount?: Amount;
   feeAmounts?: (Amount | undefined)[];
+  signerAddress?: EthAddress;
   balanceInFeePayingAsset?: bigint;
   transactionLimit?: bigint;
   depositor?: EthAddress;
@@ -68,9 +67,9 @@ export function validateShieldForm(input: ShieldFormValidationInputs): ShieldFor
     targetAsset,
     l1Balance,
     l1PendingBalance,
-    keyVault,
     approveProofGasCost,
     depositFundsGasCost,
+    signerAddress,
     feeAmount,
     balanceInFeePayingAsset,
     transactionLimit,
@@ -91,7 +90,7 @@ export function validateShieldForm(input: ShieldFormValidationInputs): ShieldFor
     !feeAmount ||
     l1Balance === undefined ||
     l1PendingBalance === undefined ||
-    !keyVault ||
+    !signerAddress ||
     approveProofGasCost === undefined ||
     depositFundsGasCost === undefined ||
     balanceInFeePayingAsset === undefined
@@ -107,7 +106,7 @@ export function validateShieldForm(input: ShieldFormValidationInputs): ShieldFor
   const feeInTargetAsset = targetAssetIsPayingFee ? feeAmount.baseUnits : 0n;
 
   const requiresSpendingKey = !targetAssetIsPayingFee;
-  if (requiresSpendingKey && !keyVault.signerAddress.equals(depositor)) {
+  if (requiresSpendingKey && !signerAddress.equals(depositor)) {
     return { mustDepositFromWalletAccountUsedToGenerateAztecKeys: true, targetAssetIsPayingFee, input };
   }
 

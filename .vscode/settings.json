@@ -102,7 +102,9 @@
     "__memory": "cpp",
     "__bits": "cpp",
     "charconv": "cpp",
-    "span": "cpp"
+    "span": "cpp",
+    "*.inc": "cpp",
+    "*.macros": "cpp"
   },
   "solidity.compileUsingRemoteVersion": "v0.6.10+commit.00c0fcaf",
   "search.exclude": {

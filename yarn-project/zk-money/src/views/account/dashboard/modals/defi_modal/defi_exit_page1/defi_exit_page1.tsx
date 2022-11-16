@@ -1,19 +1,19 @@
+import { DefiSettlementTime } from '@aztec/sdk';
 import type { StrOrMax } from '../../../../../../alt-model/forms/constants.js';
 import {
   DefiFormFeedback,
   DefiFormFields,
   DefiFormValidationResult,
 } from '../../../../../../alt-model/defi/defi_form/index.js';
-import { AmountSection } from '../../../../../../views/account/dashboard/modals/sections/index.js';
 import { DefiRecipe } from '../../../../../../alt-model/defi/types.js';
-import { DefiSettlementTime } from '@aztec/sdk';
 import { SplitSection } from '../../sections/split_section/index.js';
 import { RecipeSettlementTimeInformationSection } from '../../sections/settlement_time_information_section/index.js';
-import style from './defi_exit_page1.module.css';
 import { DefiGasSection } from './../defi_gas_section.js';
 import { DefiWebLinks } from './../defi_web_links/index.js';
 import { ExpectedExitOutputSection } from './expected_exit_output_section/index.js';
 import { FooterSection } from '../../sections/footer_section/index.js';
+import { AmountSelection } from '../../../../../../components/index.js';
+import style from './defi_exit_page1.module.css';
 
 interface DefiExitPage1Props {
   recipe: DefiRecipe;
@@ -42,11 +42,11 @@ export function DefiExitPage1({
       </div>
       <SplitSection
         leftPanel={
-          <AmountSection
+          <AmountSelection
             maxAmount={validationResult.maxOutput ?? 0n}
             asset={validationResult.input.depositAsset}
-            amountStrOrMax={fields.amountStrOrMax}
-            onChangeAmountStrOrMax={onChangeAmountStrOrMax}
+            amountStringOrMax={fields.amountStrOrMax}
+            onChangeAmountStringOrMax={onChangeAmountStrOrMax}
             message={feedback.amount}
             balanceType="L2"
           />

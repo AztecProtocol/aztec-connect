@@ -1,8 +1,7 @@
-import type { GrumpkinAddress, AztecSdk, BridgeCallData } from '@aztec/sdk';
-import type { Provider } from '../../../app/index.js';
+import { GrumpkinAddress, AztecSdk, BridgeCallData, EthersAdapter, EthAddress } from '@aztec/sdk';
+import type { Signer } from '@ethersproject/abstract-signer';
 import type { Amount } from '../../../alt-model/assets/index.js';
 import createDebug from 'debug';
-import { createSigningKeys } from '../../../app/key_vault.js';
 import { DefiComposerPhase, DefiComposerStateObs } from './defi_composer_state_obs.js';
 import { createSigningRetryableGenerator } from '../../../alt-model/forms/composer_helpers.js';
 
@@ -16,7 +15,7 @@ export type DefiComposerPayload = Readonly<{
 export interface DefiComposerDeps {
   sdk: AztecSdk;
   userId: GrumpkinAddress;
-  awaitCorrectProvider: () => Promise<Provider>;
+  awaitCorrectSigner: () => Promise<Signer>;
   bridgeCallData: BridgeCallData;
 }
 
@@ -30,17 +29,22 @@ export class DefiComposer {
     this.stateObs.clearError();
     try {
       const { targetDepositAmount, feeAmount } = this.payload;
-      const { sdk, userId, awaitCorrectProvider, bridgeCallData } = this.deps;
+      const { sdk, userId, awaitCorrectSigner, bridgeCallData } = this.deps;
 
       this.stateObs.setPhase(DefiComposerPhase.GENERATING_KEY);
-      const provider = await awaitCorrectProvider();
-      const { privateKey } = await this.withRetryableSigning(() => createSigningKeys(provider, sdk));
-      const signer = await sdk.createSchnorrSigner(privateKey);
+
+      const signer = await awaitCorrectSigner();
+      const ethersAdapter = new EthersAdapter(signer.provider!);
+      const address = await signer.getAddress();
+      const { privateKey } = await this.withRetryableSigning(async () => {
+        return await sdk.generateSpendingKeyPair(EthAddress.fromString(address), ethersAdapter);
+      });
+      const schnorrSigner = await sdk.createSchnorrSigner(privateKey);
 
       this.stateObs.setPhase(DefiComposerPhase.CREATING_PROOF);
       const controller = sdk.createDefiController(
         userId,
-        signer,
+        schnorrSigner,
         bridgeCallData,
         targetDepositAmount.toAssetValue(),
         feeAmount.toAssetValue(),

@@ -27,7 +27,10 @@
   color: #1f3058;
   height: 62px;
   display: flex;
-  gap: 15px;
+  gap: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .informationWrapper {

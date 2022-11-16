@@ -19,7 +19,7 @@ import { getTokenBalance, getWethBalance } from '../tokens/index.js';
 import { LogDescription } from 'ethers/lib/utils.js';
 import { RollupProcessor } from '../contracts/index.js';
 import { akiToKey } from './key_derivation.js';
-import { RollupProcessorJson, AztecFaucetJson } from '../abis.js';
+import { RollupProcessor as RollupProcessorJson, AztecFaucetJson } from '../abis.js';
 
 const { PRIVATE_KEY } = process.env;
 

@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { BorderBox, Button } from '../../../../../components/index.js';
+import { GrumpkinAddress } from '@aztec/sdk';
+import { Button } from '../../../../../ui-components/index.js';
+import { BorderBox } from '../../../../../components/border_box.js';
 import { CostBreakdown } from '../modal_molecules/cost_breakdown/index.js';
 import { Disclaimer } from '../modal_molecules/disclaimer/index.js';
 import { TransactionComplete } from '../modal_molecules/transaction_complete/index.js';
@@ -11,8 +13,9 @@ import {
   SendComposerState,
   SendComposerPayload,
 } from '../../../../../alt-model/send/index.js';
-import style from './send_confirmation_page.module.scss';
 import { RetrySigningButton } from '../modal_molecules/retry_signing_button/index.js';
+import style from './send_confirmation_page.module.scss';
+import { useWalletInteractionIsOngoing } from '../../../../../alt-model/wallet_interaction_hooks.js';
 
 interface SendConfirmationPageProps {
   composerState: SendComposerState;
@@ -24,7 +27,9 @@ interface SendConfirmationPageProps {
 
 function formatRecipient(recipientStr: string, sendMode: SendMode) {
   if (sendMode === SendMode.SEND) {
-    return `@${recipientStr}`;
+    return GrumpkinAddress.isAddress(recipientStr)
+      ? `aztec:${GrumpkinAddress.fromString(recipientStr).toShortString()}`
+      : `@${recipientStr}`;
   }
   return recipientStr;
 }
@@ -37,6 +42,7 @@ export function SendConfirmationPage({
   onClose,
 }: SendConfirmationPageProps) {
   const [riskChecked, setRiskChecked] = useState(false);
+  const walletInteractionIsOngoing = useWalletInteractionIsOngoing();
 
   const hasError = !!composerState?.error;
   const isIdle = composerState.phase === SendComposerPhase.IDLE;
@@ -64,12 +70,15 @@ export function SendConfirmationPage({
       {!showingComplete && (
         <div className={style.footer}>
           {composerState.signingRetryable ? (
-            <RetrySigningButton signingRetryable={composerState.signingRetryable} />
+            <RetrySigningButton
+              signingRetryable={composerState.signingRetryable}
+              disabled={walletInteractionIsOngoing}
+            />
           ) : (
             <Button
               text={hasError ? 'Retry' : 'Confirm Transaction'}
               onClick={canSubmit ? onSubmit : undefined}
-              disabled={!canSubmit}
+              disabled={!canSubmit || walletInteractionIsOngoing}
             />
           )}
         </div>

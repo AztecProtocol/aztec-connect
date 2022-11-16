@@ -2,7 +2,7 @@ import { Obs } from '../../app/util/index.js';
 import type { IObs } from '../../app/util/obs/types.js';
 import { ToastContent, ToastType } from '../../ui-components/index.js';
 
-export type ToastsObsValue = ToastContent[];
+type ToastsObsValue = ToastContent[];
 
 export class ToastsObs implements IObs<ToastsObsValue> {
   obs = Obs.input<ToastsObsValue>([]);
@@ -14,6 +14,10 @@ export class ToastsObs implements IObs<ToastsObsValue> {
   listen = this.obs.listen.bind(this.obs);
 
   addToast(toast: ToastContent) {
+    if (!toast.key) {
+      const hash = (Math.random() + 1).toString(36).substring(7);
+      toast.key = hash;
+    }
     this.obs.next([...this.obs.value, toast]);
   }
 
@@ -25,6 +29,11 @@ export class ToastsObs implements IObs<ToastsObsValue> {
   hasSystemError() {
     const erroredToast = this.obs.value.find(t => t.type === ToastType.ERROR && t.key === 'system-message');
     return !!erroredToast;
+  }
+
+  hasToastByKey(key: string) {
+    const toast = this.obs.value.find(t => t.key === key);
+    return !!toast;
   }
 
   replaceToast(toast: ToastContent) {
@@ -48,5 +57,9 @@ export class ToastsObs implements IObs<ToastsObsValue> {
 
   removeToastByIndex(index: number) {
     this.obs.next(this.obs.value.slice(0, index).concat(this.obs.value.slice(index + 1)));
+  }
+
+  removeAllToasts() {
+    this.obs.next([]);
   }
 }

@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@rainbow-me/rainbowkit": "^0.7.1",
     "@testing-library/jest-dom": "^5.16.4",
     "@testing-library/react": "^13.3.0",
     "@testing-library/user-event": "^13.5.0",
@@ -22,13 +23,13 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "nodemon --watch ../zk-money/src/ui-components --exec \"npm run storybook\" -e ts,tsx,mdx,scss,css",
+    "start": "nodemon --watch ../yarn-project/zk-money/src/ui-components --exec \"npm run storybook\" -e ts,tsx,mdx,scss,css",
     "storybook": "npm run refresh-files && start-storybook -p 6006 -s public",
     "build-storybook": "npm run refresh-files && build-storybook -s public",
     "refresh-files": "npm run clean && npm run copy-components && npm run copy-images",
     "clean": "rm -rf ./src/ui-components && rm -rf ./src/images",
-    "copy-components": "cp -r ../zk-money/src/ui-components ./src/ui-components/",
-    "copy-images": "cp -r ../zk-money/src/images ./src/images"
+    "copy-components": "cp -r ../yarn-project/zk-money/src/ui-components ./src/ui-components/",
+    "copy-images": "cp -r ../yarn-project/zk-money/src/images ./src/images"
   },
   "eslintConfig": {
     "extends": [
@@ -60,6 +61,7 @@
   },
   "devDependencies": {
     "@storybook/addon-actions": "^6.5.9",
+    "@storybook/addon-centered": "^5.3.21",
     "@storybook/addon-essentials": "^6.5.9",
     "@storybook/addon-interactions": "^6.5.9",
     "@storybook/addon-links": "^6.5.9",

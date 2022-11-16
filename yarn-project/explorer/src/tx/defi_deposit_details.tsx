@@ -1,7 +1,7 @@
 import React from 'react';
 import { OffchainDefiDepositData } from '@aztec/sdk';
 import { InfoRow, Value } from './../block_summary/index.js';
-import { Tx } from './query.js';
+import { Tx } from './types.js';
 import { formatAsset, getAssetIcon, getBridgeProtocolName } from './helpers.js';
 import { useAsset } from '../context.js';
 

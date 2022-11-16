@@ -60,7 +60,7 @@ function getWalletAccountFeedback(result: ShieldFormValidationResult) {
   if (result.mustDepositFromWalletAccountUsedToGenerateAztecKeys) {
     const targetSymbol = result.input.targetAsset?.symbol;
     const feeSymbol = result.input.feeAmount?.info.symbol;
-    const addressStr = result.input.keyVault?.signerAddress.toString();
+    const addressStr = result.input.signerAddress?.toString();
     const abbreviatedStr = `${addressStr?.slice(0, 8)}...${addressStr?.slice(-4)}`;
     return `Because fees for shielding ${targetSymbol} can only be paid from your existing zk${feeSymbol} balance, you must shield from the same L1 wallet account (${abbreviatedStr}) that was used to register your Aztec account.`;
   }

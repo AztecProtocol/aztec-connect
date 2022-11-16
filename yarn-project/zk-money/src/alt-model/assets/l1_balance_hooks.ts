@@ -1,42 +1,34 @@
-import type { RemoteAsset } from '../types.js';
-import { useEffect, useMemo, useState } from 'react';
-import { useApp } from '../index.js';
+import { useEffect, useState } from 'react';
+import { useAccount, useBalance } from 'wagmi';
+import { EthAddress } from '@aztec/sdk';
 import { useSdk } from '../top_level_context/index.js';
-import { EthAccount, EthAccountEvent } from '../../app/index.js';
-import { useProviderState } from '../provider_hooks.js';
+import { createGatedSetter } from '../../app/util/gated_setter.js';
+import { RemoteAsset } from '../types.js';
 
-export function useLegacyEthAccountState(asset?: RemoteAsset) {
+export function useL1Balances(asset: RemoteAsset | undefined) {
+  const [l1PendingBalance, setL1PendingBalance] = useState<bigint>();
   const sdk = useSdk();
-  const { provider, requiredNetwork } = useApp();
-  const providerState = useProviderState();
-  const network = providerState?.network;
-  const account = providerState?.account;
-  const ethAccount = useMemo(() => {
-    if (provider && sdk && asset) {
-      return new EthAccount(provider, account, network, sdk, asset.id, asset.address, requiredNetwork);
-    }
-  }, [provider, network, account, sdk, requiredNetwork, asset]);
-  const [state, setState] = useState(ethAccount?.state);
+  const { address } = useAccount();
+  const { data: l1BalanceFetchResult } = useBalance({
+    addressOrName: address,
+    token: asset?.id === 0 ? undefined : asset?.address.toString(),
+  });
+  const l1Balance = l1BalanceFetchResult?.value.toBigInt();
+
   useEffect(() => {
-    setState(undefined);
-    if (ethAccount) {
-      const updateState = () => setState(ethAccount.state);
-      updateState();
-      ethAccount.on(EthAccountEvent.UPDATED_PENDING_BALANCE, updateState);
-      ethAccount.on(EthAccountEvent.UPDATED_PUBLIC_BALANCE, updateState);
+    if (sdk && asset?.id !== undefined && address) {
+      const gatedSetter = createGatedSetter(setL1PendingBalance);
+      sdk.getUserPendingDeposit(asset.id, EthAddress.fromString(address)).then(pendingDeposit => {
+        gatedSetter.set(pendingDeposit);
+      });
       return () => {
-        ethAccount.off(EthAccountEvent.UPDATED_PENDING_BALANCE, updateState);
-        ethAccount.off(EthAccountEvent.UPDATED_PUBLIC_BALANCE, updateState);
+        gatedSetter.close();
       };
     }
-  }, [ethAccount]);
-  return state;
-}
+  }, [sdk, asset?.id, address]);
 
-export function useL1Balances(asset?: RemoteAsset) {
-  const state = useLegacyEthAccountState(asset);
   return {
-    l1Balance: state?.publicBalance,
-    l1PendingBalance: state?.pendingBalance,
+    l1Balance,
+    l1PendingBalance,
   };
 }

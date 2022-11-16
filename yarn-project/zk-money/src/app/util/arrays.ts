@@ -5,3 +5,8 @@ export function arrEqual<T>(arr1: T[], arr2: T[]) {
   }
   return true;
 }
+
+type Redefine<T> = { [K in keyof T]: Exclude<T[K], undefined> };
+export function areDefined<T extends Readonly<Array<unknown>>>(arr: T): arr is Redefine<T> {
+  return !arr.some(elem => elem === undefined);
+}

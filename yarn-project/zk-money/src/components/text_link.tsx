@@ -1,8 +1,8 @@
 import React from 'react';
 import { default as styled, css } from 'styled-components';
-import { colours, defaultTextColour } from '../styles/index.js';
 import { Text, TextColour, TextProps } from './text.js';
 import { Link } from '../ui-components/index.js';
+import { colours, defaultTextColour } from '../ui-components/styles/colour.js';
 
 type HoverEffect = 'underline';
 

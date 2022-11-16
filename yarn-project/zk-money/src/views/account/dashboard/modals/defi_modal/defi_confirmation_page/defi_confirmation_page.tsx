@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { BorderBox, Button } from '../../../../../../components/index.js';
 import { Disclaimer } from '../../modal_molecules/disclaimer/index.js';
 import { TransactionComplete } from '../../modal_molecules/transaction_complete/index.js';
 import { CostBreakdown } from '../../modal_molecules/cost_breakdown/index.js';
@@ -11,9 +10,12 @@ import {
 } from '../../../../../../alt-model/defi/defi_form/index.js';
 import { DefiRecipe, FlowDirection } from '../../../../../../alt-model/defi/types.js';
 import { DefiSubmissionSteps } from './defi_submission_steps.js';
-import style from './defi_confirmation_page.module.scss';
 import { RetrySigningButton } from '../../modal_molecules/retry_signing_button/index.js';
 import { renderInteractionPrediction } from './interaction_prediction.js';
+import { Button } from '../../../../../../ui-components/index.js';
+import { BorderBox } from '../../../../../../components/index.js';
+import style from './defi_confirmation_page.module.scss';
+import { useWalletInteractionIsOngoing } from '../../../../../../alt-model/wallet_interaction_hooks.js';
 
 interface DefiConfirmationPageProps {
   recipe: DefiRecipe;
@@ -35,8 +37,9 @@ export function DefiConfirmationPage({
   validationResult,
 }: DefiConfirmationPageProps) {
   const [riskChecked, setRiskChecked] = useState(false);
-  const amount = lockedComposerPayload.targetDepositAmount;
+  const walletInteractionIsOngoing = useWalletInteractionIsOngoing();
 
+  const amount = lockedComposerPayload.targetDepositAmount;
   const hasError = !!composerState?.error;
   const isIdle = composerState.phase === DefiComposerPhase.IDLE;
   const showingComplete = composerState.phase === DefiComposerPhase.DONE;
@@ -72,12 +75,15 @@ export function DefiConfirmationPage({
             <div className={style.feedback}>Please be aware that your funds will be locked until maturity</div>
           )}
           {composerState.signingRetryable ? (
-            <RetrySigningButton signingRetryable={composerState.signingRetryable} />
+            <RetrySigningButton
+              signingRetryable={composerState.signingRetryable}
+              disabled={walletInteractionIsOngoing}
+            />
           ) : (
             <Button
               text={hasError ? 'Retry' : 'Confirm Transaction'}
               onClick={canSubmit ? onSubmit : undefined}
-              disabled={!canSubmit}
+              disabled={!canSubmit || walletInteractionIsOngoing}
             />
           )}
         </div>

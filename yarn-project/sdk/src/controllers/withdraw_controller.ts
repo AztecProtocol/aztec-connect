@@ -96,7 +96,7 @@ export class WithdrawController {
     }
 
     this.txIds = await this.core.sendProofs([...this.proofOutputs, ...this.feeProofOutputs]);
-    return this.txIds[0];
+    return this.txIds[this.proofOutputs.length - 1];
   }
 
   public async awaitSettlement(timeout?: number) {

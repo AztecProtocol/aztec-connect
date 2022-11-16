@@ -1,48 +1,34 @@
-import { gql } from 'apollo-boost';
 import React, { useState, useEffect } from 'react';
-import { useLazyQuery } from 'react-apollo';
 import { useHistory } from 'react-router-dom';
+import { default as useFetch } from 'use-http';
+
 import { Input } from '../components/index.js';
 import searchSvg from '../images/search.svg';
 
-const SEARCH_BY_ID = gql`
-  query Search($id: Int!) {
-    rollup(id: $id) {
-      id
-    }
-  }
-`;
-
-const SEARCH_BY_HASH = gql`
-  query Search($hash: HexString!) {
-    tx(id: $hash) {
-      id
-    }
-  }
-`;
-
 export const SearchBar: React.FunctionComponent = () => {
   const history = useHistory();
-  const [searchById, { data: idData }] = useLazyQuery(SEARCH_BY_ID);
-  const [searchByHash, { data: hashData }] = useLazyQuery(SEARCH_BY_HASH);
+  const [idData, setIdData] = useState<string>();
+  const [hashData, setHashData] = useState<string>();
+
   const [value, setValue] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+
+  const { get: searchById } = useFetch(`/search?blockId=${value}`);
+  const { get: searchByHash } = useFetch(`/search?txHash=${value}`);
 
   useEffect(() => {
     if (!history || !searchTerm || (!idData && !hashData)) return;
 
-    if (idData?.rollup) {
-      history.push(`/block/${idData.rollup.id}`);
-    } else if (hashData?.tx) {
-      history.push(`/tx/${hashData.tx.id}`);
-    } else if (hashData?.rollup || hashData?.publishedRollup) {
-      history.push(`/block/${(hashData.rollup || hashData.publishedRollup).id}`);
+    if (idData) {
+      history.push(`/block/${idData}`);
+    } else if (hashData) {
+      history.push(`/tx/${hashData}`);
     } else {
       history.push(`/search?q=${encodeURIComponent(searchTerm)}`);
     }
   }, [history, searchTerm, idData, hashData]);
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = async (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key !== 'Enter' || searchTerm) return;
 
     e.preventDefault();
@@ -53,9 +39,11 @@ export const SearchBar: React.FunctionComponent = () => {
     setSearchTerm(term);
 
     if (term.match(/^[0-9]+$/)) {
-      searchById({ variables: { id: +value } });
+      const data = await searchById(value);
+      setIdData(data);
     } else if (term.match(/^(0x)?[0-9a-f]{64}$/i)) {
-      searchByHash({ variables: { hash: value } });
+      const data = await searchByHash(value);
+      setHashData(data);
     } else {
       history.push(`/search?q=${encodeURIComponent(term)}`);
     }

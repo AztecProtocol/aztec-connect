@@ -1,6 +1,6 @@
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { assetValueToJson } from '@aztec/barretenberg/asset';
-import { JoinSplitProofData, ProofData } from '@aztec/barretenberg/client_proofs';
+import { JoinSplitProofData, ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
 import { fetch } from '@aztec/barretenberg/iso_fetch';
 import {
   DepositTxJson,
@@ -9,10 +9,12 @@ import {
   rollupProviderStatusToJson,
   TxJson,
   initialWorldStateToBuffer,
+  bridgePublishQueryFromJson,
+  bridgePublishQueryResultToJson,
 } from '@aztec/barretenberg/rollup_provider';
 import { numToInt32BE, serializeBufferArrayToVector } from '@aztec/barretenberg/serialize';
+import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import cors from '@koa/cors';
-import graphqlPlayground from 'graphql-playground-middleware-koa';
 import Koa, { Context, DefaultState } from 'koa';
 import compress from 'koa-compress';
 import Router from 'koa-router';
@@ -65,7 +67,7 @@ export async function appFactory(server: Server, prefix: string, metrics: Metric
     if (version && server.version !== version) {
       ctx.status = 409; // 409 Conflict
       ctx.body = {
-        error: `Falafel (${server.version}) / SDK (${version}) version mismatch. Hard refresh your browser or update SDK.`,
+        error: `Rollup provider / SDK version mismatch. Hard refresh your browser or update SDK.`,
       };
     } else {
       await next();
@@ -123,9 +125,13 @@ export async function appFactory(server: Server, prefix: string, metrics: Metric
     const postData = JSON.parse((await stream.readAll()) as string);
     const txs = postData.map(fromTxJson);
     const clientIp = requestIp.getClientIp(ctx.request);
+    const { origin } = ctx;
     const txRequest: TxRequest = {
       txs,
-      requestSender: clientIp ?? '',
+      requestSender: {
+        clientIp: clientIp ?? '',
+        originUrl: origin ?? '',
+      },
     };
     const txIds = await server.receiveTxs(txRequest);
     const response = {
@@ -158,6 +164,77 @@ export async function appFactory(server: Server, prefix: string, metrics: Metric
     ctx.compress = false;
     ctx.body = response;
     ctx.status = 200;
+  });
+
+  router.get('/rollups', recordMetric, async (ctx: Koa.Context) => {
+    const { skip = 0, take = 5 } = ctx.query;
+    const blocks = await server.getRollups(+skip, +take);
+    ctx.body = blocks.map(({ id, rollupProof, ethTxHash, created, mined }) => ({
+      id,
+      hash: rollupProof.id.toString('hex'),
+      numTxs: rollupProof.txs.length,
+      ethTxHash: ethTxHash?.toString(),
+      created,
+      mined,
+    }));
+    ctx.status = 200;
+  });
+
+  router.get('/rollup/:rollupId', recordMetric, async (ctx: Koa.Context) => {
+    const { rollupId } = ctx.params;
+    const rollup = await server.getRollupById(+rollupId);
+    if (!rollup) {
+      ctx.status = 404;
+    } else {
+      const { rollupProof } = rollup;
+      const rollupProofData = RollupProofData.decode(rollupProof.encodedProofData);
+      ctx.body = {
+        id: rollup.id,
+        hash: rollupProof.id.toString('hex'),
+        numTxs: rollupProof.txs.length,
+        ethTxHash: rollup.ethTxHash?.toString(),
+        proofData: rollupProof.encodedProofData.toString('hex'),
+        dataRoot: rollupProofData.newDataRoot.toString('hex'),
+        nullifierRoot: rollupProofData.newNullRoot.toString('hex'),
+        created: rollup.created,
+        mined: rollup.mined,
+        txs: rollupProof.txs.map(({ id, ...tx }) => {
+          const joinSplit = new ProofData(tx.proofData);
+          return {
+            id: id.toString('hex'),
+            proofId: joinSplit.proofId,
+          };
+        }),
+      };
+      ctx.status = 200;
+    }
+  });
+
+  router.get('/tx/:txId', recordMetric, async (ctx: Koa.Context) => {
+    const { txId } = ctx.params;
+    const tx = await server.getTxById(txId);
+    if (!tx) {
+      ctx.status = 404;
+    } else {
+      const proofData = new ProofData(tx.proofData);
+      const { proofId, publicValue, publicOwner } = proofData;
+      const res = {
+        id: txId,
+        proofId: proofId,
+        proofData: tx.proofData.toString('hex'),
+        offchainTxdata: tx.offchainTxData.toString('hex'),
+        newNote1: proofData.noteCommitment1.toString('hex'),
+        newNote2: proofData.noteCommitment2.toString('hex'),
+        nullifier1: proofData.nullifier1.toString('hex'),
+        nullifier2: proofData.nullifier2.toString('hex'),
+        publicInput: (proofId === ProofId.DEPOSIT ? publicValue : Buffer.alloc(32)).toString('hex'),
+        publicOutput: (proofId === ProofId.WITHDRAW ? publicValue : Buffer.alloc(32)).toString('hex'),
+        inputOwner: (proofId === ProofId.DEPOSIT ? publicOwner : Buffer.alloc(32)).toString('hex'),
+        block: tx.rollupProof?.rollup,
+      };
+      ctx.body = res;
+      ctx.status = 200;
+    }
   });
 
   router.get('/remove-data', recordMetric, validateAuth, (ctx: Koa.Context) => {
@@ -228,9 +305,10 @@ export async function appFactory(server: Server, prefix: string, metrics: Metric
   router.post('/bridge-query', recordMetric, async (ctx: Koa.Context) => {
     const stream = new PromiseReadable(ctx.req);
     const data = JSON.parse((await stream.readAll()) as string);
-    const response = await server.queryBridgeStats(data);
+    const query = bridgePublishQueryFromJson(data);
+    const response = await server.queryBridgeStats(query);
     ctx.set('content-type', 'application/json');
-    ctx.body = response;
+    ctx.body = bridgePublishQueryResultToJson(response);
     ctx.status = 200;
   });
 
@@ -287,8 +365,6 @@ export async function appFactory(server: Server, prefix: string, metrics: Metric
 
     ctx.status = 200;
   });
-
-  router.all('/playground', recordMetric, graphqlPlayground.default({ endpoint: `${prefix}/graphql` }));
 
   const app = new Koa();
   app.proxy = true;

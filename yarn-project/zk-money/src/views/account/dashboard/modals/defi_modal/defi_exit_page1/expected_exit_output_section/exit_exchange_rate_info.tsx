@@ -9,7 +9,7 @@ import style from './exit_exchange_rate_info.module.css';
 
 interface ExitExchangeRateInfoProps {
   recipe: DefiRecipe;
-  auxData?: number;
+  auxData?: bigint;
 }
 
 export function ExitExchangeRateInfo(props: ExitExchangeRateInfoProps) {

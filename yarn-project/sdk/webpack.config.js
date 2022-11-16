@@ -48,7 +48,7 @@ export default {
           to: 'barretenberg.wasm',
         },
         {
-          from: `${path.dirname(require.resolve(`@aztec/barretenberg/wasm`))}/web_worker.js`,
+          from: `${path.dirname(require.resolve(`@aztec/barretenberg/wasm`))}/browser/web_worker.js`,
           to: 'web_worker.js',
         },
       ],
@@ -57,10 +57,9 @@ export default {
   resolve: {
     plugins: [new ResolveTypeScriptPlugin()],
     alias: {
-      './node_worker_factory.js': false,
+      // All node specific code, wherever it's located, should be imported as below.
+      // Provides a clean and simple way to always strip out the node code for the web build.
       './node/index.js': false,
-      './sql_database/index.js': false,
-      leveldown: false,
     },
     fallback: {
       crypto: false,

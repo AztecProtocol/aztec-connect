@@ -1,13 +1,12 @@
 import createDebug from 'debug';
 import { BridgeCallData, DefiSettlementTime } from '@aztec/sdk';
-import { useAmountFactory, useSdk } from '../../../alt-model/top_level_context/index.js';
+import { useAmountFactory, useConfig, useSdk } from '../../../alt-model/top_level_context/index.js';
 import { useMemo, useState } from 'react';
 import { useTrackedFieldChangeHandlers } from '../../../alt-model/form_fields_hooks.js';
 import { DefiFormFields, validateDefiForm } from './defi_form_validation.js';
 import { getDefiFormFeedback } from './defi_form_feedback.js';
 import { DefiComposerPhase } from './defi_composer_state_obs.js';
 import { DefiComposer } from './defi_composer.js';
-import { useApp } from '../../../alt-model/app_context.js';
 import { useMaybeObs } from '../../../app/util/index.js';
 import { useDefiFeeAmounts } from './defi_fee_hooks.js';
 import { useAwaitCorrectProvider } from './correct_provider_hooks.js';
@@ -19,6 +18,7 @@ import { useMaxSpendableValue } from '../../../alt-model/balance_hooks.js';
 import { estimateTxSettlementTimes } from '../../../alt-model/estimate_settlement_times.js';
 import { useMaxDefiValue } from './max_defi_value_hooks.js';
 import { Amount } from '../../../alt-model/assets/index.js';
+import { useAccountState } from '../../account_state/account_state_hooks.js';
 import { useDefiBatchData } from '../../../features/defi/bridge_count_down/bridge_count_down_hooks.js';
 
 const debug = createDebug('zm:defi_form_hooks');
@@ -45,12 +45,11 @@ function useDefiFormBridgeCallData(
   const bridgeAddressId = isExit ? recipe.exitBridgeAddressId ?? recipe.bridgeAddressId : recipe.bridgeAddressId;
   return useMemo(() => {
     if (auxData === undefined) return undefined;
-    return new BridgeCallData(bridgeAddressId, inA.id, outA.id, undefined, undefined, Number(auxData));
+    return new BridgeCallData(bridgeAddressId, inA.id, outA.id, undefined, undefined, BigInt(auxData));
   }, [auxData, bridgeAddressId, inA, outA]);
 }
 
 export function useDefiForm(recipe: DefiRecipe, direction: FlowDirection) {
-  const { userId, config } = useApp();
   const [fields, setFields] = useState<DefiFormFields>({
     amountStrOrMax: direction === 'exit' ? MAX_MODE : '',
     speed: DefiSettlementTime.DEADLINE,
@@ -59,9 +58,11 @@ export function useDefiForm(recipe: DefiRecipe, direction: FlowDirection) {
   const [attemptedLock, setAttemptedLock] = useState(false);
   const [lockedComposer, setLockedComposer] = useState<DefiComposer>();
 
+  const config = useConfig();
+  const accountState = useAccountState();
   const sdk = useSdk();
   const rpStatusPoller = useRollupProviderStatusPoller();
-  const awaitCorrectProvider = useAwaitCorrectProvider();
+  const awaitCorrectSigner = useAwaitCorrectProvider();
   const amountFactory = useAmountFactory();
   const interactionAssets = getInteractionAssets(recipe, direction);
   const depositAsset = interactionAssets.inA;
@@ -109,20 +110,20 @@ export function useDefiForm(recipe: DefiRecipe, direction: FlowDirection) {
       debug('Attempted to recreate DefiComposer');
       return;
     }
-    if (!validationResult.validPayload || !sdk || !awaitCorrectProvider || !userId || !bridgeCallData) {
+    if (!validationResult.validPayload || !sdk || !awaitCorrectSigner || !accountState?.userId || !bridgeCallData) {
       debug('Attempted to create DefiComposer with incomplete dependencies', {
         validationResult,
         sdk,
-        awaitCorrectProvider,
-        userId,
+        awaitCorrectSigner,
+        userId: accountState?.userId,
         bridgeCallData,
       });
       return;
     }
     const composer = new DefiComposer(validationResult.validPayload, {
       sdk,
-      awaitCorrectProvider,
-      userId,
+      awaitCorrectSigner,
+      userId: accountState?.userId,
       bridgeCallData,
     });
     setLockedComposer(composer);

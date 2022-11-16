@@ -13,7 +13,7 @@ const require = createRequire(import.meta.url);
 export default {
   target: 'web',
   mode: 'production',
-  entry: './src/wasm/web_worker.ts',
+  entry: './src/wasm/browser/web_worker.ts',
   module: {
     rules: [
       {
@@ -24,7 +24,7 @@ export default {
   },
   output: {
     path: resolve(dirname(fileURLToPath(import.meta.url)), './dest'),
-    filename: 'wasm/web_worker.js',
+    filename: 'wasm/browser/web_worker.js',
   },
   plugins: [
     new webpack.DefinePlugin({ 'process.env.NODE_DEBUG': false }),
@@ -41,7 +41,6 @@ export default {
   ],
   resolve: {
     alias: {
-      './node_worker_factory.js': false,
       './node/index.js': false,
     },
     fallback: {
@@ -49,6 +48,8 @@ export default {
       fs: false,
       path: false,
       url: false,
+      events: require.resolve('events/'),
+      util: require.resolve('util/'),
       buffer: require.resolve('buffer/'),
     },
     plugins: [new ResolveTypeScriptPlugin()],

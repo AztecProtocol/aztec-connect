@@ -13,8 +13,8 @@ import { getNumWorkers } from '../get_num_workers.js';
 import { SDK_VERSION } from '../../version.js';
 import { createDebugLogger } from '@aztec/barretenberg/log';
 import { default as memdown } from 'memdown';
-import { default as leveldown } from 'leveldown';
-import { default as leveljs } from 'level-js';
+import { levelUpNodeFactory } from './node/index.js';
+import { levelUpWebFactory } from './browser/index.js';
 
 const debug = createDebugLogger('bb:create_vanilla_core_sdk');
 
@@ -26,10 +26,10 @@ export function getLevelDb(memoryDb = false, identifier?: string): LevelUp {
       return levelup(memdown());
     } else {
       mkdirSync(dbPath, { recursive: true });
-      return levelup(leveldown(`${dbPath}/aztec2-sdk.db`));
+      return levelUpNodeFactory(`${dbPath}/aztec2-sdk.db`);
     }
   } else {
-    return levelup(leveljs(`aztec2-sdk`));
+    return levelUpWebFactory(`aztec2-sdk`);
   }
 }
 

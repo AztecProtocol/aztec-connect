@@ -1,0 +1,41 @@
+.toastGroup {
+  position: fixed;
+  inset-block-end: 0;
+  padding-block-end: 5vh;
+  gap: 20px;
+  display: flex;
+  z-index: 99999;
+  align-items: center;
+  justify-items: center;
+  flex-direction: column;
+}
+
+.bottomCenter {
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.bottomLeft {
+  left: 20px;
+}
+
+.bottomRight {
+  right: 20px;
+}
+
+.topRight {
+  top: 20px;
+  right: 20px;
+  align-items: self-end;
+}
+
+.topCenter {
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.topLeft {
+  top: 20px;
+  left: 20px;
+}

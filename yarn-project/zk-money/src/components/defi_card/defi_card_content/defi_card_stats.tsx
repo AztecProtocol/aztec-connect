@@ -1,7 +1,7 @@
+import { default as styled } from 'styled-components';
 import { DefiRecipe } from '../../../alt-model/defi/types.js';
 import { BridgeKeyStats } from '../../../features/defi/bridge_key_stats/index.js';
-import { default as styled } from 'styled-components';
-import { colours } from '../../../styles/index.js';
+import { colours } from '../../../ui-components/styles/index.js';
 
 const CardStats = styled.div`
   width: 100%;

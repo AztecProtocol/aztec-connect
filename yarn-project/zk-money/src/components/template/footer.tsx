@@ -1,6 +1,8 @@
 import React from 'react';
 import { default as styled } from 'styled-components';
-import { colours, fontSizes, lineHeights, spacings, breakpoints } from '../../styles/index.js';
+import { colours } from '../../ui-components/styles/colour.js';
+import { breakpoints, spacings } from '../../ui-components/styles/layout.js';
+import { fontSizes, lineHeights } from '../../ui-components/styles/typography.js';
 import { PaddedBlock } from '../padded_block.js';
 import { Text } from '../text.js';
 import { TextLink } from '../text_link.js';
@@ -86,7 +88,7 @@ interface FooterMenuProps {
   menuItems: MenuItem[];
 }
 
-export const FooterMenu: React.FunctionComponent<FooterMenuProps> = ({ title, menuItems }) => (
+const FooterMenu: React.FunctionComponent<FooterMenuProps> = ({ title, menuItems }) => (
   <Col>
     <PaddedBlock size="s">
       <Text text={title} size="m" weight="bold" />

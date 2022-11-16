@@ -36,7 +36,7 @@ const generateSampleBridgeCallDatas = () => {
         bridgeConfigs[0].permittedAssets[1],
         undefined,
         undefined,
-        1,
+        1n,
       ).toBigInt(),
       index: 0,
     },
@@ -47,7 +47,7 @@ const generateSampleBridgeCallDatas = () => {
         bridgeConfigs[1].permittedAssets[1],
         undefined,
         undefined,
-        1,
+        1n,
       ).toBigInt(),
       index: 1,
     },
@@ -58,7 +58,7 @@ const generateSampleBridgeCallDatas = () => {
         bridgeConfigs[0].permittedAssets[0],
         undefined,
         undefined,
-        1,
+        1n,
       ).toBigInt(),
       index: 0,
     },
@@ -69,7 +69,7 @@ const generateSampleBridgeCallDatas = () => {
         bridgeConfigs[1].permittedAssets[0],
         undefined,
         undefined,
-        1,
+        1n,
       ).toBigInt(),
       index: 1,
     },
@@ -80,7 +80,7 @@ const generateSampleBridgeCallDatas = () => {
         bridgeConfigs[0].permittedAssets[1],
         undefined,
         undefined,
-        1,
+        1n,
       ).toBigInt(),
       index: 0,
     },
@@ -91,7 +91,7 @@ const generateSampleBridgeCallDatas = () => {
         bridgeConfigs[1].permittedAssets[0],
         undefined,
         undefined,
-        1,
+        1n,
       ).toBigInt(),
       index: 1,
     },
@@ -102,7 +102,7 @@ const generateSampleBridgeCallDatas = () => {
         bridgeConfigs[0].permittedAssets[1],
         bridgeConfigs[0].permittedAssets[0],
         bridgeConfigs[0].permittedAssets[1],
-        1,
+        1n,
       ).toBigInt(),
       index: 0,
     },
@@ -113,7 +113,7 @@ const generateSampleBridgeCallDatas = () => {
         bridgeConfigs[1].permittedAssets[1],
         bridgeConfigs[1].permittedAssets[0],
         bridgeConfigs[1].permittedAssets[1],
-        1,
+        1n,
       ).toBigInt(),
       index: 1,
     },
@@ -165,7 +165,7 @@ describe('Bridge Resolver', () => {
           0,
           0,
           0,
-          1,
+          1n,
         ).toBigInt(),
       ),
     ).toEqual(undefined);
@@ -178,7 +178,7 @@ describe('Bridge Resolver', () => {
           0,
           0,
           0,
-          1,
+          1n,
         ).toBigInt(),
       ),
     ).toEqual(undefined);
@@ -191,7 +191,7 @@ describe('Bridge Resolver', () => {
           10, // invalid asset id
           0,
           0,
-          1,
+          1n,
         ).toBigInt(),
       ),
     ).toEqual(undefined);
@@ -204,7 +204,7 @@ describe('Bridge Resolver', () => {
           0,
           10, // invalid asset id
           0,
-          1,
+          1n,
         ).toBigInt(),
       ),
     ).toEqual(undefined);
@@ -217,14 +217,14 @@ describe('Bridge Resolver', () => {
           0,
           0,
           10, // invalid asset id
-          1,
+          1n,
         ).toBigInt(),
       ),
     ).toEqual(undefined);
   });
 
   it('ignores aux data when validating bridge config', () => {
-    expect(bridgeResolver.getBridgeConfig(new BridgeCallData(1, 0, 0, 0, 0, 98765).toBigInt())).toEqual(
+    expect(bridgeResolver.getBridgeConfig(new BridgeCallData(1, 0, 0, 0, 0, 98765n).toBigInt())).toEqual(
       bridgeConfigs[0],
     );
   });
@@ -238,7 +238,7 @@ describe('Bridge Resolver', () => {
           0,
           0,
           0,
-          1,
+          1n,
         ).toBigInt(),
       ),
     ).toEqual(bridgeConfigs[0]);
@@ -251,7 +251,7 @@ describe('Bridge Resolver', () => {
           2 + minVirtualAssetId, // virtual asset id
           0,
           0,
-          1,
+          1n,
         ).toBigInt(),
       ),
     ).toEqual(bridgeConfigs[0]);
@@ -264,7 +264,7 @@ describe('Bridge Resolver', () => {
           0,
           3 + minVirtualAssetId, // virtual asset id
           0,
-          1,
+          1n,
         ).toBigInt(),
       ),
     ).toEqual(bridgeConfigs[0]);
@@ -277,7 +277,7 @@ describe('Bridge Resolver', () => {
           0,
           0,
           4 + minVirtualAssetId, // virtual asset id
-          1,
+          1n,
         ).toBigInt(),
       ),
     ).toEqual(bridgeConfigs[0]);
@@ -292,7 +292,7 @@ describe('Bridge Resolver', () => {
           0,
           0,
           1 + minVirtualAssetId, // virtual asset id
-          1,
+          1n,
         ).toBigInt(),
       ),
     ).toEqual(undefined);
@@ -316,7 +316,7 @@ describe('Bridge Resolver', () => {
       2,
       1,
       2,
-      1,
+      1n,
     ).toBigInt();
     expect(bridgeResolver.getFullBridgeGas(bd)).toEqual(DEFAULT_BRIDGE_GAS_LIMIT);
   });
@@ -330,7 +330,7 @@ describe('Bridge Resolver', () => {
           0,
           0,
           1 + minVirtualAssetId, // virtual asset id
-          1,
+          1n,
         ).toBigInt(),
       ),
     ).toEqual(bridgeConfigs[0].gas);
@@ -343,12 +343,12 @@ describe('Bridge Resolver', () => {
       0,
       0,
       0,
-      1,
+      1n,
     );
     expect(() => {
       bridgeResolver.getFullBridgeGas(invalidAddress.toBigInt());
     }).toThrow(`Failed to retrieve bridge cost for bridge ${invalidAddress.toBigInt().toString()}`);
-    const invalidAsset = new BridgeCallData(1, 10, 0, 0, 0, 1);
+    const invalidAsset = new BridgeCallData(1, 10, 0, 0, 0, 1n);
     expect(() => {
       bridgeResolver.getFullBridgeGas(invalidAsset.toBigInt());
     }).toThrow(`Failed to retrieve bridge cost for bridge ${invalidAsset.toBigInt().toString()}`);
@@ -365,10 +365,10 @@ describe('Bridge Resolver', () => {
 
   it('should throw if requesting min tx gas for invalid bridge', () => {
     expect(() => {
-      bridgeResolver.getMinBridgeTxGas(new BridgeCallData(5, 0, 0, 0, 0, 1).toBigInt());
+      bridgeResolver.getMinBridgeTxGas(new BridgeCallData(5, 0, 0, 0, 0, 1n).toBigInt());
     }).toThrow('Cannot get gas. Unrecognised DeFi-bridge');
     expect(() => {
-      bridgeResolver.getMinBridgeTxGas(new BridgeCallData(0, 10, 0, 0, 0, 1).toBigInt());
+      bridgeResolver.getMinBridgeTxGas(new BridgeCallData(0, 10, 0, 0, 0, 1n).toBigInt());
     }).toThrow('Cannot get gas. Unrecognised DeFi-bridge');
   });
 
@@ -381,7 +381,7 @@ describe('Bridge Resolver', () => {
           0,
           0,
           1 + minVirtualAssetId, // virtual asset id
-          1,
+          1n,
         ).toBigInt(),
       ),
     ).toEqual(bridgeConfigs[0].gas! / bridgeConfigs[0].numTxs);

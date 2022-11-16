@@ -2,7 +2,7 @@ import React from 'react';
 import { EthAddress, InnerProofData, toBigIntBE } from '@aztec/sdk';
 import { HashValue, InfoRow, Value } from './../block_summary/index.js';
 import { assetIdFromBuffer, formatAsset, getAssetIcon } from './helpers.js';
-import { Tx } from './query.js';
+import { Tx } from './types.js';
 import { useAsset } from '../context.js';
 
 export function DepositDetails({ tx }: { tx: Tx }) {

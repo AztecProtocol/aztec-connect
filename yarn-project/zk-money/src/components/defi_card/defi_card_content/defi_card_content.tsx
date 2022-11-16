@@ -5,6 +5,10 @@ import { DefiCardDescription } from './defi_card_description.js';
 import { DefiCardInfoContent } from './defi_card_info_content.js';
 import { DefiCardProgress } from './defi_card_progress.js';
 import { DefiCardStats } from './defi_card_stats.js';
+import { useAccountStateManager } from '../../../alt-model/top_level_context/index.js';
+import { useWalletInteractionIsOngoing } from '../../../alt-model/wallet_interaction_hooks.js';
+import { useObs } from '../../../app/util/index.js';
+
 import style from './defi_card_content.module.scss';
 
 interface DefiCardContentProps {
@@ -15,6 +19,10 @@ interface DefiCardContentProps {
 
 export const DefiCardContent = (props: DefiCardContentProps) => {
   const [isInformationOpen, setIsInformationOpen] = useState(false);
+  const walletInteractionIsOngoing = useWalletInteractionIsOngoing();
+  const accountStateManager = useAccountStateManager();
+  const accountState = useObs(accountStateManager.stateObs);
+  const isSynced = accountState && !accountState.isSyncing;
 
   const handleCloseInformation = () => {
     setIsInformationOpen(false);
@@ -42,7 +50,7 @@ export const DefiCardContent = (props: DefiCardContentProps) => {
           className={style.defiCardButton}
           gradient={props.recipe.gradient && { from: props.recipe.gradient[0], to: props.recipe.gradient[1] }}
           text={props.recipe.cardButtonLabel}
-          disabled={!props.isLoggedIn}
+          disabled={!props.isLoggedIn || walletInteractionIsOngoing || !isSynced}
           onClick={handleClickDeposit}
         />
       </div>

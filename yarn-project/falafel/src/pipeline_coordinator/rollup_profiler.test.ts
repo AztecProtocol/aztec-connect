@@ -44,7 +44,7 @@ const generateValidBridgeCallData = (bridgeConfig: BridgeConfig) => {
     bridgeConfig.permittedAssets[1],
     undefined,
     undefined,
-    0,
+    0n,
   );
 };
 

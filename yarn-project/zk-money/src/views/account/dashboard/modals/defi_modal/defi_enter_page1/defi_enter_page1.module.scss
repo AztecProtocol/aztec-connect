@@ -23,3 +23,9 @@
   width: 100%;
   justify-content: space-between;
 }
+
+@media (max-width: 768px) {
+  .statsWrapper {
+    display: none;
+  }
+}

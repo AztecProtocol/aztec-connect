@@ -27,7 +27,7 @@ const createBridgeCallData = (bridgeConfig: BridgeConfig, assetIndices: number[]
     bridgeConfig.permittedAssets[assetIndices[1]],
     undefined,
     undefined,
-    0,
+    0n,
   );
 };
 
@@ -64,7 +64,7 @@ describe('Bridge Subsidy Provider', () => {
 
   it('should return zero subsidy for unrecognised bridge', async () => {
     const bridgeSubsidyProvider = new BridgeSubsidyProvider(bridgeResolver as any);
-    expect(await bridgeSubsidyProvider.getBridgeSubsidy(new BridgeCallData(5, 0, 0, 0, 0, 1).toBigInt())).toEqual(0);
+    expect(await bridgeSubsidyProvider.getBridgeSubsidy(new BridgeCallData(5, 0, 0, 0, 0, 1n).toBigInt())).toEqual(0);
   });
 
   it('should return correct subsidy for recognised bridge', async () => {
@@ -87,7 +87,7 @@ describe('Bridge Subsidy Provider', () => {
     expect(await bridgeSubsidyProvider.getBridgeSubsidy(secondBridgeCallData.toBigInt())).toEqual(expectedSubsidy);
     // claiming for the first bridge should succeed
     expect(bridgeSubsidyProvider.claimBridgeSubsidy(firstBridgeCallData.toBigInt())).toEqual(true);
-    // the same call should still rteurn true
+    // the same call should still return true
     expect(bridgeSubsidyProvider.claimBridgeSubsidy(firstBridgeCallData.toBigInt())).toEqual(true);
     // attempting to claim for the second bridge should fail
     expect(bridgeSubsidyProvider.claimBridgeSubsidy(secondBridgeCallData.toBigInt())).toEqual(false);

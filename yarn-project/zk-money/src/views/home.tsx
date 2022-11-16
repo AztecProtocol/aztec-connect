@@ -1,4 +1,4 @@
-import { Button } from '../components/index.js';
+import { Button } from '../ui-components/index.js';
 import cardStack from '../images/card_stack.svg';
 import stakingLogo from '../images/staking_logo.svg';
 import yieldLogo from '../images/yield_logo.svg';
@@ -130,7 +130,7 @@ function Banner({ onShieldNow }: { onShieldNow: () => void }) {
           zk.money is your portal to using Ethereum DeFi services with full privacy and up to 100x cost savings. Shield
           funds to start accessing!
         </div>
-        <Button text="Shield Now" onClick={onShieldNow} className={style.shieldButton} theme="gradient" />
+        <Button text="Shield Now" onClick={onShieldNow} className={style.shieldButton} />
         <div className={style.links}>
           <Hyperlink
             theme="white"

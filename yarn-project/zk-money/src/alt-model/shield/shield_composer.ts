@@ -1,15 +1,23 @@
-import { GrumpkinAddress, AztecSdk, EthAddress, DepositController, TxId, TxSettlementTime } from '@aztec/sdk';
-import type { Provider } from '../../app/index.js';
+import type { Signer } from '@ethersproject/abstract-signer';
+import {
+  GrumpkinAddress,
+  AztecSdk,
+  EthAddress,
+  DepositController,
+  TxId,
+  TxSettlementTime,
+  EthersAdapter,
+} from '@aztec/sdk';
 import createDebug from 'debug';
 import { Amount } from '../assets/index.js';
 import { retryUntil, withinTimeLimit, CachedStep } from '../../app/util/index.js';
 import { WalletAccountEnforcer } from './ensured_provider.js';
 import { Network } from '../../app/networks.js';
 import { ShieldComposerPhase, ShieldComposerStateObs } from './shield_composer_state_obs.js';
-import { KeyVault } from '../../app/key_vault.js';
 import { KNOWN_MAINNET_ASSET_ADDRESSES } from '../known_assets/known_asset_addresses.js';
 import { createSigningRetryableGenerator } from '../forms/composer_helpers.js';
 import { FEE_SIG_FIGURES } from '../forms/constants.js';
+import { ActiveSignerObs } from '../defi/defi_form/correct_provider_hooks.js';
 
 const debug = createDebug('zm:shield_composer');
 
@@ -23,10 +31,10 @@ export type ShieldComposerPayload = Readonly<{
 
 export interface ShieldComposerDeps {
   sdk: AztecSdk;
-  keyVault: KeyVault;
   userId: GrumpkinAddress;
-  provider: Provider;
   requiredNetwork: Network;
+  activeSignerObs: ActiveSignerObs;
+  awaitCorrectSigner: () => Promise<Signer>;
 }
 
 export class ShieldComposer {
@@ -34,7 +42,7 @@ export class ShieldComposer {
   private readonly walletAccountEnforcer: WalletAccountEnforcer;
   constructor(readonly payload: ShieldComposerPayload, private readonly deps: ShieldComposerDeps) {
     this.walletAccountEnforcer = new WalletAccountEnforcer(
-      deps.provider,
+      deps.activeSignerObs,
       payload.depositor,
       deps.requiredNetwork,
       this.stateObs.setPrompt,
@@ -76,7 +84,7 @@ export class ShieldComposer {
 
   private async createController() {
     const { targetOutput, fee, depositor, recipientUserId } = this.payload;
-    const { provider, sdk } = this.deps;
+    const { sdk } = this.deps;
 
     // If fees are taken in second asset we need access to the user's spending key.
     // Otherwise we can shield from nonce 0 and skip spending key generation.
@@ -86,13 +94,15 @@ export class ShieldComposer {
       // TODO - create FeeController to pay the fee for the deposit proof.
     }
 
+    const activeSigner = await this.walletAccountEnforcer.ensure();
+    const ethereumProvider = new EthersAdapter(activeSigner.provider!);
     return sdk.createDepositController(
       depositor,
       targetOutput.toAssetValue(),
       fee.toAssetValue(),
       recipientUserId,
       true, // recipientAccountRequired (depositing to a registered account)
-      provider.ethereumProvider,
+      ethereumProvider,
     );
   }
 
@@ -198,7 +208,7 @@ export class ShieldComposer {
       const timeout = 1000 * 60 * 30;
       const interval = this.deps.requiredNetwork.isFrequent ? 1000 : 10 * 1000;
       const approved = await retryUntil(() => controller.isProofApproved(), timeout, interval);
-      if (!approved) throw new Error('../../approval confirmation timed out');
+      if (!approved) throw new Error('Approval confirmation timed out');
     }
   }
 

@@ -2,20 +2,19 @@ import { Asset } from '@aztec/barretenberg/blockchain';
 import { EthAddress } from '@aztec/barretenberg/address';
 import { Signer } from 'ethers';
 import { ethers } from 'hardhat';
-import { TestRollupProcessor } from './test_rollup_processor.js';
+import { RollupProcessor } from './../rollup_processor.js';
 import { EthersAdapter } from '../../../provider/index.js';
 import { setupAssets } from '../../asset/fixtures/setup_assets.js';
 import { setupFeeDistributor } from '../../fee_distributor/fixtures/setup_fee_distributor.js';
 import { setupUniswap } from '../../fee_distributor/fixtures/setup_uniswap.js';
 import { Contract, ContractFactory } from 'ethers';
-import { UniswapBridge } from '../../../abis.js';
-import { deployRollupProcessor } from '../../../deploy/deployers/index.js';
-import { ProxyAdmin } from '../proxy_admin.js';
+import { UniswapBridge, AlwaysTrueVerifier } from '../../../abis.js';
+import { deployDefiBridgeProxy, deployRollupProcessor } from '../../../deploy/deployers/index.js';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 // require('hardhat');
 
-async function deployDefiBridge(signer: Signer, rollupProcessor: TestRollupProcessor, uniswapRouter: Contract) {
+async function deployDefiBridge(signer: Signer, rollupProcessor: RollupProcessor, uniswapRouter: Contract) {
   // TODO - Create a bridge contract with two output assets.
   const defiBridgeLibrary = new ContractFactory(UniswapBridge.abi, UniswapBridge.bytecode, signer);
   const defiBridge = await defiBridgeLibrary.deploy(rollupProcessor.address.toString(), uniswapRouter.address);
@@ -24,27 +23,17 @@ async function deployDefiBridge(signer: Signer, rollupProcessor: TestRollupProce
   return defiBridge;
 }
 
-export async function upgradeTestRollupProcessor(proxyAdmin: ProxyAdmin, rollupProcessorAddress: EthAddress) {
-  const rollupProcessor = new TestRollupProcessor(rollupProcessorAddress, new EthersAdapter(ethers.provider));
-
-  await proxyAdmin.upgradeUNSAFE(rollupProcessorAddress, await ethers.getContractFactory('TestRollupProcessor'), [
-    await rollupProcessor.escapeBlockLowerBound(),
-    await rollupProcessor.escapeBlockUpperBound(),
-  ]);
-}
-
 export async function setupTestRollupProcessor(
   signers: Signer[],
-  { numberOfTokenAssets = 2, escapeBlockLowerBound = 0, escapeBlockUpperBound = 1, useLatest = true } = {},
+  { numberOfTokenAssets = 2, escapeBlockLowerBound = 80, escapeBlockUpperBound = 100, useLatest = true } = {},
 ) {
   const rollupProvider = signers[0];
-  const MockVerifier = await ethers.getContractFactory('MockVerifier');
+
+  const MockVerifier = new ContractFactory(AlwaysTrueVerifier.abi, AlwaysTrueVerifier.bytecode, signers[0]);
   const mockVerifier = await MockVerifier.deploy();
 
   await mockVerifier.deployed();
-
-  const DefiBridgeProxy = await ethers.getContractFactory('DefiBridgeProxy');
-  const defiBridgeProxy = await DefiBridgeProxy.deploy();
+  const defiBridgeProxy = await deployDefiBridgeProxy(signers[0]);
 
   await defiBridgeProxy.deployed();
 
@@ -67,22 +56,22 @@ export async function setupTestRollupProcessor(
     useLatest,
   );
 
-  await upgradeTestRollupProcessor(proxyAdmin, EthAddress.fromString(rollupProcessorContract.address));
-
-  const rollupProcessor = new TestRollupProcessor(
+  const rollupProcessor = new RollupProcessor(
     EthAddress.fromString(rollupProcessorContract.address),
     new EthersAdapter(ethers.provider),
     EthAddress.fromString(permitHelper.address),
   );
 
-  await rollupProcessor.grantRole(
-    await rollupProcessor.rollupProcessor.LISTER_ROLE(),
-    EthAddress.fromString(await rollupProvider.getAddress()),
-  );
-  await rollupProcessor.grantRole(
-    await rollupProcessor.rollupProcessor.RESUME_ROLE(),
-    EthAddress.fromString(await rollupProvider.getAddress()),
-  );
+  if (useLatest) {
+    await rollupProcessor.grantRole(
+      await rollupProcessor.rollupProcessor.LISTER_ROLE(),
+      EthAddress.fromString(await rollupProvider.getAddress()),
+    );
+    await rollupProcessor.grantRole(
+      await rollupProcessor.rollupProcessor.RESUME_ROLE(),
+      EthAddress.fromString(await rollupProvider.getAddress()),
+    );
+  }
 
   await rollupProcessor.setRollupProvider(EthAddress.fromString(await rollupProvider.getAddress()), true);
 

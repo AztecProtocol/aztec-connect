@@ -1,6 +1,5 @@
 import elementFiLogo from '../../../images/element_fi_logo.svg';
 import elementMiniLogo from '../../../images/element_mini_logo.png';
-import ethToDaiBanner from '../../../images/eth_to_dai_banner.svg';
 import { createElementAdaptor } from '../bridge_data_adaptors/element_adaptor.js';
 import { KNOWN_MAINNET_ASSET_ADDRESSES as KMAA } from '../../../alt-model/known_assets/known_asset_addresses.js';
 import { BridgeInteraction, CreateRecipeArgs, DefiRecipe } from '../types.js';
@@ -30,7 +29,6 @@ export const ELEMENT_CARD: CreateRecipeArgs = {
   shortDesc: 'Deposit zkDai to Element for fixed yield. Funds are locked in Element and returned at the maturity date.',
   longDescription:
     'Element allows you to invest assets for a fixed yield. Deposit an asset today and receive it back on the maturity date with a fixed APR.',
-  bannerImg: ethToDaiBanner,
   logo: elementFiLogo,
   miniLogo: elementMiniLogo,
   cardTag: 'Fixed Yield',
@@ -51,7 +49,7 @@ export const ELEMENT_CARD: CreateRecipeArgs = {
       useFormattedValue: recipe => {
         const auxData = useDefaultAuxDataOption(recipe.id);
         if (auxData === undefined) return;
-        return formatDate_short(auxData * 1000);
+        return formatDate_short(Number(auxData) * 1000);
       },
     },
     keyStat3: keyStatConfig_averageWait,
@@ -69,7 +67,7 @@ export const ELEMENT_CARD: CreateRecipeArgs = {
       formattedValue: useFormattedRoi(recipe, interaction),
     };
   },
-  getAsyncResolutionDate: tx => tx.bridgeCallData.auxData * 1000,
+  getAsyncResolutionDate: tx => Number(tx.bridgeCallData.auxData) * 1000,
   getDefiPublishStatsCacheArgs: createDefiPublishStatsCacheArgsBuilder({ ignoreAuxData: true }),
 };
 
@@ -106,7 +104,7 @@ function useFormattedRoi(recipe: DefiRecipe, interaction: BridgeInteraction) {
   const termApr = useTermApr(recipe, auxData, inputValue);
   if (termApr === undefined) return;
   const nowSec = Date.now() / 1000;
-  const timeUntilMaturityInYears = (auxData - nowSec) / YEAR_IN_SECS;
+  const timeUntilMaturityInYears = (Number(auxData) - nowSec) / YEAR_IN_SECS;
   const roiAfterMaturity = BigInt(Math.floor(Number(inputValue) * (termApr / 100) * timeUntilMaturityInYears));
   return new Amount(roiAfterMaturity, recipe.flow.enter.outA).format({ uniform: true });
 }

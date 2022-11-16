@@ -67,7 +67,7 @@ export class SharedWorkerFrontend {
     const circuitSize = 2 ** 16;
     debug(`downloading crs data (circuit size: ${circuitSize})...`);
     const crs = new Crs(circuitSize);
-    await crs.download();
+    await crs.init();
     debug('done.');
     return Buffer.from(crs.getData());
   }

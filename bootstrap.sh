@@ -16,11 +16,12 @@ cd ..
 
 # We only bootstrap projects that produce artefacts needed for running end-to-end tests and frontends.
 # barretenberg outputs db_cli, rollup_cli and barretenberg.wasm.
+# contracts outputs smart contract abis.
 # barretenberg.js outputs a webpacked web worker.
-# blockchain outputs smart contract bytecode and abis.
 # sdk produces a webpacked version needed by frontends.
 PROJECTS=(
   "barretenberg:./bootstrap.sh db_cli rollup_cli"
+  "contracts:./bootstrap.sh"
   "yarn-project/barretenberg.js:./bootstrap.sh"
   "yarn-project/blockchain:yarn build"
   "yarn-project/sdk:yarn build"

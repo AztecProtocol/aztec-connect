@@ -3,10 +3,10 @@ import { useMemo } from 'react';
 import { useSdk } from '../top_level_context/index.js';
 import { useAmounts } from '../asset_hooks.js';
 import { usePolledCallback } from '../../app/util/polling_hooks.js';
-import { useApp } from '../app_context.js';
 import { FEE_SIG_FIGURES } from '../forms/constants.js';
 import { SendMode } from './send_mode.js';
 import { useSpendableBalance } from '../balance_hooks.js';
+import { useAccountState } from '../account_state/index.js';
 
 const FEE_POLL_INTERVAL = 1000 * 60;
 
@@ -47,7 +47,8 @@ export function useSendFeeAmounts(
 ) {
   useSdk();
   const sdk = useSdk();
-  const { userId } = useApp();
+  const accountState = useAccountState();
+  const userId = accountState?.userId;
   const spendableBalance = useSpendableBalance(assetValue?.assetId);
   const poll = useMemo(() => {
     if (spendableBalance) {
