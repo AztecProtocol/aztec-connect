@@ -24,7 +24,7 @@ import { rollupProviderStatusFromJson } from './rollup_provider_status.js';
  */
 export class ClientVersionMismatchError extends Error {
   constructor(message: string) {
-    super(`Version mismatch with server. Error: ${message}`);
+    super(`Version mismatch with rollup provider. Error: ${message}`);
   }
 }
 
