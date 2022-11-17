@@ -36,6 +36,7 @@ export {
   EthAsset,
 } from '@aztec/blockchain';
 
-// Exporting for medici.
-export { joinSplitProofInputToJson, joinSplitProofInputFromJson } from './proofs/index.js';
+// Exposing for medici. Remove once they have proper multisig api.
+export * from './proofs/index.js';
 export { BarretenbergWasm } from '@aztec/barretenberg/wasm';
+export { CoreSdkInterface } from './core_sdk/index.js';

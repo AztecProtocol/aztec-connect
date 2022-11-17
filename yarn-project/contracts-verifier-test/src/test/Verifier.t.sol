@@ -25,24 +25,24 @@ contract Dec is Decoder {
 
 contract VerifierTest is Test {
     function testMockVerifier() public {
-        string memory path = "verification-keys/mock_rollup_proof_data_3x2.dat";
+        string memory path = "verifier-fixtures/mock_rollup_proof_data_3x2.dat";
         (, bytes memory proof, uint256 inputHash, bool expected) = _readData(path);
         MockVerifier verifier = new MockVerifier();
         assertEq(verifier.verify(proof, inputHash), expected);
     }
 
     function testVerifier1x1() public {
-        string memory path = "verification-keys/rollup_proof_data_1x1.dat";
+        string memory path = "verifier-fixtures/rollup_proof_data_1x1.dat";
         (, bytes memory proof, uint256 inputHash, bool expected) = _readData(path);
         Verifier1x1 verifier = new Verifier1x1();
         assertEq(verifier.verify(proof, inputHash), expected);
     }
 
     function testInputHasher() public {
-        string memory path = "verification-keys/rollup_proof_data_1x1.dat";
+        string memory path = "verifier-fixtures/rollup_proof_data_1x1.dat";
         (bytes memory full, bytes memory proof, uint256 _inputHash, bool expected) = _readData(path);
         bytes memory rawEncoded =
-            Cheats(address(vm)).readFileBinary("verification-keys/encoded_rollup_proof_data_1x1.dat");
+            Cheats(address(vm)).readFileBinary("verifier-fixtures/encoded_rollup_proof_data_1x1.dat");
 
         (bytes memory decodedData,, uint256 inputHash) = (new Dec()).decode(rawEncoded);
 
@@ -57,9 +57,9 @@ contract VerifierTest is Test {
         bytes32 _rand = keccak256("random");
 
         (bytes memory full, bytes memory proof, uint256 realHash, bool expected) =
-            _readData("verification-keys/rollup_proof_data_1x1.dat");
+            _readData("verifier-fixtures/rollup_proof_data_1x1.dat");
         bytes memory rawEncoded =
-            Cheats(address(vm)).readFileBinary("verification-keys/encoded_rollup_proof_data_1x1.dat");
+            Cheats(address(vm)).readFileBinary("verifier-fixtures/encoded_rollup_proof_data_1x1.dat");
 
         uint256 proofLen = 0x20 * (24 + 17);
         uint256 where = bound(_where, 0, (rawEncoded.length - proofLen) / 0x20);
@@ -87,7 +87,7 @@ contract VerifierTest is Test {
 
     function testVerifierEcScalarMulFailure() public {
         // Manipulate proof to force a failure when validating the recursive P1
-        string memory path = "verification-keys/rollup_proof_data_1x1.dat";
+        string memory path = "verifier-fixtures/rollup_proof_data_1x1.dat";
         (, bytes memory proof, uint256 inputHash,) = _readData(path);
         Verifier1x1 verifier = new Verifier1x1();
 
@@ -102,7 +102,7 @@ contract VerifierTest is Test {
 
     function testVerifierProofFailure() public {
         // Manipulate proof to force an invalid but correctly formatted proof
-        string memory path = "verification-keys/rollup_proof_data_1x1.dat";
+        string memory path = "verifier-fixtures/rollup_proof_data_1x1.dat";
         (, bytes memory proof, uint256 inputHash,) = _readData(path);
         Verifier1x1 verifier = new Verifier1x1();
 
@@ -127,7 +127,7 @@ contract VerifierTest is Test {
         // The input hash
         // The last 68 bit limb in each point (except the last, as that is check in another testLastPublicInputNotInP)
 
-        string memory path = "verification-keys/rollup_proof_data_1x1.dat";
+        string memory path = "verifier-fixtures/rollup_proof_data_1x1.dat";
         (, bytes memory proof, uint256 inputHash, bool expected) = _readData(path);
         Verifier1x1 verifier = new Verifier1x1();
 
@@ -149,7 +149,7 @@ contract VerifierTest is Test {
         // The last public element (index 16) is replaced with p
         // This is the last value that is put into y1
 
-        string memory path = "verification-keys/rollup_proof_data_1x1.dat";
+        string memory path = "verifier-fixtures/rollup_proof_data_1x1.dat";
         (, bytes memory proof, uint256 inputHash, bool expected) = _readData(path);
         Verifier1x1 verifier = new Verifier1x1();
 
@@ -168,7 +168,7 @@ contract VerifierTest is Test {
     }
 
     function testVerifier1x1InvalidHash(uint256 invalidHash) public {
-        string memory path = "verification-keys/rollup_proof_data_1x1.dat";
+        string memory path = "verifier-fixtures/rollup_proof_data_1x1.dat";
         (, bytes memory proof, uint256 inputHash,) = _readData(path);
         vm.assume(inputHash != invalidHash);
         Verifier1x1 verifier = new Verifier1x1();
@@ -181,7 +181,7 @@ contract VerifierTest is Test {
     }
 
     function _testVerifierInvalidBn128Component(uint256 _offset) internal {
-        string memory path = "verification-keys/rollup_proof_data_1x1.dat";
+        string memory path = "verifier-fixtures/rollup_proof_data_1x1.dat";
         (, bytes memory proof, uint256 inputHash, bool expected) = _readData(path);
         Verifier1x1 verifier = new Verifier1x1();
 

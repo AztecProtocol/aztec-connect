@@ -1,8 +1,13 @@
+FROM 278380418400.dkr.ecr.eu-west-2.amazonaws.com/blockchain-vks as vks
+
 FROM ghcr.io/foundry-rs/foundry:nightly-52b57b14c4c64a61fff8efa167d2a7937b191ce8 as builder
 RUN apk update && apk add --no-cache build-base git curl bash 
 WORKDIR /usr/src/contracts
 RUN git init
 COPY . .
+
+COPY --from=vks /usr/src/blockchain-vks/keys /usr/src/contracts/src/core/verifier/keys
+
 RUN forge install --no-commit \
   https://github.com/foundry-rs/forge-std \
   https://github.com/uniswap/v2-core \

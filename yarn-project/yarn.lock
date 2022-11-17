@@ -362,6 +362,19 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@aztec/contracts-verifier-test@workspace:contracts-verifier-test":
+  version: 0.0.0-use.local
+  resolution: "@aztec/contracts-verifier-test@workspace:contracts-verifier-test"
+  dependencies:
+    "@aztec/barretenberg": "workspace:^"
+    "@aztec/eslint-config": "workspace:^"
+    "@rushstack/eslint-patch": ^1.1.4
+    "@types/node": ^18.7.23
+    ts-node: ^10.9.1
+    typescript: ^4.7.4
+  languageName: unknown
+  linkType: soft
+
 "@aztec/eslint-config@workspace:^, @aztec/eslint-config@workspace:eslint-config":
   version: 0.0.0-use.local
   resolution: "@aztec/eslint-config@workspace:eslint-config"

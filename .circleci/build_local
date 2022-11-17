@@ -19,6 +19,7 @@ PROJECTS=(
   contracts:contracts
   yarn-project:yarn-project-base
   yarn-project:barretenberg.js
+  yarn-project:contracts-verifier-test
   yarn-project:blockchain
   yarn-project:halloumi
   yarn-project:falafel
