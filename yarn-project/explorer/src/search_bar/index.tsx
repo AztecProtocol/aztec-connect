@@ -13,8 +13,8 @@ export const SearchBar: React.FunctionComponent = () => {
   const [value, setValue] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
-  const { get: searchById } = useFetch(`/search?blockId=${value}`);
-  const { get: searchByHash } = useFetch(`/search?txHash=${value}`);
+  const { get: searchById } = useFetch(`/rollup/${value}`);
+  const { get: searchByHash } = useFetch(`/tx/${value}`);
 
   useEffect(() => {
     if (!history || !searchTerm || (!idData && !hashData)) return;
@@ -39,11 +39,11 @@ export const SearchBar: React.FunctionComponent = () => {
     setSearchTerm(term);
 
     if (term.match(/^[0-9]+$/)) {
-      const data = await searchById(value);
-      setIdData(data);
+      const data = await searchById();
+      setIdData(data.id);
     } else if (term.match(/^(0x)?[0-9a-f]{64}$/i)) {
-      const data = await searchByHash(value);
-      setHashData(data);
+      const data = await searchByHash();
+      setHashData(data.id);
     } else {
       history.push(`/search?q=${encodeURIComponent(term)}`);
     }

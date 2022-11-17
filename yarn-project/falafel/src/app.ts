@@ -222,7 +222,7 @@ export async function appFactory(server: Server, prefix: string, metrics: Metric
         id: txId,
         proofId: proofId,
         proofData: tx.proofData.toString('hex'),
-        offchainTxdata: tx.offchainTxData.toString('hex'),
+        offchainTxData: tx.offchainTxData.toString('hex'),
         newNote1: proofData.noteCommitment1.toString('hex'),
         newNote2: proofData.noteCommitment2.toString('hex'),
         nullifier1: proofData.nullifier1.toString('hex'),

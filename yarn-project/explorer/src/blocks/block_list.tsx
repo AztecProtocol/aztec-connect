@@ -35,10 +35,9 @@ export const BlockList: React.FunctionComponent<BlockListProps> = ({ page, block
     if (response.ok) setBlocks(data);
   };
 
-  // initialize
   useEffect(() => {
     fetchBlocks().catch(() => console.log('Error fetching initial blocks'));
-  }, []);
+  }, [page]);
 
   useEffect(() => {
     let interval: number | null = null;
