@@ -20,7 +20,7 @@ export function useL1DepositResources(
   const depositAsset = useAsset(depositAssetId);
   const depositMaxEnabled = fields.depositValueStrOrMax === MAX_MODE;
   const depositValueStr = typeof fields.depositValueStrOrMax === 'string' ? fields.depositValueStrOrMax : 'string';
-  const feeAmount = fields.speed ? feeAmounts?.[fields.speed] : undefined;
+  const feeAmount = !!fields.speed || fields.speed === 0 ? feeAmounts?.[fields.speed] : undefined;
   const { ethAddress: depositor, ethSigner: depositorSigner } = useActiveWalletEthSigner();
   const { l1PendingBalance, l1Balance } = useL1Balances(depositAsset);
   const config = useConfig();
