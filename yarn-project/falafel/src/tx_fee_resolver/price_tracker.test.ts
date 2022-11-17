@@ -47,6 +47,12 @@ describe('price tracker', () => {
     await priceTracker.stop();
   });
 
+  it('new price tracker with dai only', async () => {
+    const tempTracker = new PriceTracker(blockchain, [1], refreshInterval, recordDuration);
+    await tempTracker.start();
+    expect(tempTracker.getAssetPrice(1)).toBe(456n);
+  });
+
   it('record prices', async () => {
     await priceTracker.start();
     expect(priceTracker.getGasPrice()).toBe(123n);
