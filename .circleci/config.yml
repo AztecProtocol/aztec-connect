@@ -276,6 +276,17 @@ jobs:
           name: 'Build and test'
           command: build barretenberg.js
 
+  contracts-verifier-test:
+    docker:
+      - image: aztecprotocol/alpine-build-image
+    resource_class: small
+    steps:
+      - *checkout
+      - *setup_env
+      - run:
+          name: 'Build'
+          command: cond_spot_run_build contracts-verifier-test 64
+
   blockchain:
     machine:
       image: ubuntu-2004:202010-01
@@ -796,13 +807,15 @@ workflows:
             - x86_64-linux-clang
           filters: *tag_filter
       - contracts:
+          requires:
+            - blockchain-vks
           filters: *tag_filter
       - yarn-project-base:
           requires:
             - wasm-linux-clang
-            - blockchain-vks
             - contracts
           filters: *tag_filter
+      - contracts-verifier-test: *yarn_project
       - barretenberg-js: *yarn_project
       - blockchain: *yarn_project
       - kebab: *yarn_project
@@ -861,6 +874,7 @@ workflows:
             - wasabi
             - zk-money
             - blockchain
+            - contracts-verifier-test
             - barretenberg-js
           filters: *deploy_filters
       - deploy:

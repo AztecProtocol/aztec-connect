@@ -1,0 +1,10 @@
+{
+  "extends": ".",
+  "compilerOptions": {
+    "rootDir": "verifier-fixtures",
+    "types": []
+  },
+  "references": [{ "path": "../barretenberg.js/tsconfig.dest.json" }],
+  "exclude": ["./verifier-fixtures/*.dat"],
+  "files": []
+}

@@ -654,4 +654,9 @@ export class AztecSdk extends EventEmitter {
   public async getDefiTxs(userId: GrumpkinAddress) {
     return (await this.getUserTxs(userId)).filter(tx => tx.proofId === ProofId.DEFI_DEPOSIT) as UserDefiTx[];
   }
+
+  // Exposing for medici. Remove once they have proper multisig api.
+  public getCoreSdk() {
+    return this.core;
+  }
 }

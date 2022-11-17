@@ -50,7 +50,7 @@ export const Tx: React.FunctionComponent<TxProps> = ({ id }) => {
   const { get, response, loading, error } = useFetch();
 
   const fetchTx = async (txId: string) => {
-    const res = await get(`/tx/${txId}`);
+    const res = await get(`/tx/${txId ?? id}`);
     if (response.ok) setTx(res);
   };
 
@@ -62,7 +62,7 @@ export const Tx: React.FunctionComponent<TxProps> = ({ id }) => {
   useEffect(() => {
     let interval: number | null = null;
     if (!tx?.block?.mined) {
-      interval = window.setInterval(fetchTx, POLL_INTERVAL);
+      interval = window.setInterval(() => fetchTx(id), POLL_INTERVAL);
     }
 
     return () => {

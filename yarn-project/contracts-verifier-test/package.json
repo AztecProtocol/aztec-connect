@@ -1,0 +1,22 @@
+{
+  "name": "@aztec/contracts-verifier-test",
+  "version": "2.0.0",
+  "license": "GPL-2.0-only",
+  "exports": "./dest/index.js",
+  "type": "module",
+  "scripts": {
+    "vk:build:fixtures": "cd verifier-fixtures && ./create_fixture.sh",
+    "build": "yarn tsc -b tsconfig.dest.json",
+    "test": "forge clean && forge build && forge test"
+  },
+  "dependencies": {
+    "@aztec/barretenberg": "workspace:^"
+  },
+  "devDependencies": {
+    "@aztec/eslint-config": "workspace:^",
+    "@rushstack/eslint-patch": "^1.1.4",
+    "@types/node": "^18.7.23",
+    "ts-node": "^10.9.1",
+    "typescript": "^4.7.4"
+  }
+}

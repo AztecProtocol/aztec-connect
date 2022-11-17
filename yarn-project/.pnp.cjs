@@ -33,6 +33,10 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
         "reference": "workspace:blockchain"\
       },\
       {\
+        "name": "@aztec/contracts-verifier-test",\
+        "reference": "workspace:contracts-verifier-test"\
+      },\
+      {\
         "name": "end-to-end",\
         "reference": "workspace:end-to-end"\
       },\
@@ -82,6 +86,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
     "fallbackExclusionList": [\
       ["@aztec/barretenberg", ["workspace:barretenberg.js"]],\
       ["@aztec/blockchain", ["workspace:blockchain"]],\
+      ["@aztec/contracts-verifier-test", ["workspace:contracts-verifier-test"]],\
       ["@aztec/eslint-config", ["workspace:eslint-config"]],\
       ["@aztec/halloumi", ["workspace:halloumi"]],\
       ["@aztec/monorepo", ["workspace:."]],\
@@ -565,6 +570,21 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["typescript", "patch:typescript@npm%3A4.8.4#~builtin<compat/typescript>::version=4.8.4&hash=a1c5e5"]\
           ],\
           "linkType": "HARD"\
+        }]\
+      ]],\
+      ["@aztec/contracts-verifier-test", [\
+        ["workspace:contracts-verifier-test", {\
+          "packageLocation": "./contracts-verifier-test/",\
+          "packageDependencies": [\
+            ["@aztec/contracts-verifier-test", "workspace:contracts-verifier-test"],\
+            ["@aztec/barretenberg", "workspace:barretenberg.js"],\
+            ["@aztec/eslint-config", "workspace:eslint-config"],\
+            ["@rushstack/eslint-patch", "npm:1.1.4"],\
+            ["@types/node", "npm:18.7.23"],\
+            ["ts-node", "virtual:4cf42c2f2a8aa147d524c15c0290174d77a2062937f0c22441901ac61d50212062460a38e714456279cdb4fab155b3b1d12acfb24cd6bb68fcc1837e921b5557#npm:10.9.1"],\
+            ["typescript", "patch:typescript@npm%3A4.7.4#~builtin<compat/typescript>::version=4.7.4&hash=a1c5e5"]\
+          ],\
+          "linkType": "SOFT"\
         }]\
       ]],\
       ["@aztec/eslint-config", [\
