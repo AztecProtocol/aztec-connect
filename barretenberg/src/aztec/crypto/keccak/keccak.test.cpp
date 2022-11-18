@@ -1,8 +1,6 @@
 #include "keccak.hpp"
 #include <gtest/gtest.h>
-#include <iostream>
 #include <memory>
-#include <cstdio>
 
 TEST(misc_keccak, test_NIST_vector_one)
 {
