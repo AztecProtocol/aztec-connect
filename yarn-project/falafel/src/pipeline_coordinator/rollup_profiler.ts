@@ -18,7 +18,9 @@ export interface RollupProfile {
   published: boolean;
   rollupSize: number;
   totalTxs: number;
+  totalSecondClassTxs: number;
   numTxsPerType: number[];
+  numSecondClassTxsPerType: number[];
   gasBalance: number;
   totalGas: number;
   totalCallData: number;
@@ -34,7 +36,9 @@ export function emptyProfile(rollupSize: number) {
     published: false,
     rollupSize,
     totalTxs: 0,
+    totalSecondClassTxs: 0,
     numTxsPerType: Array.from<number>({ length: numTxTypes }).fill(0),
+    numSecondClassTxsPerType: Array.from<number>({ length: numTxTypes }).fill(0),
     gasBalance: 0,
     totalCallData: 0,
     totalGas: 0,
@@ -56,8 +60,15 @@ export function profileRollup(
 ) {
   const rollupProfile: RollupProfile = emptyProfile(rollupSize);
   rollupProfile.totalTxs = allTxs.length;
+  rollupProfile.totalSecondClassTxs = allTxs.reduce(
+    (partialCount, tx) => (tx.secondClass ? partialCount + 1 : partialCount),
+    0,
+  );
   rollupProfile.numTxsPerType = rollupProfile.numTxsPerType.map((_, i) =>
     allTxs.reduce((a, { tx }) => a + (tx.txType === i ? 1 : 0), 0),
+  );
+  rollupProfile.numSecondClassTxsPerType = rollupProfile.numSecondClassTxsPerType.map((_, i) =>
+    allTxs.reduce((a, { tx }) => a + (tx.txType === i && tx.secondClass ? 1 : 0), 0),
   );
   const bridgeProfiles = new Map<bigint, BridgeProfile>();
   const commitmentLocations = new Map<string, number>();

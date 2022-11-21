@@ -1,4 +1,4 @@
-import { isAccountTx, isDefiDepositTx, TxType } from '@aztec/barretenberg/blockchain';
+import { isAccountTx, isDefiDepositTx, TxType, numTxTypes } from '@aztec/barretenberg/blockchain';
 import { DefiDepositProofData, ProofData } from '@aztec/barretenberg/client_proofs';
 import { HashPath } from '@aztec/barretenberg/merkle_tree';
 import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
@@ -8,6 +8,7 @@ import { BridgeResolver } from '../bridge/index.js';
 import { TxDao } from '../entity/index.js';
 import { RollupAggregator } from '../rollup_aggregator.js';
 import { RollupCreator } from '../rollup_creator.js';
+import { RollupDb } from '../rollup_db/index.js';
 import { RollupPublisher } from '../rollup_publisher.js';
 import { TxFeeResolver } from '../tx_fee_resolver/index.js';
 import { Metrics } from '../metrics/index.js';
@@ -35,6 +36,7 @@ export class RollupCoordinator {
     private rollupCreator: RollupCreator,
     private rollupAggregator: RollupAggregator,
     private rollupPublisher: RollupPublisher,
+    private rollupDb: RollupDb,
     private numInnerRollupTxs: number,
     private numOuterRollupProofs: number,
     private oldDefiRoot: Buffer,
@@ -74,7 +76,7 @@ export class RollupCoordinator {
     const bridgeSubsidyProvider = new BridgeSubsidyProvider(this.bridgeResolver);
     const bridgeQueues = new Map<bigint, BridgeTxQueue>();
 
-    const { txs, bridgeCallDatas, assetIds } = await this.getNextTxsToRollup(
+    const { txs, resourceConsumption } = await this.getNextTxsToRollup(
       pendingTxs,
       flush,
       bridgeSubsidyProvider,
@@ -84,8 +86,7 @@ export class RollupCoordinator {
     this.checkpoint();
     return await this.aggregateAndPublish(
       txs,
-      bridgeCallDatas,
-      assetIds,
+      resourceConsumption,
       rollupTimeouts,
       flush,
       bridgeSubsidyProvider,
@@ -194,8 +195,7 @@ export class RollupCoordinator {
 
     return {
       txs,
-      bridgeCallDatas: resourceConsumption.bridgeCallDatas,
-      assetIds: resourceConsumption.assetIds,
+      resourceConsumption,
     };
   }
 
@@ -328,8 +328,7 @@ export class RollupCoordinator {
 
   private async aggregateAndPublish(
     txsToRollup: RollupTx[],
-    bridgeCallDatas: bigint[],
-    assetIds: Set<number>,
+    resourceConsumption: RollupResources,
     rollupTimeouts: RollupTimeouts,
     flush: boolean,
     bridgeSubsidyProvider: BridgeSubsidyProvider,
@@ -340,7 +339,7 @@ export class RollupCoordinator {
       throw new Error(`txsToRollup.length > numRemainingSlots: ${txsToRollup.length} > ${this.totalSlots}`);
     }
 
-    const rollupProfile = profileRollup(
+    let rollupProfile = profileRollup(
       txsToRollup,
       this.feeResolver,
       this.numInnerRollupTxs,
@@ -353,6 +352,74 @@ export class RollupCoordinator {
       return rollupProfile;
     }
 
+    const conditions = this.getRollupPublishConditions(txsToRollup, rollupProfile, rollupTimeouts);
+    const { isProfitable, deadline } = conditions;
+    let { outOfGas, outOfCallData, outOfSlots } = conditions;
+
+    const shouldPublish = flush || isProfitable || deadline || outOfGas || outOfCallData || outOfSlots;
+
+    if (!shouldPublish) {
+      try {
+        await this.metrics.recordRollupMetrics(
+          rollupProfile,
+          this.bridgeResolver,
+          Array.from(bridgeQueues.values()).map(bq => bq.getQueueStats()),
+        );
+      } catch (err) {
+        this.log('Error recording rollup metrics: ', err.message);
+      }
+      return rollupProfile;
+    }
+
+    // Check if there is room for some second class transactions and add them to rollup
+    const secondClassTxs: RollupTx[] = [];
+    // Add second class txs only if block can still fit more txs
+    // (if we got here because of flush, isProfitable or deadline)
+    if (!(outOfGas || outOfCallData || outOfSlots)) {
+      // Get enough second class txs to fill up all empty slots in rollup
+      const allSecondClassTxs = await this.rollupDb.getPendingSecondClassTxs(this.totalSlots - txsToRollup.length);
+      for (
+        let i = 0;
+        i < allSecondClassTxs.length && txsToRollup.length + secondClassTxs.length < this.totalSlots;
+        i++
+      ) {
+        const tx = allSecondClassTxs[i];
+        const proofData = new ProofData(tx.proofData);
+
+        if (isAccountTx(tx.txType)) {
+          // mutates resource consumption
+          if (this.validateAndUpdateRollupResources(TxType.ACCOUNT, 0, resourceConsumption)) {
+            secondClassTxs.push(createRollupTx(tx, proofData));
+          }
+        }
+      }
+    }
+
+    // If second class txs have been added, reprofile the rollup before publishing conditions/metrics/state.
+    if (secondClassTxs.length) {
+      // Track txs currently being processed. Gives clients a view into what's being processed.
+      this.processedTxs = txsToRollup.concat(secondClassTxs);
+
+      // Reprofile now that second class txs are possibly included
+      rollupProfile = profileRollup(
+        this.processedTxs,
+        this.feeResolver,
+        this.numInnerRollupTxs,
+        this.totalSlots,
+        bridgeSubsidyProvider,
+      );
+
+      // outOf* conditions will change after inclusion of 2nd class txs
+      ({ outOfGas, outOfCallData, outOfSlots } = this.getRollupPublishConditions(
+        this.processedTxs,
+        rollupProfile,
+        rollupTimeouts,
+      ));
+    } else {
+      // Track txs currently being processed. Gives clients a view into what's being processed.
+      this.processedTxs = [...txsToRollup];
+    }
+
     try {
       await this.metrics.recordRollupMetrics(
         rollupProfile,
@@ -363,38 +430,13 @@ export class RollupCoordinator {
       this.log('Error recording rollup metrics: ', err.message);
     }
 
-    // Profitable if gasBalance is equal or above what's needed.
-    const isProfitable = rollupProfile.gasBalance >= 0;
-
-    // If any tx in this rollup is older than it's deadline, then we've timedout and should publish.
-    const deadline = this.rollupHasDeadlined(txsToRollup, rollupProfile, rollupTimeouts);
-
-    // The amount of L1 gas remaining until we breach the gasLimit.
-    const gasRemainingTillGasLimit = this.maxGasForRollup - rollupProfile.totalGas;
-
-    // The amount of L1 calldata remaining until we breach the calldata limit.
-    const callDataRemaining = this.maxCallDataForRollup - rollupProfile.totalCallData;
-
-    // Verify the remaining resources against the max possible values of gas and calldata to determine if it is time
-    // to publish. e.g. There are not enough resources left, to include an instant tx of any type.
-    const outOfGas = gasRemainingTillGasLimit < this.feeResolver.getMaxUnadjustedGas();
-    const outOfCallData = callDataRemaining < this.feeResolver.getMaxTxCallData();
-    const outOfSlots = txsToRollup.length == this.totalSlots;
-    const shouldPublish = flush || isProfitable || deadline || outOfGas || outOfCallData || outOfSlots;
-
-    if (!shouldPublish) {
-      return rollupProfile;
-    }
-
     await this.printRollupState(rollupProfile, deadline, flush, outOfGas || outOfCallData || outOfSlots);
-
-    // Track txs currently being processed. Gives clients a view into what's being processed.
-    this.processedTxs = [...txsToRollup];
 
     // Chunk txs for each inner rollup.
     const chunkedTx: RollupTx[][] = [];
-    while (txsToRollup.length) {
-      chunkedTx.push(txsToRollup.splice(0, this.numInnerRollupTxs));
+    const tmpTxs = [...this.processedTxs];
+    while (tmpTxs.length) {
+      chunkedTx.push(tmpTxs.splice(0, this.numInnerRollupTxs));
     }
 
     // First create circuit input data. In sequence as it updates the merkle trees.
@@ -403,8 +445,8 @@ export class RollupCoordinator {
       async (innerRollupTxs, i) =>
         await this.rollupCreator.createRollup(
           innerRollupTxs.map(rollupTx => rollupTx.tx),
-          bridgeCallDatas,
-          assetIds,
+          resourceConsumption.bridgeCallDatas,
+          resourceConsumption.assetIds,
           i == 0,
         ),
     );
@@ -424,8 +466,10 @@ export class RollupCoordinator {
       this.oldDefiRoot,
       this.oldDefiPath,
       this.defiInteractionNotes,
-      bridgeCallDatas.concat(Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK - bridgeCallDatas.length).fill(0n)),
-      [...assetIds],
+      resourceConsumption.bridgeCallDatas.concat(
+        Array(RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK - resourceConsumption.bridgeCallDatas.length).fill(0n),
+      ),
+      [...resourceConsumption.assetIds],
     );
 
     rollupProfile.published = await this.checkpointAndPublish(rollupDao, rollupProfile);
@@ -464,8 +508,14 @@ export class RollupCoordinator {
   private async printRollupState(rollupProfile: RollupProfile, timeout: boolean, flush: boolean, limit: boolean) {
     this.log(`RollupCoordinator: Creating rollup...`);
     this.log(`RollupCoordinator:   rollupSize: ${rollupProfile.rollupSize}`);
-    this.log(`RollupCoordinator:   numTxs: ${rollupProfile.totalTxs}`);
-    rollupProfile.numTxsPerType.forEach((v, i) => this.log(`RollupCoordinator:     ${TxType[i].toLowerCase()}: ${v}`));
+    const secondClassStr = rollupProfile.totalSecondClassTxs ? ` (${rollupProfile.totalSecondClassTxs} 2nd-class)` : '';
+    this.log(`RollupCoordinator:   numTxs: ${rollupProfile.totalTxs}${secondClassStr}`);
+    for (let t = 0; t < numTxTypes; t++) {
+      const txType = TxType[t].toLowerCase();
+      const numSecondClassForType = rollupProfile.numSecondClassTxsPerType[t];
+      const secondClassStr = numSecondClassForType ? ` (${numSecondClassForType} 2nd-class)` : '';
+      this.log(`RollupCoordinator:     ${txType}: ${rollupProfile.numTxsPerType[t]}${secondClassStr}`);
+    }
     this.log(`RollupCoordinator:   timeout/flush/limit: ${timeout}/${flush}/${limit}`);
     this.log(`RollupCoordinator:   aztecGas balance: ${rollupProfile.gasBalance}`);
     this.log(`RollupCoordinator:   inner/outer chains: ${rollupProfile.innerChains}/${rollupProfile.outerChains}`);
@@ -498,5 +548,41 @@ export class RollupCoordinator {
     return rollupTxs
       .filter(tx => tx.tx.txType !== TxType.DEFI_DEPOSIT)
       .some(tx => tx.tx.created.getTime() < rollupTimeouts.baseTimeout!.timeout.getTime());
+  }
+
+  /**
+   * Calculate the various conditions necessary to decide whether a rollup should be published.
+   *
+   * @param txs - list of txs to include in the rollup
+   * @param rollupProfile - information regarding the current state of this rollup
+   * @param rollupTimeouts - timeout information needed to determine whether the rollup has deadlined
+   *
+   * @return an object including the following conditions:
+   *   * isProfitable - is this rollup profitable
+   *   * deadline - has the rollup deadline been reached
+   *   * outOfGas - has this rollup reached the gas limit
+   *   * outOfCallData - has this rollup reached the callData limit
+   *   * outOfSlots - have all rollup tx slots been filled
+   */
+  private getRollupPublishConditions(txs: RollupTx[], rollupProfile: RollupProfile, rollupTimeouts: RollupTimeouts) {
+    // Profitable if gasBalance is equal or above what's needed.
+    const isProfitable = rollupProfile.gasBalance >= 0;
+
+    // If any tx in this rollup is older than it's deadline, then we've timedout and should publish.
+    const deadline = this.rollupHasDeadlined(txs, rollupProfile, rollupTimeouts);
+
+    // The amount of L1 gas remaining until we breach the gasLimit.
+    const gasRemainingTillGasLimit = this.maxGasForRollup - rollupProfile.totalGas;
+
+    // The amount of L1 calldata remaining until we breach the calldata limit.
+    const callDataRemaining = this.maxCallDataForRollup - rollupProfile.totalCallData;
+
+    // Verify the remaining resources against the max possible values of gas and calldata to determine if it is time
+    // to publish. e.g. There are not enough resources left, to include an instant tx of any type.
+    const outOfGas = gasRemainingTillGasLimit < this.feeResolver.getMaxUnadjustedGas();
+    const outOfCallData = callDataRemaining < this.feeResolver.getMaxTxCallData();
+    const outOfSlots = rollupProfile.totalTxs == this.totalSlots;
+
+    return { isProfitable, deadline, outOfGas, outOfCallData, outOfSlots };
   }
 }

@@ -73,6 +73,7 @@ type TxPoolProfile = {
   numTxs: number;
   pendingBridgeStats: BridgeStat[];
   pendingTxCount: number;
+  pendingSecondClassTxCount: number;
 };
 
 export class WorldState {
@@ -99,6 +100,7 @@ export class WorldState {
       numTxs: 0,
       numTxsInNextRollup: 0,
       pendingTxCount: 0,
+      pendingSecondClassTxCount: 0,
       pendingBridgeStats: [],
     };
   }
@@ -155,6 +157,7 @@ export class WorldState {
       const pendingTransactionsNotInRollup = pendingTxs.filter(elem =>
         processedTransactions.every(tx => !tx.id.equals(elem.id)),
       );
+      const pendingSecondClassTransactionsNotInRollup = pendingTransactionsNotInRollup.filter(tx => tx.secondClass);
 
       const pendingBridgeStats: Map<bigint, BridgeStat> = new Map();
       for (const tx of pendingTransactionsNotInRollup) {
@@ -180,6 +183,7 @@ export class WorldState {
         numTxsInNextRollup: processedTransactions.length,
         pendingBridgeStats: [...pendingBridgeStats.values()],
         pendingTxCount: pendingTransactionsNotInRollup.length,
+        pendingSecondClassTxCount: pendingSecondClassTransactionsNotInRollup.length,
       };
       this.txPoolProfileValidUntil = new Date(Date.now() + this.expireTxPoolAfter);
     }

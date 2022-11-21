@@ -2,29 +2,40 @@
   "name": "account-migrator",
   "version": "1.0.0",
   "description": "A utility for migrating accounts across system versions",
-  "main": "index.js",
+  "private": true,
+  "main": "dest/index.js",
   "author": "Aztec",
   "license": "GPL-2.0",
   "type": "module",
   "scripts": {
-    "build": "yarn clean && tsc -p tsconfig.json",
+    "build": "rm -rf ./dest && tsc -b tsconfig.dest.json && cp ../../barretenberg/build-wasm/bin/barretenberg.wasm ./dest/wasm",
+    "formatting": "run -T prettier --check ./src && run -T eslint --max-warnings 0 ./src",
     "start": "node ./dest/index.js",
-    "clean": "rm -rf ./dest"
+    "clean": "rm -rf ./dest",
+    "cleanall": "yarn clean && rm -rf ./gen"
   },
   "dependencies": {
     "@aztec/barretenberg": "workspace:^",
     "@aztec/blockchain": "workspace:^",
+    "@aztec/halloumi": "workspace:^",
+    "@aztec/sdk": "workspace:^",
     "@ethersproject/abstract-provider": "^5.7.0",
     "@ethersproject/providers": "^5.7.0",
-    "@types/node": "^18.7.23",
     "commander": "^8.2.0",
     "ethers": "5.5.1",
-    "typescript": "^4.7.4"
+    "leveldown": "^6.1.1",
+    "levelup": "^5.1.1",
+    "memdown": "^6.1.1"
   },
   "devDependencies": {
     "@aztec/eslint-config": "workspace:^",
     "@rushstack/eslint-patch": "^1.1.4",
+    "@types/leveldown": "^4.0.3",
+    "@types/levelup": "^4.3.0",
+    "@types/memdown": "^3.0.0",
     "@types/mocha": "^9.0.0",
-    "ts-node": "^10.2.1"
+    "@types/node": "^18.7.23",
+    "ts-node": "^10.2.1",
+    "typescript": "^4.7.4"
   }
 }

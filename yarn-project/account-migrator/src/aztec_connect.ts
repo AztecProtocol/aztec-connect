@@ -1,28 +1,12 @@
-import { RollupProcessor } from '@aztec/blockchain';
-import { EthAddress } from '@aztec/barretenberg/address';
-import { Timer } from '@aztec/barretenberg/timer';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
-import { JsonRpcProvider } from '@aztec/blockchain';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { OffchainAccountData } from '@aztec/barretenberg/offchain_tx_data';
-import { Account, Accounts } from './account.js';
 import { AccountAliasId } from '@aztec/barretenberg/account_id';
+import { Account, Accounts } from './account.js';
+import { getRollupBlocks } from './get_rollup_blocks.js';
 
 export async function getAccountsConnect(options: any) {
-  const blockTimer = new Timer();
-  const ethereumProvider = new JsonRpcProvider(options.url);
-  const rollupProcessor = new RollupProcessor(EthAddress.fromString(options.address), ethereumProvider);
-  const blocks = await rollupProcessor.getRollupBlocksFrom(options.from, options.confirmations);
-  const filteredBlocks = blocks.filter(block => {
-    if (block.rollupId < options.from) {
-      return false;
-    }
-    if (options.to && block.rollupId > options.to) {
-      return false;
-    }
-    return true;
-  });
-  console.log(`Retrieved ${filteredBlocks.length} blocks in ${blockTimer.s()}s`);
+  const filteredBlocks = await getRollupBlocks(options);
   if (!filteredBlocks.length) {
     return {
       earliestRollupId: 0,

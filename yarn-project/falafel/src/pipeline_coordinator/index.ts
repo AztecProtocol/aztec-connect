@@ -175,6 +175,7 @@ export class PipelineCoordinator {
       this.rollupCreator,
       this.rollupAggregator,
       this.rollupPublisher,
+      this.rollupDb,
       this.numInnerRollupTxs,
       this.numOuterRollupProofs,
       oldDefiRoot,

@@ -14,6 +14,7 @@ import { TxDao } from '../entity/index.js';
 import { Metrics } from '../metrics/index.js';
 import { RollupAggregator } from '../rollup_aggregator.js';
 import { RollupCreator } from '../rollup_creator.js';
+import { RollupDb } from '../rollup_db/index.js';
 import { RollupPublisher } from '../rollup_publisher.js';
 import { TxFeeResolver } from '../tx_fee_resolver/index.js';
 import { PublishTimeManager, RollupTimeouts } from './publish_time_manager.js';
@@ -90,6 +91,8 @@ const HUGE_GAS = 10000000;
 
 const NON_FEE_PAYING_ASSET = 999;
 
+const SECOND_CLASS_ID_OFFSET = 100;
+
 const getBridgeCost = (bridgeCallData: bigint) => {
   const bridgeConfig = bridgeConfigs.find(
     bc => bc.bridgeAddressId === BridgeCallData.fromBigInt(bridgeCallData).bridgeAddressId,
@@ -148,6 +151,7 @@ describe('rollup_coordinator', () => {
   let rollupCreator: Mockify<RollupCreator>;
   let rollupAggregator: Mockify<RollupAggregator>;
   let rollupPublisher: Mockify<RollupPublisher>;
+  let rollupDb: Mockify<RollupDb>;
   let feeResolver: Mockify<TxFeeResolver>;
   let bridgeResolver: Mockify<BridgeResolver>;
   let coordinator: RollupCoordinator;
@@ -164,6 +168,7 @@ describe('rollup_coordinator', () => {
       rollupCreator as any,
       rollupAggregator as any,
       rollupPublisher as any,
+      rollupDb as any,
       numInnerRollupTxs,
       numOuterRollupProofs,
       oldDefiRoot,
@@ -228,6 +233,7 @@ describe('rollup_coordinator', () => {
       noteCommitment2 = randomBytes(32),
       backwardLink = Buffer.alloc(32),
       allowChain = numToUInt32BE(2, 32),
+      secondClass = false,
     } = {},
   ) =>
     ({
@@ -247,6 +253,7 @@ describe('rollup_coordinator', () => {
         backwardLink,
         allowChain,
       ]),
+      secondClass,
     } as any as TxDao);
 
   const mockDefiBridgeTx = (id: number, gas: number, bridgeCallData: bigint, assetId = 0, creationTime?: Date) =>
@@ -257,6 +264,9 @@ describe('rollup_coordinator', () => {
       bridgeCallData,
       creationTime,
     });
+
+  const mockSecondClassTxs = (count: number) =>
+    [...Array(count)].map((_, i) => mockTx(i + SECOND_CLASS_ID_OFFSET, { txType: TxType.ACCOUNT, secondClass: true }));
 
   const expectProcessedTxIds = (txIds: number[]) => {
     expect(coordinator.getProcessedTxs().map(tx => tx.id)).toEqual(txIds.map(id => Buffer.from([id])));
@@ -303,6 +313,17 @@ describe('rollup_coordinator', () => {
       publishRollup: jest.fn<any>().mockResolvedValue(true),
       interrupt: jest.fn(),
     } as Mockify<RollupPublisher>;
+
+    rollupDb = {
+      getPendingTxCount: jest.fn<any>().mockResolvedValue(0),
+      getPendingSecondClassTxCount: jest.fn<any>().mockResolvedValue(0),
+      deleteUnsettledRollups: jest.fn(),
+      deleteOrphanedRollupProofs: jest.fn(),
+      deleteUnsettledClaimTxs: jest.fn(),
+      getLastSettledRollup: jest.fn<any>().mockResolvedValue(undefined),
+      getPendingTxs: jest.fn<any>().mockResolvedValue([]),
+      getPendingSecondClassTxs: jest.fn<any>().mockResolvedValue([]),
+    } as any;
 
     feeResolver = {
       start: jest.fn(),
@@ -371,6 +392,37 @@ describe('rollup_coordinator', () => {
       const rp = await coordinator.processPendingTxs(pendingTxs);
       expect(rp.published).toBe(true);
       expect(coordinator.getProcessedTxs()).toEqual(pendingTxs);
+      expect(rollupCreator.create).toHaveBeenCalledTimes(numOuterRollupProofs);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+    });
+
+    it('should do nothing if txs is full with only second-class txs', async () => {
+      // rollupDb should return some second-class txs for this test
+      const numSecondClassTxs = numInnerRollupTxs * numOuterRollupProofs;
+      rollupDb.getPendingSecondClassTxs.mockResolvedValueOnce(mockSecondClassTxs(numSecondClassTxs));
+      rollupDb.getPendingSecondClassTxCount.mockResolvedValueOnce(numSecondClassTxs);
+
+      const rp = await coordinator.processPendingTxs([]);
+      expect(rp.published).toBe(false);
+      expect(coordinator.getProcessedTxs()).toEqual([]);
+      expect(coordinator.getProcessedTxs().filter(tx => tx.secondClass)).toEqual([]);
+      expect(rollupCreator.create).toHaveBeenCalledTimes(0);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(0);
+    });
+
+    it('should publish ONLY first-class txs if block is full, even when second class txs are present', async () => {
+      // rollupDb should return some second-class txs for this test
+      const numSecondClassTxs = numInnerRollupTxs * numOuterRollupProofs;
+      rollupDb.getPendingSecondClassTxs.mockResolvedValueOnce(mockSecondClassTxs(numSecondClassTxs));
+      rollupDb.getPendingSecondClassTxCount.mockResolvedValueOnce(numSecondClassTxs);
+
+      const pendingTxs = [...Array(numInnerRollupTxs * numOuterRollupProofs)].map((_, i) => mockTx(i));
+      const rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(true);
+      expect(coordinator.getProcessedTxs()).toEqual(pendingTxs);
+      expect(coordinator.getProcessedTxs().filter(tx => tx.secondClass)).toEqual([]);
       expect(rollupCreator.create).toHaveBeenCalledTimes(numOuterRollupProofs);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
@@ -1451,6 +1503,37 @@ describe('rollup_coordinator', () => {
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
 
+    it('single payment tx can publish if it covers complete cost (second-class txs will fill in) 4', async () => {
+      // Same as above test, except here the rollupDb has second class txs that fill in empty rollup slots
+      //
+      // rollupDb should return some second-class txs for this test
+      const numSecondClassTxs = numInnerRollupTxs * numOuterRollupProofs;
+      rollupDb.getPendingSecondClassTxs.mockResolvedValueOnce(mockSecondClassTxs(numSecondClassTxs));
+      rollupDb.getPendingSecondClassTxCount.mockResolvedValueOnce(numSecondClassTxs);
+
+      // we flush rollup with a high excess fee tx
+      let fullCost = (numInnerRollupTxs * numOuterRollupProofs - 3) * BASE_GAS; // full base cost of rollup
+      fullCost += NON_DEFI_TX_GAS; // payment tx cost
+
+      const pendingTxs = [
+        mockTx(0, { txType: TxType.TRANSFER, excessGas: fullCost, txFeeAssetId: 0 }),
+        mockTx(1, { txType: TxType.TRANSFER, txFeeAssetId: 0 }),
+      ];
+
+      const rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(true);
+
+      // txs are first-class followed by second-class
+      // second-class txs only fill empty slots (some will not be published)
+      const numSlotsForSecondClass = numInnerRollupTxs * numOuterRollupProofs - pendingTxs.length;
+      const allTxIds = [0, 1].concat([...Array(numSlotsForSecondClass)].map((_, i) => i + SECOND_CLASS_ID_OFFSET));
+      expectProcessedTxIds(allTxIds);
+
+      expect(rollupCreator.create).toHaveBeenCalledTimes(numOuterRollupProofs);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+    });
+
     it('defi txs are not published if bridge is not profitable, even if rollup is', async () => {
       const fullCost = (numInnerRollupTxs * numOuterRollupProofs - 1) * BASE_GAS; // excess gas is all other slots
       const pendingTxs = [
@@ -1680,6 +1763,48 @@ describe('rollup_coordinator', () => {
       expectProcessedTxIds([...Array(numInnerRollupTxs)].map((_, i) => i));
 
       expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
+      expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual(Array(numberOfBridgeCalls).fill(0n));
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+    });
+    it('should publish a rollup after the rollup timeout (second-class txs will fill in) 4', async () => {
+      // from above - let currentTime = new Date('2021-06-20T11:45:00+01:00');
+      // mockTx default creation time to new Date(new Date('2021-06-20T11:43:00+01:00').getTime() + id)
+
+      // rollupDb should return some second-class txs for this test
+      const numSecondClassTxs = numInnerRollupTxs * numOuterRollupProofs;
+      rollupDb.getPendingSecondClassTxs.mockResolvedValueOnce(mockSecondClassTxs(numSecondClassTxs));
+      rollupDb.getPendingSecondClassTxCount.mockResolvedValueOnce(numSecondClassTxs);
+
+      const pendingTxs = [mockTx(0, { txType: TxType.TRANSFER, txFeeAssetId: 0 })];
+      let rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(false);
+      expectProcessedTxIds([]);
+
+      expect(rollupCreator.create).toHaveBeenCalledTimes(0);
+      expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(0);
+      expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(0);
+
+      // set the rollup timeout to the following
+      rollupTimeouts = {
+        ...rollupTimeouts,
+        baseTimeout: { timeout: new Date('2021-06-20T12:00:00+01:00'), rollupNumber: 1 },
+      };
+      // and set current time just after the timeout
+      currentTime = new Date('2021-06-20T12:00:01+01:00');
+
+      // run again and we should have published it
+      rp = await coordinator.processPendingTxs(pendingTxs);
+      expect(rp.published).toBe(true);
+
+      // txs are first-class followed by second-class
+      // second-class txs only fill empty slots (some will not be published)
+      const numSlotsForSecondClass = numInnerRollupTxs * numOuterRollupProofs - pendingTxs.length;
+      const allTxIds = [0].concat([...Array(numSlotsForSecondClass)].map((_, i) => i + SECOND_CLASS_ID_OFFSET));
+      expectProcessedTxIds(allTxIds);
+
+      expect(rollupCreator.create).toHaveBeenCalledTimes(numOuterRollupProofs);
       expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][5]).toEqual([0]);
       expect(rollupAggregator.aggregateRollupProofs.mock.calls[0][4]).toEqual(Array(numberOfBridgeCalls).fill(0n));
@@ -2606,6 +2731,87 @@ describe('rollup_coordinator', () => {
       expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
     });
 
+    // TODO add other types when they are supported as second-class txs
+    it.each([[TxType.ACCOUNT, TxType.TRANSFER]])(
+      `should not publish second-class txs of type %d would breach the available gas`,
+      async (txTypeUnderTest, secondaryTxType) => {
+        // if first-class txs use up all gas, don't include any second class
+
+        // rollupDb should return some second-class txs for this test
+        const numSecondClassTxs = numInnerRollupTxs * numOuterRollupProofs;
+        rollupDb.getPendingSecondClassTxs.mockResolvedValueOnce(mockSecondClassTxs(numSecondClassTxs));
+        rollupDb.getPendingSecondClassTxCount.mockResolvedValueOnce(numSecondClassTxs);
+
+        // set the gas value for the tx type under test so we can only fit 3 in a rollup
+        gasValues[txTypeUnderTest] = 80000;
+        gasValues[secondaryTxType] = 40000; //secondary tx type
+
+        // ensure that we have enough call data for everything
+        callDataValues[txTypeUnderTest] = 10;
+        callDataValues[secondaryTxType] = 10;
+        // Last TX here forces publish
+        const pendingTxs = [
+          mockTx(0, { txType: txTypeUnderTest, txFeeAssetId: 0 }),
+          mockTx(1, { txType: secondaryTxType, txFeeAssetId: 0 }),
+          mockTx(2, { txType: txTypeUnderTest, txFeeAssetId: 0 }),
+          mockTx(3, { txType: txTypeUnderTest, txFeeAssetId: 0 }),
+          mockTx(4, { txType: txTypeUnderTest, txFeeAssetId: 0 }),
+        ];
+
+        // we can fit the first 3 tested txs + the secondary in the rollup
+        const rp = await coordinator.processPendingTxs(pendingTxs);
+        expect(rp.published).toBe(true);
+        expect(rp.totalGas).toBe(360000); // 4 * BASE_GAS + 3 * TxType under test + 1 * secondary
+        expect(rp.totalCallData).toBe(40); // 4 * 10
+        expectProcessedTxIds([0, 1, 2, 3]);
+        expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+        expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+        expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+      },
+    );
+
+    // TODO add other types when they are supported as second-class txs
+    it.each([[TxType.ACCOUNT, TxType.TRANSFER]])(
+      `should not publish second-class txs of type %d would breach the available gas 2`,
+      async (txTypeUnderTest, secondaryTxType) => {
+        // fill in with second-class txs until run out of gas
+
+        // rollupDb should return some second-class txs for this test
+        const numSecondClassTxs = numInnerRollupTxs * numOuterRollupProofs;
+        rollupDb.getPendingSecondClassTxs.mockResolvedValueOnce(mockSecondClassTxs(numSecondClassTxs));
+        rollupDb.getPendingSecondClassTxCount.mockResolvedValueOnce(numSecondClassTxs);
+
+        // we flush rollup with a high excess fee tx
+        let fullCost = (numInnerRollupTxs * numOuterRollupProofs - 3) * BASE_GAS; // full base cost of rollup
+        fullCost += NON_DEFI_TX_GAS; // payment tx cost
+
+        // set the gas value for the tx type under test so we can only fit 3 in a rollup
+        // (a second-class tx will fit, but only 1)
+        gasValues[txTypeUnderTest] = 80000;
+        gasValues[secondaryTxType] = 40000; //secondary tx type
+
+        // ensure that we have enough call data for everything
+        callDataValues[txTypeUnderTest] = 10;
+        callDataValues[secondaryTxType] = 10;
+        // Last TX here forces publish
+        const pendingTxs = [
+          mockTx(0, { txType: txTypeUnderTest, txFeeAssetId: 0 }),
+          mockTx(1, { txType: secondaryTxType, txFeeAssetId: 0 }),
+          mockTx(2, { txType: txTypeUnderTest, excessGas: fullCost, txFeeAssetId: 0 }),
+        ];
+
+        // we can fit the first 3 tested txs + the secondary in the rollup
+        const rp = await coordinator.processPendingTxs(pendingTxs);
+        expect(rp.published).toBe(true);
+        expect(rp.totalGas).toBe(360000); // 4 * BASE_GAS + 3 * TxType under test + 1 * secondary
+        expect(rp.totalCallData).toBe(40); // 4 * 10
+        expectProcessedTxIds([0, 1, 2, 100]);
+        expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+        expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+        expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+      },
+    );
+
     it('should not publish defi claim txs that would breach the available gas', async () => {
       // set the gas value for defi claims so we can only fit 3 in a rollup
       gasValues[TxType.DEFI_CLAIM] = 95000;
@@ -2690,6 +2896,82 @@ describe('rollup_coordinator', () => {
         expect(rp.totalCallData).toBe(100000); // 3 * Tested txs + secondary
         expect(rp.totalGas).toBe(80040); // 4 * BASE_GAS + 4 * 10
         expectProcessedTxIds([0, 1, 2, 3]);
+        expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+        expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+        expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+      },
+    );
+
+    // TODO add other types when they are supported as second-class txs
+    it.each([[TxType.ACCOUNT, TxType.TRANSFER]])(
+      `should not publish second-class txs of type %d would breach the available call data`,
+      async (txTypeUnderTest, secondaryTxType) => {
+        // if first-class txs use up all call data, don't include any second class
+
+        // rollupDb should return some second-class txs for this test
+        const numSecondClassTxs = numInnerRollupTxs * numOuterRollupProofs;
+        rollupDb.getPendingSecondClassTxs.mockResolvedValueOnce(mockSecondClassTxs(numSecondClassTxs));
+        rollupDb.getPendingSecondClassTxCount.mockResolvedValueOnce(numSecondClassTxs);
+
+        // set the call data value for tx under test so we can only fit 3 in a rollup
+        callDataValues[txTypeUnderTest] = 30000; //Tx under test
+        callDataValues[secondaryTxType] = 10000; //secondary tx type
+        // ensure that we have enough gas for everything
+        gasValues[txTypeUnderTest] = 10;
+        gasValues[secondaryTxType] = 10;
+        const pendingTxs = [
+          mockTx(0, { txType: txTypeUnderTest, txFeeAssetId: 0 }),
+          mockTx(1, { txType: txTypeUnderTest, txFeeAssetId: 0 }),
+          mockTx(2, { txType: secondaryTxType, txFeeAssetId: 0 }),
+          mockTx(3, { txType: txTypeUnderTest, txFeeAssetId: 0 }),
+          mockTx(4, { txType: txTypeUnderTest, txFeeAssetId: 0 }),
+        ];
+
+        // we can fit the first 3 tested txs + the secondary in the rollup
+        const rp = await coordinator.processPendingTxs(pendingTxs);
+        expect(rp.published).toBe(true);
+        expect(rp.totalCallData).toBe(100000); // 3 * Tested txs + secondary
+        expect(rp.totalGas).toBe(80040); // 4 * BASE_GAS + 4 * 10
+        expectProcessedTxIds([0, 1, 2, 3]);
+        expect(rollupCreator.create).toHaveBeenCalledTimes(1);
+        expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
+        expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);
+      },
+    );
+
+    // TODO add other types when they are supported as second-class txs
+    it.each([[TxType.ACCOUNT, TxType.TRANSFER]])(
+      `should not publish second-class txs of type %d would breach the available call data 2`,
+      async (txTypeUnderTest, secondaryTxType) => {
+        // fill in with second-class txs until run out of call data
+        //
+        // rollupDb should return some second-class txs for this test
+        const numSecondClassTxs = numInnerRollupTxs * numOuterRollupProofs;
+        rollupDb.getPendingSecondClassTxs.mockResolvedValueOnce(mockSecondClassTxs(numSecondClassTxs));
+        rollupDb.getPendingSecondClassTxCount.mockResolvedValueOnce(numSecondClassTxs);
+
+        // we flush rollup with a high excess fee tx
+        let fullCost = (numInnerRollupTxs * numOuterRollupProofs - 3) * BASE_GAS; // full base cost of rollup
+        fullCost += NON_DEFI_TX_GAS; // payment tx cost
+
+        // set the call data value for tx under test so we can only fit 3 in a rollup
+        callDataValues[txTypeUnderTest] = 30000; //Tx under test
+        callDataValues[secondaryTxType] = 10000; //secondary tx type
+        // ensure that we have enough gas for everything
+        gasValues[txTypeUnderTest] = 10;
+        gasValues[secondaryTxType] = 10;
+        const pendingTxs = [
+          mockTx(0, { txType: txTypeUnderTest, txFeeAssetId: 0 }),
+          mockTx(1, { txType: txTypeUnderTest, txFeeAssetId: 0 }),
+          mockTx(2, { txType: secondaryTxType, excessGas: fullCost, txFeeAssetId: 0 }),
+        ];
+
+        // we can fit the first 3 tested txs + the secondary in the rollup
+        const rp = await coordinator.processPendingTxs(pendingTxs);
+        expect(rp.published).toBe(true);
+        expect(rp.totalCallData).toBe(100000); // 3 * Tested txs + secondary
+        expect(rp.totalGas).toBe(80040); // 4 * BASE_GAS + 4 * 10
+        expectProcessedTxIds([0, 1, 2, 100]);
         expect(rollupCreator.create).toHaveBeenCalledTimes(1);
         expect(rollupAggregator.aggregateRollupProofs).toHaveBeenCalledTimes(1);
         expect(rollupPublisher.publishRollup).toHaveBeenCalledTimes(1);

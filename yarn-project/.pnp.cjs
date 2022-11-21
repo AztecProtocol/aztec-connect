@@ -18014,13 +18014,21 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["@aztec/barretenberg", "workspace:barretenberg.js"],\
             ["@aztec/blockchain", "workspace:blockchain"],\
             ["@aztec/eslint-config", "workspace:eslint-config"],\
+            ["@aztec/halloumi", "workspace:halloumi"],\
+            ["@aztec/sdk", "workspace:sdk"],\
             ["@ethersproject/abstract-provider", "npm:5.7.0"],\
             ["@ethersproject/providers", "npm:5.7.0"],\
             ["@rushstack/eslint-patch", "npm:1.1.4"],\
+            ["@types/leveldown", "npm:4.0.3"],\
+            ["@types/levelup", "npm:4.3.3"],\
+            ["@types/memdown", "npm:3.0.0"],\
             ["@types/mocha", "npm:9.1.1"],\
             ["@types/node", "npm:18.7.23"],\
             ["commander", "npm:8.3.0"],\
             ["ethers", "npm:5.5.1"],\
+            ["leveldown", "npm:6.1.1"],\
+            ["levelup", "npm:5.1.1"],\
+            ["memdown", "npm:6.1.1"],\
             ["ts-node", "virtual:4cf42c2f2a8aa147d524c15c0290174d77a2062937f0c22441901ac61d50212062460a38e714456279cdb4fab155b3b1d12acfb24cd6bb68fcc1837e921b5557#npm:10.9.1"],\
             ["typescript", "patch:typescript@npm%3A4.7.4#~builtin<compat/typescript>::version=4.7.4&hash=a1c5e5"]\
           ],\

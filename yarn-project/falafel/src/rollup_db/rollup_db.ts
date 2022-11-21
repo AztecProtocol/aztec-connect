@@ -80,9 +80,21 @@ export class TypeOrmRollupDb implements RollupDb {
     );
   }
 
-  public async getPendingTxCount() {
+  public async getPendingTxCount(includeSecondClass = false) {
+    if (includeSecondClass) {
+      return await this.txRep.count({
+        where: { rollupProof: IsNull() },
+      });
+    } else {
+      return await this.txRep.count({
+        where: { rollupProof: IsNull(), secondClass: false },
+      });
+    }
+  }
+
+  public async getPendingSecondClassTxCount() {
     return await this.txRep.count({
-      where: { rollupProof: IsNull() },
+      where: { rollupProof: IsNull(), secondClass: true },
     });
   }
 
@@ -90,8 +102,14 @@ export class TypeOrmRollupDb implements RollupDb {
     await this.txRep.delete({ rollupProof: IsNull() });
   }
 
-  public async getTotalTxCount() {
-    return await this.txRep.count();
+  public async getTotalTxCount(includeSecondClass = false) {
+    if (includeSecondClass) {
+      return await this.txRep.count();
+    } else {
+      return await this.txRep.count({
+        where: { secondClass: false },
+      });
+    }
   }
 
   public async getJoinSplitTxCount() {
@@ -149,9 +167,25 @@ export class TypeOrmRollupDb implements RollupDb {
     return getNewAccountDaos(unsettledAccountTxs);
   }
 
-  public async getPendingTxs(take?: number) {
+  public async getPendingTxs(take?: number, includeSecondClass = false) {
+    if (includeSecondClass) {
+      return await this.txRep.find({
+        where: { rollupProof: IsNull() },
+        order: { created: 'ASC' },
+        take,
+      });
+    } else {
+      return await this.txRep.find({
+        where: { rollupProof: IsNull(), secondClass: false },
+        order: { created: 'ASC' },
+        take,
+      });
+    }
+  }
+
+  public async getPendingSecondClassTxs(take?: number) {
     return await this.txRep.find({
-      where: { rollupProof: IsNull() },
+      where: { rollupProof: IsNull(), secondClass: true },
       order: { created: 'ASC' },
       take,
     });

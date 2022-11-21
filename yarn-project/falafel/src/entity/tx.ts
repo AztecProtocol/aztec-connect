@@ -70,6 +70,9 @@ export class TxDao {
   @Column()
   public excessGas!: number;
 
+  @Column({ nullable: false, default: false })
+  public secondClass?: boolean;
+
   @AfterLoad()
   @AfterInsert()
   @AfterUpdate()
