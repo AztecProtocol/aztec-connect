@@ -59,7 +59,6 @@ function getFormattedId(userId) {
 
 export function Balance(props: BalanceProps) {
   const [modalActivation, setModalActivation] = useState<ModalActivation>();
-  const [isRegistrationSettled, setIsRegistrationSettled] = useState<boolean>(false);
   const accountState = useAccountState();
   const cachedAlias = useCachedAlias();
   const formattedAddress = getFormattedId(accountState?.userId);
@@ -70,7 +69,6 @@ export function Balance(props: BalanceProps) {
     if (!txs) return;
     const registrationTx = txs.find(tx => tx.proofId === ProofId.ACCOUNT);
     if (!registrationTx) return;
-    setIsRegistrationSettled(!!registrationTx.settled);
   }, [txs]);
 
   if (isLoading) return <LoadingFallback />;
@@ -83,7 +81,7 @@ export function Balance(props: BalanceProps) {
     );
 
   const handleOpenShieldModal = (assetId?: number) => {
-    const recipient = isRegistrationSettled && cachedAlias ? cachedAlias : formattedAddress;
+    const recipient = cachedAlias || formattedAddress;
     setModalActivation({ type: 'shield', assetId, recipient });
   };
 
