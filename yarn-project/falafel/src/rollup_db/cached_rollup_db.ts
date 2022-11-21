@@ -43,9 +43,9 @@ export class CachedRollupDb extends SyncRollupDb {
 
   public getPendingTxCount(includeSecondClass = false) {
     if (includeSecondClass) {
-      return Promise.resolve(this.pendingTxCount);
+      return Promise.resolve(this.pendingTxCount + this.pendingSecondClassTxCount);
     } else {
-      return Promise.resolve(this.pendingTxCount - this.pendingSecondClassTxCount);
+      return Promise.resolve(this.pendingTxCount);
     }
   }
 
@@ -126,12 +126,13 @@ export class CachedRollupDb extends SyncRollupDb {
     const { nullifier1, nullifier2 } = new ProofData(txDao.proofData);
     [nullifier1, nullifier2].filter(n => !!toBigIntBE(n)).forEach(n => this.unsettledNullifiers.push(n));
 
+    this.unsettledTxs.push(txDao);
+    this.totalTxCount++;
     if (txDao.secondClass) {
       this.pendingSecondClassTxCount++;
+    } else {
+      this.pendingTxCount++;
     }
-    this.unsettledTxs.push(txDao);
-    this.pendingTxCount++;
-    this.totalTxCount++;
   }
 
   public async addTxs(txs: TxDao[]) {
@@ -145,8 +146,8 @@ export class CachedRollupDb extends SyncRollupDb {
       .forEach(n => this.unsettledNullifiers.push(n));
 
     this.unsettledTxs.push(...txs);
-    this.pendingTxCount += txs.length;
     this.totalTxCount += txs.length;
+    this.pendingTxCount += txs.reduce((partialCount, tx) => (tx.secondClass ? partialCount : partialCount + 1), 0);
     this.pendingSecondClassTxCount += txs.reduce(
       (partialCount, tx) => (tx.secondClass ? partialCount + 1 : partialCount),
       0,
