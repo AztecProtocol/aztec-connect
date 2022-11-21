@@ -236,6 +236,7 @@ describe('world_state', () => {
         return pendingTxs;
       }),
       getUnsettledTxCount: jest.fn<any>().mockResolvedValue(0),
+      getPendingSecondClassTxCount: jest.fn<any>().mockResolvedValue(27),
       deleteTxsById: jest.fn(),
     } as Mockify<RollupDb>;
 
@@ -732,5 +733,7 @@ describe('world_state', () => {
     expect(txPoolProfile.pendingBridgeStats).toEqual([
       { bridgeCallData: bridgeCallData1, gasAccrued: (bridgeConfigs[0].gas! / bridgeConfigs[0].numTxs) * 2 },
     ]);
+
+    expect(txPoolProfile.pendingSecondClassTxCount).toBe(27);
   });
 });

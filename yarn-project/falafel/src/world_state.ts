@@ -157,7 +157,6 @@ export class WorldState {
       const pendingTransactionsNotInRollup = pendingTxs.filter(elem =>
         processedTransactions.every(tx => !tx.id.equals(elem.id)),
       );
-      const pendingSecondClassTransactionsNotInRollup = pendingTransactionsNotInRollup.filter(tx => tx.secondClass);
 
       const pendingBridgeStats: Map<bigint, BridgeStat> = new Map();
       for (const tx of pendingTransactionsNotInRollup) {
@@ -183,7 +182,7 @@ export class WorldState {
         numTxsInNextRollup: processedTransactions.length,
         pendingBridgeStats: [...pendingBridgeStats.values()],
         pendingTxCount: pendingTransactionsNotInRollup.length,
-        pendingSecondClassTxCount: pendingSecondClassTransactionsNotInRollup.length,
+        pendingSecondClassTxCount: await this.rollupDb.getPendingSecondClassTxCount(),
       };
       this.txPoolProfileValidUntil = new Date(Date.now() + this.expireTxPoolAfter);
     }

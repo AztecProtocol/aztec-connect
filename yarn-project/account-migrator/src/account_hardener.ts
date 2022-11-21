@@ -143,7 +143,7 @@ export class AccountHardener {
     );
 
     debug('Initializing RollupProvider');
-    this.rollupProvider = new SecondClassRollupProviderLimited(this.rollupHost);
+    this.rollupProvider = new SecondClassRollupProviderLimited(this.rollupHost, this.liveRun);
 
     debug('Creating BarretenbergWASM and WorkerPool');
     this.wasm = await BarretenbergWasm.new();
@@ -178,6 +178,7 @@ export class AccountHardener {
       memoryDb: this.memoryDb,
       minConfirmation: this.confirmations,
       //debug: 'bb:*',  // setting this here overrides debug logger set in this module
+      identifier: "hardener",
     });
 
     debug('Initializing WorldState');
@@ -781,7 +782,7 @@ function getLevelDb(memoryDb = false, identifier?: string): LevelUp {
   } else {
     mkdirSync(dbPath, { recursive: true });
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    return levelup(leveldown(`${dbPath}/aztec2-sdk.db`));
+    return levelup(leveldown(`${dbPath}/aztec2-harden.db`));
   }
 }
 
