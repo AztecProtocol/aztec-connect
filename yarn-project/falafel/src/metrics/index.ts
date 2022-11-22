@@ -88,6 +88,14 @@ export class Metrics {
     });
 
     new Gauge({
+      name: 'tx_pending_second_class_total',
+      help: 'Pending transactions',
+      async collect() {
+        this.set(await rollupDb.getPendingSecondClassTxCount());
+      },
+    });
+
+    new Gauge({
       name: 'tx_unsettled_total',
       help: 'Unsettled transactions',
       async collect() {

@@ -296,6 +296,7 @@ export class Server {
       numUnsettledTxs: txPoolProfile.numTxs,
       numTxsInNextRollup: txPoolProfile.numTxsInNextRollup,
       pendingTxCount: txPoolProfile.pendingTxCount,
+      pendingSecondClassTxCount: txPoolProfile.pendingSecondClassTxCount,
       totalTxs,
       totalBlocks,
       nextPublishTime: nextPublish.baseTimeout ? nextPublish.baseTimeout.timeout : new Date(0),
@@ -373,7 +374,7 @@ export class Server {
     return tx;
   }
 
-  public async receiveTxs(txRequest: TxRequest) {
+  public async receiveTxs(txRequest: TxRequest, secondClass = false) {
     const { maxUnsettledTxs } = this.configurator.getConfVars().runtimeConfig;
     const unsettled = await this.getUnsettledTxCount();
     if (maxUnsettledTxs && unsettled >= maxUnsettledTxs) {
@@ -382,7 +383,7 @@ export class Server {
 
     const start = new Date().getTime();
     const end = this.metrics.receiveTxTimer();
-    const result = await this.txReceiver.receiveTxs(txRequest);
+    const result = await this.txReceiver.receiveTxs(txRequest, secondClass);
     end();
     this.log(`Received tx in ${new Date().getTime() - start}ms.`);
     return result;

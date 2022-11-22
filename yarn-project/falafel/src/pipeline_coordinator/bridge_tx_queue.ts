@@ -12,6 +12,7 @@ export interface RollupTx {
   fee: AssetValue;
   tx: TxDao;
   bridgeCallData?: bigint;
+  secondClass?: boolean;
 }
 
 export interface RollupResources {
@@ -30,6 +31,7 @@ export function createRollupTx(rawTx: TxDao, proof: ProofData): RollupTx {
       value: toBigIntBE(proof.txFee),
     },
     bridgeCallData: undefined,
+    secondClass: rawTx.secondClass,
   };
 }
 
@@ -42,6 +44,7 @@ export function createDefiRollupTx(rawTx: TxDao, proof: DefiDepositProofData): R
       value: proof.txFee,
     },
     bridgeCallData: proof.bridgeCallData.toBigInt(),
+    secondClass: rawTx.secondClass,
   };
 }
 

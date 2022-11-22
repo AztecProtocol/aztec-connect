@@ -23,7 +23,7 @@ Simply running `yarn build` should be sufficient
 
 ## Running
 
-Run 'yarn start' with the required arguments:
+Run 'yarn start migrate' with the required arguments:
 
 Options:
 
@@ -51,22 +51,96 @@ Examples:
 
 ## Generating account Data
 
-1. `yarn start -d /home/data -a 0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba -u "https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35"`
+1. `yarn start migrate -d /home/data -a 0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba -u "https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35"`
 
    Will extract account data from the Aztec 1 rollup contract at address 0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba. It will look for rollups from id 0 to infinity with at least 3 confirmations and using provider at "https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35". Will then store account data into file /home/data/accounts.
 
-2. `yarn start -d /home/data -a 0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba -u "https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35" -z`
+2. `yarn start migrate -d /home/data -a 0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba -u "https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35" -z`
 
    Will extract account data from the Aztec Connect rollup contract at address 0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba. It will look for rollups from id 0 to infinity with at least 3 confirmations and using provider at "https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35". Will then store account data into file /home/data/accounts.
 
-3. `yarn start -d /home/data -f 5 -t 2001 -c 2 -a 0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba -u "https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35" -z`
+3. `yarn start migrate -d /home/data -f 5 -t 2001 -c 2 -a 0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba -u "https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35" -z`
 
    Will extract account data from the Aztec Connect rollup contract at address 0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba. It will look for rollups from id 5 to 2001 with at least 2 confirmations and using provider at "https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35". Will then store account data into file /home/data/accounts.
 
 ## Verifying account data
 
-1. `yarn start -d /home/data -v 1 -f 5 -t 2001 -c 2 -a 0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba -u "https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35"`
+1. `yarn start migrate -d /home/data -v 1 -f 5 -t 2001 -c 2 -a 0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba -u "https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35"`
 
    Will extract account data from the Aztec 1 rollup contract at address 0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba. It will look for rollups from id 5 to 2001 with at least 2 confirmations and using provider at "https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35". Account data won't be stored, instead the tree roots will be generated from the on-chain data and verified against those stored in barretenberg.js/src/environment/init/init_config.ts for chain id 1
 
 The data directory is required for both modes of operation as temporary files are always required, this directory must be created prior to running the application
+
+## Harden accounts
+
+### Run local test
+
+Run the script below to run a full local test of the account hardener. This script handles launching ganache, halloumi, falafel, and even an e2e test before running the account hardener.
+```
+./scripts/harden-accounts-local.sh
+```
+
+### Run full hardener sequence all at once
+
+#### Launch halloumi
+
+First, launch the halloumi instance that the hardener will use for proof generation. The command below will "background" halloumi and redirect all of its output to `log/halloumi.log` in the `account-migrator/` directory:
+`(cd ../halloumi && PORT=9083 JOB_SERVER_URL="http://localhost:9082" yarn start:e2e > log/halloumi.log 2>&1) &`
+
+> NOTE: To get more debug output, prefix the `yarn` command with `DEBUG=bb:*`
+
+> NOTE: Insead of the above command (with automatic backgrounding and output redirection), you could just run the following command in _another console_: `PORT=9083 JOB_SERVER_URL="http://localhost:9082" yarn start:e2e`
+
+#### Run hardener
+
+Run the full sequence of hardener steps including `createHardener`, `genHardenProofs`, `hardenAccounts`, and `verifyHardened`:
+```
+yarn start harden fullSequence -t <up-to-rollup-block> -a "<rollup-address>" --port 9082 -m true -c <#confirmations>
+```
+
+> NOTE omit `-t` to run for _all_ blocks and _all_ accounts.
+
+### Run hardener step-by-step
+
+#### Launch halloumi
+
+First, launch the halloumi instance that the hardener will use for proof generation. The command below will "background" halloumi and redirect all of its output to `log/halloumi.log` in the `account-migrator/` directory:
+`(cd ../halloumi && PORT=9083 JOB_SERVER_URL="http://localhost:9082" yarn start:e2e > log/halloumi.log 2>&1) &`
+
+> NOTE: To get more debug output, prefix the `yarn` command with `DEBUG=bb:*`
+
+> NOTE: Insead of the above command (with automatic backgrounding and output redirection), you could just run the following command in _another console_: `PORT=9083 JOB_SERVER_URL="http://localhost:9082" yarn start:e2e`
+
+#### Create hardener account
+
+Create the hardener account which will be migrated to each vulnerable account's inverted public key and in doing so "harden" each account:
+```
+yarn start harden createHardener -t <up-to-rollup-block> -a "<rollup-address>" --port 9082 -m true -c <#confirmations>
+```
+
+> NOTE: You can set `DEBUG=am:*` to get more debug info from the account hardener for any subcommands
+
+> NOTE: For all subcommands, be sure to replace `<rollup-address>` with the address of your rollup contract as displayed by falafel. Also be sure to set `<up-to-rollup-block>` and `<#confirmations>` appropriately.
+
+> NOTE omit `-t` to run for _all_ blocks and _all_ accounts.
+
+#### Generate account harden proofs
+
+Next, generate the proofs that will harden the accounts:
+```
+yarn start genHardenProofs -t <up-to-rollup-block> -a "<rollup-address>" --port 9082 -m true -c <#confirmations>
+```
+
+#### Harden accounts
+
+Now perform the actual harden operation. This submits the previously generated account hardening proofs to falafel for inclusion in the rollup:
+```
+yarn start hardenAccounts -t <up-to-rollup-block> -a "<rollup-address>" --port 9082 -m true -c <#confirmation>
+```
+
+#### Verify that accounts are hardened
+
+Finally, verify that all accounts in the specified block range have been hardened:
+```
+yarn start verifyHardened -t <up-to-rollup-block> -a "<rollup-address>" --port 9082 -m true -c <#confirmation>`
+```

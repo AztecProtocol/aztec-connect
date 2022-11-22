@@ -91,12 +91,14 @@ describe('pipeline_coordinator', () => {
     } as any;
 
     rollupDb = {
+      getPendingSecondClassTxCount: jest.fn<any>().mockResolvedValue(0),
       getPendingTxCount: jest.fn<any>().mockResolvedValue(0),
       deleteUnsettledRollups: jest.fn(),
       deleteOrphanedRollupProofs: jest.fn(),
       deleteUnsettledClaimTxs: jest.fn(),
       getLastSettledRollup: jest.fn<any>().mockResolvedValue(undefined),
       getPendingTxs: jest.fn<any>().mockResolvedValue([]),
+      getPendingSecondClassTxs: jest.fn<any>().mockResolvedValue([]),
     } as any;
 
     feeResolver = {

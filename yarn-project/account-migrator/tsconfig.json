@@ -1,11 +1,12 @@
 {
   "compilerOptions": {
-    "target": "esnext",
+    "target": "es2020",
+    "lib": ["dom", "esnext", "es2017.object"],
     "module": "NodeNext",
-    "lib": ["es2019"],
     "outDir": "dest",
     "strict": true,
     "noImplicitAny": true,
+    "noUnusedLocals": true,
     "noImplicitThis": false,
     "esModuleInterop": true,
     "declaration": true,
@@ -14,8 +15,12 @@
     "inlineSourceMap": true,
     "declarationMap": true,
     "resolveJsonModule": true,
-    "skipLibCheck": true
+    "useUnknownInCatchVariables": false
   },
-  "references": [{ "path": "../barretenberg.js/tsconfig.dest.json" }, { "path": "../blockchain/tsconfig.dest.json" }],
+  "references": [
+    { "path": "../barretenberg.js/tsconfig.dest.json" },
+    { "path": "../blockchain/tsconfig.dest.json" },
+    { "path": "../halloumi/tsconfig.dest.json" }
+  ],
   "include": ["src"]
 }

@@ -120,6 +120,7 @@ export interface RollupProviderStatus {
   numTxsInNextRollup: number;
   numUnsettledTxs: number;
   pendingTxCount: number;
+  pendingSecondClassTxCount: number;
   runtimeConfig: RuntimeConfig;
   bridgeStatus: BridgeStatus[];
   proverless: boolean;
@@ -137,6 +138,7 @@ export interface RollupProviderStatusJson {
   numTxsInNextRollup: number;
   numUnsettledTxs: number;
   pendingTxCount: number;
+  pendingSecondClassTxCount: number;
   runtimeConfig: RuntimeConfigJson;
   bridgeStatus: BridgeStatusJson[];
   proverless: boolean;

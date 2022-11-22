@@ -150,6 +150,15 @@ export class ServerRollupProvider extends ServerBlockSource implements RollupPro
     return +(await response.text()) === 1;
   }
 
+  /**
+   * Submits a request to baseUrl at the specified path
+   * If data is provided, a POST is sent with that data as the body.
+   * The response is checked for errors and handled accordingly.
+   * @param path Path to source at baseUrl
+   * @param data Data to be submitted in POST request
+   * @returns fetch response
+   * @throws Error when response is undefined or contains an error status
+   */
   private async fetch(path: string, data?: any) {
     const url = new URL(`${this.baseUrl}${path}`);
 

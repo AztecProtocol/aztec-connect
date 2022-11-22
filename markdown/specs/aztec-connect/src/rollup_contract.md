@@ -10,7 +10,7 @@ However, understanding the architecture may be useful to better understand the l
 
 ### State Model
 
-L2 state is recorded in 5 append-only databases, represented as Merkle trees. The Rollup contract records the roots of each tree via the rollupStateHash variable.
+L2 state is recorded in 4 append-only databases, represented as Merkle trees. The Rollup contract records the roots of each tree via the rollupStateHash variable.
 
 A call to the _processRollup(...)_ method is, at its core, a request to update the roots of the above Merkle trees due to changes in the underlying databases from a block of L2 transactions.
 
@@ -25,7 +25,7 @@ The _dataTree_ and _defiTree_ have with it associated a shared nullifier set.
 A nullifier set is an additional database which is also represented as a Merkle tree whose roots are included in _rollupStateHash_.
 This nullifier set can be shared because there is no risk of collisions.
 
-Nullifier sets record all items that have been deleted from their linked database.
+Nullifier set records all items that have been deleted from their linked database.
 The encryption algorithm used to encrypt nullifiers is different from the encryption used for their counterpart objects in their linked database.
 This gives us the property of unlinkability - observers cannot link note creation to note destruction, which obscures the transaction graph.
 

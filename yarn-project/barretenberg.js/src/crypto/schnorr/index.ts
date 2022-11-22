@@ -1,5 +1,6 @@
 import { BarretenbergWasm } from '../../wasm/index.js';
 import { SchnorrSignature } from './signature.js';
+import { GrumpkinAddress } from '../../address/index.js';
 import { serializeBufferArrayToVector } from '../../serialize/index.js';
 
 export * from './signature.js';
@@ -7,17 +8,26 @@ export * from './signature.js';
 export class Schnorr {
   constructor(private wasm: BarretenbergWasm) {}
 
+  public computePublicKey(pk: Uint8Array) {
+    this.wasm.transferToHeap(pk, 0);
+    this.wasm.call('compute_public_key', 0, 32);
+    return Buffer.from(this.wasm.sliceMemory(32, 96));
+  }
+
+  // Negate the public key (effectively negating the y-coordinate of the public key) and return the resulting public key.
+  public negatePublicKey(key: GrumpkinAddress) {
+    const keyBuffer = key.toBuffer();
+    this.wasm.transferToHeap(keyBuffer, 0);
+    this.wasm.call('negate_public_key', 0, 0);
+    const newKeyBuffer = Buffer.from(this.wasm.sliceMemory(0, keyBuffer.length));
+    return new GrumpkinAddress(newKeyBuffer);
+  }
+
   public constructSignature(msg: Uint8Array, pk: Uint8Array) {
     this.wasm.transferToHeap(pk, 64);
     this.wasm.transferToHeap(msg, 96);
     this.wasm.call('construct_signature', 96, msg.length, 64, 0, 32);
     return new SchnorrSignature(Buffer.from(this.wasm.sliceMemory(0, 64)));
-  }
-
-  public computePublicKey(pk: Uint8Array) {
-    this.wasm.transferToHeap(pk, 0);
-    this.wasm.call('compute_public_key', 0, 32);
-    return Buffer.from(this.wasm.sliceMemory(32, 96));
   }
 
   public verifySignature(msg: Uint8Array, pubKey: Uint8Array, sig: SchnorrSignature) {

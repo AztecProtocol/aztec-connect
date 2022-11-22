@@ -326,9 +326,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@aztec/bridge-clients@npm:0.1.71":
-  version: 0.1.71
-  resolution: "@aztec/bridge-clients@npm:0.1.71"
+"@aztec/bridge-clients@npm:0.1.74":
+  version: 0.1.74
+  resolution: "@aztec/bridge-clients@npm:0.1.74"
   dependencies:
     "@aztec/barretenberg": 2.1.45
     "@ethersproject/providers": ^5.7.1
@@ -339,7 +339,7 @@ __metadata:
     ts-node: ^10.9.1
     typechain: ^8.1.0
     typescript: ^4.8.4
-  checksum: 1fac3fb01e97c17c8c1215215c44bb7bf500f933ef34b866b3db9bef676795065b1900b54c6120be699650340adfc6615af01dd622cff07c5090e8ab87085873
+  checksum: 704144dbb1cb4efcedc583d9c21b3457c0f418da4e4dc2fe68c913c5d7a686caf78a25bcbeb72311505fb75029617a00fef51d6ca3f4a16ffc53830e12221ffb
   languageName: node
   linkType: hard
 
@@ -10177,13 +10177,21 @@ __metadata:
     "@aztec/barretenberg": "workspace:^"
     "@aztec/blockchain": "workspace:^"
     "@aztec/eslint-config": "workspace:^"
+    "@aztec/halloumi": "workspace:^"
+    "@aztec/sdk": "workspace:^"
     "@ethersproject/abstract-provider": ^5.7.0
     "@ethersproject/providers": ^5.7.0
     "@rushstack/eslint-patch": ^1.1.4
+    "@types/leveldown": ^4.0.3
+    "@types/levelup": ^4.3.0
+    "@types/memdown": ^3.0.0
     "@types/mocha": ^9.0.0
     "@types/node": ^18.7.23
     commander: ^8.2.0
     ethers: 5.5.1
+    leveldown: ^6.1.1
+    levelup: ^5.1.1
+    memdown: ^6.1.1
     ts-node: ^10.2.1
     typescript: ^4.7.4
   languageName: unknown
@@ -30423,12 +30431,12 @@ __metadata:
   linkType: hard
 
 "typescript@npm:^4.8.4":
-  version: 4.8.4
-  resolution: "typescript@npm:4.8.4"
+  version: 4.9.3
+  resolution: "typescript@npm:4.9.3"
   bin:
     tsc: bin/tsc
     tsserver: bin/tsserver
-  checksum: 3e4f061658e0c8f36c820802fa809e0fd812b85687a9a2f5430bc3d0368e37d1c9605c3ce9b39df9a05af2ece67b1d844f9f6ea8ff42819f13bcb80f85629af0
+  checksum: 17b8f816050b412403e38d48eef0e893deb6be522d6dc7caf105e54a72e34daf6835c447735fd2b28b66784e72bfbf87f627abb4818a8e43d1fa8106396128dc
   languageName: node
   linkType: hard
 
@@ -30443,12 +30451,12 @@ __metadata:
   linkType: hard
 
 "typescript@patch:typescript@^4.8.4#~builtin<compat/typescript>":
-  version: 4.8.4
-  resolution: "typescript@patch:typescript@npm%3A4.8.4#~builtin<compat/typescript>::version=4.8.4&hash=a1c5e5"
+  version: 4.9.3
+  resolution: "typescript@patch:typescript@npm%3A4.9.3#~builtin<compat/typescript>::version=4.9.3&hash=a1c5e5"
   bin:
     tsc: bin/tsc
     tsserver: bin/tsserver
-  checksum: 563a0ef47abae6df27a9a3ab38f75fc681f633ccf1a3502b1108e252e187787893de689220f4544aaf95a371a4eb3141e4a337deb9895de5ac3c1ca76430e5f0
+  checksum: ef65c22622d864497d0a0c5db693523329b3284c15fe632e93ad9aa059e8dc38ef3bd767d6f26b1e5ecf9446f49bd0f6c4e5714a2eeaf352805dc002479843d1
   languageName: node
   linkType: hard
 
@@ -32752,7 +32760,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "zk.money@workspace:zk-money"
   dependencies:
-    "@aztec/bridge-clients": 0.1.71
+    "@aztec/bridge-clients": 0.1.74
     "@aztec/sdk": "workspace:^"
     "@babel/plugin-syntax-import-assertions": ^7.18.6
     "@ethersproject/abstract-signer": ^5.7.0

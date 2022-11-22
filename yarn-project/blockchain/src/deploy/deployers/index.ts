@@ -10,7 +10,6 @@ export * from './deploy_rollup_processor.js';
 export * from './deploy_uniswap.js';
 export * from './deploy_verifier.js';
 export * from './deploy_ace_of_zk.js';
-export * from './deploy_compound.js';
 export * from './deploy_permit_helper.js';
 export * from './deploy_faucet.js';
 export * from './deploy_mock_data_provider.js';
