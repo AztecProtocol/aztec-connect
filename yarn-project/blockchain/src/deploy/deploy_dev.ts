@@ -12,7 +12,6 @@ import {
   deployUniswapBridge,
   deployVerifier,
   deployErc20,
-  deployCompoundBridge,
   deployAztecFaucet,
   deployMockDataProvider,
 } from './deployers/index.js';
@@ -70,11 +69,9 @@ export async function deployDev(
   await deployUniswapPair(signer, uniswapRouter, asset0, initialTokenSupply, initialEthSupply);
   const uniswapBridge = await deployUniswapBridge(signer, rollup, uniswapRouter);
   const dummyBridge = await deployDummyBridge(rollup, signer, [asset0, asset1]);
-  const compoundBridge = await deployCompoundBridge(signer, rollup);
 
   await bridgeDataProvider.setBridgeData(5, uniswapBridge.address, 50000, 'Uniswap Bridge');
   await bridgeDataProvider.setBridgeData(6, dummyBridge.address, 50000, 'Dummy Bridge');
-  await bridgeDataProvider.setBridgeData(7, compoundBridge.address, 50000, 'Compund Bridge');
 
   const gasPriceFeedContact = await deployMockPriceFeed(signer, gasPrice);
   const daiPriceFeedContact = await deployMockPriceFeed(signer, daiPrice);

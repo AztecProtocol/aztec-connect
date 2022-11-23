@@ -18,7 +18,7 @@ export function useL1Balances(asset: RemoteAsset | undefined) {
   useEffect(() => {
     if (sdk && asset?.id !== undefined && address) {
       const gatedSetter = createGatedSetter(setL1PendingBalance);
-      sdk.getUserPendingDeposit(asset.id, EthAddress.fromString(address)).then(pendingDeposit => {
+      sdk.getUserPendingFunds(asset.id, EthAddress.fromString(address)).then(pendingDeposit => {
         gatedSetter.set(pendingDeposit);
       });
       return () => {

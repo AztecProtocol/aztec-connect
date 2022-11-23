@@ -1,3 +1,0 @@
-# This is the CODEOWNERS file for the aztec2-internal monorepo
-# Crypto code owners
-/barretenberg/src/aztec/rollup/proofs/ @AztecProtocol/crypto

@@ -141,6 +141,27 @@ export async function appFactory(server: Server, prefix: string, metrics: Metric
     ctx.status = 200;
   });
 
+  router.post('/txs-second-class', recordMetric, checkReady, validateAuth, async (ctx: Koa.Context) => {
+    const stream = new PromiseReadable(ctx.req);
+    const postData = JSON.parse((await stream.readAll()) as string);
+    const txs = postData.map(fromTxJson);
+    const clientIp = requestIp.getClientIp(ctx.request);
+    const { origin } = ctx.headers;
+    const txRequest: TxRequest = {
+      txs,
+      requestSender: {
+        clientIp: clientIp ?? '',
+        originUrl: origin ?? '',
+      },
+    };
+    const txIds = await server.receiveTxs(txRequest, true); // secondClass: true
+    const response = {
+      txIds: txIds.map(txId => txId.toString('hex')),
+    };
+    ctx.body = response;
+    ctx.status = 200;
+  });
+
   router.post('/client-log', async (ctx: Koa.Context) => {
     const stream = new PromiseReadable(ctx.req);
     const log = JSON.parse((await stream.readAll()) as string);

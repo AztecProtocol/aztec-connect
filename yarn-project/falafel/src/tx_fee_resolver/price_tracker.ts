@@ -3,8 +3,8 @@ import { InterruptableSleep } from '@aztec/barretenberg/sleep';
 
 export class PriceTracker {
   private readonly gasPriceFeed: PriceFeed;
-  private readonly assetPriceFeeds: PriceFeed[];
-  private prices: { gasPrice: bigint; assetPrices: bigint[]; timestamp: number }[] = [];
+  private assetPriceFeeds: { [assetId: number]: PriceFeed };
+  private prices: { gasPrice: bigint; assetPrices: { [assetId: number]: bigint }; timestamp: number }[] = [];
   private running = false;
   private runningPromise!: Promise<void>;
   private readonly numHistoricalPrices: number;
@@ -12,12 +12,15 @@ export class PriceTracker {
 
   constructor(
     blockchain: Blockchain,
-    assetIds: number[],
+    private assetIds: number[],
     private readonly refreshInterval = 1000,
     recordDuration = refreshInterval,
   ) {
     this.gasPriceFeed = blockchain.getGasPriceFeed();
-    this.assetPriceFeeds = assetIds.map(assetId => blockchain.getPriceFeed(assetId));
+    this.assetPriceFeeds = {};
+    assetIds.forEach(assetId => {
+      this.assetPriceFeeds[assetId] = blockchain.getPriceFeed(assetId);
+    });
     this.numHistoricalPrices = Math.ceil(recordDuration / this.refreshInterval);
   }
 
@@ -69,10 +72,12 @@ export class PriceTracker {
   }
 
   private async recordPrices() {
-    const [gasPrice, ...assetPrices] = await Promise.all([
+    const [gasPrice, ...assetPricesList] = await Promise.all([
       this.gasPriceFeed.price(),
-      ...this.assetPriceFeeds.map(priceFeed => priceFeed.price()),
+      ...this.assetIds.map(assetId => this.assetPriceFeeds[assetId].price()),
     ]);
+    const assetPrices: { [assetId: number]: bigint } = {};
+    this.assetIds.forEach((assetId, i) => (assetPrices[assetId] = assetPricesList[i]));
     this.prices = [{ gasPrice, assetPrices, timestamp: Date.now() }, ...this.prices.slice(0, this.numHistoricalPrices)];
   }
 }

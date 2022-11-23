@@ -14,6 +14,7 @@ import {RollupProcessorV2} from "core/processors/RollupProcessorV2.sol";
 
 import {MockVerifier} from "core/verifier/instances/MockVerifier.sol";
 import {Verifier28x32} from "core/verifier/instances/Verifier28x32.sol";
+import {IVerifier} from "core/interfaces/IVerifier.sol";
 
 contract UpgradeV2 is Test {
     error StorageAltered(uint256 index, bytes32 expected, bytes32 actual);
@@ -21,11 +22,16 @@ contract UpgradeV2 is Test {
     uint256 internal constant VERSION_BEFORE = 1;
     uint256 internal constant VERSION_AFTER = 2;
 
-    bytes32 internal constant MOCK_KEY_HASH = 0xa81cf1dc6c591dfeea460deaf5ff466cb30eb3705a09d338cab4122236014778;
-    bytes32 internal constant PROD_KEY_HASH = 0x231a6b3ded1c9472f543428e5fa1b7dd085d852173f37b4659308745c9e930e6;
+    bytes32 internal constant MOCK_KEY_HASH = 0xe93606306cfda92d3e8937e91d4467ecb74c7092eb49e932be66a2f488ca7003;
+    bytes32 internal constant PROD_KEY_HASH = 0x2fcf22dcccdc2ad1e00374e4a8a3211e41c620ad2e84bdf5e9cc401301c96c59;
+
+    address internal constant LISTER = 0x68A36Aa8E309d5010ab4F9D6c5F1246b854D0b9e;
+    address internal constant RESUME = 0x62415C92528C7d86Fd3f82D3fc75c2F66Bb9389a;
 
     RollupProcessorV2 internal ROLLUP;
     ProxyAdmin internal PROXY_ADMIN;
+
+    bool internal constant RUN_MAINNET_SIM = true;
 
     function handleMainnet() public {
         ROLLUP = RollupProcessorV2(0xFF1F2B4ADb9dF6FC8eAFecDcbF96A2B351680455);
@@ -38,15 +44,107 @@ contract UpgradeV2 is Test {
 
         require(verifier.getVerificationKeyHash() == PROD_KEY_HASH, "Invalid verifier hash");
 
-        emit log("Multisig todo:");
+        bytes memory upgradeCalldata = abi.encodeWithSignature(
+            "upgradeAndCall(address,address,bytes)",
+            TransparentUpgradeableProxy(payable(address(ROLLUP))),
+            implementationV2,
+            abi.encodeWithSignature("initialize()")
+        );
+
+        bytes memory updateVerifierCalldata = abi.encodeWithSignature("setVerifier(address)", address(verifier));
+
+        bytes32 LISTER_ROLE = RollupProcessorV2(implementationV2).LISTER_ROLE();
+        bytes32 RESUME_ROLE = RollupProcessorV2(implementationV2).RESUME_ROLE();
+
         emit log_named_address("Rollup proxy address     ", address(ROLLUP));
         emit log_named_address("Proxy admin address      ", address(PROXY_ADMIN));
-        emit log_named_address("Upgrade implementation to", implementationV2);
-        emit log_named_address("Upgrade verifier to      ", address(verifier));
-        emit log_named_bytes32("Lister role              ", RollupProcessorV2(implementationV2).LISTER_ROLE());
-        emit log_named_bytes32("Resume role              ", RollupProcessorV2(implementationV2).RESUME_ROLE());
+        emit log("####");
+        emit log("Multisig todo:");
+
+        emit log("Upgrade implementation");
+        emit log_named_address("\tCall    ", address(PROXY_ADMIN));
+        emit log_named_bytes("\tCalldata", upgradeCalldata);
+
+        emit log("Update verifier");
+        emit log_named_address("\tCall    ", address(ROLLUP));
+        emit log_named_bytes("\tCalldata", updateVerifierCalldata);
+
+        emit log("Add lister");
+        emit log_named_address("\tCall    ", address(ROLLUP));
+        emit log_named_bytes("\tCalldata", abi.encodeWithSignature("grantRole(bytes32,address)", LISTER_ROLE, LISTER));
+
+        emit log("Add resume");
+        emit log_named_address("\tCall    ", address(ROLLUP));
+        emit log_named_bytes("\tCalldata", abi.encodeWithSignature("grantRole(bytes32,address)", RESUME_ROLE, RESUME));
+
+        emit log("Status");
 
         read();
+
+        if (RUN_MAINNET_SIM) {
+            emit log("Simulating upgrade");
+            // Load storage values from implementation. Skip initialising (_initialized, _initializing)
+            bytes32[] memory values = new bytes32[](25);
+            for (uint256 i = 1; i < 25; i++) {
+                values[i] = vm.load(address(ROLLUP), bytes32(i));
+            }
+            address bridgeProxy = ROLLUP.defiBridgeProxy();
+            uint256 gasLimit = ROLLUP.bridgeGasLimits(1);
+            bytes32 prevDefiInteractionsHash = ROLLUP.prevDefiInteractionsHash();
+            // Simulate a deposit of ether setting the proof approval
+            ROLLUP.depositPendingFunds{value: 1 ether}(0, 1 ether, address(this), bytes32("dead"));
+
+            vm.startPrank(PROXY_ADMIN.owner());
+            (bool success,) = address(PROXY_ADMIN).call(upgradeCalldata);
+            require(success, "Upgrade call failed");
+            (success,) = address(ROLLUP).call(updateVerifierCalldata);
+            require(success, "Update verifier call failed");
+            (success,) =
+                address(ROLLUP).call(abi.encodeWithSignature("grantRole(bytes32,address)", LISTER_ROLE, LISTER));
+            require(success, "Add lister call failed");
+            (success,) =
+                address(ROLLUP).call(abi.encodeWithSignature("grantRole(bytes32,address)", RESUME_ROLE, RESUME));
+            require(success, "Add resume call failed");
+            vm.stopPrank();
+
+            // Checks
+            require(IVerifier(ROLLUP.verifier()).getVerificationKeyHash() == PROD_KEY_HASH, "Invalid key hash");
+            require(ROLLUP.getImplementationVersion() == VERSION_AFTER, "Version after don't match");
+            require(
+                PROXY_ADMIN.getProxyImplementation(TransparentUpgradeableProxy(payable(address(ROLLUP))))
+                    == implementationV2,
+                "Implementation address not matching"
+            );
+            require(ROLLUP.hasRole(LISTER_ROLE, LISTER), "Not lister");
+            require(ROLLUP.hasRole(RESUME_ROLE, RESUME), "Not resume");
+
+            // check that existing storage is unaltered or altered as planned
+            for (uint256 i = 1; i < 17; i++) {
+                if (i == 2) {
+                    // The rollup state must have changed to set the `capped` flag and new verifier
+                    bytes32 expected = bytes32(uint256(values[i]) | uint256(1 << 240));
+                    expected = bytes32((uint256(expected >> 160) << 160) | uint160(address(verifier)));
+
+                    bytes32 readSlot = vm.load(address(ROLLUP), bytes32(i));
+                    if (expected != readSlot) {
+                        revert StorageAltered(i, expected, readSlot);
+                    }
+                } else {
+                    bytes32 readSlot = vm.load(address(ROLLUP), bytes32(i));
+                    if (values[i] != readSlot) {
+                        revert StorageAltered(i, values[i], readSlot);
+                    }
+                }
+            }
+            require(ROLLUP.depositProofApprovals(address(this), bytes32("dead")), "Approval altered");
+            require(ROLLUP.userPendingDeposits(0, address(this)) == 1 ether, "Pending amount altered");
+            require(ROLLUP.defiBridgeProxy() == bridgeProxy, "Invalid bridgeProxy");
+            require(ROLLUP.bridgeGasLimits(1) == gasLimit, "Invalid bridge gas limit");
+            require(ROLLUP.prevDefiInteractionsHash() == prevDefiInteractionsHash, "Invalid prevDefiInteractionsHash");
+
+            emit log("Upgrade to V2 successful");
+            read();
+        }
     }
 
     function handleDevnet() public {
@@ -80,12 +178,15 @@ contract UpgradeV2 is Test {
         MockVerifier verifier = new MockVerifier();
 
         // Upgrade to new implementation
-        vm.broadcast();
-        PROXY_ADMIN.upgradeAndCall(
+        bytes memory upgradeCalldata = abi.encodeWithSignature(
+            "upgradeAndCall(address,address,bytes)",
             TransparentUpgradeableProxy(payable(address(ROLLUP))),
             implementationV2,
             abi.encodeWithSignature("initialize()")
         );
+        vm.broadcast();
+        (bool success,) = address(PROXY_ADMIN).call(upgradeCalldata);
+        require(success, "Upgrade call failed");
 
         // Update verifier
         vm.broadcast();
@@ -100,7 +201,7 @@ contract UpgradeV2 is Test {
         vm.stopBroadcast();
 
         // Checks
-        require(MockVerifier(ROLLUP.verifier()).getVerificationKeyHash() == MOCK_KEY_HASH, "Invalid key hash");
+        require(IVerifier(ROLLUP.verifier()).getVerificationKeyHash() == MOCK_KEY_HASH, "Invalid key hash");
         require(ROLLUP.getImplementationVersion() == VERSION_AFTER, "Version after don't match");
         require(
             PROXY_ADMIN.getProxyImplementation(TransparentUpgradeableProxy(payable(address(ROLLUP))))
@@ -117,14 +218,14 @@ contract UpgradeV2 is Test {
                 bytes32 expected = bytes32(uint256(values[i]) | uint256(1 << 240));
                 expected = bytes32((uint256(expected >> 160) << 160) | uint160(address(verifier)));
 
-                bytes32 read = vm.load(address(ROLLUP), bytes32(i));
-                if (expected != read) {
-                    revert StorageAltered(i, expected, read);
+                bytes32 readSlot = vm.load(address(ROLLUP), bytes32(i));
+                if (expected != readSlot) {
+                    revert StorageAltered(i, expected, readSlot);
                 }
             } else {
-                bytes32 read = vm.load(address(ROLLUP), bytes32(i));
-                if (values[i] != read) {
-                    revert StorageAltered(i, values[i], read);
+                bytes32 readSlot = vm.load(address(ROLLUP), bytes32(i));
+                if (values[i] != readSlot) {
+                    revert StorageAltered(i, values[i], readSlot);
                 }
             }
         }
@@ -168,7 +269,7 @@ contract UpgradeV2 is Test {
         return address(fix);
     }
 
-    function _getProxyAdmin() internal returns (ProxyAdmin) {
+    function _getProxyAdmin() internal view returns (ProxyAdmin) {
         address admin = address(
             uint160(
                 uint256(vm.load(address(ROLLUP), 0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103))

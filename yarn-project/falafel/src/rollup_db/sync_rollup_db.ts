@@ -39,8 +39,12 @@ export class SyncRollupDb {
     return this.synchronise(() => this.rollupDb.getTx(txId));
   }
 
-  public getPendingTxCount() {
-    return this.synchronise(() => this.rollupDb.getPendingTxCount());
+  public getPendingTxCount(includeSecondClass = false) {
+    return this.synchronise(() => this.rollupDb.getPendingTxCount(includeSecondClass));
+  }
+
+  public getPendingSecondClassTxCount() {
+    return this.synchronise(() => this.rollupDb.getPendingSecondClassTxCount());
   }
 
   public deletePendingTxs() {
@@ -95,8 +99,12 @@ export class SyncRollupDb {
     return this.synchronise(() => this.rollupDb.getUnsettledAccounts());
   }
 
-  public getPendingTxs(take?: number) {
-    return this.synchronise(() => this.rollupDb.getPendingTxs(take));
+  public getPendingTxs(take?: number, includeSecondClass = false) {
+    return this.synchronise(() => this.rollupDb.getPendingTxs(take, includeSecondClass));
+  }
+
+  public getPendingSecondClassTxs(take?: number) {
+    return this.synchronise(() => this.rollupDb.getPendingSecondClassTxs(take));
   }
 
   public getUnsettledNullifiers() {

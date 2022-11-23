@@ -39,7 +39,7 @@ const fromLocalStorage = (): ConfigVars => ({
 });
 
 const fromEnvVars = (): ConfigVars => ({
-  deployTag: '',
+  deployTag: process.env.REACT_APP_DEPLOY_TAG || '',
   txAmountLimits: process.env.REACT_APP_TX_AMOUNT_LIMIT || '',
   sessionTimeout: process.env.REACT_APP_SESSION_TIMEOUT || '',
   debugFilter: process.env.REACT_APP_DEBUG ?? '',
@@ -98,7 +98,7 @@ async function getInferredDeployTag() {
 }
 
 function getDeployConfig(deployTag: string, rollupProviderUrl: string, chainId: number) {
-  if (deployTag) {
+  if (deployTag && deployTag !== 'localhost') {
     const hostedSdkUrl = `https://${deployTag}-sdk.aztec.network`;
     // TODO: use https://explorer.aztec.network on prod once old explorer is switched out
     const explorerUrl = `https://${deployTag}-explorer.aztec.network`;
@@ -121,7 +121,7 @@ function getRawConfigWithOverrides() {
 }
 
 function getRollupProviderUrl(deployTag: string) {
-  if (deployTag) return `https://api.aztec.network/${deployTag}/falafel`;
+  if (deployTag && deployTag !== 'localhost') return `https://api.aztec.network/${deployTag}/falafel`;
   return `${window.location.protocol}//${window.location.hostname}:8081`;
 }
 

@@ -75,7 +75,7 @@ export class TxReceiver {
     this.txFeeResolver = txFeeResolver;
   }
 
-  public async receiveTxs(txRequest: TxRequest) {
+  public async receiveTxs(txRequest: TxRequest, secondClass = false) {
     // We mutex this entire receive call until we move to "deposit to proof hash". Read more below.
     await this.mutex.acquire();
     const txs = txRequest.txs;
@@ -89,41 +89,54 @@ export class TxReceiver {
         txTypes.push(txType);
       }
 
-      const txFeeAllocator = new TxFeeAllocator(this.txFeeResolver);
-      const validation = txFeeAllocator.validateReceivedTxs(txs, txTypes);
-      this.log(
-        `Gas Required/Provided: ${validation.gasRequired}/${validation.gasProvided}. Fee asset index: ${validation.feePayingAsset}. Feeless txs: ${validation.hasFeelessTxs}.`,
-      );
-      if (validation.gasProvided < validation.gasRequired) {
-        this.log(
-          `Txs only contained enough fee to pay for ${validation.gasProvided} gas, but it needed ${validation.gasRequired}.`,
-        );
-        throw new Error('Insufficient fee.');
-      }
-
-      await this.validateChain(txs);
-
-      await this.validateRequiredDeposit(txs);
-
       const txDaos: TxDao[] = [];
-      for (let i = 0; i < txs.length; ++i) {
-        const prevTxTime = i == 0 ? undefined : txDaos[i - 1].created;
-        const txDao = await this.validateTx(txs[i], txTypes[i], prevTxTime);
-        txDaos.push(txDao);
-      }
-
-      txFeeAllocator.reallocateGas(txDaos, txs, txTypes, validation);
-
-      // check that we aren't breaching the deposit limit
-      // need to do this as the last thing before adding to the db
-      // otherwise we could add to the rate limiter and then reject the txs for other reasons
-      const numDeposits = txTypes.filter(x => x === TxType.DEPOSIT).length;
-      if (numDeposits !== 0 && !this.rateLimiter.add(txRequest.requestSender.clientIp, numDeposits)) {
-        const currentValue = this.rateLimiter.getCurrentValue(txRequest.requestSender.clientIp);
+      if (!secondClass) {
+        const txFeeAllocator = new TxFeeAllocator(this.txFeeResolver);
+        const validation = txFeeAllocator.validateReceivedTxs(txs, txTypes);
         this.log(
-          `Rejecting tx request from ${txRequest.requestSender}, attempted to submit ${numDeposits} deposits. ${currentValue} deposits already submitted`,
+          `Gas Required/Provided: ${validation.gasRequired}/${validation.gasProvided}. Fee asset index: ${validation.feePayingAsset}. Feeless txs: ${validation.hasFeelessTxs}.`,
         );
-        throw new Error('Exceeded deposit limit');
+        if (validation.gasProvided < validation.gasRequired) {
+          this.log(
+            `Txs only contained enough fee to pay for ${validation.gasProvided} gas, but it needed ${validation.gasRequired}.`,
+          );
+          throw new Error('Insufficient fee.');
+        }
+        await this.validateChain(txs);
+        await this.validateRequiredDeposit(txs);
+
+        for (let i = 0; i < txs.length; ++i) {
+          const prevTxTime = i == 0 ? undefined : txDaos[i - 1].created;
+          const txDao = await this.validateTx(txs[i], txTypes[i], prevTxTime);
+          txDao.secondClass = secondClass;
+          txDaos.push(txDao);
+        }
+
+        txFeeAllocator.reallocateGas(txDaos, txs, txTypes, validation);
+
+        // TODO if second-class TXs ever become public, this section should also be executed for second-class
+        // check that we aren't breaching the deposit limit
+        // need to do this as the last thing before adding to the db
+        // otherwise we could add to the rate limiter and then reject the txs for other reasons
+        const numDeposits = txTypes.filter(x => x === TxType.DEPOSIT).length;
+        if (numDeposits !== 0 && !this.rateLimiter.add(txRequest.requestSender.clientIp, numDeposits)) {
+          const currentValue = this.rateLimiter.getCurrentValue(txRequest.requestSender.clientIp);
+          this.log(
+            `Rejecting tx request from ${txRequest.requestSender.clientIp}, attempted to submit ${numDeposits} deposits. ${currentValue} deposits already submitted`,
+          );
+          throw new Error('Exceeded deposit limit');
+        }
+      } else {
+        await this.validateChain(txs);
+        await this.validateRequiredDeposit(txs);
+
+        this.log('Validating received txs...');
+        for (let i = 0; i < txs.length; ++i) {
+          const prevTxTime = i == 0 ? undefined : txDaos[i - 1].created;
+          const txDao = await this.validateTx(txs[i], txTypes[i], prevTxTime);
+          txDao.secondClass = secondClass;
+          txDaos.push(txDao);
+        }
       }
       await this.rollupDb.addTxs(txDaos);
 

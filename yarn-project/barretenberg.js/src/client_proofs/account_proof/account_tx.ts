@@ -15,7 +15,7 @@ export class AccountTx {
     public migrate: boolean,
     public accountIndex: number,
     public accountPath: HashPath,
-    public spendingPublicKey: GrumpkinAddress,
+    public spendingPublicKey: GrumpkinAddress, // key used to sign this tx
   ) {}
 
   toBuffer() {

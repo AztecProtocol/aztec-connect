@@ -8,6 +8,7 @@ import { useSdk, useAliasManager } from './top_level_context/index.js';
 export function useUserIdForRecipientStr(recipientStr: string, debounceMs: number, allowOwnAlias?: boolean) {
   const accountState = useAccountState();
   const sdk = useSdk();
+  const cachedAlias = useCachedAlias();
   const [userIdFetchState, setUserIdFetchState] = useState<{
     userId?: GrumpkinAddress;
     isLoading: boolean;
@@ -27,6 +28,8 @@ export function useUserIdForRecipientStr(recipientStr: string, debounceMs: numbe
     const task = setTimeout(() => {
       if (isGrumpkinAddress) {
         gatedSetter.set({ isLoading: false, userId: GrumpkinAddress.fromString(formattedRecipientStr) });
+      } else if (allowOwnAlias && recipientStr === cachedAlias) {
+        gatedSetter.set({ isLoading: false, userId: accountState?.userId });
       } else {
         sdk?.getAccountPublicKey(formattedRecipientStr).then(userId => {
           const isErrorState = accountState?.userId && userId?.equals(accountState?.userId) && !allowOwnAlias;
@@ -38,7 +41,16 @@ export function useUserIdForRecipientStr(recipientStr: string, debounceMs: numbe
       gatedSetter.close();
       clearTimeout(task);
     };
-  }, [sdk, isGrumpkinAddress, formattedRecipientStr, allowOwnAlias, accountState?.userId, debounceMs]);
+  }, [
+    sdk,
+    isGrumpkinAddress,
+    formattedRecipientStr,
+    accountState?.userId,
+    cachedAlias,
+    allowOwnAlias,
+    debounceMs,
+    recipientStr,
+  ]);
   return userIdFetchState;
 }
 

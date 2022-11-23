@@ -10,6 +10,7 @@ import { getNewAccountDaos } from './tx_dao_to_account_dao.js';
 export class CachedRollupDb extends SyncRollupDb {
   private pendingTxCount!: number;
   private totalTxCount!: number;
+  private pendingSecondClassTxCount!: number;
   private rollups: RollupDao[] = [];
   private settledRollups: RollupDao[] = [];
   private unsettledTxs!: TxDao[];
@@ -35,12 +36,21 @@ export class CachedRollupDb extends SyncRollupDb {
     this.totalTxCount = await super.getTotalTxCount();
     this.pendingTxCount = await super.getPendingTxCount();
     this.unsettledTxs = await super.getUnsettledTxs();
+    this.pendingSecondClassTxCount = await super.getPendingSecondClassTxCount();
     this.unsettledNullifiers = await super.getUnsettledNullifiers();
     this.log(`Refreshed db cache in ${new Date().getTime() - start}ms.`);
   }
 
-  public getPendingTxCount() {
-    return Promise.resolve(this.pendingTxCount);
+  public getPendingTxCount(includeSecondClass = false) {
+    if (includeSecondClass) {
+      return Promise.resolve(this.pendingTxCount + this.pendingSecondClassTxCount);
+    } else {
+      return Promise.resolve(this.pendingTxCount);
+    }
+  }
+
+  public getPendingSecondClassTxCount() {
+    return Promise.resolve(this.pendingSecondClassTxCount);
   }
 
   public getRollup(id: number) {
@@ -117,8 +127,12 @@ export class CachedRollupDb extends SyncRollupDb {
     [nullifier1, nullifier2].filter(n => !!toBigIntBE(n)).forEach(n => this.unsettledNullifiers.push(n));
 
     this.unsettledTxs.push(txDao);
-    this.pendingTxCount++;
     this.totalTxCount++;
+    if (txDao.secondClass) {
+      this.pendingSecondClassTxCount++;
+    } else {
+      this.pendingTxCount++;
+    }
   }
 
   public async addTxs(txs: TxDao[]) {
@@ -132,8 +146,12 @@ export class CachedRollupDb extends SyncRollupDb {
       .forEach(n => this.unsettledNullifiers.push(n));
 
     this.unsettledTxs.push(...txs);
-    this.pendingTxCount += txs.length;
     this.totalTxCount += txs.length;
+    this.pendingTxCount += txs.reduce((partialCount, tx) => (tx.secondClass ? partialCount : partialCount + 1), 0);
+    this.pendingSecondClassTxCount += txs.reduce(
+      (partialCount, tx) => (tx.secondClass ? partialCount + 1 : partialCount),
+      0,
+    );
   }
 
   public async deleteTxsById(ids: Buffer[]) {

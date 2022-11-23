@@ -13,7 +13,6 @@ import { FooterSection } from '../sections/footer_section/index.js';
 import { AmountSelection } from '../../../../../components/index.js';
 import { useAccountStateManager } from '../../../../../alt-model/top_level_context/index.js';
 import { useObs } from '../../../../../app/util/index.js';
-import { useCachedAlias } from '../../../../../alt-model/alias_hooks.js';
 import style from './shield.module.scss';
 
 interface ShieldPage1Props {
@@ -27,13 +26,8 @@ interface ShieldPage1Props {
   onChangeAsset(asset: number): void;
 }
 
-function getRecipientMessage(isShieldingToHimself: boolean, aliasNotSettled: boolean) {
-  if (isShieldingToHimself) {
-    return aliasNotSettled
-      ? `Your alias hasn't settled yet, please shield funds using your Aztec Account Address instead.`
-      : 'You will be the recipient of this transaction.';
-  }
-  return '';
+function getRecipientMessage(isShieldingToHimself: boolean) {
+  return isShieldingToHimself ? 'You will be the recipient of this transaction.' : '';
 }
 
 export function ShieldPage1({
@@ -49,19 +43,15 @@ export function ShieldPage1({
   const asset = validationResult.input.targetAsset;
   const accountStateManager = useAccountStateManager();
   const accountState = useObs(accountStateManager.stateObs);
-  const cachedAlias = useCachedAlias();
 
   if (!asset) {
     return <>Loading...</>;
   }
 
   const footerFeedback = `${feedback.walletAccount ? feedback.walletAccount + '. ' : ''}${feedback.footer || ''}`;
-  const hasWrittenRecipient = fields.recipientAlias.length > 0;
   const recipientWasFound = !!validationResult.input.recipientUserId;
-  const isShieldingToHimself =
-    hasWrittenRecipient &&
-    (fields.recipientAlias === accountState?.userId.toString() || fields.recipientAlias === cachedAlias);
-  const aliasNotSettled = !recipientWasFound && isShieldingToHimself;
+  const recipientAddress = validationResult.input.recipientUserId?.toString();
+  const isShieldingToHimself = recipientAddress === accountState?.userId.toString();
 
   return (
     <div className={style.contentWrapper}>
@@ -71,7 +61,7 @@ export function ShieldPage1({
             <RecipientSection
               recipientType="L2"
               recipientStr={fields.recipientAlias}
-              message={getRecipientMessage(isShieldingToHimself, aliasNotSettled)}
+              message={getRecipientMessage(isShieldingToHimself)}
               isLoading={validationResult.input.isLoadingRecipientUserId}
               isValid={recipientWasFound}
               onChangeValue={onChangeRecipientAlias}

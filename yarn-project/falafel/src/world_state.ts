@@ -73,6 +73,7 @@ type TxPoolProfile = {
   numTxs: number;
   pendingBridgeStats: BridgeStat[];
   pendingTxCount: number;
+  pendingSecondClassTxCount: number;
 };
 
 export class WorldState {
@@ -99,6 +100,7 @@ export class WorldState {
       numTxs: 0,
       numTxsInNextRollup: 0,
       pendingTxCount: 0,
+      pendingSecondClassTxCount: 0,
       pendingBridgeStats: [],
     };
   }
@@ -180,6 +182,7 @@ export class WorldState {
         numTxsInNextRollup: processedTransactions.length,
         pendingBridgeStats: [...pendingBridgeStats.values()],
         pendingTxCount: pendingTransactionsNotInRollup.length,
+        pendingSecondClassTxCount: await this.rollupDb.getPendingSecondClassTxCount(),
       };
       this.txPoolProfileValidUntil = new Date(Date.now() + this.expireTxPoolAfter);
     }

@@ -1173,7 +1173,8 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
 
   private async processAliases(rollups: RollupProofData[], offchainTxData: Buffer[][]) {
     const processRollup = (rollup: RollupProofData, offchainData: Buffer[]) => {
-      const aliases: Alias[] = [];
+      // Using a Map here to preserve insertion-order
+      const aliasMap = new Map<string, Alias>();
       let offchainIndex = -1;
       for (let i = 0; i < rollup.innerProofData.length; ++i) {
         const proof = rollup.innerProofData[i];
@@ -1195,7 +1196,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
           const commitment = this.noteAlgos.accountNoteCommitment(aliasHash, accountPublicKey, spendingPublicKey1);
           // Only need to check one commitment to make sure the aliasHash and accountPublicKey pair is valid.
           if (commitment.equals(proof.noteCommitment1)) {
-            aliases.push({
+            aliasMap.set(aliasHash.toString(), {
               accountPublicKey,
               aliasHash,
               index: rollup.dataStartIndex + i * 2,
@@ -1203,7 +1204,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
           }
         }
       }
-      return aliases;
+      return [...aliasMap.values()];
     };
 
     const aliases = rollups.map((rollup, i) => processRollup(rollup, offchainTxData[i])).flat();

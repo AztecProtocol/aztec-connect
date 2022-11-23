@@ -3,6 +3,7 @@ sourceMapSupport.install();
 import 'log-timestamp';
 import 'reflect-metadata';
 import http from 'http';
+import { Container } from 'typedi';
 import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { EthereumBlockchain } from '@aztec/blockchain';
 import { DataSource } from 'typeorm';
@@ -73,6 +74,10 @@ async function main() {
   process.once('SIGINT', shutdown);
   process.once('SIGTERM', shutdown);
   process.once('SIGUSR1', shutdownAndClearDb);
+
+  Container.set({ id: 'connection', factory: () => dataSource });
+  Container.set({ id: 'rollupDb', factory: () => rollupDb });
+  Container.set({ id: 'server', factory: () => server });
 
   const app = await appFactory(server, apiPrefix, metrics, serverAuthToken);
 
