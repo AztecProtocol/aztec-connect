@@ -17,9 +17,9 @@ export function ExitExchangeRateInfo(props: ExitExchangeRateInfoProps) {
   if (flow.type !== 'closable') {
     throw new Error("Can't calculate exit exchange rate for non-closable recipe.");
   }
-  const unitOfInput = Amount.from('1', flow.exit.inA);
+  const unitOfInput = Amount.from('1', flow.exit.outDisplayed);
   const expectedOutput = useExpectedOutput(props.recipe.id, 'exit', props.auxData, unitOfInput.baseUnits);
-  const expectedOutputAmount = useAmount(expectedOutput);
+  const expectedOutputAmount = useAmount(expectedOutput?.outputValueA);
   const expectedOutputBulkPrice = useAmountBulkPrice(expectedOutputAmount);
 
   if (expectedOutputAmount === undefined || expectedOutputBulkPrice === undefined) return <></>;

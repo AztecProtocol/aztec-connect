@@ -540,7 +540,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["@aztec/barretenberg", "npm:2.1.37"],\
             ["@ethersproject/abi", "npm:5.5.0"],\
             ["@ethersproject/providers", "npm:5.6.8"],\
-            ["@openzeppelin/contracts", "npm:4.7.3"],\
+            ["@openzeppelin/contracts", "npm:4.8.0"],\
             ["@typechain/ethers-v5", "virtual:3d37d124b63511ad845ed82937e0ca797526f169ee1f0121affccc3f0d254daaa507227ac65f8fb699fe82ab4ed5d1c4624db427994a6c23bdd84b02c977c589#npm:9.0.0"],\
             ["@typechain/hardhat", "virtual:3d37d124b63511ad845ed82937e0ca797526f169ee1f0121affccc3f0d254daaa507227ac65f8fb699fe82ab4ed5d1c4624db427994a6c23bdd84b02c977c589#npm:4.0.0"],\
             ["ethers", "npm:5.6.9"],\
@@ -567,7 +567,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["ts-node", "virtual:f8a891297054fa404f8d28aa87a754354d6badfda7212440cd614eb16f75b0e4f7f109a89652e5d4240197dbc83d0ff2e4b905a385e051cda2207a43c6ddbe43#npm:10.9.1"],\
             ["tslib", "npm:2.4.0"],\
             ["typechain", "virtual:f8a891297054fa404f8d28aa87a754354d6badfda7212440cd614eb16f75b0e4f7f109a89652e5d4240197dbc83d0ff2e4b905a385e051cda2207a43c6ddbe43#npm:8.1.1"],\
-            ["typescript", "patch:typescript@npm%3A4.9.3#~builtin<compat/typescript>::version=4.9.3&hash=a1c5e5"]\
+            ["typescript", "patch:typescript@npm%3A4.8.4#~builtin<compat/typescript>::version=4.8.4&hash=a1c5e5"]\
           ],\
           "linkType": "HARD"\
         }]\
@@ -11850,13 +11850,6 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           ],\
           "linkType": "HARD"\
         }],\
-        ["npm:4.7.3", {\
-          "packageLocation": "./.yarn/cache/@openzeppelin-contracts-npm-4.7.3-c7d67da36c-18382fcacf.zip/node_modules/@openzeppelin/contracts/",\
-          "packageDependencies": [\
-            ["@openzeppelin/contracts", "npm:4.7.3"]\
-          ],\
-          "linkType": "HARD"\
-        }],\
         ["npm:4.8.0", {\
           "packageLocation": "./.yarn/cache/@openzeppelin-contracts-npm-4.8.0-9f4e6c7d80-dfab51a7f9.zip/node_modules/@openzeppelin/contracts/",\
           "packageDependencies": [\
@@ -14754,7 +14747,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["lodash", "npm:4.17.21"],\
             ["ts-essentials", "virtual:c4f2352a2526ccf2e59c95a1fbb2dc0973694e5165263840941063a8f49bd526c1318dffcd0e03b566728b6338ed196948f88f2fa3ad27f28ad704bf2c4ba208#npm:7.0.3"],\
             ["typechain", "virtual:f8a891297054fa404f8d28aa87a754354d6badfda7212440cd614eb16f75b0e4f7f109a89652e5d4240197dbc83d0ff2e4b905a385e051cda2207a43c6ddbe43#npm:8.1.1"],\
-            ["typescript", "patch:typescript@npm%3A4.9.3#~builtin<compat/typescript>::version=4.9.3&hash=a1c5e5"]\
+            ["typescript", "patch:typescript@npm%3A4.8.4#~builtin<compat/typescript>::version=4.8.4&hash=a1c5e5"]\
           ],\
           "packagePeers": [\
             "@ethersproject/abi",\
@@ -42395,7 +42388,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           "packageDependencies": [\
             ["ts-essentials", "virtual:c4f2352a2526ccf2e59c95a1fbb2dc0973694e5165263840941063a8f49bd526c1318dffcd0e03b566728b6338ed196948f88f2fa3ad27f28ad704bf2c4ba208#npm:7.0.3"],\
             ["@types/typescript", null],\
-            ["typescript", "patch:typescript@npm%3A4.9.3#~builtin<compat/typescript>::version=4.9.3&hash=a1c5e5"]\
+            ["typescript", "patch:typescript@npm%3A4.8.4#~builtin<compat/typescript>::version=4.8.4&hash=a1c5e5"]\
           ],\
           "packagePeers": [\
             "@types/typescript",\
@@ -42799,7 +42792,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["create-require", "npm:1.1.1"],\
             ["diff", "npm:4.0.2"],\
             ["make-error", "npm:1.3.6"],\
-            ["typescript", "patch:typescript@npm%3A4.9.3#~builtin<compat/typescript>::version=4.9.3&hash=a1c5e5"],\
+            ["typescript", "patch:typescript@npm%3A4.8.4#~builtin<compat/typescript>::version=4.8.4&hash=a1c5e5"],\
             ["v8-compile-cache-lib", "npm:3.0.1"],\
             ["yn", "npm:3.1.1"]\
           ],\
@@ -43175,7 +43168,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["prettier", "npm:2.7.1"],\
             ["ts-command-line-args", "npm:2.3.1"],\
             ["ts-essentials", "virtual:c4f2352a2526ccf2e59c95a1fbb2dc0973694e5165263840941063a8f49bd526c1318dffcd0e03b566728b6338ed196948f88f2fa3ad27f28ad704bf2c4ba208#npm:7.0.3"],\
-            ["typescript", "patch:typescript@npm%3A4.9.3#~builtin<compat/typescript>::version=4.9.3&hash=a1c5e5"]\
+            ["typescript", "patch:typescript@npm%3A4.8.4#~builtin<compat/typescript>::version=4.8.4&hash=a1c5e5"]\
           ],\
           "packagePeers": [\
             "@types/typescript",\
@@ -43520,10 +43513,10 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           ],\
           "linkType": "HARD"\
         }],\
-        ["patch:typescript@npm%3A4.9.3#~builtin<compat/typescript>::version=4.9.3&hash=a1c5e5", {\
-          "packageLocation": "./.yarn/cache/typescript-patch-59b003cbd6-ef65c22622.zip/node_modules/typescript/",\
+        ["patch:typescript@npm%3A4.8.4#~builtin<compat/typescript>::version=4.8.4&hash=a1c5e5", {\
+          "packageLocation": "./.yarn/cache/typescript-patch-5b3c915f01-563a0ef47a.zip/node_modules/typescript/",\
           "packageDependencies": [\
-            ["typescript", "patch:typescript@npm%3A4.9.3#~builtin<compat/typescript>::version=4.9.3&hash=a1c5e5"]\
+            ["typescript", "patch:typescript@npm%3A4.8.4#~builtin<compat/typescript>::version=4.8.4&hash=a1c5e5"]\
           ],\
           "linkType": "HARD"\
         }]\

@@ -5,6 +5,7 @@ import { Obs } from '../../../../app/util/index.js';
 import { Poller } from '../../../../app/util/poller.js';
 import { LazyInitDeepCacheMap } from '../../../../app/util/lazy_init_cache_map.js';
 import { toAdaptorArgs } from '../bridge_adaptor_util.js';
+import { AssetValue } from '@aztec/sdk';
 
 const debug = createDebug('zm:expected_output_poller_cache');
 
@@ -33,7 +34,12 @@ export function createExpectedOutputPollerCache(recipes: DefiRecipe[], adaptorCa
       const pollObs = Obs.constant(async () => {
         try {
           const values = await adaptor.getExpectedOutput(inA, inB, outA, outB, auxData, inputAmount);
-          return { assetId: interactionAssets.outA.id, value: values[0] };
+          const outputValueA: AssetValue = { assetId: interactionAssets.outA.id, value: values[0] };
+          let outputValueB: undefined | AssetValue;
+          if (interactionAssets.outB !== undefined) {
+            outputValueB = { assetId: interactionAssets.outB.id, value: values[1] };
+          }
+          return { outputValueA, outputValueB };
         } catch (err) {
           debug({ recipeId, inA, inB, outA, outB, auxData, inputAmount }, err);
           throw new Error(`Failed to fetch bridge expected output for "${recipe.name}".`);

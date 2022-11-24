@@ -5,15 +5,15 @@ import type { BridgeDataAdaptorsMethodCaches } from '../defi/bridge_data_adaptor
 import type { RemoteStatusPoller } from './remote_status_poller.js';
 import type { SdkObs } from './sdk_obs.js';
 import type { DefiRecipe } from '../defi/types.js';
-import type { RemoteAssetsObs } from './remote_assets_obs.js';
 import type { AmountFactory } from '../assets/amount_factory.js';
 import type { PriceFeedObsCache } from '../price_feeds/index.js';
 import type { GasPricePoller } from '../gas/gas_price_obs.js';
 import type { ToastsObs } from './toasts_obs.js';
 import type { ChainLinkPollerCache } from '../../alt-model/price_feeds/chain_link_poller_cache.js';
 import type { DefiPulishStatsPollerCache } from '../defi/defi_publish_stats_poller_cache.js';
-import { AccountStateManager } from '../account_state/account_state_manager.js';
-import { AliasManager } from '../account_state/alias_manager.js';
+import type { AccountStateManager } from '../account_state/account_state_manager.js';
+import type { AliasManager } from '../account_state/alias_manager.js';
+import type { RegistrationsRepo } from '../registrations_data/index.js';
 
 export interface TopLevelContextValue {
   config: Config;
@@ -24,7 +24,7 @@ export interface TopLevelContextValue {
   toastsObs: ToastsObs;
   walletInteractionToastsObs: ToastsObs;
   remoteStatusPoller: RemoteStatusPoller;
-  remoteAssetsObs: RemoteAssetsObs;
+  registrationsRepo: RegistrationsRepo;
   amountFactory: AmountFactory;
   chainLinkPollerCache: ChainLinkPollerCache;
   priceFeedObsCache: PriceFeedObsCache;

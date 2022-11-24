@@ -1,7 +1,6 @@
 import elementFiLogo from '../../../images/element_fi_logo.svg';
 import elementMiniLogo from '../../../images/element_mini_logo.png';
 import { createElementAdaptor } from '../bridge_data_adaptors/element_adaptor.js';
-import { KNOWN_MAINNET_ASSET_ADDRESSES as KMAA } from '../../../alt-model/known_assets/known_asset_addresses.js';
 import { BridgeInteraction, CreateRecipeArgs, DefiRecipe } from '../types.js';
 import { formatDate_short, formatPercentage_1dp } from '../../../app/util/formatters.js';
 import { useCurrentAssetYield, useDefaultAuxDataOption, useDefaultTermApr, useTermApr } from '../defi_info_hooks.js';
@@ -13,9 +12,11 @@ import { createDefiPublishStatsCacheArgsBuilder } from '../defi_publish_stats_ut
 export const ELEMENT_CARD: CreateRecipeArgs = {
   id: 'element-finance.DAI-to-DAI',
   isAsync: true,
-  selectBlockchainBridge: ({ bridges }) => bridges.find(x => x.id === 9),
-  entryInputAssetAddressA: KMAA.DAI,
-  entryOutputAssetAddressA: KMAA.DAI,
+  bridgeBinding: 'ElementBridge_800K',
+  flowBindings: {
+    type: 'async',
+    enter: { inA: 'DAI', outA: 'DAI', inDisplayed: 'DAI', outDisplayed: 'DAI' },
+  },
   createAdaptor: createElementAdaptor,
   enterAuxDataResolver: {
     type: 'bridge-data-select',
@@ -71,11 +72,11 @@ export const ELEMENT_CARD: CreateRecipeArgs = {
   getDefiPublishStatsCacheArgs: createDefiPublishStatsCacheArgsBuilder({ ignoreAuxData: true }),
 };
 
-export const OLD_ELEMENT_CARD: CreateRecipeArgs = {
+export const FLUSHED_ELEMENT_CARD: CreateRecipeArgs = {
   ...ELEMENT_CARD,
-  id: 'element-finance-old.DAI-to-DAI',
+  id: 'element-finance-flushed.DAI-to-DAI',
   unlisted: true,
-  selectBlockchainBridge: ({ bridges }) => bridges.find(x => x.id === 1),
+  bridgeBinding: 'ElementBridge_2M',
 };
 
 function useFixedAprFromDefaultTermApr(recipe: DefiRecipe) {

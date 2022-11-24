@@ -9,7 +9,7 @@ export function useL1BalanceIndicator(asset?: RemoteAsset, symbol: boolean = fal
   return asset === undefined || l1Balance === undefined
     ? 'Loading...'
     : `${formatBaseUnits(l1Balance, asset.decimals, {
-        precision: getAssetPreferredFractionalDigits(asset.address),
+        precision: getAssetPreferredFractionalDigits(asset.label),
       })}${symbol ? ` ${asset.symbol}` : ''}`;
 }
 
@@ -18,6 +18,6 @@ export function useL2BalanceIndicator(asset?: RemoteAsset, symbol: boolean = fal
   return asset === undefined || balance === undefined
     ? 'Loading...'
     : `${formatBaseUnits(balance, asset.decimals, {
-        precision: getAssetPreferredFractionalDigits(asset.address),
+        precision: getAssetPreferredFractionalDigits(asset.label),
       })}${symbol ? ` zk${asset.symbol}` : ''}`;
 }

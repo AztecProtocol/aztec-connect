@@ -34,7 +34,7 @@ function ClosableInteractionField({
       disabled={walletInteractionIsOngoing}
       className={style.claimButton}
       onClick={() => onOpenDefiExitModal(position.recipe)}
-      text={'Claim & Exit'}
+      text={position.recipe.exitButtonLabel}
     />
   );
 }

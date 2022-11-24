@@ -34,6 +34,10 @@ export function DefiExitPage1({
   onChangeSpeed,
   onNext,
 }: DefiExitPage1Props) {
+  if (recipe.flow.type !== 'closable') {
+    throw new Error('Cannot exit non-closable flow');
+  }
+  const displayedInputAsset = recipe.flow.exit.inDisplayed;
   return (
     <div className={style.root}>
       <div className={style.top}>
@@ -44,7 +48,7 @@ export function DefiExitPage1({
         leftPanel={
           <AmountSelection
             maxAmount={validationResult.maxOutput ?? 0n}
-            asset={validationResult.input.depositAsset}
+            asset={displayedInputAsset}
             amountStringOrMax={fields.amountStrOrMax}
             onChangeAmountStringOrMax={onChangeAmountStrOrMax}
             message={feedback.amount}

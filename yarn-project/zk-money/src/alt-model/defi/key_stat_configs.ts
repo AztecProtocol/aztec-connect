@@ -4,7 +4,11 @@ import {
   useDefiBatchData,
 } from '../../features/defi/bridge_count_down/bridge_count_down_hooks.js';
 import moment from 'moment';
-import { useDefaultEnterBridgeCallData, useDefaultExpectedAssetYield, useDefaultLiquidity } from './defi_info_hooks.js';
+import {
+  useDefaultEnterBridgeCallData,
+  useDefaultExpectedAssetYield,
+  useDefaultMarketSizeBulkPrice,
+} from './defi_info_hooks.js';
 import { KeyStatConfig } from './types.js';
 import { estimateTxSettlementTimes } from '../estimate_settlement_times.js';
 import { useRollupProviderStatus } from '../rollup_provider_hooks.js';
@@ -13,7 +17,7 @@ export const keyStatConfig_liquidity: KeyStatConfig = {
   useLabel: () => 'L1 Liquidity',
   skeletonSizingContent: '$11B',
   useFormattedValue: recipe => {
-    const liquidity = useDefaultLiquidity(recipe.id);
+    const liquidity = useDefaultMarketSizeBulkPrice(recipe.id);
     if (liquidity === undefined) return;
     return formatBulkPrice_compact(liquidity);
   },

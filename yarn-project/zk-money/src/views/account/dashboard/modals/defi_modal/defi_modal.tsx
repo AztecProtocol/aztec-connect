@@ -50,6 +50,7 @@ export function DefiModal({ recipe, flowDirection, onClose }: DefiModalProps) {
       />
     ) : (
       <Page1
+        flowDirection={flowDirection}
         recipe={recipe}
         fields={fields}
         onChangeAmountStrOrMax={setters.amountStrOrMax}

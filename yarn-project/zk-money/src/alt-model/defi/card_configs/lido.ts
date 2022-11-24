@@ -1,22 +1,21 @@
 import lidoXCurveLogo from '../../../images/lido_x_curve_logo.svg';
 import lidoMiniLogo from '../../../images/lido_mini_logo.png';
-import { KNOWN_MAINNET_ASSET_ADDRESSES as KMAA } from '../../../alt-model/known_assets/known_asset_addresses.js';
 import { createLidoAdaptor } from '../bridge_data_adaptors/lido_adaptor.js';
 import { CreateRecipeArgs } from '../types.js';
-import { useDefaultExpectedAssetYield, useDefaultLiquidity } from '../defi_info_hooks.js';
+import { useDefaultExpectedAssetYield, useDefaultMarketSizeBulkPrice } from '../defi_info_hooks.js';
 import { formatBulkPrice_compact, formatPercentage_2dp } from '../../../app/util/formatters.js';
 import { keyStatConfig_averageWait } from '../key_stat_configs.js';
 import { bindInteractionPredictionHook_expectedOutput } from '../interaction_prediction_configs.js';
 import { useVariableAprText } from '../position_key_stat_configs.js';
 import { createDefiPublishStatsCacheArgsBuilder } from '../defi_publish_stats_utils.js';
+import { createSimpleSwapFlowBinding } from '../flow_configs.js';
 
 export const LIDO_CARD: CreateRecipeArgs = {
   id: 'lido-staking-x-curve.ETH-to-wStETH',
-  selectBlockchainBridge: ({ bridges }) => bridges.find(x => x.id === 6),
+  bridgeBinding: 'CurveStEthBridge_250K',
   gradient: ['#EE964B', '#EE964B'],
-  openHandleAssetAddress: KMAA.wstETH,
-  entryInputAssetAddressA: KMAA.ETH,
-  entryOutputAssetAddressA: KMAA.wstETH,
+  openHandleAssetBinding: 'wstETH',
+  flowBindings: createSimpleSwapFlowBinding('Eth', 'wstETH'),
   createAdaptor: createLidoAdaptor,
   enterAuxDataResolver: {
     type: 'static',
@@ -38,6 +37,7 @@ export const LIDO_CARD: CreateRecipeArgs = {
   miniLogo: lidoMiniLogo,
   cardTag: 'Staking',
   cardButtonLabel: 'Earn',
+  exitButtonLabel: 'Claim & Exit',
   keyStats: {
     keyStat1: {
       useLabel: () => 'APR',
@@ -52,7 +52,7 @@ export const LIDO_CARD: CreateRecipeArgs = {
       useLabel: () => 'L1 Liquidity',
       skeletonSizingContent: '$11B',
       useFormattedValue: recipe => {
-        const liquidity = useDefaultLiquidity(recipe.id);
+        const liquidity = useDefaultMarketSizeBulkPrice(recipe.id);
         if (liquidity === undefined) return;
         return formatBulkPrice_compact(liquidity);
       },
@@ -62,10 +62,12 @@ export const LIDO_CARD: CreateRecipeArgs = {
   useEnterInteractionPredictionInfo: bindInteractionPredictionHook_expectedOutput({
     direction: 'enter',
     showUnderlying: true,
+    outputSelection: 'A',
   }),
   useExitInteractionPredictionInfo: bindInteractionPredictionHook_expectedOutput({
     direction: 'exit',
     showUnderlying: false,
+    outputSelection: 'A',
   }),
   positionKeyStat: {
     type: 'closable',

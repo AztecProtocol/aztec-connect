@@ -6,7 +6,7 @@ import {
   DefiFormValidationResult,
 } from '../../../../../../alt-model/defi/defi_form/index.js';
 import { DescriptionSection, StatsSection } from '../../../../../../views/account/dashboard/modals/sections/index.js';
-import { DefiRecipe } from '../../../../../../alt-model/defi/types.js';
+import { DefiRecipe, FlowDirection } from '../../../../../../alt-model/defi/types.js';
 import { SplitSection } from '../../sections/split_section/index.js';
 import { RecipeSettlementTimeInformationSection } from '../../sections/settlement_time_information_section/index.js';
 import { PrivacyInformationSection } from '../../sections/privacy_information_section/index.js';
@@ -17,6 +17,7 @@ import { AmountSelection } from '../../../../../../components/index.js';
 import style from './defi_enter_page1.module.scss';
 
 interface DefiEnterPage1Props {
+  flowDirection: FlowDirection;
   recipe: DefiRecipe;
   fields: DefiFormFields;
   validationResult: DefiFormValidationResult;
@@ -27,6 +28,7 @@ interface DefiEnterPage1Props {
 }
 
 export function DefiEnterPage1({
+  flowDirection,
   recipe,
   fields,
   validationResult,
@@ -35,6 +37,10 @@ export function DefiEnterPage1({
   onChangeSpeed,
   onNext,
 }: DefiEnterPage1Props) {
+  const displayedInputAsset =
+    flowDirection === 'exit' && recipe.flow.type === 'closable'
+      ? recipe.flow.exit.inDisplayed
+      : recipe.flow.enter.inDisplayed;
   return (
     <div className={style.root}>
       <DescriptionSection text={recipe.longDescription} />
@@ -46,7 +52,7 @@ export function DefiEnterPage1({
         leftPanel={
           <AmountSelection
             maxAmount={validationResult.maxOutput ?? 0n}
-            asset={validationResult.input.depositAsset}
+            asset={displayedInputAsset}
             amountStringOrMax={fields.amountStrOrMax}
             onChangeAmountStringOrMax={onChangeAmountStrOrMax}
             message={feedback.amount}
@@ -56,7 +62,7 @@ export function DefiEnterPage1({
         rightPanel={
           <PrivacyInformationSection
             amount={validationResult.validPayload?.targetDepositAmount?.baseUnits || 0n}
-            asset={validationResult.input.depositAsset}
+            asset={validationResult.input.displayedInputAsset}
           />
         }
       />

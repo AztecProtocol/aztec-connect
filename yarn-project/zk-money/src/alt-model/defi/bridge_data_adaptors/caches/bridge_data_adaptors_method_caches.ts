@@ -12,6 +12,8 @@ import { createInteractionPresentValuePollerCache } from './interaction_present_
 import { createMarketSizePollerCache } from './market_size_poller_cache.js';
 import { createTermAprPollerCache } from './term_apr_poller_cache.js';
 import { createUnderlyingAmountPollerCache } from './underlying_amount_poller_cache.js';
+import { createUserDebtAndCollateralPollerCache } from './user_debt_and_collateral_poller_cache.js';
+import { createCurrentCollateralRatioPollerCache } from './current_collateral_ratio_poller_cache.js';
 
 export function createBridgeDataAdaptorsMethodCaches(
   defiRecipes: DefiRecipe[],
@@ -28,6 +30,8 @@ export function createBridgeDataAdaptorsMethodCaches(
   const marketSizePollerCache = createMarketSizePollerCache(defiRecipes, adaptorsCache);
   const interactionPresentValuePollerCache = createInteractionPresentValuePollerCache(adaptorsCache);
   const underlyingAmountPollerCache = createUnderlyingAmountPollerCache(defiRecipes, adaptorsCache);
+  const userDebtAndCollateralPollerCache = createUserDebtAndCollateralPollerCache(defiRecipes, adaptorsCache);
+  const currentCollateralRatioPollerCache = createCurrentCollateralRatioPollerCache(defiRecipes, adaptorsCache);
   return {
     adaptorsCache,
     auxDataPollerCache,
@@ -38,6 +42,8 @@ export function createBridgeDataAdaptorsMethodCaches(
     currentAssetYieldPollerCache,
     interactionPresentValuePollerCache,
     underlyingAmountPollerCache,
+    userDebtAndCollateralPollerCache,
+    currentCollateralRatioPollerCache,
   };
 }
 
