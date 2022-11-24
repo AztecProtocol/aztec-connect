@@ -1,4 +1,4 @@
-import { DCABridgeData } from '@aztec/bridge-clients/client-dest/src/client/dca/dca-bridge-data.js';
+import { DCABridgeData } from '../../../bridge-clients/client/dca/dca-bridge-data.js';
 import { BridgeDataAdaptorCreator } from './types.js';
 import { EthAddress } from '@aztec/sdk';
 

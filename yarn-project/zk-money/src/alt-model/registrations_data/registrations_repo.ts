@@ -2,7 +2,12 @@ import { BlockchainAsset, BlockchainBridge, EthAddress } from '@aztec/sdk';
 import { RemoteAsset } from '../types.js';
 import { registrationsDataRaw } from './registrations_data_raw.js';
 import createDebug from 'debug';
-import { RegisteredAssetLabel, RegisteredBridgeLabel, RegistrationsDataRawAssets } from './registrations_data_types.js';
+import {
+  RegisteredAssetLabel,
+  RegisteredBridgeLabel,
+  RegistrationsDataRawAssets,
+  RegistrationsDataRawBridges,
+} from './registrations_data_types.js';
 import { AssetLabel } from '../known_assets/known_asset_display_data.js';
 import { KNOWN_MAINNET_ASSET_ADDRESS_STRS } from '../known_assets/known_asset_addresses.js';
 
@@ -58,11 +63,11 @@ export class RegistrationsRepo {
       }
     }
 
-    const bridgesRaw: RegistrationsDataRawAssets | undefined = registrationsDataRaw[deployTag].bridges;
+    const bridgesRaw: RegistrationsDataRawBridges | undefined = registrationsDataRaw[deployTag].bridges;
     for (const k in bridgesRaw) {
       const bridgeLabel = k as RegisteredBridgeLabel;
-      const bridgeAddressStr = bridgesRaw[bridgeLabel];
-      const bridge = blockchainBridges.find(x => x.address.toString() === bridgeAddressStr);
+      const bridgeAddressId = bridgesRaw[bridgeLabel];
+      const bridge = blockchainBridges.find(x => x.id === bridgeAddressId);
       if (bridge) {
         this.labelledBridges[bridgeLabel] = bridge;
       } else {

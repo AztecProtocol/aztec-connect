@@ -1,4 +1,4 @@
-import { LidoBridgeData } from '@aztec/bridge-clients/client-dest/src/client/lido/lido-bridge-data.js';
+import { LidoBridgeData } from '../../../bridge-clients/client/lido/lido-bridge-data.js';
 import { BridgeDataAdaptorCreator } from './types.js';
 import { EthAddress } from '@aztec/sdk';
 

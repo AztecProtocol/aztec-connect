@@ -1,4 +1,4 @@
-import { ElementBridgeData } from '@aztec/bridge-clients/client-dest/src/client/element/element-bridge-data.js';
+import { ElementBridgeData } from '../../../bridge-clients/client/element/element-bridge-data.js';
 import { BridgeDataAdaptorCreator } from './types.js';
 import { EthAddress } from '@aztec/sdk';
 

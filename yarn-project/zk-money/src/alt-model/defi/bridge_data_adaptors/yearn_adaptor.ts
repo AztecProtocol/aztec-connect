@@ -1,4 +1,4 @@
-import { YearnBridgeData } from '@aztec/bridge-clients/client-dest/src/client/yearn/yearn-bridge-data.js';
+import { YearnBridgeData } from '../../../bridge-clients/client/yearn/yearn-bridge-data.js';
 import { EthAddress } from '@aztec/sdk';
 import { BridgeDataAdaptorCreator } from './types.js';
 

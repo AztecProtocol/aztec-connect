@@ -1,6 +1,6 @@
 import eulerLogo from '../../../images/euler_logo.svg';
 import eulerMiniLogo from '../../../images/euler_mini_logo.png';
-import { EulerBridgeData } from '@aztec/bridge-clients/client-dest/src/client/euler/euler-bridge-data.js';
+import { EulerBridgeData } from '../../../bridge-clients/client/euler/euler-bridge-data.js';
 import { CreateRecipeArgs } from '../types.js';
 import { useDefaultExpectedAssetYield, useDefaultMarketSizeBulkPrice } from '../defi_info_hooks.js';
 import { formatBulkPrice_compact, formatPercentage_2dp } from '../../../app/util/formatters.js';

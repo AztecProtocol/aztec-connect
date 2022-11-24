@@ -1,8 +1,4 @@
-import {
-  AztecAsset,
-  BridgeDataFieldGetters,
-  AuxDataConfig,
-} from '@aztec/bridge-clients/client-dest/src/client/bridge-data.js';
+import { AztecAsset, BridgeDataFieldGetters, AuxDataConfig } from '../../../bridge-clients/client/bridge-data.js';
 import { AssetValue } from '@aztec/sdk';
 
 export class BridgeDataFieldGettersMock implements BridgeDataFieldGetters {

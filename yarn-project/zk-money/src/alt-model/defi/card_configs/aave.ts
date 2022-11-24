@@ -1,6 +1,6 @@
 import aaveLogo from '../../../images/aave_logo_white.svg';
 import aaveMiniLogo from '../../../images/aave_mini_logo.png';
-import { AaveV2BridgeData } from '@aztec/bridge-clients/client-dest/src/client/aavev2/aavev2-bridge-data.js';
+import { AaveV2BridgeData } from '../../../bridge-clients/client/aavev2/aavev2-bridge-data.js';
 import { CreateRecipeArgs } from '../types.js';
 import { useDefaultExpectedAssetYield, useDefaultMarketSizeBulkPrice } from '../defi_info_hooks.js';
 import { formatBulkPrice_compact, formatPercentage_2dp } from '../../../app/util/formatters.js';

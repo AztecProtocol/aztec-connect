@@ -1,6 +1,6 @@
 import type { RemoteAsset } from '../../../alt-model/types.js';
 import { EthAddress } from '@aztec/sdk';
-import { AztecAsset, AztecAssetType } from '@aztec/bridge-clients/client-dest/src/client/bridge-data.js';
+import { AztecAsset, AztecAssetType } from '../../../bridge-clients/client/bridge-data.js';
 import { BridgeInteractionAssets } from '../types.js';
 
 export const UNUSED_ADAPTOR_ASSET: AztecAsset = {

@@ -1,4 +1,4 @@
-import { TroveBridgeData } from '@aztec/bridge-clients/client-dest/src/client/liquity/trove-bridge-data.js';
+import { TroveBridgeData } from '../../../bridge-clients/client/liquity/trove-bridge-data.js';
 import liquityLogo from '../../../images/liquity_logo_white.svg';
 import liquityMiniLogo from '../../../images/liquity_mini_logo.svg';
 import { CreateRecipeArgs, DefiRecipe } from '../types.js';
