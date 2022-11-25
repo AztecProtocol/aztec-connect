@@ -1,6 +1,5 @@
 import lidoXCurveLogo from '../../../images/lido_x_curve_logo.svg';
 import lidoMiniLogo from '../../../images/lido_mini_logo.png';
-import { createLidoAdaptor } from '../bridge_data_adaptors/lido_adaptor.js';
 import { CreateRecipeArgs } from '../types.js';
 import { useDefaultExpectedAssetYield, useDefaultMarketSizeBulkPrice } from '../defi_info_hooks.js';
 import { formatBulkPrice_compact, formatPercentage_2dp } from '../../../app/util/formatters.js';
@@ -9,6 +8,8 @@ import { bindInteractionPredictionHook_expectedOutput } from '../interaction_pre
 import { useVariableAprText } from '../position_key_stat_configs.js';
 import { createDefiPublishStatsCacheArgsBuilder } from '../defi_publish_stats_utils.js';
 import { createSimpleSwapFlowBinding } from '../flow_configs.js';
+import { LidoBridgeData } from '../../../bridge-clients/client/lido/lido-bridge-data.js';
+import { EthAddress } from '@aztec/sdk';
 
 export const LIDO_CARD: CreateRecipeArgs = {
   id: 'lido-staking-x-curve.ETH-to-wStETH',
@@ -16,7 +17,12 @@ export const LIDO_CARD: CreateRecipeArgs = {
   gradient: ['#EE964B', '#EE964B'],
   openHandleAssetBinding: 'wstETH',
   flowBindings: createSimpleSwapFlowBinding('Eth', 'wstETH'),
-  createAdaptor: createLidoAdaptor,
+  createAdaptor: ({ provider }) => {
+    const curvePoolAddress = EthAddress.fromString('0xdc24316b9ae028f1497c275eb9192a3ea0f67022');
+    const wstETHAddress = EthAddress.fromString('0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0');
+    const lidoOracleAddress = EthAddress.fromString('0x442af784A788A5bd6F42A01Ebe9F287a871243fb');
+    return LidoBridgeData.create(provider, wstETHAddress, lidoOracleAddress, curvePoolAddress);
+  },
   enterAuxDataResolver: {
     type: 'static',
     value: 10n ** 18n, // Minimum acceptable amount of stEth per 1 eth

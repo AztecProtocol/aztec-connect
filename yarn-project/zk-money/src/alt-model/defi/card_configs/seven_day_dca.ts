@@ -1,6 +1,5 @@
 import dcaLogo from '../../../images/dca_logo.png';
 import dcaMiniLogo from '../../../images/dca_mini_logo.png';
-import { createDcaAdaptor } from '../bridge_data_adaptors/dca_adaptor.js';
 import { CreateRecipeArgs } from '../types.js';
 import { keyStatConfig_averageWait } from '../key_stat_configs.js';
 import { useChainLinkPollerCache } from '../../../alt-model/top_level_context/index.js';
@@ -9,6 +8,7 @@ import { useMaybeObs } from '../../../app/util/index.js';
 import { formatBaseUnits } from '../../../app/index.js';
 import { Amount } from '../../../alt-model/assets/index.js';
 import { createDefiPublishStatsCacheArgsBuilder } from '../defi_publish_stats_utils.js';
+import { DCABridgeData } from '../../../bridge-clients/client/dca/dca-bridge-data.js';
 
 export const SEVEN_DAY_DCA_CARD_DAI_TO_ETH: CreateRecipeArgs = {
   id: 'seven-day-dca.DAI-to-ETH',
@@ -18,7 +18,7 @@ export const SEVEN_DAY_DCA_CARD_DAI_TO_ETH: CreateRecipeArgs = {
     type: 'async',
     enter: { inA: 'DAI', outA: 'Eth', inDisplayed: 'DAI', outDisplayed: 'Eth' },
   },
-  createAdaptor: createDcaAdaptor,
+  createAdaptor: ({ provider, bridgeContractAddress }) => DCABridgeData.create(provider, bridgeContractAddress),
   enterAuxDataResolver: {
     type: 'static',
     value: 7n, // Duration in ticks (days)

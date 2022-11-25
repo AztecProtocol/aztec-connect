@@ -1,7 +1,9 @@
-import { EthAddress, EthereumProvider, AssetValue } from '@aztec/sdk';
+import { BridgeCallData, EthAddress, EthereumProvider, AssetValue } from '@aztec/sdk';
 import { Web3Provider } from '@ethersproject/providers';
 import { BigNumber } from 'ethers';
 import {
+  IChainlinkOracle,
+  IChainlinkOracle__factory,
   IPriceFeed__factory,
   ITroveManager,
   ITroveManager__factory,
@@ -13,23 +15,45 @@ import { AuxDataConfig, AztecAsset, AztecAssetType, BridgeDataFieldGetters, Soli
 
 export class TroveBridgeData implements BridgeDataFieldGetters {
   public readonly LUSD = EthAddress.fromString('0x5f98805A4E8be255a32880FDeC7F6728C6568bA0');
+  // Price precision
+  public readonly PRECISION = 10n ** 18n;
+
+  // Note: max setting has to be set significantly higher than the ideal setting in order for the aggregation to work
+  public readonly IDEAL_SLIPPAGE_SETTING = 200n; // Denominated in basis points
+  public readonly MAX_ACCEPTABLE_BATCH_SLIPPAGE_SETTING = 500n; // Denominated in basis points
+
   private price?: BigNumber;
 
   protected constructor(
     protected ethersProvider: Web3Provider,
+    protected bridgeAddressId: number,
     protected bridge: TroveBridge,
     protected troveManager: ITroveManager,
+    protected ethUsdOracle: IChainlinkOracle,
+    protected lusdUsdOracle: IChainlinkOracle,
   ) {}
 
   /**
    * @param provider Ethereum provider
+   * @param bridgeAddressId An id representing bridge address in the RollupProcessor contract
    * @param bridgeAddress Address of the bridge address (and the corresponding accounting token)
    */
-  static create(provider: EthereumProvider, bridgeAddress: EthAddress) {
+  static create(provider: EthereumProvider, bridgeAddressId: number, bridgeAddress: EthAddress) {
     const ethersProvider = createWeb3Provider(provider);
     const troveManager = ITroveManager__factory.connect('0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2', ethersProvider);
     const bridge = TroveBridge__factory.connect(bridgeAddress.toString(), ethersProvider);
-    return new TroveBridgeData(ethersProvider, bridge, troveManager);
+
+    // Precision of the feeds is 1e8
+    const ethUsdOracle = IChainlinkOracle__factory.connect(
+      '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419',
+      ethersProvider,
+    );
+    const lusdUsdOracle = IChainlinkOracle__factory.connect(
+      '0x3D7aE7E594f2f2091Ad8798313450130d0Aba3a0',
+      ethersProvider,
+    );
+
+    return new TroveBridgeData(ethersProvider, bridgeAddressId, bridge, troveManager, ethUsdOracle, lusdUsdOracle);
   }
 
   auxDataConfig: AuxDataConfig[] = [
@@ -63,6 +87,22 @@ export class TroveBridgeData implements BridgeDataFieldGetters {
       // so I will set the irrelevant decimals to 0 and increase the acceptable fee by 0.1 %
       const borrowingRate = (currentBorrowingRate.toBigInt() / 10n ** 15n) * 10n ** 15n + 10n ** 15n;
       return [borrowingRate];
+    } else if (
+      inputAssetA.erc20Address.equals(EthAddress.fromString(this.bridge.address)) &&
+      inputAssetB.erc20Address.equals(this.LUSD) &&
+      outputAssetA.assetType === AztecAssetType.ETH &&
+      outputAssetB.erc20Address.equals(EthAddress.fromString(this.bridge.address))
+    ) {
+      // Repayment witha combination of collateral and LUSD --> `auxData` contains maximum price of LUSD
+      return [await this.getMaxPrice(inputAssetA.id, outputAssetA.id, inputAssetB.id, outputAssetB.id)];
+    } else if (
+      inputAssetA.erc20Address.equals(EthAddress.fromString(this.bridge.address)) &&
+      inputAssetB.assetType === AztecAssetType.NOT_USED &&
+      outputAssetA.assetType === AztecAssetType.ETH &&
+      outputAssetB.assetType === AztecAssetType.NOT_USED
+    ) {
+      // Repayment with collateral --> `auxData` contains maximum price of LUSD
+      return [await this.getMaxPrice(inputAssetA.id, outputAssetA.id, undefined, undefined)];
     }
     return [0n];
   }
@@ -176,6 +216,17 @@ export class TroveBridgeData implements BridgeDataFieldGetters {
     return [userDebt, userCollateral];
   }
 
+  /**
+   * @notice Returns LUSD price with applied slippage
+   * @param slippage Slippage denominated in basis points
+   * @return Maximum acceptable price of LUSD
+   */
+  async getCustomMaxPrice(slippage: bigint): Promise<bigint> {
+    const lusdPriceInEth = await this.getLusdPriceInEth();
+
+    return (lusdPriceInEth * (10000n + slippage)) / 10000n;
+  }
+
   private async fetchPrice(): Promise<BigNumber> {
     if (this.price === undefined) {
       const priceFeedAddress = await this.troveManager.priceFeed();
@@ -184,5 +235,77 @@ export class TroveBridgeData implements BridgeDataFieldGetters {
     }
 
     return this.price;
+  }
+
+  private async getMaxPrice(
+    inputAssetIdA: number,
+    outputAssetIdA: number,
+    inputAssetIdB?: number,
+    outputAssetIdB?: number,
+  ): Promise<bigint> {
+    const relevantAuxDatas = await this.fetchRelevantAuxDataFromFalafel(
+      inputAssetIdA,
+      outputAssetIdA,
+      inputAssetIdB,
+      outputAssetIdB,
+    );
+
+    const lusdPriceInEth = await this.getLusdPriceInEth();
+    const maxPrice = (lusdPriceInEth * (10000n + this.MAX_ACCEPTABLE_BATCH_SLIPPAGE_SETTING)) / 10000n;
+
+    for (const existingBatchPrice of relevantAuxDatas) {
+      if (lusdPriceInEth < existingBatchPrice && existingBatchPrice < maxPrice) {
+        return existingBatchPrice;
+      }
+    }
+
+    return (lusdPriceInEth * (10000n + this.IDEAL_SLIPPAGE_SETTING)) / 10000n;
+  }
+
+  private async fetchRelevantAuxDataFromFalafel(
+    inputAssetIdA: number,
+    outputAssetIdA: number,
+    inputAssetIdB?: number,
+    outputAssetIdB?: number,
+  ): Promise<bigint[]> {
+    const result = await (
+      await fetch('https://api.aztec.network/aztec-connect-prod/falafel/status', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+    ).json();
+
+    const bridgeCallDatas: BridgeCallData[] = result.bridgeStatus.map((status: any) =>
+      BridgeCallData.fromString(status.bridgeCallData),
+    );
+
+    const auxDatas: bigint[] = [];
+
+    for (const bridgeCallData of bridgeCallDatas) {
+      if (
+        bridgeCallData.bridgeAddressId === this.bridgeAddressId &&
+        bridgeCallData.inputAssetIdA === inputAssetIdA &&
+        bridgeCallData.inputAssetIdB === inputAssetIdB &&
+        bridgeCallData.outputAssetIdA === outputAssetIdA &&
+        bridgeCallData.outputAssetIdB === outputAssetIdB
+      ) {
+        auxDatas.push(bridgeCallData.auxData);
+      }
+    }
+
+    return auxDatas;
+  }
+
+  /**
+   * @return LUSD price denominated in ETH using a 1e18 precision
+   */
+  private async getLusdPriceInEth(): Promise<bigint> {
+    // Both feeds use 8 decimals
+    const [, ethPrice, , ,] = await this.ethUsdOracle.latestRoundData();
+    const [, lusdPrice, , ,] = await this.lusdUsdOracle.latestRoundData();
+
+    return lusdPrice.mul(this.PRECISION).div(ethPrice).toBigInt();
   }
 }

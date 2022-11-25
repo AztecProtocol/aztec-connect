@@ -1,18 +1,18 @@
 import yearnLogo from '../../../images/yearn_logo.svg';
 import yearnGradientLogo from '../../../images/yearn_gradient.svg';
-import { createYearnAdaptor } from '../bridge_data_adaptors/yearn_adaptor.js';
 import { CreateRecipeArgs } from '../types.js';
 import { keyStatConfig_apr, keyStatConfig_liquidity, keyStatConfig_averageWait } from '../key_stat_configs.js';
 import { bindInteractionPredictionHook_expectedOutput } from '../interaction_prediction_configs.js';
 import { useVariableAprText } from '../position_key_stat_configs.js';
 import { createDefiPublishStatsCacheArgsBuilder } from '../defi_publish_stats_utils.js';
 import { createSimpleSwapFlowBinding } from '../flow_configs.js';
+import { YearnBridgeData } from '../../../bridge-clients/client/yearn/yearn-bridge-data.js';
 
 export const YEARN_ETH_CARD: CreateRecipeArgs = {
   id: 'yearn-finance.ETH-to-yvETH',
   openHandleAssetBinding: 'yvWETH',
   flowBindings: createSimpleSwapFlowBinding('Eth', 'yvWETH'),
-  createAdaptor: createYearnAdaptor,
+  createAdaptor: ({ provider, rollupContractAddress }) => YearnBridgeData.create(provider, rollupContractAddress),
   projectName: 'Yearn Finance',
   gradient: ['#7A9CC6', '#7A9CC6'],
   website: 'https://yearn.finance/',

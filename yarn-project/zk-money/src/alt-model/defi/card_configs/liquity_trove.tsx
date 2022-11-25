@@ -4,7 +4,7 @@ import liquityMiniLogo from '../../../images/liquity_mini_logo.svg';
 import { CreateRecipeArgs, DefiRecipe } from '../types.js';
 import { useBridgeDataAdaptorsMethodCaches } from '../../top_level_context/index.js';
 import { useMaybeObs } from '../../../app/util/index.js';
-import { AssetValue, EthAddress } from '@aztec/sdk';
+import { AssetValue } from '@aztec/sdk';
 import { bindInteractionPredictionHook_expectedOutput } from '../interaction_prediction_configs.js';
 import { createDefiPublishStatsCacheArgsBuilder } from '../defi_publish_stats_utils.js';
 import { keyStatConfig_averageWait } from '../key_stat_configs.js';
@@ -31,8 +31,8 @@ export const LIQUITY_TROVE_275: CreateRecipeArgs = {
       outDisplayed: 'Eth',
     },
   },
-  createAdaptor: (provider, _, bridgeAddress) =>
-    TroveBridgeData.create(provider, EthAddress.fromString(bridgeAddress) as any),
+  createAdaptor: ({ provider, bridgeContractAddress, bridgeAddressId }) =>
+    TroveBridgeData.create(provider, bridgeAddressId, bridgeContractAddress),
   enterAuxDataResolver: {
     type: 'bridge-data-select',
     selectOpt: opts => opts[0], // Max borrower fee

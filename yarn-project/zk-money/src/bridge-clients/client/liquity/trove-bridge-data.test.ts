@@ -1,5 +1,7 @@
 import { BigNumber } from 'ethers';
 import {
+  IChainlinkOracle,
+  IChainlinkOracle__factory,
   IPriceFeed,
   IPriceFeed__factory,
   ITroveManager,
@@ -10,16 +12,19 @@ import {
 import { AztecAsset, AztecAssetType } from '../bridge-data.js';
 import { TroveBridgeData } from './trove-bridge-data.js';
 import { jest } from '@jest/globals';
-import { EthAddress, JsonRpcProvider } from '@aztec/sdk';
+import { BridgeCallData, EthAddress, JsonRpcProvider } from '@aztec/sdk';
 
 type Mockify<T> = {
   [P in keyof T]: jest.Mock | any;
 };
 
 describe('Liquity trove bridge data', () => {
+  const bridgeAddressId = 17;
+
   let troveBridge: Mockify<TroveBridge>;
   let troveManager: Mockify<ITroveManager>;
   let priceFeed: Mockify<IPriceFeed>;
+  let chainlinkOracle: Mockify<IChainlinkOracle>;
 
   let provider: JsonRpcProvider;
 
@@ -32,7 +37,7 @@ describe('Liquity trove bridge data', () => {
     provider = new JsonRpcProvider('https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c');
 
     ethAsset = {
-      id: 1,
+      id: 0,
       assetType: AztecAssetType.ETH,
       erc20Address: EthAddress.ZERO,
     };
@@ -61,17 +66,95 @@ describe('Liquity trove bridge data', () => {
 
     ITroveManager__factory.connect = () => troveManager as any;
 
-    const troveBridgeData = TroveBridgeData.create(provider, tbAsset.erc20Address);
+    const troveBridgeData = TroveBridgeData.create(provider, bridgeAddressId, tbAsset.erc20Address);
 
     const auxDataBorrow = await troveBridgeData.getAuxData(ethAsset, emptyAsset, tbAsset, lusdAsset);
     expect(auxDataBorrow[0]).toBe(6000000000000000n);
   });
 
-  it('should correctly fetch auxData when not borrowing', async () => {
-    const troveBridgeData = TroveBridgeData.create(provider, tbAsset.erc20Address);
+  it('should correctly fetch auxData when repaying', async () => {
+    const troveBridgeData = TroveBridgeData.create(provider, bridgeAddressId, tbAsset.erc20Address);
 
     const auxDataBorrow = await troveBridgeData.getAuxData(tbAsset, lusdAsset, ethAsset, lusdAsset);
     expect(auxDataBorrow[0]).toBe(0n);
+  });
+
+  it('should correctly set auxData from Falafel when repaying with collateral and there is a batch with acceptable price', async () => {
+    const referenceBridgeCallData = '00000348050BA148140000000000000000000000000000000000000B00000011';
+    const ethUsdOraclePrice = BigNumber.from('115833302141');
+    const lusdUsdOraclePrice = BigNumber.from('103848731');
+
+    // Setup mocks
+    const falafelResponse = {
+      bridgeStatus: [
+        {
+          bridgeCallData: referenceBridgeCallData,
+        },
+        {
+          bridgeCallData: '000000000000000001000000000000000000000020000000000000060000000a',
+        },
+      ],
+    };
+    global.fetch = jest.fn(() =>
+      Promise.resolve({
+        json: () => Promise.resolve(falafelResponse),
+      }),
+    ) as any;
+
+    chainlinkOracle = {
+      ...chainlinkOracle,
+      latestRoundData: jest
+        .fn()
+        .mockReturnValueOnce([BigNumber.from(0), ethUsdOraclePrice, BigNumber.from(0), BigNumber.from(0)])
+        .mockReturnValueOnce([BigNumber.from(0), lusdUsdOraclePrice, BigNumber.from(0), BigNumber.from(0)]),
+    };
+    IChainlinkOracle__factory.connect = () => chainlinkOracle as any;
+
+    const troveBridgeData = TroveBridgeData.create(provider, bridgeAddressId, tbAsset.erc20Address);
+
+    const auxData = await troveBridgeData.getAuxData(tbAsset, emptyAsset, ethAsset, emptyAsset);
+
+    // The price in Falafel is acceptable so check that it was chosen
+    expect(auxData[0]).toBe(BridgeCallData.fromString(referenceBridgeCallData).auxData);
+  });
+
+  it('should correctly set custom auxData when repaying with LUSD and collateral there is not a batch with acceptable price', async () => {
+    const referenceBridgeCallData = '00000380EF2BFA1665000000030000002C000000000000028000000B00000011';
+    const ethUsdOraclePrice = BigNumber.from('115833302141');
+    const lusdUsdOraclePrice = BigNumber.from('103848731');
+
+    // Setup mocks
+    const falafelResponse = {
+      bridgeStatus: [
+        {
+          bridgeCallData: referenceBridgeCallData,
+        },
+        {
+          bridgeCallData: '000000000000000001000000000000000000000020000000000000060000000a',
+        },
+      ],
+    };
+    global.fetch = jest.fn(() =>
+      Promise.resolve({
+        json: () => Promise.resolve(falafelResponse),
+      }),
+    ) as any;
+
+    chainlinkOracle = {
+      ...chainlinkOracle,
+      latestRoundData: jest
+        .fn()
+        .mockReturnValueOnce([BigNumber.from(0), ethUsdOraclePrice, BigNumber.from(0), BigNumber.from(0)])
+        .mockReturnValueOnce([BigNumber.from(0), lusdUsdOraclePrice, BigNumber.from(0), BigNumber.from(0)]),
+    };
+    IChainlinkOracle__factory.connect = () => chainlinkOracle as any;
+
+    const troveBridgeData = TroveBridgeData.create(provider, bridgeAddressId, tbAsset.erc20Address);
+
+    const auxData = await troveBridgeData.getAuxData(tbAsset, lusdAsset, ethAsset, tbAsset);
+
+    // The price in Falafel is not acceptable so check that it was not chosen
+    expect(auxData[0] === BridgeCallData.fromString(referenceBridgeCallData).auxData).toBeFalsy();
   });
 
   it('should correctly get expected output when borrowing', async () => {
@@ -85,7 +168,7 @@ describe('Liquity trove bridge data', () => {
     };
     TroveBridge__factory.connect = () => troveBridge as any;
 
-    const troveBridgeData = TroveBridgeData.create(provider, tbAsset.erc20Address);
+    const troveBridgeData = TroveBridgeData.create(provider, bridgeAddressId, tbAsset.erc20Address);
 
     const outputBorrow = await troveBridgeData.getExpectedOutput(
       ethAsset,
@@ -119,7 +202,7 @@ describe('Liquity trove bridge data', () => {
 
     ITroveManager__factory.connect = () => troveManager as any;
 
-    const troveBridgeData = TroveBridgeData.create(provider, tbAsset.erc20Address);
+    const troveBridgeData = TroveBridgeData.create(provider, bridgeAddressId, tbAsset.erc20Address);
 
     const inputValue = 10n ** 18n;
     const output = await troveBridgeData.getExpectedOutput(tbAsset, lusdAsset, ethAsset, lusdAsset, 0n, inputValue);
@@ -143,7 +226,7 @@ describe('Liquity trove bridge data', () => {
 
     ITroveManager__factory.connect = () => troveManager as any;
 
-    const troveBridgeData = TroveBridgeData.create(provider, tbAsset.erc20Address);
+    const troveBridgeData = TroveBridgeData.create(provider, bridgeAddressId, tbAsset.erc20Address);
 
     const output = await troveBridgeData.getMarketSize(emptyAsset, emptyAsset, emptyAsset, emptyAsset, 0n);
     const marketSize = output[0];
@@ -170,7 +253,7 @@ describe('Liquity trove bridge data', () => {
     };
     IPriceFeed__factory.connect = () => priceFeed as any;
 
-    const troveBridgeData = TroveBridgeData.create(provider, tbAsset.erc20Address);
+    const troveBridgeData = TroveBridgeData.create(provider, bridgeAddressId, tbAsset.erc20Address);
 
     const borrowAmount = 1000n * 10n ** 18n; // 1000 LUSD
     const borrowingFee = await troveBridgeData.getBorrowingFee(borrowAmount);
@@ -196,7 +279,7 @@ describe('Liquity trove bridge data', () => {
     };
     IPriceFeed__factory.connect = () => priceFeed as any;
 
-    const troveBridgeData = TroveBridgeData.create(provider, tbAsset.erc20Address);
+    const troveBridgeData = TroveBridgeData.create(provider, bridgeAddressId, tbAsset.erc20Address);
 
     const borrowAmount = 1000n * 10n ** 18n; // 1000 LUSD
     const borrowingFee = await troveBridgeData.getBorrowingFee(borrowAmount);
@@ -221,7 +304,7 @@ describe('Liquity trove bridge data', () => {
     };
     IPriceFeed__factory.connect = () => priceFeed as any;
 
-    const troveBridgeData = TroveBridgeData.create(provider, tbAsset.erc20Address);
+    const troveBridgeData = TroveBridgeData.create(provider, bridgeAddressId, tbAsset.erc20Address);
 
     const currentCR = await troveBridgeData.getCurrentCR();
     expect(currentCR).toBe(250n);
@@ -247,7 +330,7 @@ describe('Liquity trove bridge data', () => {
 
     ITroveManager__factory.connect = () => troveManager as any;
 
-    const troveBridgeData = TroveBridgeData.create(provider, tbAsset.erc20Address);
+    const troveBridgeData = TroveBridgeData.create(provider, bridgeAddressId, tbAsset.erc20Address);
 
     const inputValue = 10n ** 18n; // 1 TB
     const output = await troveBridgeData.getUserDebtAndCollateral(inputValue);
@@ -256,5 +339,31 @@ describe('Liquity trove bridge data', () => {
     const expectedDebt = 10n ** 18n; // 1 LUSD
     expect(output[0]).toBe(expectedCollateral);
     expect(output[1]).toBe(expectedDebt);
+  });
+
+  it('should correctly get custom max price', async () => {
+    const slippage = 3000n;
+
+    const ethUsdOraclePrice = BigNumber.from('115833302141');
+    const lusdUsdOraclePrice = BigNumber.from('103848731');
+
+    // Setup mocks
+    chainlinkOracle = {
+      ...chainlinkOracle,
+      latestRoundData: jest
+        .fn()
+        .mockReturnValueOnce([BigNumber.from(0), ethUsdOraclePrice, BigNumber.from(0), BigNumber.from(0)])
+        .mockReturnValueOnce([BigNumber.from(0), lusdUsdOraclePrice, BigNumber.from(0), BigNumber.from(0)]),
+    };
+    IChainlinkOracle__factory.connect = () => chainlinkOracle as any;
+
+    const troveBridgeData = TroveBridgeData.create(provider, bridgeAddressId, tbAsset.erc20Address);
+
+    const customMaxPrice = await troveBridgeData.getCustomMaxPrice(slippage);
+    const expectedMaxPrice =
+      (lusdUsdOraclePrice.mul(troveBridgeData.PRECISION).div(ethUsdOraclePrice).toBigInt() * (10000n + slippage)) /
+      10000n;
+
+    expect(customMaxPrice).toEqual(expectedMaxPrice);
   });
 });

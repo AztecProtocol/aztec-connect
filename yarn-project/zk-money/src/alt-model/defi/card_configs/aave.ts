@@ -16,7 +16,7 @@ export const AAVE_ETH_CARD: CreateRecipeArgs = {
   gradient: ['#9b559c', '#9b559c'],
   openHandleAssetBinding: 'wa2WETH',
   flowBindings: createSimpleSwapFlowBinding('Eth', 'wa2WETH'),
-  createAdaptor: provider => AaveV2BridgeData.create(provider),
+  createAdaptor: ({ provider }) => AaveV2BridgeData.create(provider),
   enterAuxDataResolver: {
     type: 'static',
     value: 0n, // Deposit flow

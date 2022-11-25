@@ -22,12 +22,13 @@ export function createBridgeDataAdaptorCache(
       return undefined;
     }
     const falafelGraphQlEndpoint = `${config.rollupProviderUrl}/graphql`;
-    return recipe.createAdaptor(
-      new EthersAdapter(provider),
-      rollupContractAddress.toString(),
-      blockchainBridge.address.toString(),
+    return recipe.createAdaptor({
+      provider: new EthersAdapter(provider),
+      rollupContractAddress,
+      bridgeAddressId: blockchainBridge.id,
+      bridgeContractAddress: blockchainBridge.address,
       falafelGraphQlEndpoint,
-    );
+    });
   });
 }
 

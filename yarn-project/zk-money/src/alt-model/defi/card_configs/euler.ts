@@ -16,7 +16,7 @@ export const EULER_ETH_CARD: CreateRecipeArgs = {
   gradient: ['#414066', '#414066'],
   openHandleAssetBinding: 'weWETH',
   flowBindings: createSimpleSwapFlowBinding('Eth', 'weWETH'),
-  createAdaptor: provider => EulerBridgeData.create(provider),
+  createAdaptor: ({ provider }) => EulerBridgeData.create(provider),
   enterAuxDataResolver: {
     type: 'static',
     value: 0n, // Deposit flow
