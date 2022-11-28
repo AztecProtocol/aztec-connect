@@ -81,7 +81,7 @@ describe('Liquity trove bridge data', () => {
 
   it('should correctly set auxData from Falafel when repaying with collateral and there is a batch with acceptable price', async () => {
     const referenceBridgeCallData = '00000348050BA148140000000000000000000000000000000000000B00000011';
-    const ethUsdOraclePrice = BigNumber.from('115833302141');
+    const ethUsdOraclePrice = BigNumber.from('113833302141');
     const lusdUsdOraclePrice = BigNumber.from('103848731');
 
     // Setup mocks
