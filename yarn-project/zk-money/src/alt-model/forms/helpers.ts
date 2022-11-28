@@ -4,7 +4,7 @@ import { RemoteAsset } from '../types.js';
 import { StrOrMax, MAX_MODE } from './constants.js';
 
 export function roundDownToPreferedFractionalDigits(value: bigint, asset: RemoteAsset) {
-  const digitsToTruncate = asset.decimals - (getAssetPreferredFractionalDigits(asset.address) ?? 0);
+  const digitsToTruncate = asset.decimals - (getAssetPreferredFractionalDigits(asset.label) ?? 0);
   const domainToTruncate = 10n ** BigInt(digitsToTruncate);
   return (value / domainToTruncate) * domainToTruncate;
 }
@@ -18,7 +18,7 @@ export function amountFromStrOrMaxRoundedDown(amountStrOrMax: StrOrMax, maxL2Out
 }
 
 export function getPrecisionIsTooHigh(amount: Amount) {
-  const digits = getAssetPreferredFractionalDigits(amount.info.address);
+  const digits = getAssetPreferredFractionalDigits(amount.info.label);
   if (digits === undefined) return false;
   const truncation = 10n ** BigInt(amount.info.decimals - digits);
   const truncationHasImpact = (amount.baseUnits / truncation) * truncation !== amount.baseUnits;

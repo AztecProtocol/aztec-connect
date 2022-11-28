@@ -8,7 +8,7 @@ function renderIcon(assetIsZk?: boolean, asset?: RemoteAsset) {
   if (assetIsZk) {
     return <ShieldedAssetIcon size="s" asset={asset} />;
   } else {
-    const src = getAssetIcon(asset.address);
+    const src = getAssetIcon(asset.label);
     if (src) return <div className={style.l1AssetIcon} style={{ backgroundImage: `url(${src})` }} />;
   }
 }

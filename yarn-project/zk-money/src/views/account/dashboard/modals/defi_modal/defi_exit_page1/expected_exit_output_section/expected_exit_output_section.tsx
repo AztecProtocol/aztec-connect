@@ -6,6 +6,7 @@ import { useAmountBulkPrice } from '../../../../../../../alt-model/price_hooks.j
 import { DefiFormValidationResult } from '../../../../../../../alt-model/defi/defi_form/index.js';
 import style from './expected_exit_output_section.module.css';
 import { ExitExchangeRateInfo } from './exit_exchange_rate_info.js';
+import { AssetValue } from '@aztec/sdk';
 
 interface ExpectedExitOutputSectionProps {
   recipe: DefiRecipe;
@@ -17,7 +18,17 @@ export function ExpectedExitOutputSection(props: ExpectedExitOutputSectionProps)
   const inputValue = props.validationResult.targetDepositAmount?.baseUnits;
   const maybeInputValue = (inputValue ?? 0n) > 0n ? inputValue : undefined;
   const expectedOutput = useExpectedOutput(props.recipe.id, 'exit', auxData, maybeInputValue);
-  const amount = useAmount(expectedOutput);
+  if (props.recipe.flow.type !== 'closable') {
+    throw new Error('Cannot display exit output for non-closable recipe');
+  }
+  let displayedOutputValue: AssetValue | undefined;
+  const displayedAssetId = props.recipe.flow.enter.outDisplayed.id;
+  if (displayedAssetId === expectedOutput?.outputValueA.assetId) {
+    displayedOutputValue = expectedOutput?.outputValueA;
+  } else if (displayedAssetId === expectedOutput?.outputValueB?.assetId) {
+    displayedOutputValue = expectedOutput?.outputValueB;
+  }
+  const amount = useAmount(displayedOutputValue);
   const amountStr = amount ? `~${amount?.format({ uniform: true })}` : undefined;
   const bulkPrice = useAmountBulkPrice(amount);
   const bulkPriceStr = bulkPrice !== undefined ? `$${formatBulkPrice(bulkPrice)}` : undefined;

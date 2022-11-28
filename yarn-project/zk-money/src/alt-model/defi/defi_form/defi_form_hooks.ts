@@ -38,15 +38,15 @@ function getInteractionAssets(recipe: DefiRecipe, mode: FlowDirection) {
 function useDefiFormBridgeCallData(
   recipe: DefiRecipe,
   direction: FlowDirection,
-  { inA, outA }: BridgeInteractionAssets,
+  { inA, inB, outA, outB }: BridgeInteractionAssets,
 ) {
   const isExit = direction === 'exit';
   const auxData = useDefaultAuxDataOption(recipe.id, isExit);
   const bridgeAddressId = isExit ? recipe.exitBridgeAddressId ?? recipe.bridgeAddressId : recipe.bridgeAddressId;
   return useMemo(() => {
     if (auxData === undefined) return undefined;
-    return new BridgeCallData(bridgeAddressId, inA.id, outA.id, undefined, undefined, BigInt(auxData));
-  }, [auxData, bridgeAddressId, inA, outA]);
+    return new BridgeCallData(bridgeAddressId, inA.id, outA.id, inB?.id, outB?.id, auxData);
+  }, [auxData, bridgeAddressId, inA, inB, outA, outB]);
 }
 
 export function useDefiForm(recipe: DefiRecipe, direction: FlowDirection) {
@@ -65,26 +65,26 @@ export function useDefiForm(recipe: DefiRecipe, direction: FlowDirection) {
   const awaitCorrectSigner = useAwaitCorrectProvider();
   const amountFactory = useAmountFactory();
   const interactionAssets = getInteractionAssets(recipe, direction);
-  const depositAsset = interactionAssets.inA;
+  const displayedInputAsset = interactionAssets.inDisplayed;
   const bridgeCallData = useDefiFormBridgeCallData(recipe, direction, interactionAssets);
   const maxChainableDefiDeposit = useMaxDefiValue(bridgeCallData, fields.speed);
   const uncheckedTargetValue =
     fields.amountStrOrMax === MAX_MODE
       ? maxChainableDefiDeposit
-      : Amount.from(fields.amountStrOrMax, depositAsset).toAssetValue();
+      : Amount.from(fields.amountStrOrMax, displayedInputAsset).toAssetValue();
   const feeAmounts = useDefiFeeAmounts(bridgeCallData, uncheckedTargetValue);
   const feeAmount = feeAmounts?.[fields.speed];
-  const balanceInTargetAsset = useMaxSpendableValue(depositAsset.id);
+  const balanceInDisplayedInputAsset = useMaxSpendableValue(displayedInputAsset.id);
   const balanceInFeePayingAsset = useMaxSpendableValue(feeAmount?.id);
-  const targetAssetAddressStr = depositAsset.address.toString();
-  const transactionLimit = config.txAmountLimits[targetAssetAddressStr];
+  const displayedAssetAddressStr = displayedInputAsset.address.toString();
+  const transactionLimit = config.txAmountLimits[displayedAssetAddressStr];
   const validationResult = validateDefiForm({
     fields,
     amountFactory,
-    depositAsset,
+    displayedInputAsset,
     feeAmount,
     feeAmounts,
-    balanceInTargetAsset,
+    balanceInDisplayedInputAsset,
     balanceInFeePayingAsset,
     transactionLimit,
     maxChainableDefiDeposit,

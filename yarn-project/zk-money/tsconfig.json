@@ -18,5 +18,9 @@
     "noImplicitAny": false
   },
   "include": ["src"],
-  "exclude": ["./src/ui-components/**/*.stories.tsx", "./src/ui-components/**/*.stories.mdx"]
+  "exclude": [
+    "./src/ui-components/**/*.stories.tsx",
+    "./src/ui-components/**/*.stories.mdx",
+    "./src/bridge-clients/client/**/*.test.ts"
+  ]
 }

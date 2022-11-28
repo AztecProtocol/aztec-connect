@@ -39,7 +39,7 @@ export class Amount {
     const symbolPrefix = layer === 'L2' ? 'zk' : '';
     const hideSymbol = opts?.hideSymbol;
     const numStr = formatBaseUnits(this.baseUnits, this.info.decimals, {
-      precision: opts?.uniform ? getAssetPreferredFractionalDigits(this.info.address) : undefined,
+      precision: opts?.uniform ? getAssetPreferredFractionalDigits(this.info.label) : undefined,
       commaSeparated: opts?.uniform,
       showPlus: opts?.showPlus,
     });

@@ -51,7 +51,7 @@ function getAmountInputFeedback(result: ShieldFormValidationResult, touched: boo
     })} available.`;
   }
   if (result.precisionIsTooHigh) {
-    const digits = getAssetPreferredFractionalDigits(result.input.targetAsset.address);
+    const digits = getAssetPreferredFractionalDigits(result.input.targetAsset.label);
     return `Please enter no more than ${digits} decimal places.`;
   }
 }

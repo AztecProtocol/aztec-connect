@@ -30,7 +30,7 @@ function getAmountInputFeedback(result: SendFormValidationResult, touched: boole
     }
   }
   if (result.issues?.precisionIsTooHigh) {
-    const digits = getAssetPreferredFractionalDigits(result.state.asset.address);
+    const digits = getAssetPreferredFractionalDigits(result.state.asset.label);
     return `Please enter no more than ${digits} decimal places.`;
   }
 }

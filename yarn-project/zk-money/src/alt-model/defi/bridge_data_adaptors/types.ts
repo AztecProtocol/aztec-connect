@@ -1,9 +1,10 @@
-import { EthereumProvider } from '@aztec/sdk';
-import { BridgeDataFieldGetters } from '@aztec/bridge-clients/client-dest/src/client/bridge-data.js';
+import { EthAddress, EthereumProvider } from '@aztec/sdk';
+import { BridgeDataFieldGetters } from '../../../bridge-clients/client/bridge-data.js';
 
-export type BridgeDataAdaptorCreator = (
-  provider: EthereumProvider,
-  rollupContractAddress: string,
-  bridgeContractAddress: string,
-  falafelGraphQlEndpoint: string,
-) => BridgeDataFieldGetters;
+export type BridgeDataAdaptorCreator = (args: {
+  provider: EthereumProvider;
+  rollupContractAddress: EthAddress;
+  bridgeContractAddress: EthAddress;
+  bridgeAddressId: number;
+  falafelGraphQlEndpoint: string;
+}) => BridgeDataFieldGetters;

@@ -55,7 +55,7 @@ export function getL1DepositAmountInputFeedback(
     })} available.`;
   }
   if (issues.precisionIsTooHigh) {
-    const digits = getAssetPreferredFractionalDigits(resources.depositAsset.address);
+    const digits = getAssetPreferredFractionalDigits(resources.depositAsset.label);
     return `Please enter no more than ${digits} decimal places.`;
   }
 }

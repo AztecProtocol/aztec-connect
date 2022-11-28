@@ -5,7 +5,7 @@ import { Obs } from '../../../../app/util/index.js';
 import { Poller } from '../../../../app/util/poller.js';
 import { LazyInitDeepCacheMap } from '../../../../app/util/lazy_init_cache_map.js';
 import { toAdaptorAsset } from '../bridge_adaptor_util.js';
-import { UnderlyingAsset } from '@aztec/bridge-clients/client-dest/src/client/bridge-data.js';
+import { UnderlyingAsset } from '../../../../bridge-clients/client/bridge-data.js';
 import { EthAddress } from '@aztec/sdk';
 
 interface PatchedUnderlyingAsset extends Omit<UnderlyingAsset, 'address'> {

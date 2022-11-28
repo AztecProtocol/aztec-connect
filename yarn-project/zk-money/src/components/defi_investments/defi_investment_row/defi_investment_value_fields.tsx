@@ -30,7 +30,7 @@ function OutputValueField({ tx }: { tx: UserDefiTx }) {
   return <ValueField amount={amount} />;
 }
 
-function ClosableValueField({ position }: { position: DefiPosition_Interactable }) {
+function DefaultClosableValueField({ position }: { position: DefiPosition_Interactable }) {
   const amount = useAmount(position.handleValue);
   return <ValueField amount={amount} />;
 }
@@ -77,6 +77,8 @@ export function renderValueField(position: DefiPosition) {
     case 'sync-exiting':
       return renderSync(position);
     case 'sync-open':
-      return <ClosableValueField position={position} />;
+      return (
+        position.recipe.renderCustomClosableValueField?.(position) ?? <DefaultClosableValueField position={position} />
+      );
   }
 }

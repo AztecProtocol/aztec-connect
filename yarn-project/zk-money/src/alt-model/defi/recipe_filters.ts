@@ -46,7 +46,11 @@ export function filterRecipes(recipes: DefiRecipe[] | undefined, filters: Recipe
   }
   if (filters.assetSymbol) {
     out = out.filter(
-      ({ flow: { enter } }) => enter.inA.symbol === filters.assetSymbol || enter.outA.symbol === filters.assetSymbol,
+      ({ flow: { enter } }) =>
+        enter.inA.symbol === filters.assetSymbol ||
+        enter.inB?.symbol === filters.assetSymbol ||
+        enter.outA.symbol === filters.assetSymbol ||
+        enter.outB?.symbol === filters.assetSymbol,
     );
   }
   return out;

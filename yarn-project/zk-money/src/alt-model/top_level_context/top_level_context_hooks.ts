@@ -24,9 +24,12 @@ export function useAliasManager() {
   return useContext(TopLevelContext).aliasManager;
 }
 
+export function useRegistrationsRepo() {
+  return useTopLevelContext().registrationsRepo;
+}
+
 export function useRemoteAssets() {
-  const { remoteAssetsObs } = useTopLevelContext();
-  return useObs(remoteAssetsObs);
+  return useRegistrationsRepo().remoteAssets;
 }
 
 export function useToasts() {

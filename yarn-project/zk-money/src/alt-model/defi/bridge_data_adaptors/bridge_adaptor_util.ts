@@ -1,6 +1,6 @@
 import type { RemoteAsset } from '../../../alt-model/types.js';
 import { EthAddress } from '@aztec/sdk';
-import { AztecAsset, AztecAssetType } from '@aztec/bridge-clients/client-dest/src/client/bridge-data.js';
+import { AztecAsset, AztecAssetType } from '../../../bridge-clients/client/bridge-data.js';
 import { BridgeInteractionAssets } from '../types.js';
 
 export const UNUSED_ADAPTOR_ASSET: AztecAsset = {
@@ -18,7 +18,8 @@ export const UNUSED_ADAPTOR_ASSET: AztecAsset = {
 //   };
 // }
 
-export function toAdaptorAsset(asset: RemoteAsset): AztecAsset {
+export function toAdaptorAsset(asset: RemoteAsset | undefined): AztecAsset {
+  if (!asset) return UNUSED_ADAPTOR_ASSET;
   return {
     id: asset.id,
     assetType: asset.id === 0 ? AztecAssetType.ETH : AztecAssetType.ERC20,
@@ -26,11 +27,11 @@ export function toAdaptorAsset(asset: RemoteAsset): AztecAsset {
   };
 }
 
-export function toAdaptorArgs({ inA, outA }: BridgeInteractionAssets) {
+export function toAdaptorArgs({ inA, inB, outA, outB }: BridgeInteractionAssets) {
   return {
     inA: toAdaptorAsset(inA),
-    inB: UNUSED_ADAPTOR_ASSET,
+    inB: toAdaptorAsset(inB),
     outA: toAdaptorAsset(outA),
-    outB: UNUSED_ADAPTOR_ASSET,
+    outB: toAdaptorAsset(outB),
   };
 }

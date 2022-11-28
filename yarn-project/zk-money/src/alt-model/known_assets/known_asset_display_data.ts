@@ -1,105 +1,97 @@
-import { EthAddress } from '@aztec/sdk';
 import daiIcon from '../../images/dai.svg';
 import daiWhiteIcon from '../../images/dai_white.svg';
 import daiGradientIcon from '../../images/dai_gradient.svg';
 import ethIcon from '../../images/ethereum.svg';
 import ethGradientIcon from '../../images/ethereum_gradient.svg';
 import ethWhiteIcon from '../../images/ethereum_white.svg';
-import rbtcIcon from '../../images/renBTC.svg';
-import rbtcGradientIcon from '../../images/renBTC_gradient.svg';
-import rbtcWhiteIcon from '../../images/renBTC_white.svg';
 import stEthGradientIcon from '../../images/steth_gradient.svg';
 import stEthWhiteIcon from '../../images/steth_white.svg';
 import yearnGradientIcon from '../../images/yearn_gradient.svg';
 import eulerGradientIcon from '../../images/euler_gradient.svg';
 import aaveGradientIcon from '../../images/aave_token_gradient.svg';
+import lusdGradientIcon from '../../images/lusd_gradient.svg';
 import questionMarkBlackIcon from '../../images/question_mark_black.svg';
 import questionMarkWhiteIcon from '../../images/question_mark_white.svg';
-import { KNOWN_MAINNET_ASSET_ADDRESS_STRS as S } from './known_asset_addresses.js';
+import { RegisteredAssetLabel } from '../registrations_data/registrations_data_types.js';
 
-export function getAssetIcon(address: EthAddress) {
-  switch (address.toString()) {
-    case S.ETH:
-    case S.wETH:
+type UnregisteredAssetLabel = 'WETH' | 'stETH';
+
+export type AssetLabel = RegisteredAssetLabel | UnregisteredAssetLabel;
+
+export function getAssetIcon(label?: AssetLabel) {
+  switch (label) {
+    case 'Eth':
+    case 'WETH':
       return ethIcon;
-    case S.DAI:
+    case 'DAI':
       return daiIcon;
-    case S.renBTC:
-      return rbtcIcon;
-    case S.yvDAI:
-    case S.yvETH:
+    case 'yvDAI':
+    case 'yvWETH':
       return yearnGradientIcon;
     default:
       return questionMarkBlackIcon;
   }
 }
 
-export function getAssetIconWhite(address: EthAddress) {
-  switch (address.toString()) {
-    case S.ETH:
-    case S.wETH:
+export function getAssetIconWhite(label?: AssetLabel) {
+  switch (label) {
+    case 'Eth':
       return ethWhiteIcon;
-    case S.DAI:
+    case 'DAI':
       return daiWhiteIcon;
-    case S.wstETH:
+    case 'wstETH':
       return stEthWhiteIcon;
-    case S.renBTC:
-      return rbtcWhiteIcon;
-    case S.yvDAI:
-    case S.yvETH:
+    case 'yvDAI':
+    case 'yvWETH':
       return yearnGradientIcon;
     default:
       return questionMarkWhiteIcon;
   }
 }
 
-export function getAssetIconGradient(address: EthAddress) {
-  switch (address.toString()) {
-    case S.ETH:
-    case S.wETH:
+export function getAssetIconGradient(label?: AssetLabel) {
+  switch (label) {
+    case 'Eth':
       return ethGradientIcon;
-    case S.DAI:
+    case 'DAI':
       return daiGradientIcon;
-    case S.renBTC:
-      return rbtcGradientIcon;
-    case S.wstETH:
+    case 'wstETH':
       return stEthGradientIcon;
-    case S.yvDAI:
-    case S.yvETH:
+    case 'yvDAI':
+    case 'yvWETH':
       return yearnGradientIcon;
-    case S.weWETH:
-    case S.weDAI:
-    case S.wewstETH:
+    case 'weWETH':
+    case 'weDAI':
+    case 'wewstETH':
       return eulerGradientIcon;
-    case S.wa2DAI:
-    case S.wa2WETH:
+    case 'wa2DAI':
+    case 'wa2WETH':
       return aaveGradientIcon;
+    case 'LUSD':
+      return lusdGradientIcon;
     default:
       return questionMarkBlackIcon;
   }
 }
 
-export function getAssetPreferredFractionalDigits(address: EthAddress) {
-  return getAssetPreferredFractionalDigitsFromStr(address.toString());
-}
-
-export function getAssetPreferredFractionalDigitsFromStr(addressStr: string) {
-  switch (addressStr) {
-    case S.DAI:
-    case S.yvDAI:
-    case S.weDAI:
-    case S.wa2DAI:
+export function getAssetPreferredFractionalDigits(label?: AssetLabel) {
+  switch (label) {
+    case 'DAI':
+    case 'yvDAI':
+    case 'weDAI':
+    case 'wa2DAI':
+    case 'LUSD':
+    case 'TB-275':
+    case 'TB-400':
       return 2;
-    case S.renBTC:
-      return 8;
-    case S.ETH:
-    case S.yvETH:
-    case S.wstETH:
-    case S.stETH:
-    case S.wETH:
-    case S.weWETH:
-    case S.wewstETH:
-    case S.wa2WETH:
+    case 'Eth':
+    case 'yvWETH':
+    case 'wstETH':
+    case 'stETH':
+    case 'WETH':
+    case 'weWETH':
+    case 'wewstETH':
+    case 'wa2WETH':
       return 6;
   }
 }

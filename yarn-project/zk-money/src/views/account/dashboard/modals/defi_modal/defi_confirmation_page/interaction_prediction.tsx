@@ -23,7 +23,7 @@ function InteractionPrediction(props: {
       return (
         <CostBreakdownInvestmentRow
           label={info.label}
-          asset={props.interaction.outputAssetA}
+          asset={props.interaction.displayedOutputAsset}
           value={info.formattedValue}
           conversionValue={info.formattedUnderlyingValue}
         />
@@ -45,7 +45,10 @@ function toInteraction(
       bridgeCallData,
       inputValue,
       inputAssetA: recipe.flow.enter.inA,
+      inputAssetB: recipe.flow.enter.inB,
       outputAssetA: recipe.flow.enter.outA,
+      outputAssetB: recipe.flow.enter.outB,
+      displayedOutputAsset: recipe.flow.enter.outDisplayed,
     };
   }
   if (direction === 'exit' && recipe.flow.type === 'closable') {
@@ -53,7 +56,10 @@ function toInteraction(
       bridgeCallData,
       inputValue,
       inputAssetA: recipe.flow.exit.inA,
+      inputAssetB: recipe.flow.exit.inB,
       outputAssetA: recipe.flow.exit.outA,
+      outputAssetB: recipe.flow.exit.outB,
+      displayedOutputAsset: recipe.flow.exit.outDisplayed,
     };
   }
 }

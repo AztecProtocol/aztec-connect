@@ -15,8 +15,8 @@ export interface DefiFormFields {
 interface DefiFormValidationInput {
   fields: DefiFormFields;
   amountFactory?: AmountFactory;
-  depositAsset: RemoteAsset;
-  balanceInTargetAsset?: bigint;
+  displayedInputAsset: RemoteAsset;
+  balanceInDisplayedInputAsset?: bigint;
   feeAmount?: Amount;
   feeAmounts?: (Amount | undefined)[];
   balanceInFeePayingAsset?: bigint;
@@ -46,18 +46,18 @@ export function validateDefiForm(input: DefiFormValidationInput): DefiFormValida
   const {
     fields,
     amountFactory,
-    balanceInTargetAsset,
+    displayedInputAsset,
+    balanceInDisplayedInputAsset,
     feeAmount,
     feeAmounts,
     balanceInFeePayingAsset,
     transactionLimit,
     maxChainableDefiDeposit,
-    depositAsset,
   } = input;
   if (
     !amountFactory ||
     !feeAmount ||
-    balanceInTargetAsset === undefined ||
+    balanceInDisplayedInputAsset === undefined ||
     balanceInFeePayingAsset === undefined ||
     !maxChainableDefiDeposit
   ) {
@@ -67,18 +67,21 @@ export function validateDefiForm(input: DefiFormValidationInput): DefiFormValida
     return { unrecognisedTargetAmount: true, input };
   }
 
-  // If the target asset isn't used for paying the fee, we don't need to reserve funds for it
-  const targetAssetIsPayingFee = depositAsset.id === feeAmount.id;
+  // If the target asset isn't used for paying the fee, we don't need to reserve funds for it.
+  // For completeness we should also check whether inputAssetB is fee paying, but since we
+  // don't currently support any such bridges, the extra complexity it would introduce isn't
+  // yet worthwhile.
+  const targetAssetIsPayingFee = displayedInputAsset.id === feeAmount.id;
   const feeInTargetAsset = targetAssetIsPayingFee ? feeAmount.baseUnits : 0n;
 
   const maxOutput = max(min(maxChainableDefiDeposit.value, transactionLimit), 0n);
-  const targetDepositAmount = amountFromStrOrMaxRoundedDown(fields.amountStrOrMax, maxOutput, depositAsset);
+  const targetDepositAmount = amountFromStrOrMaxRoundedDown(fields.amountStrOrMax, maxOutput, displayedInputAsset);
 
   const requiredInputInTargetAssetCoveringCosts = targetDepositAmount.baseUnits + feeInTargetAsset;
 
   const beyondTransactionLimit = targetDepositAmount.baseUnits > transactionLimit;
   const noAmount = targetDepositAmount.baseUnits <= 0n;
-  const insufficientTargetAssetBalance = balanceInTargetAsset < requiredInputInTargetAssetCoveringCosts;
+  const insufficientTargetAssetBalance = balanceInDisplayedInputAsset < requiredInputInTargetAssetCoveringCosts;
   const insufficientFeePayingAssetBalance = balanceInFeePayingAsset < feeAmount.baseUnits;
 
   const precisionIsTooHigh = getPrecisionIsTooHigh(targetDepositAmount);

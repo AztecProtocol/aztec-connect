@@ -1,23 +1,22 @@
 import aaveLogo from '../../../images/aave_logo_white.svg';
 import aaveMiniLogo from '../../../images/aave_mini_logo.png';
-import { KNOWN_MAINNET_ASSET_ADDRESSES as KMAA } from '../../../alt-model/known_assets/known_asset_addresses.js';
-import { AaveV2BridgeData } from '@aztec/bridge-clients/client-dest/src/client/aavev2/aavev2-bridge-data.js';
+import { AaveV2BridgeData } from '../../../bridge-clients/client/aavev2/aavev2-bridge-data.js';
 import { CreateRecipeArgs } from '../types.js';
-import { useDefaultExpectedAssetYield, useDefaultLiquidity } from '../defi_info_hooks.js';
+import { useDefaultExpectedAssetYield, useDefaultMarketSizeBulkPrice } from '../defi_info_hooks.js';
 import { formatBulkPrice_compact, formatPercentage_2dp } from '../../../app/util/formatters.js';
 import { keyStatConfig_averageWait } from '../key_stat_configs.js';
 import { bindInteractionPredictionHook_expectedOutput } from '../interaction_prediction_configs.js';
 import { useVariableAprText } from '../position_key_stat_configs.js';
 import { createDefiPublishStatsCacheArgsBuilder } from '../defi_publish_stats_utils.js';
+import { createSimpleSwapFlowBinding } from '../flow_configs.js';
 
 export const AAVE_ETH_CARD: CreateRecipeArgs = {
   id: 'aave.ETH-to-wa2ETH',
-  selectBlockchainBridge: ({ bridges }) => bridges.find(x => x.id === 13),
+  bridgeBinding: 'ERC4626_400K',
   gradient: ['#9b559c', '#9b559c'],
-  openHandleAssetAddress: KMAA.wa2WETH,
-  entryInputAssetAddressA: KMAA.ETH,
-  entryOutputAssetAddressA: KMAA.wa2WETH,
-  createAdaptor: provider => AaveV2BridgeData.create(provider),
+  openHandleAssetBinding: 'wa2WETH',
+  flowBindings: createSimpleSwapFlowBinding('Eth', 'wa2WETH'),
+  createAdaptor: ({ provider }) => AaveV2BridgeData.create(provider),
   enterAuxDataResolver: {
     type: 'static',
     value: 0n, // Deposit flow
@@ -37,6 +36,7 @@ export const AAVE_ETH_CARD: CreateRecipeArgs = {
   miniLogo: aaveMiniLogo,
   cardTag: 'Lending',
   cardButtonLabel: 'Earn',
+  exitButtonLabel: 'Claim & Exit',
   keyStats: {
     keyStat1: {
       useLabel: () => 'APY',
@@ -51,7 +51,7 @@ export const AAVE_ETH_CARD: CreateRecipeArgs = {
       useLabel: () => 'L1 Liquidity',
       skeletonSizingContent: '$11B',
       useFormattedValue: recipe => {
-        const liquidity = useDefaultLiquidity(recipe.id);
+        const liquidity = useDefaultMarketSizeBulkPrice(recipe.id);
         if (liquidity === undefined) return;
         return formatBulkPrice_compact(liquidity);
       },
@@ -61,10 +61,12 @@ export const AAVE_ETH_CARD: CreateRecipeArgs = {
   useEnterInteractionPredictionInfo: bindInteractionPredictionHook_expectedOutput({
     direction: 'enter',
     showUnderlying: true,
+    outputSelection: 'A',
   }),
   useExitInteractionPredictionInfo: bindInteractionPredictionHook_expectedOutput({
     direction: 'exit',
     showUnderlying: false,
+    outputSelection: 'A',
   }),
   positionKeyStat: {
     type: 'closable',
@@ -78,9 +80,8 @@ export const AAVE_ETH_CARD: CreateRecipeArgs = {
 export const AAVE_DAI_CARD: CreateRecipeArgs = {
   ...AAVE_ETH_CARD,
   id: 'aave.DAI-to-wa2DAI',
-  openHandleAssetAddress: KMAA.wa2DAI,
-  entryInputAssetAddressA: KMAA.DAI,
-  entryOutputAssetAddressA: KMAA.wa2DAI,
+  openHandleAssetBinding: 'wa2DAI',
+  flowBindings: createSimpleSwapFlowBinding('DAI', 'wa2DAI'),
   shortDesc: 'Lend DAI on Aave and earn yield by holding wa2DAI in exchange.',
   exitDesc: 'Unwrap wa2DAI to recieve your underlying DAI.',
   longDescription: 'Lend DAI on Aave and earn yield by holding wa2DAI in exchange.',
