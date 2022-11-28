@@ -14,30 +14,55 @@ import {
   IWstETH__factory,
   ILidoOracle__factory,
   ICurvePool__factory,
+  IChainlinkOracle,
+  IChainlinkOracle__factory,
 } from '../../../typechain-types/index.js';
 import { createWeb3Provider } from '../../aztec/provider/web3_provider.js';
-import { EthereumProvider, EthAddress, AssetValue } from '@aztec/sdk';
+import { BridgeCallData, EthereumProvider, EthAddress, AssetValue } from '@aztec/sdk';
 
 export class CurveStethBridgeData implements BridgeDataFieldGetters {
-  public scalingFactor: bigint = 1n * 10n ** 18n;
+  public readonly scalingFactor: bigint = 1n * 10n ** 18n;
+  public readonly wstEthAddress: EthAddress = EthAddress.fromString('0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0');
+
+  // Price precision
+  public readonly PRECISION = 10n ** 18n;
+
+  // Note: max setting has to be set significantly higher than the ideal setting in order for the aggregation to work
+  public readonly IDEAL_SLIPPAGE_SETTING = 100n; // Denominated in basis points
+  public readonly MAX_ACCEPTABLE_BATCH_SLIPPAGE_SETTING = this.IDEAL_SLIPPAGE_SETTING * 2n;
 
   private constructor(
+    private bridgeAddressId: number,
     private wstETHContract: IWstETH,
     private lidoOracleContract: ILidoOracle,
     private curvePoolContract: ICurvePool,
+    private chainlinkOracleContract: IChainlinkOracle,
   ) {}
 
   static create(
+    bridgeAddressId: number,
     provider: EthereumProvider,
     wstEthAddress: EthAddress,
     lidoOracleAddress: EthAddress,
     curvePoolAddress: EthAddress,
+    chainlinkOracleAddress: EthAddress,
   ) {
     const ethersProvider = createWeb3Provider(provider);
     const wstEthContract = IWstETH__factory.connect(wstEthAddress.toString(), ethersProvider);
     const lidoContract = ILidoOracle__factory.connect(lidoOracleAddress.toString(), ethersProvider);
     const curvePoolContract = ICurvePool__factory.connect(curvePoolAddress.toString(), ethersProvider);
-    return new CurveStethBridgeData(wstEthContract, lidoContract, curvePoolContract);
+    // Precision of the feed is 1e18
+    const chainlinkOracleContract = IChainlinkOracle__factory.connect(
+      chainlinkOracleAddress.toString(),
+      ethersProvider,
+    );
+    return new CurveStethBridgeData(
+      bridgeAddressId,
+      wstEthContract,
+      lidoContract,
+      curvePoolContract,
+      chainlinkOracleContract,
+    );
   }
 
   // Unused
@@ -55,14 +80,54 @@ export class CurveStethBridgeData implements BridgeDataFieldGetters {
     return [];
   }
 
-  // Not applicable
   async getAuxData(
     inputAssetA: AztecAsset,
     inputAssetB: AztecAsset,
     outputAssetA: AztecAsset,
     outputAssetB: AztecAsset,
   ): Promise<bigint[]> {
-    return [0n];
+    let ethToWstEth: boolean;
+    if (
+      inputAssetA.assetType === AztecAssetType.ETH &&
+      inputAssetB.assetType === AztecAssetType.NOT_USED &&
+      outputAssetA.erc20Address.equals(this.wstEthAddress) &&
+      outputAssetB.assetType === AztecAssetType.NOT_USED
+    ) {
+      // Buying wstETH
+      ethToWstEth = true;
+    } else if (
+      inputAssetA.erc20Address.equals(this.wstEthAddress) &&
+      inputAssetB.assetType === AztecAssetType.NOT_USED &&
+      outputAssetA.assetType === AztecAssetType.ETH &&
+      outputAssetB.assetType === AztecAssetType.NOT_USED
+    ) {
+      // Selling wstETH
+      ethToWstEth = false;
+    } else {
+      throw new Error('Incorrect combination of input/output assets.');
+    }
+
+    // Precision of the feed is 1e18
+    const [, stEthPriceInEth, , ,] = await this.chainlinkOracleContract.latestRoundData();
+
+    const oraclePrice = ethToWstEth ? 10n ** 36n / stEthPriceInEth.toBigInt() : stEthPriceInEth.toBigInt();
+
+    const worstAcceptableBatchPrice = (oraclePrice * (10000n - this.MAX_ACCEPTABLE_BATCH_SLIPPAGE_SETTING)) / 10000n;
+
+    const relevantAuxDatas = await this.fetchRelevantAuxDataFromFalafel(
+      inputAssetA.id,
+      outputAssetA.id,
+      undefined,
+      undefined,
+    );
+
+    for (const existingBatchPrice of relevantAuxDatas) {
+      if (worstAcceptableBatchPrice <= existingBatchPrice && existingBatchPrice < oraclePrice) {
+        return [existingBatchPrice];
+      }
+    }
+
+    return [(oraclePrice * (10000n - this.IDEAL_SLIPPAGE_SETTING)) / 10000n];
   }
 
   async getExpectedOutput(
@@ -128,5 +193,41 @@ export class CurveStethBridgeData implements BridgeDataFieldGetters {
       decimals: 18,
       amount: stETHBalance.toBigInt(),
     };
+  }
+
+  private async fetchRelevantAuxDataFromFalafel(
+    inputAssetIdA: number,
+    outputAssetIdA: number,
+    inputAssetIdB?: number,
+    outputAssetIdB?: number,
+  ): Promise<bigint[]> {
+    const result = await (
+      await fetch('https://api.aztec.network/aztec-connect-prod/falafel/status', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+    ).json();
+
+    const bridgeCallDatas: BridgeCallData[] = result.bridgeStatus.map((status: any) =>
+      BridgeCallData.fromString(status.bridgeCallData),
+    );
+
+    const auxDatas: bigint[] = [];
+
+    for (const bridgeCallData of bridgeCallDatas) {
+      if (
+        bridgeCallData.bridgeAddressId === this.bridgeAddressId &&
+        bridgeCallData.inputAssetIdA === inputAssetIdA &&
+        bridgeCallData.inputAssetIdB === inputAssetIdB &&
+        bridgeCallData.outputAssetIdA === outputAssetIdA &&
+        bridgeCallData.outputAssetIdB === outputAssetIdB
+      ) {
+        auxDatas.push(bridgeCallData.auxData);
+      }
+    }
+
+    return auxDatas;
   }
 }

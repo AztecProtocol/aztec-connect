@@ -6,21 +6,26 @@ import {
   IWstETH__factory,
   ICurvePool__factory,
   ILidoOracle__factory,
+  IChainlinkOracle,
+  IChainlinkOracle__factory,
 } from '../../../typechain-types/index.js';
 import { AztecAsset, AztecAssetType } from '../../bridge-data.js';
 import { BigNumber } from 'ethers';
 import { jest } from '@jest/globals';
-import { EthAddress, JsonRpcProvider } from '@aztec/sdk';
+import { BridgeCallData, EthAddress, JsonRpcProvider } from '@aztec/sdk';
 
 type Mockify<T> = {
   [P in keyof T]: jest.Mock | any;
 };
 
 describe('curve steth bridge data', () => {
+  const bridgeAddressId = 17;
+
   let curveBridgeData: CurveStethBridgeData;
   let wstethContract: Mockify<IWstETH>;
   let curvePoolContract: Mockify<ICurvePool>;
   let lidoOracleContract: Mockify<ILidoOracle>;
+  let chainlinkOracleContract: Mockify<IChainlinkOracle>;
 
   let provider: JsonRpcProvider;
 
@@ -32,18 +37,28 @@ describe('curve steth bridge data', () => {
     wsteth: IWstETH = wstethContract as any,
     curvePool: ICurvePool = curvePoolContract as any,
     lidoOracle: ILidoOracle = lidoOracleContract as any,
+    chainlinkOracle: IChainlinkOracle = chainlinkOracleContract as any,
   ) => {
     IWstETH__factory.connect = () => wsteth as any;
     ICurvePool__factory.connect = () => curvePool as any;
     ILidoOracle__factory.connect = () => lidoOracle as any;
-    return CurveStethBridgeData.create(provider, EthAddress.ZERO, EthAddress.ZERO, EthAddress.ZERO); // can pass in dummy values here as the above factories do all of the work
+    IChainlinkOracle__factory.connect = () => chainlinkOracle as any;
+    // Can pass in dummy values bellow as the above factories do all of the work
+    return CurveStethBridgeData.create(
+      bridgeAddressId,
+      provider,
+      EthAddress.ZERO,
+      EthAddress.ZERO,
+      EthAddress.ZERO,
+      EthAddress.ZERO,
+    );
   };
 
   beforeAll(() => {
     provider = new JsonRpcProvider('https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c');
 
     ethAsset = {
-      id: 1,
+      id: 0,
       assetType: AztecAssetType.ETH,
       erc20Address: EthAddress.ZERO,
     };
@@ -57,6 +72,129 @@ describe('curve steth bridge data', () => {
       assetType: AztecAssetType.NOT_USED,
       erc20Address: EthAddress.ZERO,
     };
+  });
+
+  it('sets auxData from Falafel when there is a batch with acceptable price on wstETH->ETH swap', async () => {
+    const referenceBridgeCallData = '000D873B90F0335E180000000000000000000000000000000000000200000011';
+    const stEthOraclePriceInEth = BigNumber.from('979711897527868700');
+
+    // Setup mocks
+    const falafelResponse = {
+      bridgeStatus: [
+        {
+          bridgeCallData: referenceBridgeCallData,
+        },
+        {
+          bridgeCallData: '000000000000000001000000000000000000000020000000000000060000000a',
+        },
+      ],
+    };
+    global.fetch = jest.fn(() =>
+      Promise.resolve({
+        json: () => Promise.resolve(falafelResponse),
+      }),
+    ) as any;
+
+    chainlinkOracleContract = {
+      ...chainlinkOracleContract,
+      latestRoundData: jest
+        .fn()
+        .mockReturnValueOnce([BigNumber.from(0), stEthOraclePriceInEth, BigNumber.from(0), BigNumber.from(0)]),
+    };
+    IChainlinkOracle__factory.connect = () => chainlinkOracleContract as any;
+
+    const curveBridgeData = createCurveStethBridgeData(
+      wstethContract as any,
+      curvePoolContract as any,
+      lidoOracleContract as any,
+    );
+
+    const auxData = await curveBridgeData.getAuxData(wstETHAsset, emptyAsset, ethAsset, emptyAsset);
+
+    // The price in Falafel is acceptable so check that it was chosen
+    expect(auxData[0]).toBe(BridgeCallData.fromString(referenceBridgeCallData).auxData);
+  });
+
+  it('sets auxData from Falafel when there is a batch with acceptable price on ETH->wstETH swap', async () => {
+    const referenceBridgeCallData = '000E05D6CB0E9FC4280000000000000000000000200000000000000000000011';
+    const stEthOraclePriceInEth = BigNumber.from('979711897527868700');
+
+    // Setup mocks
+    const falafelResponse = {
+      bridgeStatus: [
+        {
+          bridgeCallData: referenceBridgeCallData,
+        },
+        {
+          bridgeCallData: '000000000000000001000000000000000000000020000000000000060000000a',
+        },
+      ],
+    };
+    global.fetch = jest.fn(() =>
+      Promise.resolve({
+        json: () => Promise.resolve(falafelResponse),
+      }),
+    ) as any;
+
+    chainlinkOracleContract = {
+      ...chainlinkOracleContract,
+      latestRoundData: jest
+        .fn()
+        .mockReturnValueOnce([BigNumber.from(0), stEthOraclePriceInEth, BigNumber.from(0), BigNumber.from(0)]),
+    };
+    IChainlinkOracle__factory.connect = () => chainlinkOracleContract as any;
+
+    const curveBridgeData = createCurveStethBridgeData(
+      wstethContract as any,
+      curvePoolContract as any,
+      lidoOracleContract as any,
+    );
+
+    const auxData = await curveBridgeData.getAuxData(ethAsset, emptyAsset, wstETHAsset, emptyAsset);
+
+    // The price in Falafel is acceptable so check that it was chosen
+    expect(auxData[0]).toBe(BridgeCallData.fromString(referenceBridgeCallData).auxData);
+  });
+
+  it('sets custom auxData when there are no acceptable ones in Falafel', async () => {
+    const referenceBridgeCallData = '000D873B90F0335E180000000000000000000000000000000000000200000011';
+    const stEthOraclePriceInEth = BigNumber.from('102869749240426210');
+
+    // Setup mocks
+    const falafelResponse = {
+      bridgeStatus: [
+        {
+          bridgeCallData: referenceBridgeCallData,
+        },
+        {
+          bridgeCallData: '000000000000000001000000000000000000000020000000000000060000000a',
+        },
+      ],
+    };
+    global.fetch = jest.fn(() =>
+      Promise.resolve({
+        json: () => Promise.resolve(falafelResponse),
+      }),
+    ) as any;
+
+    chainlinkOracleContract = {
+      ...chainlinkOracleContract,
+      latestRoundData: jest
+        .fn()
+        .mockReturnValueOnce([BigNumber.from(0), stEthOraclePriceInEth, BigNumber.from(0), BigNumber.from(0)]),
+    };
+    IChainlinkOracle__factory.connect = () => chainlinkOracleContract as any;
+
+    const curveBridgeData = createCurveStethBridgeData(
+      wstethContract as any,
+      curvePoolContract as any,
+      lidoOracleContract as any,
+    );
+
+    const auxData = await curveBridgeData.getAuxData(wstETHAsset, emptyAsset, ethAsset, emptyAsset);
+
+    // The price in Falafel is not acceptable so check that it was not chosen
+    expect(auxData[0] === BridgeCallData.fromString(referenceBridgeCallData).auxData).toBeFalsy();
   });
 
   it('should get wstETH when deposit small amount of ETH', async () => {
