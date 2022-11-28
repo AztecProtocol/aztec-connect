@@ -3,6 +3,8 @@ import { Grumpkin } from '../ecc/grumpkin/index.js';
 
 export class GrumpkinAddress {
   public static SIZE = 64;
+  // Note: this is an empty array of zeros. The coordinates (0,0) DO NOT lie on the Grumpkin curve.
+  // This is NOT to be confused with the point at infinity, which has a different affine representation (see affine_element.hpp `is_point_at_infinity()` for details).
   public static ZERO = new GrumpkinAddress(Buffer.alloc(GrumpkinAddress.SIZE));
 
   constructor(private buffer: Buffer) {
@@ -32,8 +34,8 @@ export class GrumpkinAddress {
   /**
    * A valid address (is a point on the curve).
    */
-  public static one() {
-    return new GrumpkinAddress(Grumpkin.one);
+  public static generator() {
+    return new GrumpkinAddress(Grumpkin.generator);
   }
 
   public equals(rhs: GrumpkinAddress) {

@@ -313,7 +313,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   }
 
   public derivePublicKey(privateKey: Buffer) {
-    return Promise.resolve(new GrumpkinAddress(this.grumpkin.mul(Grumpkin.one, privateKey)));
+    return Promise.resolve(new GrumpkinAddress(this.grumpkin.mul(Grumpkin.generator, privateKey)));
   }
 
   public deriveLegacySigningMessageHash(address: EthAddress) {

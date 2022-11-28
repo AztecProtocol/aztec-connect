@@ -48,7 +48,7 @@ export class ViewingKey {
       throw new Error('Invalid note buffer.');
     }
 
-    const ephPubKey = grumpkin.mul(Grumpkin.one, ephPrivKey);
+    const ephPubKey = grumpkin.mul(Grumpkin.generator, ephPrivKey);
     const aesSecret = deriveAESSecret(ownerPubKey, ephPrivKey, grumpkin);
     const aesKey = aesSecret.slice(0, 16);
     const iv = aesSecret.slice(16, 32);

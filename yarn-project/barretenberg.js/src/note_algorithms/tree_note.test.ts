@@ -14,7 +14,7 @@ describe('tree_note', () => {
 
   const createKeyPair = () => {
     const privKey = grumpkin.getRandomFr();
-    const pubKey = new GrumpkinAddress(grumpkin.mul(Grumpkin.one, privKey));
+    const pubKey = new GrumpkinAddress(grumpkin.mul(Grumpkin.generator, privKey));
     return { privKey, pubKey };
   };
 
