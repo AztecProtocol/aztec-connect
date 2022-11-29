@@ -4,15 +4,41 @@ import { PooledFftFactory } from '@aztec/barretenberg/fft';
 import { createDebugLogger } from '@aztec/barretenberg/log';
 import { PooledNoteDecryptor } from '@aztec/barretenberg/note_algorithms';
 import { PooledPippenger } from '@aztec/barretenberg/pippenger';
+import { createDispatchProxyFromFn } from '@aztec/barretenberg/transport';
 import { BarretenbergWasm, WorkerPool } from '@aztec/barretenberg/wasm';
-import { CoreSdkClientStub, CoreSdkSerializedInterface } from '../../core_sdk/index.js';
+import { CoreSdkClientStub, CoreSdkSerializedInterface, CoreSdkServerStub } from '../../core_sdk/index.js';
 import { getNumWorkers } from '../get_num_workers.js';
 import { JobQueueDispatch, JobQueueInterface, JobQueueWorker } from '../job_queue/index.js';
 import { createDispatchFn, TransportClient } from '../transport.js';
-import { BananaCoreSdk } from './banana_core_sdk.js';
 import { BananaCoreSdkOptions } from './banana_core_sdk_options.js';
 
 const debug = createDebugLogger('aztec:sdk:shared_worker_frontend');
+
+// Implements the serialized core sdk interface.
+// Creates a CoreSdkSerializedInterface that forwards to SharedWorkerBackend.
+// The 'coreSdkDispatch' function on SharedWorkerBackend is evoked.
+function createBananaSharedWorkerProxy(
+  transportClient: TransportClient,
+  jobQueueWorker: JobQueueWorker,
+  workerPool: WorkerPool,
+): CoreSdkSerializedInterface {
+  // Create a dispatch proxy matching CoreSdkServerStub's methods
+  // and passing them along with our transport client
+  const coreSdk = createDispatchProxyFromFn(CoreSdkServerStub, (fn: string) => (...args: any[]) => {
+    debug(`core sdk dispatch request: ${fn}(${args})`);
+    return transportClient.request({ fn: 'coreSdkDispatch', args: [{ fn, args }] });
+  });
+  // Wrap the original destroy, adding cleanup
+  const origDestroy = coreSdk.destroy;
+  coreSdk.destroy = async () => {
+    debug('Destroying banana core sdk...');
+    await jobQueueWorker.stop();
+    await workerPool.destroy();
+    await origDestroy();
+    debug('Banana core sdk destroyed.');
+  };
+  return coreSdk;
+}
 
 export class SharedWorkerFrontend {
   private jobQueue!: JobQueueInterface;
@@ -47,15 +73,9 @@ export class SharedWorkerFrontend {
     // Call `init` on the SharedWorkerBackend. Constructs and initializes the chocolate core sdk.
     await this.transportClient.request({ fn: 'initComponents', args: [options] });
 
+    const transportClient = this.transportClient;
     // All calls on BananaCoreSdk will be sent to coreSdkDispatch function on SharedWorkerBackend.
-    this.coreSdk = new BananaCoreSdk(
-      msg => {
-        debug(`core sdk dispatch request: ${msg.fn}(${msg.args})`);
-        return this.transportClient.request({ fn: 'coreSdkDispatch', args: [msg] });
-      },
-      jobQueueWorker,
-      workerPool,
-    );
+    this.coreSdk = createBananaSharedWorkerProxy(transportClient, jobQueueWorker, workerPool);
 
     return { coreSdk: new CoreSdkClientStub(this.coreSdk) };
   }
