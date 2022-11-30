@@ -78,16 +78,15 @@ export class RollupEventGetter {
 
     while (start <= latestBlock) {
       const logsRequest = (topic: string) => {
+        const param = {
+          address: this.rollupContractAddress.toString(),
+          topics: [topic],
+          fromBlock: `0x${start.toString(16)}`,
+          toBlock: `0x${end.toString(16)}`,
+        };
         return this.provider.request({
           method: 'eth_getLogs',
-          params: [
-            {
-              address: this.rollupContractAddress.toString(),
-              topics: [topic],
-              fromBlock: `0x${start.toString(16)}`,
-              toBlock: `0x${end.toString(16)}`,
-            },
-          ],
+          params: [param],
         });
       };
       const [rollupEvents, defiBridgeEvents] = await Promise.all([

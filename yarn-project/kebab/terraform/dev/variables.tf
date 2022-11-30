@@ -17,3 +17,7 @@ variable "FAUCET_OPERATOR_ADDRESS" {
 variable "REDEPLOY" {
   type = string
 }
+
+variable "DEV_NET_RPC_URL" {
+  type = string
+}
