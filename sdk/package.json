@@ -3,6 +3,11 @@
   "version": "2.0.16",
   "main": "index.js",
   "homepage": "https://docs.aztec.network/sdk/overview",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AztecProtocol/aztec-connect.git",
+    "directory": "sdk"
+  },
   "author": "AZTEC",
   "license": "GPL-2.0",
   "scripts": {
