@@ -85,6 +85,13 @@ export const EULER_WSTETH_CARD: CreateRecipeArgs = {
   shortDesc: 'Lend wstETH on Euler and earn yield by holding wewstETH in exchange.',
   exitDesc: 'Unwrap weestWETH to recieve your underlying wstETH.',
   longDescription: 'Lend wstETH on Euler and earn yield by holding wewstETH in exchange.',
+  keyStats: {
+    ...EULER_ETH_CARD.keyStats,
+    keyStat1: {
+      ...EULER_ETH_CARD.keyStats.keyStat1,
+      useLabel: () => 'wstETH APY',
+    },
+  },
 };
 
 export const EULER_DAI_CARD: CreateRecipeArgs = {
@@ -94,5 +101,5 @@ export const EULER_DAI_CARD: CreateRecipeArgs = {
   flowBindings: createSimpleSwapFlowBinding('DAI', 'weDAI'),
   shortDesc: 'Lend DAI on Euler and earn yield by holding weDAI in exchange.',
   exitDesc: 'Unwrap weDAI to recieve your underlying DAI.',
-  longDescription: 'Lend wstETH on Euler and earn yield by holding wewstETH in exchange.',
+  longDescription: 'Lend DAI on Euler and earn yield by holding weDAI in exchange.',
 };

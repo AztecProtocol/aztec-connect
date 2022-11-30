@@ -19,8 +19,8 @@ export class TroveBridgeData implements BridgeDataFieldGetters {
   public readonly PRECISION = 10n ** 18n;
 
   // Note: max setting has to be set significantly higher than the ideal setting in order for the aggregation to work
-  public readonly IDEAL_SLIPPAGE_SETTING = 200n; // Denominated in basis points
-  public readonly MAX_ACCEPTABLE_BATCH_SLIPPAGE_SETTING = 500n; // Denominated in basis points
+  public readonly IDEAL_SLIPPAGE_SETTING = 100n; // Denominated in basis points
+  public readonly MAX_ACCEPTABLE_BATCH_SLIPPAGE_SETTING = this.IDEAL_SLIPPAGE_SETTING * 2n;
 
   private price?: BigNumber;
 
@@ -93,7 +93,7 @@ export class TroveBridgeData implements BridgeDataFieldGetters {
       outputAssetA.assetType === AztecAssetType.ETH &&
       outputAssetB.erc20Address.equals(EthAddress.fromString(this.bridge.address))
     ) {
-      // Repayment witha combination of collateral and LUSD --> `auxData` contains maximum price of LUSD
+      // Repayment with a combination of collateral and LUSD --> `auxData` contains maximum price of LUSD
       return [await this.getMaxPrice(inputAssetA.id, outputAssetA.id, inputAssetB.id, outputAssetB.id)];
     } else if (
       inputAssetA.erc20Address.equals(EthAddress.fromString(this.bridge.address)) &&

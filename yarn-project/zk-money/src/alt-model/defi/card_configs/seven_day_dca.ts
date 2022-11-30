@@ -67,7 +67,13 @@ export const SEVEN_DAY_DCA_CARD_DAI_TO_ETH: CreateRecipeArgs = {
   },
   getAsyncResolutionDate: tx => {
     if (!tx.settled) return;
-    return tx.settled?.getTime() + SEVEN_DAYS_MS;
+    const startOfFollowingDayOneWeekLater = new Date(0);
+    startOfFollowingDayOneWeekLater.setFullYear(
+      tx.settled.getFullYear(),
+      tx.settled.getMonth(),
+      tx.settled.getDate() + 8,
+    );
+    return startOfFollowingDayOneWeekLater;
   },
   getDefiPublishStatsCacheArgs: createDefiPublishStatsCacheArgsBuilder({ ignoreAuxData: false }),
 };
@@ -108,8 +114,6 @@ export const SEVEN_DAY_DCA_CARD_ETH_TO_DAI: CreateRecipeArgs = {
     };
   },
 };
-
-const SEVEN_DAYS_MS = 1000 * 60 * 60 * 24 * 7;
 
 function formatDai_2dp(baseUnits: bigint) {
   return formatBaseUnits(baseUnits, 18, { precision: 2, commaSeparated: true });
