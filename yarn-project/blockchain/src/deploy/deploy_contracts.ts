@@ -17,6 +17,7 @@ function getSigner(host?: string, privateKey?: string) {
 }
 
 function deploy(
+  host: string,
   chainId: number,
   signer: Signer,
   treeInitData: TreeInitData,
@@ -28,7 +29,7 @@ function deploy(
     case 1:
     case 0xa57ec:
     case 0xdef:
-      return deployMainnet(signer, treeInitData, vk, faucetOperator, rollupProvider);
+      return deployMainnet(host, signer, treeInitData, vk, faucetOperator, rollupProvider);
     case 0xe2e:
       return deployMainnetE2e(signer, treeInitData, vk, faucetOperator, rollupProvider);
     default:
@@ -64,6 +65,7 @@ export async function deployContracts(
   console.error(`Initial root root: ${roots.rootsRoot.toString('hex')}`);
 
   const { rollup, priceFeeds, feeDistributor, permitHelper, faucet, bridgeDataProvider } = await deploy(
+    host,
     chainId,
     signer,
     treeInitData,

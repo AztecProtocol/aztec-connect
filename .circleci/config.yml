@@ -80,7 +80,6 @@ benchmark_add_keys: &benchmark_add_keys
       chmod 0600 .ssh/id_ed25519
       ssh-add .ssh/id_ed25519
 
-
 # Called setup_env to setup a bunch of global variables used throughout the rest of the build process.
 # It takes the required CCI environment variables as inputs, and gives them normalised names for the rest of
 # the build process. This enables easy running of the build system external to CCI, as used for powerful EC2 builds.
@@ -92,9 +91,9 @@ setup_env: &setup_env
 # This step is used to save logs from various barretenberg test to the workspace so that they can be used later to parse benchmark values out of them
 save_logs: &save_logs
   persist_to_workspace:
-          root: /tmp/test-logs
-          paths:
-            - ./*
+    root: /tmp/test-logs
+    paths:
+      - ./*
 jobs:
   wasm-linux-clang:
     docker:
@@ -683,7 +682,7 @@ jobs:
       - run:
           name: 'kebab'
           # Increment to force contract redeployment.
-          command: TF_VAR_REDEPLOY=4 deploy kebab
+          command: TF_VAR_REDEPLOY=5 deploy kebab
       - run:
           name: 'halloumi'
           command: deploy halloumi "halloumi halloumi-inner halloumi-outer"
