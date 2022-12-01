@@ -13,7 +13,7 @@ import {
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { createFundedWalletProvider } from './create_funded_wallet_provider.js';
-import { addUsers } from './sdk_utils.js';
+import { registerUsers } from './sdk_utils.js';
 import { jest } from '@jest/globals';
 
 jest.setTimeout(20 * 60 * 1000);
@@ -31,16 +31,17 @@ const {
  * kebab: yarn start:e2e
  * halloumi: yarn start:e2e
  * falafel: yarn start:e2e
- * end-to-end: yarn test e2e_curve
+ * end-to-end: ./scripts/configure_e2e_bridges ./scripts/test_bridge_configs.json
+ * end-to-end: yarn test e2e_sync_bridge
  */
 describe('end-to-end defi tests', () => {
   let provider: WalletProvider;
   let sdk: AztecSdk;
   let accounts: EthAddress[] = [];
   let userIds: GrumpkinAddress[] = [];
-  let signers: SchnorrSigner[] = [];
   let shieldValue: AssetValue;
-  const debug = createDebug('bb:e2e_curve');
+  const signers: SchnorrSigner[] = [];
+  const debug = createDebug('bb:e2e_sync_bridge');
 
   beforeAll(async () => {
     debug(`funding initial ETH accounts...`);
@@ -58,7 +59,11 @@ describe('end-to-end defi tests', () => {
     await sdk.awaitSynchronised();
 
     shieldValue = sdk.toBaseUnits(0, '0.10');
-    ({ userIds, signers } = await addUsers(sdk, accounts, shieldValue));
+    userIds = await registerUsers(sdk, accounts, shieldValue);
+    for (const account of accounts) {
+      const spendingKey = await sdk.generateSpendingKeyPair(account);
+      signers.push(await sdk.createSchnorrSigner(spendingKey.privateKey));
+    }
   });
 
   afterAll(async () => {
@@ -69,25 +74,22 @@ describe('end-to-end defi tests', () => {
     const debugBalance = async (assetId: number) =>
       debug(`balance: ${sdk.fromBaseUnits(await sdk.getBalance(userIds[0], assetId), true)}`);
 
-    const bridgeAddressId = 4;
+    const bridgeAddressId = 5;
     const ethAssetId = 0;
-    const wstETHAssetId = 2;
-    const ethToWstETHBridge = new BridgeCallData(bridgeAddressId, ethAssetId, wstETHAssetId);
+    const tokenAAssetId = 5;
+    const bridgeCallData = new BridgeCallData(bridgeAddressId, ethAssetId, tokenAAssetId);
+    const ethToTokenAFees = await sdk.getDefiFees(bridgeCallData);
 
     // Rollup 1.
-    // Account 0 swaps ETH to wstETH.
+    // Account 0 swaps ETH to token A.
     {
-      const { inputAssetIdA, outputAssetIdA } = ethToWstETHBridge;
+      const { inputAssetIdA, outputAssetIdA } = bridgeCallData;
 
       await debugBalance(inputAssetIdA);
       await debugBalance(outputAssetIdA);
 
       const depositValue = sdk.toBaseUnits(inputAssetIdA, '0.05');
-      const ethToWstETHFees = await sdk.getDefiFees(ethToWstETHBridge, {
-        userId: userIds[0],
-        assetValue: depositValue,
-      });
-      const fee = ethToWstETHFees[DefiSettlementTime.INSTANT];
+      const fee = ethToTokenAFees[DefiSettlementTime.INSTANT];
 
       debug(
         `swapping ${sdk.fromBaseUnits(depositValue, true)} (fee: ${sdk.fromBaseUnits(fee)}) for ${
@@ -95,7 +97,7 @@ describe('end-to-end defi tests', () => {
         }...`,
       );
 
-      const controller = sdk.createDefiController(userIds[0], signers[0], ethToWstETHBridge, depositValue, fee);
+      const controller = sdk.createDefiController(userIds[0], signers[0], bridgeCallData, depositValue, fee);
       await controller.createProof();
       await controller.send();
 
@@ -111,62 +113,13 @@ describe('end-to-end defi tests', () => {
 
       const [defiTx] = await sdk.getDefiTxs(userIds[0]);
       const expectedInputBalance = shieldValue.value - depositValue.value - fee.value;
-      expect(defiTx).toMatchObject({ bridgeCallData: ethToWstETHBridge, depositValue, fee });
+      expect(defiTx).toMatchObject({ bridgeCallData: bridgeCallData, depositValue, fee });
+      // TODO: There is a faulure down here. Not sure why it reverts. But I better check it out.
+      // Do some tracing with foundry, probably need to be running ganache outside of tmux to copy paste
       expect(defiTx.interactionResult).toMatchObject({ isAsync: false, success: true });
       expect((await sdk.getBalance(userIds[0], inputAssetIdA)).value).toBe(expectedInputBalance);
       expect((await sdk.getBalance(userIds[0], outputAssetIdA)).value).toBe(
         defiTx.interactionResult.outputValueA!.value,
-      );
-    }
-
-    debug(`Initiating withdraw`);
-
-    // Rollup 2.
-    // Account 0 swaps wstETH to ETH.
-    {
-      const wstETHToEthBridge = new BridgeCallData(bridgeAddressId, wstETHAssetId, ethAssetId);
-      const { inputAssetIdA, outputAssetIdA } = wstETHToEthBridge;
-
-      await debugBalance(inputAssetIdA);
-      await debugBalance(outputAssetIdA);
-
-      const inputBalanceBefore = await sdk.getBalance(userIds[0], inputAssetIdA);
-      const outputBalanceBefore = await sdk.getBalance(userIds[0], outputAssetIdA);
-
-      const depositValue = sdk.toBaseUnits(inputAssetIdA, '0.025');
-      const wstETHToEthFees = await sdk.getDefiFees(wstETHToEthBridge, {
-        userId: userIds[0],
-        assetValue: depositValue,
-      });
-      const fee = wstETHToEthFees[DefiSettlementTime.INSTANT];
-
-      debug(
-        `swapping ${sdk.fromBaseUnits(depositValue, true)} (fee: ${sdk.fromBaseUnits(fee)}) for ${
-          sdk.getAssetInfo(outputAssetIdA).symbol
-        }...`,
-      );
-
-      const controller = sdk.createDefiController(userIds[0], signers[0], wstETHToEthBridge, depositValue, fee);
-      await controller.createProof();
-      await controller.send();
-
-      debug(`waiting for defi interaction to complete...`);
-      await controller.awaitDefiFinalisation();
-
-      debug('waiting for claim to settle...');
-      await sdk.flushRollup(userIds[1], signers[1]);
-      await controller.awaitSettlement();
-
-      await debugBalance(inputAssetIdA);
-      await debugBalance(outputAssetIdA);
-
-      const [defiTx] = await sdk.getDefiTxs(userIds[0]);
-      const expectedInputBalance = inputBalanceBefore.value - depositValue.value;
-      expect(defiTx).toMatchObject({ bridgeCallData: wstETHToEthBridge, depositValue, fee });
-      expect(defiTx.interactionResult).toMatchObject({ isAsync: false, success: true });
-      expect((await sdk.getBalance(userIds[0], inputAssetIdA)).value).toBe(expectedInputBalance);
-      expect((await sdk.getBalance(userIds[0], outputAssetIdA)).value).toBe(
-        outputBalanceBefore.value + defiTx.interactionResult.outputValueA!.value - fee.value,
       );
     }
   });

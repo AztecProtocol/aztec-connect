@@ -23,6 +23,7 @@
     "src",
     "src/abis/mocks/*.json",
     "src/abis/contracts/*/*.json",
+    "src/abis/bridges/*/*.json",
   ],
   "files": ["./hardhat.config.ts"]
 }

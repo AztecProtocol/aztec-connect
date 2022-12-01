@@ -37,3 +37,14 @@ export { default as ProxyContract } from './abis/contracts/TransparentUpgradeabl
 
 export { default as PermitHelper } from './abis/contracts/PermitHelper.sol/PermitHelper.json' assert { type: 'json' };
 export { default as AztecFaucetJson } from './abis/contracts/AztecFaucet.sol/AztecFaucet.json' assert { type: 'json' };
+
+export { default as ElementBridge } from './abis/bridges/ElementBridge.sol/ElementBridge.json' assert { type: 'json' };
+export { default as LidoBridge } from './abis/bridges/LidoBridge.sol/LidoBridge.json' assert { type: 'json' };
+export { default as CurveStEthBridge } from './abis/bridges/CurveStEthBridge.sol/CurveStEthBridge.json' assert { type: 'json' };
+export { default as ILido } from './abis/bridges/ILido.sol/ILido.json' assert { type: 'json' };
+export { default as IWstETH } from './abis/bridges/IWstETH.sol/IWstETH.json' assert { type: 'json' };
+export { default as IVault } from './abis/bridges/IVault.sol/IVault.json' assert { type: 'json' };
+
+export { default as AsyncBridge } from './abis/contracts/AsyncBridge.sol/AsyncBridge.json' assert { type: 'json' };
+export { default as SyncBridge } from './abis/contracts/SyncBridge.sol/SyncBridge.json' assert { type: 'json' };
+export { default as ERC20Mintable } from './abis/contracts/ERC20Mintable.sol/ERC20Mintable.json' assert { type: 'json' };

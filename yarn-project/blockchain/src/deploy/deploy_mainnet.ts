@@ -11,7 +11,6 @@ import {
   deployRollupProcessor,
   deployVerifier,
   deployAztecFaucet,
-  deployAceOfZk,
   deployMockDataProvider,
 } from './deployers/index.js';
 import { setEthBalance } from '../tenderly/index.js';
@@ -89,14 +88,12 @@ export async function deployMainnet(
   const expiryCutOff = new Date('01 Sept 2022 00:00:00 GMT');
   const elementBridge = await deployElementBridge(signer, rollup, ['dai'], expiryCutOff);
   const lidoBridge = await deployLidoBridge(signer, rollup, LIDO_REFERRAL_ADDRESS);
-  const zkBridge = await deployAceOfZk(signer, rollup);
   const curveBridge = await deployCurveBridge(signer, rollup);
 
   const bridgeDataProvider = await deployMockDataProvider(signer);
   await bridgeDataProvider.setBridgeData(1, elementBridge.address, 50000, 'Element Bridge');
   await bridgeDataProvider.setBridgeData(2, lidoBridge.address, 50000, 'Lido Bridge');
-  await bridgeDataProvider.setBridgeData(3, zkBridge.address, 50000, 'Ace of ZK Bridge');
-  await bridgeDataProvider.setBridgeData(4, curveBridge.address, 50000, 'Curve Bridge');
+  await bridgeDataProvider.setBridgeData(3, curveBridge.address, 50000, 'Curve Bridge');
 
   // Transfers ownership of the permitHelper to the multisig
   await permitHelper.transferOwnership(MULTI_SIG_ADDRESS, { gasLimit });

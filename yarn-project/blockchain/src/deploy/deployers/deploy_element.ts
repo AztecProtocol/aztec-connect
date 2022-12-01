@@ -1,7 +1,7 @@
-// eslint-disable-next-line camelcase
-import * as Element from '@aztec/bridge-clients/client-dest/typechain-types/factories/ElementBridge__factory.js';
 import { ElementVaultConfig } from './element_vault_config.js';
-import { Contract, Signer } from 'ethers';
+import { Contract, ContractFactory, Signer } from 'ethers';
+
+import { ElementBridge } from '../../abis.js';
 
 const TRANCHE_BYTECODE_HASH = Buffer.from('f481a073666136ab1f5e93b296e84df58092065256d0db23b2d22b62c68e978d', 'hex');
 const ELEMENT_REGISTRY_ADDRESS = '0xc68e2BAb13a7A2344bb81badBeA626012C62C510';
@@ -33,7 +33,9 @@ export async function deployElementBridge(
   tranchesAfter: Date,
 ) {
   console.error('Deploying ElementBridge...');
-  const elementBridge: any = await new Element.ElementBridge__factory(signer).deploy(
+  const elementFactory = new ContractFactory(ElementBridge.abi, ElementBridge.bytecode, signer);
+
+  const elementBridge: any = await elementFactory.deploy(
     rollup.address,
     ElementVaultConfig.trancheFactory,
     TRANCHE_BYTECODE_HASH,

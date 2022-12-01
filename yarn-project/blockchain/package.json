@@ -42,7 +42,7 @@
   },
   "dependencies": {
     "@aztec/barretenberg": "workspace:^",
-    "@aztec/bridge-clients": "^0.1.63",
+    "@ethersproject/abi": "5.5.0",
     "@ethersproject/abstract-provider": "5.5.1",
     "@ethersproject/contracts": "5.5.0",
     "@ethersproject/experimental": "5.5.0",
@@ -52,6 +52,7 @@
     "@uniswap/v2-periphery": "^1.1.0-beta.0",
     "bip85": "^0.0.3",
     "commander": "^9.0.0",
+    "cross-fetch": "^3.1.5",
     "debug": "^4.3.4",
     "ethereumjs-util": "^7.1.5",
     "ethers": "5.5.1",

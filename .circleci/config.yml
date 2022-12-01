@@ -501,6 +501,28 @@ jobs:
       - run:
           name: 'Test'
           command: cond_spot_run_tests end-to-end ./src/e2e_account.test.ts
+  
+  e2e-sync-defi:
+    docker:
+      - image: aztecprotocol/alpine-build-image
+    resource_class: small
+    steps:
+      - *checkout
+      - *setup_env
+      - run:
+          name: 'Test'
+          command: cond_spot_run_tests end-to-end ./src/e2e_sync_bridge.test.ts
+
+  e2e-async-defi:
+    docker:
+      - image: aztecprotocol/alpine-build-image
+    resource_class: small
+    steps:
+      - *checkout
+      - *setup_env
+      - run:
+          name: 'Test'
+          command: cond_spot_run_tests end-to-end ./src/e2e_async_bridge.test.ts
 
   e2e-defi:
     docker:
@@ -567,28 +589,6 @@ jobs:
       - run:
           name: 'Test'
           command: cond_spot_run_tests end-to-end ./src/e2e_chained_txs_with_spending_keys.test.ts
-
-  e2e-element:
-    docker:
-      - image: aztecprotocol/alpine-build-image
-    resource_class: small
-    steps:
-      - *checkout
-      - *setup_env
-      - run:
-          name: 'Test'
-          command: cond_spot_run_tests end-to-end ./src/e2e_element.test.ts true
-
-  e2e-lido:
-    docker:
-      - image: aztecprotocol/alpine-build-image
-    resource_class: small
-    steps:
-      - *checkout
-      - *setup_env
-      - run:
-          name: 'Test'
-          command: cond_spot_run_tests end-to-end ./src/e2e_lido.test.ts true
 
   e2e-browser:
     docker:
@@ -875,10 +875,10 @@ workflows:
       - e2e-browser: *e2e_test
       - e2e-chained-txs-with-spending-keys: *e2e_test
       - e2e-chained-txs: *e2e_test
+      - e2e-sync-defi: *e2e_test
+      - e2e-async-defi: *e2e_test
       - e2e-defi: *e2e_test
       - e2e-defi-subsidy: *e2e_test
-      - e2e-element: *e2e_test
-      - e2e-lido: *e2e_test
       - e2e-migrate-account: *e2e_test
       - e2e-migrated-accounts: *e2e_test
       - e2e-non-fee-assets: *e2e_test
@@ -918,10 +918,10 @@ workflows:
             - e2e-browser
             - e2e-chained-txs
             - e2e-chained-txs-with-spending-keys
+            - e2e-async-defi
+            - e2e-sync-defi
             - e2e-defi
             - e2e-defi-subsidy
-            - e2e-element
-            - e2e-lido
             - e2e-migrate-account
             - e2e-migrated-accounts
             - e2e-non-fee-assets

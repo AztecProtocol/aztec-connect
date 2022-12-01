@@ -12,20 +12,23 @@ import {
   retrieveContractSelectors,
 } from '../contracts/decode_error.js';
 import { EthereumProvider } from '@aztec/barretenberg/blockchain';
-import { default as Element } from '@aztec/bridge-clients/client-dest/typechain-types/factories/ElementBridge__factory.js';
-import { ElementBridgeData } from '@aztec/bridge-clients/client-dest/src/client/element/element-bridge-data.js';
+import { ElementBridgeData } from './clients/element-bridge-data.js';
 import { WalletProvider } from '../provider/index.js';
 import { getTokenBalance, getWethBalance } from '../tokens/index.js';
 import { LogDescription } from 'ethers/lib/utils.js';
 import { RollupProcessor } from '../contracts/index.js';
 import { akiToKey } from './key_derivation.js';
-import { RollupProcessor as RollupProcessorJson, AztecFaucetJson } from '../abis.js';
+import {
+  RollupProcessor as RollupProcessorJson,
+  AztecFaucetJson,
+  ElementBridge as ElementBridgeJson,
+} from '../abis.js';
 
 const { PRIVATE_KEY } = process.env;
 
 export const abis: { [key: string]: any } = {
   Rollup: RollupProcessorJson,
-  Element: Element.ElementBridge__factory,
+  Element: ElementBridgeJson,
   AztecFaucet: AztecFaucetJson,
 };
 
