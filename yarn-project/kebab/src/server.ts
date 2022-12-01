@@ -8,6 +8,8 @@ import { EthLogsDb, RollupLogsParamsQuery } from './log_db.js';
 import { RollupEventGetter } from './rollup_event_getter.js';
 import { RedeployConfig } from './configurator.js';
 
+const REQUEST_TYPES_TO_CACHE = ['eth_chainId'];
+
 export interface EthRequestArguments extends RequestArguments {
   jsonrpc: string;
   id: number;
@@ -29,6 +31,7 @@ export class Server {
   private runninSyncPromise!: Promise<void>;
   private interruptableSleep = new InterruptableSleep();
   private requestQueue: Array<() => void> = [];
+  private cachedResponses: { [key: string]: string | undefined } = {};
 
   private log = createLogger('Server');
 
@@ -41,6 +44,9 @@ export class Server {
     private readonly _additionalPermittedMethods: string[],
     private readonly redeployConfig: RedeployConfig,
   ) {
+    for (const request of REQUEST_TYPES_TO_CACHE) {
+      this.cachedResponses[request] = undefined;
+    }
     this.rollupEventGetter = new RollupEventGetter(redeployConfig.rollupContractAddress!, provider, chainId, logsDb);
   }
 
@@ -156,7 +162,7 @@ export class Server {
     return result || [];
   }
 
-  public async forwardEthRequest(args: EthRequestArguments) {
+  private async sendEthRequest(args: EthRequestArguments) {
     const body = { ...args };
 
     const res = await fetch(this.ethereumHost, {
@@ -164,8 +170,19 @@ export class Server {
       body: JSON.stringify(body),
       headers: { 'content-type': 'application/json' },
     });
-    const text = await res.text();
-    return JSON.parse(text);
+    return await res.text();
+  }
+
+  public async forwardEthRequest(args: EthRequestArguments) {
+    if (Object.prototype.hasOwnProperty.call(this.cachedResponses, args.method)) {
+      if (this.cachedResponses[args.method] === undefined) {
+        this.cachedResponses[args.method] = await this.sendEthRequest(args);
+        this.log(`Cached response to method ${args.method}: ${this.cachedResponses[args.method]}`);
+      }
+      return JSON.parse(this.cachedResponses[args.method]!);
+    }
+    const response = await this.sendEthRequest(args);
+    return JSON.parse(response);
   }
 
   public allowPrivilegedMethods() {
