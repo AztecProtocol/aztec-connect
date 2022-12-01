@@ -65,7 +65,7 @@ export async function deployMainnet(
     roots.rootsRoot,
     dataTreeSize,
     false,
-    false,
+    true,
   );
   const feeDistributor = await deployFeeDistributor(signer, rollup, UNISWAP_ROUTER_ADDRESS);
 
