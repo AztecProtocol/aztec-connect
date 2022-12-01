@@ -1,7 +1,6 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { TreeInitData } from '@aztec/barretenberg/environment';
 import { Signer } from 'ethers';
-import { setEthBalance } from '../tenderly/index.js';
 import {
   deployDefiBridgeProxy,
   deployElementBridge,
@@ -24,17 +23,14 @@ const LIDO_WSTETH_ADDRESS = '0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0';
 const UNISWAP_ROUTER_ADDRESS = '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D';
 const DAI_PRICE_FEED_ADDRESS = '0x773616E4d11A78F511299002da57A0a94577F1f4';
 const FAST_GAS_PRICE_FEED_ADDRESS = '0x169e633a2d1e6c10dd91238ba11c4a708dfef37c';
-const E2E_DEFAULT_SIGNER = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';
 
 export async function deployMainnetE2e(
-  host: string,
   signer: Signer,
   { dataTreeSize, roots }: TreeInitData,
   vk: string,
   faucetOperator?: EthAddress,
   rollupProvider?: EthAddress,
 ) {
-  await setEthBalance([EthAddress.fromString(E2E_DEFAULT_SIGNER)], 10n ** 24n, host);
   const verifier = await deployVerifier(signer, vk);
   const defiProxy = await deployDefiBridgeProxy(signer);
   const { rollup, permitHelper } = await deployRollupProcessor(

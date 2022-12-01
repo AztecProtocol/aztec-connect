@@ -31,7 +31,7 @@ function deploy(
     case 0xdef:
       return deployMainnet(host, signer, treeInitData, vk, faucetOperator, rollupProvider);
     case 0xe2e:
-      return deployMainnetE2e(host, signer, treeInitData, vk, faucetOperator, rollupProvider);
+      return deployMainnetE2e(signer, treeInitData, vk, faucetOperator, rollupProvider);
     default:
       return deployDev(signer, treeInitData, vk, faucetOperator, rollupProvider);
   }
