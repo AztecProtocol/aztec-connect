@@ -73,6 +73,14 @@ export async function deployMainnet(
     gasLimit,
   });
 
+  const MULTI_SIG_ADDRESS = (await signer.getChainId()) == 1 ? MAIN_MULTI_SIG_ADDRESS : DEV_NET_TEMP_MULTI_SIG_ADDRESS;
+  // Grant roles to multisig wallets
+  await rollup.grantRole(DEFAULT_ADMIN_ROLE, MULTI_SIG_ADDRESS, { gasLimit });
+  await rollup.grantRole(OWNER_ROLE, MULTI_SIG_ADDRESS, { gasLimit });
+  await rollup.grantRole(LISTER_ROLE, MULTI_SIG_ADDRESS, { gasLimit });
+  await rollup.grantRole(LISTER_ROLE, await signer.getAddress(), { gasLimit });
+  await rollup.grantRole(EMERGENCY_ROLE, EMERGENCY_MULTI_SIG_ADDRESS, { gasLimit });
+
   await rollup.setSupportedAsset(DAI_ADDRESS, 55_000, { gasLimit });
   await permitHelper.preApprove(DAI_ADDRESS, { gasLimit });
   await rollup.setSupportedAsset(LIDO_WSTETH_ADDRESS, 55_000, { gasLimit });
@@ -90,8 +98,6 @@ export async function deployMainnet(
   await bridgeDataProvider.setBridgeData(3, zkBridge.address, 50000, 'Ace of ZK Bridge');
   await bridgeDataProvider.setBridgeData(4, curveBridge.address, 50000, 'Curve Bridge');
 
-  const MULTI_SIG_ADDRESS = (await signer.getChainId()) == 1 ? MAIN_MULTI_SIG_ADDRESS : DEV_NET_TEMP_MULTI_SIG_ADDRESS;
-
   // Transfers ownership of the permitHelper to the multisig
   await permitHelper.transferOwnership(MULTI_SIG_ADDRESS, { gasLimit });
 
@@ -100,14 +106,9 @@ export async function deployMainnet(
 
   const priceFeeds = [FAST_GAS_PRICE_FEED_ADDRESS, DAI_PRICE_FEED_ADDRESS];
 
-  // Grant roles to multisig wallets
-  await rollup.grantRole(DEFAULT_ADMIN_ROLE, MULTI_SIG_ADDRESS, { gasLimit });
-  await rollup.grantRole(OWNER_ROLE, MULTI_SIG_ADDRESS, { gasLimit });
-  await rollup.grantRole(LISTER_ROLE, MULTI_SIG_ADDRESS, { gasLimit });
-  await rollup.grantRole(EMERGENCY_ROLE, EMERGENCY_MULTI_SIG_ADDRESS, { gasLimit });
-
   // Revoke roles from the deployer
   await rollup.revokeRole(EMERGENCY_ROLE, await signer.getAddress(), { gasLimit });
+  await rollup.revokeRole(LISTER_ROLE, await signer.getAddress(), { gasLimit });
   await rollup.revokeRole(OWNER_ROLE, await signer.getAddress(), { gasLimit });
 
   // TODO: Revoking of the default admin role should be done manually with the multi-sig to ensure correct setup
