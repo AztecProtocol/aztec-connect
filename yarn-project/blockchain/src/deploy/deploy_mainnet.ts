@@ -13,12 +13,10 @@ import {
   deployAztecFaucet,
   deployMockDataProvider,
 } from './deployers/index.js';
-import { setEthBalance } from '../tenderly/index.js';
 
 const gasLimit = 5000000;
 const escapeBlockLower = 2160;
 const escapeBlockUpper = 2400;
-const balanceToSet = 10n ** 24n;
 
 const MAIN_MULTI_SIG_ADDRESS = '0xE298a76986336686CC3566469e3520d23D1a8aaD';
 const DEV_NET_TEMP_MULTI_SIG_ADDRESS = '0x7095057A08879e09DC1c0a85520e3160A0F67C96';
@@ -35,12 +33,7 @@ const EMERGENCY_ROLE = keccak256(toUtf8Bytes('EMERGENCY_ROLE'));
 const OWNER_ROLE = keccak256(toUtf8Bytes('OWNER_ROLE'));
 const LISTER_ROLE = keccak256(toUtf8Bytes('LISTER_ROLE'));
 
-function notUndefined<T>(value: T | null | undefined): value is T {
-  return value !== null && value !== undefined;
-}
-
 export async function deployMainnet(
-  host: string,
   signer: Signer,
   { dataTreeSize, roots }: TreeInitData,
   vk: string,
@@ -48,8 +41,7 @@ export async function deployMainnet(
   rollupProvider?: EthAddress,
 ) {
   const signerAddress = await signer.getAddress();
-  const addressesToTopup = [EthAddress.fromString(signerAddress), faucetOperator, rollupProvider];
-  await setEthBalance(addressesToTopup.filter(notUndefined), balanceToSet, host);
+  console.log(`Deployment signer address: ${signerAddress}`);
   const verifier = await deployVerifier(signer, vk);
   const defiProxy = await deployDefiBridgeProxy(signer);
   const { rollup, proxyAdmin, permitHelper } = await deployRollupProcessor(
