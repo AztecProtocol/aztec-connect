@@ -91,7 +91,7 @@ source $BASH_ENV
 if [ -n "$COMMIT_HASH" ]; then
   # Install and ensure correct permissions on build instance key.
   mkdir -p ~/.ssh
-  cp ./remote/build_instance_key ~/.ssh/build_instance_key
+  echo $BUILD_INSTANCE_KEY | base64 -d > ~/.ssh/build_instance_key
   chmod 600 ~/.ssh/build_instance_key
 fi
 
