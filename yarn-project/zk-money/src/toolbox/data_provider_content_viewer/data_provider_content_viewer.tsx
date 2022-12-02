@@ -36,7 +36,7 @@ async function fetchAndAssembleData() {
   );
   const prod = await fetchData(
     '0x8b2e54fa4398c8f7502f30ac94cb1f354390c8ab',
-    'https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35',
+    'https://mainnet.infura.io/v3/ce91afa358e44c758ad70908b5ef0c23',
   );
   const assembled = {
     'aztec-connect-dev': dev,

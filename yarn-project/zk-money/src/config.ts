@@ -81,7 +81,7 @@ function getEthereumHost(chainId: number) {
     case 0xdef:
       return 'https://aztec-connect-dev-eth-host.aztec.network:8545';
     default:
-      return 'https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35';
+      return 'https://mainnet.infura.io/v3/ce91afa358e44c758ad70908b5ef0c23';
   }
 }
 

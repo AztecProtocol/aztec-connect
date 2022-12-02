@@ -167,7 +167,7 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "ETHEREUM_HOST",
-        "value": "https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35"
+        "value": "https://mainnet.infura.io/v3/15bcbe21bd5043b48eb5b60fb6c563b8"
       },
       {
         "name": "ROLLUP_CONTRACT_ADDRESS",

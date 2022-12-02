@@ -2,7 +2,7 @@ variable "DEPLOY_TAG" {
   type = string
 }
 
-variable "INFURA_API_KEY" {
+variable "TEST_INFURA_API_KEY" {
   type = string
 }
 
