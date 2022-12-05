@@ -17,10 +17,10 @@ export async function blocksToAdvance(target: number, accuracy: number, provider
 
 export async function advanceBlocks(blocks: number, provider: EthereumProvider) {
   for (let i = 0; i < blocks; ++i) {
-    await provider.request({ method: 'evm_mine', params: [] });
+    await provider.request({ method: 'evm_mine', params: [1] });
   }
   await sleep(1200); // wait for ethereum_blockchain to update its status (it's polling and updating status every second)
-  return getCurrentBlockNumber(provider);
+  return await getCurrentBlockNumber(provider);
 }
 
 export async function getCurrentBlockTime(provider: EthereumProvider) {

@@ -28,13 +28,13 @@
       "bridgeAddressId": 5,
       "gas": 500000,
       "numTxs": 5,
-      "permittedAssets": [0, 1]
+      "permittedAssets": [0, 1, 5]
     },
     {
       "bridgeAddressId": 6,
       "gas": 500000,
       "numTxs": 5,
-      "permittedAssets": [0, 1, 2]
+      "permittedAssets": [0, 1, 2, 5]
     }
   ]
 }

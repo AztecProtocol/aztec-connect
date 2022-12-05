@@ -2,7 +2,7 @@ import { ContractFactory, Signer } from 'ethers';
 import { MockVerifier, Verifier1x1, Verifier28x32 } from '../../abis.js';
 
 export async function deployVerifier(signer: Signer, vk: string) {
-  console.error(`Deploying ${vk}...`);
+  console.log(`Deploying ${vk}...`);
   let verifierFactory: ContractFactory;
 
   if (vk === 'VerificationKey1x1') {
@@ -15,6 +15,6 @@ export async function deployVerifier(signer: Signer, vk: string) {
     throw new Error('No verifier chosen');
   }
   const verifier = await verifierFactory.deploy();
-  console.error(`StandardVerifier contract address: ${verifier.address}`);
+  console.log(`StandardVerifier contract address: ${verifier.address}`);
   return verifier;
 }

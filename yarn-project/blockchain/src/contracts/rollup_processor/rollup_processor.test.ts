@@ -1,19 +1,11 @@
 import { EthAddress } from '@aztec/barretenberg/address';
-import { Asset, TxHash } from '@aztec/barretenberg/blockchain';
+import { Asset, EthereumProvider, EthereumRpc } from '@aztec/barretenberg/blockchain';
 import { DefiInteractionNote, packInteractionNotes } from '@aztec/barretenberg/note_algorithms';
 import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { Block } from '@aztec/barretenberg/block_source';
 import { randomBytes } from 'crypto';
-import { Signer } from 'ethers';
-import { keccak256, Result, toUtf8Bytes } from 'ethers/lib/utils.js';
-import { ethers } from 'hardhat';
-import {
-  evmSnapshot,
-  evmRevert,
-  advanceBlocksHardhat,
-  blocksToAdvanceHardhat,
-} from '../../ganache/hardhat_chain_manipulation.js';
-import { FeeDistributor } from '../fee_distributor/index.js';
+import ganache, { Server } from 'ganache';
+import { keccak256 } from '@aztec/barretenberg/crypto';
 import {
   createAccountProof,
   createDefiClaimProof,
@@ -29,34 +21,24 @@ import { deployMockBridge, MockBridgeParams } from './fixtures/setup_defi_bridge
 import { setupTestRollupProcessor } from './fixtures/setup_upgradeable_test_rollup_processor.js';
 import { RollupProcessor } from './rollup_processor.js';
 import { numToUInt32BE } from '@aztec/barretenberg/serialize';
+import { JsonRpcProvider } from '../../provider/index.js';
+import { blocksToAdvance, advanceBlocks } from '../../ganache/manipulate_blocks.js';
 
 describe('rollup_processor', () => {
-  let feeDistributor: FeeDistributor;
   let rollupProcessor: RollupProcessor;
-  let signers: Signer[];
   let addresses: EthAddress[];
   let assets: Asset[];
   let assetAddresses: EthAddress[];
 
   let snapshot: string;
+  let provider: EthereumProvider;
+  let server: Server<'ethereum'>;
 
-  const OWNER_ROLE = keccak256(toUtf8Bytes('OWNER_ROLE'));
   const escapeBlockLowerBound = 80;
   const escapeBlockUpperBound = 100;
 
   const mockBridge = (params: MockBridgeParams = {}) =>
-    deployMockBridge(signers[0], rollupProcessor, assetAddresses, params);
-
-  // Extracts the 'args' of each event emitted by the tx.
-  const fetchResults = async (txHash: TxHash, eventName: string): Promise<Result> => {
-    const receipt = await ethers.provider.getTransactionReceipt(txHash.toString());
-    const eventArgs = receipt.logs
-      .filter(l => l.address === rollupProcessor.address.toString())
-      .map(l => rollupProcessor.contract.interface.parseLog(l))
-      .filter(e => e.eventFragment.name === eventName)
-      .map(e => e.args);
-    return eventArgs;
-  };
+    deployMockBridge(provider, addresses[0], rollupProcessor, assetAddresses, params);
 
   const decodeRollup = (block: Block) => {
     const rollup = RollupProofData.decode(block.encodedRollupProofData);
@@ -64,26 +46,41 @@ describe('rollup_processor', () => {
     rollup.innerProofData.forEach(x => x.txId);
     return rollup;
   };
+  const testMnemonic = 'test test test test test test test test test test test junk';
 
   beforeAll(async () => {
-    signers = await ethers.getSigners();
-    addresses = await Promise.all(signers.map(async u => EthAddress.fromString(await u.getAddress())));
-    ({ rollupProcessor, feeDistributor, assets, assetAddresses } = await setupTestRollupProcessor(signers, {
+    server = ganache.server({ logging: { quiet: true }, wallet: { mnemonic: testMnemonic, defaultBalance: 1000000 } });
+    const PORT = 8543;
+    server.listen(PORT, err => {
+      if (err) throw err;
+    });
+
+    provider = new JsonRpcProvider(`http://127.0.0.1:${PORT}`);
+    const ethereumRpc = new EthereumRpc(provider);
+    addresses = await ethereumRpc.getAccounts();
+
+    ({ rollupProcessor, assets, assetAddresses } = await setupTestRollupProcessor(provider, addresses, {
       numberOfTokenAssets: 1,
       escapeBlockLowerBound,
       escapeBlockUpperBound,
+      useLatest: false,
     }));
+
     // Advance into block region where escapeHatch is active.
-    const blocks = await blocksToAdvanceHardhat(escapeBlockLowerBound, escapeBlockUpperBound, ethers.provider);
-    await advanceBlocksHardhat(blocks, ethers.provider);
+    const blocks = await blocksToAdvance(escapeBlockLowerBound, escapeBlockUpperBound, provider);
+    await advanceBlocks(blocks, provider);
+  });
+
+  afterAll(async () => {
+    await server.close();
   });
 
   beforeEach(async () => {
-    snapshot = await evmSnapshot();
+    snapshot = await provider.request({ method: 'evm_snapshot', params: [] });
   });
 
   afterEach(async () => {
-    await evmRevert(snapshot);
+    await provider.request({ method: 'evm_revert', params: [snapshot] });
   });
 
   it('read escape block bounds', async () => {
@@ -142,17 +139,14 @@ describe('rollup_processor', () => {
   });
 
   it('read state hash', async () => {
-    const expectedStateHash = Buffer.from(
-      keccak256(
-        Buffer.concat([
-          numToUInt32BE(0, 32),
-          Buffer.from('18ceb5cd201e1cee669a5c3ad96d3c4e933a365b37046fc3178264bede32c68d', 'hex'),
-          Buffer.from('298329c7d0936453f354e4a5eef4897296cc0bf5a66f2a528318508d2088dafa', 'hex'),
-          Buffer.from('2fd2364bfe47ccb410eba3a958be9f39a8c6aca07db1abd15f5a211f51505071', 'hex'),
-          Buffer.from('2e4ab7889ab3139204945f9e722c7a8fdb84e66439d787bd066c3d896dba04ea', 'hex'),
-        ]),
-      ).slice(2),
-      'hex',
+    const expectedStateHash = keccak256(
+      Buffer.concat([
+        numToUInt32BE(0, 32),
+        Buffer.from('18ceb5cd201e1cee669a5c3ad96d3c4e933a365b37046fc3178264bede32c68d', 'hex'),
+        Buffer.from('298329c7d0936453f354e4a5eef4897296cc0bf5a66f2a528318508d2088dafa', 'hex'),
+        Buffer.from('2fd2364bfe47ccb410eba3a958be9f39a8c6aca07db1abd15f5a211f51505071', 'hex'),
+        Buffer.from('2e4ab7889ab3139204945f9e722c7a8fdb84e66439d787bd066c3d896dba04ea', 'hex'),
+      ]),
     );
     expect(await rollupProcessor.stateHash()).toEqual(expectedStateHash);
   });
@@ -206,22 +200,29 @@ describe('rollup_processor', () => {
     expect(await rollupProcessor.getEscapeHatchStatus()).toEqual({ escapeOpen: true, blocksRemaining: 20 });
   });
 
+  // Workaround the most peculiar bug. expect(fn).rejects.toThrow() doesn't work...
+  const shouldThrow = async (fn: Promise<any>, msg?: string) => {
+    await fn
+      .then(() => expect(false).toBeTruthy())
+      .catch((err: any) => {
+        if (msg) {
+          expect(err.message.includes(msg)).toBe(true);
+        }
+      });
+  };
+
   it('owner should be able to set the allowThirdParty contract flag', async () => {
     const statusBefore = await rollupProcessor.getThirdPartyContractStatus();
     expect(statusBefore).toBe(false);
 
-    await expect(
-      rollupProcessor.setThirdPartyContractStatus(true, {
-        signingAddress: EthAddress.fromString(await signers[1].getAddress()),
-      }),
-    ).rejects.toThrow(`AccessControl: account ${addresses[1].toString().toLowerCase()} is missing role ${OWNER_ROLE}`);
+    await shouldThrow(rollupProcessor.setThirdPartyContractStatus(true, { signingAddress: addresses[1] }));
+    expect(await rollupProcessor.getThirdPartyContractStatus()).toBe(false);
 
     await rollupProcessor.setThirdPartyContractStatus(true, {
-      signingAddress: EthAddress.fromString(await signers[0].getAddress()),
+      signingAddress: addresses[0],
     });
 
-    const statusAfter = await rollupProcessor.getThirdPartyContractStatus();
-    expect(statusAfter).toBe(true);
+    expect(await rollupProcessor.getThirdPartyContractStatus()).toBe(true);
   });
 
   it('should get supported asset', async () => {
@@ -231,9 +232,9 @@ describe('rollup_processor', () => {
 
   it('should throw for a virtual asset', async () => {
     const assetIdA = 1 << 29;
-    await expect(rollupProcessor.getSupportedAsset(assetIdA)).rejects.toThrow(); //'INVALID_ASSET_ID');
+    await shouldThrow(rollupProcessor.getSupportedAsset(assetIdA)); //'INVALID_ASSET_ID');
     const assetIdB = 0x2abbccdd;
-    await expect(rollupProcessor.getSupportedAsset(assetIdB)).rejects.toThrow(); //'INVALID_ASSET_ID');
+    await shouldThrow(rollupProcessor.getSupportedAsset(assetIdB)); //'INVALID_ASSET_ID');
   });
 
   it('should approve a proof', async () => {
@@ -246,42 +247,27 @@ describe('rollup_processor', () => {
   });
 
   it('should allow any address to use escape hatch', async () => {
-    const { encodedProofData } = createRollupProof(signers[0], createSendProof());
+    const { encodedProofData } = createRollupProof(createSendProof());
     const tx = await rollupProcessor.createRollupProofTx(encodedProofData, [], []);
-    await rollupProcessor.sendTx(tx, { signingAddress: EthAddress.fromString(await signers[1].getAddress()) });
+    await rollupProcessor.sendTx(tx, { signingAddress: addresses[0] });
   });
 
   it('should reject a rollup from an unknown provider outside escape hatch window', async () => {
-    const { encodedProofData, signatures } = createRollupProof(signers[0], createSendProof(), {
-      feeDistributorAddress: feeDistributor.address,
+    const { encodedProofData, signatures } = createRollupProof(createSendProof(), {
+      feeDistributorAddress: addresses[0],
     });
-    await advanceBlocksHardhat(50, ethers.provider);
+    await advanceBlocks(50, provider);
 
     const { escapeOpen } = await rollupProcessor.getEscapeHatchStatus();
     expect(escapeOpen).toBe(false);
     const tx = await rollupProcessor.createRollupProofTx(encodedProofData, signatures, []);
 
-    await expect(
-      rollupProcessor.sendTx(tx, { signingAddress: EthAddress.fromString(await signers[1].getAddress()) }),
-    ).rejects.toThrow(); //'INVALID_PROVIDER');
-  });
-
-  it('should allow the owner to change the verifier address', async () => {
-    const txHash = await rollupProcessor.setVerifier(rollupProcessor.address);
-    const [{ verifierAddress }] = await fetchResults(txHash, 'VerifierUpdated');
-
-    expect(verifierAddress.toString()).toBe(rollupProcessor.address.toString());
-  });
-
-  it('should not be able to set the verifier if not the owner', async () => {
-    await expect(
-      rollupProcessor.setVerifier(rollupProcessor.address, { signingAddress: addresses[1] }),
-    ).rejects.toThrow(`AccessControl: account ${addresses[1].toString().toLowerCase()} is missing role ${OWNER_ROLE}`);
+    await shouldThrow(rollupProcessor.sendTx(tx, { signingAddress: addresses[1] })); //'INVALID_PROVIDER');
   });
 
   it('should get escape hatch open status', async () => {
-    const nextEscapeBlock = await blocksToAdvanceHardhat(80, 100, ethers.provider);
-    await advanceBlocksHardhat(nextEscapeBlock, ethers.provider);
+    const nextEscapeBlock = await blocksToAdvance(80, 100, provider);
+    await advanceBlocks(nextEscapeBlock, provider);
 
     const { escapeOpen, blocksRemaining } = await rollupProcessor.getEscapeHatchStatus();
     expect(escapeOpen).toBe(true);
@@ -289,8 +275,8 @@ describe('rollup_processor', () => {
   });
 
   it('should get escape hatch closed status', async () => {
-    const nextEscapeBlock = await blocksToAdvanceHardhat(79, 100, ethers.provider);
-    await advanceBlocksHardhat(nextEscapeBlock, ethers.provider);
+    const nextEscapeBlock = await blocksToAdvance(79, 100, provider);
+    await advanceBlocks(nextEscapeBlock, provider);
 
     const { escapeOpen, blocksRemaining } = await rollupProcessor.getEscapeHatchStatus();
     expect(escapeOpen).toBe(false);
@@ -308,7 +294,6 @@ describe('rollup_processor', () => {
     const numberOfBridgeCalls = RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK;
 
     const userAAddress = addresses[1];
-    const userA = signers[1];
 
     const depositAmount = 30n;
     const sendAmount = 6n;
@@ -317,7 +302,7 @@ describe('rollup_processor', () => {
     const withdrawalAmount = 10n;
 
     const innerProofOutputs = [
-      await createDepositProof(depositAmount, userAAddress, userA, inputAssetId),
+      await createDepositProof(depositAmount, userAAddress, provider, inputAssetId),
       mergeInnerProofs([createAccountProof(), createSendProof(inputAssetId, sendAmount)]),
       mergeInnerProofs([
         createDefiDepositProof(bridgeCallData, defiDepositAmount0),
@@ -340,7 +325,7 @@ describe('rollup_processor', () => {
     });
 
     for (let i = 0; i < innerProofOutputs.length; ++i) {
-      const { encodedProofData, signatures, offchainTxData } = createRollupProof(signers[0], innerProofOutputs[i], {
+      const { encodedProofData, signatures, offchainTxData } = createRollupProof(innerProofOutputs[i], {
         rollupId: i,
         defiInteractionData:
           i === 2

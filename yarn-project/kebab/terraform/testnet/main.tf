@@ -148,7 +148,7 @@ resource "aws_ecs_task_definition" "kebab" {
       },
       {
         "name": "ETHEREUM_HOST",
-        "value": "${var.TEST_NET_RPC_URL}"
+        "value": "http://localhost:8545"
       },
       {
         "name": "FAUCET_OPERATOR",
