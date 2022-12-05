@@ -946,3 +946,5 @@ workflows:
       - deploy-website:
           requires:
             - website
+
+# VS Code Extension Version: 1.3.0
