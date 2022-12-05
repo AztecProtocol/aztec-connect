@@ -5,12 +5,12 @@ import { EthAddress } from '@aztec/barretenberg/address';
 const gasLimit = 5000000;
 
 export const deployCurveBridge = async (owner: Signer, rollup: Contract) => {
-  console.error('Deploying curveBridge...');
+  console.log('Deploying curveBridge...');
   const bridgeFactory = new ContractFactory(CurveStEthBridge.abi, CurveStEthBridge.bytecode, owner);
   const bridge: any = await bridgeFactory.deploy(rollup.address, {
     gasLimit,
   });
-  console.error(`CurveBridge contract address: ${bridge.address}`);
+  console.log(`CurveBridge contract address: ${bridge.address}`);
 
   // Will mint initial tokens to the bridge contract to ensure that balance slots are not 0.
   const stEthFactory = new ContractFactory(ILido.abi, ILido.bytecode, owner);

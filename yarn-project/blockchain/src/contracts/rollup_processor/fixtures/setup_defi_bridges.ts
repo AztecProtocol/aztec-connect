@@ -1,11 +1,10 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
-import { ContractFactory, Signer } from 'ethers';
-import { ethers } from 'hardhat';
+import { ContractFactory, ethers } from 'ethers';
 import { RollupProcessor } from '../rollup_processor.js';
-import { DefiBridge } from '../../defi_bridge/index.js';
-import { EthersAdapter } from '../../../provider/index.js';
 import { MockDefiBridge, ERC20Permit } from '../../../abis.js';
+import { Web3Provider } from '@ethersproject/providers';
+import { EthereumProvider } from '@aztec/barretenberg/blockchain';
 
 export interface MockBridgeParams {
   inputAssetIdA?: number;
@@ -25,7 +24,8 @@ export interface MockBridgeParams {
 }
 
 export const deployMockBridge = async (
-  publisher: Signer,
+  provider: EthereumProvider,
+  publisher: EthAddress,
   rollupProcessor: RollupProcessor,
   assetAddresses: EthAddress[],
   {
@@ -45,7 +45,8 @@ export const deployMockBridge = async (
     bridgeGasLimit = 300000,
   }: MockBridgeParams = {},
 ) => {
-  const DefiBridge = new ContractFactory(MockDefiBridge.abi, MockDefiBridge.bytecode, publisher);
+  const signer = new Web3Provider(provider).getSigner(publisher.toString());
+  const DefiBridge = new ContractFactory(MockDefiBridge.abi, MockDefiBridge.bytecode, signer);
   const bridge = await DefiBridge.deploy(
     rollupProcessor.address.toString(),
     canConvert,
@@ -75,10 +76,10 @@ export const deployMockBridge = async (
   const mint = async (assetAddress: EthAddress, amount: bigint) => {
     if (!amount) return;
     if (assetAddress.equals(EthAddress.ZERO)) {
-      await publisher.sendTransaction({ value: `0x${amount.toString(16)}`, to: bridge.address });
+      await signer.sendTransaction({ value: `0x${amount.toString(16)}`, to: bridge.address });
     } else {
       const ERC20Mintable = new ContractFactory(ERC20Permit.abi, ERC20Permit.bytecode);
-      const erc20 = new ethers.Contract(assetAddress.toString(), ERC20Mintable.interface, publisher);
+      const erc20 = new ethers.Contract(assetAddress.toString(), ERC20Mintable.interface, signer);
       await erc20.mint(bridge.address, amount);
     }
   };
@@ -96,19 +97,4 @@ export const deployMockBridge = async (
   }
 
   return bridgeCallData;
-};
-
-export const mockAsyncBridge = async (
-  rollupProvider: Signer,
-  rollupProcessor: RollupProcessor,
-  assetAddresses: EthAddress[],
-  params: MockBridgeParams = {},
-) => {
-  const bridgeCallData = await deployMockBridge(rollupProvider, rollupProcessor, assetAddresses, {
-    ...params,
-    isAsync: true,
-  });
-  const bridgeAddress = await rollupProcessor.getSupportedBridge(bridgeCallData.bridgeAddressId);
-  const bridge = new DefiBridge(bridgeAddress, new EthersAdapter(ethers.provider));
-  return { bridgeCallData, bridge };
 };

@@ -20,7 +20,7 @@ interface ElementPoolSpec {
 
 async function setupElementPool(spec: ElementPoolSpec, bridgeContract: Contract) {
   const dateString = new Date(spec.expiry * 1000).toDateString();
-  console.error(`Registering convergent pool ${spec.poolAddress} for ${spec.asset} and expiry ${dateString}...`);
+  console.log(`Registering convergent pool ${spec.poolAddress} for ${spec.asset} and expiry ${dateString}...`);
   await bridgeContract.registerConvergentPoolAddress(spec.poolAddress, spec.wrappedPosition, spec.expiry, {
     gasLimit,
   });
@@ -32,7 +32,7 @@ export async function deployElementBridge(
   assets: ElementTokens[],
   tranchesAfter: Date,
 ) {
-  console.error('Deploying ElementBridge...');
+  console.log('Deploying ElementBridge...');
   const elementFactory = new ContractFactory(ElementBridge.abi, ElementBridge.bytecode, signer);
 
   const elementBridge: any = await elementFactory.deploy(
@@ -45,7 +45,7 @@ export async function deployElementBridge(
       gasLimit,
     },
   );
-  console.error(`ElementBridge contract address: ${elementBridge.address}`);
+  console.log(`ElementBridge contract address: ${elementBridge.address}`);
 
   await rollup.setSupportedBridge(elementBridge.address, BigInt(800000), { gasLimit });
 

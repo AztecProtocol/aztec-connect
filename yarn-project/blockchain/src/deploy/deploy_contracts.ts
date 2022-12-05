@@ -11,7 +11,7 @@ function getSigner(host?: string, privateKey?: string) {
   if (!host) {
     throw new Error('ETHEREUM_HOST not set.');
   }
-  console.error(`Json rpc provider: ${host}`);
+  console.log(`Json rpc provider: ${host}`);
   const provider = new ethers.providers.JsonRpcProvider(host);
   const signer = privateKey ? (new ethers.Wallet(privateKey, provider) as Signer) : provider.getSigner(0);
   return new NonceManager(signer);
@@ -48,23 +48,23 @@ export async function deployContracts(
 ) {
   const signer = getSigner(host, privateKey);
   const signerAddress = await signer.getAddress();
-  console.error(`Signer: ${signerAddress}`);
+  console.log(`Signer: ${signerAddress}`);
 
   const chainId = await signer.getChainId();
-  console.error(`Chain id: ${chainId}`);
+  console.log(`Chain id: ${chainId}`);
 
-  console.error(`Faucet operator: ${faucetOperator}`);
-  console.error(`Rollup provider: ${rollupProvider}`);
+  console.log(`Faucet operator: ${faucetOperator}`);
+  console.log(`Rollup provider: ${rollupProvider}`);
 
   const verificationKey = vk ? vk : 'MockVerificationKey';
   console.log(`Verification key: ${verificationKey}`);
 
   const treeInitData = InitHelpers.getInitData(chainId);
   const { dataTreeSize, roots } = treeInitData;
-  console.error(`Initial data size: ${dataTreeSize}`);
-  console.error(`Initial data root: ${roots.dataRoot.toString('hex')}`);
-  console.error(`Initial null root: ${roots.nullRoot.toString('hex')}`);
-  console.error(`Initial root root: ${roots.rootsRoot.toString('hex')}`);
+  console.log(`Initial data size: ${dataTreeSize}`);
+  console.log(`Initial data root: ${roots.dataRoot.toString('hex')}`);
+  console.log(`Initial null root: ${roots.nullRoot.toString('hex')}`);
+  console.log(`Initial root root: ${roots.rootsRoot.toString('hex')}`);
 
   const { rollup, priceFeeds, feeDistributor, permitHelper, faucet, bridgeDataProvider } = await deploy(
     host,

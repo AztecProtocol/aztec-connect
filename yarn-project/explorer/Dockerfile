@@ -2,8 +2,7 @@ FROM 278380418400.dkr.ecr.eu-west-2.amazonaws.com/yarn-project-base AS builder
 COPY barretenberg.js barretenberg.js
 COPY blockchain blockchain
 COPY sdk sdk
-# Remove need to compile contracts once they're fully in foundry and abis are added to yarn-project-base.
-RUN cd barretenberg.js && yarn build && cd ../blockchain && yarn compile && cd ../sdk && yarn build
+RUN cd barretenberg.js && yarn build && cd ../sdk && yarn build
 
 COPY explorer explorer
 WORKDIR /usr/src/yarn-project/explorer

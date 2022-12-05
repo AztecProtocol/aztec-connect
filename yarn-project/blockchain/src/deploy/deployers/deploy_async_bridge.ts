@@ -5,13 +5,13 @@ const gasLimit = 5000000;
 const outputValueA = 257 * 10 ** 12;
 
 export const deployAsyncBridge = async (owner: Signer, rollup: Contract, outputToken: Contract) => {
-  console.error('Deploying AsyncBridge...');
+  console.log('Deploying AsyncBridge...');
   const factory = new ContractFactory(AsyncBridge.abi, AsyncBridge.bytecode, owner);
   const bridge = await factory.deploy({
     gasLimit,
   });
 
-  console.error(`AsyncBridge contract address: ${bridge.address}`);
+  console.log(`AsyncBridge contract address: ${bridge.address}`);
 
   await rollup.setSupportedBridge(bridge.address, 200000n, { gasLimit });
 
@@ -27,12 +27,12 @@ export const deployAsyncBridge = async (owner: Signer, rollup: Contract, outputT
   const actionTxReceipt = await owner.provider?.getTransactionReceipt((await actionTxPromise).hash);
 
   if (actionTxReceipt && actionTxReceipt.status === 1) {
-    console.error(`AsyncBridge action successfully set in ${actionTxReceipt.transactionHash}`);
+    console.log(`AsyncBridge action successfully set in ${actionTxReceipt.transactionHash}`);
     const action = await bridge.action();
-    console.error(`Action outputA ${action.outputA}`);
-    console.error(`Action outputB ${action.outputB}`);
+    console.log(`Action outputA ${action.outputA}`);
+    console.log(`Action outputB ${action.outputB}`);
   } else {
-    console.error('Setting AsyncBridge action failed');
+    console.log('Setting AsyncBridge action failed');
   }
 
   // Mint outputValueA of outputToken to the bridge
@@ -40,11 +40,11 @@ export const deployAsyncBridge = async (owner: Signer, rollup: Contract, outputT
   const txReceiptMint = await owner.provider?.getTransactionReceipt((await mintTxPromise).hash);
 
   if (txReceiptMint && txReceiptMint.status === 1) {
-    console.error(`Minting output token to the bridge succeeded in ${txReceiptMint.transactionHash}`);
+    console.log(`Minting output token to the bridge succeeded in ${txReceiptMint.transactionHash}`);
     const bridgeOutputTokenBalance = await outputToken.balanceOf(bridge.address);
-    console.error(`Bridge balance ${bridgeOutputTokenBalance}`);
+    console.log(`Bridge balance ${bridgeOutputTokenBalance}`);
   } else {
-    console.error('Minting output token to the bridge failed');
+    console.log('Minting output token to the bridge failed');
   }
 
   return bridge;

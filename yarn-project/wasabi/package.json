@@ -10,7 +10,7 @@
     "start": "node ./dest",
     "start:dev": "tsc-watch -p tsconfig.cjs.json --onSuccess 'yarn start'",
     "test": "NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache --passWithNoTests",
-    "formatting": "run -T prettier --check ./src && run -T eslint --max-warnings 3 ./src",
+    "formatting": "run -T prettier --check ./src && run -T eslint --max-warnings 0 ./src",
     "clean": "rm -rf ./data ./dest"
   },
   "jest": {

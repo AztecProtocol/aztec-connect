@@ -1,5 +1,0 @@
-#!/bin/bash
-set -e
-
-node ./scripts/ensure_versions.js
-yarn hardhat compile

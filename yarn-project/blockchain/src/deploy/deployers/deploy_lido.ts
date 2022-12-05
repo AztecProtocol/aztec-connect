@@ -9,7 +9,7 @@ export const deployLidoBridge = async (
   rollup: Contract,
   referralCode = '0x0000000000000000000000000000000000000000',
 ) => {
-  console.error('Deploying LidoBridge...');
+  console.log('Deploying LidoBridge...');
   const bridgeFactory = new ContractFactory(LidoBridge.abi, LidoBridge.bytecode, owner);
   const bridge: any = await bridgeFactory.deploy(
     rollup.address,
@@ -18,7 +18,7 @@ export const deployLidoBridge = async (
       gasLimit,
     },
   );
-  console.error(`LidoBridge contract address: ${bridge.address}`);
+  console.log(`LidoBridge contract address: ${bridge.address}`);
 
   // Will mint initial tokens to the bridge contract to ensure that balance slots are not 0.
 

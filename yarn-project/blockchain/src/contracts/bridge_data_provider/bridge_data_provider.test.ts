@@ -2,6 +2,7 @@ import { EthAddress } from '@aztec/barretenberg/address';
 import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { JsonRpcProvider } from '../../index.js';
 import { BridgeDataProvider } from './bridge_data_provider.js';
+import { jest } from '@jest/globals';
 
 const toNumber = (value: number) => {
   return {
@@ -34,8 +35,8 @@ const bridgeDatas: {
   },
 };
 
-const bridgeCallData1 = new BridgeCallData(1, 0, 0, 0, 0, 0);
-const bridgeCallData2 = new BridgeCallData(2, 0, 0, 0, 0, 0);
+const bridgeCallData1 = new BridgeCallData(1, 0, 0, 0, 0);
+const bridgeCallData2 = new BridgeCallData(2, 0, 0, 0, 0);
 
 const subsidies: {
   [key: string]: {
@@ -47,10 +48,10 @@ const subsidies: {
 
 describe('bridge_data_provider', () => {
   const mockContract = {
-    getBridge: jest.fn().mockImplementation((id: number) => {
+    getBridge: jest.fn<any>().mockImplementation((id: number) => {
       return Promise.resolve(bridgeDatas[id]);
     }),
-    getAccumulatedSubsidyAmount: jest.fn().mockImplementation((bridgeCallData: bigint) => {
+    getAccumulatedSubsidyAmount: jest.fn<any>().mockImplementation((bridgeCallData: bigint) => {
       const sub = subsidies[BridgeCallData.fromBigInt(bridgeCallData).toString()];
       return Promise.resolve([sub.criteria, sub.eth, sub.subsidy]);
     }),

@@ -5,32 +5,24 @@
   "exports": "./dest/index.js",
   "type": "module",
   "scripts": {
-    "build": "yarn clean && yarn compile && tsc -b tsconfig.dest.json",
+    "build": "yarn clean && tsc -b tsconfig.dest.json",
     "build:dev": "tsc -p tsconfig.dest.json --watch",
-    "formatting": "run -T prettier --check ./src && run -T eslint --max-warnings 11 ./src",
-    "compile": "./scripts/as_cjs ./scripts/compile",
-    "clean": "rm -rf ./cache ./data ./dest ./src/artifacts .tsbuildinfo",
+    "formatting": "run -T prettier --check ./src && run -T eslint --max-warnings 0 ./src",
+    "clean": "rm -rf ./dest .tsbuildinfo",
     "start:ganache": "ganache-cli -h :: -l 12000000 -e 10000 -m 'test test test test test test test test test test test junk'",
     "start:ganache:fork": "ganache-cli -f https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35 --chain.chainId 0xe2e --fork.blockNumber 15918000 -h :: -l 15000000 -e 10000 -m 'test test test test test test test test test test test junk'",
-    "start:hardhat:fork": "yarn hardhat node",
-    "test": "./scripts/as_cjs ./scripts/compile_and_test",
-    "deploy": "node ./dest/deploy/index.js",
-    "blockchain_cli": "node ./dest/cli/index.js",
-    "verify:goerli": "hardhat verify --network goerli --contract contracts/RollupProcessor.sol:RollupProcessor",
-    "vk:build:fixtures": "cd src/verifier-fixtures && ./create_fixture.sh"
+    "test": "NODE_NO_WARNINGS=1 node --openssl-legacy-provider --experimental-vm-modules $(yarn bin jest) --no-cache --silent",
+    "blockchain_cli": "node ./dest/cli/index.js"
   },
   "bin": {
-    "blockchain_cli": "./dest/cli/index.js",
-    "deploy_rollup_processor": "./dest/deploy/index.js"
+    "blockchain_cli": "./dest/cli/index.js"
   },
   "jest": {
-    "transform": {
-      "^.+\\.(js|ts)$": [
-        "babel-jest",
-        {
-          "rootMode": "upward"
-        }
-      ]
+    "preset": "ts-jest/presets/default-esm",
+    "globals": {
+      "ts-jest": {
+        "useESM": true
+      }
     },
     "moduleNameMapper": {
       "^(\\.{1,2}/.*)\\.js$": "$1"
@@ -47,31 +39,24 @@
     "@ethersproject/contracts": "5.5.0",
     "@ethersproject/experimental": "5.5.0",
     "@ethersproject/providers": "5.5.1",
-    "@openzeppelin/contracts-upgradeable": "4.6.0",
     "@uniswap/v2-core": "^1.0.1",
     "@uniswap/v2-periphery": "^1.1.0-beta.0",
     "bip85": "^0.0.3",
     "commander": "^9.0.0",
     "cross-fetch": "^3.1.5",
     "debug": "^4.3.4",
-    "ethereumjs-util": "^7.1.5",
     "ethers": "5.5.1",
     "sha3": "^2.1.4"
   },
   "devDependencies": {
     "@aztec/eslint-config": "workspace:^",
+    "@jest/globals": "^29.3.1",
     "@jest/types": "^28.1.3",
-    "@nomiclabs/hardhat-ethers": "^2.1.0",
-    "@nomiclabs/hardhat-etherscan": "^3.1.0",
-    "@openzeppelin/contracts": "4.6.0",
     "@rushstack/eslint-patch": "^1.1.4",
-    "@types/bn.js": "^5.1.0",
     "@types/debug": "^4.1.7",
     "@types/jest": "^28.1.6",
-    "@types/mocha": "^9.1.1",
     "@types/node": "^18.7.23",
-    "ganache": "^7.0.3",
-    "hardhat": "2.10.2",
+    "ganache": "^7.5.0",
     "jest": "^28.1.3",
     "ts-jest": "^28.0.7",
     "ts-node": "^10.9.1",
