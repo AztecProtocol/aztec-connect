@@ -5,7 +5,6 @@ COPY kebab kebab
 RUN yarn
 # Remove need to compile contracts once they're fully in foundry and abis are added to yarn-project-base.
 WORKDIR /usr/src/yarn-project/blockchain
-RUN yarn compile
 WORKDIR /usr/src/yarn-project/kebab
 RUN yarn build && yarn formatting
 # Prune dev dependencies. See comment in base image.

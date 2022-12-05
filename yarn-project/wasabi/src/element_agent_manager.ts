@@ -134,7 +134,7 @@ export class ElementAgentManager {
           continue;
         }
         // if this nonce has been finalised then there is nothing to do
-        if (await bridgeData!.hasFinalised(BigInt(nonce!))) {
+        if (await bridgeData!.hasFinalised(nonce!)) {
           continue;
         }
         interactionNonces.add(nonce);

@@ -2,6 +2,12 @@ import { EthAddress } from '@aztec/barretenberg/address';
 import { TypedData } from '@aztec/barretenberg/blockchain';
 
 const types = {
+  EIP712Domain: [
+    { name: 'name', type: 'string' },
+    { name: 'version', type: 'string' },
+    { name: 'chainId', type: 'uint256' },
+    { name: 'verifyingContract', type: 'address' },
+  ],
   Permit: [
     {
       name: 'owner',
@@ -27,6 +33,12 @@ const types = {
 };
 
 const noneStandardTypes = {
+  EIP712Domain: [
+    { name: 'name', type: 'string' },
+    { name: 'version', type: 'string' },
+    { name: 'chainId', type: 'uint256' },
+    { name: 'verifyingContract', type: 'address' },
+  ],
   Permit: [
     {
       name: 'holder',
@@ -65,17 +77,17 @@ export function createPermitData(
   const domain = {
     name,
     version,
-    chainId,
+    chainId: chainId.toString(),
     verifyingContract: verifyingContract.toString(),
   };
   const message = {
     owner: owner.toString(),
     spender: spender.toString(),
-    value,
-    nonce,
-    deadline,
+    value: value.toString(),
+    nonce: nonce.toString(),
+    deadline: deadline.toString(),
   };
-  return { types, domain, message };
+  return { types, domain, message, primaryType: 'Permit' };
 }
 
 export function createPermitDataNonStandard(
@@ -91,15 +103,15 @@ export function createPermitDataNonStandard(
   const domain = {
     name,
     version,
-    chainId,
+    chainId: chainId.toString(),
     verifyingContract: verifyingContract.toString(),
   };
   const message = {
-    holder: owner,
-    spender,
-    nonce,
-    expiry: deadline,
+    holder: owner.toString(),
+    spender: spender.toString(),
+    nonce: nonce.toString(),
+    expiry: deadline.toString(),
     allowed: true,
   };
-  return { types: noneStandardTypes, domain, message };
+  return { types: noneStandardTypes, domain, message, primaryType: 'Permit' };
 }

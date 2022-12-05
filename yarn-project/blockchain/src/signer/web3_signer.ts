@@ -1,54 +1,41 @@
 import { EthAddress } from '@aztec/barretenberg/address';
-import { EthereumProvider, EthereumSignature, EthereumSigner, TypedData } from '@aztec/barretenberg/blockchain';
-import { Web3Provider } from '@ethersproject/providers';
-import { utils } from 'ethers';
+import { EthereumProvider, EthereumSigner, TypedData } from '@aztec/barretenberg/blockchain';
 import { validateSignature } from '../validate_signature.js';
 
 export class Web3Signer implements EthereumSigner {
-  private provider: Web3Provider;
-
-  constructor(provider: EthereumProvider) {
-    this.provider = new Web3Provider(provider);
-  }
+  constructor(private provider: EthereumProvider) {}
 
   public async signPersonalMessage(message: Buffer, address: EthAddress) {
-    const toSign = utils.hexlify(utils.toUtf8Bytes(message.toString()));
-    const result = await this.provider.send('personal_sign', [toSign, address.toString()]);
-    return Buffer.from(result.slice(2), 'hex');
+    const toSign = '0x' + message.toString('hex');
+    const result = await this.provider.request({ method: 'personal_sign', params: [toSign, address.toString()] });
+    return this.normaliseSignature(Buffer.from(result.slice(2), 'hex'));
   }
 
   public async signMessage(message: Buffer, address: EthAddress) {
-    const signer = this.provider.getSigner(address.toString());
-    const sig = await signer.signMessage(message);
-    const signature = Buffer.from(sig.slice(2), 'hex');
-
-    // Ganache is not signature standard compliant. Returns 00 or 01 as v.
-    // Need to adjust to make v 27 or 28.
-    const v = signature[signature.length - 1];
-    if (v <= 1) {
-      return Buffer.concat([signature.slice(0, -1), Buffer.from([v + 27])]);
-    }
-
-    return signature;
+    const toSign = '0x' + message.toString('hex');
+    const result = await this.provider.request({ method: 'eth_sign', params: [address.toString(), toSign] });
+    return this.normaliseSignature(Buffer.from(result.slice(2), 'hex'));
   }
 
-  public async signTypedData({ domain, types, message }: TypedData, address: EthAddress) {
-    const signer = this.provider.getSigner(address.toString());
-    const result = await signer._signTypedData(domain, types, message);
-    const signature = Buffer.from(result.slice(2), 'hex');
-    const r = signature.slice(0, 32);
-    const s = signature.slice(32, 64);
+  public async signTypedData(data: TypedData, address: EthAddress) {
+    const result = await this.provider.request({
+      method: 'eth_signTypedData_v4',
+      params: [address.toString(), data],
+    });
+    const signature = this.normaliseSignature(Buffer.from(result.slice(2), 'hex'));
+    const r = signature.subarray(0, 32);
+    const s = signature.subarray(32, 64);
     const v = signature[signature.length - 1];
+    return { v: Buffer.from([v]), r, s };
+  }
 
-    const sig: EthereumSignature = { v: Buffer.from([v]), r, s };
-
-    // Ganache is not signature standard compliant. Returns 00 or 01 as v.
-    // Need to adjust to make v 27 or 28.
+  // Older software returns 00 or 01 as v. Need to adjust to make v 27 or 28.
+  private normaliseSignature(signature: Buffer) {
+    const v = signature[signature.length - 1];
     if (v <= 1) {
-      sig.v = Buffer.from([v + 27]);
+      return Buffer.concat([signature.subarray(0, -1), Buffer.from([v + 27])]);
     }
-
-    return sig;
+    return signature;
   }
 
   public validateSignature(publicOwner: EthAddress, signature: Buffer, signingData: Buffer) {

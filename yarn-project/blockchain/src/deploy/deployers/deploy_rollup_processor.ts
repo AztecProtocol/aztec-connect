@@ -18,7 +18,7 @@ export async function deployRollupProcessor(
   allowThirdPartyContracts: boolean,
   useLatest: boolean,
 ) {
-  console.error('Deploying RollupProcessor...');
+  console.log('Deploying RollupProcessor...');
   const rollupFactory = new ContractFactory(RollupProcessor.abi, RollupProcessor.bytecode, signer);
 
   const proxyAdmin = new ProxyAdmin(signer);
@@ -39,9 +39,9 @@ export async function deployRollupProcessor(
     [escapeHatchBlockLower, escapeHatchBlockUpper],
   );
 
-  console.error(`RollupProcessor contract address: ${rollup.address}`);
-  console.error(`Proxy admin contract address    : ${proxyAdmin.address}`);
-  console.error(`Proxy Deployer contract address : ${proxyAdmin.proxyDeployer.address}`);
+  console.log(`RollupProcessor contract address: ${rollup.address}`);
+  console.log(`Proxy admin contract address: ${proxyAdmin.address}`);
+  console.log(`Proxy Deployer contract address: ${proxyAdmin.proxyDeployer.address}`);
 
   // Upgrade to the newest version
   if (useLatest) {

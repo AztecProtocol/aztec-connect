@@ -5,7 +5,7 @@ const gasLimit = 5000000;
 const dummyDefiBridgeLibrary = new ContractFactory(DummyDefiBridge.abi, DummyDefiBridge.bytecode);
 
 export async function deployDummyBridge(rollupProcessor: Contract, signer: Signer, assets: Contract[]) {
-  console.error('Deploying DummyDefiBridge...');
+  console.log('Deploying DummyDefiBridge...');
   const outputValueEth = BigInt(10) ** BigInt(15); // 0.001
   const outputValueToken = BigInt(10) ** BigInt(20); // 100
   const outputVirtualValueA = BigInt('0x123456789abcdef0123456789abcdef0123456789abcdef');
@@ -13,7 +13,7 @@ export async function deployDummyBridge(rollupProcessor: Contract, signer: Signe
   const dummyDefiBridge = await dummyDefiBridgeLibrary
     .connect(signer)
     .deploy(rollupProcessor.address, outputValueEth, outputValueToken, outputVirtualValueA, outputVirtualValueB);
-  console.error(`DummyDefiBridge contract address: ${dummyDefiBridge.address}`);
+  console.log(`DummyDefiBridge contract address: ${dummyDefiBridge.address}`);
 
   const topupTokenValue = outputValueToken * BigInt(100);
   for (const asset of assets) {

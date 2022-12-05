@@ -2,6 +2,8 @@ import { EthAddress } from '@aztec/barretenberg/address';
 import { TreeInitData } from '@aztec/barretenberg/environment';
 import { Signer } from 'ethers';
 import {
+  deployAsyncBridge,
+  deploySyncBridge,
   deployDefiBridgeProxy,
   deployElementBridge,
   deployFeeDistributor,
@@ -12,6 +14,7 @@ import {
   elementTokenAddresses,
   deployAztecFaucet,
   deployMockDataProvider,
+  deployErc20,
 } from './deployers/index.js';
 
 const gasLimit = 5000000;
@@ -65,10 +68,17 @@ export async function deployMainnetE2e(
   await rollup.setSupportedAsset(elementTokenAddresses['mim-3lp3crv-f'], 55_000, { gasLimit });
   await permitHelper.preApprove(elementTokenAddresses['mim-3lp3crv-f'], { gasLimit });
 
+  const tokenA = await deployErc20(rollup, permitHelper, signer, false, 'TOKA');
+  await rollup.setSupportedAsset(tokenA.address, 55_000, { gasLimit });
+  await permitHelper.preApprove(tokenA.address, { gasLimit });
+
   const expiryCutOff = new Date('01 Sept 2022 00:00:00 GMT');
   const elementBridge = await deployElementBridge(signer, rollup, ['dai'], expiryCutOff);
   const lidoBridge = await deployLidoBridge(signer, rollup);
   const curveBridge = await deployCurveBridge(signer, rollup);
+
+  await deploySyncBridge(signer, rollup, tokenA);
+  await deployAsyncBridge(signer, rollup, tokenA);
 
   const bridgeDataProvider = await deployMockDataProvider(signer);
   await bridgeDataProvider.setBridgeData(1, elementBridge.address, 50000, 'Element Bridge');

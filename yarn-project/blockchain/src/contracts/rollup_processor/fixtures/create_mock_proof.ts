@@ -15,10 +15,9 @@ import { TxId } from '@aztec/barretenberg/tx_id';
 import { ViewingKey } from '@aztec/barretenberg/viewing_key';
 import { WorldStateConstants } from '@aztec/barretenberg/world_state';
 import { randomBytes } from '@aztec/barretenberg/crypto';
-import { Signer } from 'ethers';
 import { Keccak } from 'sha3';
-import { EthersAdapter } from '../../../provider/index.js';
 import { Web3Signer } from '../../../signer/index.js';
+import { EthereumProvider } from '@aztec/barretenberg/blockchain';
 
 const numToBuffer = (num: number) => numToUInt32BE(num, 32);
 
@@ -50,7 +49,7 @@ export class InnerProofOutput {
 export const createDepositProof = async (
   amount: bigint,
   depositorAddress: EthAddress,
-  user: Signer,
+  provider: EthereumProvider,
   assetId: number,
   txFee = 0n,
 ) => {
@@ -64,9 +63,8 @@ export const createDepositProof = async (
     depositorAddress.toBuffer32(),
     numToBuffer(assetId),
   );
-  const userAddr = EthAddress.fromString(await user.getAddress());
   const message = new TxId(innerProof.txId).toDepositSigningData();
-  const signature = await new Web3Signer(new EthersAdapter(user)).signMessage(message, userAddr);
+  const signature = await new Web3Signer(provider).signMessage(message, depositorAddress);
 
   const totalTxFees: bigint[] = [];
   totalTxFees[assetId] = txFee;
@@ -227,7 +225,6 @@ export const createSigData = (
 };
 
 export const createRollupProof = (
-  rollupProvider: Signer,
   innerProofOutput: InnerProofOutput,
   {
     rollupId = 0,

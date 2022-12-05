@@ -1,7 +1,6 @@
 import { BridgeCallData, AztecSdk, EthereumProvider, EthAddress, AssetValue } from '@aztec/sdk';
-import { ElementBridgeData } from '@aztec/bridge-clients/client-dest/src/client/element/element-bridge-data.js';
-import { AztecAsset, AztecAssetType } from '@aztec/bridge-clients/client-dest/src/client/bridge-data.js';
-import { ChainProperties } from '@aztec/bridge-clients/client-dest/src/client/element/element-bridge-data.js';
+import { ElementBridgeData } from './clients/element-bridge-data.js';
+import { AztecAsset, AztecAssetType } from './clients/bridge-data.js';
 
 export const BALANCER_ADDRESS = '0xBA12222222228d8Ba445958a75a0704d566BF2C8';
 export const UNISWAP_BRIDGE_ADDRESS_ID = 1;
@@ -83,7 +82,6 @@ export const createElementBridgeData = async (sdk: AztecSdk, provider: EthereumP
     return;
   }
 
-  const chainProperties: ChainProperties = { eventBatchSize: 10 };
   const balancerAddress = EthAddress.fromString(BALANCER_ADDRESS);
 
   console.log('creating element bridge data class');
@@ -95,7 +93,7 @@ export const createElementBridgeData = async (sdk: AztecSdk, provider: EthereumP
     elementBridge.address as any,
     balancerAddress as any,
     rollupContractAddress as any,
-    chainProperties,
+    'UNUSED',
   );
 };
 
@@ -112,9 +110,9 @@ export const retrieveElementConfig = async (sdk: AztecSdk, provider: EthereumPro
   }
   const createAztecAsset = (asset: number, address: EthAddress, type: AztecAssetType = AztecAssetType.ERC20) => {
     return {
-      id: BigInt(asset),
+      id: asset,
       assetType: type,
-      erc20Address: address.toString(),
+      erc20Address: address,
     } as AztecAsset;
   };
 

@@ -3,7 +3,7 @@ COPY barretenberg.js barretenberg.js
 COPY blockchain blockchain
 COPY sdk sdk
 # Remove need to compile contracts once they're fully in foundry and abis are added to yarn-project-base.
-RUN cd barretenberg.js && yarn build && cd ../blockchain && yarn compile && cd ../sdk && yarn build
+RUN cd barretenberg.js && yarn build && cd ../sdk && yarn build
 
 COPY end-to-end end-to-end
 WORKDIR /usr/src/yarn-project/end-to-end

@@ -4,7 +4,7 @@ COPY blockchain blockchain
 COPY halloumi halloumi
 COPY falafel falafel
 # Remove need to compile contracts once they're fully in foundry and abis are added to yarn-project-base.
-RUN cd barretenberg.js && yarn build && cd ../blockchain && yarn compile
+RUN cd barretenberg.js && yarn build
 WORKDIR /usr/src/yarn-project/falafel
 RUN yarn build && yarn formatting && yarn test
 # Prune dev dependencies. See comment in base image.
