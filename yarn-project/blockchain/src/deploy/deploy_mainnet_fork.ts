@@ -17,7 +17,7 @@ const createRandomSigner = (signer: Signer) => {
   return new NonceManager(new ethers.Wallet(randomKey, signer.provider) as Signer);
 };
 
-export async function deployMainnetFork(
+async function deployToTenderly(
   host: string,
   signer: Signer,
   treeInitData: TreeInitData,
@@ -31,4 +31,18 @@ export async function deployMainnetFork(
   const addressesToTopup = [EthAddress.fromString(signerAddress), faucetOperator, rollupProvider];
   await setEthBalance(addressesToTopup.filter(notUndefined), balanceToSet, host);
   return await deployMainnet(randomSigner, treeInitData, vk, faucetOperator, rollupProvider);
+}
+
+export async function deployMainnetFork(
+  host: string,
+  signer: Signer,
+  treeInitData: TreeInitData,
+  vk: string,
+  faucetOperator?: EthAddress,
+  rollupProvider?: EthAddress,
+) {
+  if (host.includes('tenderly')) {
+    return await deployToTenderly(host, signer, treeInitData, vk, faucetOperator, rollupProvider);
+  }
+  return await deployMainnet(signer, treeInitData, vk, faucetOperator, rollupProvider);
 }
