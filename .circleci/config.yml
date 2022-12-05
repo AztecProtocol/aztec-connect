@@ -501,7 +501,7 @@ jobs:
       - run:
           name: 'Test'
           command: cond_spot_run_tests end-to-end ./src/e2e_account.test.ts
-  
+
   e2e-sync-defi:
     docker:
       - image: aztecprotocol/alpine-build-image
@@ -946,5 +946,4 @@ workflows:
       - deploy-website:
           requires:
             - website
-
 # VS Code Extension Version: 1.3.0
