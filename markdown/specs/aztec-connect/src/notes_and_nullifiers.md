@@ -34,7 +34,8 @@ An account note commitment is:
 
 Consists of the following:
 
-- `secret`: a random value to hide the contents of the commitment.
+- `secret`: a random value to hide the contents of the
+  commitment.
 - `owner.x` and `owner.y`: the public key of the owner of the value note. This is a Grumpkin point.
 - `account_required`: Is the note linked to an existing account or can the note be spent without an account, by directly signing with the owner key
 - `creator_pubkey`: Optional. Allows the sender of a value note to inform the recipient who the note came from.
@@ -116,37 +117,6 @@ Details on this are found [here](https://hackmd.io/@aztec-network/BJKHah_4d)
 
 # Nullifiers
 
-## Account alias hash nullifier
-
-**Objectives** of this nullifier:
-
-- Ensures that an alias can only ever be registered once.
-- Anyone (notably a new user) can produce this nullifier.
-- No collisions. Each nullifier can only be produced for one alias hash. Duplicate nullifiers must not be derivable from different alias hashes.
-- No collisions with other nullifiers (i.e. account public key nullifiers).
-- No double registration. Each alias hash must have one and only one nullifier.
-
-**Calculation**
-
-- `nullifier = pedersen::compress(account_alias_hash);`
-- Pedersen GenratorIndex:`ACCOUNT_ALIAS_HASH_NULLIFIER` to compress `account_alias_hash`
-
-
-## Account public key nullifier
-
-**Objectives** of this nullifier:
-
-- Ensures that an account public key can only ever be registered once.
-- Anyone (notably a new user) can produce this nullifier.
-- No collisions. Each nullifier can only be produced for one account public key. Duplicate nullifiers must not be derivable from different keys.
-- No collisions with other nullifiers (i.e. account alias hash nullifiers).
-- No double registration. Each account public key must have one and only one nullifier.
-
-**Calculation**
-
-- `nullifier = pedersen::compress(account_public_key.x);`
-- Pedersen GenratorIndex:`ACCOUNT_PUBLIC_KEY_NULLIFIER` to compress `account_public_key`
-
 ## Value note nullifier
 
 **Objectives** of this nullifier:
@@ -158,18 +128,19 @@ Details on this are found [here](https://hackmd.io/@aztec-network/BJKHah_4d)
 - The nullifier must only be accepted and added to the nullifier tree if it is the output of a join-split circuit which 'spends' the corresponding note.
 
 **Calculation**
+We set out the computation steps below, with suggestions for changes:
 
-- We set out the computation steps below, with suggestions for changes:
-  - `hashed_pk = account_private_key * G` (where `G` is a generator unique to this operation).
-    - This `hashed_pk` is useful to demonstrate to a 3rd party that you've nullified something without having to provide your secret key.
-  - `compressed_inputs = pedersen::compress(value_note_commitment, hashed_pk.x, hashed_pk.y, is_real_note)`
-    - This compression step reduces the cost (constrain-wise) of the blake2s hash which is done next.
-  - `nullifier = blake2s(compressed_inputs);`
-    - blake2s is needed, because a pedersen commitment alone can leak data (see comment in the code for more details on this).
+- `hashed_pk = account_private_key * G` (where `G` is a generator unique to this operation).
+  - This `hashed_pk` is useful to demonstrate to a 3rd party that you've nullified something without having to provide your secret key.
+- `compressed_inputs = pedersen::compress(value_note_commitment, hashed_pk.x, hashed_pk.y, is_real_note)`
+  - This compression step reduces the cost (constrain-wise) of the blake2s hash which is done next.
+- `nullifier = blake2s(compressed_inputs);`
+  - blake2s is needed, because a pedersen commitment alone can leak data (see comment in the code for more details on this).
 
-- Pedersen GeneratorIndex:
-  - `JOIN_SPLIT_NULLIFIER_ACCOUNT_PRIVATE_KEY` for the hashed_pk
-  - `JOIN_SPLIT_NULLIFIER` to compress the inputs
+Pedersen GeneratorIndex:
+
+- `JOIN_SPLIT_NULLIFIER_ACCOUNT_PRIVATE_KEY` for the hashed_pk
+- `JOIN_SPLIT_NULLIFIER` to compress the inputs
 
 ## Claim note nullifier
 
@@ -185,7 +156,7 @@ Details on this are found [here](https://hackmd.io/@aztec-network/BJKHah_4d)
 
 - `nullifier = pedersen::compress(claim_note_commitment);`
   - Note: it is ok that observers can see which claim note is being nullified, since values in a defi interaction are public (only owners are private). Furthermore, the rollup priovider needs to be able to generate the claim proof and doesn't have access to any user secrets - so this nullifier allows this use case.
-- Pedersen GeneratorIndex:`CLAIM_NOTE_NULLIFIER`
+  - Pedersen GeneratorIndex:`CLAIM_NOTE_NULLIFIER`
 
 ## Defi Interaction nullifier
 

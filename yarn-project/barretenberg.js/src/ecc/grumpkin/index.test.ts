@@ -22,7 +22,7 @@ describe('grumpkin', () => {
 
     const points: Buffer[] = [];
     for (let i = 0; i < numPoints; ++i) {
-      points.push(grumpkin.mul(Grumpkin.generator, randomBytes(32)));
+      points.push(grumpkin.mul(Grumpkin.one, randomBytes(32)));
     }
     let pointBuf: Buffer = points[0];
 

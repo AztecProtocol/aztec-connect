@@ -17,7 +17,7 @@ export function useDefaultAuxDataOption(recipeId: string, isExit?: boolean) {
   const recipe = recipes.find(x => x.id === recipeId);
   const resolver = isExit ? recipe?.exitAuxDataResolver : recipe?.enterAuxDataResolver;
   const shouldFetchOpts = resolver?.type === 'bridge-data-select';
-  const opts = useMaybeObs(shouldFetchOpts ? auxDataPollerCache.get(recipeId)?.obs : undefined);
+  const opts = useMaybeObs(shouldFetchOpts ? auxDataPollerCache.get([recipeId, !!isExit])?.obs : undefined);
   if (!resolver) return;
   switch (resolver.type) {
     case 'bridge-data-select': {

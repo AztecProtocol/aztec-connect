@@ -8,7 +8,7 @@ import { deriveNoteSecret } from './derive_note_secret.js';
 
 export class TreeNote {
   static EMPTY = new TreeNote(
-    GrumpkinAddress.generator(),
+    GrumpkinAddress.one(),
     BigInt(0),
     0,
     false,
