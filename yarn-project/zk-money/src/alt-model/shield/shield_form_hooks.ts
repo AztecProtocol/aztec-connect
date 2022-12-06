@@ -11,7 +11,6 @@ import { getShieldFormFeedback } from './shield_form_feedback.js';
 import { ShieldComposerPhase } from './shield_composer_state_obs.js';
 import { ShieldComposer } from './shield_composer.js';
 import { useMaybeObs } from '../../app/util/index.js';
-import { isKnownAssetAddressString } from '../known_assets/known_asset_addresses.js';
 import { useAsset } from '../asset_hooks.js';
 import { useRollupProviderStatus, useRollupProviderStatusPoller } from '../rollup_provider_hooks.js';
 import { useMaxSpendableValue } from '../balance_hooks.js';
@@ -59,11 +58,8 @@ export function useShieldForm(
   const feeAmount = feeAmounts?.[fields.speed];
   const balanceInFeePayingAsset = useMaxSpendableValue(feeAmount?.id);
   const signerAddress = accountState?.ethAddressUsedForAccountKey;
-  const targetAssetAddressStr = targetAsset.address.toString();
   const requiredNetwork = chainIdToNetwork(rpStatus.blockchainStatus.chainId)!;
-  const transactionLimit = isKnownAssetAddressString(targetAssetAddressStr)
-    ? config.txAmountLimits[targetAssetAddressStr]
-    : undefined;
+  const transactionLimit = targetAsset.label && config.txAmountLimits[targetAsset.label];
   const { userId: recipientUserId, isLoading: isLoadingRecipientUserId } = useUserIdForRecipientStr(
     fields.recipientAlias,
     200,

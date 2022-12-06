@@ -71,6 +71,14 @@ export class RegisterController extends DepositHandler {
     return this.txIds[0];
   }
 
+  public getTxIds() {
+    if (!this.txIds.length) {
+      throw new Error(`Call ${!this.proofOutput ? 'createProof()' : 'send()'} first.`);
+    }
+
+    return this.txIds;
+  }
+
   public async awaitSettlement(timeout?: number) {
     if (!this.txIds.length) {
       throw new Error(`Call ${!this.proofOutput ? 'createProof()' : 'send()'} first.`);

@@ -10,6 +10,7 @@ import yearnGradientIcon from '../../images/yearn_gradient.svg';
 import eulerGradientIcon from '../../images/euler_gradient.svg';
 import aaveGradientIcon from '../../images/aave_token_gradient.svg';
 import lusdGradientIcon from '../../images/lusd_gradient.svg';
+import compoundGradientIcon from '../../images/compound_token_gradient.svg';
 import questionMarkBlackIcon from '../../images/question_mark_black.svg';
 import questionMarkWhiteIcon from '../../images/question_mark_white.svg';
 import { RegisteredAssetLabel } from '../registrations_data/registrations_data_types.js';
@@ -69,6 +70,8 @@ export function getAssetIconGradient(label?: AssetLabel) {
       return aaveGradientIcon;
     case 'LUSD':
       return lusdGradientIcon;
+    case 'wcDAI':
+      return compoundGradientIcon;
     default:
       return questionMarkBlackIcon;
   }
@@ -83,6 +86,7 @@ export function getAssetPreferredFractionalDigits(label?: AssetLabel) {
     case 'LUSD':
     case 'TB-275':
     case 'TB-400':
+    case 'wcDAI':
       return 2;
     case 'Eth':
     case 'yvWETH':

@@ -28,7 +28,10 @@ export class CompoundBridgeData extends ERC4626BridgeData {
     const cToken = ICERC20__factory.connect(cTokenAddress.toString(), this.ethersProvider);
 
     const supplyRatePerBlock = await cToken.supplyRatePerBlock();
-    return supplyRatePerBlock.mul(blocksPerYear).toNumber() / 10 ** 16;
+    return supplyRatePerBlock
+      .mul(blocksPerYear)
+      .div(10n ** 16n)
+      .toNumber();
   }
 
   async getMarketSize(
@@ -42,18 +45,18 @@ export class CompoundBridgeData extends ERC4626BridgeData {
     let underlyingAsset;
     if (auxData === 0n) {
       // Minting
-      cTokenAddress = this.getCToken(outputAssetA.erc20Address);
+      cTokenAddress = await this.getCToken(outputAssetA.erc20Address);
       underlyingAsset = inputAssetA;
     } else if (auxData === 1n) {
       // Redeeming
-      cTokenAddress = this.getCToken(inputAssetA.erc20Address);
+      cTokenAddress = await this.getCToken(inputAssetA.erc20Address);
       underlyingAsset = outputAssetA;
     } else {
       throw new Error('Invalid auxData');
     }
 
     const underlying = IERC20__factory.connect(underlyingAsset.erc20Address.toString(), this.ethersProvider);
-    const cToken = ICERC20__factory.connect(underlyingAsset.erc20Address.toString(), this.ethersProvider);
+    const cToken = ICERC20__factory.connect(cTokenAddress.toString(), this.ethersProvider);
 
     const underlyingBalance = await underlying.balanceOf(cTokenAddress.toString());
     const totalBorrows = await cToken.totalBorrows();

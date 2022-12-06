@@ -16,6 +16,7 @@ export const KNOWN_MAINNET_ASSET_ADDRESS_STRS = {
   wa2WETH: '0xc21F107933612eCF5677894d45fc060767479A9b',
   wa2DAI: '0xbcb91e0B4Ad56b0d41e0C168E3090361c0039abC',
   LUSD: '0x5f98805A4E8be255a32880FDeC7F6728C6568bA0',
+  wcDAI: '0x6D088fe2500Da41D7fA7ab39c76a506D7c91f53b',
 } as const;
 
 type KnownAssetAddressKey = keyof typeof KNOWN_MAINNET_ASSET_ADDRESS_STRS;
@@ -23,13 +24,6 @@ type KnownAssetAddressKey = keyof typeof KNOWN_MAINNET_ASSET_ADDRESS_STRS;
 // The type beneath is useful for checking for asset label misalignments.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 type Debug_UnaddressedAssets = Exclude<KnownAssetAddressKey, RegisteredAssetLabel>;
-type KnownAssetAddressString = typeof KNOWN_MAINNET_ASSET_ADDRESS_STRS[KnownAssetAddressKey];
-
-const addressStrs: string[] = Object.values(KNOWN_MAINNET_ASSET_ADDRESS_STRS);
-export function isKnownAssetAddressString(addressStr?: string): addressStr is KnownAssetAddressString {
-  if (!addressStr) return false;
-  return addressStrs.includes(addressStr);
-}
 
 export const KNOWN_MAINNET_ASSET_ADDRESSES = mapObj(KNOWN_MAINNET_ASSET_ADDRESS_STRS, EthAddress.fromString);
 

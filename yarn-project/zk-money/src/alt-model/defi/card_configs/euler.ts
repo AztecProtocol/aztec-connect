@@ -37,6 +37,7 @@ export const EULER_ETH_CARD: CreateRecipeArgs = {
   cardTag: 'Lending',
   cardButtonLabel: 'Earn',
   exitButtonLabel: 'Claim & Exit',
+  showExchangeRate: true,
   keyStats: {
     keyStat1: {
       useLabel: () => 'APY',

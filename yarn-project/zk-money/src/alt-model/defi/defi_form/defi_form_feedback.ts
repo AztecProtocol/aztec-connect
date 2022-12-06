@@ -43,6 +43,9 @@ function getFooterFeedback(result: DefiFormValidationResult) {
       layer: 'L1',
     })}.`;
   }
+  if (result.cannotBatchForCustomAuxData) {
+    return 'No batches exist for this setting. Either pay for a faster transaction or clear any customised settings under ⚙.';
+  }
 }
 
 export function getDefiFormFeedback(

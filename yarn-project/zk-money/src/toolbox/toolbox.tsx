@@ -27,7 +27,7 @@ export function Toolbox({ config }: { config: Config }) {
     createAztecSdk(jsonRpcProvider, {
       serverUrl: rollupProviderUrl,
       flavour: SdkFlavour.PLAIN,
-      debug: 'bb:*,aztec:*',
+      debug: 'bb:*',
       minConfirmation: chainIdToNetwork(chainId)?.isFrequent ? 1 : undefined,
     }).then(sdk => {
       sdk.run();

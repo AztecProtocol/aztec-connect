@@ -6,5 +6,5 @@ export type BridgeDataAdaptorCreator = (args: {
   rollupContractAddress: EthAddress;
   bridgeContractAddress: EthAddress;
   bridgeAddressId: number;
-  falafelGraphQlEndpoint: string;
+  rollupProviderUrl: string;
 }) => BridgeDataFieldGetters;

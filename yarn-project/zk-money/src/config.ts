@@ -1,5 +1,5 @@
 import { SDK_VERSION, getRollupProviderStatus } from '@aztec/sdk';
-import { KNOWN_MAINNET_ASSET_ADDRESS_STRS as S } from './alt-model/known_assets/known_asset_addresses.js';
+import { AssetLabel } from './alt-model/known_assets/known_asset_display_data.js';
 import { toBaseUnits } from './app/units.js';
 
 export interface Config {
@@ -10,14 +10,13 @@ export interface Config {
   chainId: number;
   ethereumHost: string;
   mainnetEthereumHost: string;
-  txAmountLimits: Record<string, bigint>;
+  txAmountLimits: Record<AssetLabel, bigint>;
   sessionTimeout: number;
   debugFilter: string;
 }
 
 interface ConfigVars {
   deployTag: string;
-  txAmountLimits: string;
   sessionTimeout: string;
   debugFilter: string;
 }
@@ -34,33 +33,18 @@ const removeEmptyValues = (vars: ConfigVars): Partial<ConfigVars> => {
 
 const fromLocalStorage = (): ConfigVars => ({
   deployTag: localStorage.getItem('zm_deployTag') || '',
-  txAmountLimits: localStorage.getItem('zm_txAmountLimit') || '',
   sessionTimeout: localStorage.getItem('zm_sessionTimeout') || '',
   debugFilter: localStorage.getItem('zm_debug') ?? '',
 });
 
 const fromEnvVars = (): ConfigVars => ({
   deployTag: process.env.REACT_APP_DEPLOY_TAG || '',
-  txAmountLimits: process.env.REACT_APP_TX_AMOUNT_LIMIT || '',
   sessionTimeout: process.env.REACT_APP_SESSION_TIMEOUT || '',
   debugFilter: process.env.REACT_APP_DEBUG ?? '',
 });
 
 const productionConfig: ConfigVars = {
   deployTag: '',
-  txAmountLimits: JSON.stringify([
-    `${toBaseUnits('5', 18)}`, // 5 ETH
-    `${toBaseUnits('10000', 18)}`, // 10,000 DAI
-    `${toBaseUnits('6', 18)}`, // 6 wstETH
-    `${toBaseUnits('5', 18)}`, // 5 yvETH
-    `${toBaseUnits('10000', 18)}`, // 10,000 yvDAI
-    `${toBaseUnits('5', 18)}`, // 5 weWETH
-    `${toBaseUnits('6', 18)}`, // 6 wewstETH
-    `${toBaseUnits('10000', 18)}`, // 10,000 weDAI
-    `${toBaseUnits('5', 18)}`, // 5 wa2WETH
-    `${toBaseUnits('12000', 18)}`, // 12,000 wa2DAI
-    `${toBaseUnits('10000', 18)}`, // 10,000 LUSD
-  ]),
   sessionTimeout: '30', // days
   debugFilter: 'zm:*,bb:*',
 };
@@ -130,23 +114,27 @@ function assembleConfig(
   rawConfig: ReturnType<typeof getRawConfigWithOverrides>,
   deployConfig: ReturnType<typeof getDeployConfig>,
 ): Config {
-  const { txAmountLimits: txAmountLimitsStr, sessionTimeout, debugFilter } = rawConfig;
-  const txAmountLimits = JSON.parse(txAmountLimitsStr);
+  const { sessionTimeout, debugFilter } = rawConfig;
 
   return {
     ...deployConfig,
     txAmountLimits: {
-      [S.Eth]: BigInt(txAmountLimits[0]),
-      [S.DAI]: BigInt(txAmountLimits[1]),
-      [S.wstETH]: BigInt(txAmountLimits[2]),
-      [S.yvWETH]: BigInt(txAmountLimits[3]),
-      [S.yvDAI]: BigInt(txAmountLimits[4]),
-      [S.weWETH]: BigInt(txAmountLimits[5]),
-      [S.wewstETH]: BigInt(txAmountLimits[6]),
-      [S.weDAI]: BigInt(txAmountLimits[7]),
-      [S.wa2WETH]: BigInt(txAmountLimits[8]),
-      [S.wa2DAI]: BigInt(txAmountLimits[9]),
-      [S.LUSD]: BigInt(txAmountLimits[10]),
+      Eth: toBaseUnits('5', 18),
+      WETH: 0n, // unused
+      DAI: toBaseUnits('10000', 18),
+      wstETH: toBaseUnits('6', 18),
+      stETH: 0n, // unused
+      yvWETH: toBaseUnits('5', 18),
+      yvDAI: toBaseUnits('10000', 18),
+      weWETH: toBaseUnits('5', 18),
+      wewstETH: toBaseUnits('6', 18),
+      weDAI: toBaseUnits('10000', 18),
+      wa2WETH: toBaseUnits('5', 18),
+      wa2DAI: toBaseUnits('12000', 18),
+      LUSD: toBaseUnits('10000', 18),
+      'TB-275': toBaseUnits('10000', 18),
+      'TB-400': toBaseUnits('10000', 18),
+      wcDAI: toBaseUnits('10000', 18),
     },
     sessionTimeout: +(sessionTimeout || 1),
     debugFilter,

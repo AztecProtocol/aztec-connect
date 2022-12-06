@@ -1,18 +1,19 @@
 import { TroveBridgeData } from '../../../bridge-clients/client/liquity/trove-bridge-data.js';
 import liquityLogo from '../../../images/liquity_logo_white.svg';
 import liquityMiniLogo from '../../../images/liquity_mini_logo.svg';
-import { CreateRecipeArgs, DefiRecipe } from '../types.js';
+import { AuxDataCustomisationComponentProps, CreateRecipeArgs, DefiRecipe } from '../types.js';
 import { useBridgeDataAdaptorsMethodCaches } from '../../top_level_context/index.js';
-import { useMaybeObs } from '../../../app/util/index.js';
 import { AssetValue } from '@aztec/sdk';
+import { createGatedSetter_noArrows, useMaybeObs } from '../../../app/util/index.js';
 import { bindInteractionPredictionHook_expectedOutput } from '../interaction_prediction_configs.js';
 import { createDefiPublishStatsCacheArgsBuilder } from '../defi_publish_stats_utils.js';
 import { keyStatConfig_averageWait } from '../key_stat_configs.js';
-import { useDefaultMarketSizeBulkPrice } from '../defi_info_hooks.js';
+import { useBridgeDataAdaptor, useDefaultMarketSizeBulkPrice } from '../defi_info_hooks.js';
 import { formatBulkPrice_compact } from '../../../app/util/formatters.js';
 import { DefiPosition_Interactable } from '../open_position_hooks.js';
-import { SkeletonRect } from '../../../ui-components/index.js';
+import { Field, FieldStatus, SkeletonRect } from '../../../ui-components/index.js';
 import { formatBaseUnits } from '../../../app/units.js';
+import { useEffect, useState } from 'react';
 
 export const LIQUITY_TROVE_275: CreateRecipeArgs = {
   id: 'liquity-trove.ETH-to-TB-and-LUSD.275',
@@ -24,10 +25,8 @@ export const LIQUITY_TROVE_275: CreateRecipeArgs = {
     enter: { inA: 'Eth', outA: 'TB-275', outB: 'LUSD', inDisplayed: 'Eth', outDisplayed: 'LUSD' },
     exit: {
       inA: 'TB-275',
-      inB: 'LUSD',
       outA: 'Eth',
-      outB: 'LUSD',
-      inDisplayed: 'LUSD',
+      inDisplayed: 'TB-275',
       outDisplayed: 'Eth',
     },
   },
@@ -53,6 +52,8 @@ export const LIQUITY_TROVE_275: CreateRecipeArgs = {
   cardTag: 'Borrowing',
   cardButtonLabel: 'Borrow',
   exitButtonLabel: 'Repay',
+  exitDesc:
+    'Your LUSD debt is repaid using a flash loan. Part of your ETH collateral then repays the flash loan, and the remaining ETH is returned to your account. Your total TB-275 tokens represents the entirety of your share of the collateral. Spending all your TB-275 will release your entire share of the collateral (minus the market value of the debt to be repaid).',
   keyStats: {
     keyStat1: {
       useLabel: () => 'Col. Ratio',
@@ -95,6 +96,7 @@ export const LIQUITY_TROVE_275: CreateRecipeArgs = {
   getDefiPublishStatsCacheArgs: createDefiPublishStatsCacheArgsBuilder({ ignoreAuxData: true }),
   openHandleAssetHasDebtAndCollateral: true,
   renderCustomClosableValueField: position => <FormattedEthCollateral position={position} />,
+  renderExitAuxDataCustomiser: props => <SlippageSelect {...props} />,
 };
 
 export const LIQUITY_TROVE_400: CreateRecipeArgs = {
@@ -107,13 +109,13 @@ export const LIQUITY_TROVE_400: CreateRecipeArgs = {
     enter: { inA: 'Eth', outA: 'TB-400', outB: 'LUSD', inDisplayed: 'Eth', outDisplayed: 'LUSD' },
     exit: {
       inA: 'TB-400',
-      inB: 'LUSD',
       outA: 'Eth',
-      outB: 'LUSD',
-      inDisplayed: 'LUSD',
+      inDisplayed: 'TB-400',
       outDisplayed: 'Eth',
     },
   },
+  exitDesc:
+    'Your LUSD debt is repaid using a flash loan. Part of your ETH collateral then repays the flash loan, and the remaining ETH is returned to your account. Your total TB-400 tokens represents the entirety of your share of the collateral. Spending all your TB-400 will release your entire share of the collateral (minus the market value of the debt to be repaid).',
 };
 
 function useFormattedLusdDebt(recipe: DefiRecipe, assetValue: AssetValue) {
@@ -132,4 +134,47 @@ function FormattedEthCollateral({ position }: { position: DefiPosition_Interacta
   const collateral = debtAndCollateral?.[1];
   if (collateral === undefined) return <SkeletonRect sizingContent="Collateral: 0.123 ETH" />;
   return <>Collateral: {formatBaseUnits(collateral, 18, { precision: 6, commaSeparated: true })} ETH</>;
+}
+
+function formatBasisPoints(basisPoints: bigint | undefined) {
+  if (basisPoints === undefined) return '';
+  const str = basisPoints.toString();
+  const whole = str.substring(0, str.length - 2);
+  const fractional = str.substring(str.length - 2);
+  return `${whole}.${fractional}`;
+}
+
+function SlippageSelect(props: AuxDataCustomisationComponentProps) {
+  const adaptor = useBridgeDataAdaptor(props.recipe.id);
+  const idealSlippage = (adaptor as TroveBridgeData | undefined)?.IDEAL_SLIPPAGE_SETTING;
+  const placeholder = formatBasisPoints(idealSlippage);
+  const [slippageStr, setSlippageStr] = useState('');
+  const handleSlippageStrChange = (value: string) => setSlippageStr(value.match(/^\d*\.?\d*/)?.[0] ?? '');
+
+  const slippage = slippageStr ? BigInt(Math.floor(Number(slippageStr) * 100)) : null;
+  useEffect(() => {
+    const gatedSetter = createGatedSetter_noArrows(props.onChangeState);
+    if (slippage === null) {
+      gatedSetter.set({ auxData: null, loading: false });
+      return;
+    }
+    gatedSetter.set({ auxData: null, loading: true });
+    adaptor?.getCustomMaxPrice?.(slippage).then(auxData => {
+      gatedSetter.set({ auxData, loading: false });
+    });
+    return gatedSetter.close;
+  }, [props.onChangeState, slippage, adaptor]);
+  const status = props.state.loading ? FieldStatus.Loading : undefined;
+
+  return (
+    <div style={{ height: 80 }}>
+      <Field
+        label="Slippage tolerance (%)"
+        placeholder={placeholder}
+        value={slippageStr}
+        onChangeValue={handleSlippageStrChange}
+        status={status}
+      />
+    </div>
+  );
 }

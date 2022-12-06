@@ -1,5 +1,5 @@
-import lidoXCurveLogo from '../../../images/lido_x_curve_logo.svg';
-import lidoMiniLogo from '../../../images/lido_mini_logo.png';
+import copmoundLogo from '../../../images/compound_logo_white.svg';
+import compoundMiniLogo from '../../../images/compound_mini_logo.png';
 import { CreateRecipeArgs } from '../types.js';
 import { useDefaultExpectedAssetYield, useDefaultMarketSizeBulkPrice } from '../defi_info_hooks.js';
 import { formatBulkPrice_compact, formatPercentage_2dp } from '../../../app/util/formatters.js';
@@ -8,46 +8,41 @@ import { bindInteractionPredictionHook_expectedOutput } from '../interaction_pre
 import { useVariableAprText } from '../position_key_stat_configs.js';
 import { createDefiPublishStatsCacheArgsBuilder } from '../defi_publish_stats_utils.js';
 import { createSimpleSwapFlowBinding } from '../flow_configs.js';
-import { LidoBridgeData } from '../../../bridge-clients/client/lido/lido-bridge-data.js';
-import { EthAddress } from '@aztec/sdk';
+import { CompoundBridgeData } from '../../../bridge-clients/client/compound/compound-bridge-data.js';
 
-export const LIDO_CARD: CreateRecipeArgs = {
-  id: 'lido-staking-x-curve.ETH-to-wStETH',
-  bridgeBinding: 'CurveStEthBridge_250K',
-  gradient: ['#EE964B', '#EE964B'],
-  openHandleAssetBinding: 'wstETH',
-  flowBindings: createSimpleSwapFlowBinding('Eth', 'wstETH'),
-  createAdaptor: ({ provider }) => {
-    const curvePoolAddress = EthAddress.fromString('0xdc24316b9ae028f1497c275eb9192a3ea0f67022');
-    const wstETHAddress = EthAddress.fromString('0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0');
-    const lidoOracleAddress = EthAddress.fromString('0x442af784A788A5bd6F42A01Ebe9F287a871243fb');
-    return LidoBridgeData.create(provider, wstETHAddress, lidoOracleAddress, curvePoolAddress);
-  },
+export const COMPOUND_DAI_CARD: CreateRecipeArgs = {
+  id: 'compound.DAI-to-weETH',
+  unlisted: true,
+  bridgeBinding: 'ERC4626_400K',
+  exitBridgeBinding: 'ERC4626_300K',
+  gradient: ['rgb(96, 208, 153)', 'rgb(96, 208, 153)'],
+  openHandleAssetBinding: 'wcDAI',
+  flowBindings: createSimpleSwapFlowBinding('DAI', 'wcDAI'),
+  createAdaptor: ({ provider }) => CompoundBridgeData.create(provider),
   enterAuxDataResolver: {
     type: 'static',
-    value: 10n ** 18n, // Minimum acceptable amount of stEth per 1 eth
+    value: 0n, // Deposit flow
   },
   exitAuxDataResolver: {
     type: 'static',
-    value: 9n * 10n ** 17n, // Minimum acceptable amount of eth per 1 stEth
+    value: 1n, // Exit flow
   },
-  projectName: 'Lido',
-  website: 'https://lido.fi/',
-  websiteLabel: 'lido.fi',
-  name: 'Lido Staking × Curve',
-  shortDesc: 'Swap ETH for stETH on Curve and earn daily staking rewards. stETH is wrapped into wstETH.',
-  exitDesc: 'Unwrap zkwstETH and swap on Curve to get back zkETH.',
-  longDescription:
-    'Swap ETH for liquid staked ETH (stETH) on Curve and earn daily staking rewards. stETH is wrapped into wstETH, allowing you to earn staking yields without locking assets.',
-  logo: lidoXCurveLogo,
-  miniLogo: lidoMiniLogo,
-  cardTag: 'Staking',
+  projectName: 'Compound',
+  website: 'https://compound.finance/',
+  websiteLabel: 'compound.finance',
+  name: 'Compound',
+  shortDesc: 'Lend DAI on Compound and earn yield by holding wcDAI in exchange.',
+  exitDesc: 'Unwrap wcDAI to recieve your underlying DAI.',
+  longDescription: 'Lend DAI on Compound and earn yield by holding wcDAI in exchange.',
+  logo: copmoundLogo,
+  miniLogo: compoundMiniLogo,
+  cardTag: 'Lending',
   cardButtonLabel: 'Earn',
   exitButtonLabel: 'Claim & Exit',
   showExchangeRate: true,
   keyStats: {
     keyStat1: {
-      useLabel: () => 'APR',
+      useLabel: () => 'APY',
       skeletonSizingContent: '2.34%',
       useFormattedValue: recipe => {
         const apr = useDefaultExpectedAssetYield(recipe);
@@ -82,5 +77,5 @@ export const LIDO_CARD: CreateRecipeArgs = {
     useOpenText: useVariableAprText,
     useExitText: useVariableAprText,
   },
-  getDefiPublishStatsCacheArgs: createDefiPublishStatsCacheArgsBuilder({ ignoreAuxData: true }),
+  getDefiPublishStatsCacheArgs: createDefiPublishStatsCacheArgsBuilder({ ignoreAuxData: false }),
 };
