@@ -99,6 +99,14 @@ export class WithdrawController {
     return this.txIds[this.proofOutputs.length - 1];
   }
 
+  public getTxIds() {
+    if (!this.txIds.length) {
+      throw new Error(`Call ${!this.proofOutputs.length ? 'createProof()' : 'send()'} first.`);
+    }
+
+    return this.txIds;
+  }
+
   public async awaitSettlement(timeout?: number) {
     if (!this.txIds.length) {
       throw new Error(`Call ${!this.proofOutputs.length ? 'createProof()' : 'send()'} first.`);

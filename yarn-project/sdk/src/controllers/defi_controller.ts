@@ -199,6 +199,14 @@ export class DefiController {
     return this.getDefiTxId();
   }
 
+  public getTxIds() {
+    if (!this.txIds.length) {
+      throw new Error(`Call ${!this.proofOutput ? 'createProof()' : 'send()'} first.`);
+    }
+
+    return this.txIds;
+  }
+
   public async awaitDefiDepositCompletion(timeout?: number) {
     if (!this.txIds.length) {
       throw new Error(`Call ${!this.proofOutput ? 'createProof()' : 'send()'} first.`);
