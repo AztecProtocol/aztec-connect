@@ -3,4 +3,5 @@ export type CoreSdkOptions = {
   pollInterval?: number;
   useKeyCache?: boolean;
   debug?: string;
+  noVersionCheck?: boolean;
 };

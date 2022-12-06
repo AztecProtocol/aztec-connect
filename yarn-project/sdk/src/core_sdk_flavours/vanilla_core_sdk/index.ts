@@ -67,13 +67,13 @@ export async function createVanillaCoreSdk(options: VanillaCoreSdkOptions) {
   const pedersen = new PooledPedersen(wasm, workerPool);
   const pippenger = new PooledPippenger(workerPool);
   const fftFactory = new PooledFftFactory(workerPool);
-  const { memoryDb, identifier, serverUrl, pollInterval } = options;
+  const { memoryDb, identifier, serverUrl, pollInterval, noVersionCheck } = options;
 
   const leveldb = getLevelDb(memoryDb, identifier);
   const db = await getDb(memoryDb, identifier);
 
   const host = new URL(serverUrl);
-  const rollupProvider = new ServerRollupProvider(host, pollInterval, SDK_VERSION);
+  const rollupProvider = new ServerRollupProvider(host, pollInterval, noVersionCheck ? undefined : SDK_VERSION);
 
   const coreSdk = new CoreSdk(
     leveldb,
@@ -96,13 +96,13 @@ async function createWorkerlessSdk(options: VanillaCoreSdkOptions) {
   const pedersen = new SinglePedersen(wasm);
   const pippenger = new SinglePippenger(wasm);
   const fftFactory = new SingleFftFactory(wasm);
-  const { memoryDb, identifier, serverUrl, pollInterval } = options;
+  const { memoryDb, identifier, serverUrl, pollInterval, noVersionCheck } = options;
 
   const leveldb = getLevelDb(memoryDb, identifier);
   const db = await getDb(memoryDb, identifier);
 
   const host = new URL(serverUrl);
-  const rollupProvider = new ServerRollupProvider(host, pollInterval, SDK_VERSION);
+  const rollupProvider = new ServerRollupProvider(host, pollInterval, noVersionCheck ? undefined : SDK_VERSION);
 
   const coreSdk = new CoreSdk(leveldb, db, rollupProvider, wasm, noteDecryptor, pedersen, pippenger, fftFactory);
   await coreSdk.init(options);
