@@ -682,7 +682,7 @@ jobs:
       - run:
           name: 'kebab'
           # Increment to force contract redeployment.
-          command: TF_VAR_REDEPLOY=7 deploy kebab
+          command: TF_VAR_REDEPLOY=8 deploy kebab
       - run:
           name: 'halloumi'
           command: deploy halloumi "halloumi halloumi-inner halloumi-outer"
@@ -946,4 +946,4 @@ workflows:
       - deploy-website:
           requires:
             - website
-# VS Code Extension Version: 1.3.0
+# VS Code Extension Version: 1.4.0
