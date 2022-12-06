@@ -44,6 +44,7 @@ export const LIDO_CARD: CreateRecipeArgs = {
   cardTag: 'Staking',
   cardButtonLabel: 'Earn',
   exitButtonLabel: 'Claim & Exit',
+  showExchangeRate: true,
   keyStats: {
     keyStat1: {
       useLabel: () => 'APR',

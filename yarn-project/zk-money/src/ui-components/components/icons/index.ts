@@ -7,3 +7,4 @@ export * from './wallet_connect_icon.js';
 export * from './close_mini_icon.js';
 export * from './back_icon.js';
 export * from './forward_icon.js';
+export * from './cog_icon.js';

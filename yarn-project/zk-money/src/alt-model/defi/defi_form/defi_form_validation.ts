@@ -1,4 +1,4 @@
-import type { DefiSettlementTime, BridgeCallData, AssetValue } from '@aztec/sdk';
+import { DefiSettlementTime, BridgeCallData, AssetValue } from '@aztec/sdk';
 import type { AmountFactory } from '../../../alt-model/assets/amount_factory.js';
 import type { DefiComposerPayload } from './defi_composer.js';
 import type { RemoteAsset } from '../../../alt-model/types.js';
@@ -6,10 +6,12 @@ import { Amount } from '../../../alt-model/assets/index.js';
 import { max, min } from '../../../app/index.js';
 import { StrOrMax } from '../../../alt-model/forms/constants.js';
 import { amountFromStrOrMaxRoundedDown, getPrecisionIsTooHigh } from '../../../alt-model/forms/helpers.js';
+import { AuxDataCustomisationState } from '../types.js';
 
 export interface DefiFormFields {
   amountStrOrMax: StrOrMax;
   speed: DefiSettlementTime;
+  auxDataCustomisationState: AuxDataCustomisationState;
 }
 
 interface DefiFormValidationInput {
@@ -23,6 +25,7 @@ interface DefiFormValidationInput {
   transactionLimit?: bigint;
   maxChainableDefiDeposit?: AssetValue;
   bridgeCallData?: BridgeCallData;
+  auxDataIsCustomised: boolean;
 }
 
 export interface DefiFormValidationResult {
@@ -35,6 +38,7 @@ export interface DefiFormValidationResult {
   beyondTransactionLimit?: boolean;
   noAmount?: boolean;
   precisionIsTooHigh?: boolean;
+  cannotBatchForCustomAuxData?: boolean;
   isValid?: boolean;
   validPayload?: DefiComposerPayload;
   maxOutput?: bigint;
@@ -53,6 +57,7 @@ export function validateDefiForm(input: DefiFormValidationInput): DefiFormValida
     balanceInFeePayingAsset,
     transactionLimit,
     maxChainableDefiDeposit,
+    auxDataIsCustomised,
   } = input;
   if (
     !amountFactory ||
@@ -86,12 +91,15 @@ export function validateDefiForm(input: DefiFormValidationInput): DefiFormValida
 
   const precisionIsTooHigh = getPrecisionIsTooHigh(targetDepositAmount);
 
+  const cannotBatchForCustomAuxData = auxDataIsCustomised && fields.speed === DefiSettlementTime.DEADLINE;
+
   const isValid =
     !insufficientTargetAssetBalance &&
     !insufficientFeePayingAssetBalance &&
     !beyondTransactionLimit &&
     !noAmount &&
-    !precisionIsTooHigh;
+    !precisionIsTooHigh &&
+    !cannotBatchForCustomAuxData;
   const validPayload = isValid ? { targetDepositAmount, feeAmount } : undefined;
 
   return {
@@ -100,6 +108,7 @@ export function validateDefiForm(input: DefiFormValidationInput): DefiFormValida
     beyondTransactionLimit,
     noAmount,
     precisionIsTooHigh,
+    cannotBatchForCustomAuxData,
     isValid,
     validPayload,
     maxOutput,

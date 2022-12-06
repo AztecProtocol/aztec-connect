@@ -17,7 +17,7 @@ export interface AssessL1DepositBalancesResources {
   l1PendingBalance?: bigint;
   approveProofGasCost?: bigint;
   depositFundsGasCost?: bigint;
-  transactionLimit: bigint;
+  transactionLimit?: bigint;
   auxiliaryFeeAssetBalance?: bigint;
   depositMaxEnabled: boolean;
   depositValueStr: string;
@@ -42,6 +42,7 @@ export function assessL1DepositBalances({
   if (l1PendingBalance === undefined) return;
   if (approveProofGasCost === undefined) return;
   if (depositFundsGasCost === undefined) return;
+  if (transactionLimit === undefined) return;
   if (auxiliaryFeeAssetBalance === undefined) return;
 
   // If the deposit asset isn't used for paying the fee, we don't need to reserve funds for it

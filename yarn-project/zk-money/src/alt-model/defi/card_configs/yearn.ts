@@ -26,6 +26,7 @@ export const YEARN_ETH_CARD: CreateRecipeArgs = {
   cardTag: 'Yield',
   cardButtonLabel: 'Earn',
   exitButtonLabel: 'Claim & Exit',
+  showExchangeRate: true,
   bridgeBinding: 'YearnBridgeDeposit_200K',
   exitBridgeBinding: 'YearnBridgeWithdraw_800K',
   enterAuxDataResolver: { type: 'static', value: 0n },

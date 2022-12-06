@@ -53,6 +53,7 @@ export function DefiModal({ recipe, flowDirection, onClose }: DefiModalProps) {
         flowDirection={flowDirection}
         recipe={recipe}
         fields={fields}
+        onChangeAuxDataCustomisationState={setters.auxDataCustomisationState}
         onChangeAmountStrOrMax={setters.amountStrOrMax}
         onChangeSpeed={setters.speed}
         feedback={feedback}

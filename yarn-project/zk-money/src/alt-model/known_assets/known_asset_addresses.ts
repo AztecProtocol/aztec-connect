@@ -23,13 +23,6 @@ type KnownAssetAddressKey = keyof typeof KNOWN_MAINNET_ASSET_ADDRESS_STRS;
 // The type beneath is useful for checking for asset label misalignments.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 type Debug_UnaddressedAssets = Exclude<KnownAssetAddressKey, RegisteredAssetLabel>;
-type KnownAssetAddressString = typeof KNOWN_MAINNET_ASSET_ADDRESS_STRS[KnownAssetAddressKey];
-
-const addressStrs: string[] = Object.values(KNOWN_MAINNET_ASSET_ADDRESS_STRS);
-export function isKnownAssetAddressString(addressStr?: string): addressStr is KnownAssetAddressString {
-  if (!addressStr) return false;
-  return addressStrs.includes(addressStr);
-}
 
 export const KNOWN_MAINNET_ASSET_ADDRESSES = mapObj(KNOWN_MAINNET_ASSET_ADDRESS_STRS, EthAddress.fromString);
 

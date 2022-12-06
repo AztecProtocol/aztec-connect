@@ -15,3 +15,15 @@ export function createGatedSetter<T>(setter: Dispatch<SetStateAction<T>>) {
     },
   };
 }
+
+export function createGatedSetter_noArrows<T>(setter: (value: T) => void) {
+  let open = true;
+  return {
+    set: (value: T) => {
+      if (open) setter(value);
+    },
+    close: () => {
+      open = false;
+    },
+  };
+}

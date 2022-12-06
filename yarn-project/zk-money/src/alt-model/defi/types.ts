@@ -130,6 +130,7 @@ export interface DefiRecipe {
   exitButtonLabel?: string;
   shortDesc: string;
   exitDesc?: string;
+  showExchangeRate?: boolean;
   longDescription: string;
   hideUnderlyingOnExit?: boolean;
   keyStats: KeyStatsConfig;
@@ -140,6 +141,18 @@ export interface DefiRecipe {
   getDefiPublishStatsCacheArgs: (bridgeCallData: BridgeCallData) => DefiPublishStatsCacheArgs;
   openHandleAssetHasDebtAndCollateral?: boolean;
   renderCustomClosableValueField?: (position: DefiPosition_Interactable) => React.ReactNode;
+  renderExitAuxDataCustomiser?: (props: AuxDataCustomisationComponentProps) => React.ReactNode;
+}
+
+export interface AuxDataCustomisationState {
+  auxData: bigint | null;
+  loading: boolean;
+}
+
+export interface AuxDataCustomisationComponentProps {
+  recipe: DefiRecipe;
+  state: AuxDataCustomisationState;
+  onChangeState: (state: AuxDataCustomisationState) => void;
 }
 
 export interface BridgeInteractionAssetBindings {

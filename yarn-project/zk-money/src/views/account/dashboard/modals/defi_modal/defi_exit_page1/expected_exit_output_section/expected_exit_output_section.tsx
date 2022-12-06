@@ -22,7 +22,7 @@ export function ExpectedExitOutputSection(props: ExpectedExitOutputSectionProps)
     throw new Error('Cannot display exit output for non-closable recipe');
   }
   let displayedOutputValue: AssetValue | undefined;
-  const displayedAssetId = props.recipe.flow.enter.outDisplayed.id;
+  const displayedAssetId = props.recipe.flow.exit.outDisplayed.id;
   if (displayedAssetId === expectedOutput?.outputValueA.assetId) {
     displayedOutputValue = expectedOutput?.outputValueA;
   } else if (displayedAssetId === expectedOutput?.outputValueB?.assetId) {
@@ -43,7 +43,7 @@ export function ExpectedExitOutputSection(props: ExpectedExitOutputSectionProps)
         <div className={style.price}>{bulkPriceStr}</div>
       </div>
       <div className={style.exchangeWrapper}>
-        <ExitExchangeRateInfo recipe={props.recipe} auxData={auxData} />
+        {props.recipe.showExchangeRate && <ExitExchangeRateInfo recipe={props.recipe} auxData={auxData} />}
       </div>
     </div>
   );
