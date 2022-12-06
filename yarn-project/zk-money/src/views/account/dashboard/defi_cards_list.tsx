@@ -85,7 +85,7 @@ function useValidRecipesOnly(recipes?: DefiRecipe[]) {
     const recipesRequiringAuxDataOpts = recipes.filter(x => x.enterAuxDataResolver.type === 'bridge-data-select');
     // Lazy fetch the aux data opts for recipe in the above list
     const recipesAuxDataOptsObs = Obs.combine(
-      recipesRequiringAuxDataOpts.map(x => auxDataPollerCache.get(x.id)?.obs ?? Obs.constant(undefined)),
+      recipesRequiringAuxDataOpts.map(x => auxDataPollerCache.get([x.id, false])?.obs ?? Obs.constant(undefined)),
     );
     return recipesAuxDataOptsObs.map(recipesAuxDataOpts => {
       let validRecipes = recipes.filter(x => !x.unlisted);
