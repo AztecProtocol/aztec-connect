@@ -17,14 +17,14 @@ export const ELEMENT_CARD: CreateRecipeArgs = {
     type: 'async',
     enter: { inA: 'DAI', outA: 'DAI', inDisplayed: 'DAI', outDisplayed: 'DAI' },
   },
-  createAdaptor: ({ provider, rollupContractAddress, bridgeContractAddress, falafelGraphQlEndpoint }) => {
+  createAdaptor: ({ provider, rollupContractAddress, bridgeContractAddress, rollupProviderUrl }) => {
     const balancerAddress = EthAddress.fromString('0xBA12222222228d8Ba445958a75a0704d566BF2C8');
     return ElementBridgeData.create(
       provider,
       bridgeContractAddress,
       balancerAddress,
       rollupContractAddress,
-      falafelGraphQlEndpoint,
+      rollupProviderUrl,
     );
   },
   enterAuxDataResolver: {
