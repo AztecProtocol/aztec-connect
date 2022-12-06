@@ -27,7 +27,7 @@ async function fetchData(dataProviderAddress: string, rpcUrl: string) {
 
 async function fetchAndAssembleData() {
   const dev = await fetchData(
-    '0x1c6182e3ceaf416b10963731e8283722e274964e',
+    '0xD25B8B044CE58eaBF41288E223609726A6c98e44',
     'https://aztec-connect-dev-eth-host.aztec.network:8545',
   );
   const test = await fetchData(

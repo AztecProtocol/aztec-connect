@@ -134,6 +134,7 @@ function assembleConfig(
       LUSD: toBaseUnits('10000', 18),
       'TB-275': toBaseUnits('10000', 18),
       'TB-400': toBaseUnits('10000', 18),
+      wcDAI: toBaseUnits('10000', 18),
     },
     sessionTimeout: +(sessionTimeout || 1),
     debugFilter,

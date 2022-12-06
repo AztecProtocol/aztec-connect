@@ -15,6 +15,7 @@ import { EULER_DAI_CARD, EULER_ETH_CARD, EULER_WSTETH_CARD } from './card_config
 import { AAVE_ETH_CARD, AAVE_DAI_CARD } from './card_configs/aave.js';
 import { LIQUITY_TROVE_275, LIQUITY_TROVE_400 } from './card_configs/liquity_trove.js';
 import { RegistrationsRepo } from '../registrations_data/index.js';
+import { COMPOUND_DAI_CARD } from './card_configs/compound.js';
 
 const debug = createDebug('zm:recipes');
 
@@ -123,6 +124,7 @@ function createRecipe(args: CreateRecipeArgs, registrationsRepo: RegistrationsRe
 }
 
 const CREATE_RECIPES_ARGS: CreateRecipeArgs[] = [
+  COMPOUND_DAI_CARD,
   LIQUITY_TROVE_275,
   LIQUITY_TROVE_400,
   AAVE_ETH_CARD,
