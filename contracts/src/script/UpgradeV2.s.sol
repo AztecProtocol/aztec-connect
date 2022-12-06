@@ -23,7 +23,7 @@ contract UpgradeV2 is Test {
     uint256 internal constant VERSION_AFTER = 2;
 
     bytes32 internal constant MOCK_KEY_HASH = 0xe93606306cfda92d3e8937e91d4467ecb74c7092eb49e932be66a2f488ca7003;
-    bytes32 internal constant PROD_KEY_HASH = 0x8bb8dcfd02060143443271408d47991c82c9fd631b02b42ef1ec28909631b9a1;
+    bytes32 internal constant PROD_KEY_HASH = 0x2fcf22dcccdc2ad1e00374e4a8a3211e41c620ad2e84bdf5e9cc401301c96c59;
 
     address internal constant LISTER = 0x68A36Aa8E309d5010ab4F9D6c5F1246b854D0b9e;
     address internal constant RESUME = 0x62415C92528C7d86Fd3f82D3fc75c2F66Bb9389a;
@@ -58,7 +58,6 @@ contract UpgradeV2 is Test {
 
         emit log_named_address("Rollup proxy address     ", address(ROLLUP));
         emit log_named_address("Proxy admin address      ", address(PROXY_ADMIN));
-        emit log_named_address("Verifier address         ", address(verifier));
         emit log("####");
         emit log("Multisig todo:");
 

@@ -195,7 +195,7 @@ export class JoinSplitTxFactory {
 
   private createEphemeralKeyPair() {
     const ephPrivKey = this.grumpkin.getRandomFr();
-    const ephPubKey = new GrumpkinAddress(this.grumpkin.mul(Grumpkin.generator, ephPrivKey));
+    const ephPubKey = new GrumpkinAddress(this.grumpkin.mul(Grumpkin.one, ephPrivKey));
     return { ephPrivKey, ephPubKey };
   }
 }

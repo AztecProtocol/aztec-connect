@@ -13,7 +13,7 @@ describe('batch_decypt_notes', () => {
 
   const createKeyPair = () => {
     const privKey = grumpkin.getRandomFr();
-    const pubKey = new GrumpkinAddress(grumpkin.mul(Grumpkin.generator, privKey));
+    const pubKey = new GrumpkinAddress(grumpkin.mul(Grumpkin.one, privKey));
     return { privKey, pubKey };
   };
 
