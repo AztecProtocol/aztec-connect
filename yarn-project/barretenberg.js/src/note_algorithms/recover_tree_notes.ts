@@ -15,7 +15,7 @@ export const recoverTreeNotes = (
   grumpkin: Grumpkin,
   noteAlgorithms: NoteAlgorithms,
 ) => {
-  const ownerPubKey = new GrumpkinAddress(grumpkin.mul(Grumpkin.one, privateKey));
+  const ownerPubKey = new GrumpkinAddress(grumpkin.mul(Grumpkin.generator, privateKey));
   return decryptedNotes.map((decrypted, i) => {
     if (!decrypted) {
       debug(`index ${i}: no decrypted tree note.`);
