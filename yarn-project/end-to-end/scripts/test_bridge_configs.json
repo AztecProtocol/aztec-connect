@@ -35,6 +35,18 @@
       "gas": 500000,
       "numTxs": 5,
       "permittedAssets": [0, 1, 2, 5]
+    },
+    {
+      "bridgeAddressId": 7,
+      "gas": 500000,
+      "numTxs": 5,
+      "permittedAssets": [0, 1, 2, 5]
+    },
+    {
+      "bridgeAddressId": 8,
+      "gas": 500000,
+      "numTxs": 5,
+      "permittedAssets": [0, 1, 2, 5]
     }
   ]
 }
