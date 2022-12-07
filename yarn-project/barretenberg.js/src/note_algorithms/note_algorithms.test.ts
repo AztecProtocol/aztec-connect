@@ -25,7 +25,7 @@ describe('compute_nullifier', () => {
     grumpkin = new Grumpkin(barretenberg);
     blake2s = new Blake2s(barretenberg);
     noteAlgos = new NoteAlgorithms(barretenberg);
-    pubKey = new GrumpkinAddress(grumpkin.mul(Grumpkin.one, privateKey));
+    pubKey = new GrumpkinAddress(grumpkin.mul(Grumpkin.generator, privateKey));
   });
 
   it('should compute correct nullifier', () => {
@@ -76,6 +76,6 @@ describe('compute_nullifier', () => {
 
   it('should compute correct public key nullifier', () => {
     const nullifier = noteAlgos.accountPublicKeyNullifier(pubKey);
-    expect(nullifier.toString('hex')).toEqual('293e4583639708553c09d48eb546ea2a784c75e5619f099b41fa7ea42b68bde8');
+    expect(nullifier.toString('hex')).toEqual('1fed6d7d6fb63282dd17dc0b9187a6c6608aa41813a6bbad45a24c5dc40f114c');
   });
 });

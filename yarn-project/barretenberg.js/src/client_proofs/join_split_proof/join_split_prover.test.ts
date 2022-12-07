@@ -57,7 +57,7 @@ describe('join_split_proof', () => {
     noteAlgos = new NoteAlgorithms(barretenberg);
     joinSplitVerifier = new JoinSplitVerifier();
 
-    pubKey = new GrumpkinAddress(grumpkin.mul(Grumpkin.one, privateKey));
+    pubKey = new GrumpkinAddress(grumpkin.mul(Grumpkin.generator, privateKey));
   });
 
   const createProof = async (joinSplitProver: JoinSplitProver) => {
