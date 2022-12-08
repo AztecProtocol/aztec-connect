@@ -15,6 +15,7 @@ remappings = [
     '@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/',
     '@uniswap/v2-periphery/=lib/v2-periphery/',
     '@uniswap/v2-core/=lib/v2-core/',
+    'bridge-deployments/=lib/aztec-connect-bridges/src/deployment',
     ]
 fs_permissions = [
     {access = "read", path = 'verification-keys/mock_rollup_proof_data_3x2.dat'},

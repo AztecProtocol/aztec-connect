@@ -14,8 +14,7 @@ import {Verifier1x1} from "core/verifier/instances/Verifier1x1.sol";
 import {MockVerifier} from "core/verifier/instances/MockVerifier.sol";
 import {AlwaysTrueVerifier} from "../../test/mocks/AlwaysTrueVerifier.sol";
 import {stdJson} from "forge-std/StdJson.sol";
-
-
+import {BridgesSetup} from "./BridgesSetup.s.sol";
 
 contract E2ESetup is Test {
     using stdJson for string;
@@ -25,8 +24,6 @@ contract E2ESetup is Test {
     address internal constant MAINNET_MS = 0xE298a76986336686CC3566469e3520d23D1a8aaD;
 
     address internal constant UNISWAP_V2_ROUTER = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
-
-    address internal constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
 
     uint256 internal constant ESCAPE_BLOCK_LOWER_BOUND = 2160;
     uint256 internal constant ESCAPE_BLOCK_UPPER_BOUND = 2400;
@@ -83,6 +80,10 @@ contract E2ESetup is Test {
         string memory _verifier,
         bool _upgrade
     ) public {
+        if (block.chainid == 1){
+            revert("Deploy to mainnet not allowed");
+        }
+
         bytes32 _verifierC = keccak256(abi.encodePacked(_verifier));
         address verifier;
         if (_verifierC == keccak256(abi.encodePacked("VerificationKey1x1"))) {
@@ -138,14 +139,14 @@ contract E2ESetup is Test {
         RollupProcessorV2(proxy).setRollupProvider(_params.provider, true);
 
         vm.broadcast();
-        RollupProcessorV2(proxy).setSupportedAsset(DAI, 55000);
-
-        vm.broadcast();
         AztecFeeDistributor feeDistributor = new AztecFeeDistributor(_params.safe, proxy, UNISWAP_V2_ROUTER);
 
         if (_params.upgrade) {
             rollupDeployer.upgrade(proxyAdmin, proxy);
         }
+
+        BridgesSetup bridgesSetup = new BridgesSetup();
+        address dataProvider = bridgesSetup.setupAssetsAndBridges(address(proxy), address(permitHelper));
 
         setupRoles(proxy, _params.safe, _params.deployer);
 
@@ -158,14 +159,7 @@ contract E2ESetup is Test {
             vm.broadcast();
             ProxyAdmin(proxyAdmin).transferOwnership(_params.safe);
         }
-
-        // pre-approvals on permit helper
-        {
-            PermitHelper permitHelperC = PermitHelper(permitHelper);
-            vm.broadcast();
-            permitHelperC.preApprove(DAI);
-        }
-
+        
         outputAddresses(_params, address(proxyAdmin), address(proxy), address(permitHelper), address(proxyDeployer), address(defiProxy), address(feeDistributor)); 
     }
 

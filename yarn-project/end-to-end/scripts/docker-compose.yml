@@ -4,7 +4,7 @@ services:
     image: trufflesuite/ganache
     environment:
       NODE_OPTIONS: --max_old_space_size=3072
-    command: -h='0.0.0.0' -q -l 15000000 -e 10000 -m='test test test test test test test test test test test junk' ${CHAIN_ID} ${FORK_HOST} ${FORK_BLOCK}
+    command: -h='0.0.0.0' -q -l 15000000 -e 10000 -m='test test test test test test test test test test test junk'
     ports:
       - '8545:8545'
 
