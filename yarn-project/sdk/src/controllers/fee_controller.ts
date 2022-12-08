@@ -58,6 +58,14 @@ export class FeeController {
     return this.txIds[this.feeProofOutputs.length - 1];
   }
 
+  public getTxIds() {
+    if (!this.txIds.length) {
+      throw new Error(`Call ${!this.feeProofOutputs.length ? 'createProof()' : 'send()'} first.`);
+    }
+
+    return this.txIds;
+  }
+
   public async awaitSettlement(timeout?: number) {
     if (!this.txIds.length) {
       throw new Error(`Call ${!this.feeProofOutputs.length ? 'createProof()' : 'send()'} first.`);

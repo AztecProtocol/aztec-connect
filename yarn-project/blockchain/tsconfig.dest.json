@@ -5,6 +5,6 @@
     "types": []
   },
   "references": [{ "path": "../barretenberg.js/tsconfig.dest.json" }],
-  "exclude": ["**/*.test.*", "**/fixtures/*", "src/ganache/hardhat_chain_manipulation.ts"],
+  "exclude": ["**/*.test.*", "**/fixtures/*"],
   "files": []
 }

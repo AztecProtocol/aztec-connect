@@ -12,6 +12,7 @@ import {
   searchStrToRecipeFilters,
 } from '../../../alt-model/defi/recipe_filters.js';
 import style from './defi_cards_list.module.scss';
+import { useHiddenAssets } from '../../../alt-model/defi/hidden_asset_hooks.js';
 
 interface DefiCardsListProps {
   isLoggedIn: boolean;
@@ -28,6 +29,7 @@ function InvestmentsFilter({ filters, onChangeFilters, recipes }: InvestmentsFil
   const assetSymbolsSet = new Set(
     recipes?.map(x => x.flow.enter.inA.symbol).concat(recipes.map(x => x.flow.enter.outA.symbol)),
   );
+  useHiddenAssets().forEach(hiddenAsset => assetSymbolsSet.delete(hiddenAsset.symbol));
   const assetSymbolOpts = Array.from(assetSymbolsSet).map(value => ({ value, label: value }));
   const tagsSet = new Set(recipes?.map(x => x.cardTag));
   const typeOpts = Array.from(tagsSet).map(value => ({ value, label: value }));
@@ -83,7 +85,7 @@ function useValidRecipesOnly(recipes?: DefiRecipe[]) {
     const recipesRequiringAuxDataOpts = recipes.filter(x => x.enterAuxDataResolver.type === 'bridge-data-select');
     // Lazy fetch the aux data opts for recipe in the above list
     const recipesAuxDataOptsObs = Obs.combine(
-      recipesRequiringAuxDataOpts.map(x => auxDataPollerCache.get(x.id)?.obs ?? Obs.constant(undefined)),
+      recipesRequiringAuxDataOpts.map(x => auxDataPollerCache.get([x.id, false])?.obs ?? Obs.constant(undefined)),
     );
     return recipesAuxDataOptsObs.map(recipesAuxDataOpts => {
       let validRecipes = recipes.filter(x => !x.unlisted);

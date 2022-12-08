@@ -78,6 +78,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   private accountProofCreator!: AccountProofCreator;
   private defiDepositProofCreator!: DefiDepositProofCreator;
   private serialQueue!: SerialQueue;
+  private statelessSerialQueue!: SerialQueue;
   private broadcastChannel: BroadcastChannel | undefined = isNode ? undefined : new BroadcastChannel('aztec-sdk');
   private userStateFactory!: UserStateFactory;
   private sdkStatus: SdkStatus = {
@@ -146,7 +147,10 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       this.debug(`initializing...${sdkVersion ? ` (version: ${sdkVersion})` : ''}`);
 
       this.options = options;
+      // Tasks in serialQueue require states like notes and hash path, which will need the sdk to sync to (ideally)
+      // the latest block. Tasks in statelessSerialQueue don't.
       this.serialQueue = new MutexSerialQueue(this.db, 'aztec_core_sdk');
+      this.statelessSerialQueue = new MutexSerialQueue(this.db, 'aztec_core_sdk_stateless');
       this.noteAlgos = new NoteAlgorithms(this.barretenberg);
       this.blake2s = new Blake2s(this.barretenberg);
       this.grumpkin = new Grumpkin(this.barretenberg);
@@ -212,6 +216,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       await this.db.close();
       await this.workerPool?.destroy();
       this.serialQueue?.cancel();
+      this.statelessSerialQueue?.cancel();
       throw err;
     }
   }
@@ -227,6 +232,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     // The serial queue will cancel itself. This ensures that anything currently in the queue finishes, and ensures
     // that once the await to push() returns, nothing else is on, or can be added to the queue.
     await this.serialQueue.push(() => Promise.resolve(this.serialQueue.cancel()));
+    await this.statelessSerialQueue.push(() => Promise.resolve(this.statelessSerialQueue.cancel()));
 
     // Stop listening to account state updates.
     this.userStates.forEach(us => us.removeAllListeners());
@@ -313,7 +319,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   }
 
   public derivePublicKey(privateKey: Buffer) {
-    return Promise.resolve(new GrumpkinAddress(this.grumpkin.mul(Grumpkin.one, privateKey)));
+    return Promise.resolve(new GrumpkinAddress(this.grumpkin.mul(Grumpkin.generator, privateKey)));
   }
 
   public deriveLegacySigningMessageHash(address: EthAddress) {
@@ -467,27 +473,34 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
 
     this.initState = SdkInitState.RUNNING;
 
+    const initPippenngerPromise = this.statelessSerialQueue.push(async () => {
+      const maxCircuitSize = Math.max(JoinSplitProver.getCircuitSize(), AccountProver.getCircuitSize());
+      const crsData = await this.getCrsData(maxCircuitSize);
+      await this.pippenger.init(crsData);
+    });
+
     this.serialQueue
       .push(async () => {
-        const { proverless, verifierContractAddress } = this.sdkStatus;
+        await initPippenngerPromise;
 
-        const maxCircuitSize = Math.max(JoinSplitProver.getCircuitSize(), AccountProver.getCircuitSize());
-        const crsData = await this.getCrsData(maxCircuitSize);
-
-        await this.pippenger.init(crsData);
         await this.genesisSync();
         this.startReceivingBlocks();
-        await this.createJoinSplitProofCreator(proverless);
-        await this.createAccountProofCreator(proverless);
 
-        if (this.userStates.length) {
-          await this.computeJoinSplitProvingKey();
-        } else {
-          await this.computeAccountProvingKey();
-        }
+        await this.statelessSerialQueue.push(async () => {
+          const { proverless, verifierContractAddress } = this.sdkStatus;
 
-        // Makes the saved proving keys considered valid. Hence set this after they're saved.
-        await this.db.addKey('verifierContractAddress', verifierContractAddress.toBuffer());
+          await this.createJoinSplitProofCreator(proverless);
+          await this.createAccountProofCreator(proverless);
+
+          if (this.userStates.length) {
+            await this.computeJoinSplitProvingKey();
+          } else {
+            await this.computeAccountProvingKey();
+          }
+
+          // Makes the saved proving keys considered valid. Hence set this after they're saved.
+          await this.db.addKey('verifierContractAddress', verifierContractAddress.toBuffer());
+        });
       })
       .catch(err => {
         this.debug('failed to run:', err);
@@ -510,7 +523,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     recipientSpendingKeyRequired: boolean,
     txRefNo: number,
   ) {
-    return await this.serialQueue.push(async () => {
+    return await this.statelessSerialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
 
       // Create a one time user to generate and sign the proof.
@@ -522,6 +535,9 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       } as UserData;
       const signer = new SchnorrSigner(this, accountPublicKey, accountPrivateKey);
       const spendingPublicKey = accountPublicKey;
+
+      const { proverless } = this.sdkStatus;
+      await this.createJoinSplitProofCreator(proverless);
 
       const proofInput = await this.paymentProofCreator.createProofInput(
         user,
@@ -941,6 +957,10 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   }
 
   private async createJoinSplitProofCreator(proverless: boolean) {
+    if (this.defiDepositProofCreator) {
+      return;
+    }
+
     const fft = await this.fftFactory.createFft(JoinSplitProver.getCircuitSize(proverless));
     const unrolledProver = new UnrolledProver(
       this.workerPool ? this.workerPool.workers[0] : this.barretenberg,
@@ -965,6 +985,10 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   }
 
   private async createAccountProofCreator(proverless: boolean) {
+    if (this.accountProofCreator) {
+      return;
+    }
+
     const fft = await this.fftFactory.createFft(AccountProver.getCircuitSize(proverless));
     const unrolledProver = new UnrolledProver(
       this.workerPool ? this.workerPool.workers[0] : this.barretenberg,

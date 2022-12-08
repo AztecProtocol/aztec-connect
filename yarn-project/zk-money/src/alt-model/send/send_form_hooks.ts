@@ -5,7 +5,6 @@ import { useAsset } from '../asset_hooks.js';
 import { useMaxSpendableValue } from '../balance_hooks.js';
 import { useAwaitCorrectProvider } from '../defi/defi_form/correct_provider_hooks.js';
 import { useTrackedFieldChangeHandlers } from '../form_fields_hooks.js';
-import { isKnownAssetAddressString } from '../known_assets/known_asset_addresses.js';
 import { useRollupProviderStatus, useRollupProviderStatusPoller } from '../rollup_provider_hooks.js';
 import { useSdk, useAmountFactory, useConfig } from '../top_level_context/index.js';
 import { SendMode } from './send_mode.js';
@@ -74,10 +73,7 @@ export function useSendForm(preselectedAssetId?: number) {
   const feeAmount = feeAmounts?.[fields.speed];
   const balanceInTargetAsset = useMaxSpendableValue(fields.assetId);
   const balanceInFeePayingAsset = useMaxSpendableValue(feeAmount?.id);
-  const targetAssetAddressStr = asset?.address.toString();
-  const transactionLimit = isKnownAssetAddressString(targetAssetAddressStr)
-    ? config.txAmountLimits[targetAssetAddressStr]
-    : undefined;
+  const transactionLimit = asset?.label && config.txAmountLimits[asset.label];
   const userTxs = useAccountState()?.txs;
 
   const validationResult = validateSendForm({

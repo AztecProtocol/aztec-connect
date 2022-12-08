@@ -2,7 +2,7 @@ variable "DEPLOY_TAG" {
   type = string
 }
 
-variable "INFURA_API_KEY" {
+variable "TEST_INFURA_API_KEY" {
   type = string
 }
 
@@ -15,5 +15,9 @@ variable "FAUCET_OPERATOR_ADDRESS" {
 }
 
 variable "REDEPLOY" {
+  type = string
+}
+
+variable "DEV_NET_RPC_URL" {
   type = string
 }

@@ -27,7 +27,10 @@ function aggregatePositions(balances: AssetValue[], defiTxs: UserDefiTx[], recip
     if (recipe) positions.push({ type: 'sync-open', handleValue: assetValue, recipe });
   }
   for (const tx of defiTxs) {
-    if (tx.interactionResult.state !== UserDefiInteractionResultState.SETTLED) {
+    if (
+      tx.interactionResult.state !== UserDefiInteractionResultState.SETTLED &&
+      tx.interactionResult.success !== false // NB: undefined is considered valid, hence the explict false check
+    ) {
       const enteringRecipe = recipes.find(recipeMatcher(tx.bridgeCallData));
       if (enteringRecipe) {
         if (enteringRecipe.isAsync) {

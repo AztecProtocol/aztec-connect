@@ -17,7 +17,7 @@ export function useDefaultAuxDataOption(recipeId: string, isExit?: boolean) {
   const recipe = recipes.find(x => x.id === recipeId);
   const resolver = isExit ? recipe?.exitAuxDataResolver : recipe?.enterAuxDataResolver;
   const shouldFetchOpts = resolver?.type === 'bridge-data-select';
-  const opts = useMaybeObs(shouldFetchOpts ? auxDataPollerCache.get(recipeId)?.obs : undefined);
+  const opts = useMaybeObs(shouldFetchOpts ? auxDataPollerCache.get([recipeId, !!isExit])?.obs : undefined);
   if (!resolver) return;
   switch (resolver.type) {
     case 'bridge-data-select': {
@@ -35,14 +35,13 @@ export function useDefaultEnterBridgeCallData(recipe: DefiRecipe) {
   return useMemo(() => {
     const { bridgeAddressId, flow } = recipe;
     if (auxData === undefined) return undefined;
-    // TODO: use more complete bridge call data construction
     return new BridgeCallData(
       bridgeAddressId,
       flow.enter.inA.id,
       flow.enter.outA.id,
-      undefined,
-      undefined,
-      BigInt(auxData),
+      flow.enter.inB?.id,
+      flow.enter.outB?.id,
+      auxData,
     );
   }, [recipe, auxData]);
 }
@@ -53,15 +52,15 @@ function useBridgeMarket(recipeId: string, auxData?: bigint) {
   return useMaybeObs(poller?.obs);
 }
 
-function useLiquidity(recipeId: string, auxData?: bigint) {
+function useMarketSizeBulkPrice(recipeId: string, auxData?: bigint) {
   const market = useBridgeMarket(recipeId, auxData);
   const amount = useAmount(market?.[0]);
   return useAmountBulkPrice(amount);
 }
 
-export function useDefaultLiquidity(recipeId: string) {
+export function useDefaultMarketSizeBulkPrice(recipeId: string) {
   const auxData = useDefaultAuxDataOption(recipeId);
-  return useLiquidity(recipeId, auxData);
+  return useMarketSizeBulkPrice(recipeId, auxData);
 }
 
 export function useExpectedAssetYield(recipe: DefiRecipe) {

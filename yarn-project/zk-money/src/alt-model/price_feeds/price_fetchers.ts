@@ -78,18 +78,20 @@ export function createAssetPriceObs(
   switch (addressStr) {
     case S.yvDAI:
       return boundCreateUnderlyingAssetPriceObs(S.DAI, 'yearn-finance.DAI-to-yvDAI');
-    case S.yvETH:
-      return boundCreateUnderlyingAssetPriceObs(S.wETH, 'yearn-finance.ETH-to-yvETH');
+    case S.yvWETH:
+      return boundCreateUnderlyingAssetPriceObs(S.WETH, 'yearn-finance.ETH-to-yvETH');
     case S.weWETH:
-      return boundCreateUnderlyingAssetPriceObs(S.wETH, 'euler.ETH-to-weETH');
+      return boundCreateUnderlyingAssetPriceObs(S.WETH, 'euler.ETH-to-weETH');
     case S.weDAI:
       return boundCreateUnderlyingAssetPriceObs(S.DAI, 'euler.DAI-to-weDAI');
     case S.wewstETH:
       return boundCreateUnderlyingAssetPriceObs(S.wstETH, 'euler.wstETH-to-wewstETH');
     case S.wa2WETH:
-      return boundCreateUnderlyingAssetPriceObs(S.wETH, 'aave.ETH-to-wa2ETH');
+      return boundCreateUnderlyingAssetPriceObs(S.WETH, 'aave.ETH-to-wa2ETH');
     case S.wa2DAI:
       return boundCreateUnderlyingAssetPriceObs(S.DAI, 'aave.DAI-to-wa2DAI');
+    case S.wcDAI:
+      return boundCreateUnderlyingAssetPriceObs(S.DAI, 'compound.DAI-to-weETH');
     case S.wstETH:
       return createWstEthPriceObs(provider, chainLinkPollerCache);
     default:

@@ -50,8 +50,10 @@ export function DefiModal({ recipe, flowDirection, onClose }: DefiModalProps) {
       />
     ) : (
       <Page1
+        flowDirection={flowDirection}
         recipe={recipe}
         fields={fields}
+        onChangeAuxDataCustomisationState={setters.auxDataCustomisationState}
         onChangeAmountStrOrMax={setters.amountStrOrMax}
         onChangeSpeed={setters.speed}
         feedback={feedback}

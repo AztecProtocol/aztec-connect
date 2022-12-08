@@ -1,10 +1,11 @@
 import type { DefiRecipe } from '../../alt-model/defi/types.js';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { TokenList } from './token_list.js';
 import { DefiInvestments } from '../../components/defi_investments/index.js';
 import { useBalances } from '../../alt-model/index.js';
 import { useOpenPositions } from '../../alt-model/defi/open_position_hooks.js';
 import { Toggle } from '../../ui-components/index.js';
+import { useHiddenAssets } from '../../alt-model/defi/hidden_asset_hooks.js';
 import style from './holdings_list.module.scss';
 
 const VIEWS = [
@@ -22,7 +23,12 @@ interface HoldingsListProps {
 
 export function HoldingsList(props: HoldingsListProps) {
   const [view, setView] = useState<View>('tokens');
-  const balances = useBalances();
+  const allBalances = useBalances();
+  const hiddenAssets = useHiddenAssets();
+  const shownBalances = useMemo(
+    () => allBalances?.filter(assetValue => !hiddenAssets.some(hiddenAsset => hiddenAsset.id === assetValue.assetId)),
+    [allBalances, hiddenAssets],
+  );
   const positions = useOpenPositions();
 
   return (
@@ -33,7 +39,7 @@ export function HoldingsList(props: HoldingsListProps) {
       <>
         {view === 'tokens' ? (
           <TokenList
-            balances={balances}
+            balances={shownBalances}
             onOpenShieldModal={props.onOpenShieldModal}
             onOpenSendModal={props.onOpenSendModal}
           />

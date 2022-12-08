@@ -32,6 +32,10 @@ export function getL1DepositAmountInputFeedback(
     })} from your L1 balance for paying the transaction fee.`;
   }
   if (issues.beyondTransactionLimit) {
+    if (!resources.transactionLimit) {
+      console.error('Could not format transaction limit message');
+      return 'Beyind transaction limit';
+    }
     const txLimitAmount = info.targetL2OutputAmount.withBaseUnits(resources.transactionLimit);
     return `Transactions are capped at ${txLimitAmount?.format()}`;
   }
@@ -55,7 +59,7 @@ export function getL1DepositAmountInputFeedback(
     })} available.`;
   }
   if (issues.precisionIsTooHigh) {
-    const digits = getAssetPreferredFractionalDigits(resources.depositAsset.address);
+    const digits = getAssetPreferredFractionalDigits(resources.depositAsset.label);
     return `Please enter no more than ${digits} decimal places.`;
   }
 }

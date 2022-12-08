@@ -1,19 +1,18 @@
 import yearnLogo from '../../../images/yearn_logo.svg';
 import yearnGradientLogo from '../../../images/yearn_gradient.svg';
-import { createYearnAdaptor } from '../bridge_data_adaptors/yearn_adaptor.js';
-import { KNOWN_MAINNET_ASSET_ADDRESSES as KMAA } from '../../../alt-model/known_assets/known_asset_addresses.js';
 import { CreateRecipeArgs } from '../types.js';
 import { keyStatConfig_apr, keyStatConfig_liquidity, keyStatConfig_averageWait } from '../key_stat_configs.js';
 import { bindInteractionPredictionHook_expectedOutput } from '../interaction_prediction_configs.js';
 import { useVariableAprText } from '../position_key_stat_configs.js';
 import { createDefiPublishStatsCacheArgsBuilder } from '../defi_publish_stats_utils.js';
+import { createSimpleSwapFlowBinding } from '../flow_configs.js';
+import { YearnBridgeData } from '../../../bridge-clients/client/yearn/yearn-bridge-data.js';
 
 export const YEARN_ETH_CARD: CreateRecipeArgs = {
   id: 'yearn-finance.ETH-to-yvETH',
-  openHandleAssetAddress: KMAA.yvETH,
-  entryInputAssetAddressA: KMAA.ETH,
-  entryOutputAssetAddressA: KMAA.yvETH,
-  createAdaptor: createYearnAdaptor,
+  openHandleAssetBinding: 'yvWETH',
+  flowBindings: createSimpleSwapFlowBinding('Eth', 'yvWETH'),
+  createAdaptor: ({ provider, rollupContractAddress }) => YearnBridgeData.create(provider, rollupContractAddress),
   projectName: 'Yearn Finance',
   gradient: ['#7A9CC6', '#7A9CC6'],
   website: 'https://yearn.finance/',
@@ -26,8 +25,10 @@ export const YEARN_ETH_CARD: CreateRecipeArgs = {
   miniLogo: yearnGradientLogo,
   cardTag: 'Yield',
   cardButtonLabel: 'Earn',
-  selectBlockchainBridge: ({ bridges }) => bridges.find(x => x.id === 7),
-  selectExitBlockchainBridge: ({ bridges }) => bridges.find(x => x.id === 8),
+  exitButtonLabel: 'Claim & Exit',
+  showExchangeRate: true,
+  bridgeBinding: 'YearnBridgeDeposit_200K',
+  exitBridgeBinding: 'YearnBridgeWithdraw_800K',
   enterAuxDataResolver: { type: 'static', value: 0n },
   exitAuxDataResolver: { type: 'static', value: 1n },
   keyStats: {
@@ -38,10 +39,12 @@ export const YEARN_ETH_CARD: CreateRecipeArgs = {
   useEnterInteractionPredictionInfo: bindInteractionPredictionHook_expectedOutput({
     direction: 'enter',
     showUnderlying: true,
+    outputSelection: 'A',
   }),
   useExitInteractionPredictionInfo: bindInteractionPredictionHook_expectedOutput({
     direction: 'exit',
     showUnderlying: false,
+    outputSelection: 'A',
   }),
   positionKeyStat: {
     type: 'closable',
@@ -55,9 +58,8 @@ export const YEARN_ETH_CARD: CreateRecipeArgs = {
 export const YEARN_DAI_CARD: CreateRecipeArgs = {
   ...YEARN_ETH_CARD,
   id: 'yearn-finance.DAI-to-yvDAI',
-  openHandleAssetAddress: KMAA.yvDAI,
-  entryInputAssetAddressA: KMAA.DAI,
-  entryOutputAssetAddressA: KMAA.yvDAI,
+  openHandleAssetBinding: 'yvDAI',
+  flowBindings: createSimpleSwapFlowBinding('DAI', 'yvDAI'),
   shortDesc: `Deposit DAI into Yearn's vault to easily generate yield with a passive investing strategy.`,
   longDescription:
     'Depositing into the Yearn vault, pools the capital and uses the Yearn strategies to automate yield generation and rebalancing. Your position is represented with yvDAI.',

@@ -105,7 +105,7 @@ export class WalletProvider implements EthereumProvider {
 
   private async signTypedData(args: RequestArguments) {
     const [from, data] = args.params!;
-    const { types, domain, message } = JSON.parse(data);
+    const { types, domain, message } = typeof data === 'string' ? JSON.parse(data) : data;
     const account = this.accounts.find(a => a.address.toLowerCase() === from.toLowerCase());
     if (account) {
       delete types.EIP712Domain;

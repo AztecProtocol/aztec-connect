@@ -21,13 +21,13 @@ export function createBridgeDataAdaptorCache(
       debug("No bridge found for recipe's enter address.");
       return undefined;
     }
-    const falafelGraphQlEndpoint = `${config.rollupProviderUrl}/graphql`;
-    return recipe.createAdaptor(
-      new EthersAdapter(provider),
-      rollupContractAddress.toString(),
-      blockchainBridge.address.toString(),
-      falafelGraphQlEndpoint,
-    );
+    return recipe.createAdaptor({
+      provider: new EthersAdapter(provider),
+      rollupContractAddress,
+      bridgeAddressId: blockchainBridge.id,
+      bridgeContractAddress: blockchainBridge.address,
+      rollupProviderUrl: config.rollupProviderUrl,
+    });
   });
 }
 

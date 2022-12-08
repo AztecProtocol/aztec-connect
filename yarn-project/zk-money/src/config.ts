@@ -1,22 +1,22 @@
 import { SDK_VERSION, getRollupProviderStatus } from '@aztec/sdk';
-import { KNOWN_MAINNET_ASSET_ADDRESS_STRS as S } from './alt-model/known_assets/known_asset_addresses.js';
+import { AssetLabel } from './alt-model/known_assets/known_asset_display_data.js';
 import { toBaseUnits } from './app/units.js';
 
 export interface Config {
+  deployTag: string;
   hostedSdkUrl: string;
   rollupProviderUrl: string;
   explorerUrl: string;
   chainId: number;
   ethereumHost: string;
   mainnetEthereumHost: string;
-  txAmountLimits: Record<string, bigint>;
+  txAmountLimits: Record<AssetLabel, bigint>;
   sessionTimeout: number;
   debugFilter: string;
 }
 
 interface ConfigVars {
   deployTag: string;
-  txAmountLimits: string;
   sessionTimeout: string;
   debugFilter: string;
 }
@@ -33,33 +33,18 @@ const removeEmptyValues = (vars: ConfigVars): Partial<ConfigVars> => {
 
 const fromLocalStorage = (): ConfigVars => ({
   deployTag: localStorage.getItem('zm_deployTag') || '',
-  txAmountLimits: localStorage.getItem('zm_txAmountLimit') || '',
   sessionTimeout: localStorage.getItem('zm_sessionTimeout') || '',
   debugFilter: localStorage.getItem('zm_debug') ?? '',
 });
 
 const fromEnvVars = (): ConfigVars => ({
   deployTag: process.env.REACT_APP_DEPLOY_TAG || '',
-  txAmountLimits: process.env.REACT_APP_TX_AMOUNT_LIMIT || '',
   sessionTimeout: process.env.REACT_APP_SESSION_TIMEOUT || '',
   debugFilter: process.env.REACT_APP_DEBUG ?? '',
 });
 
 const productionConfig: ConfigVars = {
   deployTag: '',
-  txAmountLimits: JSON.stringify([
-    `${toBaseUnits('5', 18)}`, // 5 ETH
-    `${toBaseUnits('10000', 18)}`, // 10,000 DAI
-    `${toBaseUnits('1', 8)}`, // 1 renBTC
-    `${toBaseUnits('6', 18)}`, // 6 wstETH
-    `${toBaseUnits('5', 18)}`, // 5 yvETH
-    `${toBaseUnits('10000', 18)}`, // 10,000 yvDAI
-    `${toBaseUnits('5', 18)}`, // 5 weWETH
-    `${toBaseUnits('6', 18)}`, // 6 wewstETH
-    `${toBaseUnits('10000', 18)}`, // 10,000 weDAI
-    `${toBaseUnits('5', 18)}`, // 5 wa2WETH
-    `${toBaseUnits('12000', 18)}`, // 12,000 wa2DAI
-  ]),
   sessionTimeout: '30', // days
   debugFilter: 'zm:*,bb:*',
 };
@@ -105,13 +90,13 @@ function getDeployConfig(deployTag: string, rollupProviderUrl: string, chainId: 
 
     const ethereumHost = getEthereumHost(chainId);
     const mainnetEthereumHost = getEthereumHost(1);
-    return { hostedSdkUrl, rollupProviderUrl, explorerUrl, chainId, ethereumHost, mainnetEthereumHost };
+    return { deployTag, hostedSdkUrl, rollupProviderUrl, explorerUrl, chainId, ethereumHost, mainnetEthereumHost };
   } else {
     const hostedSdkUrl = `${window.location.protocol}//${window.location.hostname}:1234`;
     const explorerUrl = `${window.location.protocol}//${window.location.hostname}:3000`;
     const ethereumHost = `${window.location.protocol}//${window.location.hostname}:8545`;
     const mainnetEthereumHost = getEthereumHost(1);
-    return { hostedSdkUrl, rollupProviderUrl, explorerUrl, chainId, ethereumHost, mainnetEthereumHost };
+    return { deployTag, hostedSdkUrl, rollupProviderUrl, explorerUrl, chainId, ethereumHost, mainnetEthereumHost };
   }
 }
 
@@ -129,23 +114,27 @@ function assembleConfig(
   rawConfig: ReturnType<typeof getRawConfigWithOverrides>,
   deployConfig: ReturnType<typeof getDeployConfig>,
 ): Config {
-  const { txAmountLimits: txAmountLimitsStr, sessionTimeout, debugFilter } = rawConfig;
-  const txAmountLimits = JSON.parse(txAmountLimitsStr);
+  const { sessionTimeout, debugFilter } = rawConfig;
 
   return {
     ...deployConfig,
     txAmountLimits: {
-      [S.ETH]: BigInt(txAmountLimits[0]),
-      [S.DAI]: BigInt(txAmountLimits[1]),
-      [S.renBTC]: BigInt(txAmountLimits[2]),
-      [S.wstETH]: BigInt(txAmountLimits[3]),
-      [S.yvETH]: BigInt(txAmountLimits[4]),
-      [S.yvDAI]: BigInt(txAmountLimits[5]),
-      [S.weWETH]: BigInt(txAmountLimits[6]),
-      [S.wewstETH]: BigInt(txAmountLimits[7]),
-      [S.weDAI]: BigInt(txAmountLimits[8]),
-      [S.wa2WETH]: BigInt(txAmountLimits[9]),
-      [S.wa2DAI]: BigInt(txAmountLimits[10]),
+      Eth: toBaseUnits('5', 18),
+      WETH: 0n, // unused
+      DAI: toBaseUnits('10000', 18),
+      wstETH: toBaseUnits('6', 18),
+      stETH: 0n, // unused
+      yvWETH: toBaseUnits('5', 18),
+      yvDAI: toBaseUnits('10000', 18),
+      weWETH: toBaseUnits('5', 18),
+      wewstETH: toBaseUnits('6', 18),
+      weDAI: toBaseUnits('10000', 18),
+      wa2WETH: toBaseUnits('5', 18),
+      wa2DAI: toBaseUnits('12000', 18),
+      LUSD: toBaseUnits('10000', 18),
+      'TB-275': toBaseUnits('10000', 18),
+      'TB-400': toBaseUnits('10000', 18),
+      wcDAI: toBaseUnits('10000', 18),
     },
     sessionTimeout: +(sessionTimeout || 1),
     debugFilter,

@@ -54,13 +54,13 @@ describe('user state', () => {
 
   const createEphemeralKeyPair = () => {
     const ephPrivKey = grumpkin.getRandomFr();
-    const ephPubKey = new GrumpkinAddress(grumpkin.mul(Grumpkin.one, ephPrivKey));
+    const ephPubKey = new GrumpkinAddress(grumpkin.mul(Grumpkin.generator, ephPrivKey));
     return { ephPrivKey, ephPubKey };
   };
 
   const createUser = () => {
     const accountPrivateKey = randomBytes(32);
-    const accountPublicKey = new GrumpkinAddress(grumpkin.mul(Grumpkin.one, accountPrivateKey));
+    const accountPublicKey = new GrumpkinAddress(grumpkin.mul(Grumpkin.generator, accountPrivateKey));
     return {
       accountPrivateKey,
       accountPublicKey,

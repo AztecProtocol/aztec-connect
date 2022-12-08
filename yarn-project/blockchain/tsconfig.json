@@ -6,7 +6,6 @@
     "outDir": "dest",
     "strict": true,
     "noImplicitAny": true,
-    "noUnusedLocals": true,
     "noImplicitThis": false,
     "esModuleInterop": true,
     "declaration": true,
@@ -22,7 +21,26 @@
   "include": [
     "src",
     "src/abis/mocks/*.json",
-    "src/abis/contracts/*/*.json",
+    "src/abis/bridges/*/*.json",
+    "src/abis/contracts/ERC20Permit.sol/ERC20Permit.json",
+    "src/abis/contracts/IDefiBridge.sol/IDefiBridge.json",
+    "src/abis/contracts/DefiBridgeProxy.sol/DefiBridgeProxy.json",
+    "src/abis/contracts/AztecFeeDistributor.sol/AztecFeeDistributor.json",
+    "src/abis/contracts/RollupProcessor.sol/RollupProcessor.json",
+    "src/abis/contracts/RollupProcessorV2.sol/RollupProcessorV2.json",
+    "src/abis/contracts/AlwaysTrueVerifier.sol/AlwaysTrueVerifier.json",
+    "src/abis/contracts/MockVerifier.sol/MockVerifier.json",
+    "src/abis/contracts/Verifier1x1.sol/Verifier1x1.json",
+    "src/abis/contracts/Verifier28x32.sol/Verifier28x32.json",
+    "src/abis/contracts/ProxyDeployer.sol/ProxyDeployer.json",
+    "src/abis/contracts/ProxyAdmin.sol/ProxyAdmin.json",
+    "src/abis/contracts/TransparentUpgradeableProxy.sol/TransparentUpgradeableProxy.json",
+    "src/abis/contracts/PermitHelper.sol/PermitHelper.json",
+    "src/abis/contracts/AztecFaucet.sol/AztecFaucet.json",
+    "src/abis/contracts/AsyncBridge.sol/AsyncBridge.json",
+    "src/abis/contracts/SyncBridge.sol/SyncBridge.json",
+    "src/abis/contracts/ERC20Mintable.sol/ERC20Mintable.json"
   ],
+
   "files": ["./hardhat.config.ts"]
 }

@@ -1,7 +1,5 @@
 import dcaLogo from '../../../images/dca_logo.png';
 import dcaMiniLogo from '../../../images/dca_mini_logo.png';
-import { createDcaAdaptor } from '../bridge_data_adaptors/dca_adaptor.js';
-import { KNOWN_MAINNET_ASSET_ADDRESSES as KMAA } from '../../../alt-model/known_assets/known_asset_addresses.js';
 import { CreateRecipeArgs } from '../types.js';
 import { keyStatConfig_averageWait } from '../key_stat_configs.js';
 import { useChainLinkPollerCache } from '../../../alt-model/top_level_context/index.js';
@@ -10,14 +8,17 @@ import { useMaybeObs } from '../../../app/util/index.js';
 import { formatBaseUnits } from '../../../app/index.js';
 import { Amount } from '../../../alt-model/assets/index.js';
 import { createDefiPublishStatsCacheArgsBuilder } from '../defi_publish_stats_utils.js';
+import { DCABridgeData } from '../../../bridge-clients/client/dca/dca-bridge-data.js';
 
 export const SEVEN_DAY_DCA_CARD_DAI_TO_ETH: CreateRecipeArgs = {
   id: 'seven-day-dca.DAI-to-ETH',
   isAsync: true,
-  selectBlockchainBridge: ({ bridges }) => bridges.find(x => x.id === 11),
-  entryInputAssetAddressA: KMAA.DAI,
-  entryOutputAssetAddressA: KMAA.ETH,
-  createAdaptor: createDcaAdaptor,
+  bridgeBinding: 'DCA_400K',
+  flowBindings: {
+    type: 'async',
+    enter: { inA: 'DAI', outA: 'Eth', inDisplayed: 'DAI', outDisplayed: 'Eth' },
+  },
+  createAdaptor: ({ provider, bridgeContractAddress }) => DCABridgeData.create(provider, bridgeContractAddress),
   enterAuxDataResolver: {
     type: 'static',
     value: 7n, // Duration in ticks (days)
@@ -66,7 +67,13 @@ export const SEVEN_DAY_DCA_CARD_DAI_TO_ETH: CreateRecipeArgs = {
   },
   getAsyncResolutionDate: tx => {
     if (!tx.settled) return;
-    return tx.settled?.getTime() + SEVEN_DAYS_MS;
+    const startOfFollowingDayOneWeekLater = new Date(0);
+    startOfFollowingDayOneWeekLater.setFullYear(
+      tx.settled.getFullYear(),
+      tx.settled.getMonth(),
+      tx.settled.getDate() + 8,
+    );
+    return startOfFollowingDayOneWeekLater;
   },
   getDefiPublishStatsCacheArgs: createDefiPublishStatsCacheArgsBuilder({ ignoreAuxData: false }),
 };
@@ -74,8 +81,10 @@ export const SEVEN_DAY_DCA_CARD_DAI_TO_ETH: CreateRecipeArgs = {
 export const SEVEN_DAY_DCA_CARD_ETH_TO_DAI: CreateRecipeArgs = {
   ...SEVEN_DAY_DCA_CARD_DAI_TO_ETH,
   id: 'seven-day-dca.ETH-to-DAI',
-  entryInputAssetAddressA: KMAA.ETH,
-  entryOutputAssetAddressA: KMAA.DAI,
+  flowBindings: {
+    type: 'async',
+    enter: { inA: 'Eth', outA: 'DAI', inDisplayed: 'Eth', outDisplayed: 'DAI' },
+  },
   shortDesc: 'Dollar-Cost Averaging: Automate DAI purchases to smooth out short-term price movements.',
   longDescription:
     "Your ETH deposit is divided across 7 daily ETH to DAI swaps, purchasing more DAI when the price of ETH is high and less DAI when the price of ETH is low. The contract's pool uses external trades and uniswap as a fallbacks.",
@@ -105,8 +114,6 @@ export const SEVEN_DAY_DCA_CARD_ETH_TO_DAI: CreateRecipeArgs = {
     };
   },
 };
-
-const SEVEN_DAYS_MS = 1000 * 60 * 60 * 24 * 7;
 
 function formatDai_2dp(baseUnits: bigint) {
   return formatBaseUnits(baseUnits, 18, { precision: 2, commaSeparated: true });

@@ -11,7 +11,6 @@ import {
   deployRollupProcessor,
   deployVerifier,
   deployAztecFaucet,
-  deployAceOfZk,
   deployMockDataProvider,
 } from './deployers/index.js';
 
@@ -41,13 +40,15 @@ export async function deployMainnet(
   faucetOperator?: EthAddress,
   rollupProvider?: EthAddress,
 ) {
+  const signerAddress = await signer.getAddress();
+  console.log(`Deployment signer address: ${signerAddress}`);
   const verifier = await deployVerifier(signer, vk);
   const defiProxy = await deployDefiBridgeProxy(signer);
   const { rollup, proxyAdmin, permitHelper } = await deployRollupProcessor(
     signer,
     verifier,
     defiProxy,
-    await signer.getAddress(),
+    signerAddress,
     escapeBlockLower,
     escapeBlockUpper,
     roots.dataRoot,
@@ -55,13 +56,21 @@ export async function deployMainnet(
     roots.rootsRoot,
     dataTreeSize,
     false,
-    false,
+    true,
   );
   const feeDistributor = await deployFeeDistributor(signer, rollup, UNISWAP_ROUTER_ADDRESS);
 
-  await rollup.setRollupProvider(rollupProvider ? rollupProvider.toString() : await signer.getAddress(), true, {
+  await rollup.setRollupProvider(rollupProvider ? rollupProvider.toString() : signerAddress, true, {
     gasLimit,
   });
+
+  const MULTI_SIG_ADDRESS = (await signer.getChainId()) == 1 ? MAIN_MULTI_SIG_ADDRESS : DEV_NET_TEMP_MULTI_SIG_ADDRESS;
+  // Grant roles to multisig wallets
+  await rollup.grantRole(DEFAULT_ADMIN_ROLE, MULTI_SIG_ADDRESS, { gasLimit });
+  await rollup.grantRole(OWNER_ROLE, MULTI_SIG_ADDRESS, { gasLimit });
+  await rollup.grantRole(LISTER_ROLE, MULTI_SIG_ADDRESS, { gasLimit });
+  await rollup.grantRole(LISTER_ROLE, await signer.getAddress(), { gasLimit });
+  await rollup.grantRole(EMERGENCY_ROLE, EMERGENCY_MULTI_SIG_ADDRESS, { gasLimit });
 
   await rollup.setSupportedAsset(DAI_ADDRESS, 55_000, { gasLimit });
   await permitHelper.preApprove(DAI_ADDRESS, { gasLimit });
@@ -71,16 +80,12 @@ export async function deployMainnet(
   const expiryCutOff = new Date('01 Sept 2022 00:00:00 GMT');
   const elementBridge = await deployElementBridge(signer, rollup, ['dai'], expiryCutOff);
   const lidoBridge = await deployLidoBridge(signer, rollup, LIDO_REFERRAL_ADDRESS);
-  const zkBridge = await deployAceOfZk(signer, rollup);
   const curveBridge = await deployCurveBridge(signer, rollup);
 
   const bridgeDataProvider = await deployMockDataProvider(signer);
   await bridgeDataProvider.setBridgeData(1, elementBridge.address, 50000, 'Element Bridge');
   await bridgeDataProvider.setBridgeData(2, lidoBridge.address, 50000, 'Lido Bridge');
-  await bridgeDataProvider.setBridgeData(3, zkBridge.address, 50000, 'Ace of ZK Bridge');
-  await bridgeDataProvider.setBridgeData(4, curveBridge.address, 50000, 'Curve Bridge');
-
-  const MULTI_SIG_ADDRESS = (await signer.getChainId()) == 1 ? MAIN_MULTI_SIG_ADDRESS : DEV_NET_TEMP_MULTI_SIG_ADDRESS;
+  await bridgeDataProvider.setBridgeData(3, curveBridge.address, 50000, 'Curve Bridge');
 
   // Transfers ownership of the permitHelper to the multisig
   await permitHelper.transferOwnership(MULTI_SIG_ADDRESS, { gasLimit });
@@ -90,14 +95,9 @@ export async function deployMainnet(
 
   const priceFeeds = [FAST_GAS_PRICE_FEED_ADDRESS, DAI_PRICE_FEED_ADDRESS];
 
-  // Grant roles to multisig wallets
-  await rollup.grantRole(DEFAULT_ADMIN_ROLE, MULTI_SIG_ADDRESS, { gasLimit });
-  await rollup.grantRole(OWNER_ROLE, MULTI_SIG_ADDRESS, { gasLimit });
-  await rollup.grantRole(LISTER_ROLE, MULTI_SIG_ADDRESS, { gasLimit });
-  await rollup.grantRole(EMERGENCY_ROLE, EMERGENCY_MULTI_SIG_ADDRESS, { gasLimit });
-
   // Revoke roles from the deployer
   await rollup.revokeRole(EMERGENCY_ROLE, await signer.getAddress(), { gasLimit });
+  await rollup.revokeRole(LISTER_ROLE, await signer.getAddress(), { gasLimit });
   await rollup.revokeRole(OWNER_ROLE, await signer.getAddress(), { gasLimit });
 
   // TODO: Revoking of the default admin role should be done manually with the multi-sig to ensure correct setup

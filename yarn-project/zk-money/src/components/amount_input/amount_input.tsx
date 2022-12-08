@@ -14,7 +14,7 @@ function formatMaxAmount(maxAmount: bigint, asset: RemoteAsset) {
     return '0';
   }
   return formatBaseUnits(maxAmount, asset.decimals, {
-    precision: getAssetPreferredFractionalDigits(asset.address),
+    precision: getAssetPreferredFractionalDigits(asset.label),
     floor: true,
   });
 }

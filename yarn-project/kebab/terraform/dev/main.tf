@@ -111,7 +111,7 @@ resource "aws_ecs_task_definition" "kebab" {
     "name": "${var.DEPLOY_TAG}-mainnet-fork",
     "image": "trufflesuite/ganache",
     "essential": true,
-    "command": ["-p=8545", "-f=https://mainnet.infura.io/v3/${var.INFURA_API_KEY}", "--chain.chainId=0xDEF", "--fork.blockNumber=15918000", "--database.dbPath=/data", "-h=0.0.0.0", "-l=12000000", "-a=0"],
+    "command": ["-p=8545", "-f=https://mainnet.infura.io/v3/${var.TEST_INFURA_API_KEY}", "--chain.chainId=0xDEF", "--fork.blockNumber=15918000", "--database.dbPath=/data", "-h=0.0.0.0", "-l=12000000", "-a=0"],
     "mountPoints": [
       {
         "containerPath": "/data",
@@ -148,7 +148,7 @@ resource "aws_ecs_task_definition" "kebab" {
       },
       {
         "name": "ETHEREUM_HOST",
-        "value": "http://localhost:8545"
+        "value": "${var.DEV_NET_RPC_URL}"
       },
       {
         "name": "FAUCET_OPERATOR",

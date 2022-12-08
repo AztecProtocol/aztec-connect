@@ -1,13 +1,9 @@
-import type {
-  AssetValue,
-  BlockchainBridge,
-  BlockchainStatus,
-  BridgeCallData,
-  EthAddress,
-  UserDefiTx,
-} from '@aztec/sdk';
+import type { AssetValue, BridgeCallData, EthAddress, UserDefiTx } from '@aztec/sdk';
+import React from 'react';
 import type { RemoteAsset } from '../../alt-model/types.js';
+import { RegisteredAssetLabel, RegisteredBridgeLabel } from '../registrations_data/index.js';
 import type { BridgeDataAdaptorCreator } from './bridge_data_adaptors/types.js';
+import { DefiPosition_Interactable } from './open_position_hooks.js';
 
 type FormattedRecipePropertyHook = (recipe: DefiRecipe) => string | undefined;
 
@@ -27,7 +23,10 @@ export interface BridgeInteraction {
   bridgeCallData: BridgeCallData;
   inputValue: bigint;
   inputAssetA: RemoteAsset;
+  inputAssetB?: RemoteAsset;
   outputAssetA: RemoteAsset;
+  outputAssetB?: RemoteAsset;
+  displayedOutputAsset: RemoteAsset;
 }
 
 export type InteractionPredictionInfo =
@@ -68,7 +67,11 @@ export type FlowDirection = 'enter' | 'exit';
 
 export interface BridgeInteractionAssets {
   inA: RemoteAsset;
+  inB?: RemoteAsset;
   outA: RemoteAsset;
+  outB?: RemoteAsset;
+  inDisplayed: RemoteAsset;
+  outDisplayed: RemoteAsset;
 }
 
 export type BridgeFlowAssets =
@@ -124,8 +127,10 @@ export interface DefiRecipe {
   miniLogo: string;
   cardTag: string;
   cardButtonLabel: string;
+  exitButtonLabel?: string;
   shortDesc: string;
   exitDesc?: string;
+  showExchangeRate?: boolean;
   longDescription: string;
   hideUnderlyingOnExit?: boolean;
   keyStats: KeyStatsConfig;
@@ -134,14 +139,47 @@ export interface DefiRecipe {
   positionKeyStat: PositionKeyStatConfig;
   getAsyncResolutionDate?: (tx: UserDefiTx) => number | Date | undefined;
   getDefiPublishStatsCacheArgs: (bridgeCallData: BridgeCallData) => DefiPublishStatsCacheArgs;
+  openHandleAssetHasDebtAndCollateral?: boolean;
+  renderCustomClosableValueField?: (position: DefiPosition_Interactable) => React.ReactNode;
+  renderExitAuxDataCustomiser?: (props: AuxDataCustomisationComponentProps) => React.ReactNode;
 }
+
+export interface AuxDataCustomisationState {
+  auxData: bigint | null;
+  loading: boolean;
+}
+
+export interface AuxDataCustomisationComponentProps {
+  recipe: DefiRecipe;
+  state: AuxDataCustomisationState;
+  onChangeState: (state: AuxDataCustomisationState) => void;
+}
+
+export interface BridgeInteractionAssetBindings {
+  inA: RegisteredAssetLabel;
+  inB?: RegisteredAssetLabel;
+  outA: RegisteredAssetLabel;
+  outB?: RegisteredAssetLabel;
+  inDisplayed: RegisteredAssetLabel;
+  outDisplayed: RegisteredAssetLabel;
+}
+
+export type BridgeFlowAssetBindings =
+  | {
+      type: 'async';
+      enter: BridgeInteractionAssetBindings;
+    }
+  | {
+      type: 'closable';
+      enter: BridgeInteractionAssetBindings;
+      exit: BridgeInteractionAssetBindings;
+    };
 
 export interface CreateRecipeArgs
   extends Omit<DefiRecipe, 'bridgeAddressId' | 'address' | 'flow' | 'valueEstimationInteractionAssets'> {
-  selectBlockchainBridge: (blockchainStatus: BlockchainStatus) => BlockchainBridge | undefined;
-  selectExitBlockchainBridge?: (blockchainStatus: BlockchainStatus) => BlockchainBridge | undefined;
+  bridgeBinding: RegisteredBridgeLabel;
+  exitBridgeBinding?: RegisteredBridgeLabel;
   isAsync?: boolean;
-  entryInputAssetAddressA: EthAddress;
-  entryOutputAssetAddressA: EthAddress;
-  openHandleAssetAddress?: EthAddress;
+  flowBindings: BridgeFlowAssetBindings;
+  openHandleAssetBinding?: RegisteredAssetLabel;
 }

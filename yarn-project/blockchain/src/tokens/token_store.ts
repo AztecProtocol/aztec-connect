@@ -1,28 +1,20 @@
-import { BigNumber, Contract, utils } from 'ethers';
+import { Contract } from 'ethers';
 import { Uniswap, addressesAreSame, fixEthersStackTrace } from './uniswap.js';
 import { getTokenBalance, approveToken, transferToken } from './index.js';
 import { MainnetAddresses } from './mainnet_addresses.js';
 import { EthereumProvider } from '@aztec/barretenberg/blockchain';
 import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress } from '@aztec/barretenberg/address';
-import { CurveStablePool, FactoryAbi, ProviderAbi, RegistryAbi, Zap, ERC20 } from '../abis.js';
-import { HardhatRpc } from '../ganache/hardhat_rpc.js';
-
-interface SlotInfo {
-  slot: bigint;
-  isVyper: boolean;
-}
+import { CurveStablePool, FactoryAbi, ProviderAbi, RegistryAbi, Zap } from '../abis.js';
 
 export class TokenStore {
   private providerContract?: Contract;
   private registryContract?: Contract;
   private factoryContract?: Contract;
   private ethersProvider: Web3Provider;
-  private hardhatRpc: HardhatRpc;
 
   private constructor(private provider: EthereumProvider) {
     this.ethersProvider = new Web3Provider(provider);
-    this.hardhatRpc = new HardhatRpc(provider);
   }
 
   private async init() {
@@ -217,61 +209,5 @@ export class TokenStore {
     } else {
       return await this.depositToStablePool(spender, recipient, outputToken, amountInMaximum);
     }
-  }
-
-  /**
-   * This function allows for setting balances of ERC20 tokens. To achieve that "hardhat_setStorageAt" RPC
-   * functionality is leveraged. This method is not compatible with non-hardhat nodes.
-   * @param tokenAddr Contract address of the token
-   * @param userAddr Address to set token balance to
-   * @param balance Amount of token to set
-   */
-  async setBalance(tokenAddr: EthAddress, userAddr: EthAddress, balance: bigint) {
-    const slotInfo = await this.findBalancesSlot(tokenAddr);
-
-    const userBalanceSlot = slotInfo.isVyper
-      ? BigInt(utils.keccak256(utils.defaultAbiCoder.encode(['uint', 'address'], [slotInfo.slot, userAddr.toString()])))
-      : BigInt(
-          utils.keccak256(utils.defaultAbiCoder.encode(['address', 'uint'], [userAddr.toString(), slotInfo.slot])),
-        );
-
-    const result = await this.hardhatRpc.setStorageAt(tokenAddr, userBalanceSlot, balance);
-    if (!result) {
-      throw new Error('Setting token balance failed');
-    }
-  }
-
-  /**
-   * This function finds a slot number of balances mapping and detects whether the token was implemented in Vyper.
-   * @param tokenAddr Address of a token on which balances slot is to be found
-   * @returns Balances slot number and a boolean indicating whether token was implemented in Vyper
-   */
-  private async findBalancesSlot(tokenAddr: EthAddress): Promise<SlotInfo> {
-    const token = new Contract(tokenAddr.toString(), ERC20.abi, this.ethersProvider);
-    const randomAddress = '0x8b359fb7a31620691dc153cddd9d463259bcf29b';
-    const probeValue = BigInt(356);
-
-    for (let i = BigInt(0); i < 100; i++) {
-      const userBalanceSlot = BigInt(
-        utils.keccak256(utils.defaultAbiCoder.encode(['address', 'uint'], [randomAddress, i])),
-      );
-      await this.hardhatRpc.setStorageAt(tokenAddr, userBalanceSlot, probeValue);
-      const balance: BigNumber = await token.balanceOf(randomAddress);
-      if (balance.eq(probeValue)) {
-        return { slot: i, isVyper: false };
-      }
-    }
-
-    for (let i = BigInt(0); i < 100; i++) {
-      const userBalanceSlot = BigInt(
-        utils.keccak256(utils.defaultAbiCoder.encode(['uint', 'address'], [i, randomAddress])),
-      );
-      await this.hardhatRpc.setStorageAt(tokenAddr, userBalanceSlot, probeValue);
-      const balance: BigNumber = await token.balanceOf(randomAddress);
-      if (balance.eq(probeValue)) {
-        return { slot: i, isVyper: true };
-      }
-    }
-    throw new Error('Balances slot not found');
   }
 }

@@ -16,8 +16,8 @@ function getAmountInputFeedback(result: DefiFormValidationResult, touched: boole
   }
   if (result.insufficientTargetAssetBalance) {
     const required = result.requiredInputInTargetAssetCoveringCosts;
-    const balance = result.input.balanceInTargetAsset;
-    const asset = result.input.depositAsset;
+    const balance = result.input.balanceInDisplayedInputAsset;
+    const asset = result.input.displayedInputAsset;
     const requiredAmount = asset && required !== undefined ? new Amount(required, asset) : undefined;
     const balanceAmount = asset && balance !== undefined ? new Amount(balance, asset) : undefined;
     if (!requiredAmount || !balanceAmount) {
@@ -31,7 +31,7 @@ function getAmountInputFeedback(result: DefiFormValidationResult, touched: boole
     }
   }
   if (result.precisionIsTooHigh) {
-    const digits = getAssetPreferredFractionalDigits(result.input.depositAsset.address);
+    const digits = getAssetPreferredFractionalDigits(result.input.displayedInputAsset.label);
     return `Please enter no more than ${digits} decimal places.`;
   }
 }
@@ -42,6 +42,9 @@ function getFooterFeedback(result: DefiFormValidationResult) {
     return `You do not have enough zk${fee?.info.symbol} to pay the fee. Please shield at least ${fee?.format({
       layer: 'L1',
     })}.`;
+  }
+  if (result.cannotBatchForCustomAuxData) {
+    return 'No batches exist for this setting. Either pay for a faster transaction or clear any customised settings under ⚙.';
   }
 }
 

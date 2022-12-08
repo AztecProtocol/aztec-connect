@@ -10,7 +10,7 @@ import { DefiComposer } from './defi_composer.js';
 import { useMaybeObs } from '../../../app/util/index.js';
 import { useDefiFeeAmounts } from './defi_fee_hooks.js';
 import { useAwaitCorrectProvider } from './correct_provider_hooks.js';
-import { BridgeInteractionAssets, DefiRecipe, FlowDirection } from '../types.js';
+import { AuxDataCustomisationState, BridgeInteractionAssets, DefiRecipe, FlowDirection } from '../types.js';
 import { useDefaultAuxDataOption } from '../defi_info_hooks.js';
 import { MAX_MODE } from '../../../alt-model/forms/constants.js';
 import { useRollupProviderStatus, useRollupProviderStatusPoller } from '../../../alt-model/rollup_provider_hooks.js';
@@ -37,22 +37,28 @@ function getInteractionAssets(recipe: DefiRecipe, mode: FlowDirection) {
 
 function useDefiFormBridgeCallData(
   recipe: DefiRecipe,
-  direction: FlowDirection,
-  { inA, outA }: BridgeInteractionAssets,
+  isExit: boolean,
+  { inA, inB, outA, outB }: BridgeInteractionAssets,
+  auxData: bigint | undefined,
 ) {
-  const isExit = direction === 'exit';
-  const auxData = useDefaultAuxDataOption(recipe.id, isExit);
   const bridgeAddressId = isExit ? recipe.exitBridgeAddressId ?? recipe.bridgeAddressId : recipe.bridgeAddressId;
   return useMemo(() => {
     if (auxData === undefined) return undefined;
-    return new BridgeCallData(bridgeAddressId, inA.id, outA.id, undefined, undefined, BigInt(auxData));
-  }, [auxData, bridgeAddressId, inA, outA]);
+    return new BridgeCallData(bridgeAddressId, inA.id, outA.id, inB?.id, outB?.id, auxData);
+  }, [auxData, bridgeAddressId, inA, inB, outA, outB]);
+}
+
+function selectAuxData(defaultAuxData: bigint | undefined, auxDataCustomisationState: AuxDataCustomisationState) {
+  if (auxDataCustomisationState.auxData !== null) return auxDataCustomisationState.auxData;
+  if (auxDataCustomisationState.loading) return undefined;
+  return defaultAuxData;
 }
 
 export function useDefiForm(recipe: DefiRecipe, direction: FlowDirection) {
   const [fields, setFields] = useState<DefiFormFields>({
     amountStrOrMax: direction === 'exit' ? MAX_MODE : '',
     speed: DefiSettlementTime.DEADLINE,
+    auxDataCustomisationState: { auxData: null, loading: false },
   });
   const [touchedFields, setters] = useTrackedFieldChangeHandlers(fields, setFields);
   const [attemptedLock, setAttemptedLock] = useState(false);
@@ -65,30 +71,34 @@ export function useDefiForm(recipe: DefiRecipe, direction: FlowDirection) {
   const awaitCorrectSigner = useAwaitCorrectProvider();
   const amountFactory = useAmountFactory();
   const interactionAssets = getInteractionAssets(recipe, direction);
-  const depositAsset = interactionAssets.inA;
-  const bridgeCallData = useDefiFormBridgeCallData(recipe, direction, interactionAssets);
+  const displayedInputAsset = interactionAssets.inDisplayed;
+  const isExit = direction === 'exit';
+  const defaultAuxData = useDefaultAuxDataOption(recipe.id, isExit);
+  const auxData = selectAuxData(defaultAuxData, fields.auxDataCustomisationState);
+  const auxDataIsCustomised = defaultAuxData !== auxData;
+  const bridgeCallData = useDefiFormBridgeCallData(recipe, isExit, interactionAssets, auxData);
   const maxChainableDefiDeposit = useMaxDefiValue(bridgeCallData, fields.speed);
   const uncheckedTargetValue =
     fields.amountStrOrMax === MAX_MODE
       ? maxChainableDefiDeposit
-      : Amount.from(fields.amountStrOrMax, depositAsset).toAssetValue();
+      : Amount.from(fields.amountStrOrMax, displayedInputAsset).toAssetValue();
   const feeAmounts = useDefiFeeAmounts(bridgeCallData, uncheckedTargetValue);
   const feeAmount = feeAmounts?.[fields.speed];
-  const balanceInTargetAsset = useMaxSpendableValue(depositAsset.id);
+  const balanceInDisplayedInputAsset = useMaxSpendableValue(displayedInputAsset.id);
   const balanceInFeePayingAsset = useMaxSpendableValue(feeAmount?.id);
-  const targetAssetAddressStr = depositAsset.address.toString();
-  const transactionLimit = config.txAmountLimits[targetAssetAddressStr];
+  const transactionLimit = displayedInputAsset.label && config.txAmountLimits[displayedInputAsset.label];
   const validationResult = validateDefiForm({
     fields,
     amountFactory,
-    depositAsset,
+    displayedInputAsset,
     feeAmount,
     feeAmounts,
-    balanceInTargetAsset,
+    balanceInDisplayedInputAsset,
     balanceInFeePayingAsset,
     transactionLimit,
     maxChainableDefiDeposit,
     bridgeCallData,
+    auxDataIsCustomised,
   });
 
   const feedback = getDefiFormFeedback(validationResult, touchedFields, attemptedLock);

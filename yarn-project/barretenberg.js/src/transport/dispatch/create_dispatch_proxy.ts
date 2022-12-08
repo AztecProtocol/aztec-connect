@@ -38,28 +38,40 @@ type Transferrable<Base extends { [key: string]: (...any) => any }> = {
 
 export type Proxify<T> = Promisify<Transferrable<FilterOutAttributes<T>>>;
 
-export function createDispatchProxy<T>(
-  class_: { new (): T },
-  transportClient: TransportClient<DispatchMsg>,
+export function createDispatchProxyFromFn<T>(
+  class_: { new (...args: any[]): T },
+  requestFn: (fn: string) => (...args: any[]) => Promise<any>,
 ): Proxify<T> {
   const proxy: any = class_.prototype instanceof EventEmitter ? new EventEmitter() : {};
   for (const fn of Object.getOwnPropertyNames(class_.prototype)) {
     if (fn === 'constructor') {
       continue;
     }
-    proxy[fn] = (...args: any[]) => {
-      const transfer: Transferable[] = args.reduce(
-        (acc, a) => (isTransferDescriptor(a) ? [...acc, ...a.transferables] : acc),
-        [] as Transferable[],
-      );
-      args = args.map(a => (isTransferDescriptor(a) ? a.send : a));
-      return transportClient.request({ fn, args }, transfer);
-    };
+    proxy[fn] = requestFn(fn);
   }
-  if (class_.prototype instanceof EventEmitter) {
+  return proxy;
+}
+
+export function createDispatchProxy<T>(
+  class_: { new (...args: any[]): T },
+  transportClient: TransportClient<DispatchMsg>,
+): Proxify<T> {
+  // Create a proxy of class_ that passes along methods over our transportClient
+  const proxy = createDispatchProxyFromFn(class_, (fn: string) => (...args: any[]) => {
+    // Pass our proxied function name and arguments over our transport client
+    const transfer: Transferable[] = args.reduce(
+      (acc, a) => (isTransferDescriptor(a) ? [...acc, ...a.transferables] : acc),
+      [] as Transferable[],
+    );
+    args = args.map(a => (isTransferDescriptor(a) ? a.send : a));
+    return transportClient.request({ fn, args }, transfer);
+  });
+  if (proxy instanceof EventEmitter) {
+    // Handle proxied 'emit' calls if our proxy object is an EventEmitter
     transportClient.on('event_msg', ({ fn, args }) => {
       if (fn === 'emit') {
-        proxy.emit(...args);
+        const [eventName, ...restArgs] = args;
+        proxy.emit(eventName, ...restArgs);
       }
     });
   }

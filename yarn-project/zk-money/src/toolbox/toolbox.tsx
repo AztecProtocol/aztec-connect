@@ -9,12 +9,14 @@ import { RainbowKitProvider } from '@rainbow-me/rainbowkit';
 import { chainIdToNetwork } from '../app/networks.js';
 import { RecoverAliasInteractions } from './recover_alias/index.js';
 import style from './toolbox.module.scss';
+import { DataProviderContentViewer } from './data_provider_content_viewer/index.js';
 
 const TOOLS = [
   { component: RecoverAliasInteractions, label: 'Transfer a trapped pre-June 2021 alias to a new account' },
 ];
 if (process.env.NODE_ENV === 'development') {
   TOOLS.push({ component: LegacyRegisterInteractions, label: 'Register with legacy signing message' });
+  TOOLS.push({ component: DataProviderContentViewer, label: 'Fetch DataProvider content' });
 }
 
 export function Toolbox({ config }: { config: Config }) {
@@ -25,7 +27,7 @@ export function Toolbox({ config }: { config: Config }) {
     createAztecSdk(jsonRpcProvider, {
       serverUrl: rollupProviderUrl,
       flavour: SdkFlavour.PLAIN,
-      debug: 'bb:*,aztec:*',
+      debug: 'bb:*',
       minConfirmation: chainIdToNetwork(chainId)?.isFrequent ? 1 : undefined,
     }).then(sdk => {
       sdk.run();

@@ -33,34 +33,35 @@ export async function deployToBlockchain(prevRedeploy?: number) {
   await waitForBlockchain(ETHEREUM_HOST);
   const redeployEnv = +REDEPLOY;
   console.log(`Redeploy env: ${redeployEnv}, saved config: ${prevRedeploy}`);
-  if (prevRedeploy === undefined || prevRedeploy < redeployEnv) {
-    //redeploy
-    const addresses = await deployContracts(
-      ETHEREUM_HOST,
-      VK,
-      PRIVATE_KEY,
-      FAUCET_OPERATOR ? EthAddress.fromString(FAUCET_OPERATOR) : undefined,
-      ROLLUP_PROVIDER_ADDRESS ? EthAddress.fromString(ROLLUP_PROVIDER_ADDRESS) : undefined,
-    );
-
-    const redeployConfig: RedeployConfig = {};
-    redeployConfig.redeploy = redeployEnv;
-    console.log(`FAUCET_CONTRACT_ADDRESS: ${addresses.FAUCET_CONTRACT_ADDRESS}`);
-    console.log(`ROLLUP_CONTRACT_ADDRESS: ${addresses.ROLLUP_CONTRACT_ADDRESS}`);
-    console.log(`PERMIT_HELPER_CONTRACT_ADDRESS: ${addresses.PERMIT_HELPER_CONTRACT_ADDRESS}`);
-    console.log(`FEE_DISTRIBUTOR_ADDRESS: ${addresses.FEE_DISTRIBUTOR_ADDRESS}`);
-    console.log(`PRICE_FEED_CONTRACT_ADDRESSES: ${addresses.PRICE_FEED_CONTRACT_ADDRESSES}`);
-    console.log(`BRIDGE_DATA_PROVIDER_CONTRACT_ADDRESS: ${addresses.BRIDGE_DATA_PROVIDER_CONTRACT_ADDRESS}`);
-    redeployConfig.faucetContractAddress = EthAddress.fromString(addresses.FAUCET_CONTRACT_ADDRESS!);
-    redeployConfig.rollupContractAddress = EthAddress.fromString(addresses.ROLLUP_CONTRACT_ADDRESS!);
-    redeployConfig.feeDistributorAddress = EthAddress.fromString(addresses.FEE_DISTRIBUTOR_ADDRESS!);
-    redeployConfig.permitHelperContractAddress = EthAddress.fromString(addresses.PERMIT_HELPER_CONTRACT_ADDRESS!);
-    redeployConfig.bridgeDataProviderContractAddress = EthAddress.fromString(
-      addresses.BRIDGE_DATA_PROVIDER_CONTRACT_ADDRESS,
-    );
-    redeployConfig.priceFeedContractAddresses = addresses
-      .PRICE_FEED_CONTRACT_ADDRESSES!.split(',')
-      .map(EthAddress.fromString);
-    return redeployConfig;
+  if (prevRedeploy !== undefined && prevRedeploy >= redeployEnv) {
+    return undefined;
   }
+  //redeploy
+  const addresses = await deployContracts(
+    ETHEREUM_HOST,
+    VK,
+    PRIVATE_KEY,
+    FAUCET_OPERATOR ? EthAddress.fromString(FAUCET_OPERATOR) : undefined,
+    ROLLUP_PROVIDER_ADDRESS ? EthAddress.fromString(ROLLUP_PROVIDER_ADDRESS) : undefined,
+  );
+
+  const redeployConfig: RedeployConfig = {};
+  redeployConfig.redeploy = redeployEnv;
+  console.log(`FAUCET_CONTRACT_ADDRESS: ${addresses.FAUCET_CONTRACT_ADDRESS}`);
+  console.log(`ROLLUP_CONTRACT_ADDRESS: ${addresses.ROLLUP_CONTRACT_ADDRESS}`);
+  console.log(`PERMIT_HELPER_CONTRACT_ADDRESS: ${addresses.PERMIT_HELPER_CONTRACT_ADDRESS}`);
+  console.log(`FEE_DISTRIBUTOR_ADDRESS: ${addresses.FEE_DISTRIBUTOR_ADDRESS}`);
+  console.log(`PRICE_FEED_CONTRACT_ADDRESSES: ${addresses.PRICE_FEED_CONTRACT_ADDRESSES}`);
+  console.log(`BRIDGE_DATA_PROVIDER_CONTRACT_ADDRESS: ${addresses.BRIDGE_DATA_PROVIDER_CONTRACT_ADDRESS}`);
+  redeployConfig.faucetContractAddress = EthAddress.fromString(addresses.FAUCET_CONTRACT_ADDRESS!);
+  redeployConfig.rollupContractAddress = EthAddress.fromString(addresses.ROLLUP_CONTRACT_ADDRESS!);
+  redeployConfig.feeDistributorAddress = EthAddress.fromString(addresses.FEE_DISTRIBUTOR_ADDRESS!);
+  redeployConfig.permitHelperContractAddress = EthAddress.fromString(addresses.PERMIT_HELPER_CONTRACT_ADDRESS!);
+  redeployConfig.bridgeDataProviderContractAddress = EthAddress.fromString(
+    addresses.BRIDGE_DATA_PROVIDER_CONTRACT_ADDRESS,
+  );
+  redeployConfig.priceFeedContractAddresses = addresses
+    .PRICE_FEED_CONTRACT_ADDRESSES!.split(',')
+    .map(EthAddress.fromString);
+  return redeployConfig;
 }
