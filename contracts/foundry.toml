@@ -19,7 +19,8 @@ remappings = [
 fs_permissions = [
     {access = "read", path = 'verification-keys/mock_rollup_proof_data_3x2.dat'},
     {access = "read", path = 'verification-keys/rollup_proof_data_1x1.dat'},
-    {access = "read", path = 'verification-keys/encoded_rollup_proof_data_1x1.dat'}
+    {access = "read", path = 'verification-keys/encoded_rollup_proof_data_1x1.dat'},
+    {access = "write", path = 'serve/contract_addresses.json'}
 ]
 
 [fmt]

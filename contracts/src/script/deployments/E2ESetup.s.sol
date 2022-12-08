@@ -13,8 +13,14 @@ import {Verifier28x32} from "core/verifier/instances/Verifier28x32.sol";
 import {Verifier1x1} from "core/verifier/instances/Verifier1x1.sol";
 import {MockVerifier} from "core/verifier/instances/MockVerifier.sol";
 import {AlwaysTrueVerifier} from "../../test/mocks/AlwaysTrueVerifier.sol";
+import {stdJson} from "forge-std/StdJson.sol";
 
-contract Rollup is Test {
+
+
+contract E2ESetup is Test {
+    using stdJson for string;
+
+    // Multisigs
     address internal constant DEV_MS = 0x7095057A08879e09DC1c0a85520e3160A0F67C96;
     address internal constant MAINNET_MS = 0xE298a76986336686CC3566469e3520d23D1a8aaD;
 
@@ -24,6 +30,16 @@ contract Rollup is Test {
 
     uint256 internal constant ESCAPE_BLOCK_LOWER_BOUND = 2160;
     uint256 internal constant ESCAPE_BLOCK_UPPER_BOUND = 2400;
+
+    address internal constant ROLLUP_PROVIDER = payable(0xA173BDdF4953C1E8be2cA0695CFc07502Ff3B1e7);
+
+    // Config
+    bytes32 private constant INIT_DATA_ROOT = 0x18ceb5cd201e1cee669a5c3ad96d3c4e933a365b37046fc3178264bede32c68d;
+    bytes32 private constant INIT_NULL_ROOT = 0x298329c7d0936453f354e4a5eef4897296cc0bf5a66f2a528318508d2088dafa;
+    bytes32 private constant INIT_ROOT_ROOT = 0x2fd2364bfe47ccb410eba3a958be9f39a8c6aca07db1abd15f5a211f51505071;
+    uint32 private constant INIT_DATA_SIZE = 0;
+    bool private constant ALLOW_THIRD_PARTY_CONTRACTS = false;
+
 
     bytes32[4] internal ROLES =
         [bytes32(0), keccak256("OWNER_ROLE"), keccak256("EMERGENCY_ROLE"), keccak256("LISTER_ROLE")];
@@ -51,11 +67,11 @@ contract Rollup is Test {
                 tx.origin,
                 tx.origin,
                 false,
-                0x18ceb5cd201e1cee669a5c3ad96d3c4e933a365b37046fc3178264bede32c68d,
-                0x298329c7d0936453f354e4a5eef4897296cc0bf5a66f2a528318508d2088dafa,
-                0x2fd2364bfe47ccb410eba3a958be9f39a8c6aca07db1abd15f5a211f51505071,
-                0,
-                false
+                INIT_DATA_ROOT,
+                INIT_NULL_ROOT,
+                INIT_ROOT_ROOT,
+                INIT_DATA_SIZE,
+                ALLOW_THIRD_PARTY_CONTRACTS
             )
         );
     }
@@ -65,12 +81,7 @@ contract Rollup is Test {
         address _safe,
         address _provider,
         string memory _verifier,
-        bool _upgrade,
-        bytes32 _initDataRoot,
-        bytes32 _initNullRoot,
-        bytes32 _initRootRoot,
-        uint32 _initDataSize,
-        bool _allowThirdPartyContract
+        bool _upgrade
     ) public {
         bytes32 _verifierC = keccak256(abi.encodePacked(_verifier));
         address verifier;
@@ -92,11 +103,11 @@ contract Rollup is Test {
                 _safe,
                 _provider,
                 _upgrade,
-                _initDataRoot,
-                _initNullRoot,
-                _initRootRoot,
-                _initDataSize,
-                _allowThirdPartyContract
+                INIT_DATA_ROOT,
+                INIT_NULL_ROOT,
+                INIT_ROOT_ROOT,
+                INIT_DATA_SIZE,
+                ALLOW_THIRD_PARTY_CONTRACTS
             )
         );
     }
@@ -155,16 +166,7 @@ contract Rollup is Test {
             permitHelperC.preApprove(DAI);
         }
 
-        emit log_named_address("Deployer     ", _params.deployer);
-        emit log_named_address("Safe         ", _params.safe);
-        emit log_named_address("ProxyAdmin   ", address(proxyAdmin));
-        emit log_named_address("Proxy        ", address(proxy));
-        emit log_named_address("PermitHelper ", address(permitHelper));
-        emit log_named_address("ProxyDeployer", address(proxyDeployer));
-        emit log_named_address("DefiProxy    ", address(defiProxy));
-        emit log_named_address("Verifier     ", _params.verifier);
-        emit log_named_address("FeeDistributor", address(feeDistributor));
-        emit log_named_uint("Version      ", RollupProcessorV2(proxy).getImplementationVersion());
+        outputAddresses(_params, address(proxyAdmin), address(proxy), address(permitHelper), address(proxyDeployer), address(defiProxy), address(feeDistributor)); 
     }
 
     function setupRoles(address _rollup, address _safe, address _deployer) public {
@@ -183,5 +185,33 @@ contract Rollup is Test {
             rollup.revokeRole(ROLES[0], _deployer); // admin last
             vm.stopBroadcast();
         }
+    }
+
+    function outputAddresses(FullParam memory _params, address _proxyAdmin, address _proxy, address _permitHelper, address _proxyDeployer, address _defiProxy, address _feeDistributor) internal {
+        // Write deployment addresses to json
+        string memory json;
+        json.serialize("Deployer", _params.deployer);
+        json.serialize("Safe", _params.safe);
+        json.serialize("ProxyAdmin", address(_proxyAdmin));
+        json.serialize("Proxy", address(_proxy));
+        json.serialize("PermitHelper", address(_permitHelper));
+        json.serialize("ProxyDeployer", address(_proxyDeployer));
+        json.serialize("DefiProxy", address(_defiProxy));
+        json.serialize("Verifier", _params.verifier);
+        json.serialize("FeeDistributor", address(_feeDistributor));
+        json = json.serialize("Version", RollupProcessorV2(_proxy).getImplementationVersion());
+        json.write("serve/contract_addresses.json");
+
+        // Write deployment addresses to std out
+        emit log_named_address("Deployer", _params.deployer);
+        emit log_named_address("Safe         ", _params.safe);
+        emit log_named_address("ProxyAdmin   ", address(_proxyAdmin));
+        emit log_named_address("Proxy        ", address(_proxy));
+        emit log_named_address("PermitHelper ", address(_permitHelper));
+        emit log_named_address("ProxyDeployer", address(_proxyDeployer));
+        emit log_named_address("DefiProxy    ", address(_defiProxy));
+        emit log_named_address("Verifier     ", _params.verifier);
+        emit log_named_address("FeeDistributor", address(_feeDistributor));
+        emit log_named_uint("Version      ", RollupProcessorV2(_proxy).getImplementationVersion());
     }
 }
