@@ -21,3 +21,7 @@ variable "REDEPLOY" {
 variable "TEST_NET_RPC_URL" {
   type = string
 }
+
+variable "TEST_NET_API_KEY" {
+  type = string
+}

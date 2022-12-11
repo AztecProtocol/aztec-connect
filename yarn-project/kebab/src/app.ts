@@ -55,8 +55,13 @@ export function appFactory(server: Server, prefix: string) {
     }
   };
 
-  router.post('/', checkReady, auth, async (ctx: Koa.Context) => {
+  router.post('/:key?', checkReady, auth, async (ctx: Koa.Context) => {
     const { method, params = [], jsonrpc, id } = ctx.request.body as EthRequestArguments;
+    if (!server.isValidApiKey(ctx.params.key)) {
+      ctx.status = 401;
+      ctx.body = { error: 'Unauthorised' };
+      return;
+    }
     if (
       server.isReady() &&
       method?.startsWith('eth_getLogs') &&
