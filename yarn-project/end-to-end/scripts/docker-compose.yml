@@ -12,7 +12,6 @@ services:
     image: 278380418400.dkr.ecr.eu-west-2.amazonaws.com/contracts:latest
     environment:
       ETHEREUM_HOST: http://ganache:8545
-      DEPLOY_CONTRACTS: 'true'
       ROLLUP_PROVIDER_ADDRESS: null # Defaults to address from private key TODO: what to set to
       SAFE_ADDRESS: '0x7095057A08879e09DC1c0a85520e3160A0F67C96'
       VERIFIER_TYPE: 'MockVerifier'

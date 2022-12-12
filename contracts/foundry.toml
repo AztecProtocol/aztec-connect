@@ -16,12 +16,16 @@ remappings = [
     '@uniswap/v2-periphery/=lib/v2-periphery/',
     '@uniswap/v2-core/=lib/v2-core/',
     'bridge-deployments/=lib/aztec-connect-bridges/src/deployment',
+    'bridge-tests/=lib/aztec-connect-bridges/src/test'
     ]
 fs_permissions = [
     {access = "read", path = 'verification-keys/mock_rollup_proof_data_3x2.dat'},
     {access = "read", path = 'verification-keys/rollup_proof_data_1x1.dat'},
     {access = "read", path = 'verification-keys/encoded_rollup_proof_data_1x1.dat'},
-    {access = "write", path = 'serve/contract_addresses.json'}
+    {access = "write", path = 'serve/1/contract_addresses.json'},
+    {access = "write", path = 'serve/1337/contract_addresses.json'},
+    {access = "write", path = 'serve/3567/contract_addresses.json'},
+    {access = "write", path = 'serve/677868/contract_addresses.json'}
 ]
 
 [fmt]

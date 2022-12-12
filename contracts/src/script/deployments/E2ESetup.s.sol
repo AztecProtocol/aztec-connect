@@ -3,27 +3,25 @@
 pragma solidity >=0.8.4;
 
 import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
+import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {Test} from "forge-std/Test.sol";
 import {RollupDeployer} from "./RollupDeployer.s.sol";
 import {PermitHelper} from "periphery/PermitHelper.sol";
-import {AztecFeeDistributor} from "periphery/AztecFeeDistributor.sol";
-import {DefiBridgeProxy} from "core/DefiBridgeProxy.sol";
 import {RollupProcessorV2} from "core/processors/RollupProcessorV2.sol";
 import {Verifier28x32} from "core/verifier/instances/Verifier28x32.sol";
 import {Verifier1x1} from "core/verifier/instances/Verifier1x1.sol";
 import {MockVerifier} from "core/verifier/instances/MockVerifier.sol";
 import {AlwaysTrueVerifier} from "../../test/mocks/AlwaysTrueVerifier.sol";
 import {stdJson} from "forge-std/StdJson.sol";
-import {BridgesSetup} from "./BridgesSetup.s.sol";
+import {ChainSpecificSetup} from "./ChainSpecificSetup.s.sol";
 
 contract E2ESetup is Test {
     using stdJson for string;
+    using Strings for uint256;
 
     // Multisigs
     address internal constant DEV_MS = 0x7095057A08879e09DC1c0a85520e3160A0F67C96;
     address internal constant MAINNET_MS = 0xE298a76986336686CC3566469e3520d23D1a8aaD;
-
-    address internal constant UNISWAP_V2_ROUTER = 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D;
 
     uint256 internal constant ESCAPE_BLOCK_LOWER_BOUND = 2160;
     uint256 internal constant ESCAPE_BLOCK_UPPER_BOUND = 2400;
@@ -37,7 +35,6 @@ contract E2ESetup is Test {
     uint32 private constant INIT_DATA_SIZE = 0;
     bool private constant ALLOW_THIRD_PARTY_CONTRACTS = false;
 
-
     bytes32[4] internal ROLES =
         [bytes32(0), keccak256("OWNER_ROLE"), keccak256("EMERGENCY_ROLE"), keccak256("LISTER_ROLE")];
 
@@ -45,6 +42,7 @@ contract E2ESetup is Test {
         address verifier;
         address deployer;
         address safe;
+        address faucetController;
         address provider;
         bool upgrade;
         bytes32 initDataRoot;
@@ -54,12 +52,16 @@ contract E2ESetup is Test {
         bool allowThirdPartyContract;
     }
 
+    /**
+     * @notice Perform mock deployment with an always true verifier
+     */
     function deployAlwaysTrueVerifier() public {
         vm.broadcast();
         AlwaysTrueVerifier verifier = new AlwaysTrueVerifier();
         _full(
             FullParam(
                 address(verifier),
+                tx.origin,
                 tx.origin,
                 tx.origin,
                 tx.origin,
@@ -73,23 +75,32 @@ contract E2ESetup is Test {
         );
     }
 
+    /**
+     * @notice Deploy with input configuration
+     * @param _deployer Deployer address
+     * @param _safe Admin safe address
+     * @param _faucetController Faucet Admin address - for testnets
+     * @param _provider Rollup Provider address
+     * @param _verifier Verifier Contract setting - (VerificationKey1x1 | VerificationKey28x32 | MockVerifier)
+     * @param _upgrade Upgrade flag
+     */
     function deploy(
         address _deployer,
         address _safe,
+        address _faucetController,
         address _provider,
         string memory _verifier,
         bool _upgrade
     ) public {
-        if (block.chainid == 1){
+        if (block.chainid == 1) {
             revert("Deploy to mainnet not allowed");
         }
 
-        bytes32 _verifierC = keccak256(abi.encodePacked(_verifier));
         address verifier;
-        if (_verifierC == keccak256(abi.encodePacked("VerificationKey1x1"))) {
+        if (stringEq(_verifier, "VerificationKey1x1")) {
             vm.broadcast();
             verifier = address(new Verifier1x1());
-        } else if (_verifierC == keccak256(abi.encodePacked("VerificationKey28x32"))) {
+        } else if (stringEq(_verifier, "VerificationKey28x32")) {
             vm.broadcast();
             verifier = address(new Verifier28x32());
         } else {
@@ -102,6 +113,7 @@ contract E2ESetup is Test {
                 verifier,
                 _deployer,
                 _safe,
+                _faucetController,
                 _provider,
                 _upgrade,
                 INIT_DATA_ROOT,
@@ -113,17 +125,20 @@ contract E2ESetup is Test {
         );
     }
 
+    /**
+     * @notice Full deployment, will deploy all required contracts.
+     *         - The Rollup Deployer script handles deploying the Rollup, Proxy, DefiBridgeProxy and PermitHelper
+     *         - ChainSpecificSetup deploys infra for both testnets / test suites. Which is deployed is determined by the chainid
+     * @param _params FullParam all script input params
+     */
     function _full(FullParam memory _params) internal {
         RollupDeployer rollupDeployer = new RollupDeployer();
         rollupDeployer.setIsDeploying(true);
 
-        vm.broadcast();
-        DefiBridgeProxy defiProxy = new DefiBridgeProxy();
-
-        (address proxyAdmin, address proxy, address permitHelper, address proxyDeployer) = rollupDeployer.deploy(
+        (address proxyAdmin, address proxy, address permitHelper, address proxyDeployer, address defiProxy) =
+        rollupDeployer.deploy(
             RollupDeployer.DeployParams(
                 address(_params.verifier),
-                address(defiProxy),
                 _params.deployer,
                 ESCAPE_BLOCK_LOWER_BOUND,
                 ESCAPE_BLOCK_UPPER_BOUND,
@@ -138,15 +153,18 @@ contract E2ESetup is Test {
         vm.broadcast();
         RollupProcessorV2(proxy).setRollupProvider(_params.provider, true);
 
-        vm.broadcast();
-        AztecFeeDistributor feeDistributor = new AztecFeeDistributor(_params.safe, proxy, UNISWAP_V2_ROUTER);
-
         if (_params.upgrade) {
             rollupDeployer.upgrade(proxyAdmin, proxy);
         }
 
-        BridgesSetup bridgesSetup = new BridgesSetup();
-        address dataProvider = bridgesSetup.setupAssetsAndBridges(address(proxy), address(permitHelper));
+        // Grant the deployer permission to list bridges and assets
+        vm.broadcast();
+        RollupProcessorV2(proxy).grantRole(ROLES[3], _params.deployer);
+
+        ChainSpecificSetup bridgesSetup = new ChainSpecificSetup();
+        ChainSpecificSetup.BridgePeripheryAddresses memory peripheryAddresses = bridgesSetup.setupAssetsAndBridges(
+            address(proxy), address(permitHelper), _params.faucetController, _params.safe
+        );
 
         setupRoles(proxy, _params.safe, _params.deployer);
 
@@ -159,10 +177,25 @@ contract E2ESetup is Test {
             vm.broadcast();
             ProxyAdmin(proxyAdmin).transferOwnership(_params.safe);
         }
-        
-        outputAddresses(_params, address(proxyAdmin), address(proxy), address(permitHelper), address(proxyDeployer), address(defiProxy), address(feeDistributor)); 
+
+        outputAddresses(
+            _params,
+            peripheryAddresses,
+            address(proxyAdmin),
+            address(proxy),
+            address(permitHelper),
+            address(proxyDeployer),
+            address(defiProxy)
+        );
     }
 
+    /**
+     * @notice Grant the safe all rollup admin roles, ensure that the deployer is stripped of all
+     *         default roles or any roles granted for the purpose of deploying.
+     * @param _rollup The address of the rollup contract (proxy)
+     * @param _safe Admin Multisig
+     * @param _deployer The deployer address
+     */
     function setupRoles(address _rollup, address _safe, address _deployer) public {
         RollupProcessorV2 rollup = RollupProcessorV2(_rollup);
         for (uint256 i = 0; i < ROLES.length; i++) {
@@ -174,6 +207,7 @@ contract E2ESetup is Test {
 
         if (_safe != _deployer) {
             vm.startBroadcast();
+            rollup.revokeRole(ROLES[3], _deployer);
             rollup.revokeRole(ROLES[2], _deployer);
             rollup.revokeRole(ROLES[1], _deployer);
             rollup.revokeRole(ROLES[0], _deployer); // admin last
@@ -181,7 +215,26 @@ contract E2ESetup is Test {
         }
     }
 
-    function outputAddresses(FullParam memory _params, address _proxyAdmin, address _proxy, address _permitHelper, address _proxyDeployer, address _defiProxy, address _feeDistributor) internal {
+    /**
+     * @notice Write deployed addreses to stdout and to a json file for consumption by other services
+     * @param _params FullParam script input parameters
+     * @param _peripheryAddresses Addresses deployed in `ChainSpecificSetup.sol`
+     *        contains dataProvider, priceFeeds, faucet and fee distributor addresses
+     * @param _proxyAdmin Address holding the proxy admin role
+     * @param _proxy Address of the rollup proxy contract
+     * @param _permitHelper Address of permit helper contract
+     * @param _proxyDeployer Address of the proxy deployer
+     * @param _defiProxy Address of the defi proxy
+     */
+    function outputAddresses(
+        FullParam memory _params,
+        ChainSpecificSetup.BridgePeripheryAddresses memory _peripheryAddresses,
+        address _proxyAdmin,
+        address _proxy,
+        address _permitHelper,
+        address _proxyDeployer,
+        address _defiProxy
+    ) internal {
         // Write deployment addresses to json
         string memory json;
         json.serialize("Deployer", _params.deployer);
@@ -192,9 +245,15 @@ contract E2ESetup is Test {
         json.serialize("ProxyDeployer", address(_proxyDeployer));
         json.serialize("DefiProxy", address(_defiProxy));
         json.serialize("Verifier", _params.verifier);
-        json.serialize("FeeDistributor", address(_feeDistributor));
+        json.serialize("FeeDistributor", _peripheryAddresses.feeDistributor);
+        json.serialize("DataProvider", _peripheryAddresses.dataProvider);
+        json.serialize("GasPriceFeed", _peripheryAddresses.gasPriceFeed);
+        json.serialize("DaiPriceFeed", _peripheryAddresses.daiPriceFeed);
+        json.serialize("Faucet", _peripheryAddresses.faucet);
         json = json.serialize("Version", RollupProcessorV2(_proxy).getImplementationVersion());
-        json.write("serve/contract_addresses.json");
+
+        string memory path = string(abi.encodePacked("serve/", block.chainid.toString(), "/contract_addresses.json"));
+        json.write(path);
 
         // Write deployment addresses to std out
         emit log_named_address("Deployer", _params.deployer);
@@ -205,7 +264,19 @@ contract E2ESetup is Test {
         emit log_named_address("ProxyDeployer", address(_proxyDeployer));
         emit log_named_address("DefiProxy    ", address(_defiProxy));
         emit log_named_address("Verifier     ", _params.verifier);
-        emit log_named_address("FeeDistributor", address(_feeDistributor));
+        emit log_named_address("FeeDistributor", _peripheryAddresses.feeDistributor);
+        emit log_named_address("DataProvider  ", _peripheryAddresses.dataProvider);
+        emit log_named_address("GasPriceFeed  ", _peripheryAddresses.gasPriceFeed);
+        emit log_named_address("DaiPriceFeed  ", _peripheryAddresses.daiPriceFeed);
+        emit log_named_address("Faucet        ", _peripheryAddresses.faucet);
+
         emit log_named_uint("Version      ", RollupProcessorV2(_proxy).getImplementationVersion());
+    }
+
+    /**
+     * @dev String comparison helper function (for aesthetics)
+     */
+    function stringEq(string memory a, string memory b) internal returns (bool) {
+        return (keccak256(abi.encodePacked(a)) == keccak256(abi.encodePacked(b)));
     }
 }

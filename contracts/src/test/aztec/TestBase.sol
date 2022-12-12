@@ -56,12 +56,11 @@ abstract contract TestBase is Test {
         RollupDeployer rollupDeployer = new RollupDeployer();
 
         AlwaysTrueVerifier verifier = new AlwaysTrueVerifier();
-        DefiBridgeProxy defiProxy = new DefiBridgeProxy();
 
-        (address admin, address proxy, address permitHelper_, address proxyDeployer_) = rollupDeployer.deploy(
+        (address admin, address proxy, address permitHelper_, address proxyDeployer_, address defiProxy) =
+        rollupDeployer.deploy(
             RollupDeployer.DeployParams(
                 address(verifier),
-                address(defiProxy),
                 address(this),
                 ESCAPE_BLOCK_LOWER_BOUND,
                 ESCAPE_BLOCK_UPPER_BOUND,
