@@ -37,13 +37,7 @@ async function main() {
   }
 
   const configuration = configurator.getConfVars();
-  const {
-    redeployConfig: contractConfig,
-    allowPrivilegedMethods,
-    additionalPermittedMethods,
-    port,
-    apiPrefix,
-  } = configuration;
+  const { redeployConfig: contractConfig, allowPrivilegedMethods, port, apiPrefix } = configuration;
 
   console.log(`Rollup contract address: ${contractConfig.rollupContractAddress}`);
   console.log(`Allow privileged methods: ${allowPrivilegedMethods}`);
@@ -51,15 +45,7 @@ async function main() {
 
   const dbConn = await createConnection(ormConfig);
   const logDb = new EthLogsDb(dbConn);
-  const server = new Server(
-    provider,
-    initialConfig.ethereumHost,
-    logDb,
-    chainId,
-    allowPrivilegedMethods,
-    additionalPermittedMethods,
-    contractConfig,
-  );
+  const server = new Server(provider, initialConfig.ethereumHost, logDb, chainId, configuration);
 
   const shutdown = async () => {
     await server.stop();

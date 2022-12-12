@@ -9,3 +9,7 @@ variable "SERVER_AUTH_TOKEN" {
 variable "DEPLOY_TAG" {
   type = string
 }
+
+variable "TEST_NET_API_KEY" {
+  type = string
+}

@@ -8,6 +8,9 @@ import { RollupDepositProofData, RollupWithdrawProofData } from './index.js';
 import { toBigIntBE, toBufferBE } from '../bigint_buffer/index.js';
 import { BridgeCallData } from '../bridge_call_data/index.js';
 
+const NUM_FEE_ASSETS_PER_BLOCK = 16;
+const NUM_BRIDGE_CALLS_PER_BLOCK = 32;
+
 export enum RollupProofDataFields {
   ROLLUP_ID,
   ROLLUP_SIZE,
@@ -20,6 +23,14 @@ export enum RollupProofDataFields {
   NEW_ROOT_ROOT,
   OLD_DEFI_ROOT,
   NEW_DEFI_ROOT,
+  BRIDGE_CALL_DATAS,
+  DEFI_DEPOSIT_SUMS = BRIDGE_CALL_DATAS + NUM_BRIDGE_CALLS_PER_BLOCK,
+  FEE_ASSET_IDS = DEFI_DEPOSIT_SUMS + NUM_BRIDGE_CALLS_PER_BLOCK,
+  FEE_SUMS = FEE_ASSET_IDS + NUM_FEE_ASSETS_PER_BLOCK,
+  DEFI_INTERACTIONS = FEE_SUMS + NUM_FEE_ASSETS_PER_BLOCK,
+  PREV_DEFI_INTERACTION_HASH = DEFI_INTERACTIONS + NUM_BRIDGE_CALLS_PER_BLOCK,
+  ROLLUP_BENEFICIARY = PREV_DEFI_INTERACTION_HASH + 1,
+  NUM_ROLLUP_TXS = ROLLUP_BENEFICIARY + 1,
 }
 
 export enum RollupProofDataOffsets {
@@ -34,66 +45,90 @@ export enum RollupProofDataOffsets {
   NEW_ROOT_ROOT = RollupProofDataFields.NEW_ROOT_ROOT * 32,
   OLD_DEFI_ROOT = RollupProofDataFields.OLD_DEFI_ROOT * 32,
   NEW_DEFI_ROOT = RollupProofDataFields.NEW_DEFI_ROOT * 32,
+  BRIDGE_CALL_DATAS = RollupProofDataFields.BRIDGE_CALL_DATAS * 32,
+  DEFI_DEPOSIT_SUMS = RollupProofDataFields.DEFI_DEPOSIT_SUMS * 32,
+  FEE_ASSET_IDS = RollupProofDataFields.FEE_ASSET_IDS * 32,
+  FEE_SUMS = RollupProofDataFields.FEE_SUMS * 32,
+  DEFI_INTERACTIONS = RollupProofDataFields.DEFI_INTERACTIONS * 32,
+  PREV_DEFI_INTERACTION_HASH = RollupProofDataFields.PREV_DEFI_INTERACTION_HASH * 32,
+  ROLLUP_BENEFICIARY = RollupProofDataFields.ROLLUP_BENEFICIARY * 32,
+  NUM_ROLLUP_TXS = RollupProofDataFields.NUM_ROLLUP_TXS * 32 + 28,
 }
 
 const parseHeaderInputs = (proofData: Buffer) => {
   const rollupId = RollupProofData.getRollupIdFromBuffer(proofData);
   const rollupSize = proofData.readUInt32BE(RollupProofDataOffsets.ROLLUP_SIZE);
   const dataStartIndex = proofData.readUInt32BE(RollupProofDataOffsets.DATA_START_INDEX);
-  const oldDataRoot = proofData.slice(RollupProofDataOffsets.OLD_DATA_ROOT, RollupProofDataOffsets.OLD_DATA_ROOT + 32);
-  const newDataRoot = proofData.slice(RollupProofDataOffsets.NEW_DATA_ROOT, RollupProofDataOffsets.NEW_DATA_ROOT + 32);
-  const oldNullRoot = proofData.slice(RollupProofDataOffsets.OLD_NULL_ROOT, RollupProofDataOffsets.OLD_NULL_ROOT + 32);
-  const newNullRoot = proofData.slice(RollupProofDataOffsets.NEW_NULL_ROOT, RollupProofDataOffsets.NEW_NULL_ROOT + 32);
-  const oldDataRootsRoot = proofData.slice(
+  const oldDataRoot = proofData.subarray(
+    RollupProofDataOffsets.OLD_DATA_ROOT,
+    RollupProofDataOffsets.OLD_DATA_ROOT + 32,
+  );
+  const newDataRoot = proofData.subarray(
+    RollupProofDataOffsets.NEW_DATA_ROOT,
+    RollupProofDataOffsets.NEW_DATA_ROOT + 32,
+  );
+  const oldNullRoot = proofData.subarray(
+    RollupProofDataOffsets.OLD_NULL_ROOT,
+    RollupProofDataOffsets.OLD_NULL_ROOT + 32,
+  );
+  const newNullRoot = proofData.subarray(
+    RollupProofDataOffsets.NEW_NULL_ROOT,
+    RollupProofDataOffsets.NEW_NULL_ROOT + 32,
+  );
+  const oldDataRootsRoot = proofData.subarray(
     RollupProofDataOffsets.OLD_ROOT_ROOT,
     RollupProofDataOffsets.OLD_ROOT_ROOT + 32,
   );
-  const newDataRootsRoot = proofData.slice(
+  const newDataRootsRoot = proofData.subarray(
     RollupProofDataOffsets.NEW_ROOT_ROOT,
     RollupProofDataOffsets.NEW_ROOT_ROOT + 32,
   );
-  const oldDefiRoot = proofData.slice(RollupProofDataOffsets.OLD_DEFI_ROOT, RollupProofDataOffsets.OLD_DEFI_ROOT + 32);
-  const newDefiRoot = proofData.slice(RollupProofDataOffsets.NEW_DEFI_ROOT, RollupProofDataOffsets.NEW_DEFI_ROOT + 32);
+  const oldDefiRoot = proofData.subarray(
+    RollupProofDataOffsets.OLD_DEFI_ROOT,
+    RollupProofDataOffsets.OLD_DEFI_ROOT + 32,
+  );
+  const newDefiRoot = proofData.subarray(
+    RollupProofDataOffsets.NEW_DEFI_ROOT,
+    RollupProofDataOffsets.NEW_DEFI_ROOT + 32,
+  );
 
-  let startIndex = 11 * 32;
-  const bridgeCallDatas: Buffer[] = [];
-  for (let i = 0; i < RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK; ++i) {
-    bridgeCallDatas.push(proofData.slice(startIndex, startIndex + 32));
-    startIndex += 32;
-  }
+  const bridgeCallDatas = RollupProofData.getBridgeCallDatas(proofData);
 
   const defiDepositSums: bigint[] = [];
   for (let i = 0; i < RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK; ++i) {
-    defiDepositSums.push(toBigIntBE(proofData.slice(startIndex, startIndex + 32)));
-    startIndex += 32;
+    const startIndex = RollupProofDataOffsets.DEFI_DEPOSIT_SUMS + i * 32;
+    defiDepositSums.push(toBigIntBE(proofData.subarray(startIndex, startIndex + 32)));
   }
 
   const assetIds: number[] = [];
   for (let i = 0; i < RollupProofData.NUMBER_OF_ASSETS; ++i) {
+    const startIndex = RollupProofDataOffsets.FEE_ASSET_IDS + i * 32;
     assetIds.push(proofData.readUInt32BE(startIndex + 28));
-    startIndex += 32;
   }
 
   const totalTxFees: bigint[] = [];
   for (let i = 0; i < RollupProofData.NUMBER_OF_ASSETS; ++i) {
-    totalTxFees.push(toBigIntBE(proofData.slice(startIndex, startIndex + 32)));
-    startIndex += 32;
+    const startIndex = RollupProofDataOffsets.FEE_SUMS + i * 32;
+    totalTxFees.push(toBigIntBE(proofData.subarray(startIndex, startIndex + 32)));
   }
 
   const defiInteractionNotes: Buffer[] = [];
   for (let i = 0; i < RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK; ++i) {
-    defiInteractionNotes.push(proofData.slice(startIndex, startIndex + 32));
-    startIndex += 32;
+    const startIndex = RollupProofDataOffsets.DEFI_INTERACTIONS + i * 32;
+    defiInteractionNotes.push(proofData.subarray(startIndex, startIndex + 32));
   }
 
-  const prevDefiInteractionHash = proofData.slice(startIndex, startIndex + 32);
-  startIndex += 32;
+  const prevDefiInteractionHash = proofData.subarray(
+    RollupProofDataOffsets.PREV_DEFI_INTERACTION_HASH,
+    RollupProofDataOffsets.PREV_DEFI_INTERACTION_HASH + 32,
+  );
 
-  const rollupBeneficiary = proofData.slice(startIndex, startIndex + 32);
-  startIndex += 32;
+  const rollupBeneficiary = proofData.subarray(
+    RollupProofDataOffsets.ROLLUP_BENEFICIARY,
+    RollupProofDataOffsets.ROLLUP_BENEFICIARY + 32,
+  );
 
-  const numRollupTxs = proofData.readUInt32BE(startIndex + 28);
-  startIndex += 32;
+  const numRollupTxs = proofData.readUInt32BE(RollupProofDataOffsets.NUM_ROLLUP_TXS);
 
   return {
     rollupId,
@@ -119,10 +154,15 @@ const parseHeaderInputs = (proofData: Buffer) => {
 };
 
 export class RollupProofData {
-  static NUMBER_OF_ASSETS = 16;
-  static NUM_BRIDGE_CALLS_PER_BLOCK = 32;
+  static NUMBER_OF_ASSETS = NUM_FEE_ASSETS_PER_BLOCK;
+  static NUM_BRIDGE_CALLS_PER_BLOCK = NUM_BRIDGE_CALLS_PER_BLOCK;
   static NUM_ROLLUP_HEADER_INPUTS =
-    14 + RollupProofData.NUMBER_OF_ASSETS * 2 + RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK * 3;
+    // 14 single field header fields.
+    14 +
+    // Fee asset ids, and fee sums.
+    RollupProofData.NUMBER_OF_ASSETS * 2 +
+    // Bridge call data, bridge deposit sums, and defi interaction commitments.
+    RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK * 3;
   static LENGTH_ROLLUP_HEADER_INPUTS = RollupProofData.NUM_ROLLUP_HEADER_INPUTS * 32;
   public rollupHash_?: Buffer;
 
@@ -283,9 +323,18 @@ export class RollupProofData {
     return Array.from({ length: rollupSize })
       .map((_, i) => {
         const innerProofStart = startIndex + i * InnerProofData.LENGTH;
-        return createTxId(proofData.slice(innerProofStart, innerProofStart + InnerProofData.LENGTH));
+        return createTxId(proofData.subarray(innerProofStart, innerProofStart + InnerProofData.LENGTH));
       })
       .filter(id => !id.equals(InnerProofData.PADDING.txId));
+  }
+
+  static getBridgeCallDatas(proofData: Buffer) {
+    const bridgeCallDatas: Buffer[] = [];
+    for (let i = 0; i < RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK; ++i) {
+      const startIndex = RollupProofDataOffsets.BRIDGE_CALL_DATAS + i * 32;
+      bridgeCallDatas.push(proofData.subarray(startIndex, startIndex + 32));
+    }
+    return bridgeCallDatas;
   }
 
   public getNonPaddingProofs() {
@@ -330,7 +379,7 @@ export class RollupProofData {
     let startIndex = RollupProofData.LENGTH_ROLLUP_HEADER_INPUTS;
     const innerProofData: InnerProofData[] = [];
     for (let i = 0; i < rollupSize; ++i) {
-      const innerData = proofData.slice(startIndex, startIndex + InnerProofData.LENGTH);
+      const innerData = proofData.subarray(startIndex, startIndex + InnerProofData.LENGTH);
       innerProofData[i] = InnerProofData.fromBuffer(innerData);
       startIndex += InnerProofData.LENGTH;
     }
@@ -434,7 +483,7 @@ export class RollupProofData {
     startIndex += 4;
     const innerProofData: InnerProofData[] = [];
     while (innerProofDataLength > 0) {
-      const innerProof = decodeInnerProof(encoded.slice(startIndex));
+      const innerProof = decodeInnerProof(encoded.subarray(startIndex));
       innerProofData.push(innerProof.proofData);
       startIndex += innerProof.ENCODED_LENGTH;
       innerProofDataLength -= innerProof.ENCODED_LENGTH;

@@ -199,8 +199,8 @@ export class WorldState {
     let numInteractionPeriods = 0;
     let totalGas = 0;
     for (const rollup of rollups) {
-      const rollupProofData = RollupProofData.decode(rollup.rollupProof.encodedProofData);
-      for (const bcd of rollupProofData.bridgeCallDatas.map(x => BridgeCallData.fromBuffer(x))) {
+      const bridgeCallDatas = RollupProofData.getBridgeCallDatas(rollup.rollupProof.encodedProofData);
+      for (const bcd of bridgeCallDatas.map(x => BridgeCallData.fromBuffer(x))) {
         let gasForBridge = 0;
         try {
           gasForBridge = this.txFeeResolver.getFullBridgeGas(bcd.toBigInt());

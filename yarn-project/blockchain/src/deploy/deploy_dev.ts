@@ -14,6 +14,8 @@ import {
   deployErc20,
   deployAztecFaucet,
   deployMockDataProvider,
+  deployAsyncBridge,
+  deploySyncBridge,
 } from './deployers/index.js';
 
 const escapeBlockLower = 2160;
@@ -69,6 +71,9 @@ export async function deployDev(
   await deployUniswapPair(signer, uniswapRouter, asset0, initialTokenSupply, initialEthSupply);
   const uniswapBridge = await deployUniswapBridge(signer, rollup, uniswapRouter);
   const dummyBridge = await deployDummyBridge(rollup, signer, [asset0, asset1]);
+
+  await deploySyncBridge(signer, rollup, asset0);
+  await deployAsyncBridge(signer, rollup, asset0);
 
   await bridgeDataProvider.setBridgeData(5, uniswapBridge.address, 50000, 'Uniswap Bridge');
   await bridgeDataProvider.setBridgeData(6, dummyBridge.address, 50000, 'Dummy Bridge');
