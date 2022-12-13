@@ -1001,7 +1001,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
 
   private async computeJoinSplitProvingKey() {
     this.debug('release account proving key...');
-    await this.accountProver.releaseKey();
+    await this.accountProver?.releaseKey();
     this.debug('computing join-split proving key...');
     await this.joinSplitProver.computeKey();
     this.debug('done.');
