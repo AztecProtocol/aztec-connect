@@ -1,12 +1,11 @@
 import React from 'react';
 import { default as styled } from 'styled-components';
-import { colours } from '../../ui-components/styles/colour.js';
 import { breakpoints, spacings } from '../../ui-components/styles/layout.js';
-import { fontSizes, lineHeights } from '../../ui-components/styles/typography.js';
 import { PaddedBlock } from '../padded_block.js';
 import { Text } from '../text.js';
 import { TextLink } from '../text_link.js';
 import { ContentWrapper } from './content_wrapper.js';
+import style from './footer.module.scss';
 
 interface MenuItem {
   name: string;
@@ -16,23 +15,12 @@ interface MenuItem {
 
 const staticHelpItems = [
   {
-    name: 'Discord',
-    href: 'https://discord.gg/c7kaz9s5kr',
-  },
-  {
-    name: 'FAQ',
+    name: 'GitHub',
     href: 'https://docs.aztec.network/how-aztec-works/faq',
   },
   {
-    name: 'Looking for the old site?',
-    href: 'https://old.zk.money/',
-  },
-];
-
-const aboutItems = [
-  {
-    name: 'Medium',
-    href: 'https://medium.com/aztec-protocol',
+    name: 'Documentation',
+    href: 'https://docs.aztec.network/',
   },
 ];
 
@@ -41,37 +29,15 @@ const socialItems = [
     name: 'Twitter',
     href: 'https://twitter.com/aztecnetwork',
   },
+  {
+    name: 'Discord',
+    href: 'https://discord.gg/c7kaz9s5kr',
+  },
+  {
+    name: 'Medium',
+    href: 'https://medium.com/aztec-protocol',
+  },
 ];
-
-const FooterRoot = styled.div`
-  display: flex;
-  justify-content: center;
-  margin-top: 80px;
-  width: 100%;
-  background: ${colours.greyLight};
-  font-size: ${fontSizes.m};
-  line-height: ${lineHeights.m};
-
-  @media (max-width: 640px) {
-    padding: 10%;
-  }
-`;
-
-const FooterContent = styled.div`
-  position: relative;
-  display: flex;
-  justify-content: space-between;
-  color: black;
-  max-width: calc(1350px + 20%);
-  width: 100%;
-  align-self: center;
-  padding: 0px 10%;
-  margin: 40px auto;
-  @media (max-width: ${breakpoints.s}) {
-    flex-direction: column;
-    padding: ${spacings.s} 0;
-  }
-`;
 
 const Col = styled.div`
   @media (max-width: ${breakpoints.s}) {
@@ -81,6 +47,7 @@ const Col = styled.div`
 
 const MenuLink = styled(TextLink)`
   display: inline-block;
+  color: #99a5ee;
 `;
 
 interface FooterMenuProps {
@@ -91,11 +58,11 @@ interface FooterMenuProps {
 const FooterMenu: React.FunctionComponent<FooterMenuProps> = ({ title, menuItems }) => (
   <Col>
     <PaddedBlock size="s">
-      <Text text={title} size="m" weight="bold" />
+      <div className={style.menuText}>{title}</div>
     </PaddedBlock>
     {menuItems.map(({ name, href, to }) => (
       <PaddedBlock key={name} size="xs">
-        <MenuLink text={name} to={to} href={href} target={href ? '_blank' : undefined} size="s" />
+        <MenuLink text={name} to={to} href={href} target={href ? '_blank' : undefined} color="purple" size="s" />
       </PaddedBlock>
     ))}
   </Col>
@@ -116,19 +83,18 @@ interface FooterProps {
 }
 
 export function Footer(props: FooterProps) {
-  const helpItems = [{ name: 'Block Explorer', href: props.explorerUrl }, ...staticHelpItems];
+  const network = [...staticHelpItems, { name: 'Block Explorer', href: props.explorerUrl }];
   return (
-    <FooterRoot>
+    <div className={style.root}>
       <ContentWrapper>
-        <FooterContent>
-          <FooterMenu title="Need Help?" menuItems={helpItems} />
-          <FooterMenu title="About" menuItems={aboutItems} />
-          <FooterMenu title="Social" menuItems={socialItems} />
-        </FooterContent>
+        <div className={style.content}>
+          <FooterMenu title="Network" menuItems={network} />
+          <FooterMenu title="Community" menuItems={socialItems} />
+        </div>
         <Foot>
-          <Text text="Made in London" size="xs" />
+          <Text text="Made in London" size="xxs" />
         </Foot>
       </ContentWrapper>
-    </FooterRoot>
+    </div>
   );
 }

@@ -9,6 +9,12 @@
   align-items: center;
   border: 1px solid rgba(255, 255, 255, 0);
   padding: 0 24px;
+
+  @media (max-width: 480px) {
+    height: initial;
+    padding: 10px 24px;
+    display: block;
+  }
 }
 
 .row:nth-child(even) {
@@ -29,12 +35,30 @@
   align-items: center;
   font-weight: 500;
   text-align: right;
+
+  @media (max-width: 768px) {
+    justify-content: flex-start;
+    margin: 5px 0;
+  }
+}
+
+.inlineCost {
+  display: none;
+  font-weight: 400;
+
+  @media (max-width: 768px) {
+    display: block;
+  }
 }
 
 .cost {
   width: 200px;
   text-align: left;
   font-weight: 400;
+
+  @media (max-width: 768px) {
+    display: none;
+  }
 }
 
 .assetIcon {
@@ -42,6 +66,10 @@
   align-items: center;
   justify-content: center;
   width: 28px;
+
+  @media (max-width: 768px) {
+    display: none;
+  }
 }
 
 .amount {
@@ -50,6 +78,17 @@
   display: flex;
   flex-direction: column;
   padding: 5px 0;
+
+  @media (max-width: 768px) {
+    width: initial;
+    flex-direction: row;
+  }
+}
+
+.conversionAmount {
+  @media (max-width: 768px) {
+    flex-direction: column;
+  }
 }
 
 .l1AssetIcon {
@@ -78,6 +117,14 @@
   font-size: 16px;
   font-weight: 500;
   text-align: right;
+
+  @media (max-width: 768px) {
+    margin-top: 10px;
+  }
+
+  @media (max-width: 480px) {
+    text-align: left;
+  }
 }
 
 .conversionValue {

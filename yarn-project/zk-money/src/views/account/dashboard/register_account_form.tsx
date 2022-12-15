@@ -93,7 +93,7 @@ export function RegisterAccountForm(props: RegisterAccountFormProps) {
         label="Pick an alias"
         sublabel="Choose an alias in place of your account key so other users can find you more easily"
         value={fields.alias}
-        onChangeValue={setters.alias}
+        onChangeValue={(value: string) => setters.alias(value.toLowerCase())}
         disabled={locked || walletInteractionIsOngoing}
         placeholder="@username"
         prefix="@"

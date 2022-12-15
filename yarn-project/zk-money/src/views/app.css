@@ -21,3 +21,10 @@
 a {
   cursor: pointer;
 }
+
+.wave {
+  width: 100%;
+  top: 0;
+  position: absolute;
+  z-index: 0;
+}

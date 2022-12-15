@@ -1,7 +1,5 @@
 .toastGroup {
   position: fixed;
-  inset-block-end: 0;
-  padding-block-end: 5vh;
   gap: 20px;
   display: flex;
   z-index: 99999;
@@ -12,7 +10,13 @@
 
 .bottomCenter {
   left: 50%;
+  bottom: 20px;
   transform: translateX(-50%);
+
+  @media (max-width: 480px) {
+    width: 89%;
+    bottom: 60px;
+  }
 }
 
 .bottomLeft {
@@ -27,6 +31,10 @@
   top: 20px;
   right: 20px;
   align-items: self-end;
+
+  @media (max-width: 768px) {
+    left: 20px;
+  }
 }
 
 .topCenter {

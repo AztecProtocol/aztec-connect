@@ -5,7 +5,8 @@ export const colours = {
   grey: '#A4A4A4',
   white: '#ffffff',
   green: '#44FF9A',
-  indigo: '#0094ff',
+  purple: '#99a5ee',
+  indigo: '#2f1f49',
   violet: '#7856FF',
   orange: '#FFB444',
   yellow: '#FFD99F',
@@ -15,7 +16,7 @@ export type Colour = keyof typeof colours;
 
 export const gradients = {
   primary: {
-    from: '#940dff',
+    from: '#2f1f49',
     to: colours.indigo,
   },
   secondary: {

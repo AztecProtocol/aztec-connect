@@ -30,7 +30,7 @@
 }
 
 .primary {
-  background: linear-gradient(134.14deg, #940dff 18.37%, #0094ff 82.04%);
+  background: #2f1f49;
 }
 
 .disabled {
@@ -55,7 +55,7 @@
 }
 
 .secondary > .text {
-  @include mixins.gradient_font;
+  color: #2f1f49;
 }
 
 .outlined {

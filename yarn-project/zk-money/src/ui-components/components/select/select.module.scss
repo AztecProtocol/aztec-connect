@@ -1,5 +1,6 @@
 .selectBox {
   border-radius: 10px;
+  background-color: white;
   position: relative;
   font-size: 16px;
   height: 45px;
@@ -9,6 +10,10 @@
   @media (max-width: 480px) {
     margin: 0;
   }
+}
+
+.icon {
+  min-width: 12px;
 }
 
 .border {
@@ -21,6 +26,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  overflow: hidden;
   gap: 10px;
 }
 

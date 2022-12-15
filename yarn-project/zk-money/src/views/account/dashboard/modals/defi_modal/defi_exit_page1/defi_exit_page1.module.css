@@ -17,3 +17,9 @@
   gap: 30px;
   font-size: 14px;
 }
+
+@media (max-width: 768px) {
+  .top {
+    display: none;
+  }
+}

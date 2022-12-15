@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Pagination } from '../index.js';
 import { DefiInvestmentRow } from './defi_investment_row/index.js';
 import { DefiPosition } from '../../alt-model/defi/open_position_hooks.js';
+import style from './defi_investments.module.scss';
 
 const INVESTMENTS_PER_PAGE = 5;
 
@@ -21,7 +22,7 @@ export function DefiInvestments(props: DefiInvestmentsProps) {
   const { positions } = props;
 
   if (!positions) return <></>;
-  if (!positions.length) return <div>You haven't made any investments yet</div>;
+  if (!positions.length) return <div className={style.noHoldings}>You haven't made any investments yet</div>;
 
   return (
     <>

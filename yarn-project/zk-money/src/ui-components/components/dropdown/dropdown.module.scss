@@ -1,17 +1,3 @@
-$gradient_from: #940dff;
-$gradient_to: #0094ff;
-
-@mixin gradient_font() {
-  background-color: $gradient_from;
-  background-image: linear-gradient(134.14deg, $gradient_from 18.37%, $gradient_to 82.04%);
-  background-size: 100%;
-  background-clip: text;
-  -webkit-background-clip: text;
-  -moz-background-clip: text;
-  -webkit-text-fill-color: rgba(255, 255, 255, 0);
-  -moz-text-fill-color: rgba(255, 255, 255, 0);
-}
-
 .dropdownWrapper {
   position: absolute;
   top: 60px;
@@ -78,5 +64,5 @@ $gradient_to: #0094ff;
 }
 
 .label {
-  @include gradient_font;
+  color: #2f1f49;
 }

@@ -7,8 +7,9 @@
   height: 60px;
   display: grid;
   align-items: center;
-  grid-template-columns: 1fr 1px 1fr 1fr 1px 1fr;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
   margin-bottom: 30px;
+  background-color: white;
   position: relative;
 }
 
@@ -39,7 +40,7 @@
 }
 
 .name {
-  font-size: 18px;
+  font-size: 16px;
 }
 
 .apy {
@@ -53,56 +54,48 @@
   gap: 10px;
 }
 
-.separator {
-  width: 1px;
-  height: 28px;
-  background-color: #eee;
-}
-
-@media (max-width: 900px) {
-  .separator {
+@media (max-width: 1024px) {
+  .logo {
     display: none;
   }
 
-  .segment,
-  .lastSegment {
-    padding: 0;
-  }
-
-  .lastSegment {
-    margin-left: auto;
-    margin-top: 10px;
-  }
-
-  .root {
-    display: flex;
-    justify-content: space-between;
-    padding: 10px 40px;
-    flex-flow: row wrap;
-    height: initial;
+  .segment {
+    padding: 0 10px;
   }
 
   .firstSegment {
-    width: 45px;
+    padding-left: 15px;
+  }
+
+  .lastSegment {
+    padding-right: 15px;
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 900px) {
+  .nameWrapper {
+    padding: 0;
+  }
+
+  .segment {
+    padding: 0;
+  }
+
   .root {
-    flex-flow: column nowrap;
-    align-items: baseline;
+    padding: 20px;
+    justify-content: initial;
+    display: flex;
+    flex-flow: row wrap;
+    height: initial;
+    gap: 10px 20px;
+    flex-direction: column;
+    align-items: start;
   }
 
-  .apyWrapper {
-    position: absolute;
-    bottom: 10px;
-  }
-
-  .valueWrapper {
-    margin-top: 10px;
-  }
-
-  .logo {
-    height: 28px;
+  .lastSegment {
+    margin: auto;
+    padding: 0;
+    bottom: 20px;
+    right: 20px;
   }
 }

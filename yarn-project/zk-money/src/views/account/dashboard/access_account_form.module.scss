@@ -5,6 +5,10 @@
   justify-content: center;
   align-items: center;
   gap: 40px;
+
+  @media (max-width: 480px) {
+    padding: 20px;
+  }
 }
 
 .message {
@@ -16,4 +20,8 @@
   width: 100%;
   gap: 20px;
   justify-content: flex-end;
+
+  @media (max-width: 480px) {
+    flex-direction: column;
+  }
 }
