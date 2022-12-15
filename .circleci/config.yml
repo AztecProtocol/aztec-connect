@@ -348,6 +348,17 @@ jobs:
           name: 'Build and test'
           command: build falafel
 
+  block-server:
+    machine:
+      image: ubuntu-2004:202010-01
+    resource_class: large
+    steps:
+      - *checkout
+      - *setup_env
+      - run:
+          name: 'Build and test'
+          command: build block-server
+
   sdk:
     machine:
       image: ubuntu-2004:202010-01
@@ -690,6 +701,9 @@ jobs:
           name: 'falafel'
           command: deploy falafel
       - run:
+          name: 'block-server'
+          command: deploy block-server
+      - run:
           name: 'sdk'
           command: |
             deploy_ecr sdk
@@ -852,6 +866,7 @@ workflows:
       - kebab: *yarn_project
       - halloumi: *yarn_project
       - falafel: *yarn_project
+      - block-server: *yarn_project
       - sdk: *yarn_project
       - wasabi: *yarn_project
       - hummus: *yarn_project
