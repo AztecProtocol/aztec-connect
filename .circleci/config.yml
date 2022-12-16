@@ -919,6 +919,7 @@ workflows:
             - blockchain
             - contracts-verifier-test
             - barretenberg-js
+            - block-server
           filters: *deploy_filters
       - deploy:
           requires:
