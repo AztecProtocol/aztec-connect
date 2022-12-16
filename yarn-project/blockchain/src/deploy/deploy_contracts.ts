@@ -4,7 +4,6 @@ import { ethers, Signer } from 'ethers';
 import { InitHelpers, TreeInitData } from '@aztec/barretenberg/environment';
 import { deployDev } from './deploy_dev.js';
 import { deployMainnet } from './deploy_mainnet.js';
-import { deployMainnetE2e } from './deploy_mainnet_e2e.js';
 import { deployMainnetFork } from './deploy_mainnet_fork.js';
 
 function getSigner(host?: string, privateKey?: string) {
@@ -32,8 +31,6 @@ function deploy(
     case 0xa57ec:
     case 0xdef:
       return deployMainnetFork(host, signer, treeInitData, vk, faucetOperator, rollupProvider);
-    case 0xe2e:
-      return deployMainnetE2e(signer, treeInitData, vk, faucetOperator, rollupProvider);
     default:
       return deployDev(signer, treeInitData, vk, faucetOperator, rollupProvider);
   }

@@ -348,6 +348,17 @@ jobs:
           name: 'Build and test'
           command: build falafel
 
+  block-server:
+    machine:
+      image: ubuntu-2004:202010-01
+    resource_class: large
+    steps:
+      - *checkout
+      - *setup_env
+      - run:
+          name: 'Build and test'
+          command: build block-server
+
   sdk:
     machine:
       image: ubuntu-2004:202010-01
@@ -682,13 +693,16 @@ jobs:
       - run:
           name: 'kebab'
           # Increment to force contract redeployment.
-          command: TF_VAR_REDEPLOY=8 deploy kebab
+          command: TF_VAR_REDEPLOY=9 deploy kebab
       - run:
           name: 'halloumi'
           command: deploy halloumi "halloumi halloumi-inner halloumi-outer"
       - run:
           name: 'falafel'
           command: deploy falafel
+      - run:
+          name: 'block-server'
+          command: deploy block-server
       - run:
           name: 'sdk'
           command: |
@@ -852,6 +866,7 @@ workflows:
       - kebab: *yarn_project
       - halloumi: *yarn_project
       - falafel: *yarn_project
+      - block-server: *yarn_project
       - sdk: *yarn_project
       - wasabi: *yarn_project
       - hummus: *yarn_project
@@ -875,8 +890,8 @@ workflows:
       - e2e-browser: *e2e_test
       - e2e-chained-txs-with-spending-keys: *e2e_test
       - e2e-chained-txs: *e2e_test
-      # - e2e-sync-defi: *e2e_test
-      # - e2e-async-defi: *e2e_test
+      - e2e-sync-defi: *e2e_test
+      - e2e-async-defi: *e2e_test
       - e2e-defi: *e2e_test
       - e2e-defi-subsidy: *e2e_test
       - e2e-migrate-account: *e2e_test
@@ -918,8 +933,8 @@ workflows:
             - e2e-browser
             - e2e-chained-txs
             - e2e-chained-txs-with-spending-keys
-            # - e2e-async-defi
-            # - e2e-sync-defi
+            - e2e-async-defi
+            - e2e-sync-defi
             - e2e-defi
             - e2e-defi-subsidy
             - e2e-migrate-account

@@ -49,13 +49,11 @@ contract Create2Test is Test {
 
     function setUp() public {
         verifier = new AlwaysTrueVerifier();
-        defiProxy = new DefiBridgeProxy();
         rollupDeployer = new RollupDeployer();
 
-        (address admin, address proxy,, address proxyDeployer_) = rollupDeployer.deploy(
+        (address admin, address proxy,, address proxyDeployer_, address defiProxy) = rollupDeployer.deploy(
             RollupDeployer.DeployParams(
                 address(verifier),
-                address(defiProxy),
                 address(this),
                 80,
                 100,

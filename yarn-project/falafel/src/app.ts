@@ -201,7 +201,7 @@ export async function appFactory(server: Server, prefix: string, metrics: Metric
     ctx.status = 200;
   });
 
-  router.get('/rollup/:rollupId', recordMetric, async (ctx: Koa.Context) => {
+  router.get('/rollup/:rollupId', async (ctx: Koa.Context) => {
     const { rollupId } = ctx.params;
     const rollup = await server.getRollupById(+rollupId);
     if (!rollup) {
@@ -231,7 +231,7 @@ export async function appFactory(server: Server, prefix: string, metrics: Metric
     }
   });
 
-  router.get('/tx/:txId', recordMetric, async (ctx: Koa.Context) => {
+  router.get('/tx/:txId', async (ctx: Koa.Context) => {
     const { txId } = ctx.params;
     const tx = await server.getTxById(txId);
     if (!tx) {

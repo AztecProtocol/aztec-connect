@@ -163,7 +163,7 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "ETHEREUM_HOST",
-        "value": "https://${var.DEPLOY_TAG}-eth-host.aztec.network:8545"
+        "value": "https://${var.DEPLOY_TAG}-eth-host.aztec.network:8545/${var.DEV_NET_API_KEY}"
       },
       {
         "name": "PRIVATE_KEY",
@@ -305,6 +305,7 @@ resource "aws_alb_target_group" "falafel" {
 
 resource "aws_lb_listener_rule" "api" {
   listener_arn = data.terraform_remote_state.aztec2_iac.outputs.alb_listener_arn
+  priority     = 400
 
   action {
     type             = "forward"

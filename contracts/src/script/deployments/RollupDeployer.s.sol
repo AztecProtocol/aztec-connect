@@ -10,6 +10,7 @@ import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transpa
 import {IRollupProcessor} from "rollup-encoder/interfaces/IRollupProcessor.sol";
 import {RollupProcessor} from "core/RollupProcessor.sol";
 import {RollupProcessorV2} from "core/processors/RollupProcessorV2.sol";
+import {DefiBridgeProxy} from "core/DefiBridgeProxy.sol";
 import {PermitHelper} from "periphery/PermitHelper.sol";
 import {ProxyDeployer} from "periphery/ProxyDeployer.sol";
 
@@ -20,7 +21,6 @@ contract RollupDeployer is Test {
 
     struct DeployParams {
         address verifier;
-        address defiBridgeProxy;
         address contractOwner;
         uint256 escapeBlockLowerBound;
         uint256 escapeBlockUpperBound;
@@ -39,7 +39,6 @@ contract RollupDeployer is Test {
         public
         returns (
             /*        address _verifier,
-            address _defiBridgeProxy,
             address _contractOwner,
             uint256 _escapeBlockLowerBound,
             uint256 _escapeBlockUpperBound,
@@ -51,13 +50,17 @@ contract RollupDeployer is Test {
             address,
             address,
             address,
+            address,
             address
         )
     {
+        if (isDeploying) vm.broadcast();
+        DefiBridgeProxy defiBridgeProxy = new DefiBridgeProxy();
+
         bytes memory initializeCalldata = abi.encodeWithSignature(
             "initialize(address,address,address,bytes32,bytes32,bytes32,uint32,bool)",
             _params.verifier,
-            _params.defiBridgeProxy,
+            defiBridgeProxy,
             _params.contractOwner,
             _params.initDataRoot,
             _params.initNullRoot,
@@ -100,7 +103,9 @@ contract RollupDeployer is Test {
             assertEq(proxyAdmin.owner(), _params.contractOwner, "proxyAdmin ownership transfer failed");
         }
 
-        return (address(proxyAdmin), address(proxy), address(permitHelper), address(proxyDeployer));
+        return (
+            address(proxyAdmin), address(proxy), address(permitHelper), address(proxyDeployer), address(defiBridgeProxy)
+        );
     }
 
     function upgrade(address _proxyAdmin, address _proxy) public {

@@ -6,7 +6,7 @@ import { JsonRpcProvider } from '@aztec/blockchain';
 
 import { EthLogsDb, RollupLogsParamsQuery } from './log_db.js';
 import { RollupEventGetter } from './rollup_event_getter.js';
-import { RedeployConfig } from './configurator.js';
+import { ConfVars } from './configurator.js';
 
 const REQUEST_TYPES_TO_CACHE = ['eth_chainId'];
 
@@ -32,6 +32,7 @@ export class Server {
   private interruptableSleep = new InterruptableSleep();
   private requestQueue: Array<() => void> = [];
   private cachedResponses: { [key: string]: string | undefined } = {};
+  private apiKeys: { [key: string]: boolean } = {};
 
   private log = createLogger('Server');
 
@@ -40,14 +41,20 @@ export class Server {
     private ethereumHost: string,
     private logsDb: EthLogsDb,
     chainId: number,
-    private readonly _allowPrivilegedMethods: boolean,
-    private readonly _additionalPermittedMethods: string[],
-    private readonly redeployConfig: RedeployConfig,
+    private readonly configuration: ConfVars,
   ) {
     for (const request of REQUEST_TYPES_TO_CACHE) {
       this.cachedResponses[request] = undefined;
     }
-    this.rollupEventGetter = new RollupEventGetter(redeployConfig.rollupContractAddress!, provider, chainId, logsDb);
+    this.rollupEventGetter = new RollupEventGetter(
+      this.configuration.redeployConfig.rollupContractAddress!,
+      provider,
+      chainId,
+      logsDb,
+    );
+    for (const key of this.configuration.apiKeys) {
+      this.apiKeys[key] = true;
+    }
   }
 
   private async retrieveMoreBlocks() {
@@ -66,7 +73,7 @@ export class Server {
   }
 
   public getRedeployConfig() {
-    return this.redeployConfig;
+    return this.configuration.redeployConfig;
   }
 
   public async start() {
@@ -186,10 +193,20 @@ export class Server {
   }
 
   public allowPrivilegedMethods() {
-    return this._allowPrivilegedMethods;
+    return this.configuration.allowPrivilegedMethods;
   }
 
   public additionalPermittedMethods() {
-    return this._additionalPermittedMethods;
+    return this.configuration.additionalPermittedMethods;
+  }
+
+  public isValidApiKey(keyProvided: string | undefined) {
+    if (this.configuration.apiKeys.length === 0) {
+      return true;
+    }
+    if (!keyProvided) {
+      return false;
+    }
+    return !!this.apiKeys[keyProvided];
   }
 }

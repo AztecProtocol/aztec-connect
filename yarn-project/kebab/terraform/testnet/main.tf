@@ -169,6 +169,10 @@ resource "aws_ecs_task_definition" "kebab" {
       {
         "name": "ADDITIONAL_PERMITTED_METHODS",
         "value": "net_version"
+      },
+      {
+        "name": "API_KEYS",
+        "value": "${var.TEST_NET_API_KEY}"
       }
     ],
     "mountPoints": [

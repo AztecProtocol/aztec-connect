@@ -4,9 +4,31 @@ services:
     image: trufflesuite/ganache
     environment:
       NODE_OPTIONS: --max_old_space_size=3072
-    command: -h='0.0.0.0' -q -l 15000000 -e 10000 -m='test test test test test test test test test test test junk' ${CHAIN_ID} ${FORK_HOST} ${FORK_BLOCK}
+    command: -h='0.0.0.0' -q -l 15000000 -e 10000 -m='test test test test test test test test test test test junk'
     ports:
       - '8545:8545'
+
+  contracts:
+    image: 278380418400.dkr.ecr.eu-west-2.amazonaws.com/contracts:latest
+    environment:
+      ETHEREUM_HOST: http://ganache:8545
+      ROLLUP_PROVIDER_ADDRESS: null # Defaults to address from private key TODO: what to set to
+      SAFE_ADDRESS: '0x7095057A08879e09DC1c0a85520e3160A0F67C96'
+      VERIFIER_TYPE: 'MockVerifier'
+      UPGRADE: 'true'
+      PRIVATE_KEY: '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80' # /0 from MNEMONIC used in ganache service above
+      SERVE_PORT: 8547 # Port where deployed contracts are served
+    depends_on:
+      - ganache
+    ports:
+      - '8547:8547'
+    entrypoint: >
+      sh -c "
+        while ! curl -X POST --data '{\"jsonrpc\":\"2.0\",\"method\":\"eth_blockNumber\",\"params\":[]}' http://ganache:8545; do 
+          sleep 1 
+        done
+        sh scripts/deploy_e2e.sh
+        sh scripts/serve.sh "
 
   kebab:
     image: 278380418400.dkr.ecr.eu-west-2.amazonaws.com/kebab:latest
@@ -18,6 +40,7 @@ services:
       REDEPLOY: 1
     depends_on:
       - ganache
+      - contracts
     command: >
       sh -c "
       set -e;

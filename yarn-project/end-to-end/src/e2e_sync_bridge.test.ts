@@ -13,7 +13,7 @@ import {
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { createFundedWalletProvider } from './create_funded_wallet_provider.js';
-import { registerUsers } from './sdk_utils.js';
+import { addUsers } from './sdk_utils.js';
 import { jest } from '@jest/globals';
 
 jest.setTimeout(20 * 60 * 1000);
@@ -27,7 +27,7 @@ const {
 
 /**
  * Run the following:
- * blockchain: yarn start:ganache:fork
+ * blockchain: yarn start:ganache
  * kebab: yarn start:e2e
  * halloumi: yarn start:e2e
  * falafel: yarn start:e2e
@@ -40,13 +40,13 @@ describe('end-to-end defi tests', () => {
   let accounts: EthAddress[] = [];
   let userIds: GrumpkinAddress[] = [];
   let shieldValue: AssetValue;
-  const signers: SchnorrSigner[] = [];
+  let signers: SchnorrSigner[] = [];
   const debug = createDebug('bb:e2e_sync_bridge');
 
   beforeAll(async () => {
     debug(`funding initial ETH accounts...`);
     const privateKey = Buffer.from(PRIVATE_KEY, 'hex');
-    provider = await createFundedWalletProvider(ETHEREUM_HOST, 2, 2, privateKey, toBaseUnits('0.2', 18));
+    provider = await createFundedWalletProvider(ETHEREUM_HOST, 2, 2, privateKey, toBaseUnits('0.4', 18));
     accounts = provider.getAccounts();
 
     sdk = await createAztecSdk(provider, {
@@ -58,12 +58,9 @@ describe('end-to-end defi tests', () => {
     await sdk.run();
     await sdk.awaitSynchronised();
 
+    debug(`adding users...`);
     shieldValue = sdk.toBaseUnits(0, '0.10');
-    userIds = await registerUsers(sdk, accounts, shieldValue);
-    for (const account of accounts) {
-      const spendingKey = await sdk.generateSpendingKeyPair(account);
-      signers.push(await sdk.createSchnorrSigner(spendingKey.privateKey));
-    }
+    ({ userIds, signers } = await addUsers(sdk, accounts, shieldValue, ...accounts));
   });
 
   afterAll(async () => {
@@ -74,9 +71,9 @@ describe('end-to-end defi tests', () => {
     const debugBalance = async (assetId: number) =>
       debug(`balance: ${sdk.fromBaseUnits(await sdk.getBalance(userIds[0], assetId), true)}`);
 
-    const bridgeAddressId = 5;
+    const bridgeAddressId = 7;
     const ethAssetId = 0;
-    const tokenAAssetId = 5;
+    const tokenAAssetId = 1;
     const bridgeCallData = new BridgeCallData(bridgeAddressId, ethAssetId, tokenAAssetId);
     const ethToTokenAFees = await sdk.getDefiFees(bridgeCallData);
 
