@@ -89,7 +89,7 @@ export class Server {
       this.reqMisses++;
       const batchNum = 1000;
       if (this.reqMisses === batchNum) {
-        console.log(`Served ${batchNum} empty results, average time ${this.reqMissTime / batchNum}ms.`);
+        console.log(`Served ${batchNum} empty results, average time ${this.reqMissTime / batchNum}ms per request.`);
         this.reqMissTime = 0;
         this.reqMisses = 0;
       }
