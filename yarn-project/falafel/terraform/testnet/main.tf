@@ -321,6 +321,7 @@ resource "aws_alb_target_group" "falafel" {
 
 resource "aws_lb_listener_rule" "api" {
   listener_arn = data.terraform_remote_state.aztec2_iac.outputs.alb_listener_arn
+  priority     = 410
 
   action {
     type             = "forward"

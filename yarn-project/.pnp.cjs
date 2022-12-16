@@ -29,6 +29,10 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
         "reference": "workspace:barretenberg.js"\
       },\
       {\
+        "name": "@aztec/block-server",\
+        "reference": "workspace:block-server"\
+      },\
+      {\
         "name": "@aztec/blockchain",\
         "reference": "workspace:blockchain"\
       },\
@@ -85,6 +89,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
     "ignorePatternData": "(^(?:\\\\.yarn\\\\/sdks(?:\\\\/(?!\\\\.{1,2}(?:\\\\/|$))(?:(?:(?!(?:^|\\\\/)\\\\.{1,2}(?:\\\\/|$)).)*?)|$))$)",\
     "fallbackExclusionList": [\
       ["@aztec/barretenberg", ["workspace:barretenberg.js"]],\
+      ["@aztec/block-server", ["workspace:block-server"]],\
       ["@aztec/blockchain", ["workspace:blockchain"]],\
       ["@aztec/contracts-verifier-test", ["workspace:contracts-verifier-test"]],\
       ["@aztec/eslint-config", ["workspace:eslint-config"]],\
@@ -412,6 +417,42 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["util", "npm:0.12.5"],\
             ["webpack", "virtual:4cf42c2f2a8aa147d524c15c0290174d77a2062937f0c22441901ac61d50212062460a38e714456279cdb4fab155b3b1d12acfb24cd6bb68fcc1837e921b5557#npm:5.74.0"],\
             ["webpack-cli", "virtual:4cf42c2f2a8aa147d524c15c0290174d77a2062937f0c22441901ac61d50212062460a38e714456279cdb4fab155b3b1d12acfb24cd6bb68fcc1837e921b5557#npm:4.10.0"]\
+          ],\
+          "linkType": "SOFT"\
+        }]\
+      ]],\
+      ["@aztec/block-server", [\
+        ["workspace:block-server", {\
+          "packageLocation": "./block-server/",\
+          "packageDependencies": [\
+            ["@aztec/block-server", "workspace:block-server"],\
+            ["@aztec/barretenberg", "workspace:barretenberg.js"],\
+            ["@aztec/eslint-config", "workspace:eslint-config"],\
+            ["@jest/globals", "npm:28.1.3"],\
+            ["@jest/types", "npm:28.1.3"],\
+            ["@koa/cors", "npm:3.3.0"],\
+            ["@rushstack/eslint-patch", "npm:1.1.4"],\
+            ["@types/bn.js", "npm:4.11.6"],\
+            ["@types/jest", "npm:28.1.6"],\
+            ["@types/koa", "npm:2.13.5"],\
+            ["@types/koa-compress", "npm:2.0.9"],\
+            ["@types/koa-router", "npm:7.4.4"],\
+            ["@types/koa__cors", "npm:3.3.0"],\
+            ["@types/node", "npm:18.7.23"],\
+            ["@types/source-map-support", "npm:0.5.6"],\
+            ["bn.js", "npm:5.2.1"],\
+            ["jest", "virtual:4cf42c2f2a8aa147d524c15c0290174d77a2062937f0c22441901ac61d50212062460a38e714456279cdb4fab155b3b1d12acfb24cd6bb68fcc1837e921b5557#npm:28.1.3"],\
+            ["koa", "npm:2.13.4"],\
+            ["koa-compress", "npm:5.1.0"],\
+            ["koa-router", "npm:7.4.0"],\
+            ["log-timestamp", "npm:0.3.0"],\
+            ["promise-readable", "npm:5.0.4"],\
+            ["reflect-metadata", "npm:0.1.13"],\
+            ["source-map-support", "npm:0.5.21"],\
+            ["ts-jest", "virtual:4cf42c2f2a8aa147d524c15c0290174d77a2062937f0c22441901ac61d50212062460a38e714456279cdb4fab155b3b1d12acfb24cd6bb68fcc1837e921b5557#npm:28.0.7"],\
+            ["ts-node", "virtual:4cf42c2f2a8aa147d524c15c0290174d77a2062937f0c22441901ac61d50212062460a38e714456279cdb4fab155b3b1d12acfb24cd6bb68fcc1837e921b5557#npm:10.9.1"],\
+            ["tsc-watch", "virtual:e35cb2f9a33ef1b8aada102e2350ccc0551c137001f6014fc1f11d4a3ec40651db24890427c255d134f29987a3e5475186f25e17bc3995d86758303b9bd18a6a#npm:5.0.3"],\
+            ["typescript", "patch:typescript@npm%3A4.7.4#~builtin<compat/typescript>::version=4.7.4&hash=a1c5e5"]\
           ],\
           "linkType": "SOFT"\
         }]\

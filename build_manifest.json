@@ -83,6 +83,13 @@
     "rebuildPatterns": ["^yarn-project/falafel/"],
     "dependencies": ["barretenberg.js", "blockchain", "halloumi"]
   },
+  "block-server": {
+    "buildDir": "yarn-project",
+    "projectDir": "yarn-project/block-server",
+    "dockerfile": "block-server/Dockerfile",
+    "rebuildPatterns": ["^yarn-project/block-server/"],
+    "dependencies": ["barretenberg.js"]
+  },
   "sdk": {
     "buildDir": "yarn-project",
     "projectDir": "yarn-project/sdk",
