@@ -181,7 +181,7 @@ resource "aws_cloudwatch_log_group" "block-server_logs" {
 
 # Configure ALB to route /block-server to server.
 resource "aws_alb_target_group" "block-server" {
-  name                 = "${var.DEPLOY_TAG}-block-server"
+  name                 = "${var.DEPLOY_TAG}-blk-srv"
   port                 = "80"
   protocol             = "HTTP"
   target_type          = "ip"
