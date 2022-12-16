@@ -1,5 +1,6 @@
 import { ServerBlockSource } from '@aztec/barretenberg/block_source';
 import { createLogger } from '@aztec/barretenberg/log';
+import { numToInt32BE, serializeBufferArrayToVector } from '@aztec/barretenberg/serialize';
 import { InterruptableSleep } from '@aztec/barretenberg/sleep';
 
 export class Server {
@@ -9,6 +10,8 @@ export class Server {
   private ready = false;
   private serverBlockSource: ServerBlockSource;
   private interruptableSleep = new InterruptableSleep();
+  private reqMisses = 0;
+  private reqMissTime = 0;
 
   constructor(falafelUrl: URL, private log = createLogger('Server')) {
     this.serverBlockSource = new ServerBlockSource(falafelUrl);
@@ -74,7 +77,23 @@ export class Server {
     return await this.serverBlockSource.getLatestRollupId();
   }
 
-  public getBlockBuffers(from: number, take?: number) {
-    return this.blockBufferCache.slice(from, take ? from + take : undefined);
+  public getBlockBuffers(from?: number, take = 100) {
+    const start = new Date().getTime();
+    const blocks = from !== undefined ? this.blockBufferCache.slice(from, take ? from + take : undefined) : [];
+    const buf = Buffer.concat([numToInt32BE(this.blockBufferCache.length), serializeBufferArrayToVector(blocks)]);
+    const time = new Date().getTime() - start;
+    if (blocks.length) {
+      console.log(`Served ${blocks.length} blocks from ${from} to ${from! + take - 1} in ${time}ms.`);
+    } else {
+      this.reqMissTime += time;
+      this.reqMisses++;
+      const batchNum = 1000;
+      if (this.reqMisses === batchNum) {
+        console.log(`Served ${batchNum} empty results, average time ${this.reqMissTime / batchNum}ms.`);
+        this.reqMissTime = 0;
+        this.reqMisses = 0;
+      }
+    }
+    return buf;
   }
 }

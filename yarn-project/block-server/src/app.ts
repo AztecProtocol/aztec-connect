@@ -1,5 +1,4 @@
 import { fetch } from '@aztec/barretenberg/iso_fetch';
-import { numToInt32BE, serializeBufferArrayToVector } from '@aztec/barretenberg/serialize';
 import cors from '@koa/cors';
 import Koa, { Context, DefaultState } from 'koa';
 import compress from 'koa-compress';
@@ -27,18 +26,9 @@ export function appFactory(server: Server, prefix: string) {
     ctx.status = 200;
   });
 
-  router.get('/get-blocks', async (ctx: Koa.Context) => {
-    if (ctx.query.from) {
-      const start = new Date().getTime();
-      const from = +ctx.query.from;
-      const take = 100;
-      const blocks = ctx.query.from ? server.getBlockBuffers(from, take) : [];
-      ctx.body = Buffer.concat([numToInt32BE(await server.getLatestRollupId()), serializeBufferArrayToVector(blocks)]);
-      const time = new Date().getTime() - start;
-      console.log(`Served ${blocks.length} blocks from ${from} to ${from + take - 1} in ${time}ms.`);
-    } else {
-      ctx.body = Buffer.concat([numToInt32BE(await server.getLatestRollupId()), serializeBufferArrayToVector([])]);
-    }
+  router.get('/get-blocks', (ctx: Koa.Context) => {
+    const from = ctx.query.from ? +ctx.query.from : undefined;
+    ctx.body = server.getBlockBuffers(from);
     ctx.compress = false;
     ctx.status = 200;
   });
