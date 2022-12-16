@@ -22,6 +22,7 @@ echo "Deploying terraform found at $PWD..."
 
 # Always want to export the DEPLOY_TAG variable to terraform. It's used to easily scope releases.
 export TF_VAR_DEPLOY_TAG=$DEPLOY_TAG
+export TF_VAR_COMMIT_HASH=$COMMIT_HASH
 
 # If given a repository name, use it to construct and set/override the backend key.
 # Otherwise use the key as specified in the terraform.
