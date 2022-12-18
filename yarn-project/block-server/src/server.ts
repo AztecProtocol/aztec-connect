@@ -80,7 +80,7 @@ export class Server {
   public getBlockBuffers(from?: number, take = 100) {
     const start = new Date().getTime();
     const blocks = from !== undefined ? this.blockBufferCache.slice(from, take ? from + take : undefined) : [];
-    const buf = Buffer.concat([numToInt32BE(this.blockBufferCache.length), serializeBufferArrayToVector(blocks)]);
+    const buf = Buffer.concat([numToInt32BE(this.blockBufferCache.length - 1), serializeBufferArrayToVector(blocks)]);
     const time = new Date().getTime() - start;
     if (blocks.length) {
       console.log(`Served ${blocks.length} blocks from ${from} to ${from! + take - 1} in ${time}ms.`);
