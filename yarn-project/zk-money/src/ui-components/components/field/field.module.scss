@@ -17,6 +17,8 @@
   text-overflow: ellipsis;
   transition: box-shadow 0.2s;
   @include mixins.shadow_border;
+  // fix for iOS Safari:
+  -webkit-appearance: none;
 
   &:focus,
   &:hover {
@@ -88,7 +90,6 @@
   display: flex;
   width: 100%;
   flex-direction: column;
-  white-space: nowrap;
   justify-content: space-between;
 }
 
@@ -177,4 +178,8 @@
 
 .isClickable {
   cursor: pointer;
+}
+
+.noBackground {
+  background-color: transparent;
 }

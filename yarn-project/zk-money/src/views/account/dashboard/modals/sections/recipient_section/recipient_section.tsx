@@ -51,7 +51,7 @@ export function RecipientSection(props: RecipientSectionProps) {
       status={status}
       placeholder={getRecipientPlaceholder(recipientType)}
       prefix={getPrefixFromRecipient(recipientType, props.recipientStr)}
-      onChangeValue={handleValueChange}
+      onChangeValue={(value: string) => handleValueChange(value.toLowerCase())}
     />
   );
 }

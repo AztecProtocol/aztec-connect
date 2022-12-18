@@ -1,11 +1,24 @@
 .root {
   display: grid;
+  // flex-direction: row;
   grid-template-columns: auto 1fr auto;
+  grid-template-areas: 'faq feedback button';
   gap: 20px;
   align-items: center;
+
+  @media (max-width: 768px) {
+    grid-template-areas:
+      'feedback feedback feedback'
+      'faq faq button';
+  }
+}
+
+.faqHint {
+  grid-area: faq;
 }
 
 .feedback {
+  grid-area: feedback;
   color: white;
   background-color: #b62551;
   opacity: 0.7;
@@ -16,9 +29,15 @@
   font-size: 14px;
   line-height: 150%;
   margin: 0px 20px;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    margin: 0;
+  }
 }
 
 .nextWrapper {
+  grid-area: button;
   display: flex;
   flex-direction: column;
 }

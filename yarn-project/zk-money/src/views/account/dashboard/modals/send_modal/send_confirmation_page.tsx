@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { GrumpkinAddress } from '@aztec/sdk';
+import { EthAddress, GrumpkinAddress } from '@aztec/sdk';
 import { Button } from '../../../../../ui-components/index.js';
 import { BorderBox } from '../../../../../components/border_box.js';
 import { CostBreakdown } from '../modal_molecules/cost_breakdown/index.js';
@@ -14,8 +14,9 @@ import {
   SendComposerPayload,
 } from '../../../../../alt-model/send/index.js';
 import { RetrySigningButton } from '../modal_molecules/retry_signing_button/index.js';
-import style from './send_confirmation_page.module.scss';
 import { useWalletInteractionIsOngoing } from '../../../../../alt-model/wallet_interaction_hooks.js';
+import { formatEthAddress } from '../../../../../app/util/helpers.js';
+import style from './send_confirmation_page.module.scss';
 
 interface SendConfirmationPageProps {
   composerState: SendComposerState;
@@ -31,7 +32,7 @@ function formatRecipient(recipientStr: string, sendMode: SendMode) {
       ? `aztec:${GrumpkinAddress.fromString(recipientStr).toShortString()}`
       : `@${recipientStr}`;
   }
-  return recipientStr;
+  return formatEthAddress(EthAddress.fromString(recipientStr));
 }
 
 export function SendConfirmationPage({

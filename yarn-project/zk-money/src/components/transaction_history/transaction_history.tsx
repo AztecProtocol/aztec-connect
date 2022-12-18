@@ -3,6 +3,7 @@ import { useUserTxs } from '../../alt-model/user_tx_hooks.js';
 import { Pagination } from '../../components/pagination.js';
 import { useState } from 'react';
 import { TransactionHistoryRow } from './transaction_history_row/index.js';
+import style from './transaction_history.module.scss';
 
 const TXS_PER_PAGE = 5;
 
@@ -14,7 +15,7 @@ function getKey(tx: UserTx) {
 export function TransactionHistory() {
   const txs = useUserTxs();
   const [page, setPage] = useState(1);
-  if (!txs) return <></>;
+  if (!txs || txs.length === 0) return <div className={style.noTransactions}>You have no transactions yet</div>;
   return (
     <>
       {txs?.slice((page - 1) * TXS_PER_PAGE, page * TXS_PER_PAGE).map(tx => (

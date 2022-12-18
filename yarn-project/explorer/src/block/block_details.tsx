@@ -17,7 +17,8 @@ import { Block } from './types.js';
 
 export const getEtherscanLink = (network: Network, ethTxHash: string) => {
   const { etherscanUrl } = network;
-  return `${etherscanUrl}/tx/0x${ethTxHash}`;
+  const hash = ethTxHash.startsWith('0x') ? ethTxHash : `0x${ethTxHash}`;
+  return `${etherscanUrl}/tx/${hash}`;
 };
 
 const TimestampRoot = styled.div`

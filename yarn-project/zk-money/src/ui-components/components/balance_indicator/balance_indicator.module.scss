@@ -1,6 +1,6 @@
 @use '../../styles/mixins.scss';
 
-.balanceIndicator {
+.text {
   text-align: right;
   font-size: 14px;
   white-space: nowrap;
@@ -13,6 +13,7 @@
   width: 35px;
   height: 14px;
   border-radius: 5px;
+  cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
   box-shadow: 0px 4px 10px rgb(0 0 0 / 15%);
   padding: 1px;
@@ -31,11 +32,10 @@
 .balanceIndicatorWrapper {
   display: flex;
   flex-direction: row;
-  cursor: pointer;
   position: absolute;
   right: 45px;
   bottom: 5px;
-  gap: 10px;
+  gap: 7px;
   align-items: center;
 }
 
@@ -66,4 +66,9 @@
   flex-direction: row;
   gap: 20px;
   justify-content: space-between;
+}
+
+.maxButton {
+  font-weight: 500;
+  cursor: pointer;
 }

@@ -1,4 +1,5 @@
-import { Checkbox, TextLink } from '../../../../../../components/index.js';
+import { Checkbox } from '../../../../../../components/index.js';
+import { Hyperlink, HyperlinkIcon } from '../../../../../../ui-components/index.js';
 import style from './disclaimer.module.scss';
 
 interface DisclaimerProps {
@@ -15,19 +16,13 @@ export function Disclaimer({ accepted, onChangeAccepted }: DisclaimerProps) {
       </div>
       <div>
         <div className={style.message}>
-          This is experimental software. Use at your own risk.
-          <br />
-          <br />
-          Learn more about our approach to security{' '}
-          <TextLink
-            inline
+          <div className={style.line}>This is experimental software. Use at your own risk.</div>
+          <Hyperlink
+            theme="gradient"
+            icon={HyperlinkIcon.Open}
             href="https://medium.com/aztec-protocol/layer-by-layer-a-guide-to-aztecs-security-approach-87df087093c0"
-            target="_blank"
-            underline
-          >
-            here
-          </TextLink>
-          .
+            label="Learn more about our approach to security here"
+          />
         </div>
       </div>
       <div className={style.checkboxRow}>

@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { HOLDINGS_PER_PAGE, slicePage } from './helpers.js';
 import { Holding } from './holding.js';
+import style from './token_list.module.scss';
 
 interface TokenListProps {
   balances: AssetValue[] | undefined;
@@ -23,7 +24,7 @@ export function TokenList(props: TokenListProps) {
   };
 
   if (!props.balances) return <></>;
-  if (props.balances.length === 0) return <div>You have no tokens yet.</div>;
+  if (props.balances.length === 0) return <div className={style.noTokens}>You have no tokens yet</div>;
 
   return (
     <>

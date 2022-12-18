@@ -9,6 +9,13 @@
   left: 0px;
 }
 
+.tooltip {
+  @media (max-width: 768px) {
+    right: 30px;
+    bottom: -75px;
+  }
+}
+
 .infoTooltip {
   background-size: contain;
   background-position: center;

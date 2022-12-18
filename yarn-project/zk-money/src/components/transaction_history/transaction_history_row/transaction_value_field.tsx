@@ -2,6 +2,7 @@ import { AssetValue, ProofId, UserTx } from '@aztec/sdk';
 import { useAmount } from '../../../alt-model/asset_hooks.js';
 import { useHiddenAssets } from '../../../alt-model/defi/hidden_asset_hooks.js';
 import { ShieldedAssetIcon } from '../../../components/shielded_asset_icon.js';
+import style from './transaction_value_field.module.scss';
 
 function invertAssetValue({ assetId, value }: AssetValue): AssetValue {
   return { assetId, value: -value };
@@ -12,7 +13,7 @@ function ValueField(props: { assetValue?: AssetValue }) {
   if (!amount) return <></>;
   return (
     <>
-      <ShieldedAssetIcon size="s" asset={amount?.info} />
+      <ShieldedAssetIcon className={style.icon} size="s" asset={amount?.info} />
       {amount.format({ showPlus: true, uniform: true })}
     </>
   );

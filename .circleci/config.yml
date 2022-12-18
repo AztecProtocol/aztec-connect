@@ -662,15 +662,12 @@ jobs:
           command: build coinbase-exporter
       - run:
           name: 'Build sidecar'
-          working_directory: metrics/sidecar
           command: build metrics-sidecar
       - run:
           name: 'Build prometheus'
-          working_directory: metrics/prometheus
           command: build prometheus
       - run:
           name: 'Build grafana'
-          working_directory: metrics/grafana
           command: build grafana
 
   deploy:
@@ -922,6 +919,7 @@ workflows:
             - blockchain
             - contracts-verifier-test
             - barretenberg-js
+            - block-server
           filters: *deploy_filters
       - deploy:
           requires:

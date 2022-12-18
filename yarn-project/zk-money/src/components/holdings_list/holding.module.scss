@@ -2,32 +2,63 @@
   display: flex;
   flex-direction: row;
   width: 100%;
-  justify-content: flex-start;
+  justify-content: space-between;
   align-items: center;
   box-shadow: 0px 4px 14px rgba(0, 0, 0, 0.1);
   border-radius: 10px;
   padding: 15px 40px;
+  background-color: white;
   margin: 20px 0;
   flex-flow: row wrap;
+}
+
+.holdingInformation {
+  display: flex;
+  flex-direction: row;
+  flex-grow: 1;
+  justify-content: space-between;
+}
+
+.asset {
+  display: flex;
+  align-items: center;
+}
+
+.icon {
+  @media (max-width: 480px) {
+    display: none;
+  }
 }
 
 .assetWrapper {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  width: 35%;
   gap: 5px;
 }
 
 .holdingUnits {
-  font-size: 18px;
+  font-size: 16px;
   white-space: pre;
   margin-left: 20px;
+  display: flex;
+  font-weight: 500;
+  gap: 10px;
+  justify-content: center;
+  align-items: center;
+
+  @media (max-width: 480px) {
+    margin-left: 0;
+  }
 }
 
 .spendable {
   margin-left: 20px;
   font-size: 13px;
+
+  @media (max-width: 480px) {
+    margin-left: 0;
+  }
 }
 
 .buttonIcon {
@@ -55,20 +86,34 @@
   position: relative;
   justify-content: flex-end;
   width: 280px;
-  margin-left: auto;
 }
 
 .holdingAmount {
-  font-size: 18px;
-  text-align: center;
+  font-weight: 400;
 }
 
 @media (max-width: 900px) {
+  .holdingWrapper {
+    padding: 20px;
+  }
+
   .buttonsWrapper {
-    margin-top: 5px;
+    margin: auto;
+    width: 100%;
   }
 
   .holdingAmount {
     margin-left: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .holdingWrapper {
+    gap: 15px;
+  }
+
+  .buttonsWrapper {
+    justify-content: space-evenly;
+    gap: initial;
   }
 }

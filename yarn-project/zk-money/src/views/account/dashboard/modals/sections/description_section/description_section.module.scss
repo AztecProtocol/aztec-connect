@@ -2,4 +2,8 @@
   grid-area: desc;
   font-size: 16px;
   line-height: 170%;
+
+  @media (max-width: 480px) {
+    display: none;
+  }
 }

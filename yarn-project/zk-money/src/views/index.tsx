@@ -6,6 +6,7 @@ import { CSSTransition, TransitionGroup } from 'react-transition-group';
 import { TopLevelContext } from '../alt-model/top_level_context/top_level_context.js';
 import { useAccountState } from '../alt-model/account_state/index.js';
 import { DefiRecipe } from '../alt-model/defi/types.js';
+import wave from '../images/wave.svg';
 
 import { Template } from '../components/index.js';
 import { Config } from '../config.js';
@@ -69,7 +70,8 @@ export function Views({ config }: ViewsProps) {
 
   return (
     <>
-      <Template theme={theme} isLoading={hasAccountState} explorerUrl={config.explorerUrl}>
+      <Template theme={theme} explorerUrl={config.explorerUrl}>
+        {location.pathname === '/' && <img className={'wave'} src={wave} alt="" />}
         <Navbar
           path={location.pathname}
           theme={theme}

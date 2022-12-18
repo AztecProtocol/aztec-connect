@@ -14,9 +14,9 @@ function FaqIcon() {
       />
       <defs>
         <linearGradient id={`${id}`} x1={3.647} y1={4.045} x2={17.973} y2={7.619} gradientUnits="userSpaceOnUse">
-          <stop stopColor="#940DFF" />
-          <stop offset={1} stopColor="#0094FF" />
-          <stop offset={1} stopColor="#0094FF" />
+          <stop stopColor="#2f1f49" />
+          <stop offset={1} stopColor="#2f1f49" />
+          <stop offset={1} stopColor="#2f1f49" />
         </linearGradient>
       </defs>
     </svg>

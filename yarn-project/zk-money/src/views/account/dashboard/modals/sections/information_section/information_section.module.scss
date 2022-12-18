@@ -28,7 +28,7 @@
 .subtitle {
   font-weight: 500;
   height: 18px;
-  @include mixins.gradient_font;
+  color: #2f1f49;
 }
 
 .actionButton {
@@ -36,7 +36,7 @@
   font-weight: 500;
   height: 20px;
   cursor: pointer;
-  @include mixins.gradient_font;
+  color: #2f1f49;
 }
 
 .content {

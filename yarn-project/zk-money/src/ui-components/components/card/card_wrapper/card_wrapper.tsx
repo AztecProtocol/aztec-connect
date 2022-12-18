@@ -6,8 +6,9 @@ const cx = bindStyle(style);
 interface CardWrapperProps {
   children: React.ReactNode;
   className?: string;
+  inModal?: boolean;
 }
 
-export function CardWrapper({ children, className }: CardWrapperProps) {
-  return <div className={cx(style.cardWrapper, className)}>{children}</div>;
+export function CardWrapper({ children, className, inModal }: CardWrapperProps) {
+  return <div className={cx(style.cardWrapper, inModal && style.inModal, className)}>{children}</div>;
 }

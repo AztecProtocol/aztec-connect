@@ -41,15 +41,20 @@ export function Holding({ assetValue, onSend, onShield, onGoToEarn }: HoldingPro
 
   return (
     <div className={style.holdingWrapper}>
-      <ShieldedAssetIcon asset={asset} />
-      <div className={style.assetWrapper}>
-        <div className={style.holdingUnits}>{amount.format({ uniform: true })}</div>
-        <div className={style.spendable}>{`${spendableFormatted} available`}</div>
+      <div className={style.holdingInformation}>
+        <div className={style.asset}>
+          <ShieldedAssetIcon className={style.icon} asset={asset} />
+          <div className={style.assetWrapper}>
+            <div className={style.holdingUnits}>
+              {amount.format({ uniform: true })}
+              <div className={style.holdingAmount}>
+                {bulkPrice ? `($${formatBulkPrice(bulkPrice)})` : <SkeletonRect sizingContent="$1000.00" />}
+              </div>
+            </div>
+            <div className={style.spendable}>{`${spendableFormatted} available`}</div>
+          </div>
+        </div>
       </div>
-      <div className={style.holdingAmount}>
-        {bulkPrice ? `$${formatBulkPrice(bulkPrice)}` : <SkeletonRect sizingContent="$1000.00" />}
-      </div>
-
       <div className={style.buttonsWrapper}>
         {shieldSupported && (
           <Button

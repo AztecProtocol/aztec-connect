@@ -1,12 +1,11 @@
-import { Button } from '../ui-components/index.js';
-import cardStack from '../images/card_stack.svg';
+import { useMemo } from 'react';
+import { Button, Loader } from '../ui-components/index.js';
+import { useNavigate } from 'react-router-dom';
 import stakingLogo from '../images/staking_logo.svg';
 import yieldLogo from '../images/yield_logo.svg';
 import privateShieldLogo from '../images/private_shield_logo.svg';
 import privateSendLogo from '../images/private_send_logo.svg';
 
-import { ReactComponent as TopWave } from '../images/wave_top.svg';
-import { ReactComponent as BottomWave } from '../images/wave_bottom.svg';
 import aaveLogo from '../images/aave_logo.svg';
 import compoundLogo from '../images/compound_logo.svg';
 import cowswapLogo from '../images/cowswap_logo.svg';
@@ -17,6 +16,8 @@ import ribbonLogo from '../images/ribbon_logo.svg';
 import setLogo from '../images/set_logo.svg';
 import tokemakLogo from '../images/tokemak_logo.svg';
 import uniswapLogo from '../images/uniswap_logo.svg';
+import privateUnderline from '../images/underline.svg';
+import arrow from '../images/arrow.svg';
 
 import privateDefi from '../images/private_defi.svg';
 import sendReceive from '../images/send_receive.svg';
@@ -28,6 +29,11 @@ import whyZkMoney3 from '../images/why_zkmoney_3.svg';
 
 import { Hyperlink, HyperlinkIcon } from '../ui-components/index.js';
 import { bindStyle } from '../ui-components/util/classnames.js';
+import { useDefiRecipes } from '../alt-model/top_level_context/top_level_context_hooks.js';
+import { useValidRecipesOnly } from './account/dashboard/defi_cards_list.js';
+import { DefiCard } from '../components/index.js';
+import { DefiRecipe } from '../alt-model/defi/types.js';
+import { recipeFiltersToSearchStr } from '../alt-model/defi/recipe_filters.js';
 import style from './home.module.scss';
 
 const cx = bindStyle(style);
@@ -41,7 +47,7 @@ export function Home({ onSignup }: HomeProps) {
     <div className={style.homeWrapper}>
       <Banner onShieldNow={onSignup} />
       <FavoriteApps />
-      <div className={style.bottomContent}>
+      <div className={style.section}>
         <div className={style.sectionTitle}>How do I use zk.money?</div>
         <div className={style.steps}>
           <div className={style.step}>
@@ -78,6 +84,8 @@ export function Home({ onSignup }: HomeProps) {
             <img src={sendReceive} className={style.stepImage} alt="" />
           </div>
         </div>
+      </div>
+      <div className={style.section}>
         <div className={style.sectionTitle}>Why zk.money?</div>
         <div className={style.howItWorksWrapper}>
           <img className={cx(style.whyZk, style.whyImage1)} src={whyZkMoney1} alt="" />
@@ -116,14 +124,77 @@ export function Home({ onSignup }: HomeProps) {
   );
 }
 
+function PreviewCard() {
+  return (
+    <div className={style.previewCard}>
+      <Loader />
+    </div>
+  );
+}
+
 function Banner({ onShieldNow }: { onShieldNow: () => void }) {
+  const uncheckedRecipes = useDefiRecipes();
+  const navigate = useNavigate();
+  const recipes = useValidRecipesOnly(uncheckedRecipes);
+  const shuffledRecipes = useMemo(() => {
+    let uniqueNames: string[] = [];
+    if (!recipes) return [];
+    return (
+      recipes
+        // picks one recipe of each project
+        .filter(recipe => {
+          const isDuplicate = uniqueNames.includes(recipe.projectName);
+          if (!isDuplicate) {
+            uniqueNames.push(recipe.projectName);
+            return true;
+          }
+          return false;
+        })
+        // shuffles them
+        .map(recipe => ({ recipe, sort: Math.random() }))
+        .sort((recipeA, recipeB) => recipeA.sort - recipeB.sort)
+        .map(({ recipe }) => recipe)
+    );
+  }, [recipes]);
+
+  const hasRecipes = shuffledRecipes.length > 0;
+
+  const handleSelectRecipe = (recipe: DefiRecipe) => {
+    const filter = recipeFiltersToSearchStr({ project: recipe.projectName });
+    navigate(`/earn${filter}`);
+  };
+
   return (
     <div className={style.banner}>
-      <img src={cardStack} className={style.cardsGraphic} alt="A stack of DeFi opportunity cards" />
+      <div className={style.stack}>
+        {hasRecipes ? (
+          shuffledRecipes
+            ?.slice(0, 3)
+            .map((recipe, index) => (
+              <DefiCard
+                key={recipe.id}
+                className={cx(
+                  style.defiCard,
+                  index === 0 && style.top,
+                  index === 1 && style.middle,
+                  index === 2 && style.bottom,
+                )}
+                recipe={recipe}
+                onSelect={handleSelectRecipe}
+                isLoggedIn={true}
+              />
+            ))
+        ) : (
+          <PreviewCard />
+        )}
+      </div>
+      <img src={arrow} className={style.arrow} alt="" />
       <div className={style.text}>
         <div className={style.title}>
           {`The `}
-          <span className={style.bold}>private </span>
+          <span className={style.bold}>
+            private <img src={privateUnderline} className={style.underline} alt="Underline" />
+          </span>
           DeFi yield aggregator for Ethereum.
         </div>
         <div className={style.subtitle}>
@@ -133,13 +204,13 @@ function Banner({ onShieldNow }: { onShieldNow: () => void }) {
         <Button text="Shield Now" onClick={onShieldNow} className={style.shieldButton} />
         <div className={style.links}>
           <Hyperlink
-            theme="white"
+            theme="gradient"
             icon={HyperlinkIcon.Open}
             href="https://old.zk.money"
             label="Looking for old zk.money?"
           />
           <Hyperlink
-            theme="white"
+            theme="gradient"
             icon={HyperlinkIcon.Open}
             href="https://docs.aztec.network/how-aztec-works/faq#what-happens-when-i-shield-a-token"
             label="What is Shielding? Read our FAQ"
@@ -153,7 +224,6 @@ function Banner({ onShieldNow }: { onShieldNow: () => void }) {
 function FavoriteApps() {
   return (
     <div className={style.section}>
-      <TopWave className={style.topWave} />
       <div className={style.favoriteAppsWrapper}>
         <div className={style.favoriteApps}>
           <div className={style.sectionTitle}>Your favorite Dapps, made private.</div>
@@ -178,7 +248,6 @@ function FavoriteApps() {
           </div>
         </div>
       </div>
-      <BottomWave className={style.bottomWave} />
     </div>
   );
 }
