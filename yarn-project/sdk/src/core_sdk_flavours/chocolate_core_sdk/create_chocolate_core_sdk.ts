@@ -24,13 +24,13 @@ export async function createChocolateCoreSdk(jobQueue: JobQueue, options: Chocol
   const pedersen = new JobQueuePedersen(wasm, jobQueue);
   const pippenger = new JobQueuePippenger(jobQueue);
   const fftFactory = new JobQueueFftFactory(jobQueue);
-  const { pollInterval, serverUrl } = options;
+  const { pollInterval, serverUrl, noVersionCheck } = options;
 
   const leveldb = getLevelDb();
   const db = await getDb();
 
   const host = new URL(serverUrl);
-  const rollupProvider = new ServerRollupProvider(host, pollInterval, SDK_VERSION);
+  const rollupProvider = new ServerRollupProvider(host, pollInterval, noVersionCheck ? undefined : SDK_VERSION);
 
   const coreSdk = new CoreSdk(leveldb, db, rollupProvider, wasm, noteDecryptor, pedersen, pippenger, fftFactory);
   await coreSdk.init(options);
