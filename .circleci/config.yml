@@ -693,7 +693,7 @@ jobs:
       - run:
           name: 'kebab'
           # Increment to force contract redeployment.
-          command: TF_VAR_REDEPLOY=9 deploy kebab
+          command: TF_VAR_REDEPLOY=10 deploy kebab
       - run:
           name: 'halloumi'
           command: deploy halloumi "halloumi halloumi-inner halloumi-outer"
