@@ -267,11 +267,11 @@ export class Server {
     const cacheResult = this.cachedResponses[cacheKey];
 
     if (cacheResult === undefined) {
-      this.cachedResponses[cacheKey] = new Promise(resolve => {
+      this.cachedResponses[cacheKey] = new Promise((resolve, reject) => {
         this.debug(`cache key ${cacheKey} miss, adding response for request: ${JSON.stringify(args)}`);
-        void this.provider.request(args).then(resolve);
+        this.provider.request(args).then(resolve).catch(reject);
       });
-      return this.cachedResponses[cacheKey];
+      return await this.cachedResponses[cacheKey];
     } else if (isPromise(cacheResult)) {
       this.debug(`cache key ${cacheKey} hit (in flight) for request: ${JSON.stringify(args)}`);
       return await cacheResult;
