@@ -19,7 +19,7 @@ type SdkObsValue = AztecSdk | undefined;
 export type SdkObs = Obs<SdkObsValue>;
 
 export function createSdkObs(config: Config): SdkObs {
-  const aztecJsonRpcProvider = new JsonRpcProvider(config.ethereumHost);
+  const aztecJsonRpcProvider = new JsonRpcProvider(config.ethereumHost, false);
 
   const sdkObs = Obs.input<SdkObsValue>(undefined);
   createAztecSdk(aztecJsonRpcProvider, {

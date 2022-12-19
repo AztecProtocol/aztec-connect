@@ -3,7 +3,6 @@ import { wallet, connectorsForWallets } from '@rainbow-me/rainbowkit';
 import { configureChains, createClient, Chain, chain } from 'wagmi';
 import { infuraProvider } from 'wagmi/providers/infura';
 import { jsonRpcProvider } from 'wagmi/providers/jsonRpc';
-import { publicProvider } from 'wagmi/providers/public';
 import type { Config } from '../config.js';
 
 function getChain(chainId: number): Chain {
@@ -54,7 +53,7 @@ function getPublicProvider(config: Config) {
 export function getWagmiRainbowConfig(config: Config) {
   const { chains, provider, webSocketProvider } = configureChains(
     [getChain(config.chainId)],
-    [getPublicProvider(config), publicProvider()],
+    [getPublicProvider(config)],
   );
   const wallets = [wallet.metaMask({ chains }), wallet.walletConnect({ chains })];
   const connectors = connectorsForWallets([{ groupName: 'Supported', wallets }]);

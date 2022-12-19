@@ -2,7 +2,7 @@ import { Provider } from '@ethersproject/providers';
 import { Obs } from '../../app/util/index.js';
 import { Poller } from '../../app/util/poller.js';
 
-const GAS_PRICE_POLL_INTERVAL = 1000 * 60;
+const GAS_PRICE_POLL_INTERVAL = 5 * 1000 * 60;
 
 export function createGasPricePoller(provider: Provider) {
   const pollObs = Obs.constant(async () => {

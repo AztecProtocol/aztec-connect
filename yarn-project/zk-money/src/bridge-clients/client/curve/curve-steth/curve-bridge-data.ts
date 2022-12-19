@@ -6,7 +6,7 @@ import {
   AztecAssetType,
   BridgeDataFieldGetters,
 } from '../../bridge-data.js';
-
+import { StaticJsonRpcProvider } from '@ethersproject/providers';
 import {
   IWstETH,
   ILidoOracle,
@@ -17,8 +17,7 @@ import {
   IChainlinkOracle,
   IChainlinkOracle__factory,
 } from '../../../typechain-types/index.js';
-import { createWeb3Provider } from '../../aztec/provider/web3_provider.js';
-import { BridgeCallData, EthereumProvider, EthAddress, AssetValue } from '@aztec/sdk';
+import { BridgeCallData, EthAddress, AssetValue } from '@aztec/sdk';
 
 export class CurveStethBridgeData implements BridgeDataFieldGetters {
   public readonly scalingFactor: bigint = 1n * 10n ** 18n;
@@ -41,21 +40,17 @@ export class CurveStethBridgeData implements BridgeDataFieldGetters {
 
   static create(
     bridgeAddressId: number,
-    provider: EthereumProvider,
+    provider: StaticJsonRpcProvider,
     wstEthAddress: EthAddress,
     lidoOracleAddress: EthAddress,
     curvePoolAddress: EthAddress,
     chainlinkOracleAddress: EthAddress,
   ) {
-    const ethersProvider = createWeb3Provider(provider);
-    const wstEthContract = IWstETH__factory.connect(wstEthAddress.toString(), ethersProvider);
-    const lidoContract = ILidoOracle__factory.connect(lidoOracleAddress.toString(), ethersProvider);
-    const curvePoolContract = ICurvePool__factory.connect(curvePoolAddress.toString(), ethersProvider);
+    const wstEthContract = IWstETH__factory.connect(wstEthAddress.toString(), provider);
+    const lidoContract = ILidoOracle__factory.connect(lidoOracleAddress.toString(), provider);
+    const curvePoolContract = ICurvePool__factory.connect(curvePoolAddress.toString(), provider);
     // Precision of the feed is 1e18
-    const chainlinkOracleContract = IChainlinkOracle__factory.connect(
-      chainlinkOracleAddress.toString(),
-      ethersProvider,
-    );
+    const chainlinkOracleContract = IChainlinkOracle__factory.connect(chainlinkOracleAddress.toString(), provider);
     return new CurveStethBridgeData(
       bridgeAddressId,
       wstEthContract,

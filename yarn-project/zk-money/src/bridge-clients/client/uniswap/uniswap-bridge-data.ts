@@ -1,5 +1,6 @@
 import { AuxDataConfig, AztecAsset, AztecAssetType, BridgeDataFieldGetters, SolidityType } from '../bridge-data.js';
-import { BridgeCallData, EthAddress, EthereumProvider } from '@aztec/sdk';
+import { BridgeCallData, EthAddress } from '@aztec/sdk';
+import { StaticJsonRpcProvider } from '@ethersproject/providers';
 import 'isomorphic-fetch';
 import {
   IChainlinkOracle,
@@ -7,7 +8,6 @@ import {
   UniswapBridge,
   UniswapBridge__factory,
 } from '../../typechain-types/index.js';
-import { createWeb3Provider } from '../aztec/provider/web3_provider.js';
 
 export class UniswapBridgeData implements BridgeDataFieldGetters {
   private readonly WETH = EthAddress.fromString('0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2');
@@ -57,13 +57,12 @@ export class UniswapBridgeData implements BridgeDataFieldGetters {
     private daiEthOracle: IChainlinkOracle,
   ) {}
 
-  static create(provider: EthereumProvider, bridgeAddressId: number, bridgeAddress: EthAddress) {
-    const ethersProvider = createWeb3Provider(provider);
-    const uniswapBridge = UniswapBridge__factory.connect(bridgeAddress.toString(), ethersProvider);
+  static create(provider: StaticJsonRpcProvider, bridgeAddressId: number, bridgeAddress: EthAddress) {
+    const uniswapBridge = UniswapBridge__factory.connect(bridgeAddress.toString(), provider);
     // Precision of the feeds is 1e18
     const chainlinkEthDaiOracle = IChainlinkOracle__factory.connect(
       '0x773616E4d11A78F511299002da57A0a94577F1f4',
-      ethersProvider,
+      provider,
     );
     return new UniswapBridgeData(bridgeAddressId, uniswapBridge, chainlinkEthDaiOracle);
   }

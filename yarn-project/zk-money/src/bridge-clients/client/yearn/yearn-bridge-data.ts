@@ -1,6 +1,5 @@
-import { Web3Provider } from '@ethersproject/providers';
+import { StaticJsonRpcProvider } from '@ethersproject/providers';
 import { BigNumber } from 'ethers';
-import { createWeb3Provider } from '../aztec/provider/web3_provider.js';
 import 'isomorphic-fetch';
 import {
   IERC20Metadata__factory,
@@ -18,7 +17,7 @@ import {
   SolidityType,
   UnderlyingAsset,
 } from '../bridge-data.js';
-import { EthAddress, EthereumProvider, AssetValue } from '@aztec/sdk';
+import { EthAddress, AssetValue } from '@aztec/sdk';
 
 export class YearnBridgeData implements BridgeDataFieldGetters {
   allYvETH?: EthAddress[];
@@ -26,17 +25,16 @@ export class YearnBridgeData implements BridgeDataFieldGetters {
   wETH = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2';
 
   constructor(
-    private ethersProvider: Web3Provider,
+    private ethersProvider: StaticJsonRpcProvider,
     private yRegistry: IYearnRegistry,
     private rollupProcessor: IRollupProcessor,
   ) {}
 
-  static create(provider: EthereumProvider, rollupProcessor: EthAddress) {
-    const ethersProvider = createWeb3Provider(provider);
+  static create(provider: StaticJsonRpcProvider, rollupProcessor: EthAddress) {
     return new YearnBridgeData(
-      ethersProvider,
-      IYearnRegistry__factory.connect('0x50c1a2eA0a861A967D9d0FFE2AE4012c2E053804', ethersProvider),
-      IRollupProcessor__factory.connect(rollupProcessor.toString(), ethersProvider),
+      provider,
+      IYearnRegistry__factory.connect('0x50c1a2eA0a861A967D9d0FFE2AE4012c2E053804', provider),
+      IRollupProcessor__factory.connect(rollupProcessor.toString(), provider),
     );
   }
 
