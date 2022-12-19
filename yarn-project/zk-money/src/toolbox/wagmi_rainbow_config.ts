@@ -1,5 +1,6 @@
 import '@rainbow-me/rainbowkit/styles.css';
 import { wallet, connectorsForWallets } from '@rainbow-me/rainbowkit';
+
 import { configureChains, createClient, Chain, chain } from 'wagmi';
 import { infuraProvider } from 'wagmi/providers/infura';
 import { jsonRpcProvider } from 'wagmi/providers/jsonRpc';
@@ -56,7 +57,8 @@ export function getWagmiRainbowConfig(config: Config) {
     [getChain(config.chainId)],
     [getPublicProvider(config), publicProvider()],
   );
-  const wallets = [wallet.metaMask({ chains }), wallet.walletConnect({ chains })];
+
+  const wallets = [wallet.metaMask({ chains }), wallet.walletConnect({ chains }), wallet.brave({ chains })];
   const connectors = connectorsForWallets([{ groupName: 'Supported', wallets }]);
   const wagmiClient = createClient({
     autoConnect: true,
