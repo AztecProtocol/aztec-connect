@@ -69,7 +69,7 @@ function getEthereumHost(chainId: number) {
       return `https://aztec-connect-dev-eth-host.aztec.network:8545/${apiKey}`;
     }
     default:
-      return 'https://aztec-connect-prod-eth-host.aztec.network:8545';
+      return 'https://mainnet.infura.io/v3/ce91afa358e44c758ad70908b5ef0c23';
   }
 }
 
