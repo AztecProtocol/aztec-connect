@@ -35,6 +35,7 @@
     "@aztec/blockchain": "workspace:^",
     "@koa/cors": "^3.3.0",
     "fs-extra": "^10.1.0",
+    "json-normalize": "^1.1.2",
     "koa": "^2.13.4",
     "koa-bodyparser": "^4.3.0",
     "koa-compress": "^5.1.0",

@@ -1,19 +1,21 @@
-import { RequestArguments } from '@aztec/barretenberg/blockchain';
+import { EthereumRpc, RequestArguments } from '@aztec/barretenberg/blockchain';
 import { InterruptableSleep } from '@aztec/barretenberg/sleep';
-import { createLogger } from '@aztec/barretenberg/log';
-import { fetch } from '@aztec/barretenberg/iso_fetch';
+import { createLogger, createDebugLogger } from '@aztec/barretenberg/log';
 import { JsonRpcProvider } from '@aztec/blockchain';
 
 import { EthLogsDb, RollupLogsParamsQuery } from './log_db.js';
-import { RollupEventGetter } from './rollup_event_getter.js';
+import { DEFI_BRIDGE_EVENT_TOPIC, RollupEventGetter, ROLLUP_PROCESSED_EVENT_TOPIC } from './rollup_event_getter.js';
 import { ConfVars } from './configurator.js';
+import JSONNormalize from 'json-normalize';
 
-const REQUEST_TYPES_TO_CACHE = ['eth_chainId'];
-
-export interface EthRequestArguments extends RequestArguments {
-  jsonrpc: string;
-  id: number;
-}
+const REQUEST_TYPES_TO_CACHE = [
+  'eth_chainId',
+  'eth_call',
+  'eth_gasPrice',
+  'eth_getBalance',
+  'eth_estimateGas',
+  'eth_blockNumber',
+];
 
 export interface RollupLogsParams {
   topics: string[];
@@ -31,21 +33,20 @@ export class Server {
   private runninSyncPromise!: Promise<void>;
   private interruptableSleep = new InterruptableSleep();
   private requestQueue: Array<() => void> = [];
-  private cachedResponses: { [key: string]: string | undefined } = {};
+  private cachedResponses: { [key: string]: any } = {};
   private apiKeys: { [key: string]: boolean } = {};
-
+  private provider: JsonRpcProvider;
+  private ethereumRpc: EthereumRpc;
   private log = createLogger('Server');
+  private debug = createDebugLogger('server');
 
   constructor(
     provider: JsonRpcProvider,
-    private ethereumHost: string,
+    ethereumHost: string,
     private logsDb: EthLogsDb,
     chainId: number,
     private readonly configuration: ConfVars,
   ) {
-    for (const request of REQUEST_TYPES_TO_CACHE) {
-      this.cachedResponses[request] = undefined;
-    }
     this.rollupEventGetter = new RollupEventGetter(
       this.configuration.redeployConfig.rollupContractAddress!,
       provider,
@@ -55,6 +56,9 @@ export class Server {
     for (const key of this.configuration.apiKeys) {
       this.apiKeys[key] = true;
     }
+
+    this.provider = new JsonRpcProvider(ethereumHost);
+    this.ethereumRpc = new EthereumRpc(this.provider);
   }
 
   private async retrieveMoreBlocks() {
@@ -77,24 +81,38 @@ export class Server {
   }
 
   public async start() {
-    // check sync status
     this.log('Server starting...');
+    const { indexing } = this.configuration;
 
-    // init DB with existing blocks
-    await this.init();
-
-    // flip flag to start looking for new blocks
     this.running = true;
 
+    if (indexing) {
+      this.log('Performing initial sync...');
+      await this.rollupEventGetter.init();
+    }
+    this.ready = true;
+
     this.runninSyncPromise = (async () => {
+      let blockNumber = await this.ethereumRpc.blockNumber();
+
       while (this.running) {
         await this.interruptableSleep.sleep(this.checkFrequency);
+
+        const newBlockNumber = await this.ethereumRpc.blockNumber();
+        if (blockNumber != newBlockNumber) {
+          this.debug(`new block number ${newBlockNumber}, purging cache.`);
+          this.cachedResponses = {};
+          blockNumber = newBlockNumber;
+        }
+
         // if we are still running, or there are requests queued, then we need to look for further blocks
-        if (this.running || this.requestQueue.length) {
+        if ((indexing && this.running) || this.requestQueue.length) {
           await this.retrieveMoreBlocks();
         }
       }
     })();
+
+    this.log(`Server started, indexing: ${indexing}.`);
   }
 
   public async stop() {
@@ -108,22 +126,44 @@ export class Server {
     return this.ready;
   }
 
-  public async lookForBlocks(): Promise<void> {
-    const latestEvents = await this.rollupEventGetter.getLatestRollupEvents();
-    if (latestEvents.length && this.ready) {
-      await this.logsDb.addEthLogs(latestEvents);
+  public allowPrivilegedMethods() {
+    return this.configuration.allowPrivilegedMethods;
+  }
+
+  // Why are there not just privileged and unprivileged methods??
+  public additionalPermittedMethods() {
+    return this.configuration.additionalPermittedMethods;
+  }
+
+  public isValidApiKey(keyProvided: string | undefined) {
+    if (this.configuration.apiKeys.length === 0) {
+      return true;
+    }
+    if (!keyProvided) {
+      return false;
+    }
+    return !!this.apiKeys[keyProvided];
+  }
+
+  public async jsonRpc(args: RequestArguments) {
+    const { method, params = [] } = args;
+    if (
+      this.configuration.indexing &&
+      this.isReady() &&
+      method?.startsWith('eth_getLogs') &&
+      params[0].topics?.length &&
+      [ROLLUP_PROCESSED_EVENT_TOPIC, DEFI_BRIDGE_EVENT_TOPIC].includes(params[0].topics[0])
+    ) {
+      return await this.queryLogs(params[0]);
+    } else {
+      return await this.forwardEthRequest({ method, params });
     }
   }
 
-  public async init() {
-    // sync with blockchain
-    await this.rollupEventGetter.init();
-    this.log('Ready to receive requests...');
-    this.ready = true;
-  }
+  // PRIVATE METHODS:
 
   // querying for eth logs that may be in our DB
-  public async queryLogs(params: RollupLogsParams) {
+  private async queryLogs(params: RollupLogsParams) {
     const ourLatestBlock = this.rollupEventGetter.getLastQueriedBlockNum();
     const requestedStartBlock =
       !params.fromBlock || params.fromBlock === 'latest' ? ourLatestBlock : parseInt(params.fromBlock);
@@ -169,44 +209,26 @@ export class Server {
     return result || [];
   }
 
-  private async sendEthRequest(args: EthRequestArguments) {
-    const body = { ...args };
-
-    const res = await fetch(this.ethereumHost, {
-      method: 'POST',
-      body: JSON.stringify(body),
-      headers: { 'content-type': 'application/json' },
-    });
-    return await res.text();
-  }
-
-  public async forwardEthRequest(args: EthRequestArguments) {
-    if (Object.prototype.hasOwnProperty.call(this.cachedResponses, args.method)) {
-      if (this.cachedResponses[args.method] === undefined) {
-        this.cachedResponses[args.method] = await this.sendEthRequest(args);
-        this.log(`Cached response to method ${args.method}: ${this.cachedResponses[args.method]}`);
+  private async forwardEthRequest(args: RequestArguments) {
+    if (REQUEST_TYPES_TO_CACHE.includes(args.method)) {
+      const cacheKey = JSONNormalize.sha256(args);
+      if (this.cachedResponses[cacheKey]) {
+        this.debug(`cache hit for request: ${JSON.stringify(args)}`);
+        return this.cachedResponses[cacheKey];
       }
-      return JSON.parse(this.cachedResponses[args.method]!);
+      const result = await this.provider.request(args);
+      this.cachedResponses[cacheKey] = result;
+      this.debug(`cache miss, added response for request: ${JSON.stringify(args)}`);
+      return result;
     }
-    const response = await this.sendEthRequest(args);
-    return JSON.parse(response);
+
+    return await this.provider.request(args);
   }
 
-  public allowPrivilegedMethods() {
-    return this.configuration.allowPrivilegedMethods;
-  }
-
-  public additionalPermittedMethods() {
-    return this.configuration.additionalPermittedMethods;
-  }
-
-  public isValidApiKey(keyProvided: string | undefined) {
-    if (this.configuration.apiKeys.length === 0) {
-      return true;
+  private async lookForBlocks(): Promise<void> {
+    const latestEvents = await this.rollupEventGetter.getLatestRollupEvents();
+    if (latestEvents.length && this.ready) {
+      await this.logsDb.addEthLogs(latestEvents);
     }
-    if (!keyProvided) {
-      return false;
-    }
-    return !!this.apiKeys[keyProvided];
   }
 }
