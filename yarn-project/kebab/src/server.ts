@@ -36,6 +36,7 @@ export class Server {
   private apiKeys: { [key: string]: boolean } = {};
   private provider: JsonRpcProvider;
   private ethereumRpc: EthereumRpc;
+  private blockNumber = -1;
   private log = createLogger('Server');
   private debug = createDebugLogger('server');
 
@@ -92,16 +93,16 @@ export class Server {
     this.ready = true;
 
     this.runninSyncPromise = (async () => {
-      let blockNumber = await this.ethereumRpc.blockNumber();
+      this.blockNumber = await this.ethereumRpc.blockNumber();
 
       while (this.running) {
         await this.interruptableSleep.sleep(this.checkFrequency);
 
         const newBlockNumber = await this.ethereumRpc.blockNumber();
-        if (blockNumber != newBlockNumber) {
+        if (this.blockNumber != newBlockNumber) {
           this.debug(`new block number ${newBlockNumber}, purging cache.`);
           this.cachedResponses = {};
-          blockNumber = newBlockNumber;
+          this.blockNumber = newBlockNumber;
         }
 
         // if we are still running, or there are requests queued, then we need to look for further blocks
@@ -211,9 +212,10 @@ export class Server {
   private async forwardEthRequest(args: RequestArguments) {
     if (REQUEST_TYPES_TO_CACHE.includes(args.method)) {
       const cacheKey = JSONNormalize.sha256Sync(args);
-      if (this.cachedResponses[cacheKey]) {
+      const cacheResult = this.cachedResponses[cacheKey];
+      if (cacheResult) {
         this.debug(`cache key ${cacheKey} hit for request: ${JSON.stringify(args)}`);
-        return this.cachedResponses[cacheKey];
+        return cacheResult;
       }
       const result = await this.provider.request(args);
       this.cachedResponses[cacheKey] = result;
@@ -221,7 +223,12 @@ export class Server {
       return result;
     }
 
-    return await this.provider.request(args);
+    const result = await this.provider.request(args);
+    if (args.method == 'eth_getTransactionReceipt' && result.blockNumber > this.blockNumber) {
+      this.debug(`discarding transaction receipt result until cache cleared.`);
+      return null;
+    }
+    return result;
   }
 
   private async lookForBlocks(): Promise<void> {
