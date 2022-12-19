@@ -19696,17 +19696,6 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           "linkType": "HARD"\
         }]\
       ]],\
-      ["babel-runtime", [\
-        ["npm:6.26.0", {\
-          "packageLocation": "./.yarn/cache/babel-runtime-npm-6.26.0-d38e7946b4-8aeade9466.zip/node_modules/babel-runtime/",\
-          "packageDependencies": [\
-            ["babel-runtime", "npm:6.26.0"],\
-            ["core-js", "npm:2.6.12"],\
-            ["regenerator-runtime", "npm:0.11.1"]\
-          ],\
-          "linkType": "HARD"\
-        }]\
-      ]],\
       ["backoff", [\
         ["npm:2.5.0", {\
           "packageLocation": "./.yarn/cache/backoff-npm-2.5.0-2f29e91e19-ccdcf2a26a.zip/node_modules/backoff/",\
@@ -21844,13 +21833,6 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
         }]\
       ]],\
       ["core-js", [\
-        ["npm:2.6.12", {\
-          "packageLocation": "./.yarn/unplugged/core-js-npm-2.6.12-0b93d77d31/node_modules/core-js/",\
-          "packageDependencies": [\
-            ["core-js", "npm:2.6.12"]\
-          ],\
-          "linkType": "HARD"\
-        }],\
         ["npm:3.23.3", {\
           "packageLocation": "./.yarn/unplugged/core-js-npm-3.23.3-83cb265bcd/node_modules/core-js/",\
           "packageDependencies": [\
@@ -31031,18 +31013,6 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           "linkType": "HARD"\
         }]\
       ]],\
-      ["json-normalize", [\
-        ["npm:1.1.2", {\
-          "packageLocation": "./.yarn/cache/json-normalize-npm-1.1.2-0a5ad10adf-d9ef7b33c4.zip/node_modules/json-normalize/",\
-          "packageDependencies": [\
-            ["json-normalize", "npm:1.1.2"],\
-            ["babel-runtime", "npm:6.26.0"],\
-            ["bluebird", "npm:3.7.2"],\
-            ["source-map-support", "npm:0.5.21"]\
-          ],\
-          "linkType": "HARD"\
-        }]\
-      ]],\
       ["json-parse-better-errors", [\
         ["npm:1.0.2", {\
           "packageLocation": "./.yarn/cache/json-parse-better-errors-npm-1.0.2-7f37637d19-ff2b5ba2a7.zip/node_modules/json-parse-better-errors/",\
@@ -31253,7 +31223,6 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["debug", "virtual:e9a07d9e500f265638a80b6a2d60a63d2c1402dd6a58d2f05af9d82e52be33df29a16291c32b33b9e23f1a0efea054868bd3312893433fe0583e4dba376fe47e#npm:4.3.4"],\
             ["fs-extra", "npm:10.1.0"],\
             ["jest", "virtual:4cf42c2f2a8aa147d524c15c0290174d77a2062937f0c22441901ac61d50212062460a38e714456279cdb4fab155b3b1d12acfb24cd6bb68fcc1837e921b5557#npm:28.1.3"],\
-            ["json-normalize", "npm:1.1.2"],\
             ["koa", "npm:2.13.4"],\
             ["koa-bodyparser", "npm:4.3.0"],\
             ["koa-compress", "npm:5.1.0"],\
@@ -37888,13 +37857,6 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
         }]\
       ]],\
       ["regenerator-runtime", [\
-        ["npm:0.11.1", {\
-          "packageLocation": "./.yarn/cache/regenerator-runtime-npm-0.11.1-a31e4f8dcd-3c97bd2c7b.zip/node_modules/regenerator-runtime/",\
-          "packageDependencies": [\
-            ["regenerator-runtime", "npm:0.11.1"]\
-          ],\
-          "linkType": "HARD"\
-        }],\
         ["npm:0.13.9", {\
           "packageLocation": "./.yarn/cache/regenerator-runtime-npm-0.13.9-6d02340eec-65ed455fe5.zip/node_modules/regenerator-runtime/",\
           "packageDependencies": [\
