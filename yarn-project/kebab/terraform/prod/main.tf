@@ -135,7 +135,7 @@ resource "aws_ecs_task_definition" "kebab" {
         "value": "1"
       },
       {
-        "name": "ROLLUP_PROVIDER_ADDRESS",
+        "name": "ROLLUP_CONTRACT_ADDRESS",
         "value": "0xFF1F2B4ADb9dF6FC8eAFecDcbF96A2B351680455"
       },
       {
