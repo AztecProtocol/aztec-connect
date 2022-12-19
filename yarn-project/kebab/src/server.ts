@@ -7,6 +7,10 @@ import { DEFI_BRIDGE_EVENT_TOPIC, RollupEventGetter, ROLLUP_PROCESSED_EVENT_TOPI
 import { ConfVars } from './configurator.js';
 import { default as JSONNormalize } from 'json-normalize';
 
+/**
+ * Do not cache eth_getTransactionReceipt without careful consideration of how it impacts consistency.
+ * Discussed in forwardEthRequest.
+ */
 const REQUEST_TYPES_TO_CACHE = [
   'eth_chainId',
   'eth_call',
@@ -22,6 +26,10 @@ export interface RollupLogsParams {
   fromBlock?: string;
   toBlock?: string;
   blockHash?: string;
+}
+
+function isPromise(obj: any): obj is Promise<any> {
+  return !!obj.then;
 }
 
 export class Server {
@@ -211,24 +219,66 @@ export class Server {
 
   private async forwardEthRequest(args: RequestArguments) {
     if (REQUEST_TYPES_TO_CACHE.includes(args.method)) {
-      const cacheKey = JSONNormalize.sha256Sync(args);
-      const cacheResult = this.cachedResponses[cacheKey];
-      if (cacheResult) {
-        this.debug(`cache key ${cacheKey} hit for request: ${JSON.stringify(args)}`);
-        return cacheResult;
-      }
-      const result = await this.provider.request(args);
-      this.cachedResponses[cacheKey] = result;
-      this.debug(`cache key ${cacheKey} miss, added response for request: ${JSON.stringify(args)}`);
-      return result;
+      return await this.forwardEthRequestViaCache(args);
     }
 
     const result = await this.provider.request(args);
+
+    // Imagine:
+    // Alice makes a `call` request to check a bit of state. The result is cached.
+    // Alice sends a transaction that modifies the state.
+    // Alice requests a transaction receipt, which would be returned as success, implying the state has changed.
+    // Alice performs another `call` to check the state change, but the cached result is returned. Bad.
+    //
+    // Any data stored in the cache will be *no older* than this.blockNumber.
+    // They could be newer as the `call` request may populate the cache between a new block, and the poll discovering it.
+    // This means there is data inconsistency spanning maybe two blocks, potentially for a few seconds.
+    // This is certainly no worse then using something like Infura.
+    //
+    // We can remedy this case.
+    // Here we filter any transaction receipts that would acknowledge state that is newer than what is in the cache.
+    // This resolves the use case above.
+    //
+    // The thoughtful engineer will subsequently imagine:
+    // Alice makes a `call` request to check a bit of state. The result is cached.
+    // Bob sends a transaction that modifies the state.
+    // Charlie makes a `call` request to check a bit of state. The stale cached result is returned.
+    //
+    // While this maybe considered an issue, the reality is this is *already* the case.
+    // You can actually never assume that a value returned by a `call` that is shared, is not immediately stale.
+    // The fact that Bob's transaction happened before Charlie's call, but Charlie experiences the state change after,
+    // is irrelevant.
     if (args.method == 'eth_getTransactionReceipt' && result.blockNumber > this.blockNumber) {
       this.debug(`discarding transaction receipt result until cache cleared.`);
       return null;
     }
+
     return result;
+  }
+
+  /**
+   * Normalises the JSON (orders properties) to produce a consistent cache key.
+   * If there's no entry, kick off a request and store the promise in the cache.
+   * If there's a promise in the cache the request is in flight, await it.
+   * If there's an entry in the cache, return it.
+   */
+  private async forwardEthRequestViaCache(args: RequestArguments) {
+    const cacheKey = JSONNormalize.sha256Sync(args);
+    const cacheResult = this.cachedResponses[cacheKey];
+
+    if (cacheResult === undefined) {
+      this.cachedResponses[cacheKey] = new Promise(resolve => {
+        this.debug(`cache key ${cacheKey} miss, adding response for request: ${JSON.stringify(args)}`);
+        void this.provider.request(args).then(resolve);
+      });
+      return this.cachedResponses[cacheKey];
+    } else if (isPromise(cacheResult)) {
+      this.debug(`cache key ${cacheKey} hit (in flight) for request: ${JSON.stringify(args)}`);
+      return await cacheResult;
+    } else {
+      this.debug(`cache key ${cacheKey} hit for request: ${JSON.stringify(args)}`);
+      return cacheResult;
+    }
   }
 
   private async lookForBlocks(): Promise<void> {

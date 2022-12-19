@@ -38,8 +38,11 @@ function getPublicProvider(config: Config) {
       // TODO: reshape config to remove this flakey parsing
       const match = config.ethereumHost.match(/[0-9a-z]{32}/);
       const infuraId = match?.[0];
-      if (!infuraId) throw new Error('Could not parse infuraId');
-      return infuraProvider({ infuraId });
+      if (infuraId) {
+        return infuraProvider({ infuraId });
+      } else {
+        return jsonRpcProvider({ rpc: () => ({ http: config.ethereumHost }) });
+      }
     }
     case 1337:
     case 0xa57ec:
