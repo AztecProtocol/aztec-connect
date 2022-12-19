@@ -1,3 +1,5 @@
 declare module 'json-normalize' {
-  function sha256(obj: any): string;
+  export default class JSONNormalize {
+    static sha256Sync(obj: any): string;
+  }
 }

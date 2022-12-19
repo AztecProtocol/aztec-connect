@@ -2,11 +2,10 @@ import { EthereumRpc, RequestArguments } from '@aztec/barretenberg/blockchain';
 import { InterruptableSleep } from '@aztec/barretenberg/sleep';
 import { createLogger, createDebugLogger } from '@aztec/barretenberg/log';
 import { JsonRpcProvider } from '@aztec/blockchain';
-
 import { EthLogsDb, RollupLogsParamsQuery } from './log_db.js';
 import { DEFI_BRIDGE_EVENT_TOPIC, RollupEventGetter, ROLLUP_PROCESSED_EVENT_TOPIC } from './rollup_event_getter.js';
 import { ConfVars } from './configurator.js';
-import JSONNormalize from 'json-normalize';
+import { default as JSONNormalize } from 'json-normalize';
 
 const REQUEST_TYPES_TO_CACHE = [
   'eth_chainId',
@@ -211,14 +210,14 @@ export class Server {
 
   private async forwardEthRequest(args: RequestArguments) {
     if (REQUEST_TYPES_TO_CACHE.includes(args.method)) {
-      const cacheKey = JSONNormalize.sha256(args);
+      const cacheKey = JSONNormalize.sha256Sync(args);
       if (this.cachedResponses[cacheKey]) {
-        this.debug(`cache hit for request: ${JSON.stringify(args)}`);
+        this.debug(`cache key ${cacheKey} hit for request: ${JSON.stringify(args)}`);
         return this.cachedResponses[cacheKey];
       }
       const result = await this.provider.request(args);
       this.cachedResponses[cacheKey] = result;
-      this.debug(`cache miss, added response for request: ${JSON.stringify(args)}`);
+      this.debug(`cache key ${cacheKey} miss, added response for request: ${JSON.stringify(args)}`);
       return result;
     }
 

@@ -4,14 +4,14 @@ services:
     image: trufflesuite/ganache
     environment:
       NODE_OPTIONS: --max_old_space_size=3072
-    command: -h='0.0.0.0' -q -l 15000000 -e 10000 -m='test test test test test test test test test test test junk'
+    command: -h='0.0.0.0' -p=8544 -q -l 15000000 -e 10000 -m='test test test test test test test test test test test junk'
     ports:
-      - '8545:8545'
+      - '8544:8544'
 
   contracts:
     image: 278380418400.dkr.ecr.eu-west-2.amazonaws.com/contracts:latest
     environment:
-      ETHEREUM_HOST: http://ganache:8545
+      ETHEREUM_HOST: http://ganache:8544
       ROLLUP_PROVIDER_ADDRESS: null # Defaults to address from private key TODO: what to set to
       SAFE_ADDRESS: '0x7095057A08879e09DC1c0a85520e3160A0F67C96'
       VERIFIER_TYPE: 'MockVerifier'
@@ -24,8 +24,8 @@ services:
       - '8547:8547'
     entrypoint: >
       sh -c "
-        while ! curl -X POST --data '{\"jsonrpc\":\"2.0\",\"method\":\"eth_blockNumber\",\"params\":[]}' http://ganache:8545; do 
-          sleep 1 
+        while ! curl -X POST --data '{\"jsonrpc\":\"2.0\",\"method\":\"eth_blockNumber\",\"params\":[]}' http://ganache:8544; do
+          sleep 1
         done
         sh scripts/deploy_e2e.sh
         sh scripts/serve.sh "
@@ -33,8 +33,8 @@ services:
   kebab:
     image: 278380418400.dkr.ecr.eu-west-2.amazonaws.com/kebab:latest
     environment:
-      ETHEREUM_HOST: http://ganache:8545
-      PORT: 8546
+      ETHEREUM_HOST: http://ganache:8544
+      PORT: 8545
       ALLOW_PRIVILEGED_METHODS: 'true'
       VK: ${VK}
       REDEPLOY: 1
@@ -47,7 +47,7 @@ services:
       yarn start
       "
     ports:
-      - '8546:8546'
+      - '8545:8545'
 
   halloumi1:
     image: 278380418400.dkr.ecr.eu-west-2.amazonaws.com/halloumi:latest
@@ -72,7 +72,7 @@ services:
   falafel:
     image: 278380418400.dkr.ecr.eu-west-2.amazonaws.com/falafel:latest
     environment:
-      ETHEREUM_HOST: http://kebab:8546
+      ETHEREUM_HOST: http://kebab:8545
       NUM_INNER_ROLLUP_TXS: ${NUM_INNER_ROLLUP_TXS}
       NUM_OUTER_ROLLUP_PROOFS: ${NUM_OUTER_ROLLUP_PROOFS}
       NODE_ENV: production
@@ -85,7 +85,7 @@ services:
     command: >
       sh -c "
       set -e;
-      while ! nc -z kebab 8546; do sleep 1; done;
+      while ! nc -z kebab 8545; do sleep 1; done;
       yarn start
       "
     ports:
@@ -113,7 +113,7 @@ services:
   end-to-end:
     image: 278380418400.dkr.ecr.eu-west-2.amazonaws.com/end-to-end:latest
     environment:
-      ETHEREUM_HOST: http://kebab:8546
+      ETHEREUM_HOST: http://kebab:8545
       ROLLUP_HOST: http://falafel:8081
       SDK_HOST: http://sdk:1234
       HUMMUS_HOST: http://hummus:8080

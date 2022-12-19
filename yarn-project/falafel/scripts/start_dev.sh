@@ -8,7 +8,7 @@ make -j$(nproc) barretenberg.wasm
 popd
 
 # Hosts
-export ETHEREUM_HOST=http://localhost:8546
+export ETHEREUM_HOST=http://localhost:8545
 
 . ./scripts/export_addresses.sh
 tsc-watch -p tsconfig.dest.json --onSuccess 'yarn start'

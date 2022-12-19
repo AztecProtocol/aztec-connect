@@ -120,7 +120,7 @@ echo "Running local ganache instance. Output in '$GANACHE_LOG'"
 wait_until_log_ready ganache $GANACHE_LOG "RPC Listening on " 1
 
 echo "Running local kebab instance . Output in '$KEBAB_LOG'"
-(cd ../kebab && ETHEREUM_HOST=http://localhost:8545 yarn start:e2e > $KEBAB_LOG 2>&1) &
+(cd ../kebab && ETHEREUM_HOST=http://localhost:8544 yarn start:e2e > $KEBAB_LOG 2>&1) &
 # wait for kebab to start up before proceeding
 wait_until_log_ready kebab $KEBAB_LOG "Server: Ready to receive requests..." 2
 
@@ -129,7 +129,7 @@ echo "Running the halloumi instance to communicate with falafel and generate rol
 # don't need to wait for halloumi to be ready
 
 echo "Running the falafel instance to populate ganache with rollup blocks. Output in '$FALAFEL_LOG'"
-(cd ../falafel && ETHEREUM_HOST=http://localhost:8546 DEBUG=bb:* yarn start:e2e > $FALAFEL_LOG 2>&1) &
+(cd ../falafel && ETHEREUM_HOST=http://localhost:8545 DEBUG=bb:* yarn start:e2e > $FALAFEL_LOG 2>&1) &
 # wait for falafel to start up before proceeding
 wait_until_log_ready falafel $FALAFEL_LOG "Server: Ready to receive txs." 4
 

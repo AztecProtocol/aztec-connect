@@ -25,8 +25,8 @@ export interface RedeployConfig {
 }
 
 const defaultStartupConfig: StartupConfig = {
-  port: 8546,
-  ethereumHost: 'http://localhost:8545',
+  port: 8545,
+  ethereumHost: 'http://localhost:8544',
   apiPrefix: '',
   typeOrmLogging: false,
   allowPrivilegedMethods: false,
