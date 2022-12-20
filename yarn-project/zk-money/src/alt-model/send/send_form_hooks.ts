@@ -17,9 +17,9 @@ import { estimateTxSettlementTimes } from '../estimate_settlement_times.js';
 import { useSendFeeAmounts } from './tx_fee_hooks.js';
 import { useAccountState } from '../account_state/index.js';
 import { useMaxSendValue } from './max_send_value_hooks.js';
-import { MAX_MODE } from '../forms/constants.js';
-import { Amount } from '../assets/index.js';
 import { useUserIdForRecipientStr } from '../alias_hooks.js';
+import { amountFromStrOrMaxRoundedDown } from '../forms/helpers.js';
+import { max, min } from '../../app/index.js';
 
 const debug = createDebug('zm:send_form_hooks');
 
@@ -67,19 +67,21 @@ export function useSendForm(preselectedAssetId?: number) {
   const { instantSettlementTime, nextSettlementTime } = estimateTxSettlementTimes(rpStatus);
   const maxChainableValue = useMaxSendValue(fields.sendMode, fields.assetId, fields.speed, recipientEthAddress);
   const asset = useAsset(fields.assetId);
-  const uncheckedValue =
-    fields.amountStrOrMax === MAX_MODE ? maxChainableValue : Amount.from(fields.amountStrOrMax, asset).toAssetValue();
-  const feeAmounts = useSendFeeAmounts(fields.sendMode, uncheckedValue, recipientEthAddress);
+  const transactionLimit = asset?.label && config.txAmountLimits[asset.label];
+  const maxOutput = max(min(maxChainableValue?.value || 0n, transactionLimit || 0n), 0n);
+  const targetAmount = amountFromStrOrMaxRoundedDown(fields.amountStrOrMax, maxOutput, asset);
+  const feeAmounts = useSendFeeAmounts(fields.sendMode, targetAmount.toAssetValue(), recipientEthAddress);
   const feeAmount = feeAmounts?.[fields.speed];
   const balanceInTargetAsset = useMaxSpendableValue(fields.assetId);
   const balanceInFeePayingAsset = useMaxSpendableValue(feeAmount?.id);
-  const transactionLimit = asset?.label && config.txAmountLimits[asset.label];
   const userTxs = useAccountState()?.txs;
 
   const validationResult = validateSendForm({
     fields,
     amountFactory,
     asset,
+    maxOutput,
+    targetAmount,
     feeAmount,
     feeAmounts,
     balanceInTargetAsset,

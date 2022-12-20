@@ -22,7 +22,7 @@ export function useDefiFeeAmounts(bridgeCallData: BridgeCallData | undefined, de
       // changed, and the fee for chaining may have changed too. Hence why it's
       // included as a dependency to trigger a refetch.
     }
-    if (!sdk || !bridgeCallData || deposit?.assetId === undefined || deposit?.value === undefined) return;
+    if (!sdk || !bridgeCallData || !deposit?.value || deposit?.assetId === undefined) return;
     return () =>
       sdk.getDefiFees(bridgeCallData, {
         userId,

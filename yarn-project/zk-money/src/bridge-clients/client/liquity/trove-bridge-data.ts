@@ -1,5 +1,5 @@
-import { BridgeCallData, EthAddress, EthereumProvider, AssetValue } from '@aztec/sdk';
-import { Web3Provider } from '@ethersproject/providers';
+import { BridgeCallData, EthAddress, AssetValue } from '@aztec/sdk';
+import { StaticJsonRpcProvider } from '@ethersproject/providers';
 import { BigNumber } from 'ethers';
 import {
   IChainlinkOracle,
@@ -10,7 +10,6 @@ import {
   TroveBridge,
   TroveBridge__factory,
 } from '../../typechain-types/index.js';
-import { createWeb3Provider } from '../aztec/provider/web3_provider.js';
 import { AuxDataConfig, AztecAsset, AztecAssetType, BridgeDataFieldGetters, SolidityType } from '../bridge-data.js';
 
 export class TroveBridgeData implements BridgeDataFieldGetters {
@@ -25,7 +24,7 @@ export class TroveBridgeData implements BridgeDataFieldGetters {
   private price?: BigNumber;
 
   protected constructor(
-    protected ethersProvider: Web3Provider,
+    protected ethersProvider: StaticJsonRpcProvider,
     protected bridgeAddressId: number,
     protected bridge: TroveBridge,
     protected troveManager: ITroveManager,
@@ -38,22 +37,15 @@ export class TroveBridgeData implements BridgeDataFieldGetters {
    * @param bridgeAddressId An id representing bridge address in the RollupProcessor contract
    * @param bridgeAddress Address of the bridge address (and the corresponding accounting token)
    */
-  static create(provider: EthereumProvider, bridgeAddressId: number, bridgeAddress: EthAddress) {
-    const ethersProvider = createWeb3Provider(provider);
-    const troveManager = ITroveManager__factory.connect('0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2', ethersProvider);
-    const bridge = TroveBridge__factory.connect(bridgeAddress.toString(), ethersProvider);
+  static create(provider: StaticJsonRpcProvider, bridgeAddressId: number, bridgeAddress: EthAddress) {
+    const troveManager = ITroveManager__factory.connect('0xA39739EF8b0231DbFA0DcdA07d7e29faAbCf4bb2', provider);
+    const bridge = TroveBridge__factory.connect(bridgeAddress.toString(), provider);
 
     // Precision of the feeds is 1e8
-    const ethUsdOracle = IChainlinkOracle__factory.connect(
-      '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419',
-      ethersProvider,
-    );
-    const lusdUsdOracle = IChainlinkOracle__factory.connect(
-      '0x3D7aE7E594f2f2091Ad8798313450130d0Aba3a0',
-      ethersProvider,
-    );
+    const ethUsdOracle = IChainlinkOracle__factory.connect('0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419', provider);
+    const lusdUsdOracle = IChainlinkOracle__factory.connect('0x3D7aE7E594f2f2091Ad8798313450130d0Aba3a0', provider);
 
-    return new TroveBridgeData(ethersProvider, bridgeAddressId, bridge, troveManager, ethUsdOracle, lusdUsdOracle);
+    return new TroveBridgeData(provider, bridgeAddressId, bridge, troveManager, ethUsdOracle, lusdUsdOracle);
   }
 
   auxDataConfig: AuxDataConfig[] = [

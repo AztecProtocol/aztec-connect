@@ -1,8 +1,9 @@
-import { EthAddress, EthereumProvider } from '@aztec/sdk';
+import { EthAddress } from '@aztec/sdk';
+import { StaticJsonRpcProvider } from '@ethersproject/providers';
 import { BridgeDataFieldGetters } from '../../../bridge-clients/client/bridge-data.js';
 
 export type BridgeDataAdaptorCreator = (args: {
-  provider: EthereumProvider;
+  provider: StaticJsonRpcProvider;
   rollupContractAddress: EthAddress;
   bridgeContractAddress: EthAddress;
   bridgeAddressId: number;

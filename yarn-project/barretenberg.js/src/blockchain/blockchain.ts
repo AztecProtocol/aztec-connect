@@ -25,6 +25,7 @@ export interface SendTxOptions {
   signingAddress?: EthAddress;
   provider?: EthereumProvider;
   nonce?: number;
+  value?: bigint;
 }
 
 export interface FeeData {

@@ -8,7 +8,7 @@ make -j$(nproc) barretenberg.wasm
 cd ../../yarn-project/falafel
 
 # Hosts
-export ETHEREUM_HOST=http://localhost:8546 # change port to 8545 to run locally WITHOUT Kebab
+export ETHEREUM_HOST=http://localhost:8545
 export HALLOUMI_HOST=http://localhost:8083
 
 # Falafel

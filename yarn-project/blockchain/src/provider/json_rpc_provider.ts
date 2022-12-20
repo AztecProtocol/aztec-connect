@@ -8,7 +8,7 @@ const log = createDebugLogger('json_rpc_provider');
 export class JsonRpcProvider implements EthereumProvider {
   private id = 0;
 
-  constructor(private host: string, private netMustSucceed = true) {}
+  constructor(private host: string, private netMustSucceed = false) {}
 
   public async request({ method, params }: RequestArguments): Promise<any> {
     const body = {

@@ -1,3 +1,4 @@
+import { StaticJsonRpcProvider } from '@ethersproject/providers';
 import {
   AuxDataConfig,
   AztecAsset,
@@ -6,7 +7,6 @@ import {
   BridgeDataFieldGetters,
   UnderlyingAsset,
 } from '../bridge-data.js';
-
 import {
   IWstETH,
   ILidoOracle,
@@ -15,8 +15,7 @@ import {
   ILidoOracle__factory,
   ICurvePool__factory,
 } from '../../typechain-types/index.js';
-import { createWeb3Provider } from '../aztec/provider/web3_provider.js';
-import { EthereumProvider, EthAddress, AssetValue } from '@aztec/sdk';
+import { EthAddress, AssetValue } from '@aztec/sdk';
 
 export class LidoBridgeData implements BridgeDataFieldGetters {
   public scalingFactor: bigint = 1n * 10n ** 18n;
@@ -28,15 +27,14 @@ export class LidoBridgeData implements BridgeDataFieldGetters {
   ) {}
 
   static create(
-    provider: EthereumProvider,
+    provider: StaticJsonRpcProvider,
     wstEthAddress: EthAddress,
     lidoOracleAddress: EthAddress,
     curvePoolAddress: EthAddress,
   ) {
-    const ethersProvider = createWeb3Provider(provider);
-    const wstEthContract = IWstETH__factory.connect(wstEthAddress.toString(), ethersProvider);
-    const lidoContract = ILidoOracle__factory.connect(lidoOracleAddress.toString(), ethersProvider);
-    const curvePoolContract = ICurvePool__factory.connect(curvePoolAddress.toString(), ethersProvider);
+    const wstEthContract = IWstETH__factory.connect(wstEthAddress.toString(), provider);
+    const lidoContract = ILidoOracle__factory.connect(lidoOracleAddress.toString(), provider);
+    const curvePoolContract = ICurvePool__factory.connect(curvePoolAddress.toString(), provider);
     return new LidoBridgeData(wstEthContract, lidoContract, curvePoolContract);
   }
 

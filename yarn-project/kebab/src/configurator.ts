@@ -11,6 +11,7 @@ export interface StartupConfig {
   allowPrivilegedMethods: boolean;
   additionalPermittedMethods: string[];
   apiKeys: string[];
+  indexing: boolean;
 }
 
 export interface RedeployConfig {
@@ -24,13 +25,14 @@ export interface RedeployConfig {
 }
 
 const defaultStartupConfig: StartupConfig = {
-  port: 8546,
-  ethereumHost: 'http://localhost:8545',
+  port: 8545,
+  ethereumHost: 'http://localhost:8544',
   apiPrefix: '',
   typeOrmLogging: false,
   allowPrivilegedMethods: false,
   additionalPermittedMethods: [],
   apiKeys: [],
+  indexing: true,
 };
 
 const defaultRedeployConfig: RedeployConfig = {
@@ -52,6 +54,7 @@ function getStartupConfigEnvVars(): Partial<StartupConfig> {
     ALLOW_PRIVILEGED_METHODS,
     ADDITIONAL_PERMITTED_METHODS,
     API_KEYS,
+    INDEXING,
   } = process.env;
 
   const envVars: Partial<StartupConfig> = {
@@ -62,6 +65,7 @@ function getStartupConfigEnvVars(): Partial<StartupConfig> {
     allowPrivilegedMethods: ALLOW_PRIVILEGED_METHODS ? ALLOW_PRIVILEGED_METHODS === 'true' : undefined,
     additionalPermittedMethods: ADDITIONAL_PERMITTED_METHODS ? ADDITIONAL_PERMITTED_METHODS.split(',') : [],
     apiKeys: API_KEYS ? API_KEYS.split(',') : [],
+    indexing: INDEXING ? INDEXING === 'true' : undefined,
   };
   return Object.fromEntries(Object.entries(envVars).filter(e => e[1] !== undefined));
 }

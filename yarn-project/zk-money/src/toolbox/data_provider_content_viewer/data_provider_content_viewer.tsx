@@ -1,5 +1,6 @@
 import { DataProviderWrapper } from '../../bridge-clients/client/aztec/data-provider/DataProvider.js';
-import { EthAddress, JsonRpcProvider } from '@aztec/sdk';
+import { EthAddress } from '@aztec/sdk';
+import { StaticJsonRpcProvider } from '@ethersproject/providers';
 import { useEffect, useState } from 'react';
 import { mapObj } from '../../app/util/objects.js';
 
@@ -16,7 +17,7 @@ export function DataProviderContentViewer() {
 }
 
 async function fetchData(dataProviderAddress: string, rpcUrl: string) {
-  const jsonRpcProvider = new JsonRpcProvider(rpcUrl);
+  const jsonRpcProvider = new StaticJsonRpcProvider(rpcUrl);
   const wrapper = DataProviderWrapper.create(jsonRpcProvider, EthAddress.fromString(dataProviderAddress) as any);
   const assets = await wrapper.getAssets();
   const assetsPod = mapObj(assets, x => x.assetAddress.toString());

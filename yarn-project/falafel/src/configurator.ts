@@ -44,7 +44,7 @@ const defaultStartupConfig: StartupConfig = {
   permitHelperContractAddress: EthAddress.ZERO,
   priceFeedContractAddresses: [],
   bridgeDataProviderAddress: EthAddress.ZERO,
-  ethereumHost: 'http://localhost:8546',
+  ethereumHost: 'http://localhost:8545',
   ethereumPollInterval: 10000,
   proofGeneratorMode: 'normal',
   // Test mnemonic account 0.

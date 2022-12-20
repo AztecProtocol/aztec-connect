@@ -1,10 +1,8 @@
 import 'isomorphic-fetch';
-
-import { Web3Provider } from '@ethersproject/providers';
+import { StaticJsonRpcProvider } from '@ethersproject/providers';
 import { IStableMaster, IStableMaster__factory } from '../../typechain-types/index.js';
-import { createWeb3Provider } from '../aztec/provider/web3_provider.js';
 import { AuxDataConfig, AztecAsset, AztecAssetType, BridgeDataFieldGetters, SolidityType } from '../bridge-data.js';
-import { AssetValue, EthAddress, EthereumProvider } from '@aztec/sdk';
+import { AssetValue, EthAddress } from '@aztec/sdk';
 
 export class AngleBridgeData implements BridgeDataFieldGetters {
   readonly scalingFactor: bigint = 10n ** 18n;
@@ -33,14 +31,12 @@ export class AngleBridgeData implements BridgeDataFieldGetters {
 
   allMarkets?: EthAddress[];
 
-  private constructor(private ethersProvider: Web3Provider, private angleStableMaster: IStableMaster) {}
+  private constructor(private ethersProvider: StaticJsonRpcProvider, private angleStableMaster: IStableMaster) {}
 
-  static create(provider: EthereumProvider) {
-    const ethersProvider = createWeb3Provider(provider);
-
+  static create(provider: StaticJsonRpcProvider) {
     return new AngleBridgeData(
-      createWeb3Provider(provider),
-      IStableMaster__factory.connect('0x5adDc89785D75C86aB939E9e15bfBBb7Fc086A87', ethersProvider),
+      provider,
+      IStableMaster__factory.connect('0x5adDc89785D75C86aB939E9e15bfBBb7Fc086A87', provider),
     );
   }
 

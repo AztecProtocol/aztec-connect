@@ -1,19 +1,24 @@
-import { RequestArguments } from '@aztec/barretenberg/blockchain';
+import { EthereumRpc, RequestArguments } from '@aztec/barretenberg/blockchain';
 import { InterruptableSleep } from '@aztec/barretenberg/sleep';
-import { createLogger } from '@aztec/barretenberg/log';
-import { fetch } from '@aztec/barretenberg/iso_fetch';
+import { createLogger, createDebugLogger } from '@aztec/barretenberg/log';
 import { JsonRpcProvider } from '@aztec/blockchain';
-
 import { EthLogsDb, RollupLogsParamsQuery } from './log_db.js';
-import { RollupEventGetter } from './rollup_event_getter.js';
+import { DEFI_BRIDGE_EVENT_TOPIC, RollupEventGetter, ROLLUP_PROCESSED_EVENT_TOPIC } from './rollup_event_getter.js';
 import { ConfVars } from './configurator.js';
+import { default as JSONNormalize } from 'json-normalize';
 
-const REQUEST_TYPES_TO_CACHE = ['eth_chainId'];
-
-export interface EthRequestArguments extends RequestArguments {
-  jsonrpc: string;
-  id: number;
-}
+/**
+ * Do not cache eth_getTransactionReceipt without careful consideration of how it impacts consistency.
+ * Discussed in forwardEthRequest.
+ */
+const REQUEST_TYPES_TO_CACHE = [
+  'eth_chainId',
+  'eth_call',
+  'eth_gasPrice',
+  'eth_getBalance',
+  'eth_estimateGas',
+  'eth_blockNumber',
+];
 
 export interface RollupLogsParams {
   topics: string[];
@@ -21,6 +26,10 @@ export interface RollupLogsParams {
   fromBlock?: string;
   toBlock?: string;
   blockHash?: string;
+}
+
+function isPromise(obj: any): obj is Promise<any> {
+  return !!obj.then;
 }
 
 export class Server {
@@ -31,21 +40,21 @@ export class Server {
   private runninSyncPromise!: Promise<void>;
   private interruptableSleep = new InterruptableSleep();
   private requestQueue: Array<() => void> = [];
-  private cachedResponses: { [key: string]: string | undefined } = {};
+  private cachedResponses: { [key: string]: any } = {};
   private apiKeys: { [key: string]: boolean } = {};
-
+  private provider: JsonRpcProvider;
+  private ethereumRpc: EthereumRpc;
+  private blockNumber = -1;
   private log = createLogger('Server');
+  private debug = createDebugLogger('server');
 
   constructor(
     provider: JsonRpcProvider,
-    private ethereumHost: string,
+    ethereumHost: string,
     private logsDb: EthLogsDb,
     chainId: number,
     private readonly configuration: ConfVars,
   ) {
-    for (const request of REQUEST_TYPES_TO_CACHE) {
-      this.cachedResponses[request] = undefined;
-    }
     this.rollupEventGetter = new RollupEventGetter(
       this.configuration.redeployConfig.rollupContractAddress!,
       provider,
@@ -55,6 +64,9 @@ export class Server {
     for (const key of this.configuration.apiKeys) {
       this.apiKeys[key] = true;
     }
+
+    this.provider = new JsonRpcProvider(ethereumHost);
+    this.ethereumRpc = new EthereumRpc(this.provider);
   }
 
   private async retrieveMoreBlocks() {
@@ -77,24 +89,38 @@ export class Server {
   }
 
   public async start() {
-    // check sync status
     this.log('Server starting...');
+    const { indexing } = this.configuration;
 
-    // init DB with existing blocks
-    await this.init();
-
-    // flip flag to start looking for new blocks
     this.running = true;
 
+    if (indexing) {
+      this.log('Performing initial sync...');
+      await this.rollupEventGetter.init();
+    }
+    this.ready = true;
+
     this.runninSyncPromise = (async () => {
+      this.blockNumber = await this.ethereumRpc.blockNumber();
+
       while (this.running) {
         await this.interruptableSleep.sleep(this.checkFrequency);
+
+        const newBlockNumber = await this.ethereumRpc.blockNumber();
+        if (this.blockNumber != newBlockNumber) {
+          this.debug(`new block number ${newBlockNumber}, purging cache.`);
+          this.cachedResponses = {};
+          this.blockNumber = newBlockNumber;
+        }
+
         // if we are still running, or there are requests queued, then we need to look for further blocks
-        if (this.running || this.requestQueue.length) {
+        if ((indexing && this.running) || this.requestQueue.length) {
           await this.retrieveMoreBlocks();
         }
       }
     })();
+
+    this.log(`Server started, indexing: ${indexing}.`);
   }
 
   public async stop() {
@@ -108,22 +134,44 @@ export class Server {
     return this.ready;
   }
 
-  public async lookForBlocks(): Promise<void> {
-    const latestEvents = await this.rollupEventGetter.getLatestRollupEvents();
-    if (latestEvents.length && this.ready) {
-      await this.logsDb.addEthLogs(latestEvents);
+  public allowPrivilegedMethods() {
+    return this.configuration.allowPrivilegedMethods;
+  }
+
+  // Why are there not just privileged and unprivileged methods??
+  public additionalPermittedMethods() {
+    return this.configuration.additionalPermittedMethods;
+  }
+
+  public isValidApiKey(keyProvided: string | undefined) {
+    if (this.configuration.apiKeys.length === 0) {
+      return true;
+    }
+    if (!keyProvided) {
+      return false;
+    }
+    return !!this.apiKeys[keyProvided];
+  }
+
+  public async jsonRpc(args: RequestArguments) {
+    const { method, params = [] } = args;
+    if (
+      this.configuration.indexing &&
+      this.isReady() &&
+      method?.startsWith('eth_getLogs') &&
+      params[0].topics?.length &&
+      [ROLLUP_PROCESSED_EVENT_TOPIC, DEFI_BRIDGE_EVENT_TOPIC].includes(params[0].topics[0])
+    ) {
+      return await this.queryLogs(params[0]);
+    } else {
+      return await this.forwardEthRequest({ method, params });
     }
   }
 
-  public async init() {
-    // sync with blockchain
-    await this.rollupEventGetter.init();
-    this.log('Ready to receive requests...');
-    this.ready = true;
-  }
+  // PRIVATE METHODS:
 
   // querying for eth logs that may be in our DB
-  public async queryLogs(params: RollupLogsParams) {
+  private async queryLogs(params: RollupLogsParams) {
     const ourLatestBlock = this.rollupEventGetter.getLastQueriedBlockNum();
     const requestedStartBlock =
       !params.fromBlock || params.fromBlock === 'latest' ? ourLatestBlock : parseInt(params.fromBlock);
@@ -169,44 +217,74 @@ export class Server {
     return result || [];
   }
 
-  private async sendEthRequest(args: EthRequestArguments) {
-    const body = { ...args };
-
-    const res = await fetch(this.ethereumHost, {
-      method: 'POST',
-      body: JSON.stringify(body),
-      headers: { 'content-type': 'application/json' },
-    });
-    return await res.text();
-  }
-
-  public async forwardEthRequest(args: EthRequestArguments) {
-    if (Object.prototype.hasOwnProperty.call(this.cachedResponses, args.method)) {
-      if (this.cachedResponses[args.method] === undefined) {
-        this.cachedResponses[args.method] = await this.sendEthRequest(args);
-        this.log(`Cached response to method ${args.method}: ${this.cachedResponses[args.method]}`);
-      }
-      return JSON.parse(this.cachedResponses[args.method]!);
+  private async forwardEthRequest(args: RequestArguments) {
+    if (REQUEST_TYPES_TO_CACHE.includes(args.method)) {
+      return await this.forwardEthRequestViaCache(args);
     }
-    const response = await this.sendEthRequest(args);
-    return JSON.parse(response);
-  }
 
-  public allowPrivilegedMethods() {
-    return this.configuration.allowPrivilegedMethods;
-  }
+    const result = await this.provider.request(args);
 
-  public additionalPermittedMethods() {
-    return this.configuration.additionalPermittedMethods;
-  }
-
-  public isValidApiKey(keyProvided: string | undefined) {
-    if (this.configuration.apiKeys.length === 0) {
-      return true;
+    // Imagine:
+    // Alice makes a `call` request to check a bit of state. The result is cached.
+    // Alice sends a transaction that modifies the state.
+    // Alice requests a transaction receipt, which would be returned as success, implying the state has changed.
+    // Alice performs another `call` to check the state change, but the cached result is returned. Bad.
+    //
+    // Any data stored in the cache will be *no older* than this.blockNumber.
+    // They could be newer as the `call` request may populate the cache between a new block, and the poll discovering it.
+    // This means there is data inconsistency spanning maybe two blocks, potentially for a few seconds.
+    // This is certainly no worse then using something like Infura.
+    //
+    // We can remedy this case.
+    // Here we filter any transaction receipts that would acknowledge state that is newer than what is in the cache.
+    // This resolves the use case above.
+    //
+    // The thoughtful engineer will subsequently imagine:
+    // Alice makes a `call` request to check a bit of state. The result is cached.
+    // Bob sends a transaction that modifies the state.
+    // Charlie makes a `call` request to check a bit of state. The stale cached result is returned.
+    //
+    // While this maybe considered an issue, the reality is this is *already* the case.
+    // You can actually never assume that a value returned by a `call` that is shared, is not immediately stale.
+    // The fact that Bob's transaction happened before Charlie's call, but Charlie experiences the state change after,
+    // is irrelevant.
+    if (args.method == 'eth_getTransactionReceipt' && result.blockNumber > this.blockNumber) {
+      this.debug(`discarding transaction receipt result until cache cleared.`);
+      return null;
     }
-    if (!keyProvided) {
-      return false;
+
+    return result;
+  }
+
+  /**
+   * Normalises the JSON (orders properties) to produce a consistent cache key.
+   * If there's no entry, kick off a request and store the promise in the cache.
+   * If there's a promise in the cache the request is in flight, await it.
+   * If there's an entry in the cache, return it.
+   */
+  private async forwardEthRequestViaCache(args: RequestArguments) {
+    const cacheKey = JSONNormalize.sha256Sync(args);
+    const cacheResult = this.cachedResponses[cacheKey];
+
+    if (cacheResult === undefined) {
+      this.cachedResponses[cacheKey] = new Promise((resolve, reject) => {
+        this.debug(`cache key ${cacheKey} miss, adding response for request: ${JSON.stringify(args)}`);
+        this.provider.request(args).then(resolve).catch(reject);
+      });
+      return await this.cachedResponses[cacheKey];
+    } else if (isPromise(cacheResult)) {
+      this.debug(`cache key ${cacheKey} hit (in flight) for request: ${JSON.stringify(args)}`);
+      return await cacheResult;
+    } else {
+      this.debug(`cache key ${cacheKey} hit for request: ${JSON.stringify(args)}`);
+      return cacheResult;
     }
-    return !!this.apiKeys[keyProvided];
+  }
+
+  private async lookForBlocks(): Promise<void> {
+    const latestEvents = await this.rollupEventGetter.getLatestRollupEvents();
+    if (latestEvents.length && this.ready) {
+      await this.logsDb.addEthLogs(latestEvents);
+    }
   }
 }

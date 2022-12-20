@@ -1,8 +1,7 @@
 import { UnderlyingAsset, AuxDataConfig, AztecAsset, SolidityType, BridgeDataFieldGetters } from '../bridge-data.js';
-
+import { StaticJsonRpcProvider } from '@ethersproject/providers';
 import { BiDCABridge, BiDCABridge__factory, IERC20__factory } from '../../typechain-types/index.js';
-import { createWeb3Provider } from '../aztec/provider/web3_provider.js';
-import { EthereumProvider, EthAddress, AssetValue } from '@aztec/sdk';
+import { EthAddress, AssetValue } from '@aztec/sdk';
 
 export class DCABridgeData implements BridgeDataFieldGetters {
   public scalingFactor: bigint = 1n * 10n ** 18n;
@@ -10,9 +9,8 @@ export class DCABridgeData implements BridgeDataFieldGetters {
 
   private constructor(private bidcaContract: BiDCABridge) {}
 
-  static create(provider: EthereumProvider, dcaAddress: EthAddress) {
-    const ethersProvider = createWeb3Provider(provider);
-    const bidcaContract = BiDCABridge__factory.connect(dcaAddress.toString(), ethersProvider);
+  static create(provider: StaticJsonRpcProvider, dcaAddress: EthAddress) {
+    const bidcaContract = BiDCABridge__factory.connect(dcaAddress.toString(), provider);
     return new DCABridgeData(bidcaContract);
   }
 

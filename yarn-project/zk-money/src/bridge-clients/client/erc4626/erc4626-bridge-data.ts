@@ -1,17 +1,15 @@
-import { EthAddress, EthereumProvider } from '@aztec/sdk';
-import { Web3Provider } from '@ethersproject/providers';
+import { EthAddress } from '@aztec/sdk';
+import { StaticJsonRpcProvider } from '@ethersproject/providers';
 import { IERC20Metadata__factory, IERC4626__factory } from '../../typechain-types/index.js';
-import { createWeb3Provider } from '../aztec/provider/web3_provider.js';
 import { AuxDataConfig, AztecAsset, BridgeDataFieldGetters, SolidityType, UnderlyingAsset } from '../bridge-data.js';
 
 export class ERC4626BridgeData implements BridgeDataFieldGetters {
   shareToAssetMap = new Map<EthAddress, EthAddress>();
 
-  protected constructor(protected ethersProvider: Web3Provider) {}
+  protected constructor(protected ethersProvider: StaticJsonRpcProvider) {}
 
-  static create(provider: EthereumProvider) {
-    const ethersProvider = createWeb3Provider(provider);
-    return new ERC4626BridgeData(ethersProvider);
+  static create(provider: StaticJsonRpcProvider) {
+    return new ERC4626BridgeData(provider);
   }
 
   auxDataConfig: AuxDataConfig[] = [

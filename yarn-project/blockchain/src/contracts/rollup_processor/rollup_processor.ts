@@ -29,6 +29,8 @@ export class RollupProcessor {
   static readonly DEFAULT_BRIDGE_GAS_LIMIT = 300000;
   static readonly DEFAULT_ERC20_GAS_LIMIT = 55000;
 
+  private static DEPOSIT_GAS_LIMIT_MULTIPLIER = 1.1;
+
   public rollupProcessor: Contract;
   public permitHelper: Contract;
   private lastQueriedRollupId?: number;
@@ -373,12 +375,28 @@ export class RollupProcessor {
     proofHash: Buffer = Buffer.alloc(32),
     options: SendTxOptions = {},
   ) {
-    const { gasLimit } = options;
+    let { gasLimit } = options;
     const rollupProcessor = this.getContractWithSigner(options);
     const depositor = await rollupProcessor.signer.getAddress();
+
+    const value = assetId === 0 ? amount : undefined;
+
+    // note: Due to non deterministic gas estimations provided in depositPendingFunds, we add 10% to the total
+    // transaction fee to cover the cost of all execution branches.
+    // Non determinism is cause by user's individually calculating the new deposit limit, where the previous update
+    // determines the path of the next user's execution.
+    if (!gasLimit) {
+      const estimation = await rollupProcessor.estimateGas
+        .depositPendingFunds(assetId, amount, depositor, proofHash, {
+          value,
+        })
+        .catch(fixEthersStackTrace);
+      gasLimit = Math.ceil(estimation.toNumber() * RollupProcessor.DEPOSIT_GAS_LIMIT_MULTIPLIER);
+    }
+
     const tx = await rollupProcessor
       .depositPendingFunds(assetId, amount, depositor, proofHash, {
-        value: assetId === 0 ? amount : undefined,
+        value,
         gasLimit,
       })
       .catch(fixEthersStackTrace);
@@ -392,9 +410,18 @@ export class RollupProcessor {
     signature: EthereumSignature,
     options: SendTxOptions = {},
   ) {
-    const { gasLimit } = options;
+    let { gasLimit } = options;
     const permitHelper = this.getHelperContractWithSigner(options);
     const depositor = await permitHelper.signer.getAddress();
+
+    // Deposit actions have non-deterministic gas consumption - see note in `depositPendingFunds`
+    if (!gasLimit) {
+      const estimation = await permitHelper.estimateGas
+        .depositPendingFundsPermit(assetId, amount, depositor, deadline, signature.v, signature.r, signature.s)
+        .catch(fixEthersStackTrace);
+      gasLimit = Math.ceil(estimation.toNumber() * RollupProcessor.DEPOSIT_GAS_LIMIT_MULTIPLIER);
+    }
+
     const tx = await permitHelper
       .depositPendingFundsPermit(assetId, amount, depositor, deadline, signature.v, signature.r, signature.s, {
         gasLimit,
@@ -411,9 +438,27 @@ export class RollupProcessor {
     signature: EthereumSignature,
     options: SendTxOptions = {},
   ) {
-    const { gasLimit } = options;
+    let { gasLimit } = options;
     const permitHelper = this.getHelperContractWithSigner(options);
     const depositor = await permitHelper.signer.getAddress();
+
+    // Deposit actions have non-deterministic gas consumption - see note in `depositPendingFunds`
+    if (!gasLimit) {
+      const estimation = await permitHelper.estimateGas
+        .depositPendingFundsPermitNonStandard(
+          assetId,
+          amount,
+          depositor,
+          nonce,
+          deadline,
+          signature.v,
+          signature.r,
+          signature.s,
+        )
+        .catch(fixEthersStackTrace);
+      gasLimit = Math.ceil(estimation.toNumber() * RollupProcessor.DEPOSIT_GAS_LIMIT_MULTIPLIER);
+    }
+
     const tx = await permitHelper
       .depositPendingFundsPermitNonStandard(
         assetId,
