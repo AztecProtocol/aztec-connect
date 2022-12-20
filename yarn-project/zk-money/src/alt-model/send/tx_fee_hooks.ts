@@ -57,7 +57,7 @@ export function useSendFeeAmounts(
       // changed, and the fee for chaining may have changed too. Hence why it's
       // included as a dependency to trigger a refetch.
     }
-    if (!sdk || !userId || assetValue?.assetId === undefined || assetValue.value === undefined) return;
+    if (!sdk || !userId || !assetValue?.value || assetValue?.assetId === undefined) return;
     return createFeesGetter(
       sendMode,
       sdk,

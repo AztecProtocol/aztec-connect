@@ -3,9 +3,8 @@ import type { AmountFactory } from '../../../alt-model/assets/amount_factory.js'
 import type { DefiComposerPayload } from './defi_composer.js';
 import type { RemoteAsset } from '../../../alt-model/types.js';
 import { Amount } from '../../../alt-model/assets/index.js';
-import { max, min } from '../../../app/index.js';
 import { StrOrMax } from '../../../alt-model/forms/constants.js';
-import { amountFromStrOrMaxRoundedDown, getPrecisionIsTooHigh } from '../../../alt-model/forms/helpers.js';
+import { getPrecisionIsTooHigh } from '../../../alt-model/forms/helpers.js';
 import { AuxDataCustomisationState } from '../types.js';
 
 export interface DefiFormFields {
@@ -19,6 +18,8 @@ interface DefiFormValidationInput {
   amountFactory?: AmountFactory;
   displayedInputAsset: RemoteAsset;
   balanceInDisplayedInputAsset?: bigint;
+  maxOutput: bigint;
+  targetDepositAmount: Amount;
   feeAmount?: Amount;
   feeAmounts?: (Amount | undefined)[];
   balanceInFeePayingAsset?: bigint;
@@ -52,6 +53,8 @@ export function validateDefiForm(input: DefiFormValidationInput): DefiFormValida
     amountFactory,
     displayedInputAsset,
     balanceInDisplayedInputAsset,
+    maxOutput,
+    targetDepositAmount,
     feeAmount,
     feeAmounts,
     balanceInFeePayingAsset,
@@ -78,9 +81,6 @@ export function validateDefiForm(input: DefiFormValidationInput): DefiFormValida
   // yet worthwhile.
   const targetAssetIsPayingFee = displayedInputAsset.id === feeAmount.id;
   const feeInTargetAsset = targetAssetIsPayingFee ? feeAmount.baseUnits : 0n;
-
-  const maxOutput = max(min(maxChainableDefiDeposit.value, transactionLimit), 0n);
-  const targetDepositAmount = amountFromStrOrMaxRoundedDown(fields.amountStrOrMax, maxOutput, displayedInputAsset);
 
   const requiredInputInTargetAssetCoveringCosts = targetDepositAmount.baseUnits + feeInTargetAsset;
 

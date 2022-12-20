@@ -2,9 +2,8 @@ import { AssetValue, ProofId, TxSettlementTime, UserTx } from '@aztec/sdk';
 import { Amount } from '../assets/index.js';
 import { AmountFactory } from '../assets/amount_factory.js';
 import { StrOrMax } from '../forms/constants.js';
-import { amountFromStrOrMaxRoundedDown, getPrecisionIsTooHigh } from '../forms/helpers.js';
+import { getPrecisionIsTooHigh } from '../forms/helpers.js';
 import { RemoteAsset } from '../types.js';
-import { max, min } from '../../app/index.js';
 import { Recipient, SendComposerPayload } from './send_form_composer.js';
 import { SendMode } from './send_mode.js';
 
@@ -21,6 +20,8 @@ interface SendFormValidationInput {
   amountFactory: AmountFactory | undefined;
   asset: RemoteAsset;
   balanceInTargetAsset: bigint | undefined;
+  maxOutput: bigint;
+  targetAmount: Amount;
   feeAmount: Amount | undefined;
   feeAmounts: (Amount | undefined)[] | undefined;
   balanceInFeePayingAsset: bigint | undefined;
@@ -34,8 +35,6 @@ interface SendFormValidationInput {
 export interface SendFormDerivedData extends Omit<SendFormValidationInput, 'fields'> {
   fields: SendFormFields;
   validComposerPayload?: SendComposerPayload;
-  targetAmount?: Amount;
-  maxOutput?: bigint;
   requiredInputInTargetAssetCoveringCosts?: bigint;
 }
 
@@ -62,11 +61,11 @@ export function validateSendForm(input: SendFormValidationInput): SendFormValida
     fields,
     amountFactory,
     balanceInTargetAsset,
+    targetAmount,
     feeAmount,
     balanceInFeePayingAsset,
     transactionLimit,
     maxChainableValue,
-    asset,
     recipient,
     isLoadingRecipient,
     userTxs,
@@ -87,9 +86,6 @@ export function validateSendForm(input: SendFormValidationInput): SendFormValida
   // If the target asset isn't used for paying the fee, we don't need to reserve funds for it
   const targetAssetIsPayingFee = fields.assetId === feeAmount.id;
   const feeInTargetAsset = targetAssetIsPayingFee ? feeAmount.baseUnits : 0n;
-
-  const maxOutput = max(min(maxChainableValue.value, transactionLimit), 0n);
-  const targetAmount = amountFromStrOrMaxRoundedDown(fields.amountStrOrMax, maxOutput, asset);
 
   const requiredInputInTargetAssetCoveringCosts = targetAmount.baseUnits + feeInTargetAsset;
 
@@ -132,7 +128,6 @@ export function validateSendForm(input: SendFormValidationInput): SendFormValida
       ...input,
       targetAmount,
       validComposerPayload,
-      maxOutput,
       requiredInputInTargetAssetCoveringCosts,
     },
     isValid,
