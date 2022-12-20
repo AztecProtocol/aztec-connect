@@ -161,6 +161,35 @@ resource "aws_ecs_task_definition" "kebab" {
         "awslogs-stream-prefix": "ecs"
       }
     }
+  },
+  {
+    "name": "metrics",
+    "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/metrics-sidecar:latest",
+    "essential": false,
+    "memoryReservation": 256,
+    "portMappings": [
+      {
+        "containerPort": 9545
+      }
+    ],
+    "environment": [
+      {
+        "name": "DEPLOY_TAG",
+        "value": "${var.DEPLOY_TAG}"
+      },
+      {
+        "name": "SERVICE",
+        "value": "${var.DEPLOY_TAG}-kebab"
+      }
+    ],
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "${aws_cloudwatch_log_group.kebab_logs.name}",
+        "awslogs-region": "eu-west-2",
+        "awslogs-stream-prefix": "ecs"
+      }
+    }
   }
 ]
 DEFINITIONS

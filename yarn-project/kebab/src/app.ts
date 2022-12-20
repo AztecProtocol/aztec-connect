@@ -84,6 +84,19 @@ export function appFactory(server: Server, prefix: string) {
     ctx.status = 200;
   });
 
+  router.get('/metrics', async (ctx: Koa.Context) => {
+    ctx.body = '';
+
+    // Fetch and forward metrics from sidecar.
+    // Means we can easily use prometheus dns_sd_configs to make SRV queries to scrape metrics.
+    const sidecarResp = await fetch('http://localhost:9545/metrics').catch(() => undefined);
+    if (sidecarResp) {
+      ctx.body += await sidecarResp.text();
+    }
+
+    ctx.status = 200;
+  });
+
   const app = new Koa();
   app.proxy = true;
 
