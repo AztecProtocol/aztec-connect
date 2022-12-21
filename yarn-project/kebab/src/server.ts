@@ -56,7 +56,7 @@ export class Server {
     private readonly configuration: ConfVars,
   ) {
     this.rollupEventGetter = new RollupEventGetter(
-      this.configuration.redeployConfig.rollupContractAddress!,
+      this.configuration.contractConfig.rollupContractAddress!,
       provider,
       chainId,
       logsDb,
@@ -84,8 +84,8 @@ export class Server {
     }
   }
 
-  public getRedeployConfig() {
-    return this.configuration.redeployConfig;
+  public getContractConfig() {
+    return this.configuration.contractConfig;
   }
 
   public async start() {

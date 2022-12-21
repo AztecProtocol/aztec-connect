@@ -14,8 +14,7 @@ export interface StartupConfig {
   indexing: boolean;
 }
 
-export interface RedeployConfig {
-  redeploy?: number;
+export interface ContractConfig {
   rollupContractAddress?: EthAddress;
   priceFeedContractAddresses?: EthAddress[];
   permitHelperContractAddress?: EthAddress;
@@ -35,8 +34,7 @@ const defaultStartupConfig: StartupConfig = {
   indexing: true,
 };
 
-const defaultRedeployConfig: RedeployConfig = {
-  redeploy: undefined,
+const defaultContractConfig: ContractConfig = {
   rollupContractAddress: EthAddress.ZERO,
   priceFeedContractAddresses: [],
   permitHelperContractAddress: EthAddress.ZERO,
@@ -70,8 +68,45 @@ function getStartupConfigEnvVars(): Partial<StartupConfig> {
   return Object.fromEntries(Object.entries(envVars).filter(e => e[1] !== undefined));
 }
 
+/** Get Contract Config Env Vars
+ *
+ * @notice Kebab requires that required addresses are provided through
+ *         Environment variables. Panic if any required addresses are not found.
+ */
+function getContractConfigEnvVars() {
+  const {
+    ETHEREUM_HOST,
+    ROLLUP_CONTRACT_ADDRESS,
+    PERMIT_HELPER_CONTRACT_ADDRESS,
+    FEE_DISTRIBUTOR_ADDRESS,
+    PRICE_FEED_CONTRACT_ADDRESSES,
+    BRIDGE_DATA_PROVIDER_CONTRACT_ADDRESS,
+  } = process.env;
+
+  if (
+    !ETHEREUM_HOST ||
+    !ROLLUP_CONTRACT_ADDRESS ||
+    !PERMIT_HELPER_CONTRACT_ADDRESS ||
+    !FEE_DISTRIBUTOR_ADDRESS ||
+    !PRICE_FEED_CONTRACT_ADDRESSES ||
+    !BRIDGE_DATA_PROVIDER_CONTRACT_ADDRESS
+  ) {
+    throw new Error(
+      'ASSERT | ETHEREUM_HOST, ROLLUP_CONTRACT_ADDRESS, PERMIT_HELPER_CONTRACT_ADDRESS, FEE_DISTRIBUTOR_ADDRESS, PRICE_FEED_CONTRACT_ADDRESSES and BRIDGE_DATA_PROVIDER_CONTRACT_ADDRESS MUST be set',
+    );
+  }
+
+  const contractConfig: ContractConfig = {};
+  contractConfig.rollupContractAddress = EthAddress.fromString(ROLLUP_CONTRACT_ADDRESS);
+  contractConfig.permitHelperContractAddress = EthAddress.fromString(PERMIT_HELPER_CONTRACT_ADDRESS);
+  contractConfig.feeDistributorAddress = EthAddress.fromString(FEE_DISTRIBUTOR_ADDRESS);
+  contractConfig.priceFeedContractAddresses = PRICE_FEED_CONTRACT_ADDRESSES.split(',').map(EthAddress.fromString);
+  contractConfig.bridgeDataProviderContractAddress = EthAddress.fromString(BRIDGE_DATA_PROVIDER_CONTRACT_ADDRESS);
+  return contractConfig;
+}
+
 export interface ConfVars extends StartupConfig {
-  redeployConfig: RedeployConfig;
+  contractConfig: ContractConfig;
 }
 
 export class Configurator {
@@ -88,6 +123,7 @@ export class Configurator {
     mkdirpSync(dir);
 
     const startupConfigEnvVars = getStartupConfigEnvVars();
+    const startupContractEnvVars = getContractConfigEnvVars();
 
     if (pathExistsSync(this.confPath)) {
       // Erase all data if rollup contract changes.
@@ -95,26 +131,28 @@ export class Configurator {
 
       // Priorities:
       // StartupConfig: Environment, saved, defaults.
-      // RedeployConfig: Don't take from the given environment
-      const { redeployConfig: savedRedeployConfig, ...savedStartupConfig } = saved;
+      // ContractConfig: Don't take from the given environment
+      const { contractConfig: savedContractConfig, ...savedStartupConfig } = saved;
       this.confVars = {
         ...defaultStartupConfig,
         ...savedStartupConfig,
         ...startupConfigEnvVars,
-        redeployConfig: {
-          ...defaultRedeployConfig,
-          ...savedRedeployConfig,
+        contractConfig: {
+          ...defaultContractConfig,
+          ...startupContractEnvVars,
+          ...savedContractConfig,
         },
       };
     } else {
       // Priorities:
       // StartupConfig: Environment, defaults.
-      // RedeployConfig: Just take the default
+      // ContractConfig: Environment, defaults.
       this.confVars = {
         ...defaultStartupConfig,
         ...startupConfigEnvVars,
-        redeployConfig: {
-          ...defaultRedeployConfig,
+        contractConfig: {
+          ...defaultContractConfig,
+          ...startupContractEnvVars,
         },
       };
     }
@@ -133,25 +171,25 @@ export class Configurator {
     const conf = readJsonSync(path);
     return {
       ...conf,
-      redeployConfig: {
-        ...conf.redeployConfig,
-        rollupContractAddress: conf.redeployConfig.rollupContractAddress
-          ? EthAddress.fromString(conf.redeployConfig.rollupContractAddress)
+      contractConfig: {
+        ...conf.contractConfig,
+        rollupContractAddress: conf.contractConfig.rollupContractAddress
+          ? EthAddress.fromString(conf.contractConfig.rollupContractAddress)
           : EthAddress.ZERO,
-        permitHelperContractAddress: conf.redeployConfig.permitHelperContractAddress
-          ? EthAddress.fromString(conf.redeployConfig.permitHelperContractAddress)
+        permitHelperContractAddress: conf.contractConfig.permitHelperContractAddress
+          ? EthAddress.fromString(conf.contractConfig.permitHelperContractAddress)
           : EthAddress.ZERO,
-        feeDistributorAddress: conf.redeployConfig.feeDistributorAddress
-          ? EthAddress.fromString(conf.redeployConfig.feeDistributorAddress)
+        feeDistributorAddress: conf.contractConfig.feeDistributorAddress
+          ? EthAddress.fromString(conf.contractConfig.feeDistributorAddress)
           : EthAddress.ZERO,
-        faucetContractAddress: conf.redeployConfig.faucetContractAddress
-          ? EthAddress.fromString(conf.redeployConfig.faucetContractAddress)
+        faucetContractAddress: conf.contractConfig.faucetContractAddress
+          ? EthAddress.fromString(conf.contractConfig.faucetContractAddress)
           : EthAddress.ZERO,
-        bridgeDataProviderContractAddress: conf.redeployConfig.bridgeDataProviderContractAddress
-          ? EthAddress.fromString(conf.redeployConfig.bridgeDataProviderContractAddress)
+        bridgeDataProviderContractAddress: conf.contractConfig.bridgeDataProviderContractAddress
+          ? EthAddress.fromString(conf.contractConfig.bridgeDataProviderContractAddress)
           : EthAddress.ZERO,
-        priceFeedContractAddresses: conf.redeployConfig.priceFeedContractAddresses
-          ? conf.redeployConfig.priceFeedContractAddresses.map(EthAddress.fromString)
+        priceFeedContractAddresses: conf.contractConfig.priceFeedContractAddresses
+          ? conf.contractConfig.priceFeedContractAddresses.map(EthAddress.fromString)
           : [],
       },
     };
@@ -164,28 +202,28 @@ export class Configurator {
   private writeConfigFile(path: string, conf: ConfVars) {
     const toWrite = {
       ...conf,
-      redeployConfig: {
-        ...conf.redeployConfig,
-        rollupContractAddress: conf.redeployConfig.rollupContractAddress?.toString(),
-        permitHelperContractAddress: conf.redeployConfig.permitHelperContractAddress?.toString(),
-        feeDistributorAddress: conf.redeployConfig.feeDistributorAddress?.toString(),
-        faucetContractAddress: conf.redeployConfig.faucetContractAddress?.toString(),
-        bridgeDataProviderContractAddress: conf.redeployConfig?.bridgeDataProviderContractAddress?.toString(),
-        priceFeedContractAddresses: conf.redeployConfig.priceFeedContractAddresses
-          ? conf.redeployConfig.priceFeedContractAddresses.map(x => x.toString())
+      contractConfig: {
+        ...conf.contractConfig,
+        rollupContractAddress: conf.contractConfig.rollupContractAddress?.toString(),
+        permitHelperContractAddress: conf.contractConfig.permitHelperContractAddress?.toString(),
+        feeDistributorAddress: conf.contractConfig.feeDistributorAddress?.toString(),
+        faucetContractAddress: conf.contractConfig.faucetContractAddress?.toString(),
+        bridgeDataProviderContractAddress: conf.contractConfig?.bridgeDataProviderContractAddress?.toString(),
+        priceFeedContractAddresses: conf.contractConfig.priceFeedContractAddresses
+          ? conf.contractConfig.priceFeedContractAddresses.map(x => x.toString())
           : undefined,
       },
     };
     writeJsonSync(path, toWrite);
   }
 
-  public saveRedeployConfig(redeployConfig: RedeployConfig) {
-    const prevRedeployConfig = this.confVars.redeployConfig;
+  public saveContractConfig(contractConfig: ContractConfig) {
+    const prevContractConfig = this.confVars.contractConfig;
     this.confVars = {
       ...this.confVars,
-      redeployConfig: {
-        ...prevRedeployConfig,
-        ...redeployConfig,
+      contractConfig: {
+        ...prevContractConfig,
+        ...contractConfig,
       },
     };
     this.writeConfigFile(this.confPath, this.confVars);

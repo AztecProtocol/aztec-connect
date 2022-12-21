@@ -3,3 +3,4 @@ cache
 out
 Dockerfile
 lib
+serve

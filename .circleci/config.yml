@@ -456,7 +456,7 @@ jobs:
       - *setup_env
       - run:
           name: 'Test'
-          command: cond_spot_run_tests end-to-end ./src/e2e_deposit.test.ts false 1 1 VerificationKey1x1
+          command: cond_spot_run_tests end-to-end ./src/e2e_deposit.test.ts 1 1 VerificationKey1x1
 
   e2e-payment:
     docker:
@@ -469,7 +469,7 @@ jobs:
           name: 'Test'
           command: cond_spot_run_tests end-to-end ./src/e2e.test.ts
 
-  e2e-permit:
+  e2e-deposit-permit:
     docker:
       - image: aztecprotocol/alpine-build-image
     resource_class: small
@@ -491,7 +491,7 @@ jobs:
           name: 'Test'
           command: cond_spot_run_tests end-to-end ./src/e2e_migrated_accounts.test.ts
 
-  e2e-migrate-account:
+  e2e-migrate-account-and-funds:
     docker:
       - image: aztecprotocol/alpine-build-image
     resource_class: small
@@ -513,7 +513,7 @@ jobs:
           name: 'Test'
           command: cond_spot_run_tests end-to-end ./src/e2e_account.test.ts
 
-  e2e-sync-defi:
+  e2e-sync-bridge:
     docker:
       - image: aztecprotocol/alpine-build-image
     resource_class: small
@@ -524,7 +524,7 @@ jobs:
           name: 'Test'
           command: cond_spot_run_tests end-to-end ./src/e2e_sync_bridge.test.ts
 
-  e2e-async-defi:
+  e2e-async-bridge:
     docker:
       - image: aztecprotocol/alpine-build-image
     resource_class: small
@@ -535,7 +535,7 @@ jobs:
           name: 'Test'
           command: cond_spot_run_tests end-to-end ./src/e2e_async_bridge.test.ts
 
-  e2e-defi:
+  e2e-subsidy:
     docker:
       - image: aztecprotocol/alpine-build-image
     resource_class: small
@@ -544,9 +544,9 @@ jobs:
       - *setup_env
       - run:
           name: 'Test'
-          command: cond_spot_run_tests end-to-end ./src/e2e_defi.test.ts
+          command: cond_spot_run_tests end-to-end ./src/e2e_subsidy.test.ts
 
-  e2e-defi-subsidy:
+  e2e-subsidy-async:
     docker:
       - image: aztecprotocol/alpine-build-image
     resource_class: small
@@ -555,7 +555,7 @@ jobs:
       - *setup_env
       - run:
           name: 'Test'
-          command: cond_spot_run_tests end-to-end ./src/e2e_defi_subsidy.test.ts
+          command: cond_spot_run_tests end-to-end ./src/e2e_subsidy_async.test.ts
 
   e2e-non-fee-assets:
     docker:
@@ -678,6 +678,10 @@ jobs:
       - *checkout
       - *setup_env
       - run:
+          name: 'contracts'
+          working_directory: contracts/scripts
+          command: ./deploy_contracts.sh
+      - run:
           name: 'barretenberg.js'
           command: |
             deploy_ecr barretenberg.js
@@ -689,8 +693,7 @@ jobs:
             deploy_npm blockchain
       - run:
           name: 'kebab'
-          # Increment to force contract redeployment.
-          command: TF_VAR_REDEPLOY=10 deploy kebab
+          command: deploy kebab
       - run:
           name: 'halloumi'
           command: deploy halloumi "halloumi halloumi-inner halloumi-outer"
@@ -887,15 +890,15 @@ workflows:
       - e2e-browser: *e2e_test
       - e2e-chained-txs-with-spending-keys: *e2e_test
       - e2e-chained-txs: *e2e_test
-      - e2e-sync-defi: *e2e_test
-      - e2e-async-defi: *e2e_test
-      - e2e-defi: *e2e_test
-      - e2e-defi-subsidy: *e2e_test
-      - e2e-migrate-account: *e2e_test
+      - e2e-sync-bridge: *e2e_test
+      - e2e-async-bridge: *e2e_test
+      - e2e-subsidy: *e2e_test
+      - e2e-subsidy-async: *e2e_test
+      - e2e-migrate-account-and-funds: *e2e_test
       - e2e-migrated-accounts: *e2e_test
       - e2e-non-fee-assets: *e2e_test
       - e2e-payment: *e2e_test
-      - e2e-permit: *e2e_test
+      - e2e-deposit-permit: *e2e_test
       - e2e-prover: *e2e_test
       - e2e-virtual-assets: *e2e_test
       - bb-join:
@@ -931,15 +934,15 @@ workflows:
             - e2e-browser
             - e2e-chained-txs
             - e2e-chained-txs-with-spending-keys
-            - e2e-async-defi
-            - e2e-sync-defi
-            - e2e-defi
-            - e2e-defi-subsidy
-            - e2e-migrate-account
+            - e2e-async-bridge
+            - e2e-sync-bridge
+            - e2e-subsidy
+            - e2e-subsidy-async
+            - e2e-migrate-account-and-funds
             - e2e-migrated-accounts
             - e2e-non-fee-assets
             - e2e-payment
-            - e2e-permit
+            - e2e-deposit-permit
             - e2e-prover
             - e2e-virtual-assets
           filters: *deploy_filters

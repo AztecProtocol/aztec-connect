@@ -11,6 +11,10 @@ cd ../../yarn-project/falafel
 export ETHEREUM_HOST=http://localhost:8545
 export HALLOUMI_HOST=http://localhost:8083
 
+# Contracts service, provides contract addresses when not running in prod
+export CONTRACTS_HOST=localhost
+export CONTRACTS_PORT=8547
+
 # Falafel
 export MIN_CONFIRMATION_ESCAPE_HATCH_WINDOW=1
 export NUM_INNER_ROLLUP_TXS=3
@@ -19,6 +23,9 @@ export ETHEREUM_POLL_INTERVAL=1000
 export FEE_GAS_PRICE_MULTIPLIER=0.01
 export FEE_PAYING_ASSET_IDS=0,1
 export PROVERLESS=true
+
+# Get contract addresses from the contract service
+. ./scripts/export_addresses.sh
 
 yarn build
 yarn clean_db

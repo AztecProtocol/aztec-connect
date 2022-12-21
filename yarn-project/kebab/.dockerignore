@@ -4,3 +4,4 @@ node_modules
 **/.terraform
 Dockerfile
 .env
+addresses.json

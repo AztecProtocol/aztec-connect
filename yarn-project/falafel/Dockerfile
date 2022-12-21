@@ -11,7 +11,7 @@ RUN yarn cache clean
 RUN yarn workspaces focus --production
 
 FROM node:18-alpine
-RUN apk update && apk add --no-cache llvm15-libs curl jq bash
+RUN apk update && apk add --no-cache llvm15-libs
 COPY --from=builder /usr/src /usr/src
 WORKDIR /usr/src/yarn-project/falafel
 CMD ["yarn", "start"]

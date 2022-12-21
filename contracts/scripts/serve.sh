@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # NOTE: deploy_e2e.sh must be run before running this script
 # NOTE: This script will statically serve the deployed addresses on port so that it can be consumed by other service
 # NOTE: making any HTTP request to SERVE_PORT will return the file.

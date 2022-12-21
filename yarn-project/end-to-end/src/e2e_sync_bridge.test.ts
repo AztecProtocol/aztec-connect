@@ -71,7 +71,7 @@ describe('end-to-end defi tests', () => {
     const debugBalance = async (assetId: number) =>
       debug(`balance: ${sdk.fromBaseUnits(await sdk.getBalance(userIds[0], assetId), true)}`);
 
-    const bridgeAddressId = 7;
+    const bridgeAddressId = 2;
     const ethAssetId = 0;
     const tokenAAssetId = 1;
     const bridgeCallData = new BridgeCallData(bridgeAddressId, ethAssetId, tokenAAssetId);

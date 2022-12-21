@@ -1,7 +1,7 @@
 FROM 278380418400.dkr.ecr.eu-west-2.amazonaws.com/blockchain-vks as vks
 
 FROM ghcr.io/foundry-rs/foundry:nightly as builder
-RUN apk update && apk add --no-cache build-base git curl bash socat 
+RUN apk update && apk add --no-cache build-base git curl bash socat
 WORKDIR /usr/src/contracts
 RUN git init
 COPY . .
@@ -17,6 +17,8 @@ RUN forge install --no-commit \
   https://github.com/AztecProtocol/rollup-encoder \
   https://github.com/AztecProtocol/aztec-connect-bridges@23900615ee72930099959cdb82e0a89fa351ddc4
 ENV MAINNET_RPC_URL='https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c'
+
 RUN forge clean && forge build && forge test
 
 WORKDIR /usr/src/contracts
+ENTRYPOINT ["sh", "scripts/deploy_e2e.sh"]

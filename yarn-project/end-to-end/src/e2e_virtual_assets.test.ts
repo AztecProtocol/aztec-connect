@@ -42,7 +42,7 @@ describe('end-to-end virtual assets tests', () => {
   let userIds: GrumpkinAddress[] = [];
   let signers: Signer[] = [];
   let shieldValue: AssetValue;
-  const bridgeAddressId = 6;
+  const bridgeAddressId = 1;
   const outputValueEth = 10n ** 15n; // 0.001
   const outputValueDai = 10n ** 20n; // 100
   const outputVirtualValueA = BigInt('0x123456789abcdef0123456789abcdef0123456789abcdef');

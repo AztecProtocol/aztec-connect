@@ -3,41 +3,18 @@ import http from 'http';
 import { createConnection } from 'typeorm';
 
 import { getComponents } from './config.js';
-import { Configurator, RedeployConfig } from './configurator.js';
+import { Configurator } from './configurator.js';
 import { Server } from './server.js';
 import { appFactory } from './app.js';
 import { EthLogsDb } from './log_db.js';
-import { deployToBlockchain } from './deploy.js';
-import { EthAddress } from '@aztec/barretenberg/address';
-
-const { ROLLUP_CONTRACT_ADDRESS } = process.env;
 
 const configurator = new Configurator();
 
 async function main() {
   const { ormConfig, provider, chainId } = await getComponents(configurator);
-  const initialConfig = configurator.getConfVars();
-
-  if (ROLLUP_CONTRACT_ADDRESS) {
-    console.log(`Rollup contract address provided: ${ROLLUP_CONTRACT_ADDRESS}. Will not redeploy`);
-    // we have been given a rollup contract address directly
-    // we won't deploy anything
-    const redeployConfig: RedeployConfig = {
-      rollupContractAddress: EthAddress.fromString(ROLLUP_CONTRACT_ADDRESS),
-    };
-    configurator.saveRedeployConfig(redeployConfig);
-  } else {
-    console.log('No rollup contract address provided, checking redploy flag...');
-    // we haven't been given a rollup address, redeploy contracts
-    const redeployConfig = await deployToBlockchain(initialConfig.redeployConfig.redeploy);
-
-    if (redeployConfig) {
-      configurator.saveRedeployConfig(redeployConfig);
-    }
-  }
 
   const configuration = configurator.getConfVars();
-  const { redeployConfig: contractConfig, allowPrivilegedMethods, port, apiPrefix } = configuration;
+  const { contractConfig, allowPrivilegedMethods, port, apiPrefix } = configuration;
 
   console.log(`Rollup contract address: ${contractConfig.rollupContractAddress}`);
   console.log(`Allow privileged methods: ${allowPrivilegedMethods}`);
@@ -45,7 +22,7 @@ async function main() {
 
   const dbConn = await createConnection(ormConfig);
   const logDb = new EthLogsDb(dbConn);
-  const server = new Server(provider, initialConfig.ethereumHost, logDb, chainId, configuration);
+  const server = new Server(provider, configuration.ethereumHost, logDb, chainId, configuration);
 
   const shutdown = async () => {
     await server.stop();
