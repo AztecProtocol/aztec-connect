@@ -679,7 +679,7 @@ jobs:
       - *setup_env
       - run:
           name: 'contracts'
-          working_directory: contracts/scripts
+          working_directory: contracts/deploy
           command: ./deploy_contracts.sh
       - run:
           name: 'barretenberg.js'
