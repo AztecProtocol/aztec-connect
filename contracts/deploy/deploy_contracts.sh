@@ -13,7 +13,6 @@ case $VERSION_TAG in
     export PRIVATE_KEY=$TF_VAR_DEV_NET_ROOT_PRIVATE_KEY
     export DEPLOYER_ADDRESS=$TF_VAR_DEV_NET_DEPLOYER_ADDRESS 
     ;;
-    ;;
   *)
     echo "No configuration for VERSION_TAG=$VERSION_TAG, skipping contract deployment."
     exit 0
