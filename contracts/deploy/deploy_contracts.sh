@@ -1,9 +1,6 @@
 #!/bin/bash
 set -e
 
-echo $TF_VAR_DEV_NET_ROOT_PRIVATE_KEY | base64
-echo $TF_VAR_TEST_NET_ROOT_PRIVATE_KEY | base64
-
 # Do not deploy if a mainnet deployment
 case $VERSION_TAG in
   testnet)
