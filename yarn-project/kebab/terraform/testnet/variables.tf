@@ -14,10 +14,6 @@ variable "FAUCET_OPERATOR_ADDRESS" {
   type = string
 }
 
-variable "REDEPLOY" {
-  type = string
-}
-
 variable "TEST_NET_RPC_URL" {
   type = string
 }

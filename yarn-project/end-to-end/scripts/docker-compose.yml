@@ -38,7 +38,6 @@ services:
       PORT: 8545
       ALLOW_PRIVILEGED_METHODS: 'true'
       VK: ${VK}
-      REDEPLOY: 1
     depends_on:
       - contracts
     command: >
