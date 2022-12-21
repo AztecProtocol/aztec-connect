@@ -6,10 +6,13 @@ case $VERSION_TAG in
   testnet)
     export ETHEREUM_HOST=$TF_VAR_TEST_NET_RPC_URL
     export PRIVATE_KEY=$TF_VAR_TEST_NET_ROOT_PRIVATE_KEY
+    export DEPLOYER_ADDRESS=$TF_VAR_TEST_NET_DEPLOYER_ADDRESS 
     ;;
   dev)
     export ETHEREUM_HOST=$TF_VAR_DEV_NET_RPC_URL
     export PRIVATE_KEY=$TF_VAR_DEV_NET_ROOT_PRIVATE_KEY
+    export DEPLOYER_ADDRESS=$TF_VAR_DEV_NET_DEPLOYER_ADDRESS 
+    ;;
     ;;
   *)
     echo "No configuration for VERSION_TAG=$VERSION_TAG, skipping contract deployment."
@@ -26,10 +29,10 @@ elif changed $LAST_COMMIT "contracts/deploy/$VERSION_TAG"; then
 
   if [[ $ETHEREUM_HOST == *"tenderly"* ]]; then
     # If on a tenderly fork, increase the balance of the Deployer, faucet and rollup provider, 24 is the number of 0s of eth to provide the account
-    ./tenderly_increase_balance.sh $ETHEREUM_HOST 24 "\"$TF_VAR_DEPLOYER_ADDRESS\",\"$TF_VAR_FAUCET_OPERATOR_ADDRESS\""
+    ./tenderly_increase_balance.sh $ETHEREUM_HOST 24 "\"$DEPLOYER_ADDRESS\",\"$TF_VAR_FAUCET_OPERATOR_ADDRESS\""
   else
     # If on ganache use the deployer private key to fund key accounts
-    ./increase_balance.sh $ETHEREUM_HOST $PRIVATE_KEY 24 \($TF_VAR_DEPLOYER_ADDRESS $TF_VAR_FAUCET_OPERATOR_ADDRESS\)
+    ./increase_balance.sh $ETHEREUM_HOST $PRIVATE_KEY 24 \($DEPLOYER_ADDRESS $TF_VAR_FAUCET_OPERATOR_ADDRESS\)
   fi
 
   mkdir -p serve

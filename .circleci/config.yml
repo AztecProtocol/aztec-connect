@@ -678,7 +678,10 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'contracts'
+          name: 'contracts-ecr'
+          command: deploy_ecr contracts
+      - run:
+          name: 'contracts-deploy'
           working_directory: contracts/deploy
           command: ./deploy_contracts.sh
       - run:
