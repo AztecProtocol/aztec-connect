@@ -24,10 +24,10 @@ elif changed $LAST_COMMIT "contracts/deploy/$VERSION_TAG"; then
 
   if [[ $ETHEREUM_HOST == *"tenderly"* ]]; then
     # If on a tenderly fork, increase the balance of the Deployer, faucet and rollup provider, 24 is the number of 0s of eth to provide the account
-    sh ./tenderly_increase_balance.sh $ETHEREUM_HOST 24 "\"$TF_VAR_DEPLOYER_ADDRESS\",\"$TF_VAR_FAUCET_OPERATOR_ADDRESS\",\"$TF_VAR_ROLLUP_PROVIDER_ADDRESS\""
+    ./tenderly_increase_balance.sh $ETHEREUM_HOST 24 "\"$TF_VAR_DEPLOYER_ADDRESS\",\"$TF_VAR_FAUCET_OPERATOR_ADDRESS\",\"$TF_VAR_ROLLUP_PROVIDER_ADDRESS\""
   else
     # If on ganache use the deployer private key to fund key accounts
-    sh ./increase_balance.sh $ETHEREUM_HOST $TF_VAR_PRIVATE_KEY 24 ($TF_VAR_DEPLOYER_ADDRESS $TF_VAR_FAUCET_OPERATOR_ADDRESS $TF_VAR_ROLLUP_PROVIDER_ADDRESS)
+    ./increase_balance.sh $ETHEREUM_HOST $TF_VAR_PRIVATE_KEY 24 \($TF_VAR_DEPLOYER_ADDRESS $TF_VAR_FAUCET_OPERATOR_ADDRESS $TF_VAR_ROLLUP_PROVIDER_ADDRESS\)
   fi
 
   mkdir -p serve
