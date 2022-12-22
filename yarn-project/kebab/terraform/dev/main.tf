@@ -117,26 +117,6 @@ resource "aws_ecs_task_definition" "kebab" {
   container_definitions = <<DEFINITIONS
 [
   {
-    "name": "${var.DEPLOY_TAG}-mainnet-fork",
-    "image": "trufflesuite/ganache",
-    "essential": true,
-    "command": ["-p=8545", "-f=https://mainnet.infura.io/v3/${var.TEST_INFURA_API_KEY}", "--chain.chainId=0xDEF", "--fork.blockNumber=15918000", "--database.dbPath=/data", "-h=0.0.0.0", "-l=12000000", "-a=0"],
-    "mountPoints": [
-      {
-        "containerPath": "/data",
-        "sourceVolume": "efs-data-store"
-      }
-    ],
-    "logConfiguration": {
-      "logDriver": "awslogs",
-      "options": {
-        "awslogs-group": "${aws_cloudwatch_log_group.kebab_logs.name}",
-        "awslogs-region": "eu-west-2",
-        "awslogs-stream-prefix": "ecs"
-      }
-    }
-  },
-  {
     "name": "${var.DEPLOY_TAG}-kebab",
     "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/kebab:${var.DEPLOY_TAG}",
     "essential": true,
@@ -305,27 +285,10 @@ resource "aws_alb_target_group" "kebab" {
   }
 }
 
-resource "aws_lb_listener_rule" "mainnet-fork" {
-  listener_arn = data.terraform_remote_state.aztec2_iac.outputs.mainnet-fork-listener-id
-
-  action {
-    type             = "forward"
-    target_group_arn = aws_alb_target_group.kebab.arn
-  }
-
-  condition {
-    host_header {
-      values = ["${var.DEPLOY_TAG}-eth-host.aztec.network"]
-    }
-  }
-}
-
-
 data "aws_alb" "aztec2" {
   arn = data.terraform_remote_state.aztec2_iac.outputs.alb_arn
 }
 
-# mainnet-fork DNS entry.
 resource "aws_route53_record" "mainnet-fork" {
   zone_id = data.terraform_remote_state.aztec2_iac.outputs.aws_route53_zone_id
   name    = "${var.DEPLOY_TAG}-eth-host"
