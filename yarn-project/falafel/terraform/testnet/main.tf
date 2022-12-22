@@ -228,7 +228,7 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "PRICE_FEED_CONTRACT_ADDRESSES",
-        "value": "${data.terraform_remote_state.contracts.outputs.price_feed_contract_address}"
+        "value": "${data.terraform_remote_state.contracts.outputs.price_feed_contract_addresses}"
       },
       {
         "name": "BRIDGE_DATA_PROVIDER_CONTRACT_ADDRESS",
