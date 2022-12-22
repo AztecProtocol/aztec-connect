@@ -768,13 +768,15 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       }));
 
       const txIds = await this.rollupProvider.sendTxs([...proofTxs, ...txs]).catch(async e => {
-        await this.rollupProvider.clientLog({
-          error: e.message,
-          proofRequestData,
-          proofs: proofs.map(p => ProofId[p.tx.proofId]),
-          proofTxs: proofTxs.map(p => ProofId[ProofData.getProofIdFromBuffer(p.proofData)]),
-          elapsed: Date.now() - (proofRequestData?.created || 0),
-        });
+        if (e.message === 'Insufficient fee.') {
+          await this.rollupProvider.clientLog({
+            error: e.message,
+            proofRequestData,
+            proofs: proofs.map(p => ProofId[p.tx.proofId]),
+            proofTxs: proofTxs.map(p => ProofId[ProofData.getProofIdFromBuffer(p.proofData)]),
+            elapsed: Date.now() - (proofRequestData?.created || 0),
+          });
+        }
         throw e;
       });
 
