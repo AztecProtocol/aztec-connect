@@ -1,6 +1,7 @@
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { TxType } from '@aztec/barretenberg/blockchain';
 import { DefiDepositProofData } from '@aztec/barretenberg/client_proofs';
+import { createLogger } from '@aztec/barretenberg/log';
 import { TxDao } from '../entity/index.js';
 import { TxFeeResolver } from '../tx_fee_resolver/index.js';
 import { Tx } from './tx.js';
@@ -13,7 +14,7 @@ interface TxGroupValidation {
 }
 
 export class TxFeeAllocator {
-  constructor(private txFeeResolver: TxFeeResolver) {}
+  constructor(private txFeeResolver: TxFeeResolver, private log = createLogger('TxFeeAllocator')) {}
 
   public validateReceivedTxs(txs: Tx[], txTypes: TxType[]): TxGroupValidation {
     const feePayingAssets = new Set<number>();
@@ -64,6 +65,77 @@ export class TxFeeAllocator {
       gasProvided,
       gasRequired,
     };
+  }
+
+  public printFeeBreakdown(txs: Tx[], txTypes: TxType[]) {
+    const feePayingAssets = new Set<number>();
+    let hasFeelessTxs = false;
+    // determine the fee paying asset type for this block of txs
+    for (let i = 0; i < txs.length; i++) {
+      const tx = txs[i];
+      const txFeeAssetId = tx.proof.feeAssetId;
+      const isFeePayingAsset = this.txFeeResolver.isFeePayingAsset(txFeeAssetId);
+      const txFee = toBigIntBE(tx.proof.txFee);
+      if (isFeePayingAsset && txFee) {
+        feePayingAssets.add(txFeeAssetId);
+      } else {
+        hasFeelessTxs = true;
+      }
+    }
+
+    const feePayingAsset = [...feePayingAssets][0];
+    this.log(`Generating fee breakdown, fee paying asset: ${feePayingAsset}, feeless txs: ${hasFeelessTxs}`);
+    let gasRequired = 0;
+    let gasProvided = 0;
+    let totalFeeProvided = 0n;
+    let totalFeeRequired = 0n;
+    // calculate the gas required and that provided
+    for (let i = 0; i < txs.length; i++) {
+      const tx = txs[i];
+      const txAssetId = tx.proof.feeAssetId;
+      const txFee = toBigIntBE(tx.proof.txFee);
+      let gasPaidFor = 0;
+      if (txTypes[i] === TxType.DEFI_DEPOSIT) {
+        const { bridgeCallData } = new DefiDepositProofData(tx.proof);
+        // this call return BASE_TX_GAS + constants[DEFI_DEPOSIT] + BRIDGE_TX_GAS
+        const bridgeGas = this.txFeeResolver.getAdjustedBridgeTxGas(txAssetId, bridgeCallData.toBigInt());
+        // this call return BASE_TX_GAS + constants[DEFI_CLAIM]
+        const claimGas = this.txFeeResolver.getAdjustedTxGas(txAssetId, TxType.DEFI_CLAIM);
+        const gasForThisTx = bridgeGas + claimGas;
+        gasRequired += gasForThisTx;
+
+        const feeRequiredForThisTx = this.txFeeResolver.getTxFeeFromGas(feePayingAsset, gasForThisTx);
+        totalFeeRequired += feeRequiredForThisTx;
+        this.log(
+          `Tx ${i + 1}/${txs.length}, type: ${
+            TxType[txTypes[i]]
+          }, fee/asset id ${txFee}/${txAssetId}, gas cost for tx: ${gasForThisTx}, fee required: ${feeRequiredForThisTx}`,
+        );
+        this.log(`Bridge ${bridgeCallData.toString()} gas: ${bridgeGas}, claim gas: ${claimGas}`);
+      } else {
+        const gasForThisTx = this.txFeeResolver.getAdjustedTxGas(txAssetId, txTypes[i]);
+        gasRequired += gasForThisTx;
+        const feeRequiredForThisTx = this.txFeeResolver.getTxFeeFromGas(feePayingAsset, gasForThisTx);
+        totalFeeRequired += feeRequiredForThisTx;
+        this.log(
+          `Tx ${i + 1}/${txs.length}, type: ${
+            TxType[txTypes[i]]
+          }, fee/asset id ${txFee}/${txAssetId}, gas cost for tx: ${gasForThisTx}, fee required: ${feeRequiredForThisTx}`,
+        );
+      }
+
+      if (txAssetId === feePayingAsset) {
+        gasPaidFor = this.txFeeResolver.getGasPaidForByFee(feePayingAsset, txFee);
+        gasProvided += gasPaidFor;
+        totalFeeProvided += txFee;
+      }
+      this.log(`Gas paid for by tx ${i + 1}/${txs.length}: ${gasPaidFor}`);
+    }
+    this.log(
+      `Gas required/provided: ${gasRequired}/${gasProvided}, gas balance: ${
+        gasProvided - gasRequired
+      }, fee required/provided: ${totalFeeRequired}/${totalFeeProvided}`,
+    );
   }
 
   public reallocateGas(txDaos: TxDao[], txs: Tx[], txTypes: TxType[], validation: TxGroupValidation) {

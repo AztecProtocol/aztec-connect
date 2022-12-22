@@ -100,6 +100,7 @@ export class TxReceiver {
           this.log(
             `Txs only contained enough fee to pay for ${validation.gasProvided} gas, but it needed ${validation.gasRequired}.`,
           );
+          txFeeAllocator.printFeeBreakdown(txs, txTypes);
           throw new Error('Insufficient fee.');
         }
         await this.validateChain(txs);
