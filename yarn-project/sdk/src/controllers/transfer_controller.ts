@@ -11,6 +11,7 @@ export class TransferController {
   private proofOutputs: ProofOutput[] = [];
   private feeProofOutputs: ProofOutput[] = [];
   private txIds: TxId[] = [];
+  private created = Date.now();
 
   constructor(
     public readonly userId: GrumpkinAddress,
@@ -96,7 +97,14 @@ export class TransferController {
       throw new Error('Call createProof() first.');
     }
 
-    this.txIds = await this.core.sendProofs([...this.proofOutputs, ...this.feeProofOutputs]);
+    this.txIds = await this.core.sendProofs([...this.proofOutputs, ...this.feeProofOutputs], [], {
+      from: 'transfer_controller',
+      fee: {
+        ...this.fee,
+        value: this.fee.value.toString(),
+      },
+      created: this.created,
+    });
     return this.txIds[this.proofOutputs.length - 1];
   }
 

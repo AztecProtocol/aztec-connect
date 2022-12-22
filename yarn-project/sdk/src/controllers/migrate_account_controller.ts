@@ -13,6 +13,7 @@ export class MigrateAccountController extends DepositHandler {
   private proofOutput?: ProofOutput;
   private txIds: TxId[] = [];
   private requireDeposit: boolean;
+  private created = Date.now();
 
   constructor(
     public readonly userId: GrumpkinAddress,
@@ -63,7 +64,14 @@ export class MigrateAccountController extends DepositHandler {
     }
 
     const proofs = this.getProofOutputs();
-    this.txIds = await this.core.sendProofs(proofs);
+    this.txIds = await this.core.sendProofs(proofs, [], {
+      from: 'migrate_account_controller',
+      fee: {
+        ...this.fee,
+        value: this.fee.value.toString(),
+      },
+      created: this.created,
+    });
     return this.txIds[0];
   }
 
