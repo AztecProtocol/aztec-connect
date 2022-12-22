@@ -14,5 +14,5 @@ FROM node:18-alpine
 RUN apk update && apk add --no-cache llvm15-libs curl jq bash
 COPY --from=builder /usr/src /usr/src
 WORKDIR /usr/src/yarn-project/falafel
-CMD ["yarn", "start"]
+CMD ["node", "./dest"]
 EXPOSE 80
