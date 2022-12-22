@@ -284,6 +284,20 @@ resource "aws_alb_target_group" "kebab" {
     name = "${var.DEPLOY_TAG}-kebab"
   }
 }
+resource "aws_lb_listener_rule" "mainnet-fork" {
+  listener_arn = data.terraform_remote_state.aztec2_iac.outputs.mainnet-fork-listener-id
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_alb_target_group.kebab.arn
+  }
+
+  condition {
+    host_header {
+      values = ["${var.DEPLOY_TAG}-eth-host.aztec.network"]
+    }
+  }
+}
 
 data "aws_alb" "aztec2" {
   arn = data.terraform_remote_state.aztec2_iac.outputs.alb_arn
