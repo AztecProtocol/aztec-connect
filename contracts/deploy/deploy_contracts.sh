@@ -46,7 +46,7 @@ elif changed $LAST_COMMIT "contracts/deploy/$VERSION_TAG"; then
   export TF_VAR_PRICE_FEED_CONTRACT_ADDRESSES="$TF_VAR_GAS_PRICE_FEED_CONTRACT_ADDRESS,$TF_VAR_DAI_PRICE_FEED_CONTRACT_ADDRESS" 
 
   # Write state variables
-  deploy_terraform contracts
+  deploy_terraform contracts ./terraform/$VERSION_TAG
 fi
 
 tag_remote_image contracts cache-$COMMIT_HASH cache-$COMMIT_HASH-$DEPLOY_TAG-deployed
