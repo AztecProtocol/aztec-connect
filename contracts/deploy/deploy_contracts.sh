@@ -28,7 +28,7 @@ elif changed $LAST_COMMIT "contracts/deploy/$VERSION_TAG"; then
 
   if [[ $ETHEREUM_HOST == *"tenderly"* ]]; then
     # If on a tenderly fork, increase the balance of the Deployer, faucet and rollup provider, 24 is the number of 0s of eth to provide the account
-    ./tenderly_increase_balance.sh $ETHEREUM_HOST 24 "\"$DEPLOYER_ADDRESS\",\"$TF_VAR_FAUCET_OPERATOR_ADDRESS\""
+    ./deploy/tenderly_increase_balance.sh $ETHEREUM_HOST 24 "\"$DEPLOYER_ADDRESS\",\"$TF_VAR_FAUCET_OPERATOR_ADDRESS\""
   fi 
 
   mkdir -p serve

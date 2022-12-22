@@ -682,8 +682,8 @@ jobs:
           command: deploy_ecr contracts
       - run:
           name: 'contracts-deploy'
-          working_directory: contracts/deploy
-          command: ./deploy_contracts.sh
+          working_directory: contracts
+          command: ./deploy/deploy_contracts.sh
       - run:
           name: 'barretenberg.js'
           command: |
