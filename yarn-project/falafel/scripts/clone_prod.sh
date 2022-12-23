@@ -20,4 +20,7 @@ fi
 # Start postgres container.
 CONTAINER_ID=$(docker run --rm -d -p 5432:5432 -e POSTGRES_USER=username -e POSTGRES_PASSWORD=password -e POSTGRES_DB=falafel postgres)
 
+# Wait to start...
+sleep 5
+
 ./scripts/import_rds_db.sh $TARGET_DIR/db.dump

@@ -10,6 +10,7 @@
 set -e
 
 TARGET_PROJECT=$1
+PUSH_LABEL=$2
 REPO=aztec2-internal
 COMMIT_HASH=$(git rev-parse HEAD)
 
@@ -48,5 +49,5 @@ cd /$REPO/.circleci
 source ./setup_env $COMMIT_HASH '' mainframe_$USER /repo
 cd ..
 
-build_local $TARGET_PROJECT $ONLY_TARGET
+build_local $TARGET_PROJECT $ONLY_TARGET $PUSH_LABEL
 "
