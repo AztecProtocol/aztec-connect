@@ -220,10 +220,6 @@ resource "aws_ecs_task_definition" "falafel" {
       {
         "name": "PUBLISH_INTERVAL",
         "value": "14400"
-      },
-      {
-        "name": "DEBUG",
-        "value": "log_typeorm_rollup_db,log_sync_rollup_db"
       }
     ],
     "mountPoints": [

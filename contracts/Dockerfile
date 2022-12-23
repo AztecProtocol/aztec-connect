@@ -1,6 +1,6 @@
 FROM 278380418400.dkr.ecr.eu-west-2.amazonaws.com/blockchain-vks as vks
 
-FROM ghcr.io/foundry-rs/foundry:nightly as builder
+FROM ghcr.io/foundry-rs/foundry:nightly-8c4294c1d2321e20a3543fbd9a813d47053a8303 as builder
 RUN apk update && apk add --no-cache build-base git curl bash socat
 WORKDIR /usr/src/contracts
 RUN git init

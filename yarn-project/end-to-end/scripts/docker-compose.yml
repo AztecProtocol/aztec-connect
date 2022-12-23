@@ -130,5 +130,3 @@ services:
       ./scripts/wait_till_ready;
       yarn test ${TEST:-./src/e2e.test.ts} falafel 8081
       "
-volumes:
-  env_data:
