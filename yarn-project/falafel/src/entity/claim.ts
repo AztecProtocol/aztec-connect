@@ -34,6 +34,8 @@ export class ClaimDao {
   public inputNullifier!: Buffer;
 
   @Column()
+  // Should be indexed, leaving out for now to get timings.
+  // @Index()
   public interactionNonce!: number;
 
   @Column('text', { transformer: [bigintTransformer] })

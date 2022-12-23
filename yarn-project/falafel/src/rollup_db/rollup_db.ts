@@ -44,6 +44,14 @@ export class TypeOrmRollupDb implements RollupDb {
     this.bridgeMetricsRep = this.connection.getRepository(BridgeMetricsDao);
   }
 
+  public init() {
+    return Promise.resolve();
+  }
+
+  public async destroy() {
+    await this.connection.destroy();
+  }
+
   public async addTx(txDao: TxDao) {
     await this.connection.transaction(async transactionalEntityManager => {
       await transactionalEntityManager.save(txDao);

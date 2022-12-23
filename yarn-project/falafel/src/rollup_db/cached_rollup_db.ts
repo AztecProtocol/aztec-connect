@@ -1,13 +1,23 @@
+import { AliasHash } from '@aztec/barretenberg/account_id';
+import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { TxHash, TxType } from '@aztec/barretenberg/blockchain';
 import { ProofData } from '@aztec/barretenberg/client_proofs';
 import { createLogger } from '@aztec/barretenberg/log';
 import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
-import { AssetMetricsDao, RollupDao, RollupProofDao, TxDao, BridgeMetricsDao } from '../entity/index.js';
-import { SyncRollupDb } from './sync_rollup_db.js';
+import {
+  AssetMetricsDao,
+  RollupDao,
+  RollupProofDao,
+  TxDao,
+  BridgeMetricsDao,
+  AccountDao,
+  ClaimDao,
+} from '../entity/index.js';
+import { RollupDb } from './rollup_db.js';
 import { getNewAccountDaos } from './tx_dao_to_account_dao.js';
 
-export class CachedRollupDb extends SyncRollupDb {
+export class CachedRollupDb implements RollupDb {
   private pendingTxCount!: number;
   private totalTxCount!: number;
   private pendingSecondClassTxCount!: number;
@@ -18,9 +28,13 @@ export class CachedRollupDb extends SyncRollupDb {
   private unsettledNullifiers: Buffer[] = [];
   private log = createLogger('CachedRollupDb');
 
+  constructor(private underlying: RollupDb) {}
+
   public async init() {
+    await this.underlying.init();
+
     this.log('Loading rollup cache...');
-    this.rollups = await super.getRollups();
+    this.rollups = await this.underlying.getRollups();
     this.settledRollups = this.rollups.filter(rollup => rollup.mined);
     this.rollups
       .map(r => r.rollupProof.txs.map(tx => [tx.nullifier1, tx.nullifier2]).flat())
@@ -31,13 +45,17 @@ export class CachedRollupDb extends SyncRollupDb {
     await this.refresh();
   }
 
+  public async destroy() {
+    await this.underlying.destroy();
+  }
+
   private async refresh() {
     const start = new Date().getTime();
-    this.totalTxCount = await super.getTotalTxCount();
-    this.pendingTxCount = await super.getPendingTxCount();
-    this.unsettledTxs = await super.getUnsettledTxs();
-    this.pendingSecondClassTxCount = await super.getPendingSecondClassTxCount();
-    this.unsettledNullifiers = await super.getUnsettledNullifiers();
+    this.totalTxCount = await this.underlying.getTotalTxCount();
+    this.pendingTxCount = await this.underlying.getPendingTxCount();
+    this.unsettledTxs = await this.underlying.getUnsettledTxs();
+    this.pendingSecondClassTxCount = await this.underlying.getPendingSecondClassTxCount();
+    this.unsettledNullifiers = await this.underlying.getUnsettledNullifiers();
     this.log(`Refreshed db cache in ${new Date().getTime() - start}ms.`);
   }
 
@@ -121,7 +139,7 @@ export class CachedRollupDb extends SyncRollupDb {
   }
 
   public async addTx(txDao: TxDao) {
-    await super.addTx(txDao);
+    await this.underlying.addTx(txDao);
 
     const { nullifier1, nullifier2 } = new ProofData(txDao.proofData);
     [nullifier1, nullifier2].filter(n => !!toBigIntBE(n)).forEach(n => this.unsettledNullifiers.push(n));
@@ -136,7 +154,7 @@ export class CachedRollupDb extends SyncRollupDb {
   }
 
   public async addTxs(txs: TxDao[]) {
-    await super.addTxs(txs);
+    await this.underlying.addTxs(txs);
 
     txs
       .map(tx => new ProofData(tx.proofData))
@@ -155,22 +173,22 @@ export class CachedRollupDb extends SyncRollupDb {
   }
 
   public async deleteTxsById(ids: Buffer[]) {
-    await super.deleteTxsById(ids);
+    await this.underlying.deleteTxsById(ids);
     await this.refresh();
   }
 
   public async addRollupProof(rollupDao: RollupProofDao) {
-    await super.addRollupProof(rollupDao);
+    await this.underlying.addRollupProof(rollupDao);
     await this.refresh();
   }
 
   public async addRollupProofs(rollupDaos: RollupProofDao[]) {
-    await super.addRollupProofs(rollupDaos);
+    await this.underlying.addRollupProofs(rollupDaos);
     await this.refresh();
   }
 
   public async addRollup(rollup: RollupDao) {
-    await super.addRollup(rollup);
+    await this.underlying.addRollup(rollup);
     this.rollups[rollup.id] = rollup;
 
     if (rollup.mined) {
@@ -196,7 +214,7 @@ export class CachedRollupDb extends SyncRollupDb {
     bridgeMetrics: BridgeMetricsDao[],
     subtreeRoot: Buffer,
   ) {
-    const rollup = await super.confirmMined(
+    const rollup = await this.underlying.confirmMined(
       id,
       gasUsed,
       gasPrice,
@@ -219,32 +237,140 @@ export class CachedRollupDb extends SyncRollupDb {
   }
 
   public async deletePendingTxs() {
-    await super.deletePendingTxs();
+    await this.underlying.deletePendingTxs();
     await this.refresh();
   }
 
   public async deleteRollupProof(id: Buffer) {
-    await super.deleteRollupProof(id);
+    await this.underlying.deleteRollupProof(id);
     await this.refresh();
   }
 
   public async deleteOrphanedRollupProofs() {
-    await super.deleteOrphanedRollupProofs();
+    await this.underlying.deleteOrphanedRollupProofs();
     await this.refresh();
   }
 
   public async deleteUnsettledRollups() {
-    await super.deleteUnsettledRollups();
+    await this.underlying.deleteUnsettledRollups();
     this.rollups = this.settledRollups.slice();
   }
 
   public async deleteUnsettledClaimTxs() {
-    await super.deleteUnsettledClaimTxs();
+    await this.underlying.deleteUnsettledClaimTxs();
     await this.refresh();
   }
 
   public async eraseDb() {
-    await super.eraseDb();
+    await this.underlying.eraseDb();
     await this.refresh();
+  }
+
+  public async addAccounts(accounts: AccountDao[]) {
+    await this.underlying.addAccounts(accounts);
+  }
+
+  public async getTx(txId: Buffer) {
+    return await this.underlying.getTx(txId);
+  }
+
+  public async isAccountRegistered(accountPublicKey: GrumpkinAddress) {
+    return await this.underlying.isAccountRegistered(accountPublicKey);
+  }
+
+  public async getJoinSplitTxCount() {
+    return await this.underlying.getJoinSplitTxCount();
+  }
+
+  public async getDefiTxCount() {
+    return await this.underlying.getDefiTxCount();
+  }
+
+  public async getAccountTxCount() {
+    return await this.underlying.getAccountTxCount();
+  }
+
+  public async getAccountCount() {
+    return await this.underlying.getAccountCount();
+  }
+
+  public async isAliasRegistered(aliasHash: AliasHash) {
+    return await this.underlying.isAliasRegistered(aliasHash);
+  }
+
+  public async isAliasRegisteredToAccount(accountPublicKey: GrumpkinAddress, aliasHash: AliasHash) {
+    return await this.underlying.isAliasRegisteredToAccount(accountPublicKey, aliasHash);
+  }
+
+  public async getPendingTxs(take?: number, includeSecondClass = false) {
+    return await this.underlying.getPendingTxs(take, includeSecondClass);
+  }
+
+  public async getPendingSecondClassTxs(take?: number) {
+    return await this.underlying.getPendingSecondClassTxs(take);
+  }
+
+  public async getRollupProof(id: Buffer, includeTxs = false) {
+    return await this.underlying.getRollupProof(id, includeTxs);
+  }
+
+  public async deleteTxlessRollupProofs() {
+    return await this.underlying.deleteTxlessRollupProofs();
+  }
+
+  public async getRollupsByRollupIds(ids: number[]) {
+    return await this.underlying.getRollupsByRollupIds(ids);
+  }
+
+  public async setCallData(id: number, rollupProofCalldata: Buffer) {
+    return await this.underlying.setCallData(id, rollupProofCalldata);
+  }
+
+  public async confirmSent(id: number, txHash: TxHash) {
+    return await this.underlying.confirmSent(id, txHash);
+  }
+
+  public async getUnsettledRollups() {
+    return await this.underlying.getUnsettledRollups();
+  }
+
+  public async getRollupByDataRoot(dataRoot: Buffer) {
+    return await this.underlying.getRollupByDataRoot(dataRoot);
+  }
+
+  public async getDataRootsIndex(root: Buffer) {
+    return await this.underlying.getDataRootsIndex(root);
+  }
+
+  public async addClaim(claim: ClaimDao) {
+    return await this.underlying.addClaim(claim);
+  }
+
+  public async getClaimsToRollup(take?: number) {
+    return await this.underlying.getClaimsToRollup(take);
+  }
+
+  public async updateClaimsWithResultRollupId(interactionNonce: number, interactionResultRollupId: number) {
+    return await this.underlying.updateClaimsWithResultRollupId(interactionNonce, interactionResultRollupId);
+  }
+
+  public async confirmClaimed(nullifier: Buffer, claimed: Date) {
+    return await this.underlying.confirmClaimed(nullifier, claimed);
+  }
+
+  public async getAssetMetrics(assetId: number) {
+    return await this.underlying.getAssetMetrics(assetId);
+  }
+
+  public async addBridgeMetrics(bridgeMetrics: BridgeMetricsDao[]) {
+    return await this.underlying.addBridgeMetrics(bridgeMetrics);
+  }
+
+  public async getBridgeMetricsForRollup(bridgeCallData: bigint, rollupId: number) {
+    return await this.underlying.getBridgeMetricsForRollup(bridgeCallData, rollupId);
+  }
+
+  public async getOurLastBridgeMetrics(bridgeCallData: bigint) {
+    return await this.underlying.getOurLastBridgeMetrics(bridgeCallData);
   }
 }

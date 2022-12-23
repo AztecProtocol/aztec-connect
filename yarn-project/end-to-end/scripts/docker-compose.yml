@@ -79,7 +79,7 @@ services:
       PROVERLESS: ${PROVERLESS}
       FEE_PAYING_ASSET_IDS: 0,1
       FEE_GAS_PRICE_MULTIPLIER: 0.01
-      DEBUG: 'bb:rollup_processor'
+      DEBUG: 'bb:rollup_processor,log*_rollup_db'
     depends_on:
       - kebab
     command: >

@@ -1,6 +1,9 @@
 import { EthereumRpc } from '@aztec/barretenberg/blockchain';
-import { EthereumBlockchainConfig, JsonRpcProvider, WalletProvider } from '@aztec/blockchain';
-import { ConnectionOptions } from 'typeorm';
+import { InitHelpers } from '@aztec/barretenberg/environment';
+import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
+import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
+import { EthereumBlockchain, EthereumBlockchainConfig, JsonRpcProvider, WalletProvider } from '@aztec/blockchain';
+import { DataSource, DataSourceOptions } from 'typeorm';
 import { Configurator, ConfVars } from './configurator.js';
 import {
   TxDao,
@@ -11,6 +14,7 @@ import {
   AccountDao,
   BridgeMetricsDao,
 } from './entity/index.js';
+import { CachedRollupDb, LogRollupDb, SyncRollupDb, TypeOrmRollupDb } from './rollup_db/index.js';
 
 function getEthereumBlockchainConfig({
   runtimeConfig: { gasLimit },
@@ -35,7 +39,7 @@ async function getProvider(ethereumHost: string, privateKey: Buffer) {
   return { provider, signingAddress, chainId };
 }
 
-export function getOrmConfig(dbUrl?: string, logging = false): ConnectionOptions {
+export function getOrmConfig(dbUrl?: string, logging = false): DataSourceOptions {
   const entities = [TxDao, RollupProofDao, RollupDao, AccountDao, ClaimDao, AssetMetricsDao, BridgeMetricsDao];
   if (!dbUrl) {
     return {
@@ -61,6 +65,33 @@ export function getOrmConfig(dbUrl?: string, logging = false): ConnectionOptions
   }
 }
 
+async function getRollupDb(dbUrl: string | undefined, dataRoot: Buffer, erase = false, logging = false) {
+  const ormConfig = getOrmConfig(dbUrl, logging);
+  const dataSource = new DataSource(ormConfig);
+  await dataSource.initialize();
+
+  const typeOrmRollupDb = new LogRollupDb(new TypeOrmRollupDb(dataSource, dataRoot), 'log_typeorm_rollup_db');
+
+  if (erase) {
+    console.log('Erasing sql database...');
+    await typeOrmRollupDb.eraseDb();
+  }
+
+  // If we don't have a dbUrl we're sqlite, wrap in serialization layer to ensure no more than 1 request at a time.
+  // const cachedRollupDb = new CachedRollupDb(
+  //   dbUrl ? typeOrmRollupDb : new LogRollupDb(new SyncRollupDb(typeOrmRollupDb), 'log_sync_rollup_db'),
+  // );
+
+  // Keeping original behaviour of always having sync in place to try and diagnose.
+  const syncRollupDb = new LogRollupDb(new SyncRollupDb(typeOrmRollupDb), 'log_sync_rollup_db');
+  const rollupDb = new LogRollupDb(new CachedRollupDb(syncRollupDb), 'log_cached_rollup_db');
+  await rollupDb.init();
+
+  // We shouldn't have to be returning the dataSource here! This is again, because of graphql crap.
+  // Remove once graphql is gone.
+  return { rollupDb, dataSource };
+}
+
 export async function getComponents(configurator: Configurator) {
   const confVars = configurator.getConfVars();
   const {
@@ -77,9 +108,7 @@ export async function getComponents(configurator: Configurator) {
     rollupCallDataLimit,
     version,
   } = confVars;
-  const ormConfig = getOrmConfig(dbUrl, typeOrmLogging);
   const { provider, signingAddress } = await getProvider(ethereumHost, privateKey);
-  const ethConfig = getEthereumBlockchainConfig(confVars);
 
   console.log(`Process Id: ${process.pid}`);
   console.log(`Database Url: ${dbUrl || 'none (local sqlite)'}`);
@@ -100,5 +129,32 @@ export async function getComponents(configurator: Configurator) {
     throw new Error('There should be one price feed contract address per fee paying asset.');
   }
 
-  return { ormConfig, provider, signingAddress, ethConfig };
+  // Create blockchain component.
+  const ethConfig = getEthereumBlockchainConfig(confVars);
+  const blockchain = await EthereumBlockchain.new(
+    ethConfig,
+    rollupContractAddress,
+    permitHelperContractAddress,
+    bridgeDataProviderAddress,
+    priceFeedContractAddresses,
+    provider,
+  );
+  const chainId = await blockchain.getChainId();
+
+  const erase = configurator.getRollupContractChanged();
+
+  // Create sql db component.
+  const { dataRoot } = InitHelpers.getInitRoots(chainId);
+  const { rollupDb, dataSource } = await getRollupDb(dbUrl, dataRoot, erase, typeOrmLogging);
+
+  // Create world state db.
+  const worldStateDb = new WorldStateDb();
+  if (erase) {
+    worldStateDb.destroy();
+  }
+
+  // Create barrtetenberg wasm instance.
+  const barretenberg = await BarretenbergWasm.new();
+
+  return { signingAddress, blockchain, rollupDb, worldStateDb, barretenberg, dataSource };
 }

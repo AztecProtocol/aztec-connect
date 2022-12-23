@@ -14,10 +14,18 @@ import {
 } from '../entity/index.js';
 import { RollupDb } from './rollup_db.js';
 
-export class SyncRollupDb {
+export class SyncRollupDb implements RollupDb {
   private writeMutex = new Mutex();
 
   constructor(private rollupDb: RollupDb) {}
+
+  public async init() {
+    await this.synchronise(() => this.rollupDb.init());
+  }
+
+  public async destroy() {
+    await this.synchronise(() => this.rollupDb.destroy());
+  }
 
   public addTx(txDao: TxDao) {
     return this.synchronise(() => this.rollupDb.addTx(txDao));
