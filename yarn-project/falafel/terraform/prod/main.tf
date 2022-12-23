@@ -223,7 +223,7 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "DEBUG",
-        "value": "log*_rollup_db"
+        "value": "log_typeorm_rollup_db,log_sync_rollup_db"
       }
     ],
     "mountPoints": [
