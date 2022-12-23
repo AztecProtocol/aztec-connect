@@ -19,7 +19,6 @@ PROJECTS=(
   contracts:contracts
   yarn-project:yarn-project-base
   yarn-project:barretenberg.js
-  yarn-project:contracts-verifier-test
   yarn-project:blockchain
   yarn-project:halloumi
   yarn-project:falafel
@@ -66,7 +65,7 @@ for E in ${PROJECTS[@]}; do
 
   time docker build -f $DOCKERFILE -t $ECR_DEPLOY_URL/$REPO:latest .
 
-  if [ -n "$TERM_AT_TARGET" -a "$PROJECT" = "$TARGET_PROJECT" ]; then
+  if [ "$PROJECT" = "$TARGET_PROJECT" ]; then
     if [ -n "$PUSH_LABEL" ]; then
       $(aws ecr get-login --region eu-west-2 --no-include-email) 2> /dev/null
       docker tag $ECR_DEPLOY_URL/$REPO:latest $ECR_DEPLOY_URL/$REPO:$PUSH_LABEL

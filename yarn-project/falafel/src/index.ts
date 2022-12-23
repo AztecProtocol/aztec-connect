@@ -4,69 +4,35 @@ import 'log-timestamp';
 import 'reflect-metadata';
 import http from 'http';
 import { Container } from 'typedi';
-import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
-import { EthereumBlockchain } from '@aztec/blockchain';
-import { DataSource } from 'typeorm';
 import { appFactory } from './app.js';
 import { Server } from './server.js';
-import { getComponents } from './config.js';
+import { getComponents } from './get_components.js';
 import { Metrics } from './metrics/index.js';
-import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
-import { CachedRollupDb, TypeOrmRollupDb } from './rollup_db/index.js';
-import { InitHelpers } from '@aztec/barretenberg/environment';
 import { configurator } from './entity/init_entities.js';
 
 async function main() {
-  const { ormConfig, provider, signingAddress, ethConfig } = await getComponents(configurator);
+  const { signingAddress, blockchain, rollupDb, worldStateDb, barretenberg, dataSource } = await getComponents(
+    configurator,
+  );
   const {
-    rollupContractAddress,
-    permitHelperContractAddress,
-    priceFeedContractAddresses,
-    bridgeDataProviderAddress,
     apiPrefix,
     serverAuthToken,
     port,
     runtimeConfig: { rollupBeneficiary = signingAddress },
   } = configurator.getConfVars();
 
-  const dataSource = new DataSource(ormConfig);
-  await dataSource.initialize();
-  const blockchain = await EthereumBlockchain.new(
-    ethConfig,
-    rollupContractAddress,
-    permitHelperContractAddress,
-    bridgeDataProviderAddress,
-    priceFeedContractAddresses,
-    provider,
-  );
-
-  const barretenberg = await BarretenbergWasm.new();
-
-  const chainId = await blockchain.getChainId();
-  const { dataRoot } = InitHelpers.getInitRoots(chainId);
-  const rollupDb = new CachedRollupDb(new TypeOrmRollupDb(dataSource, dataRoot));
-  const worldStateDb = new WorldStateDb();
-
-  if (configurator.getRollupContractChanged()) {
-    console.log('Erasing sql database...');
-    await rollupDb.eraseDb();
-    console.log('Erasing world state database...');
-    worldStateDb.destroy();
-  }
-
-  await rollupDb.init();
   const metrics = new Metrics(worldStateDb, rollupDb, blockchain, rollupBeneficiary);
   const server = new Server(configurator, signingAddress, blockchain, rollupDb, worldStateDb, metrics, barretenberg);
 
   const shutdown = async () => {
     await server.stop();
-    await dataSource.destroy();
+    await rollupDb.destroy();
     process.exit(0);
   };
   const shutdownAndClearDb = async () => {
     await server.stop();
     await rollupDb.eraseDb();
-    await dataSource.destroy();
+    await rollupDb.destroy();
     worldStateDb.destroy();
     console.log('Databases erased.');
     process.exit(0);

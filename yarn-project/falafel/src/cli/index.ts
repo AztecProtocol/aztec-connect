@@ -6,7 +6,7 @@ import { OffchainDefiDepositData } from '@aztec/barretenberg/offchain_tx_data';
 import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { Command } from 'commander';
 import { DataSource } from 'typeorm';
-import { getOrmConfig } from '../config.js';
+import { getOrmConfig } from '../get_components.js';
 import { configurator } from '../entity/init_entities.js';
 import { TypeOrmRollupDb } from '../rollup_db/index.js';
 import { SyncRollupDb } from '../rollup_db/sync_rollup_db.js';

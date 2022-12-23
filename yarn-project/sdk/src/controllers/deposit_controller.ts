@@ -9,6 +9,7 @@ import { DepositHandler } from './deposit_handler.js';
 
 export class DepositController extends DepositHandler {
   private txIds: TxId[] = [];
+  private created = Date.now();
 
   constructor(
     public readonly assetValue: AssetValue,
@@ -33,7 +34,14 @@ export class DepositController extends DepositHandler {
   }
 
   public async send() {
-    this.txIds = await this.core.sendProofs([super.getProofOutput()]);
+    this.txIds = await this.core.sendProofs([super.getProofOutput()], [], {
+      from: 'deposit_controller',
+      fee: {
+        ...this.fee,
+        value: this.fee.value.toString(),
+      },
+      created: this.created,
+    });
     return this.txIds[0];
   }
 

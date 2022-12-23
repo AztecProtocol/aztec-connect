@@ -2,7 +2,7 @@ import { AliasHash } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
-import { AccountProver, JoinSplitProver, ProofId, UnrolledProver } from '@aztec/barretenberg/client_proofs';
+import { AccountProver, JoinSplitProver, ProofData, ProofId, UnrolledProver } from '@aztec/barretenberg/client_proofs';
 import { NetCrs } from '@aztec/barretenberg/crs';
 import { keccak256, Blake2s, Pedersen, randomBytes, Schnorr } from '@aztec/barretenberg/crypto';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
@@ -757,7 +757,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     });
   }
 
-  public async sendProofs(proofs: ProofOutput[], proofTxs: Tx[] = []) {
+  public async sendProofs(proofs: ProofOutput[], proofTxs: Tx[] = [], proofRequestData?: any) {
     return await this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
 
@@ -766,7 +766,19 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
         offchainTxData: offchainTxData.toBuffer(),
         depositSignature: signature,
       }));
-      const txIds = await this.rollupProvider.sendTxs([...proofTxs, ...txs]);
+
+      const txIds = await this.rollupProvider.sendTxs([...proofTxs, ...txs]).catch(async e => {
+        if (e.message === 'Insufficient fee.') {
+          await this.rollupProvider.clientLog({
+            error: e.message,
+            proofRequestData,
+            proofs: proofs.map(p => ProofId[p.tx.proofId]),
+            proofTxs: proofTxs.map(p => ProofId[ProofData.getProofIdFromBuffer(p.proofData)]),
+            elapsed: Date.now() - (proofRequestData?.created || 0),
+          });
+        }
+        throw e;
+      });
 
       for (const proof of proofs) {
         const { userId } = proof.tx;

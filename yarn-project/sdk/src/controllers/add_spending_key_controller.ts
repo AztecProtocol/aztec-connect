@@ -11,6 +11,7 @@ export class AddSpendingKeyController {
   private proofOutput?: ProofOutput;
   private feeProofOutputs: ProofOutput[] = [];
   private txIds: TxId[] = [];
+  private created = Date.now();
 
   constructor(
     public readonly userId: GrumpkinAddress,
@@ -78,7 +79,14 @@ export class AddSpendingKeyController {
       throw new Error('Call createProof() first.');
     }
 
-    this.txIds = await this.core.sendProofs([this.proofOutput, ...this.feeProofOutputs]);
+    this.txIds = await this.core.sendProofs([this.proofOutput, ...this.feeProofOutputs], [], {
+      from: 'add_spending_key_controller',
+      fee: {
+        ...this.fee,
+        value: this.fee.value.toString(),
+      },
+      created: this.created,
+    });
     return this.txIds[0];
   }
 

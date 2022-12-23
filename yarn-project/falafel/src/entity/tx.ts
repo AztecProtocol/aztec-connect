@@ -71,6 +71,8 @@ export class TxDao {
   public excessGas!: number;
 
   @Column({ nullable: false, default: false })
+  // Should be indexed, leaving out for now to get timings.
+  // @Index()
   public secondClass?: boolean;
 
   @AfterLoad()
