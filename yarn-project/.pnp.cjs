@@ -482,7 +482,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["cross-fetch", "npm:3.1.5"],\
             ["debug", "virtual:e9a07d9e500f265638a80b6a2d60a63d2c1402dd6a58d2f05af9d82e52be33df29a16291c32b33b9e23f1a0efea054868bd3312893433fe0583e4dba376fe47e#npm:4.3.4"],\
             ["ethers", "npm:5.5.1"],\
-            ["ganache", "npm:7.5.0"],\
+            ["ganache", "patch:ganache@npm%3A7.5.0#../.yarn/patches/ganache-npm-7.5.0-39a409db90.patch::version=7.5.0&hash=507155&locator=%40aztec%2Fblockchain%40workspace%3Ablockchain"],\
             ["jest", "virtual:4cf42c2f2a8aa147d524c15c0290174d77a2062937f0c22441901ac61d50212062460a38e714456279cdb4fab155b3b1d12acfb24cd6bb68fcc1837e921b5557#npm:28.1.3"],\
             ["sha3", "npm:2.1.4"],\
             ["ts-jest", "virtual:4cf42c2f2a8aa147d524c15c0290174d77a2062937f0c22441901ac61d50212062460a38e714456279cdb4fab155b3b1d12acfb24cd6bb68fcc1837e921b5557#npm:28.0.7"],\
@@ -26473,10 +26473,10 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
         }]\
       ]],\
       ["ganache", [\
-        ["npm:7.5.0", {\
-          "packageLocation": "./.yarn/unplugged/ganache-npm-7.5.0-39a409db90/node_modules/ganache/",\
+        ["patch:ganache@npm%3A7.5.0#../.yarn/patches/ganache-npm-7.5.0-39a409db90.patch::version=7.5.0&hash=507155&locator=%40aztec%2Fblockchain%40workspace%3Ablockchain", {\
+          "packageLocation": "./.yarn/unplugged/ganache-patch-fc2cd77174/node_modules/ganache/",\
           "packageDependencies": [\
-            ["ganache", "npm:7.5.0"],\
+            ["ganache", "patch:ganache@npm%3A7.5.0#../.yarn/patches/ganache-npm-7.5.0-39a409db90.patch::version=7.5.0&hash=507155&locator=%40aztec%2Fblockchain%40workspace%3Ablockchain"],\
             ["@trufflesuite/bigint-buffer", "npm:1.1.10"],\
             ["@types/bn.js", "npm:5.1.1"],\
             ["@types/lru-cache", "npm:5.1.1"],\
