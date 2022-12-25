@@ -266,7 +266,7 @@ __metadata:
     cross-fetch: ^3.1.5
     debug: ^4.3.4
     ethers: 5.5.1
-    ganache: "patch:ganache@7.5.0#../.yarn/patches/ganache-npm-7.5.0-39a409db90.patch"
+    ganache: ^7.5.0
     jest: ^28.1.3
     sha3: ^2.1.4
     ts-jest: ^28.0.7
@@ -16845,7 +16845,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ganache@npm:7.5.0":
+"ganache@npm:^7.5.0":
   version: 7.5.0
   resolution: "ganache@npm:7.5.0"
   dependencies:
@@ -16868,32 +16868,6 @@ __metadata:
     ganache: dist/node/cli.js
     ganache-cli: dist/node/cli.js
   checksum: 3baec5c71d066264bfd14ec9a47d17f82fdea198aa7c3f020975b3c35da81872853e306fdd397f22f109f7e01268eb4434a87bb30ef2d66624fbc6fc4ce0c1ad
-  languageName: node
-  linkType: hard
-
-"ganache@patch:ganache@7.5.0#../.yarn/patches/ganache-npm-7.5.0-39a409db90.patch::locator=%40aztec%2Fblockchain%40workspace%3Ablockchain":
-  version: 7.5.0
-  resolution: "ganache@patch:ganache@npm%3A7.5.0#../.yarn/patches/ganache-npm-7.5.0-39a409db90.patch::version=7.5.0&hash=507155&locator=%40aztec%2Fblockchain%40workspace%3Ablockchain"
-  dependencies:
-    "@trufflesuite/bigint-buffer": 1.1.10
-    "@types/bn.js": ^5.1.0
-    "@types/lru-cache": 5.1.1
-    "@types/seedrandom": 3.0.1
-    bufferutil: 4.0.5
-    emittery: 0.10.0
-    keccak: 3.0.2
-    leveldown: 6.1.0
-    secp256k1: 4.0.3
-    utf-8-validate: 5.0.7
-  dependenciesMeta:
-    bufferutil:
-      optional: true
-    utf-8-validate:
-      optional: true
-  bin:
-    ganache: dist/node/cli.js
-    ganache-cli: dist/node/cli.js
-  checksum: 3f99d3f7dcdf39acf2a502ac2a256a6df4cc646eb21083deb8b238bb748707bdc1b8812c587d910409a04f03b27e3668ccd0cdde82667d14c135916acd708025
   languageName: node
   linkType: hard
 

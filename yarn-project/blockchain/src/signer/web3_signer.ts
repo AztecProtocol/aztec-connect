@@ -20,7 +20,7 @@ export class Web3Signer implements EthereumSigner {
   public async signTypedData(data: TypedData, address: EthAddress) {
     const result = await this.provider.request({
       method: 'eth_signTypedData_v4',
-      params: [address.toString(), JSON.stringify(data)],
+      params: [address.toString(), data],
     });
     const signature = this.normaliseSignature(Buffer.from(result.slice(2), 'hex'));
     const r = signature.subarray(0, 32);
