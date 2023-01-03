@@ -5,7 +5,7 @@
 
 .headerRoot {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   gap: 60px;
   margin: 35px 0 50px 0;
   align-items: center;
@@ -17,8 +17,6 @@
 .logoRoot {
   align-items: center;
   width: 245px;
-  position: absolute;
-  left: 10%;
   cursor: pointer;
 
   @media (max-width: 768px) {
@@ -44,6 +42,7 @@
 
 .accountRoot {
   display: flex;
+  margin-left: auto;
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
@@ -158,7 +157,7 @@
 
   .accountComponent {
     position: absolute;
-    top: 80px;
+    top: 95px;
     right: 10%;
   }
 
