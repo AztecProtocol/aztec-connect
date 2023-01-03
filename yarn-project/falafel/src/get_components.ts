@@ -87,9 +87,7 @@ async function getRollupDb(dbUrl: string | undefined, dataRoot: Buffer, erase = 
   const rollupDb = new LogRollupDb(new CachedRollupDb(syncRollupDb), 'log_cached_rollup_db');
   await rollupDb.init();
 
-  // We shouldn't have to be returning the dataSource here! This is again, because of graphql crap.
-  // Remove once graphql is gone.
-  return { rollupDb, dataSource };
+  return { rollupDb };
 }
 
 export async function getComponents(configurator: Configurator) {
@@ -145,7 +143,7 @@ export async function getComponents(configurator: Configurator) {
 
   // Create sql db component.
   const { dataRoot } = InitHelpers.getInitRoots(chainId);
-  const { rollupDb, dataSource } = await getRollupDb(dbUrl, dataRoot, erase, typeOrmLogging);
+  const { rollupDb } = await getRollupDb(dbUrl, dataRoot, erase, typeOrmLogging);
 
   // Create world state db.
   const worldStateDb = new WorldStateDb();
@@ -156,5 +154,5 @@ export async function getComponents(configurator: Configurator) {
   // Create barrtetenberg wasm instance.
   const barretenberg = await BarretenbergWasm.new();
 
-  return { signingAddress, blockchain, rollupDb, worldStateDb, barretenberg, dataSource };
+  return { signingAddress, blockchain, rollupDb, worldStateDb, barretenberg };
 }

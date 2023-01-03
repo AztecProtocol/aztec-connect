@@ -95,14 +95,14 @@ export const createElementBridgeData = (
   rollupAddress: EthAddress,
   elementBridgeAddress: EthAddress,
   provider: EthereumProvider,
-  falafelGraphQLEndpoint: string,
+  rollupProviderUrl: string,
 ) => {
   return ElementBridgeData.create(
     provider,
     elementBridgeAddress as any,
     EthAddress.fromString(MainnetAddresses.Contracts['BALANCER']) as any,
     rollupAddress as any,
-    falafelGraphQLEndpoint,
+    rollupProviderUrl,
   );
 };
 
@@ -114,7 +114,7 @@ export async function profileElement(
   rollupAddress: EthAddress,
   elementAddress: EthAddress,
   provider: EthereumProvider,
-  falafelGraphQLEndpoint: string,
+  rollupProviderUrl: string,
   from: number,
   to?: number,
 ) {
@@ -122,7 +122,7 @@ export async function profileElement(
   const finaliseEvents = await retrieveEvents(elementAddress, 'Element', provider, 'LogFinalise', from, to);
   const poolEvents = await retrieveEvents(elementAddress, 'Element', provider, 'LogPoolAdded', from, to);
   const rollupBridgeEvents = await retrieveEvents(rollupAddress, 'Rollup', provider, 'DefiBridgeProcessed', from, to);
-  const elementBridgeData = createElementBridgeData(rollupAddress, elementAddress, provider, falafelGraphQLEndpoint);
+  const elementBridgeData = createElementBridgeData(rollupAddress, elementAddress, provider, rollupProviderUrl);
 
   const interactions: {
     [key: string]: {
@@ -461,17 +461,17 @@ async function main() {
     .description('provides details of element defi interactions')
     .argument('<rollupAddress>', 'the address of the deployed rollup contract, as a hex string')
     .argument('<elementAddress>', 'the address of the deployed element bridge contract, as a hex string')
-    .argument('<falafelGraphQLEndpoint>', 'the graph QL endpoint of Falafel in the required environemnt')
+    .argument('<rollupProviderUrl>', "Falafel's endpoint in the required environemnt")
     .argument('<from>', 'the block number to search from')
     .argument('[to]', 'the block number to search to, defaults to the latest block')
     .argument('[url]', 'your ganache url', 'http://localhost:8545')
-    .action(async (rollupAddress, elementAddress, falafelGraphQLEndpoint, from, to, url) => {
+    .action(async (rollupAddress, elementAddress, rollupProviderUrl, from, to, url) => {
       const provider = getProvider(url);
       await profileElement(
         EthAddress.fromString(rollupAddress),
         EthAddress.fromString(elementAddress),
         provider,
-        falafelGraphQLEndpoint,
+        rollupProviderUrl,
         parseInt(from),
         to ? parseInt(to) : undefined,
       );
