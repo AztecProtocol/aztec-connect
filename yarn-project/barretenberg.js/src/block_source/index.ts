@@ -14,7 +14,7 @@ import { EventEmitter } from 'stream';
 export class Block {
   constructor(
     public txHash: TxHash,
-    public created: Date,
+    public mined: Date,
     public rollupId: number,
     public rollupSize: number,
     public encodedRollupProofData: Buffer,
@@ -28,7 +28,7 @@ export class Block {
   static deserialize(buf: Buffer, offset = 0) {
     const des = new Deserializer(buf, offset);
     const txHash = des.exec(TxHash.deserialize);
-    const created = des.date();
+    const mined = des.date();
     const rollupId = des.uInt32();
     const rollupSize = des.uInt32();
     const rollupProofData = des.vector();
@@ -40,7 +40,7 @@ export class Block {
     return {
       elem: new Block(
         txHash,
-        created,
+        mined,
         rollupId,
         rollupSize,
         rollupProofData,
@@ -61,7 +61,7 @@ export class Block {
   toBuffer() {
     return Buffer.concat([
       this.txHash.toBuffer(),
-      serializeDate(this.created),
+      serializeDate(this.mined),
       numToUInt32BE(this.rollupId),
       numToUInt32BE(this.rollupSize),
       serializeBufferToVector(this.encodedRollupProofData),

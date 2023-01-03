@@ -678,12 +678,12 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'contracts-ecr'
-          command: deploy_ecr contracts
-      - run:
-          name: 'contracts-deploy'
+          name: 'contracts'
           working_directory: contracts
-          command: ./deploy/deploy_contracts.sh
+          command: |
+            deploy_ecr contracts
+            deploy_dockerhub contracts
+            ./scripts/ci_deploy_contracts.sh
       - run:
           name: 'barretenberg.js'
           command: |
@@ -696,13 +696,19 @@ jobs:
             deploy_npm blockchain
       - run:
           name: 'kebab'
-          command: deploy kebab
+          command: |
+            deploy kebab
+            deploy_dockerhub kebab
       - run:
           name: 'halloumi'
-          command: deploy halloumi "halloumi halloumi-inner halloumi-outer"
+          command: |
+            deploy halloumi "halloumi halloumi-inner halloumi-outer"
+            deploy_dockerhub halloumi
       - run:
           name: 'falafel'
-          command: deploy falafel
+          command: |
+            deploy falafel
+            deploy_dockerhub falafel
       - run:
           name: 'block-server'
           command: deploy block-server

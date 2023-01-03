@@ -10,6 +10,10 @@ import fsExtra from 'fs-extra';
 const { mkdirpSync, pathExistsSync, readJsonSync, writeJsonSync } = fsExtra;
 import { FALAFEL_VERSION } from './version.js';
 
+const { DATA_DIR = './data' } = process.env;
+
+export type SupportedDb = 'mysql' | 'postgres' | 'sqlite';
+
 interface StartupConfig {
   version: string;
   port: number;
@@ -168,7 +172,7 @@ export class Configurator {
    * Update the configuration with the saved runtime configuration (if it exists).
    * Save the new configuration to disk.
    */
-  constructor(private confPath = './data/config') {
+  constructor(private confPath = `${DATA_DIR}/config`) {
     if (process.env.JEST_WORKER_ID) {
       // Ensure when we run tests, we don't create any disk state. We have to do this horrific check due
       // to the fact the Configurator must be created globally as part of init_entities.
@@ -231,8 +235,21 @@ export class Configurator {
     return this.confVars;
   }
 
+  public getDataDir() {
+    return DATA_DIR;
+  }
+
   public getRollupContractChanged() {
     return this.rollupContractChanged;
+  }
+
+  public getDbType(): SupportedDb {
+    const dbUrl = configurator.getConfVars().dbUrl;
+    if (dbUrl) {
+      const url = new URL(dbUrl);
+      return url.protocol.slice(0, -1) as SupportedDb;
+    }
+    return 'sqlite';
   }
 
   public saveRuntimeConfig(runtimeConfig: Partial<RuntimeConfig>) {
@@ -310,3 +327,5 @@ export class Configurator {
     });
   }
 }
+
+export const configurator = new Configurator();

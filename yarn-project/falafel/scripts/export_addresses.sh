@@ -1,15 +1,12 @@
-#!/bin/bash
-set -e
+#!/bin/sh
 
 # Wait for host
-while ! nc -z $CONTRACTS_HOST $CONTRACTS_PORT; do sleep 1; done;
-
-# Write to addresses.json
-curl $CONTRACTS_HOST:$CONTRACTS_PORT > addresses.json
+echo "Waiting for contracts host at $CONTRACTS_HOST..."
+while ! curl -s $CONTRACTS_HOST > /dev/null; do sleep 1; done;
 
 # Export keys to env variables
 for KEY in ROLLUP_CONTRACT_ADDRESS FAUCET_CONTRACT_ADDRESS PERMIT_HELPER_CONTRACT_ADDRESS FEE_DISTRIBUTOR_ADDRESS GAS_PRICE_FEED_CONTRACT_ADDRESS DAI_PRICE_FEED_CONTRACT_ADDRESS BRIDGE_DATA_PROVIDER_CONTRACT_ADDRESS; do
-    VALUE=$(jq -r .$KEY addresses.json)
+    VALUE=$(curl -s $CONTRACTS_HOST | jq -r .$KEY)
     echo "$KEY=$VALUE"
     export $KEY=$VALUE
 done

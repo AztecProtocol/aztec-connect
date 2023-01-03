@@ -27,11 +27,15 @@ const {
 
 /**
  * Run the following:
- * blockchain: yarn start:ganache
+ * contracts: ./scripts/start_e2e.sh
  * kebab: yarn start:e2e
  * halloumi: yarn start:e2e
  * falafel: yarn start:e2e
- * end-to-end: yarn test ./src/e2e.test.ts
+ * end-to-end: yarn test e2e.test.ts
+ *
+ * If running via docker:
+ * end-to-end: ONLY_TARGET=false ../../bootstrap_docker.sh
+ * end-to-end: TEST=e2e.test.ts docker-compose -f ./scripts/docker-compose.yml up --force-recreate --exit-code-from end-to-end
  */
 
 describe('end-to-end tests', () => {

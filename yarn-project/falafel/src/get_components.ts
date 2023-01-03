@@ -39,12 +39,13 @@ async function getProvider(ethereumHost: string, privateKey: Buffer) {
   return { provider, signingAddress, chainId };
 }
 
-export function getOrmConfig(dbUrl?: string, logging = false): DataSourceOptions {
+export function getOrmConfig(configurator: Configurator): DataSourceOptions {
+  const { dbUrl, typeOrmLogging: logging } = configurator.getConfVars();
   const entities = [TxDao, RollupProofDao, RollupDao, AccountDao, ClaimDao, AssetMetricsDao, BridgeMetricsDao];
   if (!dbUrl) {
     return {
       type: 'sqlite',
-      database: 'data/db.sqlite',
+      database: `${configurator.getDataDir()}/db.sqlite`,
       entities,
       synchronize: true,
       logging,
@@ -65,8 +66,8 @@ export function getOrmConfig(dbUrl?: string, logging = false): DataSourceOptions
   }
 }
 
-async function getRollupDb(dbUrl: string | undefined, dataRoot: Buffer, erase = false, logging = false) {
-  const ormConfig = getOrmConfig(dbUrl, logging);
+async function getRollupDb(configurator: Configurator, dataRoot: Buffer, erase = false) {
+  const ormConfig = getOrmConfig(configurator);
   const dataSource = new DataSource(ormConfig);
   await dataSource.initialize();
 
@@ -77,13 +78,13 @@ async function getRollupDb(dbUrl: string | undefined, dataRoot: Buffer, erase = 
     await typeOrmRollupDb.eraseDb();
   }
 
-  // If we don't have a dbUrl we're sqlite, wrap in serialization layer to ensure no more than 1 request at a time.
-  // const cachedRollupDb = new CachedRollupDb(
-  //   dbUrl ? typeOrmRollupDb : new LogRollupDb(new SyncRollupDb(typeOrmRollupDb), 'log_sync_rollup_db'),
-  // );
+  // If we're using sqlite, wrap in a serialization layer to ensure no more than 1 request on the connection at a time.
+  const syncRollupDb =
+    configurator.getDbType() === 'sqlite'
+      ? new LogRollupDb(new SyncRollupDb(typeOrmRollupDb), 'log_sync_rollup_db')
+      : typeOrmRollupDb;
 
-  // Keeping original behaviour of always having sync in place to try and diagnose.
-  const syncRollupDb = new LogRollupDb(new SyncRollupDb(typeOrmRollupDb), 'log_sync_rollup_db');
+  // TODO: Can we remove/simplify caching layer? Takes a long time to load rollups.
   const rollupDb = new LogRollupDb(new CachedRollupDb(syncRollupDb), 'log_cached_rollup_db');
   await rollupDb.init();
 
@@ -100,7 +101,6 @@ export async function getComponents(configurator: Configurator) {
     permitHelperContractAddress,
     priceFeedContractAddresses,
     bridgeDataProviderAddress,
-    typeOrmLogging,
     dbUrl,
     proverless,
     rollupCallDataLimit,
@@ -143,10 +143,10 @@ export async function getComponents(configurator: Configurator) {
 
   // Create sql db component.
   const { dataRoot } = InitHelpers.getInitRoots(chainId);
-  const { rollupDb } = await getRollupDb(dbUrl, dataRoot, erase, typeOrmLogging);
+  const { rollupDb } = await getRollupDb(configurator, dataRoot, erase);
 
   // Create world state db.
-  const worldStateDb = new WorldStateDb();
+  const worldStateDb = new WorldStateDb(`${configurator.getDataDir()}/world_state.db`);
   if (erase) {
     worldStateDb.destroy();
   }

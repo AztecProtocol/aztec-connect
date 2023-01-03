@@ -12,15 +12,7 @@ export interface StartupConfig {
   additionalPermittedMethods: string[];
   apiKeys: string[];
   indexing: boolean;
-}
-
-export interface ContractConfig {
-  rollupContractAddress?: EthAddress;
-  priceFeedContractAddresses?: EthAddress[];
-  permitHelperContractAddress?: EthAddress;
-  feeDistributorAddress?: EthAddress;
-  faucetContractAddress?: EthAddress;
-  bridgeDataProviderContractAddress?: EthAddress;
+  rollupContractAddress: EthAddress;
 }
 
 const defaultStartupConfig: StartupConfig = {
@@ -32,15 +24,7 @@ const defaultStartupConfig: StartupConfig = {
   additionalPermittedMethods: [],
   apiKeys: [],
   indexing: true,
-};
-
-const defaultContractConfig: ContractConfig = {
   rollupContractAddress: EthAddress.ZERO,
-  priceFeedContractAddresses: [],
-  permitHelperContractAddress: EthAddress.ZERO,
-  feeDistributorAddress: EthAddress.ZERO,
-  faucetContractAddress: EthAddress.ZERO,
-  bridgeDataProviderContractAddress: EthAddress.ZERO,
 };
 
 function getStartupConfigEnvVars(): Partial<StartupConfig> {
@@ -53,6 +37,7 @@ function getStartupConfigEnvVars(): Partial<StartupConfig> {
     ADDITIONAL_PERMITTED_METHODS,
     API_KEYS,
     INDEXING,
+    ROLLUP_CONTRACT_ADDRESS,
   } = process.env;
 
   const envVars: Partial<StartupConfig> = {
@@ -61,53 +46,15 @@ function getStartupConfigEnvVars(): Partial<StartupConfig> {
     apiPrefix: API_PREFIX,
     typeOrmLogging: TYPEORM_LOGGING ? TYPEORM_LOGGING === 'true' : undefined,
     allowPrivilegedMethods: ALLOW_PRIVILEGED_METHODS ? ALLOW_PRIVILEGED_METHODS === 'true' : undefined,
-    additionalPermittedMethods: ADDITIONAL_PERMITTED_METHODS ? ADDITIONAL_PERMITTED_METHODS.split(',') : [],
-    apiKeys: API_KEYS ? API_KEYS.split(',') : [],
+    additionalPermittedMethods: ADDITIONAL_PERMITTED_METHODS ? ADDITIONAL_PERMITTED_METHODS.split(',') : undefined,
+    apiKeys: API_KEYS ? API_KEYS.split(',') : undefined,
     indexing: INDEXING ? INDEXING === 'true' : undefined,
+    rollupContractAddress: ROLLUP_CONTRACT_ADDRESS ? EthAddress.fromString(ROLLUP_CONTRACT_ADDRESS) : undefined,
   };
   return Object.fromEntries(Object.entries(envVars).filter(e => e[1] !== undefined));
 }
 
-/** Get Contract Config Env Vars
- *
- * @notice Kebab requires that required addresses are provided through
- *         Environment variables. Panic if any required addresses are not found.
- */
-function getContractConfigEnvVars() {
-  const {
-    ETHEREUM_HOST,
-    ROLLUP_CONTRACT_ADDRESS,
-    PERMIT_HELPER_CONTRACT_ADDRESS,
-    FEE_DISTRIBUTOR_ADDRESS,
-    PRICE_FEED_CONTRACT_ADDRESSES,
-    BRIDGE_DATA_PROVIDER_CONTRACT_ADDRESS,
-  } = process.env;
-
-  if (
-    !ETHEREUM_HOST ||
-    !ROLLUP_CONTRACT_ADDRESS ||
-    !PERMIT_HELPER_CONTRACT_ADDRESS ||
-    !FEE_DISTRIBUTOR_ADDRESS ||
-    !PRICE_FEED_CONTRACT_ADDRESSES ||
-    !BRIDGE_DATA_PROVIDER_CONTRACT_ADDRESS
-  ) {
-    throw new Error(
-      'ASSERT | ETHEREUM_HOST, ROLLUP_CONTRACT_ADDRESS, PERMIT_HELPER_CONTRACT_ADDRESS, FEE_DISTRIBUTOR_ADDRESS, PRICE_FEED_CONTRACT_ADDRESSES and BRIDGE_DATA_PROVIDER_CONTRACT_ADDRESS MUST be set',
-    );
-  }
-
-  const contractConfig: ContractConfig = {};
-  contractConfig.rollupContractAddress = EthAddress.fromString(ROLLUP_CONTRACT_ADDRESS);
-  contractConfig.permitHelperContractAddress = EthAddress.fromString(PERMIT_HELPER_CONTRACT_ADDRESS);
-  contractConfig.feeDistributorAddress = EthAddress.fromString(FEE_DISTRIBUTOR_ADDRESS);
-  contractConfig.priceFeedContractAddresses = PRICE_FEED_CONTRACT_ADDRESSES.split(',').map(EthAddress.fromString);
-  contractConfig.bridgeDataProviderContractAddress = EthAddress.fromString(BRIDGE_DATA_PROVIDER_CONTRACT_ADDRESS);
-  return contractConfig;
-}
-
-export interface ConfVars extends StartupConfig {
-  contractConfig: ContractConfig;
-}
+export type ConfVars = StartupConfig;
 
 export class Configurator {
   private confVars!: ConfVars;
@@ -123,7 +70,6 @@ export class Configurator {
     mkdirpSync(dir);
 
     const startupConfigEnvVars = getStartupConfigEnvVars();
-    const startupContractEnvVars = getContractConfigEnvVars();
 
     if (pathExistsSync(this.confPath)) {
       // Erase all data if rollup contract changes.
@@ -132,28 +78,16 @@ export class Configurator {
       // Priorities:
       // StartupConfig: Environment, saved, defaults.
       // ContractConfig: Don't take from the given environment
-      const { contractConfig: savedContractConfig, ...savedStartupConfig } = saved;
       this.confVars = {
         ...defaultStartupConfig,
-        ...savedStartupConfig,
+        ...saved,
         ...startupConfigEnvVars,
-        contractConfig: {
-          ...defaultContractConfig,
-          ...savedContractConfig,
-          ...startupContractEnvVars,
-        },
       };
     } else {
-      // Priorities:
-      // StartupConfig: Environment, defaults.
-      // ContractConfig: Environment, defaults.
+      // Priorities: Environment, defaults.
       this.confVars = {
         ...defaultStartupConfig,
         ...startupConfigEnvVars,
-        contractConfig: {
-          ...defaultContractConfig,
-          ...startupContractEnvVars,
-        },
       };
     }
 
@@ -171,27 +105,7 @@ export class Configurator {
     const conf = readJsonSync(path);
     return {
       ...conf,
-      contractConfig: {
-        ...conf.contractConfig,
-        rollupContractAddress: conf.contractConfig?.rollupContractAddress
-          ? EthAddress.fromString(conf.contractConfig.rollupContractAddress)
-          : EthAddress.ZERO,
-        permitHelperContractAddress: conf.contractConfig?.permitHelperContractAddress
-          ? EthAddress.fromString(conf.contractConfig.permitHelperContractAddress)
-          : EthAddress.ZERO,
-        feeDistributorAddress: conf.contractConfig?.feeDistributorAddress
-          ? EthAddress.fromString(conf.contractConfig.feeDistributorAddress)
-          : EthAddress.ZERO,
-        faucetContractAddress: conf.contractConfig?.faucetContractAddress
-          ? EthAddress.fromString(conf.contractConfig.faucetContractAddress)
-          : EthAddress.ZERO,
-        bridgeDataProviderContractAddress: conf.contractConfig?.bridgeDataProviderContractAddress
-          ? EthAddress.fromString(conf.contractConfig.bridgeDataProviderContractAddress)
-          : EthAddress.ZERO,
-        priceFeedContractAddresses: conf.contractConfig?.priceFeedContractAddresses
-          ? conf.contractConfig.priceFeedContractAddresses.map(EthAddress.fromString)
-          : [],
-      },
+      rollupContractAddress: EthAddress.fromString(conf.rollupContractAddress),
     };
   }
 
@@ -202,30 +116,8 @@ export class Configurator {
   private writeConfigFile(path: string, conf: ConfVars) {
     const toWrite = {
       ...conf,
-      contractConfig: {
-        ...conf.contractConfig,
-        rollupContractAddress: conf.contractConfig.rollupContractAddress?.toString(),
-        permitHelperContractAddress: conf.contractConfig.permitHelperContractAddress?.toString(),
-        feeDistributorAddress: conf.contractConfig.feeDistributorAddress?.toString(),
-        faucetContractAddress: conf.contractConfig.faucetContractAddress?.toString(),
-        bridgeDataProviderContractAddress: conf.contractConfig?.bridgeDataProviderContractAddress?.toString(),
-        priceFeedContractAddresses: conf.contractConfig.priceFeedContractAddresses
-          ? conf.contractConfig.priceFeedContractAddresses.map(x => x.toString())
-          : undefined,
-      },
+      rollupContractAddress: conf.rollupContractAddress.toString(),
     };
     writeJsonSync(path, toWrite);
-  }
-
-  public saveContractConfig(contractConfig: ContractConfig) {
-    const prevContractConfig = this.confVars.contractConfig;
-    this.confVars = {
-      ...this.confVars,
-      contractConfig: {
-        ...prevContractConfig,
-        ...contractConfig,
-      },
-    };
-    this.writeConfigFile(this.confPath, this.confVars);
   }
 }

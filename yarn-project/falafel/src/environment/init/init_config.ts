@@ -1,15 +1,19 @@
+import { configurator } from '../../configurator.js';
+
+const dataDir = configurator.getDataDir();
+
 const initConfig = {
   '1': {
-    accountsData: './data/mainnet/accounts',
+    accountsData: `${dataDir}/mainnet/accounts`,
   },
   '677868' /* 0xa57ec */: {
-    accountsData: './data/mainnet_fork/accounts',
+    accountsData: `${dataDir}/mainnet_fork/accounts`,
   },
   '3567' /* 0xdef */: {
-    accountsData: './data/mainnet_fork/accounts',
+    accountsData: `${dataDir}/mainnet_fork/accounts`,
   },
   default: {
-    accountsData: './data/default/accounts',
+    accountsData: `${dataDir}/default/accounts`,
   },
   /* Empty defaults.
   default: {

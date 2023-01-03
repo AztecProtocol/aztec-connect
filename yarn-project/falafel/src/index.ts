@@ -7,7 +7,7 @@ import { appFactory } from './app.js';
 import { Server } from './server.js';
 import { getComponents } from './get_components.js';
 import { Metrics } from './metrics/index.js';
-import { configurator } from './entity/init_entities.js';
+import { configurator } from './configurator.js';
 
 async function main() {
   const { signingAddress, blockchain, rollupDb, worldStateDb, barretenberg } = await getComponents(configurator);

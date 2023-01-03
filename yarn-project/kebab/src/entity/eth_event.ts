@@ -16,6 +16,7 @@ export class EthEventDao {
   public transactionIndex!: number;
 
   @Column()
+  @Index()
   public blockNumber!: number;
 
   @Column()

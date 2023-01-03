@@ -380,7 +380,7 @@ export class UserState extends EventEmitter {
     offchainTxData: OffchainAccountData,
     noteStartIndex: number,
   ) {
-    const { created } = blockContext;
+    const { mined: created } = blockContext;
     const tx = this.recoverAccountTx(proof, offchainTxData, created);
     if (!tx.userId.equals(this.userData.accountPublicKey)) {
       return;
@@ -413,7 +413,7 @@ export class UserState extends EventEmitter {
     const savedTx = await this.db.getAccountTx(txId);
     if (savedTx) {
       this.debug(`settling account tx: ${txId.toString()}`);
-      await this.db.settleAccountTx(txId, blockContext.created);
+      await this.db.settleAccountTx(txId, blockContext.mined);
     } else {
       this.debug(`recovered account tx: ${txId.toString()}`);
       await this.db.addAccountTx(tx);
@@ -428,7 +428,7 @@ export class UserState extends EventEmitter {
     note1?: TreeNote,
     note2?: TreeNote,
   ) {
-    const { created } = blockContext;
+    const { mined: created } = blockContext;
     const { noteCommitment1, noteCommitment2, nullifier1, nullifier2 } = proof;
     const newNote = note1
       ? await this.processSettledNote(noteStartIndex, note1, noteCommitment1, blockContext)
@@ -472,7 +472,7 @@ export class UserState extends EventEmitter {
     noteStartIndex: number,
     treeNote2: TreeNote,
   ) {
-    const { interactionResult, created } = blockContext;
+    const { interactionResult, mined: created } = blockContext;
     const { noteCommitment1, noteCommitment2 } = proof;
     const note2 = await this.processSettledNote(noteStartIndex + 1, treeNote2, noteCommitment2, blockContext);
     if (!note2) {
@@ -510,7 +510,7 @@ export class UserState extends EventEmitter {
   }
 
   private async processDefiInteractionResults(blockContext: BlockContext) {
-    const { interactionResult, created } = blockContext;
+    const { interactionResult, mined: created } = blockContext;
     for (const event of interactionResult) {
       const defiTxs = await this.db.getDefiTxsByNonce(this.userData.accountPublicKey, event.nonce);
       for (const tx of defiTxs) {
@@ -535,7 +535,7 @@ export class UserState extends EventEmitter {
     }
 
     this.debug(`found claim tx: ${claimTxId}`);
-    const { created } = blockContext;
+    const { mined: created } = blockContext;
     const { defiTxId, userId, partialState, secret, interactionNonce } = claim;
     const { noteCommitment1, noteCommitment2, nullifier2 } = proof;
     const { bridgeCallData, depositValue, outputValueA, outputValueB, success } = (await this.db.getDefiTx(defiTxId))!;

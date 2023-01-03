@@ -12,9 +12,8 @@ import {
   TxDao,
   BridgeMetricsDao,
 } from '../entity/index.js';
-import { RollupDb, TypeOrmRollupDb } from './index.js';
+import { LogRollupDb, RollupDb, TypeOrmRollupDb } from './index.js';
 import { randomAccountTx, randomClaim, randomRollup, randomRollupProof, randomTx } from './fixtures.js';
-import { txDaoToAccountDao } from './tx_dao_to_account_dao.js';
 
 describe('rollup_db', () => {
   let connection: DataSource;
@@ -30,7 +29,7 @@ describe('rollup_db', () => {
       logging: false,
     });
     await connection.initialize();
-    rollupDb = new TypeOrmRollupDb(connection);
+    rollupDb = new LogRollupDb(new TypeOrmRollupDb(connection));
   });
 
   afterEach(async () => {
@@ -43,6 +42,23 @@ describe('rollup_db', () => {
 
     const result = await rollupDb.getTx(txDao.id);
     expect(result!).toEqual(txDao);
+  });
+
+  it('should check nullifiers exist', async () => {
+    const txDao = randomTx();
+    const randomNullifier = randomBytes(32);
+    expect(await rollupDb.nullifiersExist([txDao.nullifier1!])).toBe(false);
+    expect(await rollupDb.nullifiersExist([txDao.nullifier2!])).toBe(false);
+    expect(await rollupDb.nullifiersExist([randomNullifier])).toBe(false);
+
+    await rollupDb.addTx(txDao);
+
+    expect(await rollupDb.nullifiersExist([txDao.nullifier1!])).toBe(true);
+    expect(await rollupDb.nullifiersExist([txDao.nullifier2!])).toBe(true);
+    expect(await rollupDb.nullifiersExist([txDao.nullifier1!, txDao.nullifier2!])).toBe(true);
+    expect(await rollupDb.nullifiersExist([txDao.nullifier1!, randomNullifier])).toBe(true);
+    expect(await rollupDb.nullifiersExist([txDao.nullifier2!, randomNullifier])).toBe(true);
+    expect(await rollupDb.nullifiersExist([randomNullifier])).toBe(false);
   });
 
   it('should add account tx', async () => {
@@ -255,7 +271,7 @@ describe('rollup_db', () => {
     }
   });
 
-  it('get nullifiers of unsettled txs', async () => {
+  it('should get nullifiers of unsettled txs', async () => {
     const tx0 = randomTx();
     tx0.nullifier2 = undefined;
     await rollupDb.addTx(tx0);
@@ -280,6 +296,41 @@ describe('rollup_db', () => {
     const nullifiers = await rollupDb.getUnsettledNullifiers();
     expect(nullifiers.length).toBe(3);
     expect(nullifiers).toEqual(expect.arrayContaining([tx0.nullifier1, tx1.nullifier1, tx1.nullifier2]));
+  });
+
+  it('should getRollup in reasonable time', async () => {
+    const num = 896;
+    const txs = new Array(num).fill(0).map(() => randomTx());
+    const rollupProof = randomRollupProof(txs, 0);
+    const rollup = randomRollup(0, rollupProof, undefined);
+    await rollupDb.addRollup(rollup);
+    const returnedRollup = await rollupDb.getRollup(rollup.id);
+    // Checking all of them takes too long...
+    expect(returnedRollup?.rollupProof.txs[0]).toStrictEqual(rollup.rollupProof.txs[0]);
+  });
+
+  it('should confirmMined in reasonable time', async () => {
+    const num = 896;
+    expect(await rollupDb.getUnsettledTxCount()).toBe(0);
+    const txs = new Array(num).fill(0).map(() => randomTx());
+    await rollupDb.addTxs(txs);
+    const rollupProof = randomRollupProof(txs, 0);
+    const rollup = randomRollup(0, rollupProof, undefined);
+    await rollupDb.addRollup(rollup);
+    expect(await rollupDb.getUnsettledTxCount()).toBe(num);
+    await rollupDb.confirmMined(
+      rollup.id,
+      0,
+      0n,
+      new Date(),
+      TxHash.random(),
+      [],
+      txs.map(tx => tx.id),
+      [],
+      [],
+      randomBytes(32),
+    );
+    expect(await rollupDb.getUnsettledTxCount()).toBe(0);
   });
 
   it('should update rollup id for txs when newer proof added', async () => {
@@ -363,7 +414,7 @@ describe('rollup_db', () => {
     expect(await rollupDb.getAccountCount()).toBe(2);
   });
 
-  it('should add rollup with account txs that have already in db', async () => {
+  it('should add rollup with account txs that have already been added', async () => {
     const txs = [randomAccountTx(), randomAccountTx()];
     for (const tx of txs) {
       await rollupDb.addTx(tx);
@@ -422,7 +473,7 @@ describe('rollup_db', () => {
 
     await rollupDb.addRollup(rollup);
 
-    const settledRollups1 = await rollupDb.getSettledRollups();
+    const settledRollups1 = await rollupDb.getSettledRollups(0, 100);
     expect(settledRollups1.length).toBe(0);
 
     await rollupDb.confirmMined(
@@ -438,7 +489,7 @@ describe('rollup_db', () => {
       randomBytes(32),
     );
 
-    const settledRollups2 = await rollupDb.getSettledRollups();
+    const settledRollups2 = await rollupDb.getSettledRollups(0, 100);
     expect(settledRollups2.length).toBe(1);
     expect(settledRollups2[0].rollupProof).not.toBeUndefined();
     expect(settledRollups2[0].rollupProof.txs[0].id).toEqual(tx0.id);
@@ -572,7 +623,7 @@ describe('rollup_db', () => {
         }
         pendingClaims.push(claim);
       }
-      await rollupDb.addClaim(claim);
+      await rollupDb.addClaims([claim]);
     }
 
     // only those pending claims with a valid result are ready to rollup
@@ -586,13 +637,13 @@ describe('rollup_db', () => {
     });
 
     // now set the odds to be ready to rollup
-    await rollupDb.updateClaimsWithResultRollupId(1, 64);
+    await rollupDb.updateClaimsWithResultRollupId([1], 64);
 
     // now, all claims in pending claims should be ready to rollup
     expect(await rollupDb.getClaimsToRollup()).toEqual(pendingClaims);
 
     // now confirm the first claim
-    await rollupDb.confirmClaimed(pendingClaims[0].nullifier, new Date());
+    await rollupDb.confirmClaimed([pendingClaims[0].nullifier], new Date());
 
     // should no longer be ready to rollup
     expect(await rollupDb.getClaimsToRollup()).toEqual(pendingClaims.slice(1));
@@ -612,7 +663,7 @@ describe('rollup_db', () => {
       } else {
         unclaimedTxs.push(tx);
       }
-      await rollupDb.addClaim(claim);
+      await rollupDb.addClaims([claim]);
       await rollupDb.addTx(tx);
     }
 
@@ -625,50 +676,6 @@ describe('rollup_db', () => {
 
     const saved = await rollupDb.getPendingTxs();
     expect(saved).toEqual(claimedTxs.sort((a, b) => (a.created.getTime() > b.created.getTime() ? 1 : -1)));
-  });
-
-  it('should get unsettled accounts', async () => {
-    const accountKeys = [...Array(4)].map(() => GrumpkinAddress.random());
-    const aliasHashes = [...Array(2)].map(() => AliasHash.random());
-    const txs = [
-      randomAccountTx({ accountPublicKey: accountKeys[0], aliasHash: aliasHashes[0] }),
-      randomTx({ txType: TxType.DEPOSIT }),
-      randomAccountTx({ accountPublicKey: accountKeys[0], aliasHash: aliasHashes[0], addKey: true }),
-      randomAccountTx({ accountPublicKey: accountKeys[1], aliasHash: aliasHashes[0], migrate: true }), // settled
-      randomTx({ txType: TxType.DEPOSIT }), // settled
-      randomAccountTx({ accountPublicKey: accountKeys[2], aliasHash: aliasHashes[1] }), // rollup created
-      randomTx({ txType: TxType.DEPOSIT }), // rollup created
-      randomTx({ txType: TxType.TRANSFER }),
-      randomAccountTx({ accountPublicKey: accountKeys[3], aliasHash: aliasHashes[1], migrate: true }),
-      randomAccountTx({ accountPublicKey: accountKeys[3], aliasHash: aliasHashes[1], addKey: true }),
-      randomTx({ txType: TxType.DEFI_CLAIM }),
-    ];
-    await rollupDb.addTxs(txs);
-
-    const rollupProof0 = randomRollupProof([txs[3], txs[4]], 0);
-    await rollupDb.addRollupProof(rollupProof0);
-
-    const rollupProof1 = randomRollupProof([txs[5], txs[6]], 0);
-    await rollupDb.addRollupProof(rollupProof1);
-
-    const rollup = randomRollup(0, rollupProof0, undefined);
-    await rollupDb.addRollup(rollup);
-    const settledTxIds = rollupProof0.txs.map(tx => tx.id);
-    await rollupDb.confirmMined(
-      rollup.id,
-      0,
-      0n,
-      new Date(),
-      TxHash.random(),
-      [],
-      settledTxIds,
-      [],
-      [],
-      randomBytes(32),
-    );
-
-    const expectedAccounts = [txs[8], txs[5], txs[0]].map(txDaoToAccountDao);
-    expect(await rollupDb.getUnsettledAccounts()).toEqual(expectedAccounts);
   });
 
   it('should delete txs by id', async () => {

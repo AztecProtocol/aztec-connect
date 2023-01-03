@@ -14,9 +14,9 @@ async function main() {
   const { ormConfig, provider, chainId } = await getComponents(configurator);
 
   const configuration = configurator.getConfVars();
-  const { contractConfig, allowPrivilegedMethods, port, apiPrefix } = configuration;
+  const { rollupContractAddress, allowPrivilegedMethods, port, apiPrefix } = configuration;
 
-  console.log(`Rollup contract address: ${contractConfig.rollupContractAddress}`);
+  console.log(`Rollup contract address: ${rollupContractAddress}`);
   console.log(`Allow privileged methods: ${allowPrivilegedMethods}`);
   console.log(`Chain id: ${chainId}`);
 

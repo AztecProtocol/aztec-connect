@@ -19,7 +19,7 @@ export class BlockContext {
   constructor(
     public rollup: RollupProofData,
     private rollupSize: number,
-    public created: Date,
+    public mined: Date,
     public interactionResult: DefiInteractionEvent[],
     public offchainTxData: Buffer[],
     private pedersen: Pedersen,
@@ -29,7 +29,7 @@ export class BlockContext {
     return new BlockContext(
       RollupProofData.decode(block.encodedRollupProofData),
       block.rollupSize,
-      block.created,
+      block.mined,
       block.interactionResult,
       block.offchainTxData,
       pedersen,

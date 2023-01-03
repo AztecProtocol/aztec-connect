@@ -30,11 +30,11 @@ const {
 
 /**
  * Run the following:
- * blockchain: yarn start:ganache
+ * contracts: ./scripts/start_e2e.sh
  * kebab: yarn start:e2e
  * halloumi: yarn start:e2e
  * falafel: yarn start:e2e
- * end-to-end: yarn test e2e_virtual_assets
+ * end-to-end: yarn test e2e_virtual_assets.test.ts
  */
 describe('end-to-end virtual assets tests', () => {
   let provider: WalletProvider;

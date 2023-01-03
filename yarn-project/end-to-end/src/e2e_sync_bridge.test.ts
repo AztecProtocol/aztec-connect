@@ -27,12 +27,11 @@ const {
 
 /**
  * Run the following:
- * blockchain: yarn start:ganache
+ * contracts: ./scripts/start_e2e.sh
  * kebab: yarn start:e2e
  * halloumi: yarn start:e2e
  * falafel: yarn start:e2e
- * end-to-end: ./scripts/configure_e2e_bridges ./scripts/test_bridge_configs.json
- * end-to-end: yarn test e2e_sync_bridge
+ * end-to-end: yarn test e2e_sync_bridge.test.ts
  */
 describe('end-to-end defi tests', () => {
   let provider: WalletProvider;

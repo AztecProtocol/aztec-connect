@@ -5,6 +5,7 @@ import {
   AfterUpdate,
   Column,
   Entity,
+  Index,
   OneToMany,
   OneToOne,
   PrimaryColumn,
@@ -12,7 +13,7 @@ import {
 } from 'typeorm';
 import { AssetMetricsDao } from './asset_metrics.js';
 import { BridgeMetricsDao } from './bridge_metrics.js';
-import { bufferColumn } from './init_entities.js';
+import { bufferColumn } from './buffer_column.js';
 import { RollupProofDao } from './rollup_proof.js';
 import { txHashTransformer } from './transformer.js';
 
@@ -37,12 +38,6 @@ export class RollupDao {
   @OneToMany(() => BridgeMetricsDao, bm => bm.rollup, { cascade: true })
   public bridgeMetrics!: BridgeMetricsDao[];
 
-  // @Column(...bufferColumn())
-  // public viewingKeys!: Buffer;
-
-  @Column()
-  public created!: Date;
-
   // Null until computed.
   @Column(...bufferColumn({ nullable: true }))
   public processRollupCalldata?: Buffer;
@@ -65,6 +60,7 @@ export class RollupDao {
 
   // Null until mined.
   @Column({ nullable: true })
+  @Index()
   public mined?: Date;
 
   // Null until mined.

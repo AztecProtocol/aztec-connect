@@ -238,6 +238,9 @@ describe('world_state', () => {
       getUnsettledTxCount: jest.fn<any>().mockResolvedValue(0),
       getPendingSecondClassTxCount: jest.fn<any>().mockResolvedValue(27),
       deleteTxsById: jest.fn(),
+      addClaims: jest.fn(),
+      confirmClaimed: jest.fn(),
+      updateClaimsWithResultRollupId: jest.fn(),
     } as Mockify<RollupDb>;
 
     worldStateDb = {
@@ -258,7 +261,7 @@ describe('world_state', () => {
     } as Mockify<WorldStateDb>;
 
     blockchain = new (class extends EventEmitter {
-      getBlocks = jest.fn<any>().mockResolvedValue([]);
+      callbackRollupBlocksFrom = jest.fn<any>().mockResolvedValue([]);
       getChainId = jest.fn<any>().mockResolvedValue(1);
       start = jest.fn();
       getRollupBalance = jest.fn<any>().mockResolvedValue(0n);
@@ -311,6 +314,7 @@ describe('world_state', () => {
       noteAlgorithms as any,
       metrics as any,
       txFeeResolver as any,
+      false,
       1,
       () => {},
     );

@@ -80,7 +80,7 @@ describe('user state', () => {
     const decoded = RollupProofData.decode(block.encodedRollupProofData);
     return {
       rollup: decoded,
-      created: block.created,
+      mined: block.mined,
       offchainTxData: block.offchainTxData,
       interactionResult: block.interactionResult,
       getBlockSubtreeHashPath: function (index: number) {
@@ -600,7 +600,7 @@ describe('user state', () => {
     expect(db.settlePaymentTx).toHaveBeenCalledWith(
       user.accountPublicKey,
       new TxId(jsProof.proofData.txId),
-      block.created,
+      block.mined,
     );
     expect(db.addPaymentTx).toHaveBeenCalledTimes(0);
     expect(db.updateUser).toHaveBeenLastCalledWith({
@@ -656,7 +656,7 @@ describe('user state', () => {
     expect(db.settlePaymentTx).toHaveBeenCalledWith(
       user.accountPublicKey,
       new TxId(jsProof.proofData.txId),
-      block.created,
+      block.mined,
     );
   });
 
@@ -702,12 +702,12 @@ describe('user state', () => {
     expect(db.settlePaymentTx).toHaveBeenCalledWith(
       user.accountPublicKey,
       new TxId(jsProof1.proofData.txId),
-      block1.created,
+      block1.mined,
     );
     expect(db.settlePaymentTx).toHaveBeenCalledWith(
       user.accountPublicKey,
       new TxId(jsProof2.proofData.txId),
-      block2.created,
+      block2.mined,
     );
     expect(db.addPaymentTx).toHaveBeenCalledTimes(0);
     expect(db.updateUser).toHaveBeenCalledTimes(1);
@@ -783,7 +783,7 @@ describe('user state', () => {
       recipientPrivateOutput: depositValue,
       senderPrivateOutput: 0n,
       isRecipient: true,
-      settled: block.created,
+      settled: block.mined,
     });
   });
 
@@ -827,7 +827,7 @@ describe('user state', () => {
       recipientPrivateOutput: 0n,
       senderPrivateOutput: changeValue,
       isSender: true,
-      settled: block.created,
+      settled: block.mined,
     });
   });
 
@@ -858,7 +858,7 @@ describe('user state', () => {
       senderPrivateOutput: 0n,
       isSender: false,
       isRecipient: true,
-      settled: block.created,
+      settled: block.mined,
     });
   });
 
@@ -892,7 +892,7 @@ describe('user state', () => {
       senderPrivateOutput: 0n,
       isSender: false,
       isRecipient: true,
-      settled: block.created,
+      settled: block.mined,
     });
   });
 
@@ -916,7 +916,7 @@ describe('user state', () => {
       senderPrivateOutput: proof.tx.senderPrivateOutput,
       isSender: true,
       isRecipient: false,
-      settled: block.created,
+      settled: block.mined,
     });
   });
 
@@ -1002,7 +1002,7 @@ describe('user state', () => {
       hashPath: generatedHashPaths[1].toBuffer(),
     });
     expect(db.settleAccountTx).toHaveBeenCalledTimes(1);
-    expect(db.settleAccountTx).toHaveBeenCalledWith(txId, block.created);
+    expect(db.settleAccountTx).toHaveBeenCalledWith(txId, block.mined);
     expect(db.addAccountTx).toHaveBeenCalledTimes(0);
   });
 
@@ -1039,7 +1039,7 @@ describe('user state', () => {
       newSpendingPublicKey1: newSpendingPublicKey1.x(),
       newSpendingPublicKey2: newSpendingPublicKey2.x(),
       migrated: false,
-      settled: block.created,
+      settled: block.mined,
     });
   });
 
@@ -1103,7 +1103,7 @@ describe('user state', () => {
       newSpendingPublicKey1: newSpendingPublicKey1.x(),
       newSpendingPublicKey2: newSpendingPublicKey2.x(),
       migrated: true,
-      settled: block.created,
+      settled: block.mined,
     });
   });
 
@@ -1174,7 +1174,7 @@ describe('user state', () => {
     expect(db.nullifyNote).toHaveBeenCalledWith(defiProof.proofData.nullifier1);
     expect(db.nullifyNote).toHaveBeenCalledWith(defiProof.proofData.nullifier2);
     expect(db.settleDefiDeposit).toHaveBeenCalledTimes(1);
-    expect(db.settleDefiDeposit).toHaveBeenCalledWith(txId, defiProofInteractionNonce, false, block.created);
+    expect(db.settleDefiDeposit).toHaveBeenCalledWith(txId, defiProofInteractionNonce, false, block.mined);
     // defi tx should have been updated
     expect(db.updateDefiTxFinalisationResult).toHaveBeenCalledTimes(1);
     expect(db.updateDefiTxFinalisationResult).toHaveBeenCalledWith(
@@ -1182,7 +1182,7 @@ describe('user state', () => {
       result,
       outputValueA,
       outputValueB,
-      block.created,
+      block.mined,
     );
     expect(db.addDefiTx).toHaveBeenCalledTimes(0);
     expect(db.settleDefiTx).toHaveBeenCalledTimes(0);
@@ -1259,12 +1259,7 @@ describe('user state', () => {
 
     // defi tx should have been given nonce
     expect(db.settleDefiDeposit).toHaveBeenCalledTimes(1);
-    expect(db.settleDefiDeposit).toHaveBeenCalledWith(
-      defiProof.tx.txId,
-      defiProofInteractionNonce,
-      true,
-      block1.created,
-    );
+    expect(db.settleDefiDeposit).toHaveBeenCalledWith(defiProof.tx.txId, defiProofInteractionNonce, true, block1.mined);
 
     // defi tx should have been updated
     expect(db.updateDefiTxFinalisationResult).toHaveBeenCalledTimes(1);
@@ -1273,7 +1268,7 @@ describe('user state', () => {
       result,
       outputValueA,
       outputValueB,
-      block2.created,
+      block2.mined,
     );
 
     // claim output should have been created
@@ -1345,7 +1340,7 @@ describe('user state', () => {
         bridgeCallData,
         depositValue,
         txFee,
-        settled: block.created,
+        settled: block.mined,
         interactionNonce: defiProofInteractionNonce,
         isAsync: true,
         success: undefined,
@@ -1451,12 +1446,7 @@ describe('user state', () => {
     expect(db.settlePaymentTx).toHaveBeenCalledTimes(0);
 
     expect(db.settleDefiDeposit).toHaveBeenCalledTimes(1);
-    expect(db.settleDefiDeposit).toHaveBeenCalledWith(
-      defiProof.tx.txId,
-      defiProofInteractionNonce,
-      false,
-      block.created,
-    );
+    expect(db.settleDefiDeposit).toHaveBeenCalledWith(defiProof.tx.txId, defiProofInteractionNonce, false, block.mined);
 
     expect(db.addDefiTx).toHaveBeenCalledTimes(0);
     expect(db.updateDefiTxFinalisationResult).toHaveBeenCalledTimes(1);
@@ -1465,7 +1455,7 @@ describe('user state', () => {
       defiResult,
       outputValueA,
       outputValueB,
-      block.created,
+      block.mined,
     );
   });
 
@@ -1561,7 +1551,7 @@ describe('user state', () => {
         }),
       });
       expect(db.settleDefiTx).toHaveBeenCalledTimes(1);
-      expect(db.settleDefiTx).toHaveBeenCalledWith(txId, block.created, new TxId(claimProof.proofData.txId));
+      expect(db.settleDefiTx).toHaveBeenCalledWith(txId, block.mined, new TxId(claimProof.proofData.txId));
     });
 
     it('settle a defi tx and add new notes for unregistered account', async () => {
@@ -1614,7 +1604,7 @@ describe('user state', () => {
         }),
       });
       expect(db.settleDefiTx).toHaveBeenCalledTimes(1);
-      expect(db.settleDefiTx).toHaveBeenCalledWith(txId, block.created, new TxId(claimProof.proofData.txId));
+      expect(db.settleDefiTx).toHaveBeenCalledWith(txId, block.mined, new TxId(claimProof.proofData.txId));
     });
 
     it('settle a defi tx and add one virtual output note', async () => {
@@ -1657,7 +1647,7 @@ describe('user state', () => {
         }),
       });
       expect(db.settleDefiTx).toHaveBeenCalledTimes(1);
-      expect(db.settleDefiTx).toHaveBeenCalledWith(txId, block.created, new TxId(claimProof.proofData.txId));
+      expect(db.settleDefiTx).toHaveBeenCalledWith(txId, block.mined, new TxId(claimProof.proofData.txId));
     });
 
     it('settle a defi tx and add one real and one virtual output notes', async () => {
@@ -1710,7 +1700,7 @@ describe('user state', () => {
         }),
       });
       expect(db.settleDefiTx).toHaveBeenCalledTimes(1);
-      expect(db.settleDefiTx).toHaveBeenCalledWith(txId, block.created, new TxId(claimProof.proofData.txId));
+      expect(db.settleDefiTx).toHaveBeenCalledWith(txId, block.mined, new TxId(claimProof.proofData.txId));
     });
 
     it('settle a failed defi tx and add a refund note', async () => {
@@ -1746,7 +1736,7 @@ describe('user state', () => {
         }),
       });
       expect(db.settleDefiTx).toHaveBeenCalledTimes(1);
-      expect(db.settleDefiTx).toHaveBeenCalledWith(txId, block.created, new TxId(claimProof.proofData.txId));
+      expect(db.settleDefiTx).toHaveBeenCalledWith(txId, block.mined, new TxId(claimProof.proofData.txId));
     });
 
     it('settle a failed defi tx and add a refund note for unregistered account', async () => {
@@ -1789,7 +1779,7 @@ describe('user state', () => {
         }),
       });
       expect(db.settleDefiTx).toHaveBeenCalledTimes(1);
-      expect(db.settleDefiTx).toHaveBeenCalledWith(txId, block.created, new TxId(claimProof.proofData.txId));
+      expect(db.settleDefiTx).toHaveBeenCalledWith(txId, block.mined, new TxId(claimProof.proofData.txId));
     });
 
     it('settle a failed defi tx and add two refund notes', async () => {
@@ -1835,7 +1825,7 @@ describe('user state', () => {
         }),
       });
       expect(db.settleDefiTx).toHaveBeenCalledTimes(1);
-      expect(db.settleDefiTx).toHaveBeenCalledWith(txId, block.created, new TxId(claimProof.proofData.txId));
+      expect(db.settleDefiTx).toHaveBeenCalledWith(txId, block.mined, new TxId(claimProof.proofData.txId));
     });
   });
 });

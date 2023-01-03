@@ -83,13 +83,13 @@ export class Server {
     const buf = Buffer.concat([numToInt32BE(this.blockBufferCache.length - 1), serializeBufferArrayToVector(blocks)]);
     const time = new Date().getTime() - start;
     if (blocks.length) {
-      console.log(`Served ${blocks.length} blocks from ${from} to ${from! + take - 1} in ${time}ms.`);
+      this.log(`Served ${blocks.length} blocks from ${from} to ${from! + take - 1} in ${time}ms.`);
     } else {
       this.reqMissTime += time;
       this.reqMisses++;
       const batchNum = 1000;
       if (this.reqMisses === batchNum) {
-        console.log(`Served ${batchNum} empty results, average time ${this.reqMissTime / batchNum}ms per request.`);
+        this.log(`Served ${batchNum} empty results, average time ${this.reqMissTime / batchNum}ms per request.`);
         this.reqMissTime = 0;
         this.reqMisses = 0;
       }

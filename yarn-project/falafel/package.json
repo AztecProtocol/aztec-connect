@@ -10,12 +10,8 @@
     "clean_db": "rm -rf ./data",
     "formatting": "run -T prettier --check ./src && run -T eslint --max-warnings 0 ./src",
     "start": "node ${NODE_ARGS:-} ./dest",
-    "start:debug": "./scripts/start.sh --inspect-brk=0.0.0.0:9221",
-    "start:dev": "./scripts/start_dev.sh",
     "start:e2e": "./scripts/start_e2e.sh",
-    "start:wasabi": "./scripts/start_wasabi.sh",
-    "test": "NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache",
-    "falafel_cli": "node ./dest/cli/index.js"
+    "test": "NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache"
   },
   "bin": {
     "falafel_cli": "./cli/index.js"

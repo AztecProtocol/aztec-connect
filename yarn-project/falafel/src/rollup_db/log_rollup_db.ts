@@ -50,8 +50,8 @@ export class LogRollupDb implements RollupDb {
     return this.time('getTx', () => this.rollupDb.getTx(txId));
   }
 
-  public getPendingTxCount(includeSecondClass = false) {
-    return this.time('getPendingTxCount', () => this.rollupDb.getPendingTxCount(includeSecondClass));
+  public getPendingTxCount() {
+    return this.time('getPendingTxCount', () => this.rollupDb.getPendingTxCount());
   }
 
   public getPendingSecondClassTxCount() {
@@ -108,12 +108,8 @@ export class LogRollupDb implements RollupDb {
     return this.time('getUnsettledDepositTxs', () => this.rollupDb.getUnsettledDepositTxs());
   }
 
-  public getUnsettledAccounts() {
-    return this.time('getUnsettledAccounts', () => this.rollupDb.getUnsettledAccounts());
-  }
-
-  public getPendingTxs(take?: number, includeSecondClass = false) {
-    return this.time('getPendingTxs', () => this.rollupDb.getPendingTxs(take, includeSecondClass));
+  public getPendingTxs(take?: number) {
+    return this.time('getPendingTxs', () => this.rollupDb.getPendingTxs(take));
   }
 
   public getPendingSecondClassTxs(take?: number) {
@@ -124,8 +120,8 @@ export class LogRollupDb implements RollupDb {
     return this.time('getUnsettledNullifiers', () => this.rollupDb.getUnsettledNullifiers());
   }
 
-  public nullifiersExist(n1: Buffer, n2: Buffer) {
-    return this.time('nullifiersExist', () => this.rollupDb.nullifiersExist(n1, n2));
+  public nullifiersExist(nullifiers: Buffer[]) {
+    return this.time('nullifiersExist', () => this.rollupDb.nullifiersExist(nullifiers));
   }
 
   public addRollupProof(rollupDao: RollupProofDao) {
@@ -168,8 +164,8 @@ export class LogRollupDb implements RollupDb {
     return this.time('getRollupsByRollupIds', () => this.rollupDb.getRollupsByRollupIds(ids));
   }
 
-  public getSettledRollupsAfterTime(time: Date, descending = false) {
-    return this.time('getSettledRollupsAfterTime', () => this.rollupDb.getSettledRollupsAfterTime(time, descending));
+  public getSettledRollupsAfterTime(time: Date) {
+    return this.time('getSettledRollupsAfterTime', () => this.rollupDb.getSettledRollupsAfterTime(time));
   }
 
   public getNumSettledRollups() {
@@ -216,7 +212,7 @@ export class LogRollupDb implements RollupDb {
     );
   }
 
-  public getSettledRollups(from = 0, take?: number) {
+  public getSettledRollups(from: number, take: number) {
     return this.time('getSettledRollups', () => this.rollupDb.getSettledRollups(from, take));
   }
 
@@ -240,22 +236,22 @@ export class LogRollupDb implements RollupDb {
     return this.time('getDataRootsIndex', () => this.rollupDb.getDataRootsIndex(root));
   }
 
-  public addClaim(claim: ClaimDao) {
-    return this.time('addClaim', () => this.rollupDb.addClaim(claim));
+  public addClaims(claims: ClaimDao[]) {
+    return this.time('addClaim', () => this.rollupDb.addClaims(claims));
   }
 
   public getClaimsToRollup(take?: number) {
     return this.time('getClaimsToRollup', () => this.rollupDb.getClaimsToRollup(take));
   }
 
-  public updateClaimsWithResultRollupId(interactionNonce: number, interactionResultRollupId: number) {
+  public updateClaimsWithResultRollupId(interactionNonces: number[], interactionResultRollupId: number) {
     return this.time('updateClaimsWithResultId', () =>
-      this.rollupDb.updateClaimsWithResultRollupId(interactionNonce, interactionResultRollupId),
+      this.rollupDb.updateClaimsWithResultRollupId(interactionNonces, interactionResultRollupId),
     );
   }
 
-  public confirmClaimed(nullifier: Buffer, claimed: Date) {
-    return this.time('confirmClaimed', () => this.rollupDb.confirmClaimed(nullifier, claimed));
+  public confirmClaimed(nullifiers: Buffer[], claimed: Date) {
+    return this.time('confirmClaimed', () => this.rollupDb.confirmClaimed(nullifiers, claimed));
   }
 
   public deleteUnsettledClaimTxs() {

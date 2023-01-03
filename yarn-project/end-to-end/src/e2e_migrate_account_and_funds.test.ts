@@ -25,11 +25,11 @@ const {
 
 /**
  * Run the following:
- * blockchain: yarn start:ganache
+ * contracts: ./scripts/start_e2e.sh
  * kebab: yarn start:e2e
  * halloumi: yarn start:e2e
  * falafel: yarn start:e2e
- * end-to-end: yarn test ./src/e2e_migrate_account_and_funds.test.ts
+ * end-to-end: yarn test e2e_migrate_account_and_funds.test.ts
  */
 
 describe('end-to-end migrate account and funds tests', () => {

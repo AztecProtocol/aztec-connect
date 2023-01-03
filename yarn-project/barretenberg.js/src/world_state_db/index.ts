@@ -5,6 +5,7 @@ import { toBigIntBE, toBufferBE } from '../bigint_buffer/index.js';
 import { ChildProcess, execSync, spawn } from 'child_process';
 import { PromiseReadable } from 'promise-readable';
 import { serializeBufferArrayToVector } from '../serialize/index.js';
+import { createDebugLogger } from '../log/debug.js';
 
 enum Command {
   GET,
@@ -35,6 +36,7 @@ export class WorldStateDb {
   private roots: Buffer[] = [];
   private sizes: bigint[] = [];
   private binPath = '../../barretenberg/build/bin/db_cli';
+  private debug = createDebugLogger('bb:world_state_db');
 
   constructor(private dbPath: string = './data/world_state.db') {}
 

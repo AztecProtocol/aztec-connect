@@ -26,6 +26,7 @@ import { TxFeeResolver } from './tx_fee_resolver/index.js';
 import { TxReceiver, TxRequest } from './tx_receiver/index.js';
 import { WorldState } from './world_state.js';
 import { AddressCheckProviders, AztecBlacklistProvider, RateLimiter } from './compliance/index.js';
+import { rollupDaoToBlockBuffer } from './rollup_db/rollup_dao_to_block_buffer.js';
 
 export class Server {
   public version: string;
@@ -83,17 +84,19 @@ export class Server {
       case 'split':
         this.proofGenerator = new HttpJobServers();
         break;
-      case 'local':
+      case 'local': {
+        const { MAX_CIRCUIT_SIZE = '0' } = process.env;
         this.proofGenerator = new CliProofGenerator(
-          2 ** 25,
+          proverless ? 8192 : +MAX_CIRCUIT_SIZE || 2 ** 25,
           numInnerRollupTxs,
           numOuterRollupProofs,
           proverless,
-          true,
+          false,
           false,
           './data',
         );
         break;
+      }
       default:
         this.proofGenerator = new HttpJobServer();
     }
@@ -331,6 +334,8 @@ export class Server {
   }
 
   public async getUnsettledNullifiers() {
+    // TODO: Deprecate this. We don't want to support external parties making these requests.
+    // We already have getUnsettledTxs(). Use this?
     return await this.rollupDb.getUnsettledNullifiers();
   }
 
@@ -349,27 +354,34 @@ export class Server {
   }
 
   public async getUnsettledDepositTxs() {
+    // TODO: Deprecate this. We don't want to support external parties making these requests.
+    // We already have getUnsettledTxs(). Use this?
     return await this.rollupDb.getUnsettledDepositTxs();
   }
 
-  public getBlockBuffers(from: number, take?: number) {
-    return this.worldState.getBlockBuffers(from, take);
+  public async getBlockBuffers(from: number, take: number) {
+    const blocks = await this.rollupDb.getSettledRollups(from, take);
+    return blocks.map(rollupDaoToBlockBuffer);
   }
 
   public async getRollups(from: number, take: number) {
+    // TODO: Deprecate this. We don't want to support external parties making these requests.
     const data = await this.rollupDb.getRollups(take!, from!, true);
     return data;
   }
 
   public async getRollupById(rollupId: number) {
+    // TODO: Deprecate this. We don't want to support external parties making these requests.
     const rollup = await this.rollupDb.getRollup(rollupId);
     return rollup;
   }
+
   public async getLatestRollupId() {
     return (await this.rollupDb.getNextRollupId()) - 1;
   }
 
   public async getTxById(txId: string) {
+    // TODO: Deprecate this. We don't want to support external parties making these requests.
     const tx = await this.rollupDb.getTx(Buffer.from(txId.replace(/^0x/i, ''), 'hex'));
     return tx;
   }

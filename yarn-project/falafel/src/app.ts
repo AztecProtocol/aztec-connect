@@ -170,7 +170,7 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
   });
 
   router.get('/get-blocks', recordMetric, async (ctx: Koa.Context) => {
-    const blocks = ctx.query.from ? server.getBlockBuffers(+ctx.query.from, 100) : [];
+    const blocks = ctx.query.from ? await server.getBlockBuffers(+ctx.query.from, 100) : [];
     const response = Buffer.concat([
       numToInt32BE(await server.getLatestRollupId()),
       serializeBufferArrayToVector(blocks),
@@ -183,12 +183,11 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
   router.get('/rollups', recordMetric, async (ctx: Koa.Context) => {
     const { skip = 0, take = 5 } = ctx.query;
     const blocks = await server.getRollups(+skip, +take);
-    ctx.body = blocks.map(({ id, rollupProof, ethTxHash, created, mined }) => ({
+    ctx.body = blocks.map(({ id, rollupProof, ethTxHash, mined }) => ({
       id,
       hash: rollupProof.id.toString('hex'),
       numTxs: rollupProof.txs.length,
       ethTxHash: ethTxHash?.toString(),
-      created,
       mined,
     }));
     ctx.status = 200;
@@ -210,7 +209,6 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
         proofData: rollupProof.encodedProofData.toString('hex'),
         dataRoot: rollupProofData.newDataRoot.toString('hex'),
         nullifierRoot: rollupProofData.newNullRoot.toString('hex'),
-        created: rollup.created,
         mined: rollup.mined,
         txs: rollupProof.txs.map(({ id, ...tx }) => {
           const joinSplit = new ProofData(tx.proofData);

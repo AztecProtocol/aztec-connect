@@ -15,6 +15,7 @@ import { createDebugLogger, createLogger } from '@aztec/barretenberg/log';
 import { InterruptError } from '@aztec/barretenberg/errors';
 import { RollupProfile, emptyProfile } from './rollup_profiler.js';
 import { Metrics } from '../metrics/index.js';
+import { InterruptableSleep } from '@aztec/barretenberg/sleep';
 
 export class PipelineCoordinator {
   private flush = false;
@@ -25,6 +26,7 @@ export class PipelineCoordinator {
   private debug = createDebugLogger('pipeline_coordinator');
   private log = createLogger('PipelineCoordinator');
   private nextRollupProfile: RollupProfile;
+  private interruptableSleep = new InterruptableSleep();
 
   constructor(
     private rollupCreator: RollupCreator,
@@ -43,6 +45,7 @@ export class PipelineCoordinator {
     private maxCallDataPerRollup: number,
     private maxGasPerRollup: number,
     private metrics: Metrics,
+    private pollIntervalSeconds = 5,
   ) {
     this.publishTimeManager = new PublishTimeManager(this.publishInterval);
     this.nextRollupProfile = emptyProfile(this.numInnerRollupTxs * this.numOuterRollupProofs);
@@ -87,7 +90,8 @@ export class PipelineCoordinator {
           this.running = false;
           break;
         }
-        await new Promise(resolve => setTimeout(resolve, 1000 * +this.running));
+
+        await this.interruptableSleep.sleep(this.pollIntervalSeconds * 1000);
       }
 
       this.log('Pipeline exited.');
@@ -121,6 +125,8 @@ export class PipelineCoordinator {
       return;
     }
 
+    this.running = false;
+    this.interruptableSleep.interrupt();
     this.claimProofCreator.interrupt();
     await this.rollupCoordinator?.interrupt(shouldThrowIfFailToStop);
     await this.runningPromise;

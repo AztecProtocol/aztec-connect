@@ -1,14 +1,17 @@
-# Install Foundry if not yet installed
-if [ ! -d ~/.foundry ]; then
-  curl -L https://foundry.paradigm.xyz | bash
-  ~/.foundry/bin/foundryup
-fi
+#!/bin/bash
+set -eu
 
-# Install 
-~/.foundry/bin/forge install --no-commit
+# Clean
+rm -rf broadcast cache out serve
 
-# Update
-~/.foundry/bin/forge update
+# Install foundry.
+. ./scripts/install_foundry.sh
+
+# Install
+forge install --no-commit
+
+# Ensure libraries are at the correct version
+git submodule update --init --recursive ./lib
 
 # Compile contracts
-~/.foundry/bin/forge build
+forge build

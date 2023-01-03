@@ -3,7 +3,12 @@ import { InterruptableSleep } from '@aztec/barretenberg/sleep';
 import { createLogger, createDebugLogger } from '@aztec/barretenberg/log';
 import { JsonRpcProvider } from '@aztec/blockchain';
 import { EthLogsDb, RollupLogsParamsQuery } from './log_db.js';
-import { DEFI_BRIDGE_EVENT_TOPIC, RollupEventGetter, ROLLUP_PROCESSED_EVENT_TOPIC } from './rollup_event_getter.js';
+import {
+  DEFI_BRIDGE_EVENT_TOPIC,
+  OFFCHAIN_EVENT_TOPIC,
+  RollupEventGetter,
+  ROLLUP_PROCESSED_EVENT_TOPIC,
+} from './rollup_event_getter.js';
 import { ConfVars } from './configurator.js';
 import { default as JSONNormalize } from 'json-normalize';
 
@@ -28,10 +33,6 @@ export interface RollupLogsParams {
   blockHash?: string;
 }
 
-function isPromise(obj: any): obj is Promise<any> {
-  return !!obj.then;
-}
-
 export class Server {
   private ready = false;
   private rollupEventGetter: RollupEventGetter;
@@ -40,7 +41,7 @@ export class Server {
   private runninSyncPromise!: Promise<void>;
   private interruptableSleep = new InterruptableSleep();
   private requestQueue: Array<() => void> = [];
-  private cachedResponses: { [key: string]: any } = {};
+  private cachedResponses: { [key: string]: Promise<any> | undefined } = {};
   private apiKeys: { [key: string]: boolean } = {};
   private provider: JsonRpcProvider;
   private ethereumRpc: EthereumRpc;
@@ -56,7 +57,7 @@ export class Server {
     private readonly configuration: ConfVars,
   ) {
     this.rollupEventGetter = new RollupEventGetter(
-      this.configuration.contractConfig.rollupContractAddress!,
+      this.configuration.rollupContractAddress!,
       provider,
       chainId,
       logsDb,
@@ -82,10 +83,6 @@ export class Server {
     } catch (err) {
       this.log('Error while looking for new rollup events: ', err.message);
     }
-  }
-
-  public getContractConfig() {
-    return this.configuration.contractConfig;
   }
 
   public async start() {
@@ -160,7 +157,7 @@ export class Server {
       this.isReady() &&
       method?.startsWith('eth_getLogs') &&
       params[0].topics?.length &&
-      [ROLLUP_PROCESSED_EVENT_TOPIC, DEFI_BRIDGE_EVENT_TOPIC].includes(params[0].topics[0])
+      [ROLLUP_PROCESSED_EVENT_TOPIC, DEFI_BRIDGE_EVENT_TOPIC, OFFCHAIN_EVENT_TOPIC].includes(params[0].topics[0])
     ) {
       return await this.queryLogs(params[0]);
     } else {
@@ -259,8 +256,7 @@ export class Server {
   /**
    * Normalises the JSON (orders properties) to produce a consistent cache key.
    * If there's no entry, kick off a request and store the promise in the cache.
-   * If there's a promise in the cache the request is in flight, await it.
-   * If there's an entry in the cache, return it.
+   * If there's an entry in the cache, await the result and return it.
    */
   private async forwardEthRequestViaCache(args: RequestArguments) {
     const cacheKey = JSONNormalize.sha256Sync(args);
@@ -272,12 +268,9 @@ export class Server {
         this.provider.request(args).then(resolve).catch(reject);
       });
       return await this.cachedResponses[cacheKey];
-    } else if (isPromise(cacheResult)) {
-      this.debug(`cache key ${cacheKey} hit (in flight) for request: ${JSON.stringify(args)}`);
-      return await cacheResult;
     } else {
       this.debug(`cache key ${cacheKey} hit for request: ${JSON.stringify(args)}`);
-      return cacheResult;
+      return await cacheResult;
     }
   }
 

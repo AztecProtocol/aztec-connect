@@ -7,7 +7,7 @@ import { WorldStateDb } from '@aztec/barretenberg/world_state_db';
 import { Command } from 'commander';
 import { DataSource } from 'typeorm';
 import { getOrmConfig } from '../get_components.js';
-import { configurator } from '../entity/init_entities.js';
+import { configurator } from '../configurator.js';
 import { TypeOrmRollupDb } from '../rollup_db/index.js';
 import { SyncRollupDb } from '../rollup_db/sync_rollup_db.js';
 import { checkDuplicateNullifiers, checkNullifiersAgainstWorldState, findNearbyTxs } from './diagnostics.js';
@@ -15,14 +15,8 @@ import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { fromBaseUnits } from '@aztec/blockchain';
 import { RollupDao } from '../entity/index.js';
 
-const getOrmDbConfig = () => {
-  const confVars = configurator.getConfVars();
-  const { typeOrmLogging, dbUrl } = confVars;
-  return getOrmConfig(dbUrl, typeOrmLogging);
-};
-
 const createRollupDb = async () => {
-  const dbConfig = getOrmDbConfig();
+  const dbConfig = getOrmConfig(configurator);
   const connection = new DataSource(dbConfig);
   await connection.initialize();
   const rollupDb = new SyncRollupDb(new TypeOrmRollupDb(connection));

@@ -10,7 +10,6 @@
 set -e
 
 TARGET_PROJECT=$1
-PUSH_LABEL=$2
 REPO=aztec2-internal
 COMMIT_HASH=$(git rev-parse HEAD)
 
@@ -19,7 +18,7 @@ if [ -z "$TARGET_PROJECT" ]; then
   TARGET_PROJECT=$(git rev-parse --show-prefix)
   if [ -n "$TARGET_PROJECT" ]; then
     # We are in a project folder.
-    ONLY_TARGET=true
+    ONLY_TARGET=${ONLY_TARGET:-true}
     TARGET_PROJECT=$(basename $TARGET_PROJECT)
     cd $(git rev-parse --show-cdup)
   fi
@@ -49,5 +48,5 @@ cd /$REPO/.circleci
 source ./setup_env $COMMIT_HASH '' mainframe_$USER /repo
 cd ..
 
-build_local $TARGET_PROJECT $ONLY_TARGET $PUSH_LABEL
+build_local $TARGET_PROJECT $ONLY_TARGET
 "
