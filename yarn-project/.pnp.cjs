@@ -11356,6 +11356,13 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["@remix-run/router", "npm:1.0.0"]\
           ],\
           "linkType": "HARD"\
+        }],\
+        ["npm:1.2.1", {\
+          "packageLocation": "./.yarn/cache/@remix-run-router-npm-1.2.1-b89e8a23a3-71c947f83e.zip/node_modules/@remix-run/router/",\
+          "packageDependencies": [\
+            ["@remix-run/router", "npm:1.2.1"]\
+          ],\
+          "linkType": "HARD"\
         }]\
       ]],\
       ["@rollup/plugin-babel", [\
@@ -15817,6 +15824,16 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["typedarray-to-buffer", "npm:3.1.5"]\
           ],\
           "linkType": "HARD"\
+        }],\
+        ["npm:1.0.2", {\
+          "packageLocation": "./.yarn/cache/@walletconnect-encoding-npm-1.0.2-b88f288c9c-648029d6a0.zip/node_modules/@walletconnect/encoding/",\
+          "packageDependencies": [\
+            ["@walletconnect/encoding", "npm:1.0.2"],\
+            ["is-typedarray", "npm:1.0.0"],\
+            ["tslib", "npm:1.14.1"],\
+            ["typedarray-to-buffer", "npm:3.1.5"]\
+          ],\
+          "linkType": "HARD"\
         }]\
       ]],\
       ["@walletconnect/environment", [\
@@ -15864,7 +15881,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           "packageDependencies": [\
             ["@walletconnect/iso-crypto", "npm:1.8.0"],\
             ["@walletconnect/crypto", "npm:1.0.2"],\
-            ["@walletconnect/encoding", "npm:1.0.1"],\
+            ["@walletconnect/encoding", "npm:1.0.2"],\
             ["@walletconnect/types", "npm:1.8.0"],\
             ["@walletconnect/utils", "npm:1.8.0"]\
           ],\
@@ -16068,7 +16085,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           "packageLocation": "./.yarn/__virtual__/@web3-react-core-virtual-f885f0bc3d/0/cache/@web3-react-core-npm-6.1.9-11f114d7d3-b7f3ad6281.zip/node_modules/@web3-react/core/",\
           "packageDependencies": [\
             ["@web3-react/core", "virtual:0fa5f2a0390adcc0bf26ebfbab71d38e679ad06f8a96e7dd4ebbdbb0e8456171eab4486aed5b63ea334e766129a7e93d631670e38f8f0703b6005cc02533b850#npm:6.1.9"],\
-            ["@ethersproject/bytes", "npm:5.6.1"],\
+            ["@ethersproject/bytes", "npm:5.7.0"],\
             ["@ethersproject/keccak256", "npm:5.6.1"],\
             ["@types/react", "npm:18.0.15"],\
             ["@web3-react/abstract-connector", "npm:6.0.7"],\
@@ -36668,7 +36685,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           "packageDependencies": [\
             ["react-router-dom", "virtual:0ccdc7d837e2266d21cabf202cc695e33e96daa4499d9ea2fa1887a44c8e8b91fee89b38879cbdf28572ef8e4727432e02f1996d5b78afcce3fe61de33044a27#npm:5.3.3"],\
             ["@babel/runtime", "npm:7.18.9"],\
-            ["@remix-run/router", "npm:1.0.0"],\
+            ["@remix-run/router", "npm:1.2.1"],\
             ["@types/react", "npm:18.0.15"],\
             ["history", "npm:4.10.1"],\
             ["loose-envify", "npm:1.4.0"],\
@@ -36688,7 +36705,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           "packageLocation": "./.yarn/__virtual__/react-router-dom-virtual-5dd99c6900/0/cache/react-router-dom-npm-6.4.0-6eb09f3674-5595bb168c.zip/node_modules/react-router-dom/",\
           "packageDependencies": [\
             ["react-router-dom", "virtual:9bf5e241e2dc17b833e112da24bae967b9d49b46aa3f05606e86f481d7497e582e0889d30fdb3a89cc6757535ad24586561398b64b10d45c0fcde85b5efce039#npm:6.4.0"],\
-            ["@remix-run/router", "npm:1.0.0"],\
+            ["@remix-run/router", "npm:1.2.1"],\
             ["@types/react", "npm:17.0.50"],\
             ["@types/react-dom", "npm:17.0.17"],\
             ["react", "npm:17.0.2"],\
@@ -37874,6 +37891,16 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["source-map-js", "npm:1.0.2"]\
           ],\
           "linkType": "HARD"\
+        }],\
+        ["npm:1.57.1", {\
+          "packageLocation": "./.yarn/cache/sass-npm-1.57.1-bafdba484f-734a08781b.zip/node_modules/sass/",\
+          "packageDependencies": [\
+            ["sass", "npm:1.57.1"],\
+            ["chokidar", "npm:3.5.3"],\
+            ["immutable", "npm:4.1.0"],\
+            ["source-map-js", "npm:1.0.2"]\
+          ],\
+          "linkType": "HARD"\
         }]\
       ]],\
       ["sass-loader", [\
@@ -37897,7 +37924,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["klona", "npm:2.0.5"],\
             ["neo-async", "npm:2.6.2"],\
             ["node-sass", null],\
-            ["sass", "npm:1.54.9"],\
+            ["sass", "npm:1.57.1"],\
             ["sass-embedded", null],\
             ["webpack", "virtual:9bf5e241e2dc17b833e112da24bae967b9d49b46aa3f05606e86f481d7497e582e0889d30fdb3a89cc6757535ad24586561398b64b10d45c0fcde85b5efce039#npm:5.74.0"]\
           ],\
