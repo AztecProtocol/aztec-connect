@@ -30,8 +30,7 @@ function getRegisterFormSpendingKeysFeedback(
   }
 }
 
-function getRegisterFormAliasFeedback(_: RegisterFormResources, assessment: RegisterFormAssessment, touched: boolean) {
-  if (!touched) return;
+function getRegisterFormAliasFeedback(assessment: RegisterFormAssessment) {
   const { info, issues } = assessment.alias;
   if (issues.aliasAlreadyTaken) {
     return 'This alias is already taken';
@@ -47,11 +46,7 @@ export function getRegisterFormFeedback(
   touchedFields: TouchedFormFields<RegisterFormFields>,
   attemptedLock: boolean,
 ) {
-  const amount = getL1DepositAmountInputFeedback(
-    resources,
-    assessment,
-    (touchedFields.alias && touchedFields.speed) || attemptedLock,
-  );
+  const amount = getL1DepositAmountInputFeedback(resources, assessment);
   const walletAccount = getRegisterFormWalletAccountFeedback(resources, assessment);
   const signingKeys = getRegisterFormSpendingKeysFeedback(
     resources,
@@ -59,6 +54,6 @@ export function getRegisterFormFeedback(
     touchedFields.spendingKeys || attemptedLock,
   );
   const footer = getL1DepositFooterFeedback(resources, assessment);
-  const alias = getRegisterFormAliasFeedback(resources, assessment, touchedFields.alias || attemptedLock);
+  const alias = getRegisterFormAliasFeedback(assessment);
   return { amount, walletAccount, footer, signingKeys, alias };
 }

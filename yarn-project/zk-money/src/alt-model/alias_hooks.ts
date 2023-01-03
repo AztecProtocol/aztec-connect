@@ -54,6 +54,39 @@ export function useUserIdForRecipientStr(recipientStr: string, debounceMs: numbe
   return userIdFetchState;
 }
 
+export function useUserIdForRegistrationStr(alias: string, debounceMs: number) {
+  const sdk = useSdk();
+  const [registrationFetchState, setRegistrationFetchState] = useState<{
+    isRegistered?: boolean;
+    isLoading: boolean;
+  }>({
+    isLoading: false,
+  });
+
+  useEffect(() => {
+    if (!isValidAliasInput(alias)) {
+      setRegistrationFetchState({ isLoading: false });
+      return;
+    }
+
+    const gatedSetter = createGatedSetter(setRegistrationFetchState);
+    gatedSetter.set({ isLoading: true });
+
+    const task = setTimeout(() => {
+      sdk?.isAliasRegistered(alias, true).then((result: boolean) => {
+        setRegistrationFetchState({ isRegistered: result, isLoading: false });
+      });
+    }, debounceMs);
+
+    return () => {
+      gatedSetter.close();
+      clearTimeout(task);
+    };
+  }, [sdk, alias, debounceMs]);
+
+  return registrationFetchState;
+}
+
 export function useCachedAlias(): string | undefined {
   const accountState = useAccountState();
   const aliasManager = useAliasManager();

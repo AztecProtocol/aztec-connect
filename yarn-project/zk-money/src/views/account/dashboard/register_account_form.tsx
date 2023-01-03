@@ -21,8 +21,12 @@ interface RegisterAccountFormProps {
   onCancel: () => void;
 }
 
-function getAliasFieldStatus(alias: string, aliasFeedback?: string) {
+function getAliasFieldStatus(alias: string, aliasFeedback?: string, checkingAlias?: boolean) {
   const aliasHasFeedback = aliasFeedback && aliasFeedback.length > 0;
+
+  if (checkingAlias) {
+    return FieldStatus.Loading;
+  }
 
   if (aliasHasFeedback) {
     return FieldStatus.Error;
@@ -98,7 +102,7 @@ export function RegisterAccountForm(props: RegisterAccountFormProps) {
         placeholder="@username"
         prefix="@"
         message={feedback.alias}
-        status={getAliasFieldStatus(fields.alias, feedback.alias)}
+        status={getAliasFieldStatus(fields.alias, feedback.alias, resources.checkingAlias)}
       />
       <TxGasSection
         speed={fields.speed}
