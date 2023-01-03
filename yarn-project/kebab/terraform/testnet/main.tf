@@ -315,3 +315,61 @@ resource "aws_route53_record" "mainnet-fork" {
     evaluate_target_health = true
   }
 }
+
+## Rate limit rules for clients, coming from aztec-connect-testnet-eth-host.aztec.network
+
+# resource "aws_waf_regex_pattern_set" "aztec_connect_testnet_host_pattern" {
+#   name                  = "tf_waf_regex_pattern_set"
+#   regex_pattern_strings = ["aztec-connect-testnet-eth-host.aztec.network"]
+# }
+
+# resource "aws_waf_regex_match_set" "aztec_connect_testnet_host_match" {
+#   name = "aztec_connect_testnet_eth_host_match"
+
+#   regex_match_tuple {
+#     field_to_match {
+#       data = "Host"
+#       type = "HEADER"
+#     }
+
+#     regex_pattern_set_id = aws_waf_regex_pattern_set.aztec_connect_testnet_host_pattern.id
+#     text_transformation  = "NONE"
+#   }
+# }
+
+# resource "aws_waf_rate_based_rule" "aztec_connect_testnet_rate_limit_rule" {
+#   depends_on  = [aws_waf_regex_match_set.aztec_connect_testnet_host_match]
+#   name        = "aztecConnectTestnetRateLimitRule"
+#   metric_name = "aztecConnectTestnetRateLimitRule"
+
+#   rate_key   = "IP"
+#   rate_limit = 5000
+
+#   predicates {
+#     data_id = aws_waf_regex_match_set.aztec_connect_testnet_host_match.id
+#     negated = false
+#     type    = "RegexMatch"
+#   }
+# }
+
+# resource "aws_waf_web_acl" "waf_acl" {
+#   depends_on = [
+#     aws_waf_rate_based_rule.aztec_connect_testnet_rate_limit_rule
+#   ]
+#   name        = "aztecConnectTestnetRateLimitAcl"
+#   metric_name = "aztecConnectTestnetRateLimitAcl"
+
+#   default_action {
+#     type = "ALLOW"
+#   }
+
+#   rules {
+#     action {
+#       type = "ALLOW"
+#     }
+
+#     priority = 1
+#     rule_id  = aws_waf_rate_based_rule.aztec_connect_testnet_rate_limit_rule.id
+#     type     = "RATE_BASED"
+#   }
+# }
