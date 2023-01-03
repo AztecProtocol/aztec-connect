@@ -13,7 +13,6 @@ export class RegisterController extends DepositHandler {
   private proofOutput?: ProofOutput;
   private txIds: TxId[] = [];
   private requireDeposit: boolean;
-  private created = Date.now();
 
   constructor(
     public readonly userId: GrumpkinAddress,
@@ -68,14 +67,7 @@ export class RegisterController extends DepositHandler {
     }
 
     const proofs = this.getProofOutputs();
-    this.txIds = await this.core.sendProofs(proofs, [], {
-      from: 'register_controller',
-      fee: {
-        ...this.fee,
-        value: this.fee.value.toString(),
-      },
-      created: this.created,
-    });
+    this.txIds = await this.core.sendProofs(proofs);
     return this.txIds[0];
   }
 

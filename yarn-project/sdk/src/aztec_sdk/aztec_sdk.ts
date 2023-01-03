@@ -582,13 +582,7 @@ export class AztecSdk extends EventEmitter {
       proofInput.signature = await userSigner.signMessage(proofInput.signingData);
       proofs.push(await this.core.createPaymentProof(proofInput, txRefNo));
     }
-    const txIds = await this.core.sendProofs(proofs, [], {
-      from: 'flushRollup',
-      fee: {
-        ...fee,
-        value: fee.value.toString(),
-      },
-    });
+    const txIds = await this.core.sendProofs(proofs);
     await Promise.all(txIds.map(txId => this.core.awaitSettlement(txId)));
   }
 

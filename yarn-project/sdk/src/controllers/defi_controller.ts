@@ -14,7 +14,6 @@ export class DefiController {
   private jsProofOutputs: ProofOutput[] = [];
   private feeProofOutputs: ProofOutput[] = [];
   private txIds: TxId[] = [];
-  private created = Date.now();
 
   constructor(
     public readonly userId: GrumpkinAddress,
@@ -196,15 +195,7 @@ export class DefiController {
     if (!this.proofOutput) {
       throw new Error('Call createProof() first.');
     }
-    this.txIds = await this.core.sendProofs([...this.jsProofOutputs, this.proofOutput, ...this.feeProofOutputs], [], {
-      from: 'defi_controller',
-      bridgeCallData: this.bridgeCallData.toString(),
-      fee: {
-        ...this.fee,
-        value: this.fee.value.toString(),
-      },
-      created: this.created,
-    });
+    this.txIds = await this.core.sendProofs([...this.jsProofOutputs, this.proofOutput, ...this.feeProofOutputs]);
     return this.getDefiTxId();
   }
 

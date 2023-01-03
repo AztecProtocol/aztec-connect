@@ -109,7 +109,7 @@ export interface CoreSdkInterface {
 
   createDefiProof(input: JoinSplitProofInput, txRefNo: number): Promise<ProofOutput>;
 
-  sendProofs(proofs: ProofOutput[], proofTxs?: Tx[], proofRequestData?: any): Promise<TxId[]>;
+  sendProofs(proofs: ProofOutput[], proofTxs?: Tx[]): Promise<TxId[]>;
 
   awaitSynchronised(timeout?: number): Promise<void>;
 

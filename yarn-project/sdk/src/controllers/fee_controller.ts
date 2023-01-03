@@ -10,7 +10,6 @@ import { createTxRefNo } from './create_tx_ref_no.js';
 export class FeeController {
   private feeProofOutputs: ProofOutput[] = [];
   private txIds: TxId[] = [];
-  private created = Date.now();
 
   constructor(
     public readonly userId: GrumpkinAddress,
@@ -55,14 +54,7 @@ export class FeeController {
       throw new Error('Call createProof() first.');
     }
 
-    this.txIds = await this.core.sendProofs(this.feeProofOutputs, this.proofTxs, {
-      from: 'fee_controller',
-      fee: {
-        ...this.fee,
-        value: this.fee.value.toString(),
-      },
-      created: this.created,
-    });
+    this.txIds = await this.core.sendProofs(this.feeProofOutputs, this.proofTxs);
     return this.txIds[this.feeProofOutputs.length - 1];
   }
 
