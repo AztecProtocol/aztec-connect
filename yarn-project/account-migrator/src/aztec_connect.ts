@@ -16,7 +16,7 @@ export async function getAccountsConnect(options: any) {
   }
 
   const rollupProofs = filteredBlocks.map(block => RollupProofData.decode(block.encodedRollupProofData));
-  const innerProofs = rollupProofs.flatMap(outerProof => outerProof.innerProofData).filter(x => !x.isPadding());
+  const innerProofs = rollupProofs.flatMap(outerProof => outerProof.getNonPaddingProofs());
   const offChainData = filteredBlocks.map(block => block.offchainTxData);
   const offChainAccountData = offChainData.flat().filter((data, index) => {
     return innerProofs[index].proofId === ProofId.ACCOUNT;

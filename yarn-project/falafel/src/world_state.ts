@@ -617,10 +617,7 @@ export class WorldState {
         subtreeRoot,
       );
 
-      for (const inner of rollup.innerProofData) {
-        if (inner.isPadding()) {
-          continue;
-        }
+      for (const inner of rollup.getNonPaddingProofs()) {
         const tx = rollupProof.txs.find(tx => tx.id.equals(inner.txId));
         if (!tx) {
           this.log('Rollup tx missing. Not tracking time...');
@@ -633,8 +630,8 @@ export class WorldState {
     } else {
       this.log(`Adding rollup ${rollup.rollupId} from someone else`);
       // Not a rollup we created. Add or replace rollup.
-      const txs = rollup.innerProofData
-        .filter(tx => !tx.isPadding())
+      const txs = rollup
+        .getNonPaddingProofs()
         .map((p, i) => innerProofDataToTxDao(p, offchainTxData[i], created, getTxTypeFromInnerProofData(p)));
       const rollupProofDao = new RollupProofDao({
         id: rollup.rollupHash,

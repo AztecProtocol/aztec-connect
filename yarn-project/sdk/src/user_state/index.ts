@@ -113,7 +113,7 @@ export class UserState extends EventEmitter {
     this.debug(`synching blocks ${from} to ${from + blockContexts.length - 1}...`);
 
     const rollupProofData = blockContexts.map(b => b.rollup);
-    const innerProofs = rollupProofData.map(p => p.innerProofData.filter(i => !i.isPadding())).flat();
+    const innerProofs = rollupProofData.map(p => p.getNonPaddingProofs()).flat();
     const offchainTxDataBuffers = blockContexts.map(b => b.offchainTxData).flat();
     const viewingKeys: ViewingKey[] = [];
     const noteCommitments: Buffer[] = [];
