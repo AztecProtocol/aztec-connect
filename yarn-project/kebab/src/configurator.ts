@@ -139,8 +139,8 @@ export class Configurator {
         ...startupConfigEnvVars,
         contractConfig: {
           ...defaultContractConfig,
-          ...startupContractEnvVars,
           ...savedContractConfig,
+          ...startupContractEnvVars,
         },
       };
     } else {
@@ -173,22 +173,22 @@ export class Configurator {
       ...conf,
       contractConfig: {
         ...conf.contractConfig,
-        rollupContractAddress: conf.contractConfig.rollupContractAddress
+        rollupContractAddress: conf.contractConfig?.rollupContractAddress
           ? EthAddress.fromString(conf.contractConfig.rollupContractAddress)
           : EthAddress.ZERO,
-        permitHelperContractAddress: conf.contractConfig.permitHelperContractAddress
+        permitHelperContractAddress: conf.contractConfig?.permitHelperContractAddress
           ? EthAddress.fromString(conf.contractConfig.permitHelperContractAddress)
           : EthAddress.ZERO,
-        feeDistributorAddress: conf.contractConfig.feeDistributorAddress
+        feeDistributorAddress: conf.contractConfig?.feeDistributorAddress
           ? EthAddress.fromString(conf.contractConfig.feeDistributorAddress)
           : EthAddress.ZERO,
-        faucetContractAddress: conf.contractConfig.faucetContractAddress
+        faucetContractAddress: conf.contractConfig?.faucetContractAddress
           ? EthAddress.fromString(conf.contractConfig.faucetContractAddress)
           : EthAddress.ZERO,
-        bridgeDataProviderContractAddress: conf.contractConfig.bridgeDataProviderContractAddress
+        bridgeDataProviderContractAddress: conf.contractConfig?.bridgeDataProviderContractAddress
           ? EthAddress.fromString(conf.contractConfig.bridgeDataProviderContractAddress)
           : EthAddress.ZERO,
-        priceFeedContractAddresses: conf.contractConfig.priceFeedContractAddresses
+        priceFeedContractAddresses: conf.contractConfig?.priceFeedContractAddresses
           ? conf.contractConfig.priceFeedContractAddresses.map(EthAddress.fromString)
           : [],
       },

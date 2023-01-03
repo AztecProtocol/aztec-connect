@@ -73,3 +73,5 @@ variable "ETHEREUM_HOST" {
 output "ethereum_host" {
   value = "${var.ETHEREUM_HOST}"
 }
+
+
