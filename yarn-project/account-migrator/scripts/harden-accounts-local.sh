@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# This script is used to launch a full e2e test of the account hardener.
+# This script is used to launch a full test of the account hardener.
 # This is NOT to be used for tests on a live/external network.
 # The steps performed by this script include:
 #   * Launch ganache, kebab, halloumi (twice), and falafel
@@ -8,7 +8,6 @@
 #       * Also so that child processes do not keep running after script exits
 #       * If any of the required subprocesses fail, kills all of them
 #     * Wait for these services to be ready
-#   * Optionally run an e2e test to populate the rollup with some accounts
 #   * Run all stages of the hardener (createHardener, genRollupProofs, hardenAccounts, and verifyHardened)
 #
 # Examples
@@ -18,9 +17,6 @@
 # ./scripts/harden-accounts-local.sh
 # ```
 #
-# Test that skips the e2e test:
-# ./scripts/harden-accounts-local.sh noe2e
-
 # WARNING: this script is for fully LOCAL tests only! Not meant for use with testnet or mainnet
 
 LOG_DIR="$(readlink -f $(dirname -- "$(readlink -f "${BASH_SOURCE}")")/../log)"
@@ -99,20 +95,6 @@ export NUM_OUTER_ROLLUP_PROOFS=2
 export PERSIST=false
 export PROVERLESS=true
 
-# Falafel
-# Use something like this if designing a mainnet-fork test
-#export NODE_ENV=production
-#export NUM_INNER_ROLLUP_TXS=28
-#export NUM_OUTER_ROLLUP_PROOFS=32
-#export MIN_CONFIRMATION=3
-##export PROOF_GENERATOR_MODE=split
-#export PUBLISH_INTERVAL=14400
-#export FEE_PAYING_ASSET_IDS=0,1
-#export ROLLUP_CONTRACT_ADDRESS=0xFF1F2B4ADb9dF6FC8eAFecDcbF96A2B351680455
-#export PERMIT_HELPER_CONTRACT_ADDRESS=0xf4F1e0B0b93b7b2b7b6992B99F2A1678b07Cd70C
-#export FEE_DISTRIBUTOR_ADDRESS=0x4cf32670a53657596E641DFCC6d40f01e4d64927
-#export PRICE_FEED_CONTRACT_ADDRESSES=0x169e633a2d1e6c10dd91238ba11c4a708dfef37c,0x773616E4d11A78F511299002da57A0a94577F1f4
-
 # These following applications need to be run for a fully LOCAL test
 echo "Running local ganache instance. Output in '$GANACHE_LOG'"
 (cd ../blockchain && yarn start:ganache > $GANACHE_LOG 2>&1) &
@@ -142,19 +124,12 @@ echo "Running the halloumi instance to communicate with the account hardener. Ou
 rollupAddress=$(sed -n -e 's/^.*Rollup contract address: \(0x[a-fA-F0-9]\+\)/\1/p' $FALAFEL_LOG)
 echo "Falafel is ready and rollup contract lives at address: ${rollupAddress}"
 
-# Run e2e test to get some accounts in the rollup (unless e2e is disabled via noe2e)
-if [[ -n "${1-}" && "$1" == noe2e ]]; then
-  echo "Not running e2e tests because 'noe2e' is set"
-else
-  echo "Starting end-to-end test to populate ganache with some rollup blocks.... Output in '$LOG_DIR/e2e.test.log'"
-  (cd ../end-to-end && yarn test src/e2e_account.test.ts > $LOG_DIR/e2e_account.test.log 2>&1) || die "Failure in end-to-end test"
-fi
-
 # NOTE: `-t 99999` below is just an arbitrarily large rollup block ID so that we make sure we harden accounts in ALL blocks
 # Usage string to print to screen
 USAGE=$(cat <<EOF
-  # Execute full sequence of hardener commands
+  # Execute full sequence of hardener commands and verify
   DEBUG=am:* yarn start harden fullSequence -a "${rollupAddress}" --port 9082 -m true -c 0
+  DEBUG=am:* yarn start harden verifyHardened  -a "${rollupAddress}" --port 9082 -m true -c 0
   # Alternatively execute step-by-step
   DEBUG=am:* yarn start harden createHardener  -a "${rollupAddress}" --port 9082 -m true -c 0
   DEBUG=am:* yarn start harden genHardenProofs -a "${rollupAddress}" --port 9082 -m true -c 0
@@ -169,9 +144,10 @@ EOF
   echo "If this command fails, the program will NOT exit!"
   echo "You can keep all of your progress by backgrounding this process with Ctrl-z followed by 'bg', then just rerun one of the following commands:"
   echo "$USAGE"
-  # Execute full sequence of hardener commands
+  # Execute full sequence of hardener commands and then verify
   #yarn build && \
-  #DEBUG=am:* yarn -s start harden fullSequence -a "${rollupAddress}" --port 9082 -m true -c 0
+  #DEBUG=am:* yarn -s start harden fullSequence -a "${rollupAddress}" --port 9082 -m true -c 0 && \
+  #DEBUG=am:* yarn start harden verifyHardened  -a "${rollupAddress}" --port 9082 -m true -c 0
   # Alternatively execute step-by-step
   yarn build && \
   DEBUG=am:* yarn start harden createHardener  -a "${rollupAddress}" --port 9082 -m true -c 0 && \
