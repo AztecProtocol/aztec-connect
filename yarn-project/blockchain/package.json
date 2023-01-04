@@ -41,8 +41,6 @@
     "@ethersproject/providers": "5.5.1",
     "@uniswap/v2-core": "^1.0.1",
     "@uniswap/v2-periphery": "^1.1.0-beta.0",
-    "bip85": "^0.0.3",
-    "commander": "^9.0.0",
     "cross-fetch": "^3.1.5",
     "debug": "^4.3.4",
     "ethers": "5.5.1",
