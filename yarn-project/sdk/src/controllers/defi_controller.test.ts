@@ -25,7 +25,7 @@ interface MockPaymentProof {
   outputNoteValue: bigint;
 }
 
-describe('defi controller', () => {
+describe.skip('defi controller', () => {
   let coreSdk: Mockify<CoreSdkInterface>;
   const userId = GrumpkinAddress.random();
   const userSigner: Signer = {

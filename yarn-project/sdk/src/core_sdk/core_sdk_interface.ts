@@ -103,9 +103,9 @@ export interface CoreSdkInterface {
     userId: GrumpkinAddress,
     bridgeCallData: BridgeCallData,
     depositValue: bigint,
-    inputNotes: Note[],
+    fee: bigint,
     spendingPublicKey: GrumpkinAddress,
-  ): Promise<JoinSplitProofInput>;
+  ): Promise<JoinSplitProofInput[]>;
 
   createDefiProof(input: JoinSplitProofInput, txRefNo: number): Promise<ProofOutput>;
 

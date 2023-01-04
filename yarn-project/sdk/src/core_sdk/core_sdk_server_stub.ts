@@ -12,7 +12,7 @@ import {
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { EventEmitter } from 'events';
 import { coreUserTxToJson } from '../core_tx/index.js';
-import { noteFromJson, NoteJson, noteToJson } from '../note/index.js';
+import { noteToJson } from '../note/index.js';
 import {
   accountProofInputFromJson,
   AccountProofInputJson,
@@ -233,17 +233,17 @@ export class CoreSdkServerStub {
     userId: string,
     bridgeCallData: string,
     depositValue: string,
-    inputNotes: NoteJson[],
+    fee: string,
     spendingPublicKey: string,
   ) {
-    const proofInput = await this.core.createDefiProofInput(
+    const proofInputs = await this.core.createDefiProofInput(
       GrumpkinAddress.fromString(userId),
       BridgeCallData.fromString(bridgeCallData),
       BigInt(depositValue),
-      inputNotes.map(n => noteFromJson(n)),
+      BigInt(fee),
       GrumpkinAddress.fromString(spendingPublicKey),
     );
-    return joinSplitProofInputToJson(proofInput);
+    return proofInputs.map(joinSplitProofInputToJson);
   }
 
   public async createDefiProof(input: JoinSplitProofInputJson, txRefNo: number) {
