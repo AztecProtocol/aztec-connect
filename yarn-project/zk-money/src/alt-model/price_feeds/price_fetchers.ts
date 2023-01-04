@@ -5,7 +5,9 @@ import { UnderlyingAmountPollerCache } from '../../alt-model/defi/bridge_data_ad
 import { ChainLinkPollerCache } from './chain_link_poller_cache.js';
 import { getUsdOracleAddressForAsset } from './chain_link_oracles.js';
 import { Poller } from '../../app/util/poller.js';
-import { Obs } from '../../app/util/index.js';
+import { createGatedSetter_noArrows, Obs } from '../../app/util/index.js';
+import { ExpectedOutputPollerCache } from '../defi/bridge_data_adaptors/caches/expected_output_poller_cache.js';
+import { AuxDataOptionsPollerCache } from '../defi/bridge_data_adaptors/caches/aux_data_options_poller_cache.js';
 
 function createWstEthPriceObs(provider: Provider, chainLinkPollerCache: ChainLinkPollerCache) {
   const stETHOracleAddress = getUsdOracleAddressForAsset(S.stETH);
@@ -36,21 +38,18 @@ function createWstEthPriceObs(provider: Provider, chainLinkPollerCache: ChainLin
 
 export type PriceObs = Obs<bigint | undefined>;
 
-function createUnderlyingAssetPriceObs(
-  underlyingAssetPriceObs: PriceObs | undefined,
-  recipeId: string,
-  decimals: number,
-  underlyingAmountPollerCache: UnderlyingAmountPollerCache,
+function createConvertedAssetPriceObs(
+  convertedAssetUnitPriceObs: PriceObs | undefined,
+  conversionValueObs: PriceObs | undefined,
+  unitAssetValue: bigint,
 ) {
-  const unitAssetValue = 10n ** BigInt(decimals);
-  const unitUnderlyingAssetValuePoller = underlyingAmountPollerCache.get([recipeId, unitAssetValue]);
-  if (!unitUnderlyingAssetValuePoller) return;
-  if (!underlyingAssetPriceObs) return;
-  return Obs.combine([unitUnderlyingAssetValuePoller.obs, underlyingAssetPriceObs]).map(
-    ([unitUnderlyingAssetValue, underlyingAssetPrice]) => {
-      if (!unitUnderlyingAssetValue) return undefined;
+  if (!conversionValueObs) return;
+  if (!convertedAssetUnitPriceObs) return;
+  return Obs.combine([conversionValueObs, convertedAssetUnitPriceObs]).map(
+    ([conversionValue, underlyingAssetPrice]) => {
+      if (conversionValue === undefined) return undefined;
       if (underlyingAssetPrice === undefined) return undefined;
-      return (underlyingAssetPrice * unitUnderlyingAssetValue.amount) / unitAssetValue;
+      return (underlyingAssetPrice * conversionValue) / unitAssetValue;
     },
   );
 }
@@ -61,20 +60,55 @@ function getChainLinkPriceObs(assetAddressStr: string, chainLinkPollerCache: Cha
   return chainLinkPollerCache.get(oracleAddress).obs;
 }
 
+function createIcEthPriceObs(
+  expectedOutputPollerCache: ExpectedOutputPollerCache,
+  auxDataOptionsPollerCache: AuxDataOptionsPollerCache,
+  getPriceFeedObs: (assetAddressStr: string) => PriceObs | undefined,
+) {
+  const auxDataOptsPoller = auxDataOptionsPollerCache.get(['set-uniswap.ETH-to-icETH', true]);
+  const unitAssetValue = 10n ** 18n;
+  // Note that unlike the other price obs this emitter-based implementation is
+  // will only ever evaluate once. We compromise on this because it's currently
+  // more effort than it's worth to implement Obs unwrapping inside an Obs.
+  const outputValueObs = Obs.emitter<bigint | undefined>(emit => {
+    const gatedSetter = createGatedSetter_noArrows(emit);
+    const getAndEmitOutputValue = async () => {
+      const opts = await auxDataOptsPoller?.obs.whenDefined();
+      if (!opts) return;
+      const auxData = opts[0];
+      const expectedOutputPoller = expectedOutputPollerCache.get([
+        'set-uniswap.ETH-to-icETH',
+        auxData,
+        unitAssetValue,
+        'exit',
+      ]);
+      const output = await expectedOutputPoller?.obs.whenDefined();
+      emit(output?.outputValueA.value);
+    };
+    getAndEmitOutputValue();
+    return gatedSetter.close;
+  }, undefined);
+  return createConvertedAssetPriceObs(getPriceFeedObs(S.Eth), outputValueObs, unitAssetValue);
+}
+
 export function createAssetPriceObs(
   addressStr: string,
   provider: Provider,
   chainLinkPollerCache: ChainLinkPollerCache,
   underlyingAmountPollerCache: UnderlyingAmountPollerCache,
+  expectedOutputPollerCache: ExpectedOutputPollerCache,
+  auxDataOptionsPollerCache: AuxDataOptionsPollerCache,
   getPriceFeedObs: (assetAddressStr: string) => PriceObs | undefined,
 ): PriceObs | undefined {
-  const boundCreateUnderlyingAssetPriceObs = (underlyingAssetAddressStr: string, recipeId: string, decimals = 18) =>
-    createUnderlyingAssetPriceObs(
+  const boundCreateUnderlyingAssetPriceObs = (underlyingAssetAddressStr: string, recipeId: string, decimals = 18) => {
+    const unitAssetValue = 10n ** BigInt(decimals);
+    const unitUnderlyingAssetValuePoller = underlyingAmountPollerCache.get([recipeId, unitAssetValue]);
+    return createConvertedAssetPriceObs(
       getPriceFeedObs(underlyingAssetAddressStr),
-      recipeId,
-      decimals,
-      underlyingAmountPollerCache,
+      unitUnderlyingAssetValuePoller?.obs.map(x => x?.amount),
+      unitAssetValue,
     );
+  };
   switch (addressStr) {
     case S.yvDAI:
       return boundCreateUnderlyingAssetPriceObs(S.DAI, 'yearn-finance.DAI-to-yvDAI');
@@ -94,6 +128,8 @@ export function createAssetPriceObs(
       return boundCreateUnderlyingAssetPriceObs(S.DAI, 'compound.DAI-to-weETH');
     case S.wstETH:
       return createWstEthPriceObs(provider, chainLinkPollerCache);
+    case S.icETH:
+      return createIcEthPriceObs(expectedOutputPollerCache, auxDataOptionsPollerCache, getPriceFeedObs);
     default:
       return getChainLinkPriceObs(addressStr, chainLinkPollerCache);
   }

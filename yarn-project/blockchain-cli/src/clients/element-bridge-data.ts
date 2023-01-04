@@ -7,9 +7,9 @@ import { EthereumProvider } from '@aztec/barretenberg/blockchain';
 import { EthAddress } from '@aztec/barretenberg/address';
 import { createWeb3Provider } from './web3_provider.js';
 import { AuxDataConfig, AztecAsset, BridgeDataFieldGetters, SolidityType } from './bridge-data.js';
-import { ElementBridge, RollupProcessor, IVault } from '../../abis.js';
+import { ElementBridge, RollupProcessor, IVault } from '../abis/index.js';
 import { Contract, BigNumber } from 'ethers';
-import { fetch } from 'cross-fetch';
+import { fetch } from '@aztec/barretenberg/iso_fetch';
 
 export type BatchSwapStep = {
   poolId: string;

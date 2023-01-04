@@ -13,7 +13,7 @@ import {
 import { TxId } from '@aztec/barretenberg/tx_id';
 import EventEmitter from 'events';
 import { coreUserTxFromJson } from '../core_tx/index.js';
-import { Note, noteFromJson, noteToJson } from '../note/index.js';
+import { noteFromJson } from '../note/index.js';
 import {
   AccountProofInput,
   accountProofInputFromJson,
@@ -223,17 +223,17 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
     userId: GrumpkinAddress,
     bridgeCallData: BridgeCallData,
     depositValue: bigint,
-    inputNotes: Note[],
+    fee: bigint,
     spendingPublicKey: GrumpkinAddress,
   ) {
-    const json = await this.backend.createDefiProofInput(
+    const proofInputs = await this.backend.createDefiProofInput(
       userId.toString(),
       bridgeCallData.toString(),
       depositValue.toString(),
-      inputNotes.map(n => noteToJson(n)),
+      fee.toString(),
       spendingPublicKey.toString(),
     );
-    return joinSplitProofInputFromJson(json);
+    return proofInputs.map(joinSplitProofInputFromJson);
   }
 
   public async createDefiProof(input: JoinSplitProofInput, txRefNo: number) {

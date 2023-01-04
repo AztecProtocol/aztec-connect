@@ -11,6 +11,7 @@ import eulerGradientIcon from '../../images/euler_gradient.svg';
 import aaveGradientIcon from '../../images/aave_token_gradient.svg';
 import lusdGradientIcon from '../../images/lusd_gradient.svg';
 import compoundGradientIcon from '../../images/compound_token_gradient.svg';
+import setGradientIcon from '../../images/set_token_gradient.svg';
 import questionMarkBlackIcon from '../../images/question_mark_black.svg';
 import questionMarkWhiteIcon from '../../images/question_mark_white.svg';
 import { RegisteredAssetLabel } from '../registrations_data/registrations_data_types.js';
@@ -72,6 +73,8 @@ export function getAssetIconGradient(label?: AssetLabel) {
       return lusdGradientIcon;
     case 'wcDAI':
       return compoundGradientIcon;
+    case 'icETH':
+      return setGradientIcon;
     default:
       return questionMarkBlackIcon;
   }
@@ -97,5 +100,16 @@ export function getAssetPreferredFractionalDigits(label?: AssetLabel) {
     case 'wewstETH':
     case 'wa2WETH':
       return 6;
+  }
+}
+
+export function getAssetWithdrawShown(label?: AssetLabel) {
+  switch (label) {
+    case 'Eth':
+    case 'DAI':
+    case 'LUSD':
+      return true;
+    default:
+      return false;
   }
 }

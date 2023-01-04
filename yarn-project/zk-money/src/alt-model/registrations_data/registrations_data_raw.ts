@@ -1,11 +1,14 @@
 // This blob below is pasted from zk.money/toolbox -> "Fetch DataProvider content'
 
 export const registrationsDataRaw = {
-  'aztec-connect-dev': {
+  localhost: {
     assets: {
       Eth: '0x0000000000000000000000000000000000000000',
       DAI: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
       wstETH: '0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0',
+      'LUSD3CRV-f': '0xEd279fDD11cA84bEef15AF5D39BB4d4bEE23F0cA',
+      'MIM-3LP3CRV-f': '0x5a6A4D54456819380173272A5E8E9B9904BdF41B',
+      TOKA: '0x7A28cf37763279F774916b85b5ef8b64AB421f79',
       yvDAI: '0xdA816459F1AB5631232FE5e97a05BBBb94970c95',
       yvWETH: '0xa258C4606Ca8206D8aA700cE2143D7db854D168c',
       weWETH: '0x3c66B18F67CA6C1A71F829E2F6a0c987f97462d0',
@@ -14,9 +17,10 @@ export const registrationsDataRaw = {
       wa2DAI: '0xbcb91e0B4Ad56b0d41e0C168E3090361c0039abC',
       wa2WETH: '0xc21F107933612eCF5677894d45fc060767479A9b',
       LUSD: '0x5f98805A4E8be255a32880FDeC7F6728C6568bA0',
-      'TB-275': '0x7b7642DbF0fbCC6274ba980836B28f2E69Eb824b',
-      'TB-400': '0x2F2392aDD4009824957f34372b4Da0559D5a6472',
+      'TB-275': '0x2B4E07C50e905e768704813Af6DE70e5261843c3',
+      'TB-400': '0xE8C82B638f8EEf6ff7A43d56f7DBA4181248806e',
       wcDAI: '0x6D088fe2500Da41D7fA7ab39c76a506D7c91f53b',
+      icETH: '0x7C07F7aBe10CE8e33DC6C5aD68FE033085256A84',
     },
     bridges: {
       ElementBridge_800K: 1,
@@ -32,6 +36,40 @@ export const registrationsDataRaw = {
       Liquity400_550K: 14,
       Uniswap_500K: 15,
       Uniswap_800K: 16,
+    },
+  },
+  'aztec-connect-dev': {
+    assets: {
+      Eth: '0x0000000000000000000000000000000000000000',
+      DAI: '0x6B175474E89094C44Da98b954EedeAC495271d0F',
+      wstETH: '0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0',
+      yvDAI: '0xdA816459F1AB5631232FE5e97a05BBBb94970c95',
+      yvWETH: '0xa258C4606Ca8206D8aA700cE2143D7db854D168c',
+      weWETH: '0x3c66B18F67CA6C1A71F829E2F6a0c987f97462d0',
+      wewstETH: '0x60897720AA966452e8706e74296B018990aEc527',
+      weDAI: '0x4169Df1B7820702f566cc10938DA51F6F597d264',
+      wa2DAI: '0xbcb91e0B4Ad56b0d41e0C168E3090361c0039abC',
+      wa2WETH: '0xc21F107933612eCF5677894d45fc060767479A9b',
+      LUSD: '0x5f98805A4E8be255a32880FDeC7F6728C6568bA0',
+      'TB-275': '0x7c23F4E49cF0d3f390Cb2aCAC0Ec00b5b84B14B9',
+      'TB-400': '0xbBfB0b5295c4B67B0300327b78C878AC7A95899b',
+      wcDAI: '0x6D088fe2500Da41D7fA7ab39c76a506D7c91f53b',
+      icETH: '0x7C07F7aBe10CE8e33DC6C5aD68FE033085256A84',
+    },
+    bridges: {
+      ElementBridge_800K: 1,
+      CurveStEthBridge_250K: 2,
+      YearnBridgeDeposit_200K: 3,
+      YearnBridgeWithdraw_800K: 4,
+      ElementBridge_2M: 5,
+      ERC4626_300K: 6,
+      DCA_400K: 7,
+      ERC4626_500K: 8,
+      ERC4626_400K: 9,
+      Liquity275_550K: 10,
+      Liquity400_550K: 11,
+      Uniswap_500K: 12,
+      Uniswap_800K: 13,
     },
   },
   'aztec-connect-testnet': {

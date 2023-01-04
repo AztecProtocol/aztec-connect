@@ -2,27 +2,22 @@
 import { Web3Provider } from '@ethersproject/providers';
 import { Contract } from 'ethers';
 import { EthAddress } from '@aztec/barretenberg/address';
-import { EthereumRpc, TxHash } from '@aztec/barretenberg/blockchain';
+import { EthereumProvider, EthereumRpc, TxHash } from '@aztec/barretenberg/blockchain';
 import { Command } from 'commander';
-import { MainnetAddresses, purchaseTokens } from '../tokens/index.js';
-import { setBlockchainTime, getCurrentBlockTime } from '../ganache/manipulate_blocks.js';
-import {
-  decodeErrorFromContractByTxHash,
-  decodeSelector,
-  retrieveContractSelectors,
-} from '../contracts/decode_error.js';
-import { EthereumProvider } from '@aztec/barretenberg/blockchain';
+import { MainnetAddresses, purchaseTokens } from '@aztec/blockchain';
+import { setBlockchainTime, getCurrentBlockTime } from '@aztec/blockchain';
+import { decodeErrorFromContractByTxHash, decodeSelector, retrieveContractSelectors } from '@aztec/blockchain';
 import { ElementBridgeData } from './clients/element-bridge-data.js';
-import { WalletProvider } from '../provider/index.js';
-import { getTokenBalance, getWethBalance } from '../tokens/index.js';
+import { WalletProvider } from '@aztec/blockchain';
+import { getTokenBalance, getWethBalance } from '@aztec/blockchain';
 import { LogDescription } from 'ethers/lib/utils.js';
-import { RollupProcessor } from '../contracts/index.js';
+import { RollupProcessor } from '@aztec/blockchain';
 import { akiToKey } from './key_derivation.js';
 import {
   RollupProcessor as RollupProcessorJson,
   AztecFaucetJson,
   ElementBridge as ElementBridgeJson,
-} from '../abis.js';
+} from './abis/index.js';
 
 const { PRIVATE_KEY } = process.env;
 
@@ -445,7 +440,7 @@ async function main() {
 
   program
     .command('selectors')
-    .description("display useful information about a contrac't selectors")
+    .description('display useful information about a contract selectors')
     .argument('<contractAddress>', 'the address of the deployed contract, as a hex string')
     .argument('<contractName>', 'the name of the contract, valid values: Rollup, Element')
     .argument('[type]', 'optional filter for the type of selectors, e.g. error, event')

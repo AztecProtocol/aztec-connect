@@ -40,3 +40,5 @@ export function createAuxDataOptionsPollerCache(recipes: DefiRecipe[], adaptorCa
     return new Poller(pollObs, POLL_INTERVAL, undefined);
   });
 }
+
+export type AuxDataOptionsPollerCache = ReturnType<typeof createAuxDataOptionsPollerCache>;
