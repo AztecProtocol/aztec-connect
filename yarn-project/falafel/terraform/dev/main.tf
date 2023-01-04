@@ -176,7 +176,7 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "PRIVATE_KEY",
-        "value": "${var.PRIVATE_KEY}"
+        "value": "${var.DEV_NET_ROOT_PRIVATE_KEY}"
       },
       {
         "name": "SERVER_AUTH_TOKEN",
