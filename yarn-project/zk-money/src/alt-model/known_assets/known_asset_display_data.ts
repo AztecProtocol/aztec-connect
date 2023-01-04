@@ -102,3 +102,14 @@ export function getAssetPreferredFractionalDigits(label?: AssetLabel) {
       return 6;
   }
 }
+
+export function getAssetWithdrawShown(label?: AssetLabel) {
+  switch (label) {
+    case 'Eth':
+    case 'DAI':
+    case 'LUSD':
+      return true;
+    default:
+      return false;
+  }
+}
