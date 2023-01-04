@@ -29,7 +29,7 @@ interface Asset {
 export interface FieldProps {
   value: string;
   label?: string;
-  sublabel?: string;
+  sublabel?: string | JSX.Element;
   message?: string;
   prefix?: string;
   placeholder?: string;

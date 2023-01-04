@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { GrumpkinAddress } from '@aztec/sdk';
-import { formatAliasInput, isValidAliasInput } from '../app/index.js';
+import { isValidAliasInput } from '../app/index.js';
 import { createGatedSetter, useObs } from '../app/util/index.js';
 import { useAccountState } from './account_state/index.js';
 import { useSdk, useAliasManager } from './top_level_context/index.js';
@@ -16,9 +16,8 @@ export function useUserIdForRecipientStr(recipientStr: string, debounceMs: numbe
     isLoading: false,
   });
   const isGrumpkinAddress = GrumpkinAddress.isAddress(recipientStr);
-  const formattedRecipientStr = isGrumpkinAddress ? recipientStr : formatAliasInput(recipientStr);
   useEffect(() => {
-    if (!isValidAliasInput(formattedRecipientStr) && !isGrumpkinAddress) {
+    if (!isValidAliasInput(recipientStr) && !isGrumpkinAddress) {
       setUserIdFetchState({ isLoading: false });
       return;
     }
@@ -27,11 +26,11 @@ export function useUserIdForRecipientStr(recipientStr: string, debounceMs: numbe
 
     const task = setTimeout(() => {
       if (isGrumpkinAddress) {
-        gatedSetter.set({ isLoading: false, userId: GrumpkinAddress.fromString(formattedRecipientStr) });
+        gatedSetter.set({ isLoading: false, userId: GrumpkinAddress.fromString(recipientStr) });
       } else if (allowOwnAlias && recipientStr === cachedAlias) {
         gatedSetter.set({ isLoading: false, userId: accountState?.userId });
       } else {
-        sdk?.getAccountPublicKey(formattedRecipientStr).then(userId => {
+        sdk?.getAccountPublicKey(recipientStr).then(userId => {
           const isErrorState = accountState?.userId && userId?.equals(accountState?.userId) && !allowOwnAlias;
           gatedSetter.set({ isLoading: false, userId: isErrorState ? undefined : userId });
         });
@@ -41,16 +40,7 @@ export function useUserIdForRecipientStr(recipientStr: string, debounceMs: numbe
       gatedSetter.close();
       clearTimeout(task);
     };
-  }, [
-    sdk,
-    isGrumpkinAddress,
-    formattedRecipientStr,
-    accountState?.userId,
-    cachedAlias,
-    allowOwnAlias,
-    debounceMs,
-    recipientStr,
-  ]);
+  }, [sdk, isGrumpkinAddress, accountState?.userId, cachedAlias, allowOwnAlias, debounceMs, recipientStr]);
   return userIdFetchState;
 }
 

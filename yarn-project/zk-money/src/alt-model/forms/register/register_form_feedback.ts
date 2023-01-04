@@ -16,12 +16,7 @@ function getRegisterFormWalletAccountFeedback(resources: RegisterFormResources, 
   }
 }
 
-function getRegisterFormSpendingKeysFeedback(
-  _: RegisterFormResources,
-  assessment: RegisterFormAssessment,
-  touched: boolean,
-) {
-  if (!touched) return;
+function getRegisterFormSpendingKeysFeedback(_: RegisterFormResources, assessment: RegisterFormAssessment) {
   if (assessment.spendingKey.issues.noSpendingKeyGenerated) {
     return 'Please retrieve your spending key';
   }
@@ -48,11 +43,7 @@ export function getRegisterFormFeedback(
 ) {
   const amount = getL1DepositAmountInputFeedback(resources, assessment);
   const walletAccount = getRegisterFormWalletAccountFeedback(resources, assessment);
-  const signingKeys = getRegisterFormSpendingKeysFeedback(
-    resources,
-    assessment,
-    touchedFields.spendingKeys || attemptedLock,
-  );
+  const signingKeys = getRegisterFormSpendingKeysFeedback(resources, assessment);
   const footer = getL1DepositFooterFeedback(resources, assessment);
   const alias = getRegisterFormAliasFeedback(assessment);
   return { amount, walletAccount, footer, signingKeys, alias };
