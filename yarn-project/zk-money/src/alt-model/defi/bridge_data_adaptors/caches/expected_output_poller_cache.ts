@@ -49,3 +49,5 @@ export function createExpectedOutputPollerCache(recipes: DefiRecipe[], adaptorCa
     },
   );
 }
+
+export type ExpectedOutputPollerCache = ReturnType<typeof createExpectedOutputPollerCache>;

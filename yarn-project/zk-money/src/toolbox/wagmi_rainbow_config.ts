@@ -12,6 +12,8 @@ function getChain(chainId: number): Chain {
       return chain.mainnet;
     case 1337:
       return chain.localhost;
+    case 0xe2e:
+      return { ...chain.localhost, id: 0xe2e };
     case 0xa57ec:
       return {
         id: 0xa57ec,
@@ -46,6 +48,7 @@ function getPublicProvider(config: Config) {
       }
     }
     case 1337:
+    case 0xe2e:
     case 0xa57ec:
     case 0xdef:
       return jsonRpcProvider({ rpc: () => ({ http: config.ethereumHost }) });
