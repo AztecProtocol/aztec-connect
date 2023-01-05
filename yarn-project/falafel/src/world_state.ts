@@ -567,8 +567,10 @@ export class WorldState {
       );
     }
 
+    // need to add the claims first as there may be claims added here that are updated further down
+    await this.rollupDb.addClaims(claimsToAdd);
+
     await Promise.all([
-      this.rollupDb.addClaims(claimsToAdd),
       this.rollupDb.confirmClaimed(confirmClaimedNullifiers, block.mined),
       this.rollupDb.updateClaimsWithResultRollupId(
         interactionResult.map(ir => ir.nonce),
