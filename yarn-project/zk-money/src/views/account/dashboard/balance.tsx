@@ -80,7 +80,7 @@ export function Balance(props: BalanceProps) {
   }, [txs]);
 
   if (isLoading) return <LoadingFallback />;
-  if (accountState?.isSyncing) return <SyncingFallback />;
+  if (accountState?.isSyncing && accountState.isRegistered) return <SyncingFallback />;
 
   if (!accountState || !accountState.isRegistered)
     return (

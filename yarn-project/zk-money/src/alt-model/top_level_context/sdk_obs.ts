@@ -29,7 +29,6 @@ export function createSdkObs(config: Config): SdkObs {
     minConfirmation: chainIdToNetwork(config.chainId)?.isFrequent ? 1 : undefined,
   })
     .then(sdk => {
-      sdk.run(); // TODO: move this until after registration
       sdkObs.next(sdk);
       sdk.addListener(SdkEvent.DESTROYED, () => sdkObs.next(undefined));
       sdk.on(SdkEvent.VERSION_MISMATCH, () => {

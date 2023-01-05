@@ -6,16 +6,16 @@ import style from './synchronisation_loading_bar.module.scss';
 function useSynchronsationProgress() {
   const accountState = useAccountState();
   const rpStatus = useRollupProviderStatus();
-  if (!rpStatus || !accountState)
+  if (!rpStatus || !accountState || rpStatus.blockchainStatus.nextRollupId < 2 || accountState.syncedToRollup < 0)
     return {
       text: 'Synchronising blocks...',
       progress: 0,
     };
-  const total = rpStatus ? rpStatus.blockchainStatus.nextRollupId - 1 : undefined;
-  const current = accountState?.syncedToRollup ?? 0;
+  const total = rpStatus.blockchainStatus.nextRollupId - 1;
+  const current = accountState.syncedToRollup;
   return {
     text: `Synchronising blocks (${current} / ${total})`,
-    progress: current / (total ?? 1),
+    progress: current / total,
   };
 }
 

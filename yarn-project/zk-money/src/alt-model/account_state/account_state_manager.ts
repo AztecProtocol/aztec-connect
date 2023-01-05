@@ -72,6 +72,13 @@ export class AccountStateManager {
 
   private watchUser(sdk: AztecSdk, userId: GrumpkinAddress, ethAddressUsedForAccountKey: EthAddress) {
     debug(`Watching user state for '${userId.toString()}'`);
+
+    // Start the sdk running (required for some queries below). We're only
+    // doing this now so as to avoid overfetching data. (Adding a new user
+    // resets the global synchronisation state.) It's benign to kick this
+    // method when the sdk is already running.
+    sdk.run();
+
     let isRegistered = false;
     const updateState = async () => {
       // Fetch in parallel
