@@ -245,7 +245,7 @@ export class Server {
     // You can actually never assume that a value returned by a `call` that is shared, is not immediately stale.
     // The fact that Bob's transaction happened before Charlie's call, but Charlie experiences the state change after,
     // is irrelevant.
-    if (args.method == 'eth_getTransactionReceipt' && result.blockNumber > this.blockNumber) {
+    if (args.method == 'eth_getTransactionReceipt' && result?.blockNumber > this.blockNumber) {
       this.debug(`discarding transaction receipt result until cache cleared.`);
       return null;
     }
