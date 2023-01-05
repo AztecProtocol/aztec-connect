@@ -14,10 +14,6 @@ variable "FAUCET_OPERATOR_ADDRESS" {
   type = string
 }
 
-variable "DEV_NET_RPC_URL" {
-  type = string
-}
-
 variable "DEV_NET_API_KEY" {
   type = string
 }
