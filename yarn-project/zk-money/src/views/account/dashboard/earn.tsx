@@ -1,6 +1,6 @@
 import { DefiInvestmentsSection } from '../../../components/defi_investments/defi_investments_section.js';
-import { DefiRecipe } from '../../../alt-model/defi/types.js';
 import { DefiCardsList } from './defi_cards_list.js';
+import { DefiRecipe } from '../../../alt-model/defi/types.js';
 import style from './earn.module.scss';
 
 interface EarnProps {

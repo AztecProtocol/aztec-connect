@@ -10,6 +10,7 @@
   background-color: white;
   margin: 20px 0;
   flex-flow: row wrap;
+  gap: 20px;
 }
 
 .holdingInformation {
@@ -22,6 +23,11 @@
 .asset {
   display: flex;
   align-items: center;
+}
+
+.clock {
+  width: 11px;
+  height: 11px;
 }
 
 .icon {
@@ -52,13 +58,38 @@
   }
 }
 
-.spendable {
+.details {
   margin-left: 20px;
   font-size: 13px;
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+
+  @media (max-width: 900px) {
+    flex-direction: column;
+  }
 
   @media (max-width: 480px) {
     margin-left: 0;
   }
+}
+
+.spendableBalance {
+  padding: 3px 0;
+}
+
+.alert {
+  font-weight: 500;
+}
+
+.pendingBalance {
+  background-color: #ffd166;
+  color: black;
+  border-radius: 5px;
+  flex-direction: row;
+  display: flex;
+  gap: 10px;
+  padding: 3px 6px;
 }
 
 .buttonIcon {
@@ -95,6 +126,7 @@
 @media (max-width: 900px) {
   .holdingWrapper {
     padding: 20px;
+    gap: 15px;
   }
 
   .buttonsWrapper {
@@ -108,10 +140,6 @@
 }
 
 @media (max-width: 480px) {
-  .holdingWrapper {
-    gap: 15px;
-  }
-
   .buttonsWrapper {
     justify-content: space-evenly;
     gap: initial;

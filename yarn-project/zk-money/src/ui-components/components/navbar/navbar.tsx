@@ -1,8 +1,10 @@
 import { Link, useLocation } from 'react-router-dom';
+import { usePendingBalances } from '../../../alt-model/assets/l1_balance_hooks.js';
 import { ReactComponent as Logo } from '../../../images/zk_money.svg';
 import { ReactComponent as MobileNavbarEarn } from '../../../images/mobile_navbar_earn.svg';
 import { ReactComponent as MobileNavbarTrade } from '../../../images/mobile_navbar_trade.svg';
 import { ReactComponent as MobileNavbarWallet } from '../../../images/mobile_navbar_wallet.svg';
+import { ReactComponent as Clock } from '../../images/clock.svg';
 import { bindStyle } from '../../../ui-components/util/classnames.js';
 import style from './navbar.module.scss';
 
@@ -49,6 +51,7 @@ const LINKS: LinkItem[] = [
 
 export function Navbar({ isUserRegistered, accountComponent, theme, onChange }: NavbarProps): JSX.Element {
   const location = useLocation();
+  const pendingBalances = usePendingBalances();
 
   return (
     <div className={style.headerRoot}>
@@ -83,6 +86,9 @@ export function Navbar({ isUserRegistered, accountComponent, theme, onChange }: 
         >
           <MobileNavbarWallet className={style.mobileImage} />
           {isUserRegistered ? 'Wallet' : 'Access'}
+          {isUserRegistered && pendingBalances && Object.keys(pendingBalances).length > 0 ? (
+            <Clock className={style.alert} />
+          ) : null}
         </Link>
       </div>
       {isUserRegistered ? <div className={style.accountComponent}>{accountComponent}</div> : null}

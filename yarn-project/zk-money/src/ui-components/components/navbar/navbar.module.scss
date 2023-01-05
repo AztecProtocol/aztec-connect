@@ -71,9 +71,9 @@
 }
 
 .navLink {
-  border-bottom: 2px solid rgba(255, 255, 255, 0);
+  border-bottom: 2px solid transparent;
   position: relative;
-  padding-bottom: 5px;
+  padding-bottom: 4px;
   opacity: 1;
   margin-top: 5px;
   font-weight: 450;
@@ -88,8 +88,27 @@
   opacity: 0.5;
 }
 
-.navLink.active::before {
-  color: #2f1f49;
+.navLink.active {
+  border-bottom: 2px solid #2f1f49;
+}
+
+.alert {
+  position: absolute;
+  top: -6px;
+  right: -16px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 500;
+  align-items: center;
+
+  @media (max-width: 480px) {
+    right: 35px;
+    top: -5px;
+  }
 }
 
 .balanceLink {
