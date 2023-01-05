@@ -149,7 +149,6 @@ describe('end-to-end chained txs tests', () => {
               value,
               fee: depositFees[TxSettlementTime.NEXT_ROLLUP],
               publicOwner: addresses[0],
-              settled: undefined,
             }),
           ),
         );
@@ -162,7 +161,6 @@ describe('end-to-end chained txs tests', () => {
             value: depositValues[0],
             fee: depositFees[TxSettlementTime.INSTANT],
             publicOwner: addresses[1],
-            settled: undefined,
           }),
         ]);
 
