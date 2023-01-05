@@ -57,7 +57,7 @@ const developmentConfig: ConfigVars = {
 function getEthereumHost(chainId: number) {
   switch (chainId) {
     case 5:
-      return 'https://goerli.infura.io/v3/6a04b7c89c5b421faefde663f787aa35';
+      return 'https://goerli.infura.io/v3/85712ac4df0446b58612ace3ed566352';
     case 1337:
       return 'http://localhost:8545';
     case 0xe2e: {

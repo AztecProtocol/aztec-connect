@@ -51,23 +51,23 @@ Examples:
 
 ## Generating account Data
 
-1. `yarn start migrate -d /home/data -a 0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba -u "https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35"`
+1. `yarn start migrate -d /home/data -a 0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba -u "https://mainnet.infura.io/v3/85712ac4df0446b58612ace3ed566352"`
 
-   Will extract account data from the Aztec 1 rollup contract at address 0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba. It will look for rollups from id 0 to infinity with at least 3 confirmations and using provider at "https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35". Will then store account data into file /home/data/accounts.
+   Will extract account data from the Aztec 1 rollup contract at address 0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba. It will look for rollups from id 0 to infinity with at least 3 confirmations and using provider at "https://mainnet.infura.io/v3/85712ac4df0446b58612ace3ed566352". Will then store account data into file /home/data/accounts.
 
-2. `yarn start migrate -d /home/data -a 0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba -u "https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35" -z`
+2. `yarn start migrate -d /home/data -a 0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba -u "https://mainnet.infura.io/v3/85712ac4df0446b58612ace3ed566352" -z`
 
-   Will extract account data from the Aztec Connect rollup contract at address 0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba. It will look for rollups from id 0 to infinity with at least 3 confirmations and using provider at "https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35". Will then store account data into file /home/data/accounts.
+   Will extract account data from the Aztec Connect rollup contract at address 0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba. It will look for rollups from id 0 to infinity with at least 3 confirmations and using provider at "https://mainnet.infura.io/v3/85712ac4df0446b58612ace3ed566352". Will then store account data into file /home/data/accounts.
 
-3. `yarn start migrate -d /home/data -f 5 -t 2001 -c 2 -a 0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba -u "https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35" -z`
+3. `yarn start migrate -d /home/data -f 5 -t 2001 -c 2 -a 0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba -u "https://mainnet.infura.io/v3/85712ac4df0446b58612ace3ed566352" -z`
 
-   Will extract account data from the Aztec Connect rollup contract at address 0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba. It will look for rollups from id 5 to 2001 with at least 2 confirmations and using provider at "https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35". Will then store account data into file /home/data/accounts.
+   Will extract account data from the Aztec Connect rollup contract at address 0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba. It will look for rollups from id 5 to 2001 with at least 2 confirmations and using provider at "https://mainnet.infura.io/v3/85712ac4df0446b58612ace3ed566352". Will then store account data into file /home/data/accounts.
 
 ## Verifying account data
 
-1. `yarn start migrate -d /home/data -v 1 -f 5 -t 2001 -c 2 -a 0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba -u "https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35"`
+1. `yarn start migrate -d /home/data -v 1 -f 5 -t 2001 -c 2 -a 0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba -u "https://mainnet.infura.io/v3/85712ac4df0446b58612ace3ed566352"`
 
-   Will extract account data from the Aztec 1 rollup contract at address 0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba. It will look for rollups from id 5 to 2001 with at least 2 confirmations and using provider at "https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35". Account data won't be stored, instead the tree roots will be generated from the on-chain data and verified against those stored in barretenberg.js/src/environment/init/init_config.ts for chain id 1
+   Will extract account data from the Aztec 1 rollup contract at address 0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba. It will look for rollups from id 5 to 2001 with at least 2 confirmations and using provider at "https://mainnet.infura.io/v3/85712ac4df0446b58612ace3ed566352". Account data won't be stored, instead the tree roots will be generated from the on-chain data and verified against those stored in barretenberg.js/src/environment/init/init_config.ts for chain id 1
 
 The data directory is required for both modes of operation as temporary files are always required, this directory must be created prior to running the application
 
