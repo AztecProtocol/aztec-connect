@@ -23,7 +23,7 @@ export function Toolbox({ config }: { config: Config }) {
   const [sdk, setSdk] = useState<AztecSdk>();
   const { rollupProviderUrl, ethereumHost, chainId } = config;
   useEffect(() => {
-    const jsonRpcProvider = new JsonRpcProvider(ethereumHost);
+    const jsonRpcProvider = new JsonRpcProvider(ethereumHost, false);
     createAztecSdk(jsonRpcProvider, {
       serverUrl: rollupProviderUrl,
       flavour: SdkFlavour.PLAIN,

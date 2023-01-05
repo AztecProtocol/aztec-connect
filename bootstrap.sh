@@ -23,7 +23,6 @@ PROJECTS=(
   "barretenberg:./bootstrap.sh db_cli rollup_cli"
   "contracts:./bootstrap.sh"
   "yarn-project/barretenberg.js:./bootstrap.sh"
-  "yarn-project/blockchain:yarn build"
   "yarn-project/sdk:yarn build"
 )
 

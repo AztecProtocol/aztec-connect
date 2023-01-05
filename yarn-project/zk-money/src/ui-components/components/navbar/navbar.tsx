@@ -1,10 +1,10 @@
 import { Link, useLocation } from 'react-router-dom';
-import { ReactComponent as Logo } from '../../images/zk_money.svg';
+import { usePendingBalances } from '../../../alt-model/assets/l1_balance_hooks.js';
+import { ReactComponent as Logo } from '../../../images/zk_money.svg';
 import { ReactComponent as MobileNavbarEarn } from '../../../images/mobile_navbar_earn.svg';
 import { ReactComponent as MobileNavbarTrade } from '../../../images/mobile_navbar_trade.svg';
 import { ReactComponent as MobileNavbarWallet } from '../../../images/mobile_navbar_wallet.svg';
-import zkMoneyLogoWhite from '../../../images/zk_money_white.svg';
-import zkMoneyLogo from '../../images/zk_money.svg';
+import { ReactComponent as Clock } from '../../images/clock.svg';
 import { bindStyle } from '../../../ui-components/util/classnames.js';
 import style from './navbar.module.scss';
 
@@ -49,20 +49,16 @@ const LINKS: LinkItem[] = [
   { url: Pages.TRADE, label: 'Trade', mobileImage: <MobileNavbarTrade className={style.mobileImage} /> },
 ];
 
-function getLogo(theme: Theme | undefined) {
-  if (isSafari) {
-    return <img src={theme === Theme.GRADIENT ? zkMoneyLogoWhite : zkMoneyLogo} alt="zk.money logo" />;
-  }
-  return <Logo className={cx(style.logo, theme === Theme.GRADIENT ? style.gradient : style.white)} />;
-}
-
 export function Navbar({ isUserRegistered, accountComponent, theme, onChange }: NavbarProps): JSX.Element {
   const location = useLocation();
+  const pendingBalances = usePendingBalances();
 
   return (
     <div className={style.headerRoot}>
       <div className={cx(style.logoRoot, { enabled: !!onChange })}>
-        <Link to={Pages.HOME}>{getLogo(theme)}</Link>
+        <Link to={Pages.HOME}>
+          <Logo className={cx(style.logo, style.white)} />
+        </Link>
       </div>
 
       <div className={style.accountRoot}>
@@ -90,9 +86,12 @@ export function Navbar({ isUserRegistered, accountComponent, theme, onChange }: 
         >
           <MobileNavbarWallet className={style.mobileImage} />
           {isUserRegistered ? 'Wallet' : 'Access'}
+          {isUserRegistered && pendingBalances && Object.keys(pendingBalances).length > 0 ? (
+            <Clock className={style.alert} />
+          ) : null}
         </Link>
-        {isUserRegistered ? <div className={style.accountComponent}>{accountComponent}</div> : null}
       </div>
+      {isUserRegistered ? <div className={style.accountComponent}>{accountComponent}</div> : null}
     </div>
   );
 }

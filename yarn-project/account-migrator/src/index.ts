@@ -36,7 +36,6 @@ function withHardenOptions(command: Command) {
     .option('-t, --to <rollupIdTo>', 'Id of last required rollup', parseAndCheckNumber, Infinity)
     .option('-w, --numWorkers <wkrs>', 'Number of workers for note decryptor and pedersen', parseAndCheckNumber, 1)
     .option('-m, --memoryDb <mem>', 'Flag indicating whether to use a memoryDB', false)
-    //.option('-i, --identifier <id>', 'DB identifier')
     .option('-l, --liveRun <live>', 'Flag indicating whether this is a live run (testnet/mainnet)', false);
 }
 
@@ -69,42 +68,48 @@ async function main() {
     )
     .action(migrate);
 
-
   // harden command
   const hardenCommand = program
     .command('harden')
-    .description('Harden accounts by migrating an alias without spending keys to the account\'s inverted public key');
+    .description("Harden accounts by migrating an alias without spending keys to the account's inverted public key");
 
   // harden subcommands, each with the same set of options defined in the `withHardenOptions` helper
   withHardenOptions(
     hardenCommand
       .command('fullSequence')
       .description('Run all sub-steps to harden all accounts')
-      .action((options) => harden(HardenCommand.FULL_SEQUENCE, options)),
+      .action(options => harden(HardenCommand.FULL_SEQUENCE, options)),
   );
+  // This command may prove useful in the future
+  //withHardenOptions(
+  //  hardenCommand
+  //    .command('pullAccounts')
+  //    .description('Just pull all accounts - probably don\'t want to run this alone')
+  //    .action(options => harden(HardenCommand.CREATE_HARDENER, options)),
+  //);
   withHardenOptions(
     hardenCommand
       .command('createHardener')
       .description('Create hardener account that will be used to harden all vulnerable accounts')
-      .action((options) => harden(HardenCommand.CREATE_HARDENER, options)),
+      .action(options => harden(HardenCommand.CREATE_HARDENER, options)),
   );
   withHardenOptions(
     hardenCommand
       .command('genHardenProofs')
       .description('Generate proofs that can be used to harden vulnerable accounts')
-      .action((options) => harden(HardenCommand.GEN_HARDEN_PROOFS, options)),
+      .action(options => harden(HardenCommand.GEN_HARDEN_PROOFS, options)),
   );
   withHardenOptions(
     hardenCommand
       .command('hardenAccounts')
       .description('Harden accounts by submitting previously generated proofs')
-      .action((options) => harden(HardenCommand.HARDEN_ACCOUNTS, options)),
+      .action(options => harden(HardenCommand.HARDEN_ACCOUNTS, options)),
   );
   withHardenOptions(
     hardenCommand
       .command('verifyHardened')
       .description('Verify that all accounts in the block range have been hardened')
-      .action((options) => harden(HardenCommand.VERIFY_HARDENED, options)),
+      .action(options => harden(HardenCommand.VERIFY_HARDENED, options)),
   );
 
   await program.parseAsync(process.argv);

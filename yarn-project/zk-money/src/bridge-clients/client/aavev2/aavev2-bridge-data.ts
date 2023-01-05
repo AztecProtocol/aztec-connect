@@ -1,7 +1,6 @@
-import { Web3Provider } from '@ethersproject/providers';
+import { StaticJsonRpcProvider } from '@ethersproject/providers';
 import 'isomorphic-fetch';
-import { createWeb3Provider } from '../aztec/provider/web3_provider.js';
-import { AssetValue, EthereumProvider } from '@aztec/sdk';
+import { AssetValue } from '@aztec/sdk';
 import { AztecAsset, AztecAssetType } from '../bridge-data.js';
 
 import { ERC4626BridgeData } from '../erc4626/erc4626-bridge-data.js';
@@ -10,13 +9,12 @@ export class AaveV2BridgeData extends ERC4626BridgeData {
   private readonly subgraphWethId = '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2';
   private readonly RAY = 10 ** 27;
 
-  protected constructor(ethersProvider: Web3Provider) {
+  protected constructor(ethersProvider: StaticJsonRpcProvider) {
     super(ethersProvider);
   }
 
-  static create(provider: EthereumProvider) {
-    const ethersProvider = createWeb3Provider(provider);
-    return new AaveV2BridgeData(ethersProvider);
+  static create(provider: StaticJsonRpcProvider) {
+    return new AaveV2BridgeData(provider);
   }
 
   async getAPR(yieldAsset: AztecAsset): Promise<number> {

@@ -2,17 +2,20 @@
   display: flex;
   letter-spacing: 0.03em;
   padding: 30px;
-  flex-basis: 33%;
+  gap: 30px;
   line-height: 150%;
+  background-color: white;
   overflow: initial;
+
+  @media (max-width: 768px) {
+    font-size: 16px;
+    padding: 20px;
+    gap: 15px;
+  }
 }
 
-.shieldMoreButton {
-  margin-top: 30px;
-}
-
-.modalAnchor {
-  position: relative;
+.shieldMoreLabel {
+  white-space: nowrap;
 }
 
 .shieldMoreLabel {

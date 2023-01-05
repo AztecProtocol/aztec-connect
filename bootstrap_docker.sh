@@ -18,7 +18,7 @@ if [ -z "$TARGET_PROJECT" ]; then
   TARGET_PROJECT=$(git rev-parse --show-prefix)
   if [ -n "$TARGET_PROJECT" ]; then
     # We are in a project folder.
-    ONLY_TARGET=true
+    ONLY_TARGET=${ONLY_TARGET:-true}
     TARGET_PROJECT=$(basename $TARGET_PROJECT)
     cd $(git rev-parse --show-cdup)
   fi

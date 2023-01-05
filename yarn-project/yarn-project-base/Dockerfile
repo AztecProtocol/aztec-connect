@@ -16,6 +16,7 @@ WORKDIR /usr/src/yarn-project
 COPY account-migrator/package.json account-migrator/package.json
 COPY barretenberg.js/package.json barretenberg.js/package.json
 COPY blockchain/package.json blockchain/package.json
+COPY blockchain-cli/package.json blockchain-cli/package.json
 COPY contracts-verifier-test/package.json contracts-verifier-test/package.json
 COPY explorer/package.json explorer/package.json
 COPY halloumi/package.json halloumi/package.json

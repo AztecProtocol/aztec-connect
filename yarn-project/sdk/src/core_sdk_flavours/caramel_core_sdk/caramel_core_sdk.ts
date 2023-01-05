@@ -2,7 +2,6 @@ import { BridgePublishQuery, BridgePublishQueryResult, TxJson } from '@aztec/bar
 import { EventEmitter } from 'events';
 import { LevelUp } from 'levelup';
 import { CoreSdkOptions, CoreSdkSerializedInterface, CoreSdkServerStub, SdkEvent } from '../../core_sdk/index.js';
-import { NoteJson } from '../../note/index.js';
 import {
   accountProofInputFromJson,
   AccountProofInputJson,
@@ -197,11 +196,11 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
     userId: string,
     bridgeCallData: string,
     depositValue: string,
-    inputNotes: NoteJson[],
+    fee: string,
     spendingPublicKey: string,
   ) {
     await this.checkPermission(userId);
-    return this.core.createDefiProofInput(userId, bridgeCallData, depositValue, inputNotes, spendingPublicKey);
+    return this.core.createDefiProofInput(userId, bridgeCallData, depositValue, fee, spendingPublicKey);
   }
 
   public async createDefiProof(input: JoinSplitProofInputJson, txRefNo: number) {

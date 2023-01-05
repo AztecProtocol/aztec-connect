@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { RollupProviderStatus } from '@aztec/sdk';
-import { JsonRpcProvider } from '@ethersproject/providers';
+import { StaticJsonRpcProvider } from '@ethersproject/providers';
 import { createBridgeDataAdaptorsMethodCaches } from '../../alt-model/defi/bridge_data_adaptors/caches/bridge_data_adaptors_method_caches.js';
 import { createDefiRecipes } from '../../alt-model/defi/recipes.js';
 import { createPriceFeedObsCache } from '../../alt-model/price_feeds/index.js';
@@ -21,7 +21,7 @@ function createTopLevelContextValue(
   config: Config,
   initialRollupProviderStatus: RollupProviderStatus,
 ): TopLevelContextValue {
-  const stableEthereumProvider = new JsonRpcProvider(config.ethereumHost);
+  const stableEthereumProvider = new StaticJsonRpcProvider(config.ethereumHost);
   const sdkObs = createSdkObs(config);
   const accountStateManager = new AccountStateManager(sdkObs);
   const aliasManager = new AliasManager();
@@ -49,6 +49,8 @@ function createTopLevelContextValue(
     stableEthereumProvider,
     chainLinkPollerCache,
     bridgeDataAdaptorsMethodCaches.underlyingAmountPollerCache,
+    bridgeDataAdaptorsMethodCaches.expectedOutputPollerCache,
+    bridgeDataAdaptorsMethodCaches.auxDataPollerCache,
   );
   const defiPulishStatsPollerCache = createDefiPublishStatsPollerCache(sdkObs);
 

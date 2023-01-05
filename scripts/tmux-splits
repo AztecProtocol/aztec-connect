@@ -1,5 +1,5 @@
 #!/bin/bash
-# Launches tmux with 1 window running ganache, and a second window with 5 panes running, from top to bottom:
+# Launches tmux with 1 window running contracts, and a second window with 5 panes running, from top to bottom:
 # - kebab
 # - halloumi
 # - falafel
@@ -14,7 +14,7 @@ if tmux has-session -t $SESSION_NAME > /dev/null 2>&1; then
   tmux attach -t $SESSION_NAME
 else
   tmux new-session -s $SESSION_NAME -d \; \
-  send-keys 'cd yarn-project/blockchain && yarn start:ganache' C-m \; \
+  tmux send-keys 'cd contracts && bash scripts/start_e2e.sh' C-m \; \
   new-window \; \
   split-window \; \
   select-layout even-vertical \; \
@@ -23,7 +23,7 @@ else
   split-window \; \
   select-layout even-vertical \; \
   split-window \;  \
-  select-layout even-vertical \;
+  select-layout even-vertical \; \
   # Give a chance for terminals to start (avoids double command echo).
   sleep 3
   tmux select-pane -t 0 \; \
@@ -35,6 +35,6 @@ else
   select-pane -t 3 \; \
   send-keys 'cd yarn-project/hummus && yarn start:dev' C-m \; \
   select-pane -t 4 \; \
-  send-keys "cd yarn-project/end-to-end && ([ -z \"$TEST\" ] || (./scripts/wait_till_ready localhost && yarn test $TEST))" C-m \; \
+  send-keys "cd yarn-project/end-to-end && ([ -z \"$TEST\" ] || (yarn test $TEST))" C-m \; \
   attach \;
 fi

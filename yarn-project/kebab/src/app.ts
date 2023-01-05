@@ -3,6 +3,7 @@ import Router from 'koa-router';
 import bodyParser from 'koa-bodyparser';
 import compress from 'koa-compress';
 import cors from '@koa/cors';
+import { Server } from './server.js';
 
 // Not sure why the declaration in koa-bodyparser is not being picked up. Workaround...
 // Maybe you, dear reader, can fix and let me (Charlie) know why?
@@ -12,9 +13,6 @@ declare module 'koa' {
     rawBody: string;
   }
 }
-
-import { EthRequestArguments, Server } from './server.js';
-import { DEFI_BRIDGE_EVENT_TOPIC, ROLLUP_PROCESSED_EVENT_TOPIC } from './rollup_event_getter.js';
 
 export function appFactory(server: Server, prefix: string) {
   const router = new Router<DefaultState, Context>({ prefix });
@@ -56,43 +54,36 @@ export function appFactory(server: Server, prefix: string) {
   };
 
   router.post('/:key?', checkReady, auth, async (ctx: Koa.Context) => {
-    const { method, params = [], jsonrpc, id } = ctx.request.body as EthRequestArguments;
+    const { method, params = [], jsonrpc, id } = ctx.request.body;
+
     if (!server.isValidApiKey(ctx.params.key)) {
       ctx.status = 401;
       ctx.body = { error: 'Unauthorised' };
       return;
     }
-    if (
-      server.isReady() &&
-      method?.startsWith('eth_getLogs') &&
-      params[0].topics?.length &&
-      [ROLLUP_PROCESSED_EVENT_TOPIC, DEFI_BRIDGE_EVENT_TOPIC].includes(params[0].topics[0])
-    ) {
-      // do the work
-      const result = await server.queryLogs(params[0]);
-      ctx.body = { jsonrpc, id, result };
-    } else {
-      // forward to node
-      const result = await server.forwardEthRequest(ctx.request.body);
-      ctx.body = { ...result };
-    }
+
+    const result = await server.jsonRpc({ method, params });
+    ctx.body = { jsonrpc, id, result };
   });
 
   router.get('/', (ctx: Koa.Context) => {
-    const serverConfig = server.getRedeployConfig();
-    const redeployConfig = {
-      rollupContractAddress: serverConfig.rollupContractAddress?.toString(),
-      priceFeedContractAddresses: serverConfig.priceFeedContractAddresses?.map(x => x.toString()).join(','),
-      feeDistributorAddress: serverConfig.feeDistributorAddress?.toString(),
-      permitHelperAddress: serverConfig.permitHelperContractAddress?.toString(),
-      faucetContractAddress: serverConfig.faucetContractAddress?.toString(),
-      bridgeDataProviderContractAddress: serverConfig.bridgeDataProviderContractAddress?.toString(),
-    };
     ctx.body = {
       serviceName: 'kebab',
       isReady: server.isReady(),
-      redeployConfig,
     };
+    ctx.status = 200;
+  });
+
+  router.get('/metrics', async (ctx: Koa.Context) => {
+    ctx.body = '';
+
+    // Fetch and forward metrics from sidecar.
+    // Means we can easily use prometheus dns_sd_configs to make SRV queries to scrape metrics.
+    const sidecarResp = await fetch('http://localhost:9545/metrics').catch(() => undefined);
+    if (sidecarResp) {
+      ctx.body += await sidecarResp.text();
+    }
+
     ctx.status = 200;
   });
 

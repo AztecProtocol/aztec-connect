@@ -29,6 +29,15 @@ data "terraform_remote_state" "aztec2_iac" {
   }
 }
 
+data "terraform_remote_state" "contracts" {
+  backend = "s3"
+  config = {
+    bucket = "aztec-terraform"
+    key    = "${var.DEPLOY_TAG}/contracts"
+    region = "eu-west-2"
+  }
+}
+
 provider "aws" {
   profile = "default"
   region  = "eu-west-2"
@@ -167,7 +176,7 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "PRIVATE_KEY",
-        "value": "${var.PRIVATE_KEY}"
+        "value": "${var.DEV_NET_ROOT_PRIVATE_KEY}"
       },
       {
         "name": "SERVER_AUTH_TOKEN",
@@ -194,8 +203,24 @@ resource "aws_ecs_task_definition" "falafel" {
         "value": "true"
       },
       {
+        "name": "ROLLUP_CONTRACT_ADDRESS",
+        "value": "${data.terraform_remote_state.contracts.outputs.rollup_contract_address}"
+      },
+      {
+        "name": "PERMIT_HELPER_CONTRACT_ADDRESS",
+        "value": "${data.terraform_remote_state.contracts.outputs.permit_helper_contract_address}"
+      },
+      {
+        "name": "FEE_DISTRIBUTOR_ADDRESS",
+        "value": "${data.terraform_remote_state.contracts.outputs.fee_distributor_address}"
+      },
+      {
+        "name": "PRICE_FEED_CONTRACT_ADDRESSES",
+        "value": "${data.terraform_remote_state.contracts.outputs.price_feed_contract_addresses}"
+      },
+      {
         "name": "BRIDGE_DATA_PROVIDER_CONTRACT_ADDRESS",
-        "value": "0xD25B8B044CE58eaBF41288E223609726A6c98e44"
+        "value": "${data.terraform_remote_state.contracts.outputs.bridge_data_provider_contract_address}"
       }
     ],
     "mountPoints": [

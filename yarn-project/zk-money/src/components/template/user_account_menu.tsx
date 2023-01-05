@@ -147,7 +147,7 @@ export function UserAccountMenu() {
                     label="Aztec Account Alias"
                     sublabel="This is the alias for your Aztec account"
                     value={hasAlias ? cachedAlias : alias}
-                    onChangeValue={setAlias}
+                    onChangeValue={value => setAlias(value)}
                     disabled={hasAlias || walletInteractionIsOngoing}
                     message={
                       hasAlias || alias.length === 0

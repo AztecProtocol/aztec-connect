@@ -30,7 +30,7 @@ const CloseButton = styled.div`
 const ModalWrapper = styled.div`
   display: flex;
   flex-direction: column;
-  width: 970px;
+  width: 950px;
   overflow-y: auto;
 `;
 
@@ -41,7 +41,7 @@ interface ModalHeaderProps {
 }
 
 interface ModalProps extends ModalHeaderProps {
-  children: React.ReactNode;
+  children: React.ReactElement;
   noPadding?: boolean;
   className?: string;
 }
@@ -87,9 +87,11 @@ export const Modal: React.FunctionComponent<ModalProps> = props => {
     };
   }, [onClose]);
 
+  if (!props.children) return <></>;
+
   return (
     <Overlay>
-      <ModalWrapper className={props.className}>{props.children}</ModalWrapper>
+      <ModalWrapper className={props.className}>{React.cloneElement(props.children, { inModal: true })}</ModalWrapper>
     </Overlay>
   );
 };

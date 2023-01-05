@@ -21,6 +21,7 @@ import { AliasHash } from '@aztec/barretenberg/account_id';
 import { OffchainAccountData } from '@aztec/barretenberg/offchain_tx_data';
 import { ProofId } from '@aztec/barretenberg/client_proofs';
 import { Tx, txToJson, txFromJson } from '@aztec/barretenberg/rollup_provider';
+import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 
 // Halloumi imports
 import { HttpJobServer } from '@aztec/halloumi/proof_generator';
@@ -30,9 +31,9 @@ import fs from 'fs';
 import path from 'path';
 import { mkdirSync } from 'fs';
 import { randomBytes } from 'crypto';
-import {default as levelup, LevelUp } from 'levelup';
-import {default as leveldown} from 'leveldown';
-import {default as memdown} from 'memdown';
+import { default as levelup, LevelUp } from 'levelup';
+import { default as leveldown } from 'leveldown';
+import { default as memdown } from 'memdown';
 
 // Local imports
 import { createFundedWalletProvider } from './create_funded_wallet_provider.js';
@@ -44,9 +45,10 @@ const log = createLogger('am:accountHardener');
 const debug = createDebugLogger('am:debug:accountHardener');
 
 const BATCH_SIZE = 10;
-const MAX_PENDING_SECOND_CLASS_TXS = 2000;
+const MAX_PENDING_SECOND_CLASS_TXS = 200;
 const GEN_DIR = './gen/';
 const PROOFS_DIR = GEN_DIR + 'account-proofs/';
+const MERKLE_ROOT_FILE = GEN_DIR + 'merkle_root.json';
 const BATCH_COUNT_FILE = GEN_DIR + 'num_batches.json';
 const NEXT_BATCH_FILE = GEN_DIR + 'next_batch.json';
 const BATCH_FILE_PREFIX = PROOFS_DIR + 'account_proofs_block_';
@@ -82,9 +84,8 @@ const HARDENER_FILE = GEN_DIR + 'hardener.json';
  * @public
  */
 export class AccountHardener {
-  private ethPublicKey!: EthAddress; // eth public key for the provided private key
-  private ethPrivateKey!: Buffer;
   private allAccountsEver = new Map<string, GrumpkinAddress>();
+  private allAccountNullifiersEver = new Set<string>();
   private accountsProcessed = new Set<string>();
   private walletProvider!: WalletProvider;
   private rollupProvider!: SecondClassRollupProviderLimited;
@@ -94,7 +95,6 @@ export class AccountHardener {
   private proofGenerator!: HttpJobServer;
   private accountProver!: AccountProver;
   private schnorr!: Schnorr;
-  private hardener!: HardenerAccountInfo;
   private accounts!: GrumpkinAddress[];
   private numBatches!: number;
   // lastRollupId is used to keep track of the latest rollupId when checking new blocks for tx settlement
@@ -110,7 +110,6 @@ export class AccountHardener {
     private rollupIdTo: number,
     private numWorkers: number,
     private memoryDb: boolean,
-    private useCachedHardener: boolean = false,
     private liveRun: boolean = false,
   ) {}
 
@@ -178,19 +177,12 @@ export class AccountHardener {
       memoryDb: this.memoryDb,
       minConfirmation: this.confirmations,
       //debug: 'bb:*',  // setting this here overrides debug logger set in this module
-      identifier: "hardener",
+      identifier: 'hardener',
     });
 
     debug('Initializing WorldState');
-    this.worldState = new WorldState(getLevelDb(this.memoryDb), new SinglePedersen(this.wasm));
+    this.worldState = new WorldState(getLevelDb(this.memoryDb, 'hardenerWorldState'), new SinglePedersen(this.wasm));
     await this.worldState.init(0); // subTreeDepth is 0
-
-    // Initialize Hardener Account information using eth account,
-    // and optionally load Hardener aliasHash, path, and index
-    await this.initHardenerAccountInfo();
-    if (this.useCachedHardener) {
-      this.loadHardenerInfo();
-    }
   }
 
   /**
@@ -212,13 +204,15 @@ export class AccountHardener {
    * Ensures that the list of accounts is 'unique' (no duplicates).
    * Store batch count to file.
    */
-  public async pullAccountsToHarden() {
+  public async pullAccountsToHarden(needWorldState = true) {
     debug('Pulling initial accounts and accounts from rollup blocks');
 
     const initialState = await this.rollupProvider.getInitialWorldState();
     const initialAccounts = InitHelpers.parseAccountTreeData(initialState.initialAccounts);
 
     const notes = initialAccounts.flatMap(x => [x.notes.note1, x.notes.note2]);
+    // add account public key nullifiers to set
+    initialAccounts.forEach(x => this.allAccountNullifiersEver.add(x.nullifiers.nullifier2.toString('hex')));
     debug(`Number of initial account notes ${notes.length}`);
 
     // unique target accounts found within provided block range
@@ -227,6 +221,7 @@ export class AccountHardener {
     // Keep track of accounts in a Map for now to ensure no duplicates
     for (let a = 0; a < initialAccounts.length; a++) {
       const address = new GrumpkinAddress(initialAccounts[a].alias.address);
+      debug(`Initial account ${a}: ${address.toString()}`);
       this.allAccountsEver.set(address.toString(), address);
       if (this.rollupIdFrom == 0) {
         targetAccounts.set(address.toString(), address);
@@ -234,9 +229,11 @@ export class AccountHardener {
     }
     debug(`Number of unique initial accounts: ${this.allAccountsEver.size}`);
 
-    // Insert genesis accounts into WorldState
-    await this.worldState.insertElements(0, notes);
-    debug(`WorldState ROOT (notes only): ${this.worldState.getRoot().toString('hex')}`);
+    if (needWorldState) {
+      // Insert genesis accounts into WorldState
+      await this.worldState.insertElements(0, notes);
+      debug(`WorldState ROOT (notes only): ${this.worldState.getRoot().toString('hex')}`);
+    }
 
     // Get ALL blocks from rollup and decode contained data
     const filteredBlocks = await getRollupBlocks({
@@ -247,18 +244,21 @@ export class AccountHardener {
       to: Infinity,
     });
 
-
     // Insert all notes in rollup blocks into WorldState
     for (let i = 0; i < filteredBlocks.length; i++) {
       const block = filteredBlocks[i];
       const rollupProof = RollupProofData.decode(block.encodedRollupProofData);
-      const innerProofs = rollupProof.innerProofData;
-      const commitments = innerProofs.flatMap(x => [x.noteCommitment1, x.noteCommitment2]);
       debug(`----------------------------------------------------------------`);
       debug(`Rollup ID: ${block.rollupId}`);
-      await this.worldState.insertElements(rollupProof.dataStartIndex, commitments);
-      debug(`Inserted ${commitments.length} commitments to WorldState @ dataStartIndex ${rollupProof.dataStartIndex}`);
-
+      const innerProofs = rollupProof.innerProofData;
+      if (needWorldState) {
+        const commitments = innerProofs.flatMap(x => [x.noteCommitment1, x.noteCommitment2]);
+        // account public key nullifiers
+        await this.worldState.insertElements(rollupProof.dataStartIndex, commitments);
+        debug(
+          `Inserted ${commitments.length} commitments to WorldState @ dataStartIndex ${rollupProof.dataStartIndex}`,
+        );
+      }
       const innerProof = rollupProof.innerProofData.flat().filter(x => !x.isPadding());
       const offChainAccountData = block.offchainTxData
         .flat()
@@ -273,13 +273,22 @@ export class AccountHardener {
       if (block.rollupId >= this.rollupIdFrom && block.rollupId <= this.rollupIdTo) {
         accountsFromBlock.forEach(acc => targetAccounts.set(acc.toString(), acc));
       }
+
+      // add account public key nullifiers to set
+      innerProofs
+        .filter(p => p.proofId == ProofId.ACCOUNT)
+        .forEach(x => this.allAccountNullifiersEver.add(x.nullifier2.toString('hex')));
     }
     // lastRollupId is useful when checking new blocks for new tx settlement
     this.lastRollupId = filteredBlocks.length > 0 ? filteredBlocks[filteredBlocks.length - 1].rollupId : -1;
     // Get the WorldState root (should match falafel root)
     debug(`Last Rollup ID: ${this.lastRollupId}`);
-    debug(`Total Data Size: ${this.worldState.getSize()}`);
-    debug(`WorldState ROOT: ${this.worldState.getRoot().toString('hex')}`);
+    if (needWorldState) {
+      debug(`Total Data Size: ${this.worldState.getSize()}`);
+      const merkleRoot = this.worldState.getRoot();
+      debug(`Saving WorldState ROOT to file: ${merkleRoot.toString('hex')}`);
+      this.saveMerkleRoot(merkleRoot);
+    }
 
     // Convert Map of unique accounts to array for easier iteration
     this.accounts = Array.from(targetAccounts.values());
@@ -296,8 +305,8 @@ export class AccountHardener {
   }
 
   /**
-   * Generates account creation proof for hardener, submits to falafel, awaits settlement
-   * `pullAccountsToHarden` must be called before this method to ensure merkle tree is correct.
+   * Generates account creation proof for hardener, submits to falafel, awaits settlement.
+   * `pullAccountsToHarden(needsWorldState=true)` must be called before this method to ensure merkle tree is correct.
    *
    * @remarks
    * Submits the account creation proof as a second-class TX.
@@ -312,25 +321,28 @@ export class AccountHardener {
   public async createHardenerAccount() {
     log('Creating one new account to be used for many migrations.');
 
+    // Initialize Hardener Account information using eth account,
+    const hardener = await this.initHardenerAccountInfo();
+
     const newAccountTx = new AccountTx(
       this.worldState.getRoot(),
-      this.hardener.accountPublicKey, // accountPublicKey
-      this.hardener.accountPublicKey, // newAccountPublicKey
-      this.hardener.spendingPublicKey, // spendingPublicKey
-      this.hardener.spendingPublicKey, // newSpendingPublicKey
-      this.hardener.aliasHash, // aliasHash
+      hardener.accountPublicKey, // accountPublicKey
+      hardener.accountPublicKey, // newAccountPublicKey
+      hardener.spendingPublicKey, // spendingPublicKey
+      hardener.spendingPublicKey, // newSpendingPublicKey
+      hardener.aliasHash, // aliasHash
       true, // create
       false, // migrate
       0, // accountIndex
       this.worldState.buildZeroHashPath(32), // accountPath
-      this.hardener.accountPublicKey, // spendingPublicKey
+      hardener.accountPublicKey, // spendingPublicKey
     );
     // Create signing data for tx
     const signingData = await this.accountProver.computeSigningData(newAccountTx);
     debug(`Signing data: 0x${signingData.toString('hex')}`);
 
     // Construct Schnorr signature using user's accountPrivateKey to sign data
-    const signature = this.schnorr.constructSignature(signingData, this.hardener.accountPrivateKey);
+    const signature = this.schnorr.constructSignature(signingData, hardener.accountPrivateKey);
     debug(`Schnorr signature: ${signature.toString()}`);
 
     debug('Creating account proof via Halloumi/HttpJobServer');
@@ -340,10 +352,10 @@ export class AccountHardener {
     debug(`Proof size: ${proof.length}`);
 
     const offchainTxData = new OffchainAccountData(
-      this.hardener.accountPublicKey,
-      this.hardener.aliasHash,
-      this.hardener.spendingPublicKey.x(),
-      this.hardener.spendingPublicKey.x(),
+      hardener.accountPublicKey,
+      hardener.aliasHash,
+      hardener.spendingPublicKey.x(),
+      hardener.spendingPublicKey.x(),
       0, // txRefNo
     );
     const finalNewAccountTx: Tx = {
@@ -370,7 +382,7 @@ export class AccountHardener {
         address: this.rollupAddress,
         confirmations: this.confirmations,
         from: this.lastRollupId + 1,
-        to: this.rollupIdTo,
+        to: Infinity,
       });
       for (let i = 0; i < filteredBlocks.length; i++) {
         const block = filteredBlocks[i];
@@ -386,41 +398,48 @@ export class AccountHardener {
         txSettled = txIndex != -1;
         if (txSettled) {
           // Index into block with txIndex*2 because each tx has 2 commitments
-          this.hardener.index = rollupProof.dataStartIndex + txIndex * 2;
-          debug(`Hardener account index: ${this.hardener.index}`);
-          this.hardener.path = await this.worldState.getHashPath(this.hardener.index);
+          hardener.index = rollupProof.dataStartIndex + txIndex * 2;
+          debug(`Hardener account index: ${hardener.index}`);
+          hardener.path = await this.worldState.getHashPath(hardener.index);
           break;
         }
       }
       if (!txSettled) {
+        debug(
+          `Not found in #${filteredBlocks.length} blocks from ${this.lastRollupId + 1}, waiting and trying again...`,
+        );
         if (filteredBlocks.length > 0) {
           this.lastRollupId = filteredBlocks[filteredBlocks.length - 1].rollupId;
         }
-        debug('Waiting and trying again...');
-        await sleep(1000);
+        await sleep(10000);
       }
     }
 
-    this.saveHardenerInfo();
+    this.saveHardenerInfo(hardener);
+    debug(`Updating merkle root saved to file: ${this.worldState.getRoot().toString('hex')}`);
+    this.saveMerkleRoot(this.worldState.getRoot());
   }
 
   /**
    * Generates hardening proofs for vulnerable accounts and writes to file.
    *
    * @remarks
-   * `pullAccountsToHarden` must be called before this method to ensure merkle tree is correct.
+   * `pullAccountsToHarden(needsWorldState=false)` must be called before this method to ensure merkle tree is correct.
    * Proofs are written to file in batches for later submission to falafel.
    * This method gets the root of the worldState tree to use during proof generation.
    * Each proof is a migration (without spending keys) of an alias to the negated account public
    * key of a vulnerable account.
    */
   public async generateAndStoreProofs() {
+    const noteAlgos = new NoteAlgorithms(this.wasm);
+
+    const hardener = await this.initHardenerAccountInfo(true);
+
     fs.mkdirSync(PROOFS_DIR, { recursive: true });
 
     // Get the WorldState root for use in proof-generation
-    const merkleRoot = this.worldState.getRoot();
-    debug(`Total Data Size: ${this.worldState.getSize()}`);
-    debug(`WorldState ROOT: ${this.worldState.getRoot().toString('hex')}`);
+    const merkleRoot = this.getSavedMerkleRoot();
+    debug(`Loaded WorldState ROOT from file: ${merkleRoot.toString('hex')}`);
 
     // TODO more comments!
     log(`Batches: ${this.numBatches}, accounts: ${this.accounts}`);
@@ -433,10 +452,22 @@ export class AccountHardener {
       log(`Writing to file sync...`);
       fs.writeFileSync(batch_file, '[\n');
       log(`Looping...`);
+      let inFileSoFar = 0;
       for (let i = 0; i < batch_size; i++) {
         const accountIdx = b * BATCH_SIZE + i;
         debug(`Account IDX: ${accountIdx} (batch ${b}, offset ${i})`);
         const account = this.accounts[accountIdx];
+
+        if (account.toString() === hardener.accountPublicKey.toString()) {
+          // The skip (continue) should occur in the next block of code since the hardener is already hardened
+          log(`Skipping ... no need to harden hardener account itself (${hardener.accountPublicKey.toString()})`);
+        }
+
+        const hOfXNullifier = noteAlgos.accountPublicKeyNullifier(account).toString('hex');
+        if (this.allAccountNullifiersEver.has(hOfXNullifier)) {
+          log(`WARNING: Skipping an account that is already HARDENED or ATTACKED: ${account.toString()}`);
+          continue;
+        }
 
         log(`Inverting...`);
         const negatedAccountKey = this.schnorr.negatePublicKey(account);
@@ -449,21 +480,18 @@ export class AccountHardener {
         debug(`Generating proof to harden account...`);
         debug(`\tvulnerable account key:       ${account.toString()}`);
         debug(`\tnegated/newAccountPublicKey: ${negatedAccountKey.toString()}`);
-        const finalTx = await this.generateHardenProof(merkleRoot, negatedAccountKey);
+        const finalTx = await this.generateHardenProof(merkleRoot, negatedAccountKey, hardener);
 
         debug('Writing TX (proofData and offchainTxData) to file...');
         const finalTxJson = txToJson(finalTx);
 
-        let suffix = '\n';
-        if (i < batch_size - 1) {
-          suffix = ',' + suffix;
-        }
-        // FIXME asynchronous fs.appendFile instead for performance?
-        fs.appendFileSync(batch_file, JSON.stringify(finalTxJson, null, 2) + suffix);
+        let prefix = inFileSoFar > 0 ? ',\n' : '';
+        fs.appendFileSync(batch_file, prefix + JSON.stringify(finalTxJson, null, 2));
+        inFileSoFar++;
 
         this.accountsProcessed.add(account.toString());
       }
-      fs.appendFileSync(batch_file, ']\n');
+      fs.appendFileSync(batch_file, '\n]\n');
     }
   }
 
@@ -483,17 +511,26 @@ export class AccountHardener {
     try {
       while (nextBatch < numBatches) {
         log(`Attempting to submit batch #${nextBatch}...`);
-        const pendingTxCount = await this.rollupProvider.getPendingSecondClassTxCount();
-        log(`Pending 2nd-class TXS: ${pendingTxCount}`);
+        let pendingTxCount = Infinity;
+        try {
+          pendingTxCount = await this.rollupProvider.getPendingSecondClassTxCount();
+        } catch {
+          debug(`Failed to getPendingSecondClassTxCount, trying again in a bit...`);
+          await sleep(30000);
+          continue;
+        }
+        debug(`Pending 2nd-class TXS: ${pendingTxCount}`);
         if (pendingTxCount < MAX_PENDING_SECOND_CLASS_TXS) {
           await this.loadAndSubmitProofBatch(nextBatch);
           nextBatch++;
+          await sleep(20000);
         } else {
-          log(`Falafel is not ready to receive more second class txs, sleeping...`);
-          sleep(10000);
+          debug(`Falafel is not ready to receive more second class txs, sleeping...`);
+          await sleep(10000);
         }
       }
     } finally {
+      debug(`Exited (completion or falafel error)`);
       fs.writeFileSync(NEXT_BATCH_FILE, JSON.stringify(nextBatch));
     }
   }
@@ -502,26 +539,47 @@ export class AccountHardener {
    * Verify that all accounts in the specified block range are hardened. Log any vulnerable accounts.
    *
    * @remarks
-   * `pullAccountsToHarden` must be called before this method to ensure merkle tree is correct.
+   * `pullAccountsToHarden(needsWorldState=false)` must be called before this method to ensure merkle tree is correct.
    * Verification involves checking whether an account's negated account key is present in any
    * of the pulled rollup blocks. So really _all_ rollup blocks should be pulled when calling this
    * command on the hardener.
    * Display number of vulnerable accounts.
    */
   public async verifyAccountsHardened() {
-    log(`Checking whether ${this.accounts.length} accounts are hardened`);
+    const noteAlgos = new NoteAlgorithms(this.wasm);
+
+    log(
+      `Checking whether ${this.accounts.length} accounts are hardened via their negated account key and nullifier h(x)`,
+    );
     let vulnerableAccounts = 0;
     for (let a = 0; a < this.accounts.length; a++) {
       const negatedAccountKey = this.schnorr.negatePublicKey(this.accounts[a]);
-      debug(`Verifying account is hardened. Account public key: ${this.accounts[a]}, negated: ${negatedAccountKey}`);
-      const hardened = this.allAccountsEver.has(negatedAccountKey.toString());
-      if (!hardened) {
-        log(`Account ${this.accounts[a].toString()} has not been hardened.`);
-        log(`Its negated key ${negatedAccountKey.toString()} is not registered.`);
-        vulnerableAccounts++;
+      log(`**** Verifying account is hardened. Account public key: ${this.accounts[a]}, negated: ${negatedAccountKey}`);
+      const negatedKeyExists = this.allAccountsEver.has(negatedAccountKey.toString());
+
+      if (negatedKeyExists) {
+        log(`\t\tNegated account public key exists, but still need to check nullifier h(x)`);
+      } else {
+        log(`\t\tNegated account public key DOES NOT EXIST, but h(x) nullifier might`);
       }
+
+      const hOfXNullifier = noteAlgos.accountPublicKeyNullifier(this.accounts[a]).toString('hex');
+      const hOfXNullifierExists = this.allAccountNullifiersEver.has(hOfXNullifier);
+
+      if (hOfXNullifierExists) {
+        log(`\t\tHARDENED or ATTACKED (h(x) nullifier exists)`);
+      } else {
+        vulnerableAccounts++;
+        log(`\t\tVULNERABLE (h(x) nullifier DOES NOT EXIST)`);
+        log(
+          `\t${vulnerableAccounts}/${a + 1} accounts checked are vulnerable. ${
+            this.accounts.length
+          } accounts are being checked total`,
+        );
+      }
+      log(''); // newline
     }
-    log(`${vulnerableAccounts} vulnerable accounts found`);
+    log(`${vulnerableAccounts} vulnerable accounts found out of ${this.accounts.length} total`);
   }
 
   /////////////////////////////////////////////////////////////////////////////
@@ -537,22 +595,24 @@ export class AccountHardener {
    * This account will be the source of serveral 'migration' txs that harden a vulnerable account by
    * migrating an alias (without spending keys) to a vulnerable account's negated public key.
    * The HardenerAccountInfo type is used to group all information relevant to the 'hardener' account.
+   *
+   * @param merkleInfoFromFile - if true, load hardener's aliasHash, index and path from file cache
    */
-  private async initHardenerAccountInfo() {
+  private async initHardenerAccountInfo(merkleInfoFromFile = false) {
     log(`Generating hardener Aztec account info from Ethereum keys...`);
 
-    this.ethPrivateKey = Buffer.from(process.env.ETHEREUM_PRIVATE_KEY!, 'hex');
+    const ethPrivateKey = Buffer.from(process.env.ETHEREUM_PRIVATE_KEY!, 'hex');
 
     // Add key to wallet provider for use by SDK when generating Aztec keys
-    this.ethPublicKey = this.walletProvider.addAccount(this.ethPrivateKey);
-    debug(`Ethereum Public Key: ${this.ethPublicKey}`);
+    const ethPublicKey = this.walletProvider.addAccount(ethPrivateKey);
+    debug(`Ethereum Public Key: ${ethPublicKey}`);
 
     // Generate Aztec account and spending keys for Ethereum account
     const { privateKey: accountPrivateKey, publicKey: accountPublicKey } = await this.sdk.generateAccountKeyPair(
-      this.ethPublicKey,
+      ethPublicKey,
     );
     const { privateKey: spendingPrivateKey, publicKey: spendingPublicKey } = await this.sdk.generateSpendingKeyPair(
-      this.ethPublicKey,
+      ethPublicKey,
     );
     debug(`Account  Public Key: ${accountPublicKey}`);
     debug(`Spending Public Key: ${spendingPublicKey}`);
@@ -563,14 +623,30 @@ export class AccountHardener {
     debug(`Account Alias: ${newAccountAlias}`);
     debug(`Account Alias Hash: ${newAccountAliasHash.toString()}`);
 
-    this.hardener = new HardenerAccountInfo(
-      this.ethPublicKey,
+    const hardener = new HardenerAccountInfo(
+      ethPublicKey,
       accountPublicKey,
       accountPrivateKey,
       spendingPublicKey,
       spendingPrivateKey,
       newAccountAliasHash,
     );
+
+    if (merkleInfoFromFile) {
+      // Interpret the hardener as json and convert to HardenerAccountInfo
+      const jsonStr = fs.readFileSync(HARDENER_FILE, 'utf-8');
+      const jsonObj = JSON.parse(jsonStr);
+      const ethPublicKeyFromFile = EthAddress.fromString(jsonObj.ethPublicKey);
+      // Ensure that the stored+loaded hardener is for the currently active eth account
+      if (!ethPublicKey.equals(ethPublicKeyFromFile)) {
+        throw new Error('Provided Ethereum private key does not match the stored hardener public key');
+      }
+      hardener.aliasHash = AliasHash.fromString(jsonObj.aliasHash);
+      hardener.index = jsonObj.index;
+      hardener.path = HashPath.fromBuffer(Buffer.from(jsonObj.path, 'hex'));
+    }
+
+    return hardener;
   }
 
   /**
@@ -582,28 +658,32 @@ export class AccountHardener {
    * Submits account TX info to Halloumi for efficient proof-generation.
    * Called by `generateAndStoreProofs` which generates ALL proofs
    */
-  private async generateHardenProof(merkleRoot: Buffer, negatedAccountKey: GrumpkinAddress) {
+  private async generateHardenProof(
+    merkleRoot: Buffer,
+    negatedAccountKey: GrumpkinAddress,
+    hardener: HardenerAccountInfo,
+  ) {
     debug(`Generating account-harden proof for negated key: ${negatedAccountKey}`);
     // Construct an AccountTx
     const accountTx = new AccountTx(
       merkleRoot,
-      this.hardener.accountPublicKey, // accountPublicKey
+      hardener.accountPublicKey, // accountPublicKey
       negatedAccountKey, // newAccountPublicKey
       GrumpkinAddress.ZERO, // newSpendingPublicKey1
       GrumpkinAddress.ZERO, // newSpendingPublicKey2
-      this.hardener.aliasHash, // aliasHash
+      hardener.aliasHash, // aliasHash
       false, // create
       true, // migrate
-      this.hardener.index, // accountIndex
-      this.hardener.path, // accountPath
-      this.hardener.spendingPublicKey, // spendingPublicKey
+      hardener.index, // accountIndex
+      hardener.path, // accountPath
+      hardener.spendingPublicKey, // spendingPublicKey
     );
     // Create signing data for tx
     const signingData = await this.accountProver.computeSigningData(accountTx);
     debug(`Signing data: 0x${signingData.toString('hex')}`);
 
     // Construct Schnorr signature using user's accountPrivateKey to sign data
-    const signature = this.schnorr.constructSignature(signingData, this.hardener.spendingPrivateKey);
+    const signature = this.schnorr.constructSignature(signingData, hardener.spendingPrivateKey);
     debug(`Schnorr signature: ${signature.toString()}`);
 
     log('Creating account proof via Halloumi/HttpJobServer');
@@ -614,7 +694,7 @@ export class AccountHardener {
 
     const offchainTxData = new OffchainAccountData(
       negatedAccountKey,
-      this.hardener.aliasHash,
+      hardener.aliasHash,
       GrumpkinAddress.ZERO.x(), // spendingPublicKey
       GrumpkinAddress.ZERO.x(), // spendingPublicKey
     );
@@ -704,30 +784,28 @@ export class AccountHardener {
    * @remarks
    * This method converts the hardener to json first before writing to file.
    */
-  private saveHardenerInfo() {
-    const hardenerInfo = this.hardener.persistentInfoToJson();
-    // FIXME make async and check for write errors
+  private saveHardenerInfo(hardener: HardenerAccountInfo) {
+    const hardenerInfo = hardener.persistentInfoToJson();
     writeFileSafe(HARDENER_FILE, hardenerInfo);
   }
 
   /**
-   * Load hardener path and index from file to use a previously created account in this call
+   * Save merkle root to file for later use in subsequent calls.
+   */
+  private saveMerkleRoot(root: Buffer) {
+    writeFileSafe(MERKLE_ROOT_FILE, JSON.stringify({ merkleRoot: root.toString('hex') }));
+  }
+
+  /**
+   * Load the merkle root from file
    *
    * @remarks
-   * `initHardenerAccountInfo` must be called before this function
-   * Interpret the hardener as json and convert to HardenerAccountInfo.
+   * This is useful for generating hardener proofs when we need the merkle root
+   * but do not need the fully populated merkle tree / world state
    */
-  private loadHardenerInfo() {
-    // FIXME make async and check for read errors
-    const jsonStr = fs.readFileSync(HARDENER_FILE, 'utf-8');
-    const jsonObj = JSON.parse(jsonStr);
-    const ethPublicKey = EthAddress.fromString(jsonObj.ethPublicKey);
-    // Ensure that the stored+loaded hardener is for the currently active eth account
-    if (!ethPublicKey.equals(this.ethPublicKey)) {
-      throw new Error('Provided Ethereum private key does not match the stored hardener public key');
-    }
-    (this.hardener.aliasHash = AliasHash.fromString(jsonObj.aliasHash)), (this.hardener.index = jsonObj.index);
-    this.hardener.path = HashPath.fromBuffer(Buffer.from(jsonObj.path, 'hex'));
+  private getSavedMerkleRoot() {
+    const jsonStr = fs.readFileSync(MERKLE_ROOT_FILE, 'utf-8');
+    return Buffer.from(JSON.parse(jsonStr).merkleRoot, 'hex');
   }
 }
 

@@ -1,7 +1,7 @@
 import { ProofId, UserDefiClaimTx, UserDefiTx, UserTx } from '@aztec/sdk';
-import style from './transaction_type_field.module.scss';
 import { useDefiRecipes } from '../../../alt-model/top_level_context/index.js';
 import { exitingRecipeMatcher, recipeMatcher } from '../../../alt-model/defi/recipe_matchers.js';
+import style from './transaction_type_field.module.scss';
 
 function getTxTypeLabel(tx: UserTx) {
   switch (tx.proofId) {
@@ -42,7 +42,11 @@ export function TransactionTypeField({ tx }: TransactionTypeFieldProps) {
       <div className={style.top}>
         <div className={style.label}>{getTxTypeLabel(tx)}</div>
       </div>
-      <div className={style.bottom}>{isDefi && <DefiRecipeName tx={tx} />}</div>
+      {isDefi && (
+        <div className={style.bottom}>
+          <DefiRecipeName tx={tx} />
+        </div>
+      )}
     </div>
   );
 }

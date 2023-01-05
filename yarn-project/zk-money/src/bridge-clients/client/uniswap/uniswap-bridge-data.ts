@@ -1,5 +1,6 @@
 import { AuxDataConfig, AztecAsset, AztecAssetType, BridgeDataFieldGetters, SolidityType } from '../bridge-data.js';
-import { BridgeCallData, EthAddress, EthereumProvider } from '@aztec/sdk';
+import { BridgeCallData, EthAddress } from '@aztec/sdk';
+import { StaticJsonRpcProvider } from '@ethersproject/providers';
 import 'isomorphic-fetch';
 import {
   IChainlinkOracle,
@@ -7,12 +8,12 @@ import {
   UniswapBridge,
   UniswapBridge__factory,
 } from '../../typechain-types/index.js';
-import { createWeb3Provider } from '../aztec/provider/web3_provider.js';
 
 export class UniswapBridgeData implements BridgeDataFieldGetters {
   private readonly WETH = EthAddress.fromString('0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2');
   private readonly USDC = EthAddress.fromString('0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48');
   private readonly DAI = EthAddress.fromString('0x6B175474E89094C44Da98b954EedeAC495271d0F');
+  private readonly ICETH = EthAddress.fromString('0x7C07F7aBe10CE8e33DC6C5aD68FE033085256A84');
 
   private readonly PATHS = {
     UNUSED: {
@@ -39,6 +40,14 @@ export class UniswapBridgeData implements BridgeDataFieldGetters {
       token2: EthAddress.ZERO.toString(),
       fee3: 500,
     },
+    ETH_ICETH_AND_BACK: {
+      percentage: 100,
+      fee1: 100,
+      token1: EthAddress.ZERO.toString(),
+      fee2: 100, // Ignored since unused
+      token2: EthAddress.ZERO.toString(),
+      fee3: 500,
+    },
   };
 
   // 0000000000000000000000000011111111111111111111111111111111111111
@@ -51,21 +60,18 @@ export class UniswapBridgeData implements BridgeDataFieldGetters {
   public readonly IDEAL_SLIPPAGE_SETTING = 100n; // Denominated in basis points
   public readonly MAX_ACCEPTABLE_BATCH_SLIPPAGE_SETTING = this.IDEAL_SLIPPAGE_SETTING * 2n;
 
-  private constructor(
+  protected constructor(
+    protected ethersProvider: StaticJsonRpcProvider,
     private bridgeAddressId: number,
     private uniswapBridge: UniswapBridge,
     private daiEthOracle: IChainlinkOracle,
   ) {}
 
-  static create(provider: EthereumProvider, bridgeAddressId: number, bridgeAddress: EthAddress) {
-    const ethersProvider = createWeb3Provider(provider);
-    const uniswapBridge = UniswapBridge__factory.connect(bridgeAddress.toString(), ethersProvider);
+  static create(provider: StaticJsonRpcProvider, bridgeAddressId: number, bridgeAddress: EthAddress) {
+    const uniswapBridge = UniswapBridge__factory.connect(bridgeAddress.toString(), provider);
     // Precision of the feeds is 1e18
-    const chainlinkEthDaiOracle = IChainlinkOracle__factory.connect(
-      '0x773616E4d11A78F511299002da57A0a94577F1f4',
-      ethersProvider,
-    );
-    return new UniswapBridgeData(bridgeAddressId, uniswapBridge, chainlinkEthDaiOracle);
+    const daiEthOracle = IChainlinkOracle__factory.connect('0x773616E4d11A78F511299002da57A0a94577F1f4', provider);
+    return new UniswapBridgeData(provider, bridgeAddressId, uniswapBridge, daiEthOracle);
   }
 
   /**
@@ -85,15 +91,24 @@ export class UniswapBridgeData implements BridgeDataFieldGetters {
     outputAssetB: AztecAsset,
   ): Promise<bigint[]> {
     let splitPath: UniswapBridge.SplitPathStruct;
+    let oraclePrice: bigint;
+
     if (this.isEth(inputAssetA) && outputAssetA.erc20Address.equals(this.DAI)) {
       splitPath = this.PATHS['ETH_DAI'];
+      oraclePrice = await this.getEthDaiPrice(inputAssetA);
     } else if (inputAssetA.erc20Address.equals(this.DAI) && this.isEth(outputAssetA)) {
       splitPath = this.PATHS['DAI_ETH'];
+      oraclePrice = await this.getEthDaiPrice(inputAssetA);
+    } else if (
+      (this.isEth(inputAssetA) && outputAssetA.erc20Address.equals(this.ICETH)) ||
+      (inputAssetA.erc20Address.equals(this.ICETH) && this.isEth(outputAssetA))
+    ) {
+      splitPath = this.PATHS['ETH_ICETH_AND_BACK'];
+      oraclePrice = await this.getEthIcEthPrice(inputAssetA);
     } else {
       throw new Error('The combination of input/output assets not supported');
     }
 
-    const oraclePrice = await this.getInputPriceInOutputAsset(inputAssetA, outputAssetA);
     const worstAcceptableBatchPrice = (oraclePrice * (10000n - this.MAX_ACCEPTABLE_BATCH_SLIPPAGE_SETTING)) / 10000n;
     const worstAcceptableIdealPrice = (oraclePrice * (10000n - this.IDEAL_SLIPPAGE_SETTING)) / 10000n;
 
@@ -177,7 +192,12 @@ export class UniswapBridgeData implements BridgeDataFieldGetters {
     inputAssetA: AztecAsset,
     outputAssetA: AztecAsset,
   ): Promise<bigint> {
-    const oraclePrice = await this.getInputPriceInOutputAsset(inputAssetA, outputAssetA);
+    let oraclePrice: bigint;
+    if (inputAssetA.erc20Address.equals(this.DAI) || outputAssetA.erc20Address.equals(this.DAI)) {
+      oraclePrice = await this.getEthDaiPrice(inputAssetA);
+    } else {
+      oraclePrice = await this.getEthIcEthPrice(inputAssetA);
+    }
     const worstAcceptablePrice = (oraclePrice * (10000n - customSlippage)) / 10000n;
     const encodedPrice = this.encodeMinPrice(worstAcceptablePrice);
     return (encodedPrice << this.PRICE_SHIFT) + (auxData & this.PATH_MASK);
@@ -191,26 +211,36 @@ export class UniswapBridgeData implements BridgeDataFieldGetters {
   }
 
   /**
-   * @notice Returns price of input asset denominated in output asset
+   * @notice Returns price of input asset denominated in the other asset
    * @param inputAssetA Asset to get the price for
-   * @param outputAssetA Asset in which the return price is denominated
-   * @return Price of input asset denominated in output asset
+   * @return Price of input asset denominated in the other asset (e.g. if Dai on input return val denominated in ETH)
    */
-  private async getInputPriceInOutputAsset(inputAssetA: AztecAsset, outputAssetA: AztecAsset): Promise<bigint> {
-    // Note: this check will be replaced with fetching oracle from a map of oracles once Set token support is
-    // implemented. I am having the check here now in order to indicate only ETH and DAI are supported.
-    if (
-      !(
-        (this.isEth(inputAssetA) && outputAssetA.erc20Address.equals(this.DAI)) ||
-        (inputAssetA.erc20Address.equals(this.DAI) && this.isEth(outputAssetA))
-      )
-    ) {
-      throw new Error('The combination of input/output assets not supported by oracle');
-    }
-
+  private async getEthDaiPrice(inputAssetA: AztecAsset): Promise<bigint> {
     // Precision of the feed is 1e18
     const [, daiPrice, , ,] = await this.daiEthOracle.latestRoundData();
     return inputAssetA.erc20Address.equals(this.DAI) ? daiPrice.toBigInt() : 10n ** 36n / daiPrice.toBigInt();
+  }
+
+  /**
+   * @notice Returns price of input asset denominated in the other asset
+   * @param inputAssetA Asset to get the price for
+   * @return Price of input asset denominated in the other asset (e.g. if Dai on input return val denominated in ETH)
+   */
+  private async getEthIcEthPrice(inputAssetA: AztecAsset): Promise<bigint> {
+    const result = await (
+      await fetch(
+        'https://api.coingecko.com/api/v3/simple/token_price/ethereum?contract_addresses=0x7c07f7abe10ce8e33dc6c5ad68fe033085256a84&vs_currencies=ETH',
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        },
+      )
+    ).json();
+    const price =
+      BigInt(Math.floor(Number(result['0x7c07f7abe10ce8e33dc6c5ad68fe033085256a84']['eth'])) * 10 ** 10) * 10n ** 8n;
+    return this.isEth(inputAssetA) ? 10n ** 36n / price : price;
   }
 
   private async fetchRelevantAuxDataFromFalafel(

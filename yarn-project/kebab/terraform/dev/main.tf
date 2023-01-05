@@ -29,6 +29,15 @@ data "terraform_remote_state" "aztec2_iac" {
   }
 }
 
+data "terraform_remote_state" "contracts" {
+  backend = "s3"
+  config = {
+    bucket = "aztec-terraform"
+    key    = "${var.DEPLOY_TAG}/contracts"
+    region = "eu-west-2"
+  }
+}
+
 provider "aws" {
   profile = "default"
   region  = "eu-west-2"
@@ -108,26 +117,6 @@ resource "aws_ecs_task_definition" "kebab" {
   container_definitions = <<DEFINITIONS
 [
   {
-    "name": "${var.DEPLOY_TAG}-mainnet-fork",
-    "image": "trufflesuite/ganache",
-    "essential": true,
-    "command": ["-p=8545", "-f=https://mainnet.infura.io/v3/${var.TEST_INFURA_API_KEY}", "--chain.chainId=0xDEF", "--fork.blockNumber=15918000", "--database.dbPath=/data", "-h=0.0.0.0", "-l=12000000", "-a=0"],
-    "mountPoints": [
-      {
-        "containerPath": "/data",
-        "sourceVolume": "efs-data-store"
-      }
-    ],
-    "logConfiguration": {
-      "logDriver": "awslogs",
-      "options": {
-        "awslogs-group": "${aws_cloudwatch_log_group.kebab_logs.name}",
-        "awslogs-region": "eu-west-2",
-        "awslogs-stream-prefix": "ecs"
-      }
-    }
-  },
-  {
     "name": "${var.DEPLOY_TAG}-kebab",
     "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/kebab:${var.DEPLOY_TAG}",
     "essential": true,
@@ -148,23 +137,35 @@ resource "aws_ecs_task_definition" "kebab" {
       },
       {
         "name": "ETHEREUM_HOST",
-        "value": "${var.DEV_NET_RPC_URL}"
+        "value": "https://${var.DEPLOY_TAG}-mainnet-fork.aztec.network:8545"
       },
       {
         "name": "FAUCET_OPERATOR",
         "value": "${var.FAUCET_OPERATOR_ADDRESS}"
       },
       {
-        "name": "REDEPLOY",
-        "value": "${var.REDEPLOY}"
-      },
-      {
         "name": "PRIVATE_KEY",
         "value": "${var.DEV_NET_ROOT_PRIVATE_KEY}"
       },
       {
-        "name": "ROLLUP_PROVIDER_ADDRESS",
-        "value": "0xA57EC00AfA2061565b9c8f4477E841F807222A6d"
+        "name": "ROLLUP_CONTRACT_ADDRESS",
+        "value": "${data.terraform_remote_state.contracts.outputs.rollup_contract_address}"
+      },
+      {
+        "name": "PERMIT_HELPER_CONTRACT_ADDRESS",
+        "value": "${data.terraform_remote_state.contracts.outputs.permit_helper_contract_address}"
+      },
+      {
+        "name": "FEE_DISTRIBUTOR_ADDRESS",
+        "value": "${data.terraform_remote_state.contracts.outputs.fee_distributor_address}"
+      },
+      {
+        "name": "PRICE_FEED_CONTRACT_ADDRESSES",
+        "value": "${data.terraform_remote_state.contracts.outputs.price_feed_contract_addresses}"
+      },
+      {
+        "name": "BRIDGE_DATA_PROVIDER_CONTRACT_ADDRESS",
+        "value": "${data.terraform_remote_state.contracts.outputs.bridge_data_provider_contract_address}"
       },
       {
         "name": "ADDITIONAL_PERMITTED_METHODS",
@@ -179,6 +180,35 @@ resource "aws_ecs_task_definition" "kebab" {
       {
         "containerPath": "/usr/src/yarn-project/kebab/data",
         "sourceVolume": "efs-data-store"
+      }
+    ],
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "${aws_cloudwatch_log_group.kebab_logs.name}",
+        "awslogs-region": "eu-west-2",
+        "awslogs-stream-prefix": "ecs"
+      }
+    }
+  },
+  {
+    "name": "metrics",
+    "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/metrics-sidecar:latest",
+    "essential": false,
+    "memoryReservation": 256,
+    "portMappings": [
+      {
+        "containerPort": 9545
+      }
+    ],
+    "environment": [
+      {
+        "name": "DEPLOY_TAG",
+        "value": "${var.DEPLOY_TAG}"
+      },
+      {
+        "name": "SERVICE",
+        "value": "${var.DEPLOY_TAG}-kebab"
       }
     ],
     "logConfiguration": {
@@ -254,7 +284,6 @@ resource "aws_alb_target_group" "kebab" {
     name = "${var.DEPLOY_TAG}-kebab"
   }
 }
-
 resource "aws_lb_listener_rule" "mainnet-fork" {
   listener_arn = data.terraform_remote_state.aztec2_iac.outputs.mainnet-fork-listener-id
 
@@ -270,12 +299,10 @@ resource "aws_lb_listener_rule" "mainnet-fork" {
   }
 }
 
-
 data "aws_alb" "aztec2" {
   arn = data.terraform_remote_state.aztec2_iac.outputs.alb_arn
 }
 
-# mainnet-fork DNS entry.
 resource "aws_route53_record" "mainnet-fork" {
   zone_id = data.terraform_remote_state.aztec2_iac.outputs.aws_route53_zone_id
   name    = "${var.DEPLOY_TAG}-eth-host"

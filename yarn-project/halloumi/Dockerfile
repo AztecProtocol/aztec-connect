@@ -5,7 +5,7 @@ WORKDIR /usr/src/yarn-project/halloumi
 RUN yarn build && yarn formatting && yarn test
 # Prune dev dependencies. See comment in base image.
 RUN yarn cache clean
-RUN yarn workspaces focus --production
+RUN yarn workspaces focus --production > /dev/null
 
 FROM node:18-alpine
 RUN apk update && apk add --no-cache llvm15-libs

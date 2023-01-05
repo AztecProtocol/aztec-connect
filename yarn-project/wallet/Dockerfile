@@ -9,7 +9,7 @@ WORKDIR /usr/src/yarn-project/wallet
 RUN yarn build && yarn formatting && yarn test
 # Prune dev dependencies. See comment in base image.
 RUN yarn cache clean
-RUN yarn workspaces focus --production
+RUN yarn workspaces focus --production > /dev/null
 
 FROM node:18-alpine
 COPY --from=builder /usr/src/yarn-project /usr/src/yarn-project

@@ -1,7 +1,7 @@
-import { EthAddress, EthereumProvider } from '@aztec/sdk';
+import { EthAddress } from '@aztec/sdk';
 import { DataProvider__factory } from '../../../typechain-types/index.js';
 import { DataProvider } from '../../../typechain-types/index.js';
-import { createWeb3Provider } from '../provider/web3_provider.js';
+import { StaticJsonRpcProvider } from '@ethersproject/providers';
 
 export interface AssetData {
   assetAddress: EthAddress;
@@ -18,9 +18,8 @@ export interface BridgeData {
 export class DataProviderWrapper {
   private constructor(private dataProvider: DataProvider) {}
 
-  static create(provider: EthereumProvider, dataProviderAddress: EthAddress) {
-    const ethersProvider = createWeb3Provider(provider);
-    return new DataProviderWrapper(DataProvider__factory.connect(dataProviderAddress.toString(), ethersProvider));
+  static create(provider: StaticJsonRpcProvider, dataProviderAddress: EthAddress) {
+    return new DataProviderWrapper(DataProvider__factory.connect(dataProviderAddress.toString(), provider));
   }
 
   async getBridgeByName(name: string): Promise<BridgeData> {

@@ -25,7 +25,7 @@ export class RegistrationsRepo {
     }
     const labelToAssetAddressStr = {
       ...KNOWN_MAINNET_ASSET_ADDRESS_STRS,
-      ...(registrationsDataRaw[deployTag].assets as RegistrationsDataRawAssets),
+      ...(registrationsDataRaw[deployTag]?.assets as RegistrationsDataRawAssets),
     };
     this.assetAddressStrToLabel = Object.fromEntries(
       Object.entries(labelToAssetAddressStr).map(([k, v]) => [v, k as AssetLabel]),
@@ -63,7 +63,7 @@ export class RegistrationsRepo {
       }
     }
 
-    const bridgesRaw: RegistrationsDataRawBridges | undefined = registrationsDataRaw[deployTag].bridges;
+    const bridgesRaw: RegistrationsDataRawBridges | undefined = registrationsDataRaw[deployTag]?.bridges;
     for (const k in bridgesRaw) {
       const bridgeLabel = k as RegisteredBridgeLabel;
       const bridgeAddressId = bridgesRaw[bridgeLabel];

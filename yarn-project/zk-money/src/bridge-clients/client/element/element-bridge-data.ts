@@ -1,4 +1,6 @@
-import { EthereumProvider, EthAddress, AssetValue, BridgeCallData } from '@aztec/sdk';
+import { EthAddress, AssetValue, BridgeCallData } from '@aztec/sdk';
+import { StaticJsonRpcProvider } from '@ethersproject/providers';
+
 import 'isomorphic-fetch';
 import {
   ElementBridge,
@@ -8,7 +10,6 @@ import {
   RollupProcessor__factory,
 } from '../../typechain-types/index.js';
 import { AsyncDefiBridgeProcessedEvent, RollupProcessor } from '../../typechain-types/RollupProcessor.js';
-import { createWeb3Provider } from '../aztec/provider/web3_provider.js';
 import { AuxDataConfig, AztecAsset, BridgeDataFieldGetters, SolidityType } from '../bridge-data.js';
 
 export type BatchSwapStep = {
@@ -70,16 +71,15 @@ export class ElementBridgeData implements BridgeDataFieldGetters {
   ) {}
 
   static create(
-    provider: EthereumProvider,
+    provider: StaticJsonRpcProvider,
     elementBridgeAddress: EthAddress,
     balancerAddress: EthAddress,
     rollupContractAddress: EthAddress,
     falafelEndpoint: string,
   ) {
-    const ethersProvider = createWeb3Provider(provider);
-    const elementBridgeContract = ElementBridge__factory.connect(elementBridgeAddress.toString(), ethersProvider);
-    const rollupContract = RollupProcessor__factory.connect(rollupContractAddress.toString(), ethersProvider);
-    const vaultContract = IVault__factory.connect(balancerAddress.toString(), ethersProvider);
+    const elementBridgeContract = ElementBridge__factory.connect(elementBridgeAddress.toString(), provider);
+    const rollupContract = RollupProcessor__factory.connect(rollupContractAddress.toString(), provider);
+    const vaultContract = IVault__factory.connect(balancerAddress.toString(), provider);
     return new ElementBridgeData(elementBridgeContract, vaultContract, rollupContract, falafelEndpoint);
   }
 

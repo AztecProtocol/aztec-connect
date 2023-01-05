@@ -2,12 +2,7 @@ import { Amount } from '../../assets/amount.js';
 import { getAssetPreferredFractionalDigits } from '../../known_assets/known_asset_display_data.js';
 import { L1DepositResources, L1DepositAssessment } from './assess_l1_deposit.js';
 
-export function getL1DepositAmountInputFeedback(
-  resources: L1DepositResources,
-  assessment: L1DepositAssessment,
-  touched: boolean,
-) {
-  if (!touched) return;
+export function getL1DepositAmountInputFeedback(resources: L1DepositResources, assessment: L1DepositAssessment) {
   if (!assessment.balances) return;
   const { issues, info } = assessment.balances;
   if (issues.noAmount) {

@@ -4,13 +4,12 @@
 set -e
 
 export TEST=$1
-export MAINNET_FORK=$2
-export NUM_INNER_ROLLUP_TXS=${3:-3}
-export NUM_OUTER_ROLLUP_PROOFS=${4:-2}
-export VK=$5
+export NUM_INNER_ROLLUP_TXS=${2:-3}
+export NUM_OUTER_ROLLUP_PROOFS=${3:-2}
+export VK=$4
 
-if [ -z "$VK" ]; then
-  export PROVERLESS=true
+if [ -n "$VK" ]; then
+  export PROVERLESS=false
 fi
 
 if [ -n "$COMMIT_HASH" ]; then
@@ -18,7 +17,7 @@ if [ -n "$COMMIT_HASH" ]; then
 
   for REPO in contracts halloumi kebab falafel sdk hummus end-to-end; do
     docker pull 278380418400.dkr.ecr.us-east-2.amazonaws.com/$REPO:cache-$COMMIT_HASH
-    docker tag 278380418400.dkr.ecr.us-east-2.amazonaws.com/$REPO:cache-$COMMIT_HASH 278380418400.dkr.ecr.eu-west-2.amazonaws.com/$REPO:latest
+    docker tag 278380418400.dkr.ecr.us-east-2.amazonaws.com/$REPO:cache-$COMMIT_HASH aztecprotocol/$REPO:latest
   done
 fi
 

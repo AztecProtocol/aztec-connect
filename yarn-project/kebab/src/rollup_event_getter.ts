@@ -1,6 +1,6 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { getEarliestBlock } from '@aztec/blockchain';
-import { createLogger } from '@aztec/barretenberg/log';
+import { createDebugLogger } from '@aztec/barretenberg/log';
 import { JsonRpcProvider } from '@aztec/blockchain';
 import { EthLogsDb } from './log_db.js';
 
@@ -22,7 +22,7 @@ export type EthEvent = {
 
 export class RollupEventGetter {
   private lastQueriedBlockNum: number;
-  private log = createLogger('RollupEventGetter');
+  private debug = createDebugLogger('bb:rollup_event_getter');
 
   constructor(
     protected rollupContractAddress: EthAddress,
@@ -50,13 +50,14 @@ export class RollupEventGetter {
   }
 
   public async init() {
-    await this.getAndStoreRollupBlocksFrom(this.getEarliestBlock().earliestBlock, this.logsDb);
+    const lastSynchedBlock = await this.logsDb.getLastKnownBlockNumber();
+    await this.getAndStoreRollupBlocksFrom(lastSynchedBlock, this.logsDb);
   }
 
   public async getLatestRollupEvents(): Promise<EthEvent[]> {
     const latestBlock = await this.getLatestBlockNumber();
     if (latestBlock > this.lastQueriedBlockNum) {
-      this.log(`Getting new blocks, latest block ${latestBlock}, last queried block ${this.lastQueriedBlockNum}`);
+      this.debug(`getting new blocks, latest block ${latestBlock}, last queried block ${this.lastQueriedBlockNum}`);
       return this.getAndStoreRollupBlocksFrom(this.lastQueriedBlockNum + 1, this.logsDb);
     }
     return [];
@@ -89,10 +90,16 @@ export class RollupEventGetter {
           params: [param],
         });
       };
-      const [rollupEvents, defiBridgeEvents] = await Promise.all([
+      this.debug(`requesting logs for blocks ${start} to ${end}. Latest: ${latestBlock}...`);
+      const [rollupEvents, defiBridgeEvents, offchainEvents] = await Promise.all([
         logsRequest(ROLLUP_PROCESSED_EVENT_TOPIC),
         logsRequest(DEFI_BRIDGE_EVENT_TOPIC),
+        logsRequest(OFFCHAIN_EVENT_TOPIC),
       ]);
+
+      // TODO: Something is bugged and im seeing missing rollup events in db.
+      // Further the system carries on inserting rollups even though there is a missing id instead of bombing out...
+
       // cache the last eth block number where we actually received an event
       const latestRollupBlock = rollupEvents.length ? rollupEvents[rollupEvents.length - 1].blockNumber : earliestBlock;
       const latestDefiBlock = defiBridgeEvents.length
@@ -106,10 +113,10 @@ export class RollupEventGetter {
 
       // if db has been passed, store directly
       if (db) {
-        const eventsToStore = [...rollupEvents, ...defiBridgeEvents];
+        const eventsToStore = [...rollupEvents, ...defiBridgeEvents, ...offchainEvents];
         await db.addEthLogs(eventsToStore);
       } else {
-        events = [...rollupEvents, ...defiBridgeEvents, ...events];
+        events = [...rollupEvents, ...defiBridgeEvents, ...offchainEvents, ...events];
       }
 
       start = end + 1;
@@ -117,7 +124,7 @@ export class RollupEventGetter {
     }
 
     if (lastQueriedEthBlock !== -1) {
-      this.log(
+      this.debug(
         `${initialStart} -> ${lastQueriedEthBlock}: ${eventCountMap[ROLLUP_PROCESSED_EVENT_TOPIC]} rollup / ${
           eventCountMap[DEFI_BRIDGE_EVENT_TOPIC]
         } defi events fetched in ${(new Date().getTime() - totalStartTime) / 1000}s`,

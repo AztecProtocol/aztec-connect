@@ -1,7 +1,13 @@
-#!/bin/bash
-set -e
+#!/bin/sh
 
-. ./scripts/export_address.sh ROLLUP_CONTRACT_ADDRESS rollupContractAddress
-. ./scripts/export_address.sh PERMIT_HELPER_CONTRACT_ADDRESS permitHelperAddress
-. ./scripts/export_address.sh PRICE_FEED_CONTRACT_ADDRESSES priceFeedContractAddresses
-. ./scripts/export_address.sh BRIDGE_DATA_PROVIDER_CONTRACT_ADDRESS bridgeDataProviderContractAddress
+# Wait for host
+echo "Waiting for contracts host at $CONTRACTS_HOST..."
+while ! curl -s $CONTRACTS_HOST > /dev/null; do sleep 1; done;
+
+# Export keys to env variables
+for KEY in ROLLUP_CONTRACT_ADDRESS FAUCET_CONTRACT_ADDRESS PERMIT_HELPER_CONTRACT_ADDRESS FEE_DISTRIBUTOR_ADDRESS GAS_PRICE_FEED_CONTRACT_ADDRESS DAI_PRICE_FEED_CONTRACT_ADDRESS BRIDGE_DATA_PROVIDER_CONTRACT_ADDRESS; do
+    VALUE=$(curl -s $CONTRACTS_HOST | jq -r .$KEY)
+    echo "$KEY=$VALUE"
+    export $KEY=$VALUE
+done
+export PRICE_FEED_CONTRACT_ADDRESSES="$GAS_PRICE_FEED_CONTRACT_ADDRESS,$DAI_PRICE_FEED_CONTRACT_ADDRESS"

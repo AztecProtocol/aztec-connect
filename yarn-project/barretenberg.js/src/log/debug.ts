@@ -16,7 +16,7 @@ function theFunctionThroughWhichAllLogsPass(logger: any, ...args: any[]) {
   }
 }
 
-export function createDebugLogger(name: string): any {
+export function createDebugLogger(name: string) {
   const logger = debug(name);
   return (...args: any[]) => theFunctionThroughWhichAllLogsPass(logger, ...args);
 }

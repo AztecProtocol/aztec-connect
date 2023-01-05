@@ -587,58 +587,24 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
         throw new Error(`Failed to find notes that sum to ${privateInput}.`);
       }
 
-      const proofInputs: JoinSplitProofInput[] = [];
-      const settledNotes = notes.filter(n => !n.pending);
-      let firstNote = notes.find(n => n.pending) || settledNotes.shift()!;
-      const lastNote = settledNotes.pop();
+      const { proofInputs, outputNotes } = await this.createChainedProofInputs(userId, spendingPublicKey, notes);
+      const proofInput = await this.paymentProofCreator.createProofInput(
+        user,
+        outputNotes,
+        privateInput,
+        recipientPrivateOutput,
+        senderPrivateOutput,
+        publicInput,
+        publicOutput,
+        assetId,
+        noteRecipient,
+        recipientSpendingKeyRequired,
+        publicOwner,
+        spendingPublicKey,
+        allowChain,
+      );
 
-      // Create chained txs to generate one large value note.
-      for (const note of settledNotes) {
-        const inputNotes = [firstNote, note];
-        const noteSum = inputNotes.reduce((sum, n) => sum + n.value, BigInt(0));
-        const proofInput = await this.paymentProofCreator.createProofInput(
-          user,
-          inputNotes,
-          noteSum, // privateInput
-          BigInt(0), // recipientPrivateOutput
-          noteSum, // senderPrivateOutput
-          BigInt(0), // publicInput,
-          BigInt(0), // publicOutput
-          assetId,
-          userId, // noteRecipient
-          spendingKeyRequired,
-          undefined, // publicOwner
-          spendingPublicKey,
-          2,
-        );
-        proofInputs.push(proofInput);
-        firstNote = treeNoteToNote(proofInput.tx.outputNotes[1], user.accountPrivateKey, this.noteAlgos, {
-          allowChain: true,
-        });
-      }
-
-      // Spend the last note and the large value note for whatever this payment proof is for.
-      {
-        const inputNotes = lastNote ? [firstNote, lastNote] : [firstNote];
-        const proofInput = await this.paymentProofCreator.createProofInput(
-          user,
-          inputNotes,
-          privateInput,
-          recipientPrivateOutput,
-          senderPrivateOutput,
-          publicInput,
-          publicOutput,
-          assetId,
-          noteRecipient,
-          recipientSpendingKeyRequired,
-          publicOwner,
-          spendingPublicKey,
-          allowChain,
-        );
-        proofInputs.push(proofInput);
-      }
-
-      return proofInputs;
+      return [...proofInputs, proofInput];
     });
   }
 
@@ -725,21 +691,228 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     userId: GrumpkinAddress,
     bridgeCallData: BridgeCallData,
     depositValue: bigint,
-    inputNotes: Note[],
+    fee: bigint,
     spendingPublicKey: GrumpkinAddress,
   ) {
     return await this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
       const userState = this.getUserState(userId);
       const user = userState.getUserData();
-      return await this.defiDepositProofCreator.createProofInput(
+
+      // The goal here is to create the necessary inputs for a defi tx
+      // A defi tx can have either 1 or 2 input assets.
+
+      // If it has 1 input asset
+      // then we can use both input notes to achieve the required deposit + fee value
+      // and we can create a chain of J/S txs to merge/split notes to achieve the required input
+
+      // If it has 2 input assets then we are more restricted
+      // We can only have 1 input note for each asset and we can only have 1 chain of J/S txs
+      // to merge/splt notes in order to achieve the correct input for an asset
+      // So, for example. We have 2 assets A and B.
+      // We could create a chain of J/S txs to produce a single note for input asset B.
+      // Then we MUST have a single note of the exact size for input asset A.
+      // If we don't then we can't execute the tx.
+
+      // An additional thing to note is that the fee, if there is one is paid for by input asset A
+      // So the input note/s for asset A will need to include the requested fee value
+
+      let notesA: Note[] = [];
+      let notesB: Note[] = [];
+      let requireJoinSplitForAssetB = false;
+      const hasTwoAssets = bridgeCallData.numInputAssets === 2;
+      const spendingKeyRequired = !spendingPublicKey.equals(userId);
+      if (hasTwoAssets) {
+        // We have 2 input assets, so it's the more complex situation as explained above
+        const assetIdB = bridgeCallData.inputAssetIdB!;
+        // Look for a single note for asset B
+        const note2 = await userState.pickNote(assetIdB, depositValue, spendingKeyRequired);
+        // If we found a single note, great. If not then look for multiple notes.
+        notesB = note2 ? [note2] : await userState.pickNotes(assetIdB, depositValue, spendingKeyRequired);
+        if (!notesB.length) {
+          throw new Error(`Failed to find notes of asset ${assetIdB} that sum to ${depositValue}.`);
+        }
+
+        // If we need more than 1 note for asset B OR the single note we found is too large
+        // then we require J/S txs on asset A
+        // We will not be able to use J/S on input asset A!! This is checked further down...
+        requireJoinSplitForAssetB = notesB.length > 1 || notesB[0].value !== depositValue;
+      }
+
+      {
+        const assetIdA = bridgeCallData.inputAssetIdA;
+        const valueA = depositValue + fee;
+        // If a J/S operation is required for asset B then we require that the input note for asset A is NOT pending
+        // Also, if any of the input notes for asset B are pending then we require that the input note for asset A is NOT pending
+        const excludePendingNotes = requireJoinSplitForAssetB || notesB.some(n => n.pending);
+        // If we have 2 input assets then search for a single note
+        const note1 = hasTwoAssets
+          ? await userState.pickNote(assetIdA, valueA, spendingKeyRequired, excludePendingNotes)
+          : undefined;
+        // If we have a single note, great! If not then search for more notes
+        notesA = note1
+          ? [note1]
+          : await userState.pickNotes(assetIdA, valueA, spendingKeyRequired, excludePendingNotes);
+        if (!notesA.length) {
+          throw new Error(`Failed to find notes of asset ${assetIdA} that sum to ${valueA}.`);
+        }
+
+        // Here we are checking to see if we can execute the tx.
+        // If the total note value for asset A is greater then required then we require J/S txs on asset A
+        // If the number of notes for asset A is greater than 2 then we require J/S txs on asset A
+        // If the number of notes for asset A is greater than 1 AND we have 2 input assets then we require J/S txs on asset A
+        const totalInputNoteValueForAssetA = notesA.reduce((sum, note) => sum + note.value, BigInt(0));
+        const requireJoinSplitForAssetA =
+          totalInputNoteValueForAssetA > valueA || notesA.length > 2 || (hasTwoAssets && notesA.length > 1);
+
+        // At this point, if we need J/S txs on both input assets then the tx can't be executed
+        if (requireJoinSplitForAssetA && requireJoinSplitForAssetB) {
+          throw new Error(`Cannot find a note with the exact value for asset ${assetIdA}. Require ${valueA}.`);
+        }
+      }
+
+      const joinSplitProofInputs: JoinSplitProofInput[] = [];
+      const outputNotes: Note[] = [];
+      {
+        // Here we need to generate the proof inputs based on the notes collected above
+        // For asset A, we need the deposit value + any fee
+        // If there is only 1 input asset (asset A) AND we have more than 2 notes then remove 1 non-pending note from the pack (if there is one)
+        // Also reduce the target value by the value of this note
+        let targetValue = depositValue + fee;
+        const reservedNote = !hasTwoAssets && notesA.length > 2 ? notesA.find(n => !n.pending) : undefined;
+        if (reservedNote) {
+          outputNotes.push(reservedNote);
+          targetValue -= reservedNote.value;
+        }
+        // We now need to produce J/S txs as required to give us the required number of notes for asset A
+        // If we have 2 input assets then we require a single note as output from these txs
+        // If we have reserved a note above then we require a single note as output from these txs
+        // Otherwise we can have 2 notes as output from these txs
+        // One thing to note is that we may have a perfect-sized note for asset A here
+        // In this case, this next operation should produce no J/S txs!
+        // Another thing to note is that the check for non-pending notes above is significant
+        // The output from the following operation will be a pending note and a tx can't have 2 pending input notes
+        const numberOfOutputNotes = hasTwoAssets || reservedNote ? 1 : 2;
+        const { proofInputs, outputNotes: outputNotesA } = await this.createChainedProofInputs(
+          userId,
+          spendingPublicKey,
+          notesA.filter(n => n !== reservedNote),
+          targetValue,
+          numberOfOutputNotes,
+        );
+        joinSplitProofInputs.push(...proofInputs);
+        outputNotes.push(...outputNotesA);
+      }
+      if (hasTwoAssets) {
+        // Having produced the required note for asset A above (and any required J/S txs)
+        // We now need to do the same for asset B
+        // As we have 2 assets then we must produce a single output note for this asset
+        const { proofInputs, outputNotes: outputNotesB } = await this.createChainedProofInputs(
+          userId,
+          spendingPublicKey,
+          notesB,
+          depositValue,
+          1,
+        );
+        joinSplitProofInputs.push(...proofInputs);
+        outputNotes.push(...outputNotesB);
+      }
+
+      const defiProofInput = await this.defiDepositProofCreator.createProofInput(
         user,
         bridgeCallData,
         depositValue,
-        inputNotes,
+        outputNotes,
         spendingPublicKey,
       );
+
+      return [...joinSplitProofInputs, defiProofInput];
     });
+  }
+
+  private async createChainedProofInputs(
+    userId: GrumpkinAddress,
+    spendingPublicKey: GrumpkinAddress,
+    notes: Note[],
+    targetValue?: bigint,
+    numberOfOutputNotes = 2,
+  ) {
+    const userState = this.getUserState(userId);
+    const user = userState.getUserData();
+    const spendingKeyRequired = !spendingPublicKey.equals(userId);
+
+    const proofInputs: JoinSplitProofInput[] = [];
+    let outputNotes: Note[] = notes;
+
+    if (notes.length > 2) {
+      // We have more than 2 notes so we want to J/S them down to just 2
+      // We do this by splitting the notes into settled and pending (there must be at most 1 pending note!)
+      // Then we pair a settled note with a settled/pending note to produce a pending output note.
+      // Then we pair that pending output note with another settled note to produce a new pending output note
+      // Repeat this until we have 2 notes remaining, one pending and one settled
+      const settledNotes = notes.filter(n => !n.pending);
+      let firstNote = notes.find(n => n.pending) || settledNotes.shift()!;
+      const lastNote = settledNotes.pop()!;
+      const assetId = firstNote.assetId;
+
+      // Create chained txs to generate 2 output notes
+      for (const note of settledNotes) {
+        const inputNotes = [firstNote, note];
+        const noteSum = inputNotes.reduce((sum, n) => sum + n.value, BigInt(0));
+        const proofInput = await this.paymentProofCreator.createProofInput(
+          user,
+          inputNotes,
+          noteSum, // privateInput
+          BigInt(0), // recipientPrivateOutput
+          noteSum, // senderPrivateOutput
+          BigInt(0), // publicInput,
+          BigInt(0), // publicOutput
+          assetId,
+          userId, // noteRecipient
+          spendingKeyRequired,
+          undefined, // publicOwner
+          spendingPublicKey,
+          2,
+        );
+        proofInputs.push(proofInput);
+        firstNote = treeNoteToNote(proofInput.tx.outputNotes[1], user.accountPrivateKey, this.noteAlgos, {
+          allowChain: true,
+        });
+      }
+
+      outputNotes = [firstNote, lastNote];
+    }
+
+    // If the sum of our output notes does not exactly match the value requested then we must perform 1 final J/S
+    // Also, if the current number of output notes is greater than that requested then we must perform 1 final J/S
+    const noteSum = outputNotes.reduce((sum, n) => sum + n.value, BigInt(0));
+    if ((targetValue !== undefined && noteSum !== targetValue) || outputNotes.length > numberOfOutputNotes) {
+      const senderPrivateOutput = targetValue !== undefined ? targetValue : noteSum;
+      const recipientPrivateOutput = noteSum - senderPrivateOutput;
+      const proofInput = await this.paymentProofCreator.createProofInput(
+        user,
+        outputNotes,
+        noteSum, // privateInput
+        recipientPrivateOutput,
+        senderPrivateOutput,
+        BigInt(0), // publicInput,
+        BigInt(0), // publicOutput
+        outputNotes[0].assetId,
+        userId, // noteRecipient
+        spendingKeyRequired,
+        undefined, // publicOwner
+        spendingPublicKey,
+        3,
+      );
+      proofInputs.push(proofInput);
+      outputNotes = [
+        treeNoteToNote(proofInput.tx.outputNotes[1], user.accountPrivateKey, this.noteAlgos, {
+          allowChain: true,
+        }),
+      ];
+    }
+
+    return { proofInputs, outputNotes };
   }
 
   public async createDefiProof(input: JoinSplitProofInput, txRefNo: number) {
@@ -766,6 +939,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
         offchainTxData: offchainTxData.toBuffer(),
         depositSignature: signature,
       }));
+
       const txIds = await this.rollupProvider.sendTxs([...proofTxs, ...txs]);
 
       for (const proof of proofs) {
@@ -1001,7 +1175,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
 
   private async computeJoinSplitProvingKey() {
     this.debug('release account proving key...');
-    await this.accountProver.releaseKey();
+    await this.accountProver?.releaseKey();
     this.debug('computing join-split proving key...');
     await this.joinSplitProver.computeKey();
     this.debug('done.');

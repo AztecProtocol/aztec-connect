@@ -61,7 +61,6 @@ contract DummyDefiBridge is IDefiBridge {
         uint64
     ) external payable override returns (uint256, uint256, bool) {
         require(msg.sender == rollupProcessor, "invalid sender!");
-
         uint256 returnValueA = approveTransfer(outputAssetA, outputVirtualValueA, interactionNonce);
         uint256 returnValueB = approveTransfer(outputAssetB, outputVirtualValueB, interactionNonce);
         return (returnValueA, returnValueB, true);

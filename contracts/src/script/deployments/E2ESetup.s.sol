@@ -27,12 +27,6 @@ contract E2ESetup is Test {
     uint256 internal constant ESCAPE_BLOCK_UPPER_BOUND = 2400;
 
     address internal constant ROLLUP_PROVIDER = payable(0xA173BDdF4953C1E8be2cA0695CFc07502Ff3B1e7);
-
-    // Config
-    bytes32 private constant INIT_DATA_ROOT = 0x18ceb5cd201e1cee669a5c3ad96d3c4e933a365b37046fc3178264bede32c68d;
-    bytes32 private constant INIT_NULL_ROOT = 0x298329c7d0936453f354e4a5eef4897296cc0bf5a66f2a528318508d2088dafa;
-    bytes32 private constant INIT_ROOT_ROOT = 0x2fd2364bfe47ccb410eba3a958be9f39a8c6aca07db1abd15f5a211f51505071;
-    uint32 private constant INIT_DATA_SIZE = 0;
     bool private constant ALLOW_THIRD_PARTY_CONTRACTS = false;
 
     bytes32[4] internal ROLES =
@@ -58,6 +52,11 @@ contract E2ESetup is Test {
     function deployAlwaysTrueVerifier() public {
         vm.broadcast();
         AlwaysTrueVerifier verifier = new AlwaysTrueVerifier();
+
+        // Get empty tree
+        (bytes32 initDataRoot, bytes32 initNullRoot, bytes32 initRootsRoot, uint32 initDataSize) =
+            getDefaultRootValues(true);
+
         _full(
             FullParam(
                 address(verifier),
@@ -66,10 +65,10 @@ contract E2ESetup is Test {
                 tx.origin,
                 tx.origin,
                 false,
-                INIT_DATA_ROOT,
-                INIT_NULL_ROOT,
-                INIT_ROOT_ROOT,
-                INIT_DATA_SIZE,
+                initDataRoot,
+                initNullRoot,
+                initRootsRoot,
+                initDataSize,
                 ALLOW_THIRD_PARTY_CONTRACTS
             )
         );
@@ -108,6 +107,10 @@ contract E2ESetup is Test {
             verifier = address(new MockVerifier());
         }
 
+        // Depending on the chainID that is being deployed to, the initial values will be different
+        (bytes32 initDataRoot, bytes32 initNullRoot, bytes32 initRootsRoot, uint32 initDataSize) =
+            getDefaultRootValues(false);
+
         _full(
             FullParam(
                 verifier,
@@ -116,10 +119,10 @@ contract E2ESetup is Test {
                 _faucetController,
                 _provider,
                 _upgrade,
-                INIT_DATA_ROOT,
-                INIT_NULL_ROOT,
-                INIT_ROOT_ROOT,
-                INIT_DATA_SIZE,
+                initDataRoot,
+                initNullRoot,
+                initRootsRoot,
+                initDataSize,
                 ALLOW_THIRD_PARTY_CONTRACTS
             )
         );
@@ -190,6 +193,41 @@ contract E2ESetup is Test {
     }
 
     /**
+     * @notice Depending on the chain that is being deployed to, there are different root configurations for
+     *         for the merkle trees. This function reads the chainId and returns the suitable values
+     * @dev Values are verbatim from: https://github.com/AztecProtocol/aztec2-internal/blob/defi-bridge-project/yarn-project/barretenberg.js/src/environment/init/init_config.ts
+     * @param empty If the empty flag is provided then roots for empty trees are returned
+     * @return initDataRoot
+     * @return initNullRoot
+     * @return initRootsRoot
+     * @return initDataSize
+     */
+    function getDefaultRootValues(bool empty)
+        public
+        returns (bytes32 initDataRoot, bytes32 initNullRoot, bytes32 initRootsRoot, uint32 initDataSize)
+    {
+        if (empty) {
+            initDataRoot = 0x18ceb5cd201e1cee669a5c3ad96d3c4e933a365b37046fc3178264bede32c68d;
+            initNullRoot = 0x298329c7d0936453f354e4a5eef4897296cc0bf5a66f2a528318508d2088dafa;
+            initRootsRoot = 0x2fd2364bfe47ccb410eba3a958be9f39a8c6aca07db1abd15f5a211f51505071;
+            initDataSize = 0;
+        } else {
+            uint256 chainId = block.chainid;
+            if (chainId == 677868 || chainId == 3567 /* 0xa57ec || 0xdef */ ) {
+                initDataRoot = 0x2a460f05d3dbdbb1d6ed8c3a1e589b13561dca0d49e4d496ae0d1d15c4aa1c68;
+                initNullRoot = 0x1cb59b327064120bdf5ba23096b76cfe1ca8a45ab3db1b4f033bca92443cc025;
+                initRootsRoot = 0x1c8ca5c80e65a610ca9326c65b7e1906864ad84e6c4d70e406f770f939934ecf;
+                initDataSize = 18;
+            } else {
+                initDataRoot = 0x1417c092da90cfd39679299b8e381dd295dba6074b410e830ef6d3b7040b6eac;
+                initNullRoot = 0x0225131cf7530ba9f617dba641b32020a746a6e0124310c09aac7c7c8a2e0ce5;
+                initRootsRoot = 0x08ddeab28afc61bd560f0153f7399c9bb437c7cd280d0f4c19322227fcd80e05;
+                initDataSize = 8;
+            }
+        }
+    }
+
+    /**
      * @notice Grant the safe all rollup admin roles, ensure that the deployer is stripped of all
      *         default roles or any roles granted for the purpose of deploying.
      * @param _rollup The address of the rollup contract (proxy)
@@ -237,23 +275,25 @@ contract E2ESetup is Test {
     ) internal {
         // Write deployment addresses to json
         string memory json;
-        json.serialize("Deployer", _params.deployer);
-        json.serialize("Safe", _params.safe);
-        json.serialize("ProxyAdmin", address(_proxyAdmin));
-        json.serialize("Proxy", address(_proxy));
-        json.serialize("PermitHelper", address(_permitHelper));
-        json.serialize("ProxyDeployer", address(_proxyDeployer));
-        json.serialize("DefiProxy", address(_defiProxy));
-        json.serialize("Verifier", _params.verifier);
-        json.serialize("FeeDistributor", _peripheryAddresses.feeDistributor);
-        json.serialize("DataProvider", _peripheryAddresses.dataProvider);
-        json.serialize("GasPriceFeed", _peripheryAddresses.gasPriceFeed);
-        json.serialize("DaiPriceFeed", _peripheryAddresses.daiPriceFeed);
-        json.serialize("Faucet", _peripheryAddresses.faucet);
-        json = json.serialize("Version", RollupProcessorV2(_proxy).getImplementationVersion());
+        json.serialize("DEPLOYER_ADDRESS", _params.deployer);
+        json.serialize("SAFE_ADDRESS", _params.safe);
+        json.serialize("PROXY_ADMIN_ADDRESS", address(_proxyAdmin));
+        json.serialize("ROLLUP_CONTRACT_ADDRESS", address(_proxy));
+        json.serialize("PERMIT_HELPER_CONTRACT_ADDRESS", address(_permitHelper));
+        json.serialize("PROXY_DEPLOYER_CONTRACT_ADDRESS", address(_proxyDeployer));
+        json.serialize("DEFI_PROXY_CONTRACT_ADDRESS", address(_defiProxy));
+        json.serialize("VERIFIER_CONTRACT_ADDRESS", _params.verifier);
+        json.serialize("FEE_DISTRIBUTOR_ADDRESS", _peripheryAddresses.feeDistributor);
+        json.serialize("BRIDGE_DATA_PROVIDER_CONTRACT_ADDRESS", _peripheryAddresses.dataProvider);
+        json.serialize("GAS_PRICE_FEED_CONTRACT_ADDRESS", _peripheryAddresses.gasPriceFeed);
+        json.serialize("DAI_PRICE_FEED_CONTRACT_ADDRESS", _peripheryAddresses.daiPriceFeed);
+        json.serialize("FAUCET_CONTRACT_ADDRESS", _peripheryAddresses.faucet);
+        json = json.serialize("VERSION", RollupProcessorV2(_proxy).getImplementationVersion());
 
-        string memory path = string(abi.encodePacked("serve/", block.chainid.toString(), "/contract_addresses.json"));
+        string memory path = string(abi.encodePacked("serve/contract_addresses.json"));
         json.write(path);
+        emit log_string("Contracts written to:");
+        emit log_string(path);
 
         // Write deployment addresses to std out
         emit log_named_address("Deployer", _params.deployer);
@@ -265,7 +305,7 @@ contract E2ESetup is Test {
         emit log_named_address("DefiProxy    ", address(_defiProxy));
         emit log_named_address("Verifier     ", _params.verifier);
         emit log_named_address("FeeDistributor", _peripheryAddresses.feeDistributor);
-        emit log_named_address("DataProvider  ", _peripheryAddresses.dataProvider);
+        emit log_named_address("BridgeDataProvider  ", _peripheryAddresses.dataProvider);
         emit log_named_address("GasPriceFeed  ", _peripheryAddresses.gasPriceFeed);
         emit log_named_address("DaiPriceFeed  ", _peripheryAddresses.daiPriceFeed);
         emit log_named_address("Faucet        ", _peripheryAddresses.faucet);

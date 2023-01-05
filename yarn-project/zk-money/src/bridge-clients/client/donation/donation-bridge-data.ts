@@ -1,17 +1,15 @@
-import { EthereumProvider, AssetValue } from '@aztec/sdk';
-import { Web3Provider } from '@ethersproject/providers';
+import { AssetValue } from '@aztec/sdk';
+import { StaticJsonRpcProvider } from '@ethersproject/providers';
 import { IRollupProcessor, IRollupProcessor__factory } from '../../typechain-types/index.js';
-import { createWeb3Provider } from '../aztec/provider/web3_provider.js';
 import { AuxDataConfig, AztecAsset, AztecAssetType, BridgeDataFieldGetters, SolidityType } from '../bridge-data.js';
 
 export class DonationBridgeData implements BridgeDataFieldGetters {
-  private constructor(private ethersProvider: Web3Provider, private rollupProcessor: IRollupProcessor) {}
+  private constructor(private ethersProvider: StaticJsonRpcProvider, private rollupProcessor: IRollupProcessor) {}
 
-  static create(provider: EthereumProvider) {
-    const ethersProvider = createWeb3Provider(provider);
+  static create(provider: StaticJsonRpcProvider) {
     return new DonationBridgeData(
-      createWeb3Provider(provider),
-      IRollupProcessor__factory.connect('0xFF1F2B4ADb9dF6FC8eAFecDcbF96A2B351680455', ethersProvider),
+      provider,
+      IRollupProcessor__factory.connect('0xFF1F2B4ADb9dF6FC8eAFecDcbF96A2B351680455', provider),
     );
   }
 

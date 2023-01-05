@@ -100,9 +100,11 @@ export class TxReceiver {
           this.log(
             `Txs only contained enough fee to pay for ${validation.gasProvided} gas, but it needed ${validation.gasRequired}.`,
           );
+          txFeeAllocator.printFeeBreakdown(txs, txTypes);
           throw new Error('Insufficient fee.');
         }
         await this.validateChain(txs);
+        await this.validateNullifiers(txs);
         await this.validateRequiredDeposit(txs);
 
         for (let i = 0; i < txs.length; ++i) {
@@ -128,6 +130,7 @@ export class TxReceiver {
         }
       } else {
         await this.validateChain(txs);
+        await this.validateNullifiers(txs);
         await this.validateRequiredDeposit(txs);
 
         this.log('Validating received txs...');
@@ -279,6 +282,7 @@ export class TxReceiver {
 
   private async validateChain(txs: Tx[]) {
     const unsettledTxs = (await this.rollupDb.getUnsettledTxs()).map(({ proofData }) => new ProofData(proofData));
+
     for (let i = 0; i < txs.length; ++i) {
       const { backwardLink } = txs[i].proof;
       if (!backwardLink.equals(Buffer.alloc(32))) {
@@ -296,20 +300,22 @@ export class TxReceiver {
           throw new Error('Linked tx not found.');
         }
       }
+    }
+  }
 
-      const { nullifier1, nullifier2 } = txs[i].proof;
-      if (
-        (await this.rollupDb.nullifiersExist(nullifier1, nullifier2)) ||
-        txs
-          .slice(0, i)
-          .some(p =>
-            [p.proof.nullifier1, p.proof.nullifier2]
-              .filter(n => !!toBigIntBE(n))
-              .some(n => n.equals(nullifier1) || n.equals(nullifier2)),
-          )
-      ) {
-        throw new Error('Nullifier already exists.');
-      }
+  private async validateNullifiers(txs: Tx[]) {
+    const zero = Buffer.alloc(32);
+
+    // Extract all non zero nullifiers from txs.
+    const nullifiers = txs
+      .reduce((a, { proof: { nullifier1, nullifier2 } }) => [...a, nullifier1, nullifier2], [] as Buffer[])
+      .filter(n => !n.equals(zero));
+
+    // Check for duplicates.
+    const nullifierSet = new Set(nullifiers.map(n => toBigIntBE(n)));
+
+    if (nullifierSet.size !== nullifiers.length || (await this.rollupDb.nullifiersExist(nullifiers))) {
+      throw new Error('Nullifier already exists.');
     }
   }
 

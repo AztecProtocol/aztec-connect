@@ -78,7 +78,7 @@ export const getWalletSelectorToast = (closeModal: () => void) => ({
   key: Toasts.WALLET_SELECTOR,
   closable: true,
   components: (
-    <div className={style.signatureToast} style={{ width: '400px' }}>
+    <div className={style.signatureToast}>
       Do you wish to switch the wallet you're signing with?
       <div className={style.note}>
         Please note, this has no effect on the Aztec account you're currently signed in with.

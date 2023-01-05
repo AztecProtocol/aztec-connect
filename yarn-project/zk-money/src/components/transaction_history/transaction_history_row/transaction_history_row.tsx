@@ -13,19 +13,20 @@ interface TransactionHistoryRowProps {
 const cx = bindStyle(style);
 
 export function TransactionHistoryRow({ tx }: TransactionHistoryRowProps) {
+  const transactionFee = renderTransactionFeeField(tx);
   return (
     <div className={style.root}>
       <div className={cx(style.segment, style.firstSegment)}>
         <TransactionTypeField tx={tx} />
       </div>
-      <div className={style.separator} />
-      <div className={style.segment}>
+      <div className={cx(style.segment, style.valueField)}>
         <div className={style.value}>{renderTransactionValueField(tx)}</div>
       </div>
-      <div className={style.segment}>
-        <div className={style.fee}>{renderTransactionFeeField(tx)}</div>
-      </div>
-      <div className={style.separator} />
+      {transactionFee && (
+        <div className={cx(style.segment, style.feeField)}>
+          <div className={style.fee}>{renderTransactionFeeField(tx)}</div>
+        </div>
+      )}
       <div className={cx(style.segment, style.lastSegment)}>
         <div className={style.time}>
           <TransactionTimeField tx={tx} />

@@ -25,6 +25,7 @@ interface DefiConfirmationPageProps {
   validationResult: DefiFormValidationResult;
   onSubmit: () => void;
   onClose: () => void;
+  onBack: (() => void) | undefined;
 }
 
 export function DefiConfirmationPage({
@@ -34,6 +35,7 @@ export function DefiConfirmationPage({
   flowDirection,
   onSubmit,
   onClose,
+  onBack,
   validationResult,
 }: DefiConfirmationPageProps) {
   const [riskChecked, setRiskChecked] = useState(false);
@@ -41,10 +43,25 @@ export function DefiConfirmationPage({
 
   const amount = lockedComposerPayload.targetDepositAmount;
   const hasError = !!composerState?.error;
+  const backNoRetry = composerState?.backNoRetry;
   const isIdle = composerState.phase === DefiComposerPhase.IDLE;
   const showingComplete = composerState.phase === DefiComposerPhase.DONE;
   const showingDeclaration = isIdle && !hasError;
   const canSubmit = riskChecked && isIdle;
+
+  let buttonText = 'Confirm Transaction';
+  if (backNoRetry) {
+    buttonText = 'Go Back';
+  } else if (hasError) {
+    buttonText = 'Retry';
+  }
+
+  let onClick: (() => void) | undefined;
+  if (backNoRetry) {
+    onClick = onBack;
+  } else if (canSubmit) {
+    onClick = onSubmit;
+  }
 
   return (
     <div className={style.page2Wrapper}>
@@ -80,11 +97,7 @@ export function DefiConfirmationPage({
               disabled={walletInteractionIsOngoing}
             />
           ) : (
-            <Button
-              text={hasError ? 'Retry' : 'Confirm Transaction'}
-              onClick={canSubmit ? onSubmit : undefined}
-              disabled={!canSubmit || walletInteractionIsOngoing}
-            />
+            <Button text={buttonText} onClick={onClick} disabled={!canSubmit || walletInteractionIsOngoing} />
           )}
         </div>
       )}

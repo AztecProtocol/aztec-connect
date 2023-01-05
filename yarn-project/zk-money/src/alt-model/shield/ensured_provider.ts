@@ -22,7 +22,7 @@ export class WalletAccountEnforcer {
       if (!isCorrectAccount) {
         const abbreviatedAddress = `${enforcedAddressStr.slice(0, 6)}...${enforcedAddressStr.slice(-4)}`;
         this.prompt(`Please switch your wallet's account to ${abbreviatedAddress}.`);
-      } else if (isCorrectNetwork) {
+      } else if (!isCorrectNetwork) {
         this.prompt(`Please switch your wallet's network to ${this.enforcedNetwork.network}...`);
       }
       if (isCorrectAccount && isCorrectNetwork) return signer;

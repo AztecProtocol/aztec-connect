@@ -30,11 +30,11 @@ const {
 
 /**
  * Run the following:
- * blockchain: yarn start:ganache
+ * contracts: ./scripts/start_e2e.sh
  * kebab: yarn start:e2e
  * halloumi: yarn start:e2e
  * falafel: yarn start:e2e
- * end-to-end: yarn test e2e_virtual_assets
+ * end-to-end: yarn test e2e_virtual_assets.test.ts
  */
 describe('end-to-end virtual assets tests', () => {
   let provider: WalletProvider;
@@ -42,7 +42,7 @@ describe('end-to-end virtual assets tests', () => {
   let userIds: GrumpkinAddress[] = [];
   let signers: Signer[] = [];
   let shieldValue: AssetValue;
-  const bridgeAddressId = 6;
+  const bridgeAddressId = 1;
   const outputValueEth = 10n ** 15n; // 0.001
   const outputValueDai = 10n ** 20n; // 100
   const outputVirtualValueA = BigInt('0x123456789abcdef0123456789abcdef0123456789abcdef');

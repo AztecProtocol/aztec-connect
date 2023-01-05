@@ -1,4 +1,4 @@
-variable "PRIVATE_KEY" {
+variable "TEST_NET_ROOT_PRIVATE_KEY" {
   type = string
 }
 

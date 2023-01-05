@@ -11,6 +11,10 @@
   align-items: center;
   gap: 18px;
   font-size: 22px;
+
+  @media (max-width: 480px) {
+    width: 100%;
+  }
 }
 
 .logo {

@@ -18,10 +18,9 @@
 
 .checkboxRow {
   display: flex;
-  gap: 20px;
+  gap: 15px;
   align-items: center;
   justify-content: flex-end;
-  letter-spacing: 0.06em;
   font-size: 16px;
 }
 
@@ -31,9 +30,22 @@
 }
 
 .message {
-  line-height: 157%;
-  letter-spacing: 0.06em;
   font-size: 16px;
-  margin: 35px 0 70px 0;
+  margin: 35px 0 50px 0;
   text-align: center;
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+
+  @media (max-width: 480px) {
+    gap: 30px;
+  }
+}
+
+.line {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
 }

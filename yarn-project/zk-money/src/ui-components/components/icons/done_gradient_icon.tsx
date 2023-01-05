@@ -13,9 +13,9 @@ export const DoneGradientIcon = (props: SVGProps<SVGSVGElement>) => {
       />
       <defs>
         <linearGradient id={`${id}`} x1={-2.857} y1={0} x2={21.22} y2={-5.108} gradientUnits="userSpaceOnUse">
-          <stop stopColor="#940DFF" />
-          <stop offset={1} stopColor="#0094FF" />
-          <stop offset={1} stopColor="#0094FF" />
+          <stop stopColor="#2f1f49" />
+          <stop offset={1} stopColor="#2f1f49" />
+          <stop offset={1} stopColor="#2f1f49" />
         </linearGradient>
       </defs>
     </svg>

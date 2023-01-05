@@ -24,11 +24,15 @@ const {
  * This simple deposit is run with the prover enabled in the e2e-prover test in CI.
  *
  * Run the following:
- * blockchain: yarn start:ganache
+ * contracts: ./scripts/start_e2e.sh
  * kebab: ./scripts start_e2e_prover.sh
  * halloumi: ./scripts start_e2e_prover.sh
  * falafel: ./scripts start_e2e_prover.sh
- * end-to-end: yarn test ./src/e2e_deposit.test.ts
+ * end-to-end: yarn test e2e_deposit.test.ts
+ *
+ * If running real prover via docker:
+ * end-to-end: ONLY_TARGET=false ../../bootstrap_docker.sh
+ * end-to-end: TEST=e2e_deposit.test.ts NUM_INNER_ROLLUP_TXS=1 NUM_OUTER_ROLLUP_PROOFS=1 VK=VerificationKey1x1 PROVERLESS=false docker-compose -f ./scripts/docker-compose.yml up --force-recreate --exit-code-from end-to-end
  */
 
 describe('end-to-end deposit test', () => {

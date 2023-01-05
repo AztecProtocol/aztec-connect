@@ -110,8 +110,8 @@ export class RollupPipeline {
     return this.pipelineCoordinator.getProcessedTxs();
   }
 
-  public async start() {
-    return await this.pipelineCoordinator.start();
+  public start() {
+    return this.pipelineCoordinator.start();
   }
 
   public async stop(shouldThrowIfFailToStop: boolean) {

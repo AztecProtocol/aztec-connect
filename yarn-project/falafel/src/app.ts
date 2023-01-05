@@ -20,17 +20,10 @@ import compress from 'koa-compress';
 import Router from 'koa-router';
 import { PromiseReadable } from 'promise-readable';
 import requestIp from 'request-ip';
-import { buildSchemaSync } from 'type-graphql';
-import { Container } from 'typedi';
 import { TxDao } from './entity/index.js';
 import { Metrics } from './metrics/index.js';
-import { RollupResolver, ServerStatusResolver, TxResolver } from './resolver/index.js';
 import { Server } from './server.js';
 import { Tx, TxRequest } from './tx_receiver/index.js';
-
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-const { ApolloServer } = require('apollo-server-koa');
 
 const toDepositTxJson = ({ proofData }: TxDao): DepositTxJson => {
   const proof = JoinSplitProofData.fromBuffer(proofData);
@@ -55,7 +48,7 @@ const fromTxJson = (data: TxJson): Tx => ({
   depositSignature: data.depositSignature ? bufferFromHex(data.depositSignature) : undefined,
 });
 
-export async function appFactory(server: Server, prefix: string, metrics: Metrics, serverAuthToken: string) {
+export function appFactory(server: Server, prefix: string, metrics: Metrics, serverAuthToken: string) {
   const router = new Router<DefaultState, Context>({ prefix });
 
   /* Ensure the version header (if present) matches the server version.
@@ -177,7 +170,7 @@ export async function appFactory(server: Server, prefix: string, metrics: Metric
   });
 
   router.get('/get-blocks', recordMetric, async (ctx: Koa.Context) => {
-    const blocks = ctx.query.from ? server.getBlockBuffers(+ctx.query.from, 100) : [];
+    const blocks = ctx.query.from ? await server.getBlockBuffers(+ctx.query.from, 100) : [];
     const response = Buffer.concat([
       numToInt32BE(await server.getLatestRollupId()),
       serializeBufferArrayToVector(blocks),
@@ -190,12 +183,11 @@ export async function appFactory(server: Server, prefix: string, metrics: Metric
   router.get('/rollups', recordMetric, async (ctx: Koa.Context) => {
     const { skip = 0, take = 5 } = ctx.query;
     const blocks = await server.getRollups(+skip, +take);
-    ctx.body = blocks.map(({ id, rollupProof, ethTxHash, created, mined }) => ({
+    ctx.body = blocks.map(({ id, rollupProof, ethTxHash, mined }) => ({
       id,
       hash: rollupProof.id.toString('hex'),
       numTxs: rollupProof.txs.length,
       ethTxHash: ethTxHash?.toString(),
-      created,
       mined,
     }));
     ctx.status = 200;
@@ -217,7 +209,6 @@ export async function appFactory(server: Server, prefix: string, metrics: Metric
         proofData: rollupProof.encodedProofData.toString('hex'),
         dataRoot: rollupProofData.newDataRoot.toString('hex'),
         nullifierRoot: rollupProofData.newNullRoot.toString('hex'),
-        created: rollup.created,
         mined: rollup.mined,
         txs: rollupProof.txs.map(({ id, ...tx }) => {
           const joinSplit = new ProofData(tx.proofData);
@@ -394,14 +385,6 @@ export async function appFactory(server: Server, prefix: string, metrics: Metric
   app.use(exceptionHandler);
   app.use(router.routes());
   app.use(router.allowedMethods());
-
-  const schema = buildSchemaSync({
-    resolvers: [RollupResolver, TxResolver, ServerStatusResolver],
-    container: Container,
-  });
-  const appServer = new ApolloServer({ schema, introspection: true });
-  await appServer.start();
-  appServer.applyMiddleware({ app, path: `${prefix}/graphql` });
 
   return app;
 }

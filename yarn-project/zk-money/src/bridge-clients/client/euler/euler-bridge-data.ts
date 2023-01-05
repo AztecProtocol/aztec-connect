@@ -1,7 +1,6 @@
-import { EthAddress, EthereumProvider, AssetValue } from '@aztec/sdk';
-import { Web3Provider } from '@ethersproject/providers';
+import { EthAddress, AssetValue } from '@aztec/sdk';
 import 'isomorphic-fetch';
-import { createWeb3Provider } from '../aztec/provider/web3_provider.js';
+import { StaticJsonRpcProvider } from '@ethersproject/providers';
 import { AztecAsset, AztecAssetType } from '../bridge-data.js';
 
 import { ERC4626BridgeData } from '../erc4626/erc4626-bridge-data.js';
@@ -11,20 +10,18 @@ export class EulerBridgeData extends ERC4626BridgeData {
   private readonly subgraphWethId = '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2';
   private readonly wstETH = EthAddress.fromString('0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0');
 
-  protected constructor(ethersProvider: Web3Provider, private lidoBridgeData: LidoBridgeData | undefined) {
+  protected constructor(ethersProvider: StaticJsonRpcProvider, private lidoBridgeData: LidoBridgeData | undefined) {
     super(ethersProvider);
   }
 
-  static create(provider: EthereumProvider) {
-    const ethersProvider = createWeb3Provider(provider);
-    return new EulerBridgeData(ethersProvider, undefined);
+  static create(provider: StaticJsonRpcProvider) {
+    return new EulerBridgeData(provider, undefined);
   }
 
-  static createWithLido(provider: EthereumProvider, lidoOracleAddress: EthAddress) {
-    const ethersProvider = createWeb3Provider(provider);
+  static createWithLido(provider: StaticJsonRpcProvider, lidoOracleAddress: EthAddress) {
     // Note: passing in only the addresses which are relevant for the getAPR method to keep it simple
     const lidoBridgeData = LidoBridgeData.create(provider, EthAddress.ZERO, lidoOracleAddress, EthAddress.ZERO);
-    return new EulerBridgeData(ethersProvider, lidoBridgeData);
+    return new EulerBridgeData(provider, lidoBridgeData);
   }
 
   async getAPR(yieldAsset: AztecAsset): Promise<number> {

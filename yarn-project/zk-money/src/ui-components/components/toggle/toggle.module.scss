@@ -5,26 +5,16 @@
   position: relative;
   width: 100%;
   height: 48px;
+  background-color: white;
+  font-weight: 450;
   border-radius: 10px;
   @include mixins.shadow_border;
-}
-
-.small {
-  min-width: 250px;
-}
-
-.medium {
-  min-width: 375px;
-}
-
-.large {
-  min-width: 500px;
 }
 
 .boldLabels {
   height: 48px;
   transition: transform 0.2s;
-  font-weight: 450;
+  font-weight: 500;
 }
 
 .switch {
@@ -51,7 +41,6 @@
   transition: transform 0.2s;
   display: flex;
   flex-direction: column;
-  font-weight: 500;
 }
 
 .label {
@@ -59,7 +48,6 @@
   white-space: break-spaces;
   font-size: 16px;
   line-height: 24px;
-  font-weight: 450;
   text-transform: capitalize;
 }
 

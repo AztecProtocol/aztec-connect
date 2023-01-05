@@ -7,7 +7,7 @@
   "type": "module",
   "scripts": {
     "build": "run tsc -b tsconfig.dest.json",
-    "test": "./scripts/start_e2e",
+    "test": "./scripts/start_e2e.sh",
     "formatting": "run -T prettier --check ./src && run -T eslint --max-warnings 0 ./src",
     "clean": "rm -rf ./data"
   },

@@ -153,6 +153,7 @@ describe('pipeline_coordinator', () => {
       128 * 1024,
       12000000,
       metrics as any,
+      1,
     );
   });
 

@@ -1,6 +1,6 @@
 import { ProofGenerator } from './proof_generator.js';
 import { randomBytes } from '@aztec/barretenberg/crypto';
-import { createDebugLogger } from '@aztec/barretenberg/log';
+import { createDebugLogger, createLogger } from '@aztec/barretenberg/log';
 import { InterruptError } from '@aztec/barretenberg/errors';
 import { Command, Protocol } from './http_job_protocol.js';
 import http from 'http';
@@ -37,7 +37,8 @@ interface Job {
 export class HttpJobServer implements ProofGenerator {
   private jobs: Job[] = [];
   private server: http.Server;
-  private log = createDebugLogger('http_job_server');
+  private debug = createDebugLogger('http_job_server');
+  private log = createLogger('HttpJobServer');
   private running = true;
   // Queue that will execute jobs sequentially with the help of `serialExecute`
   private serialQueue = new MemoryFifo<() => Promise<void>>();
@@ -55,7 +56,7 @@ export class HttpJobServer implements ProofGenerator {
       // retrieval of work is serialized to prevent simultaneous polls of the job queue
       ctx.body = await this.serialExecute(() => this.getWork());
       ctx.status = 200;
-      this.log('get-job returned');
+      this.debug('get-job returned');
     });
 
     // A worker can notify the server upon job completion with the requested data
@@ -119,7 +120,7 @@ export class HttpJobServer implements ProofGenerator {
    * Empty buffer is returned if server is stopped before a job is found.
    */
   private async getWork() {
-    this.log('received request for work');
+    this.debug('received request for work');
     // Continuously try to get an unclaimed job, waiting if none is found and then trying again
     while (this.running) {
       const now = new Date().getTime();
@@ -131,9 +132,9 @@ export class HttpJobServer implements ProofGenerator {
         return Protocol.pack(job.id, job.cmd, job.data);
       } else {
         // No jobs. Block for 1 second, or until awoken.
-        this.log('sleep');
+        this.debug('sleep');
         await this.interruptableSleep.sleep(1000);
-        this.log('awoke');
+        this.debug('awoke');
       }
     }
     // Should only happen if server is stopped before this function finds work to return
@@ -151,7 +152,7 @@ export class HttpJobServer implements ProofGenerator {
    * Worker should set `cmd` to ACK when work was completed successfully.
    */
   private completeJob(buf: Buffer) {
-    this.log('received result for job: ', Protocol.logUnpack(buf).id);
+    this.debug('received result for job: ', Protocol.logUnpack(buf).id);
     const { id, cmd, data } = Protocol.unpack(buf);
 
     const index = this.jobs.findIndex(j => id.equals(j.id));
@@ -166,7 +167,7 @@ export class HttpJobServer implements ProofGenerator {
     if (cmd === Command.ACK) {
       // Job was completed successfully, resolve corresponding Promise
       job.resolve(data);
-      this.log('resolved');
+      this.debug('resolved');
     } else {
       // Job failed, reject corresponding Promise
       job.reject(new Error(data.toString('utf8')));
@@ -181,7 +182,7 @@ export class HttpJobServer implements ProofGenerator {
    * Worker should periodically ping to indicate that work is still in progress for a job.
    */
   private ping(jobId: Buffer) {
-    this.log('ping for job:', jobId.toString('hex'));
+    this.debug('ping for job:', jobId.toString('hex'));
     const job = this.jobs.find(j => j.id.equals(jobId));
     if (job) {
       job.timestamp = new Date().getTime();
@@ -190,18 +191,18 @@ export class HttpJobServer implements ProofGenerator {
 
   public start() {
     this.server.listen(this.port); // http server
-    console.log(`Proof job server listening on port ${this.port}.`);
+    this.log(`Proof job server listening on port ${this.port}.`);
     return Promise.resolve();
   }
 
   public async stop() {
-    this.log('stop called');
+    this.debug('stop called');
     this.running = false; // `getWork` shouldn't try to get another job
     this.server.close(); // http server
     this.serialQueue.cancel(); // discard jobs from queue
     this.interruptableSleep.interrupt(); // interrupt sleep (e.g. in `getWork` which should now exit)
     await this.runningPromise; // wait for `serialQueue`'s `process` call to finish
-    this.log('stop complete');
+    this.debug('stop complete');
   }
 
   /**

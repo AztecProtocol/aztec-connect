@@ -6,6 +6,7 @@
     "account-migrator",
     "barretenberg.js",
     "blockchain",
+    "blockchain-cli",
     "contracts-verifier-test",
     "eslint-config",
     "explorer",

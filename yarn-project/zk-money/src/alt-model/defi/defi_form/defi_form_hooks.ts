@@ -17,9 +17,10 @@ import { useRollupProviderStatus, useRollupProviderStatusPoller } from '../../..
 import { useMaxSpendableValue } from '../../../alt-model/balance_hooks.js';
 import { estimateTxSettlementTimes } from '../../../alt-model/estimate_settlement_times.js';
 import { useMaxDefiValue } from './max_defi_value_hooks.js';
-import { Amount } from '../../../alt-model/assets/index.js';
 import { useAccountState } from '../../account_state/account_state_hooks.js';
 import { useDefiBatchData } from '../../../features/defi/bridge_count_down/bridge_count_down_hooks.js';
+import { amountFromStrOrMaxRoundedDown } from '../../forms/helpers.js';
+import { max, min } from '../../../app/index.js';
 
 const debug = createDebug('zm:defi_form_hooks');
 
@@ -78,21 +79,21 @@ export function useDefiForm(recipe: DefiRecipe, direction: FlowDirection) {
   const auxDataIsCustomised = defaultAuxData !== auxData;
   const bridgeCallData = useDefiFormBridgeCallData(recipe, isExit, interactionAssets, auxData);
   const maxChainableDefiDeposit = useMaxDefiValue(bridgeCallData, fields.speed);
-  const uncheckedTargetValue =
-    fields.amountStrOrMax === MAX_MODE
-      ? maxChainableDefiDeposit
-      : Amount.from(fields.amountStrOrMax, displayedInputAsset).toAssetValue();
-  const feeAmounts = useDefiFeeAmounts(bridgeCallData, uncheckedTargetValue);
+  const transactionLimit = displayedInputAsset.label && config.txAmountLimits[displayedInputAsset.label];
+  const maxOutput = max(min(maxChainableDefiDeposit?.value || 0n, transactionLimit || 0n), 0n);
+  const targetDepositAmount = amountFromStrOrMaxRoundedDown(fields.amountStrOrMax, maxOutput, displayedInputAsset);
+  const feeAmounts = useDefiFeeAmounts(bridgeCallData, targetDepositAmount.toAssetValue());
   const feeAmount = feeAmounts?.[fields.speed];
   const balanceInDisplayedInputAsset = useMaxSpendableValue(displayedInputAsset.id);
   const balanceInFeePayingAsset = useMaxSpendableValue(feeAmount?.id);
-  const transactionLimit = displayedInputAsset.label && config.txAmountLimits[displayedInputAsset.label];
   const validationResult = validateDefiForm({
     fields,
     amountFactory,
     displayedInputAsset,
+    targetDepositAmount,
     feeAmount,
     feeAmounts,
+    maxOutput,
     balanceInDisplayedInputAsset,
     balanceInFeePayingAsset,
     transactionLimit,

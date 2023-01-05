@@ -18,3 +18,4 @@ export * from './spacer.js';
 export * from './text.js';
 export * from './text_link.js';
 export * from './shielded_asset_icon.js';
+export * from './synchronisation_loading_bar/index.js';

@@ -75,7 +75,7 @@ export function Select<T>(props: SelectProps<T>) {
       onClick={handleTriggerDropdown}
     >
       <div className={cx(style.innerFrame, hasButton && style.innerFrameWithButton)}>
-        <GradientDisclosureIcon opacity={props.disabled ? 0 : 1} />
+        <GradientDisclosureIcon className={style.icon} opacity={props.disabled ? 0 : 1} />
         <span className={cx(style.value, !activeLabel && style.placeholder)}>{activeLabel || props.placeholder}</span>
         {hasButton ? (
           <div className={style.closeButton} onClick={handleOptionUnselect}>

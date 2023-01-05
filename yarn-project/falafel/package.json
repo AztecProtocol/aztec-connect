@@ -9,13 +9,9 @@
     "clean": "rm -rf ./data ./dest",
     "clean_db": "rm -rf ./data",
     "formatting": "run -T prettier --check ./src && run -T eslint --max-warnings 0 ./src",
-    "start": "./scripts/start.sh",
-    "start:debug": "./scripts/start.sh --inspect-brk=0.0.0.0:9221",
-    "start:dev": "./scripts/start_dev.sh",
+    "start": "node ${NODE_ARGS:-} ./dest",
     "start:e2e": "./scripts/start_e2e.sh",
-    "start:wasabi": "./scripts/start_wasabi.sh",
-    "test": "NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache",
-    "falafel_cli": "node ./dest/cli/index.js"
+    "test": "NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache"
   },
   "bin": {
     "falafel_cli": "./cli/index.js"
@@ -38,14 +34,12 @@
     "@aztec/blockchain": "workspace:^",
     "@aztec/halloumi": "workspace:^",
     "@koa/cors": "^3.3.0",
-    "apollo-server-koa": "^3.10.2",
     "async-mutex": "^0.2.6",
     "bn.js": "^5.0.0",
     "class-validator": "^0.12.2",
     "coinbase-pro": "^0.9.0",
     "commander": "^9.4.0",
     "fs-extra": "9.0.1",
-    "graphql": "^15.3.0",
     "koa": "^2.7.0",
     "koa-compress": "^5.1.0",
     "koa-router": "^7.4.0",
@@ -59,8 +53,6 @@
     "request-ip": "^2.1.3",
     "source-map-support": "^0.5.21",
     "sqlite3": "^5.0.9",
-    "type-graphql": "^1.0.0",
-    "typedi": "^0.8.0",
     "typeorm": "^0.3.10"
   },
   "devDependencies": {

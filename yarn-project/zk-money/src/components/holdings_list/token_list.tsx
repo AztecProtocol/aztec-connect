@@ -6,6 +6,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { HOLDINGS_PER_PAGE, slicePage } from './helpers.js';
 import { Holding } from './holding.js';
+import { usePendingBalances } from '../../alt-model/assets/l1_balance_hooks.js';
+import style from './token_list.module.scss';
 
 interface TokenListProps {
   balances: AssetValue[] | undefined;
@@ -14,8 +16,9 @@ interface TokenListProps {
 }
 
 export function TokenList(props: TokenListProps) {
-  const navigate = useNavigate();
   const [page, setPage] = useState(1);
+  const navigate = useNavigate();
+  const pendingBalances = usePendingBalances();
 
   const handleGoToEarn = (asset: RemoteAsset) => {
     const searchStr = recipeFiltersToSearchStr({ assetSymbol: asset.symbol });
@@ -23,7 +26,25 @@ export function TokenList(props: TokenListProps) {
   };
 
   if (!props.balances) return <></>;
-  if (props.balances.length === 0) return <div>You have no tokens yet.</div>;
+  if (props.balances.length === 0) {
+    if (pendingBalances && Object.keys(pendingBalances).length > 0) {
+      return (
+        <div>
+          {Object.keys(pendingBalances).map(pendingBalanceId => {
+            const pendingBalance = pendingBalances[pendingBalanceId];
+            const assetId = Number(pendingBalanceId);
+            return (
+              <Holding
+                assetValue={{ assetId, value: pendingBalance }}
+                onShield={() => props.onOpenShieldModal(assetId)}
+              />
+            );
+          })}
+        </div>
+      );
+    }
+    return <div className={style.noTokens}>You have no tokens yet</div>;
+  }
 
   return (
     <>

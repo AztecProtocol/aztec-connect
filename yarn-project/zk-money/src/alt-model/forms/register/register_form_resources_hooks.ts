@@ -1,4 +1,4 @@
-import { useUserIdForRecipientStr } from '../../alias_hooks.js';
+import { useUserIdForRegistrationStr } from '../../alias_hooks.js';
 import { useL1DepositResources } from '../l1_deposit/l1_deposit_resources_hooks.js';
 import { RegisterFormResources } from './assess_register_form.js';
 import { useRegistrationFeeAmounts } from './register_form_fees_hooks.js';
@@ -8,9 +8,9 @@ export function useRegisterFormResources(fields: RegisterFormFields): RegisterFo
   const feeAmounts = useRegistrationFeeAmounts(fields.depositAssetId);
   const l1DepositResources = useL1DepositResources(fields, feeAmounts, true);
   const { alias, spendingKeys, accountKeys, confirmationAccountKeys } = fields;
-  const aliasResult = useUserIdForRecipientStr(alias, 200, true);
+  const aliasResult = useUserIdForRegistrationStr(alias, 200);
   const checkingAlias = aliasResult.isLoading;
-  const aliasAlreadyTaken = !aliasResult.isLoading && !!aliasResult.userId;
+  const aliasAlreadyTaken = !!aliasResult.isRegistered;
   return {
     ...l1DepositResources,
     accountKeys,
