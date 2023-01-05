@@ -7,5 +7,6 @@ export interface AccountState {
   balances: AssetValue[];
   spendableBalances: AssetValue[];
   isSyncing: boolean;
+  syncedToRollup: number;
   ethAddressUsedForAccountKey: EthAddress;
 }

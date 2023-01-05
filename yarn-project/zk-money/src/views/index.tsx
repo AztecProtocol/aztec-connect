@@ -65,7 +65,7 @@ export function Views({ config }: ViewsProps) {
 
   useShowCookies();
 
-  const isInAccessPage = location.pathname === Pages.BALANCE && !isLoggedIn;
+  const isInAccessPage = location.pathname === Pages.BALANCE && (!isLoggedIn || accountState?.isSyncing);
   const shouldCenterContent = location.pathname === Pages.TRADE || isInAccessPage;
 
   return (
