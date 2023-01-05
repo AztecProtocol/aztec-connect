@@ -14,6 +14,7 @@ export interface SendComposerState {
   phase: SendComposerPhase;
   error?: { phase: SendComposerPhase; message: string };
   signingRetryable?: Retryable<unknown>;
+  backNoRetry?: boolean;
 }
 
 export class SendComposerStateObs implements IObs<SendComposerState> {
@@ -44,5 +45,9 @@ export class SendComposerStateObs implements IObs<SendComposerState> {
   error(message: string) {
     const error = { phase: this.obs.value.phase, message };
     this.obs.next({ phase: SendComposerPhase.IDLE, error });
+  }
+
+  setBackNoRetry(value: boolean) {
+    this.obs.next({ ...this.value, backNoRetry: value });
   }
 }

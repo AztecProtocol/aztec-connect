@@ -24,6 +24,7 @@ interface SendConfirmationPageProps {
   state: SendFormDerivedData;
   onSubmit: () => void;
   onClose: () => void;
+  onBack: (() => void) | undefined;
 }
 
 function formatRecipient(recipientStr: string, sendMode: SendMode) {
@@ -41,15 +42,31 @@ export function SendConfirmationPage({
   state,
   onSubmit,
   onClose,
+  onBack,
 }: SendConfirmationPageProps) {
   const [riskChecked, setRiskChecked] = useState(false);
   const walletInteractionIsOngoing = useWalletInteractionIsOngoing();
 
   const hasError = !!composerState?.error;
+  const backNoRetry = composerState?.backNoRetry;
   const isIdle = composerState.phase === SendComposerPhase.IDLE;
   const showingComplete = composerState.phase === SendComposerPhase.DONE;
   const showingDeclaration = isIdle && !hasError;
   const canSubmit = riskChecked && isIdle;
+
+  let buttonText = 'Confirm Transaction';
+  if (backNoRetry) {
+    buttonText = 'Go Back';
+  } else if (hasError) {
+    buttonText = 'Retry';
+  }
+
+  let onClick: (() => void) | undefined;
+  if (backNoRetry) {
+    onClick = onBack;
+  } else if (canSubmit) {
+    onClick = onSubmit;
+  }
 
   return (
     <div className={style.page2Wrapper}>
@@ -76,11 +93,7 @@ export function SendConfirmationPage({
               disabled={walletInteractionIsOngoing}
             />
           ) : (
-            <Button
-              text={hasError ? 'Retry' : 'Confirm Transaction'}
-              onClick={canSubmit ? onSubmit : undefined}
-              disabled={!canSubmit || walletInteractionIsOngoing}
-            />
+            <Button text={buttonText} onClick={onClick} disabled={!canSubmit || walletInteractionIsOngoing} />
           )}
         </div>
       )}

@@ -61,6 +61,7 @@ export class ShieldComposer {
 
   async compose() {
     this.stateObs.clearError();
+    this.stateObs.setBackNoRetry(false);
     try {
       // Each step is only attempted if it hasn't already succeeded on a previous run.
       const controller = await this.cachedSteps.createController.exec(() => this.createController());
@@ -228,9 +229,10 @@ export class ShieldComposer {
     const isPayingFeeWithNotes = targetOutput.id !== fee.id;
     const layer = isPayingFeeWithNotes ? 'L1' : 'L2';
     this.stateObs.error(
-      `Gas prices have increased since starting this transaction and the rollup provider has rejected it as result. You can wait for gas prices to go back down and attempt your transaction again, or start the shielding process again at the higher fee. (Latest fee quote: ${latestFeeAmount.format(
+      `Gas prices have increased since starting this transaction and the rollup provider has rejected it as a result. You can wait for gas prices to go back down and attempt your transaction again, or start the shielding process again at the higher fee. (Latest fee quote: ${latestFeeAmount.format(
         { layer },
       )})`,
     );
+    this.stateObs.setBackNoRetry(true);
   }
 }

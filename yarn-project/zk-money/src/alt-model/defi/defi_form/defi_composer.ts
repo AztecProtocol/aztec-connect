@@ -27,6 +27,7 @@ export class DefiComposer {
 
   async compose() {
     this.stateObs.clearError();
+    this.stateObs.setBackNoRetry(false);
     try {
       const { targetDepositAmount, feeAmount } = this.payload;
       const { sdk, userId, awaitCorrectSigner, bridgeCallData } = this.deps;
@@ -51,7 +52,6 @@ export class DefiComposer {
       );
       await controller.createProof();
       this.stateObs.setPhase(DefiComposerPhase.SENDING_PROOF);
-
       const txId = await controller.send();
       this.stateObs.setPhase(DefiComposerPhase.DONE);
 
@@ -59,6 +59,10 @@ export class DefiComposer {
     } catch (error) {
       debug('Compose failed with error:', error);
       this.stateObs.error(error?.message?.toString());
+      if (error?.message?.toString() === 'Insufficient fee.') {
+        // update obs so user doesn't retry
+        this.stateObs.setBackNoRetry(true);
+      }
       return false;
     }
   }
