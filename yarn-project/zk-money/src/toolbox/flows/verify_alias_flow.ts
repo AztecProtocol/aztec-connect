@@ -1,5 +1,5 @@
 import { AztecSdk, GrumpkinAddress } from '@aztec/sdk';
-import { formatAliasInput, isValidAliasInput } from '../../app/index.js';
+import { isValidAliasInput } from '../../app/index.js';
 import { Fullfiller } from '../../app/util/index.js';
 import { Emit, ThrowIfCancelled } from './flows_utils.js';
 
@@ -20,9 +20,8 @@ export async function verifyAliasFlow(
   // It's the component accepting keystrokes that's responsible for settling on the final input so as to avoid rapid
   // input related race conditions. Therefore validator should be available to the component.
   const checkAlias: CheckAlias = async alias => {
-    const formattedAlias = formatAliasInput(alias);
     if (!isValidAliasInput(alias)) return 'invalid';
-    const aliasOwnerUserId = await sdk.getAccountPublicKey(formattedAlias);
+    const aliasOwnerUserId = await sdk.getAccountPublicKey(alias);
     if (!aliasOwnerUserId) return 'not-found';
     if (aliasOwnerUserId.equals(userId)) return 'matches';
     return 'different-account';

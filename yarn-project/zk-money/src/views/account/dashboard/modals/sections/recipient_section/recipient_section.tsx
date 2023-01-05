@@ -25,6 +25,15 @@ function getRecipientPlaceholder(type: RecipientType) {
   }
 }
 
+function getSubtitle(type: RecipientType) {
+  switch (type) {
+    case 'L2':
+      return <span style={{ fontWeight: 450 }}>Remember: Aliases are case sensitive</span>;
+    default:
+      return '';
+  }
+}
+
 const getRecipientInputStatus = (isLoading: boolean, isValid: boolean, hasWarning: boolean) => {
   if (isLoading) return FieldStatus.Loading;
   if (hasWarning) return FieldStatus.Warning;
@@ -45,13 +54,14 @@ export function RecipientSection(props: RecipientSectionProps) {
   return (
     <Field
       label={'Recipient'}
+      sublabel={getSubtitle(recipientType)}
       disabled={walletInteractionIsOngoing}
       message={props.message}
       value={props.recipientStr}
       status={status}
       placeholder={getRecipientPlaceholder(recipientType)}
       prefix={getPrefixFromRecipient(recipientType, props.recipientStr)}
-      onChangeValue={(value: string) => handleValueChange(value.toLowerCase())}
+      onChangeValue={(value: string) => handleValueChange(value)}
     />
   );
 }
