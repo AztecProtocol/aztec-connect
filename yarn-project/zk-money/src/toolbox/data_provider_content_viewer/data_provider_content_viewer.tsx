@@ -1,5 +1,5 @@
 import { DataProviderWrapper } from '../../bridge-clients/client/aztec/data-provider/DataProvider.js';
-import { EthAddress } from '@aztec/sdk';
+import { EthAddress, getRollupProviderStatus } from '@aztec/sdk';
 import { StaticJsonRpcProvider } from '@ethersproject/providers';
 import { useEffect, useState } from 'react';
 import { mapObj } from '../../app/util/objects.js';
@@ -16,8 +16,10 @@ export function DataProviderContentViewer() {
   );
 }
 
-async function fetchData(dataProviderAddress: string, rpcUrl: string) {
+async function fetchData(falafelUrl: string, rpcUrl: string) {
   try {
+    const status = await getRollupProviderStatus(falafelUrl);
+    const dataProviderAddress = status.blockchainStatus.bridgeDataProvider.toString();
     const jsonRpcProvider = new StaticJsonRpcProvider(rpcUrl);
     const wrapper = DataProviderWrapper.create(jsonRpcProvider, EthAddress.fromString(dataProviderAddress));
     const assets = await wrapper.getAssets();
@@ -31,24 +33,24 @@ async function fetchData(dataProviderAddress: string, rpcUrl: string) {
 }
 
 async function fetchAndAssembleData() {
-  const localhost = await fetchData('0x5b2989bc33f19bfac4bcaad4e1795e2501edd5a3', 'http://localhost:8545');
-  const dev = await fetchData(
-    '0x4C17161087F32980BcDa0fa313ed0Be9E88249e6',
+  const localhostProm = fetchData('http://localhost:8081', 'http://localhost:8545');
+  const devProm = fetchData(
+    'https://api.aztec.network/aztec-connect-dev/falafel',
     'https://aztec-connect-dev-eth-host.aztec.network:8545/INSERT_KEY',
   );
-  const test = await fetchData(
-    '0xa33b20ba45ca9c265bbf7b35a75717590edfc868',
+  const testProm = fetchData(
+    'https://api.aztec.network/aztec-connect-testnet/falafel',
     'https://aztec-connect-testnet-eth-host.aztec.network:8545/INSERT_KEY',
   );
-  const prod = await fetchData(
-    '0x8b2e54fa4398c8f7502f30ac94cb1f354390c8ab',
+  const prodProm = fetchData(
+    'https://api.aztec.network/aztec-connect-prod/falafel',
     'https://aztec-connect-prod-eth-host.aztec.network:8545',
   );
   const assembled = {
-    localhost,
-    'aztec-connect-dev': dev,
-    'aztec-connect-testnet': test,
-    'aztec-connect-prod': prod,
+    localhost: await localhostProm,
+    'aztec-connect-dev': await devProm,
+    'aztec-connect-testnet': await testProm,
+    'aztec-connect-prod': await prodProm,
   };
   return JSON.stringify(assembled, null, 2);
 }
