@@ -7,13 +7,17 @@ import { RemoteAsset } from '../types.js';
 import { assetIsSupportedForShielding } from '../../alt-model/shield/shieldable_assets.js';
 import { useUserTxs } from '../user_tx_hooks.js';
 
+export type PendingBalances = {
+  [assetId: number]: bigint;
+};
+
 export function useShieldableAssets(): RemoteAsset[] {
   const assets = useRemoteAssets();
   const shieldableAssets = useMemo(() => assets?.filter(x => assetIsSupportedForShielding(x.address)), [assets]);
   return shieldableAssets;
 }
 
-export function usePendingBalances() {
+export function usePendingBalances(): PendingBalances | undefined {
   const [l1PendingBalances, setL1PendingBalances] = useState<{ [assetId: number]: bigint }>();
   const sdk = useSdk();
   const { address } = useAccount();

@@ -1,11 +1,11 @@
 import { Link, useLocation } from 'react-router-dom';
-import { usePendingBalances } from '../../../alt-model/assets/l1_balance_hooks.js';
 import { ReactComponent as Logo } from '../../../images/zk_money.svg';
 import { ReactComponent as MobileNavbarEarn } from '../../../images/mobile_navbar_earn.svg';
 import { ReactComponent as MobileNavbarTrade } from '../../../images/mobile_navbar_trade.svg';
 import { ReactComponent as MobileNavbarWallet } from '../../../images/mobile_navbar_wallet.svg';
 import { ReactComponent as Clock } from '../../images/clock.svg';
 import { bindStyle } from '../../../ui-components/util/classnames.js';
+import { PendingBalances } from '../../../alt-model/assets/l1_balance_hooks.js';
 import style from './navbar.module.scss';
 
 const cx = bindStyle(style);
@@ -28,8 +28,9 @@ export enum Theme {
 interface NavbarProps {
   path?: string;
   theme?: Theme;
-  onChange?: (path: string) => void;
   isUserRegistered?: boolean;
+  pendingBalances?: PendingBalances;
+  onChange?: (path: string) => void;
   // NOTE: This is receiving an AccountComponent
   //     this should instead receive an AccountState and
   //     render the AccountComponent within here
@@ -49,9 +50,14 @@ const LINKS: LinkItem[] = [
   { url: Pages.TRADE, label: 'Trade', mobileImage: <MobileNavbarTrade className={style.mobileImage} /> },
 ];
 
-export function Navbar({ isUserRegistered, accountComponent, theme, onChange }: NavbarProps): JSX.Element {
+export function Navbar({
+  theme,
+  isUserRegistered,
+  accountComponent,
+  pendingBalances,
+  onChange,
+}: NavbarProps): JSX.Element {
   const location = useLocation();
-  const pendingBalances = usePendingBalances();
 
   return (
     <div className={style.headerRoot}>

@@ -1,5 +1,5 @@
 import Cookie from 'js-cookie';
-import React, { useContext, useEffect, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { Location, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { CSSTransition, TransitionGroup } from 'react-transition-group';
 
@@ -21,6 +21,9 @@ import { Balance } from './account/dashboard/balance.js';
 import { DefiModal, DefiModalProps } from './account/dashboard/modals/defi_modal/defi_modal.js';
 import { Home } from './home.js';
 import { Toasts } from './toasts/toasts.js';
+import { usePendingBalances } from '../alt-model/assets/l1_balance_hooks.js';
+import { useDefiRecipes } from '../alt-model/top_level_context/index.js';
+import { useValidRecipesOnly } from './account/dashboard/defi_cards_list.js';
 import './app.css';
 
 const getIsCookieAccepted = () => Cookie.get('accepted') === 'true';
@@ -47,8 +50,11 @@ interface ViewsProps {
 export function Views({ config }: ViewsProps) {
   const [defiModalProps, setDefiModalProps] = useState<DefiModalProps>();
   const navigate = useNavigate();
+  const pendingBalances = usePendingBalances();
   const accountState = useAccountState();
   const location = useLocation();
+  const uncheckedRecipes = useDefiRecipes();
+  const recipes = useValidRecipesOnly(uncheckedRecipes);
   const theme = getTheme(location);
   const hasAccountState = !!accountState;
   const isLoggedIn = !!accountState?.isRegistered;
@@ -75,6 +81,7 @@ export function Views({ config }: ViewsProps) {
         <Navbar
           path={location.pathname}
           theme={theme}
+          pendingBalances={pendingBalances}
           isUserRegistered={accountState?.isRegistered}
           accountComponent={hasAccountState ? <UserAccountMenu /> : undefined}
         />
@@ -101,7 +108,7 @@ export function Views({ config }: ViewsProps) {
               />
               <Route path={Pages.TRADE} element={<Trade />} />
               <Route path={Pages.BALANCE} element={<Balance onOpenDefiExitModal={handleOpenDefiExitModal} />} />
-              <Route path={Pages.HOME} element={<Home onSignup={() => navigate(Pages.BALANCE)} />} />
+              <Route path={Pages.HOME} element={<Home onSignup={() => navigate(Pages.BALANCE)} recipes={recipes} />} />
               <Route
                 path="*"
                 element={

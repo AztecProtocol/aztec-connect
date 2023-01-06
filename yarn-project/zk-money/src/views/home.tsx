@@ -29,8 +29,6 @@ import whyZkMoney3 from '../images/why_zkmoney_3.svg';
 
 import { Hyperlink, HyperlinkIcon } from '../ui-components/index.js';
 import { bindStyle } from '../ui-components/util/classnames.js';
-import { useDefiRecipes } from '../alt-model/top_level_context/top_level_context_hooks.js';
-import { useValidRecipesOnly } from './account/dashboard/defi_cards_list.js';
 import { DefiCard } from '../components/index.js';
 import { DefiRecipe } from '../alt-model/defi/types.js';
 import { recipeFiltersToSearchStr } from '../alt-model/defi/recipe_filters.js';
@@ -40,12 +38,13 @@ const cx = bindStyle(style);
 
 interface HomeProps {
   onSignup: () => void;
+  recipes?: DefiRecipe[];
 }
 
-export function Home({ onSignup }: HomeProps) {
+export function Home({ onSignup, recipes }: HomeProps) {
   return (
     <div className={style.homeWrapper}>
-      <Banner onShieldNow={onSignup} />
+      <Banner onShieldNow={onSignup} recipes={recipes} />
       <FavoriteApps />
       <div className={style.section}>
         <div className={style.sectionTitle}>How do I use zk.money?</div>
@@ -132,10 +131,8 @@ function PreviewCard() {
   );
 }
 
-function Banner({ onShieldNow }: { onShieldNow: () => void }) {
-  const uncheckedRecipes = useDefiRecipes();
+function Banner({ onShieldNow, recipes }: { onShieldNow: () => void; recipes: DefiRecipe[] | undefined }) {
   const navigate = useNavigate();
-  const recipes = useValidRecipesOnly(uncheckedRecipes);
   const shuffledRecipes = useMemo(() => {
     let uniqueNames: string[] = [];
     if (!recipes) return [];
