@@ -55,6 +55,13 @@
     "rebuildPatterns": ["^yarn-project/blockchain/"],
     "dependencies": ["barretenberg.js"]
   },
+  "aztec-dev-cli": {
+    "buildDir": "yarn-project",
+    "projectDir": "yarn-project/aztec-dev-cli",
+    "dockerfile": "aztec-dev-cli/Dockerfile",
+    "rebuildPatterns": ["^yarn-project/aztec-dev-cli/"],
+    "dependencies": ["barretenberg.js", "blockchain"]
+  },
   "contracts-verifier-test": {
     "buildDir": "yarn-project",
     "projectDir": "yarn-project/contracts-verifier-test",

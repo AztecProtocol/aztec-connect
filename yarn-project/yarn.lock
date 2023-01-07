@@ -10321,6 +10321,42 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"aztec-dev-cli@workspace:aztec-dev-cli":
+  version: 0.0.0-use.local
+  resolution: "aztec-dev-cli@workspace:aztec-dev-cli"
+  dependencies:
+    "@aztec/barretenberg": "workspace:^"
+    "@aztec/blockchain": "workspace:^"
+    "@aztec/eslint-config": "workspace:^"
+    "@ethersproject/abi": 5.5.0
+    "@ethersproject/abstract-provider": 5.5.1
+    "@ethersproject/contracts": 5.5.0
+    "@ethersproject/experimental": 5.5.0
+    "@ethersproject/providers": 5.5.1
+    "@jest/globals": ^28.1.3
+    "@jest/types": ^28.1.3
+    "@rushstack/eslint-patch": ^1.1.4
+    "@types/bn.js": ^4.11.5
+    "@types/jest": ^28.1.6
+    "@types/koa": ^2.13.5
+    "@types/koa-compress": ^2.0.9
+    "@types/koa-router": ^7.0.42
+    "@types/koa__cors": ^3.3.0
+    "@types/node": ^18.7.23
+    "@types/source-map-support": ^0.5.6
+    bip85: ^0.0.3
+    commander: ^9.0.0
+    ethers: 5.5.1
+    jest: ^28.1.3
+    ts-jest: ^28.0.7
+    ts-node: ^10.9.1
+    tsc-watch: ^5.0.3
+    typescript: ^4.7.4
+  bin:
+    aztec-dev-cli: ./dest/index.js
+  languageName: unknown
+  linkType: soft
+
 "babel-eslint@npm:^10.1.0":
   version: 10.1.0
   resolution: "babel-eslint@npm:10.1.0"
@@ -10990,42 +11026,6 @@ __metadata:
   checksum: d699ba116cfa21d0b01d12014a03e484dd76d483133e6dc9eb415aa70a119f08beb3bcefb8c71840106a00b542cba77383f8be60cd1f0d4589cb8afb922eefbe
   languageName: node
   linkType: hard
-
-"blockchain-cli@workspace:blockchain-cli":
-  version: 0.0.0-use.local
-  resolution: "blockchain-cli@workspace:blockchain-cli"
-  dependencies:
-    "@aztec/barretenberg": "workspace:^"
-    "@aztec/blockchain": "workspace:^"
-    "@aztec/eslint-config": "workspace:^"
-    "@ethersproject/abi": 5.5.0
-    "@ethersproject/abstract-provider": 5.5.1
-    "@ethersproject/contracts": 5.5.0
-    "@ethersproject/experimental": 5.5.0
-    "@ethersproject/providers": 5.5.1
-    "@jest/globals": ^28.1.3
-    "@jest/types": ^28.1.3
-    "@rushstack/eslint-patch": ^1.1.4
-    "@types/bn.js": ^4.11.5
-    "@types/jest": ^28.1.6
-    "@types/koa": ^2.13.5
-    "@types/koa-compress": ^2.0.9
-    "@types/koa-router": ^7.0.42
-    "@types/koa__cors": ^3.3.0
-    "@types/node": ^18.7.23
-    "@types/source-map-support": ^0.5.6
-    bip85: ^0.0.3
-    commander: ^9.0.0
-    ethers: 5.5.1
-    jest: ^28.1.3
-    ts-jest: ^28.0.7
-    ts-node: ^10.9.1
-    tsc-watch: ^5.0.3
-    typescript: ^4.7.4
-  bin:
-    blockchain-cli: ./dest/index.js
-  languageName: unknown
-  linkType: soft
 
 "bluebird@npm:^3.4.7, bluebird@npm:^3.5.5":
   version: 3.7.2

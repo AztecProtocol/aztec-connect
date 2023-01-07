@@ -315,6 +315,17 @@ jobs:
           name: 'Build and test'
           command: build blockchain
 
+  aztec-dev-cli:
+    machine:
+      image: ubuntu-2004:202010-01
+    resource_class: large
+    steps:
+      - *checkout
+      - *setup_env
+      - run:
+          name: 'Build and test'
+          command: build aztec-dev-cli
+
   kebab:
     machine:
       image: ubuntu-2004:202010-01
@@ -678,6 +689,11 @@ jobs:
       - *checkout
       - *setup_env
       - run:
+          name: 'derive keys'
+          command: |
+            ensure_repo aztec-dev-cli
+            docker run --rm $ECR_URL/aztec-dev-cli/cache-$COMMIT_HASH deriveKeys $KEY_DERIVATION_MNEMONIC >> $BASH_ENV
+      - run:
           name: 'contracts'
           working_directory: contracts
           command: |
@@ -872,6 +888,7 @@ workflows:
       - contracts-verifier-test: *yarn_project
       - barretenberg-js: *yarn_project
       - blockchain: *yarn_project
+      - aztec-dev-cli: *yarn_project
       - kebab: *yarn_project
       - halloumi: *yarn_project
       - falafel: *yarn_project
@@ -932,6 +949,7 @@ workflows:
             - contracts-verifier-test
             - barretenberg-js
             - block-server
+            - aztec-dev-cli
           filters: *deploy_filters
       - deploy:
           requires:

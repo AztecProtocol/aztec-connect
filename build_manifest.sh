@@ -14,6 +14,7 @@ PROJECTS=(
   yarn-project:yarn-project-base
   yarn-project:barretenberg.js
   yarn-project:blockchain
+  yarn-project:aztec-dev-cli
   yarn-project:halloumi
   yarn-project:falafel
   yarn-project:kebab

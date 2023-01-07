@@ -15,8 +15,10 @@
     "inlineSourceMap": true,
     "declarationMap": true,
     "resolveJsonModule": true,
-    "useUnknownInCatchVariables": false
+    "useUnknownInCatchVariables": false,
+    "tsBuildInfoFile": ".tsbuildinfo",
+    "incremental": true
   },
-  "references": [{ "path": "../barretenberg.js/tsconfig.dest.json" }],
+  "references": [{ "path": "../barretenberg.js/tsconfig.dest.json" }, { "path": "../blockchain/tsconfig.dest.json" }],
   "include": ["src"]
 }

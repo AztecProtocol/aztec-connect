@@ -12,7 +12,7 @@ import { WalletProvider } from '@aztec/blockchain';
 import { getTokenBalance, getWethBalance } from '@aztec/blockchain';
 import { LogDescription } from 'ethers/lib/utils.js';
 import { RollupProcessor } from '@aztec/blockchain';
-import { akiToKey } from './key_derivation.js';
+import { deriveDeploymentKeys } from './key_derivation.js';
 import {
   RollupProcessor as RollupProcessorJson,
   AztecFaucetJson,
@@ -234,12 +234,11 @@ const program = new Command();
 
 async function main() {
   program
-    .command('pkFromAki')
-    .description('derive private key from an aztec key identifier')
+    .command('deriveKeys')
+    .description('derive keys')
     .argument('<mnemonic>', 'repository mnemonic')
-    .argument('<aki>', 'an aztec key identifier')
-    .action((mnemonic: string, aki: string) => {
-      console.log(akiToKey(mnemonic, aki));
+    .action((mnemonic: string) => {
+      console.log(deriveDeploymentKeys(mnemonic));
     });
 
   program
