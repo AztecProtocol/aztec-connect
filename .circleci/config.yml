@@ -692,7 +692,7 @@ jobs:
           name: 'derive keys'
           command: |
             ensure_repo aztec-dev-cli $ECR_REGION
-            docker run --rm $ECR_URL/aztec-dev-cli:cache-$COMMIT_HASH deriveKeys $KEY_DERIVATION_MNEMONIC >> $BASH_ENV
+            docker run --rm $ECR_URL/aztec-dev-cli:cache-$COMMIT_HASH deriveKeys "$KEY_DERIVATION_MNEMONIC" >> $BASH_ENV
       - run:
           name: 'contracts'
           working_directory: contracts
