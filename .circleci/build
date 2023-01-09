@@ -10,7 +10,7 @@
 # output image:
 #   278380418400.dkr.ecr.us-east-2.amazonaws.com/barretenberg-x86_64-linux-clang:cache-deadbeefcafebabe1337c0d3
 
-set -e
+set -euo pipefail
 
 REPOSITORY=$1
 DOCKERFILE=$(query_manifest dockerfile $REPOSITORY)
@@ -20,7 +20,7 @@ echo "Repository: $REPOSITORY"
 echo "Working directory: $PWD"
 echo "Dockerfile: $DOCKERFILE"
 
-cd $(query_manifest buildDir $REPOSITORY)
+init_submodules $REPOSITORY
 
 function fetch_image() {
   echo "Pulling: $1"
@@ -36,6 +36,8 @@ ensure_repo $REPOSITORY $ECR_REGION refresh_lifecycle
 
 LAST_SUCCESSFUL_COMMIT=$(last_successful_commit $REPOSITORY)
 echo "Last successful commit: $LAST_SUCCESSFUL_COMMIT"
+
+cd $(query_manifest buildDir $REPOSITORY)
 
 # If we have previously successful commit, we can early out if nothing relevant has changed since.
 if ! check_rebuild "$LAST_SUCCESSFUL_COMMIT" $REPOSITORY; then
@@ -91,6 +93,8 @@ for PARENT in $PARENTS; do
 done
 
 # Pull, build and push each named stage to cache.
+STAGE_CACHE_FROM=""
+CACHE_FROM=""
 STAGES=$(cat $DOCKERFILE | sed -n -e 's/^FROM .* AS \(.*\)/\1/p')
 for STAGE in $STAGES; do
   # Get the last build of this stage to leverage layer caching.

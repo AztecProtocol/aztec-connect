@@ -459,7 +459,7 @@ export class TypeOrmRollupDb implements RollupDb {
   public async getClaimsToRollup(take?: number) {
     return await this.claimRep.find({
       where: { claimed: IsNull(), interactionResultRollupId: Not(IsNull()) },
-      order: { created: 'ASC' },
+      order: { id: 'ASC' },
       take,
     });
   }

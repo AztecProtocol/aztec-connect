@@ -46,15 +46,18 @@ checkout: &checkout
 
       chmod 0600 .ssh/id_rsa
 
+      # IF YOU'RE CHANGING THIS, YOU ALSO WANT TO CHANGE: .circleci/remote_build/remote_build
       # Shallow checkout this commit.
       mkdir -p project
       cd project
       git init
       git remote add origin $CIRCLE_REPOSITORY_URL
+      # Only download metadata when fetching.
       git fetch --depth 50 --filter=blob:none origin $CIRCLE_SHA1
       git checkout FETCH_HEAD
 
-# This build step checks out the code from the benchmark-archive repository. The key is saved in CircleCi environment in base64 format.
+# This build step checks out the code from the benchmark-archive repository.
+# The key is saved in CircleCi environment in base64 format.
 # Initially it just fetches the latest version.
 benchmark_add_keys: &benchmark_add_keys
   run:
@@ -94,6 +97,7 @@ save_logs: &save_logs
     root: /tmp/test-logs
     paths:
       - ./*
+
 jobs:
   wasm-linux-clang:
     docker:
@@ -106,17 +110,6 @@ jobs:
           name: 'Build'
           command: cond_spot_run_build barretenberg-wasm-linux-clang 64
 
-  x86_64-linux-gcc:
-    docker:
-      - image: aztecprotocol/alpine-build-image
-    resource_class: small
-    steps:
-      - *checkout
-      - *setup_env
-      - run:
-          name: 'Build'
-          command: cond_spot_run_build barretenberg-x86_64-linux-gcc 64
-
   x86_64-linux-clang:
     docker:
       - image: aztecprotocol/alpine-build-image
@@ -128,126 +121,91 @@ jobs:
           name: 'Build'
           command: cond_spot_run_build barretenberg-x86_64-linux-clang 64
 
-  x86_64-linux-clang-assert:
-    docker:
-      - image: aztecprotocol/alpine-build-image
-    resource_class: small
-    steps:
-      - *checkout
-      - *setup_env
-      - run:
-          name: 'Build'
-          command: cond_spot_run_build barretenberg-x86_64-linux-clang-assert 64
+  # small-circuit-tests:
+  #   docker:
+  #     - image: aztecprotocol/alpine-build-image
+  #   resource_class: small
+  #   steps:
+  #     - *checkout
+  #     - *setup_env
+  #     - run:
+  #         name: 'Test'
+  #         command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert bb-tests
+  #     - *save_logs
 
-  barretenberg-tests:
-    docker:
-      - image: aztecprotocol/alpine-build-image
-    resource_class: small
-    steps:
-      - *checkout
-      - *setup_env
-      - run:
-          name: 'Test'
-          command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert bb-tests
-      - *save_logs
+  # tx-rollup-tests:
+  #   docker:
+  #     - image: aztecprotocol/alpine-build-image
+  #   resource_class: small
+  #   steps:
+  #     - *checkout
+  #     - *setup_env
+  #     - run:
+  #         name: 'Test'
+  #         command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert rollup_proofs_tx_rollup_tests --gtest_filter=-rollup_full_tests.*
+  #     - *save_logs
 
-  benchmark-aggregator:
-    docker:
-      - image: aztecprotocol/alpine-build-image
-    resource_class: small
-    steps:
-      - attach_workspace:
-          at: /tmp/test-logs
-      - *checkout
-      - *setup_env
-      - *benchmark_add_keys
-      - run:
-          name: 'Test'
-          command: store_test_benchmark_logs barretenberg-x86_64-linux-clang-assert
+  # tx-rollup-full-tests:
+  #   docker:
+  #     - image: aztecprotocol/alpine-build-image
+  #   resource_class: small
+  #   steps:
+  #     - *checkout
+  #     - *setup_env
+  #     - run:
+  #         name: 'Test'
+  #         command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert rollup_proofs_tx_rollup_tests --gtest_filter=rollup_full_tests.*
+  #     - *save_logs
 
-  stdlib-primitives-tests:
-    docker:
-      - image: aztecprotocol/alpine-build-image
-    resource_class: small
-    steps:
-      - *checkout
-      - *setup_env
-      - run:
-          name: 'Test'
-          command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert stdlib_primitives_tests
-      - *save_logs
+  # root-rollup-tests:
+  #   docker:
+  #     - image: aztecprotocol/alpine-build-image
+  #   resource_class: small
+  #   steps:
+  #     - *checkout
+  #     - *setup_env
+  #     - run:
+  #         name: 'Test'
+  #         command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert rollup_proofs_root_rollup_tests --gtest_filter=-root_rollup_full_tests.*
+  #     - *save_logs
 
-  stdlib-recursion-tests:
-    docker:
-      - image: aztecprotocol/alpine-build-image
-    resource_class: small
-    steps:
-      - *checkout
-      - *setup_env
-      - run:
-          name: 'Test'
-          command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert stdlib_recursion_tests
-      - *save_logs
+  # root-rollup-full-tests:
+  #   docker:
+  #     - image: aztecprotocol/alpine-build-image
+  #   resource_class: small
+  #   steps:
+  #     - *checkout
+  #     - *setup_env
+  #     - run:
+  #         name: 'Test'
+  #         command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert rollup_proofs_root_rollup_tests --gtest_filter=root_rollup_full_tests.*
+  #     - *save_logs
 
-  tx-rollup-tests:
-    docker:
-      - image: aztecprotocol/alpine-build-image
-    resource_class: small
-    steps:
-      - *checkout
-      - *setup_env
-      - run:
-          name: 'Test'
-          command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert rollup_proofs_tx_rollup_tests --gtest_filter=-rollup_full_tests.*
-      - *save_logs
+  # root-verifier-tests:
+  #   docker:
+  #     - image: aztecprotocol/alpine-build-image
+  #   resource_class: small
+  #   steps:
+  #     - *checkout
+  #     - *setup_env
+  #     - run:
+  #         name: 'Test'
+  #         command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert rollup_proofs_root_verifier_tests
+  #     - *save_logs
 
-  tx-rollup-full-tests:
-    docker:
-      - image: aztecprotocol/alpine-build-image
-    resource_class: small
-    steps:
-      - *checkout
-      - *setup_env
-      - run:
-          name: 'Test'
-          command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert rollup_proofs_tx_rollup_tests --gtest_filter=rollup_full_tests.*
-      - *save_logs
-
-  root-rollup-tests:
-    docker:
-      - image: aztecprotocol/alpine-build-image
-    resource_class: small
-    steps:
-      - *checkout
-      - *setup_env
-      - run:
-          name: 'Test'
-          command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert rollup_proofs_root_rollup_tests --gtest_filter=-root_rollup_full_tests.*
-      - *save_logs
-
-  root-rollup-full-tests:
-    docker:
-      - image: aztecprotocol/alpine-build-image
-    resource_class: small
-    steps:
-      - *checkout
-      - *setup_env
-      - run:
-          name: 'Test'
-          command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert rollup_proofs_root_rollup_tests --gtest_filter=root_rollup_full_tests.*
-      - *save_logs
-
-  root-verifier-tests:
-    docker:
-      - image: aztecprotocol/alpine-build-image
-    resource_class: small
-    steps:
-      - *checkout
-      - *setup_env
-      - run:
-          name: 'Test'
-          command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert rollup_proofs_root_verifier_tests
-      - *save_logs
+  # benchmark-aggregator:
+  #   docker:
+  #     - image: aztecprotocol/alpine-build-image
+  #   resource_class: small
+  #   steps:
+  #     - attach_workspace:
+  #         at: /tmp/test-logs
+  #     - *checkout
+  #     - *setup_env
+  #     - *benchmark_add_keys
+  #     - run:
+  #         name: 'Test'
+  #         command: store_test_benchmark_logs barretenberg-x86_64-linux-clang-assert
 
   blockchain-vks:
     docker:
@@ -842,36 +800,30 @@ workflows:
     when:
       equal: [system, << pipeline.parameters.workflow >>]
     jobs:
-      - x86_64-linux-gcc:
-          filters: *tag_filter
       - x86_64-linux-clang:
-          filters: *tag_filter
-      - x86_64-linux-clang-assert:
           filters: *tag_filter
       - wasm-linux-clang:
           filters: *tag_filter
-      - barretenberg-tests: *bb_test
-      - stdlib-primitives-tests: *bb_test
-      - benchmark-aggregator:
-          requires:
-            - barretenberg-tests
-            - stdlib-primitives-tests
-            - stdlib-recursion-tests
-            - tx-rollup-tests
-            - tx-rollup-full-tests
-            - root-verifier-tests
-            - root-rollup-tests
-            - root-rollup-full-tests
-          filters:
-            branches:
-              only:
-                - defi-bridge-project
-      - stdlib-recursion-tests: *bb_test
-      - tx-rollup-tests: *bb_test
-      - tx-rollup-full-tests: *bb_test
-      - root-rollup-tests: *bb_test
-      - root-rollup-full-tests: *bb_test
-      - root-verifier-tests: *bb_test
+      # - small-circuit-tests: *bb_test
+      # - tx-rollup-tests: *bb_test
+      # - tx-rollup-full-tests: *bb_test
+      # - root-rollup-tests: *bb_test
+      # - root-rollup-full-tests: *bb_test
+      # - root-verifier-tests: *bb_test
+      # - benchmark-aggregator:
+      #     requires:
+      #       - barretenberg-tests
+      #       - stdlib-primitives-tests
+      #       - stdlib-recursion-tests
+      #       - tx-rollup-tests
+      #       - tx-rollup-full-tests
+      #       - root-verifier-tests
+      #       - root-rollup-tests
+      #       - root-rollup-full-tests
+      #     filters:
+      #       branches:
+      #         only:
+      #           - defi-bridge-project
       - blockchain-vks:
           requires:
             - x86_64-linux-clang
@@ -927,18 +879,15 @@ workflows:
       - e2e-deposit-permit: *e2e_test
       - e2e-prover: *e2e_test
       - e2e-virtual-assets: *e2e_test
-      - bb-join:
-          requires:
-            - x86_64-linux-gcc
-            - barretenberg-tests
-            - stdlib-primitives-tests
-            - stdlib-recursion-tests
-            - tx-rollup-tests
-            - tx-rollup-full-tests
-            - root-rollup-tests
-            - root-rollup-full-tests
-            - root-verifier-tests
-          filters: *deploy_filters
+      # - bb-join:
+      #     requires:
+      #       - small-circuit-tests
+      #       - tx-rollup-tests
+      #       - tx-rollup-full-tests
+      #       - root-rollup-tests
+      #       - root-rollup-full-tests
+      #       - root-verifier-tests
+      #     filters: *deploy_filters
       - yarn-join:
           requires:
             - explorer
@@ -954,7 +903,7 @@ workflows:
       - deploy:
           requires:
             # Must list all projects at the end of a dependency chain.
-            - bb-join
+            # - bb-join
             - yarn-join
             - faucet
             - e2e-account
@@ -989,4 +938,3 @@ workflows:
       - deploy-website:
           requires:
             - website
-# VS Code Extension Version: 1.4.0

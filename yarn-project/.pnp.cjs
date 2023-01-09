@@ -292,7 +292,6 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["@aztec/eslint-config", "workspace:eslint-config"],\
             ["@rushstack/eslint-patch", "npm:1.1.4"],\
             ["@types/node", "npm:18.7.23"],\
-            ["ts-node", "virtual:4cf42c2f2a8aa147d524c15c0290174d77a2062937f0c22441901ac61d50212062460a38e714456279cdb4fab155b3b1d12acfb24cd6bb68fcc1837e921b5557#npm:10.9.1"],\
             ["typescript", "patch:typescript@npm%3A4.7.4#~builtin<compat/typescript>::version=4.7.4&hash=a1c5e5"]\
           ],\
           "linkType": "SOFT"\

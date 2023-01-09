@@ -610,7 +610,7 @@ describe('rollup_db', () => {
   it('should add and get pending claims', async () => {
     const pendingClaims: ClaimDao[] = [];
     for (let i = 0; i < 16; ++i) {
-      const claim = randomClaim();
+      const claim = randomClaim(i);
       claim.interactionNonce = i % 2; // nonce is based on even or odd-ness
       if (i % 4 === 0) {
         // every 4th is fully claimed
@@ -653,7 +653,7 @@ describe('rollup_db', () => {
     const claimedTxs: TxDao[] = [];
     const unclaimedTxs: TxDao[] = [];
     for (let i = 0; i < 8; ++i) {
-      const claim = randomClaim();
+      const claim = randomClaim(i);
       const tx = randomTx();
       tx.nullifier1 = claim.nullifier;
       if (i % 2) {
