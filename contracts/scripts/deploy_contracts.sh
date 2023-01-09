@@ -15,6 +15,10 @@ set -eu
 mkdir -p serve/
 echo "Created output directory"
 
+# Required for deploying aztec-connect-bridges bridges
+export network=${network:-None}
+export simulateAdmin=${simulateAdmin:-false}
+
 # Set Rollup provider address to the deployer if none is provided
 DEPLOYER_ADDRESS=$(cast w a --private-key "$PRIVATE_KEY")
 ROLLUP_PROVIDER_ADDRESS=${ROLLUP_PROVIDER_ADDRESS:-$DEPLOYER_ADDRESS}
@@ -25,8 +29,8 @@ UPGRADE=${UPGRADE:=true}
 
 echo "Deploying contracts from: $DEPLOYER_ADDRESS"
 
-# NOTE: hard coded at 50 gwei + using legacy flag to support ganache
-forge script E2ESetup --ffi --private-key $PRIVATE_KEY --legacy --with-gas-price 100000000000 --slow --broadcast --rpc-url $ETHEREUM_HOST --sig "deploy(address,address,address,address,string,bool)" \
+# Execute deployment solidity script
+forge script E2ESetup --ffi --private-key $PRIVATE_KEY --broadcast --rpc-url $ETHEREUM_HOST --sig "deploy(address,address,address,address,string,bool)" \
   $DEPLOYER_ADDRESS \
   $SAFE_ADDRESS \
   $FAUCET_CONTROLLER \
