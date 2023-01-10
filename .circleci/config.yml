@@ -671,7 +671,12 @@ jobs:
       - run:
           name: 'kebab'
           command: |
-            deploy kebab
+            if [ -n "$CONTRACTS_REDEPLOYED" ]; then
+              # Taint the efs file system to recreate.
+              deploy kebab kebab aws_efs_file_system.kebab_data_store
+            else
+              deploy kebab
+            fi
             deploy_dockerhub kebab
       - run:
           name: 'halloumi'
@@ -681,7 +686,13 @@ jobs:
       - run:
           name: 'falafel'
           command: |
-            deploy falafel
+            if [ -n "$CONTRACTS_REDEPLOYED" ]; then
+              # Taint the postgres db and efs file system to recreate them.
+              # We include block-server as a service to restart to clear caches.
+              deploy falafel "falafel block-server" "aws_db_instance.postgres aws_efs_file_system.falafel_data_store"
+            else
+              deploy falafel
+            fi
             deploy_dockerhub falafel
       - run:
           name: 'block-server'
@@ -756,7 +767,7 @@ jobs:
       - *setup_env
       - run:
           name: 'coinbase-exporter'
-          command: deploy coinbase-exporter "" is_global
+          command: deploy_global coinbase-exporter
       - run:
           name: 'ecs-exporter'
           working_directory: metrics/ecs-exporter
@@ -766,10 +777,10 @@ jobs:
           command: deploy_ecr metrics-sidecar
       - run:
           name: 'prometheus'
-          command: deploy prometheus "" is_global
+          command: deploy_global prometheus
       - run:
           name: 'grafana'
-          command: deploy grafana "" is_global
+          command: deploy_global grafana
 
 # Repeatable config for defining the workflow below.
 tag_regex: &tag_regex /v[0-9]+(\.[0-9]+)*(-[a-zA-Z-]+\.[0-9]+)?/

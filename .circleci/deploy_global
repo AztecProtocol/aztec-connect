@@ -1,9 +1,8 @@
 #!/bin/bash
+# Deployment script for global service (e.g. company website and metrics).
 set -e
 
 REPOSITORY=$1
-SERVICES=${2:-$REPOSITORY}
-TO_TAINT=$3
 
 cd $(query_manifest projectDir $REPOSITORY)
 
@@ -18,12 +17,9 @@ if ! check_rebuild "$LAST_SUCCESSFUL_COMMIT" $REPOSITORY; then
   exit 0
 fi
 
-deploy_terraform $REPOSITORY ./terraform/$VERSION_TAG $TO_TAINT
+deploy_terraform "" ./terraform
 
-# Restart services.
-for SERVICE in $SERVICES; do
-  deploy_service $DEPLOY_TAG-$SERVICE
-done
+deploy_service $REPOSITORY
 
 # Tag the image as deployed.
 tag_remote_image $REPOSITORY cache-$COMMIT_HASH cache-$COMMIT_HASH-$DEPLOY_TAG-deployed
