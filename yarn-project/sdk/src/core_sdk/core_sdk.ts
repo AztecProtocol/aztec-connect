@@ -1259,9 +1259,9 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   }
 
   /**
-   * Every time called, determine the lowest `from` block, and download and process the next chunk of blocks.
-   * Will always first bring the data tree into sync, and then forward the blocks onto user states.
-   * This is always called on the serial queue.
+   * Every time called, determine the lowest `from` block for core and user states. If some user state is synced to
+   * a lower block, use this iteration for that user state to catch up (by calling syncUserStates(...) function).
+   * If not, fetch the following chunk of blocks and apply them to both core and user states (syncBoth(...) function).
    */
   private async sync() {
     // Persistent data could have changed underfoot. Ensure this.sdkStatus and user states are up to date first.
@@ -1269,74 +1269,94 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     await Promise.all(this.userStates.map(us => us.syncFromDb()));
 
     const { syncedToRollup } = this.sdkStatus;
-    const from = syncedToRollup + 1;
 
-    // First we focus on bringing the core in sync (mutable data tree layers and accounts).
-    // Server will return a chunk of blocks.
-    const timer = new Timer();
-    const coreBlocks = await this.rollupProvider.getBlocks(from);
-    if (coreBlocks.length) {
-      this.debug(`creating contexts for blocks ${from} to ${from + coreBlocks.length - 1}...`);
-    }
-    const coreBlockContexts = coreBlocks.map(b => BlockContext.fromBlock(b, this.pedersen));
-
-    if (coreBlocks.length) {
-      // For debugging corrupted data root.
-      const oldRoot = this.worldState.getRoot();
-
-      const rollups = coreBlockContexts.map(b => b.rollup);
-      const offchainTxData = coreBlocks.map(b => b.offchainTxData);
-      const subtreeRoots = coreBlocks.map(block => block.subtreeRoot!);
-      this.debug(`inserting ${subtreeRoots.length} rollup roots into data tree...`);
-      await this.worldState.insertElements(rollups[0].dataStartIndex, subtreeRoots);
-      this.debug(`processing aliases...`);
-      await this.processAliases(rollups, offchainTxData);
-      await this.writeSyncInfo(rollups[rollups.length - 1].rollupId);
-
-      // TODO: Ugly hotfix. Find root cause.
-      // We expect our data root to be equal to the new data root in the last block we processed.
-      // UPDATE: Possibly solved. But leaving in for now. Can monitor for clientLogs.
-      const expectedDataRoot = rollups[rollups.length - 1].newDataRoot;
-      const newRoot = this.worldState.getRoot();
-      if (!newRoot.equals(expectedDataRoot)) {
-        const newSize = this.worldState.getSize();
-        await this.reinitDataTree();
-        await this.writeSyncInfo(-1);
-        await this.rollupProvider.clientLog({
-          message: 'Invalid dataRoot.',
-          synchingFromRollup: syncedToRollup,
-          blocksReceived: coreBlocks.length,
-          oldRoot: oldRoot.toString('hex'),
-          newRoot: newRoot.toString('hex'),
-          newSize,
-          expectedDataRoot: expectedDataRoot.toString('hex'),
-        });
-        return;
-      }
-
-      this.debug(`forwarding blocks to user states...`);
-      await Promise.all(this.userStates.map(us => us.processBlocks(coreBlockContexts)));
-
-      this.debug(`finished processing blocks ${from} to ${from + coreBlocks.length - 1} in ${timer.s()}s...`);
-    }
-
-    // Secondly we want bring user states in sync. Determine the lowest block.
+    // Determine the lowest synced block of all user states
     const userSyncedToRollup = Math.min(...this.userStates.map(us => us.getUserData().syncedToRollup));
 
-    // If it's lower than we downloaded for core, fetch and process blocks.
     if (userSyncedToRollup < syncedToRollup) {
-      const timer = new Timer();
-      const from = userSyncedToRollup + 1;
-      this.debug(`fetching blocks from ${from} for user states...`);
-      const userBlocks = await this.rollupProvider.getBlocks(from);
-      this.debug(`creating contexts for blocks ${from} to ${from + userBlocks.length - 1}...`);
-      const userBlockContexts = userBlocks.map(b => BlockContext.fromBlock(b, this.pedersen));
-      this.debug(`forwarding blocks to user states...`);
-      await Promise.all(this.userStates.map(us => us.processBlocks(userBlockContexts)));
-      this.debug(
-        `finished processing user state blocks ${from} to ${from + userBlocks.length - 1} in ${timer.s()}s...`,
-      );
+      // Some user state is lagging behind core --> first make the user state catch up to core
+      await this.syncUserStates(userSyncedToRollup + 1, syncedToRollup);
+    } else {
+      // User state is not lagging behind core --> sync both
+      await this.syncBoth(syncedToRollup + 1);
     }
+  }
+
+  /**
+   * @notice Fetches blocks and applies them to user states
+   * @from Number of a block from which to sync
+   * @to Number of a block up to which to sync
+   */
+  private async syncUserStates(from: number, to: number) {
+    const timer = new Timer();
+    this.debug(`fetching blocks from ${from} for user states...`);
+    let userBlocks = await this.rollupProvider.getBlocks(from);
+    // Filter blocks with higher `rollupId`/`block height` than `to`
+    userBlocks = userBlocks.filter(block => block.rollupId <= to);
+    if (!userBlocks.length) {
+      // nothing to do
+      return;
+    }
+    this.debug(`creating contexts for blocks ${from} to ${from + userBlocks.length - 1}...`);
+    const userBlockContexts = userBlocks.map(b => BlockContext.fromBlock(b, this.pedersen));
+    this.debug(`forwarding blocks to user states...`);
+    await Promise.all(this.userStates.map(us => us.processBlocks(userBlockContexts)));
+    this.debug(`finished processing user state blocks ${from} to ${from + userBlocks.length - 1} in ${timer.s()}s...`);
+  }
+
+  /**
+   * @notice Fetches blocks and applies them to both core and user states
+   * @from Number of a block from which to sync
+   */
+  private async syncBoth(from: number) {
+    const timer = new Timer();
+    const coreBlocks = await this.rollupProvider.getBlocks(from);
+    if (!coreBlocks.length) {
+      // nothing to do
+      return;
+    }
+    this.debug(`creating contexts for blocks ${from} to ${from + coreBlocks.length - 1}...`);
+    const coreBlockContexts = coreBlocks.map(b => BlockContext.fromBlock(b, this.pedersen));
+
+    // For debugging corrupted data root.
+    const oldRoot = this.worldState.getRoot();
+
+    // First bring the core in sync (mutable data tree layers and accounts).
+    const rollups = coreBlockContexts.map(b => b.rollup);
+    const offchainTxData = coreBlocks.map(b => b.offchainTxData);
+    const subtreeRoots = coreBlocks.map(block => block.subtreeRoot!);
+    this.debug(`inserting ${subtreeRoots.length} rollup roots into data tree...`);
+    await this.worldState.insertElements(rollups[0].dataStartIndex, subtreeRoots);
+    this.debug(`processing aliases...`);
+    await this.processAliases(rollups, offchainTxData);
+    await this.writeSyncInfo(rollups[rollups.length - 1].rollupId);
+
+    // TODO: Ugly hotfix. Find root cause.
+    // We expect our data root to be equal to the new data root in the last block we processed.
+    // UPDATE: Possibly solved. But leaving in for now. Can monitor for clientLogs.
+    const expectedDataRoot = rollups[rollups.length - 1].newDataRoot;
+    const newRoot = this.worldState.getRoot();
+    if (!newRoot.equals(expectedDataRoot)) {
+      const newSize = this.worldState.getSize();
+      await this.reinitDataTree();
+      await this.writeSyncInfo(-1);
+      await this.rollupProvider.clientLog({
+        message: 'Invalid dataRoot.',
+        synchingFromRollup: from,
+        blocksReceived: coreBlocks.length,
+        oldRoot: oldRoot.toString('hex'),
+        newRoot: newRoot.toString('hex'),
+        newSize,
+        expectedDataRoot: expectedDataRoot.toString('hex'),
+      });
+      return;
+    }
+
+    // Second apply the blocks to user states
+    this.debug(`forwarding blocks to user states...`);
+    await Promise.all(this.userStates.map(us => us.processBlocks(coreBlockContexts)));
+
+    this.debug(`finished processing blocks ${from} to ${from + coreBlocks.length - 1} in ${timer.s()}s...`);
   }
 
   /**

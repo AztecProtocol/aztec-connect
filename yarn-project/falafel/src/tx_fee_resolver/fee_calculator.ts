@@ -1,8 +1,8 @@
 import { Blockchain, TxType } from '@aztec/barretenberg/blockchain';
 import { createLogger } from '@aztec/barretenberg/log';
+import { roundUp } from '@aztec/barretenberg/rounding';
 import { getGasOverhead, getTxCallData } from './get_gas_overhead.js';
 import { PriceTracker } from './price_tracker.js';
-import { roundUp } from './round_up.js';
 
 const allTxTypes = [
   TxType.DEPOSIT,

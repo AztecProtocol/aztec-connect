@@ -14,6 +14,7 @@ import {
 } from '@aztec/barretenberg/rollup_provider';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
+import { roundUp } from '@aztec/barretenberg/rounding';
 import { ClientEthereumBlockchain, validateSignature, Web3Signer } from '@aztec/blockchain';
 import { EventEmitter } from 'events';
 import {
@@ -36,7 +37,6 @@ import { UserAccountTx, UserDefiTx, UserPaymentTx } from '../user_tx/index.js';
 import { AztecSdkUser } from './aztec_sdk_user.js';
 import { FeeCalculator, GetFeesOptions } from './fee_calcalator.js';
 import { groupUserTxs } from './group_user_txs.js';
-import { roundUp } from './round_up.js';
 import { TxValueCalculator, GetMaxTxValueOptions } from './tx_value_calculator.js';
 
 export { GetFeesOptions, GetMaxTxValueOptions };
