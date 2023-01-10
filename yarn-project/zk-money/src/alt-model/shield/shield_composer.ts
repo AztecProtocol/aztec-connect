@@ -14,7 +14,7 @@ import { retryUntil, withinTimeLimit, CachedStep } from '../../app/util/index.js
 import { WalletAccountEnforcer } from './ensured_provider.js';
 import { Network } from '../../app/networks.js';
 import { ShieldComposerPhase, ShieldComposerStateObs } from './shield_composer_state_obs.js';
-// import { KNOWN_MAINNET_ASSET_ADDRESSES } from '../known_assets/known_asset_addresses.js';
+import { KNOWN_MAINNET_ASSET_ADDRESSES } from '../known_assets/known_asset_addresses.js';
 import { createSigningRetryableGenerator } from '../forms/composer_helpers.js';
 import { FEE_SIG_FIGURES } from '../forms/constants.js';
 import { ActiveSignerObs } from '../defi/defi_form/correct_provider_hooks.js';
@@ -168,13 +168,12 @@ export class ShieldComposer {
   }
 
   private isDai() {
-    return false;
-    // try {
-    //   return this.payload.targetOutput.id === this.deps.sdk.getAssetIdByAddress(KNOWN_MAINNET_ASSET_ADDRESSES.DAI);
-    // } catch {
-    //   // This should only happen when testing with a backend that isn't forked from mainnet
-    //   return false;
-    // }
+    try {
+      return this.payload.targetOutput.id === this.deps.sdk.getAssetIdByAddress(KNOWN_MAINNET_ASSET_ADDRESSES.DAI);
+    } catch {
+      // This should only happen when testing with a backend that isn't forked from mainnet
+      return false;
+    }
   }
 
   private async approveProof(controller: DepositController) {
