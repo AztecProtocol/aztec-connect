@@ -46,7 +46,7 @@ elif changed $LAST_COMMIT "contracts/deploy/$VERSION_TAG"; then
   deploy_terraform contracts ./terraform/$VERSION_TAG
 
   # Set environment variable for downstream deployments to discover redeployment.
-  echo "export CONTRACTS_REDEPLOYED=1 >> $BASH_ENV"
+  echo export CONTRACTS_REDEPLOYED=1 >> $BASH_ENV
 fi
 
 tag_remote_image contracts cache-$COMMIT_HASH cache-$COMMIT_HASH-$DEPLOY_TAG-deployed
