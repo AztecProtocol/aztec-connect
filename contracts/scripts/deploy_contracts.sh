@@ -16,8 +16,8 @@ mkdir -p serve/
 echo "Created output directory"
 
 # Required for deploying aztec-connect-bridges bridges
-export network=${network:-None}
-export simulateAdmin=${simulateAdmin:-false}
+export NETWORK=${NETWORK:-None}
+export SIMULATE_ADMIN=${SIMULATE_ADMIN:-false}
 
 # Set Rollup provider address to the deployer if none is provided
 DEPLOYER_ADDRESS=$(cast w a --private-key "$PRIVATE_KEY")

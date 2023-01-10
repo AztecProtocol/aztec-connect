@@ -16,8 +16,8 @@ RUN forge install --no-commit \
   https://github.com/uniswap/v2-periphery \
   https://github.com/openzeppelin/openzeppelin-contracts \
   https://github.com/openzeppelin/openzeppelin-contracts-upgradeable \
-  https://github.com/AztecProtocol/rollup-encoder \
-  https://github.com/AztecProtocol/aztec-connect-bridges@dd5d43e4318b33373abf0bfd52b7d007e701e25f
+  https://github.com/AztecProtocol/rollup-encoder@main \
+  https://github.com/AztecProtocol/aztec-connect-bridges@master
 ENV MAINNET_RPC_URL='https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c'
 
 RUN forge clean && forge build && forge test
