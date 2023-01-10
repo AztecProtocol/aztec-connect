@@ -79,6 +79,10 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
     return rollupProviderStatusFromJson(json);
   }
 
+  public async sendConsoleLog(clientData?: string[], preserveLog?: boolean) {
+    return await this.backend.sendConsoleLog(clientData, preserveLog);
+  }
+
   public async isAccountRegistered(accountPublicKey: GrumpkinAddress, includePending: boolean) {
     return await this.backend.isAccountRegistered(accountPublicKey.toString(), includePending);
   }

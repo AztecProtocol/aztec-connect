@@ -32,6 +32,8 @@ export interface CoreSdkInterface {
 
   getRemoteStatus(): Promise<RollupProviderStatus>;
 
+  sendConsoleLog(clientData?: string[], preserveLog?: boolean): Promise<void>;
+
   isAccountRegistered(accountPublicKey: GrumpkinAddress, includePending: boolean): Promise<boolean>;
 
   isAliasRegistered(alias: string, includePending: boolean): Promise<boolean>;

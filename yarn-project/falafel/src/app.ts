@@ -15,15 +15,19 @@ import {
 import { numToInt32BE, serializeBufferArrayToVector } from '@aztec/barretenberg/serialize';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import cors from '@koa/cors';
+import fsExtra from 'fs-extra';
 import Koa, { Context, DefaultState } from 'koa';
 import compress from 'koa-compress';
 import Router from 'koa-router';
 import { PromiseReadable } from 'promise-readable';
 import requestIp from 'request-ip';
+import { configurator } from './configurator.js';
 import { TxDao } from './entity/index.js';
 import { Metrics } from './metrics/index.js';
 import { Server } from './server.js';
 import { Tx, TxRequest } from './tx_receiver/index.js';
+
+const { mkdirpSync, writeJsonSync } = fsExtra;
 
 const toDepositTxJson = ({ proofData }: TxDao): DepositTxJson => {
   const proof = JoinSplitProofData.fromBuffer(proofData);
@@ -160,12 +164,42 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     const log = JSON.parse((await stream.readAll()) as string);
     const clientIp = requestIp.getClientIp(ctx.request);
     const userAgent = ctx.request.header['user-agent'];
+    const origin = ctx.request.origin;
     const data = {
       ...log,
       clientIp,
       userAgent,
+      origin,
     };
     console.log(`Client log for: ${JSON.stringify(data)}`);
+    ctx.status = 200;
+  });
+
+  router.post('/client-console-log', async (ctx: Koa.Context) => {
+    const stream = new PromiseReadable(ctx.req);
+    // TODO - only allow post from whitelisted domains
+    const origin = ctx.request.origin;
+    const log = JSON.parse((await stream.readAll()) as string);
+    const { publicKeys } = log;
+    if (!publicKeys) {
+      throw new Error('Invalid log.');
+    }
+
+    // TODO - reject if submitted in N seconds.
+    const clientIp = requestIp.getClientIp(ctx.request);
+    const userAgent = ctx.request.header['user-agent'];
+    const data = {
+      ...log,
+      clientIp,
+      userAgent,
+      origin,
+    };
+    const timestamp = Date.now();
+    const dir = `${configurator.getDataDir()}/client-logs`;
+    const publicKey = publicKeys[0] || GrumpkinAddress.ZERO.toString();
+    const filename = `${dir}/${publicKey.slice(2, 10)}_${publicKey.slice(-4)}-${clientIp}-${timestamp}`;
+    mkdirpSync(dir);
+    writeJsonSync(filename, data);
     ctx.status = 200;
   });
 

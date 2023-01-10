@@ -132,6 +132,10 @@ export class AztecSdk extends EventEmitter {
     return await this.core.getRemoteStatus();
   }
 
+  public async sendConsoleLog(clientData?: string[], preserveLog = false) {
+    await this.core.sendConsoleLog(clientData, preserveLog);
+  }
+
   public async isAccountRegistered(accountPublicKey: GrumpkinAddress, includePending = false) {
     return await this.core.isAccountRegistered(accountPublicKey, includePending);
   }

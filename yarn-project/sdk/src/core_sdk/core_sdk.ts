@@ -8,7 +8,7 @@ import { keccak256, Blake2s, Pedersen, randomBytes, Schnorr } from '@aztec/barre
 import { Grumpkin } from '@aztec/barretenberg/ecc';
 import { InitHelpers } from '@aztec/barretenberg/environment';
 import { FftFactory } from '@aztec/barretenberg/fft';
-import { createDebugLogger } from '@aztec/barretenberg/log';
+import { createDebugLogger, logHistory } from '@aztec/barretenberg/log';
 import { NoteAlgorithms, NoteDecryptor } from '@aztec/barretenberg/note_algorithms';
 import { OffchainAccountData } from '@aztec/barretenberg/offchain_tx_data';
 import { Pippenger } from '@aztec/barretenberg/pippenger';
@@ -259,6 +259,32 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
 
   public async getRemoteStatus() {
     return await this.rollupProvider.getStatus();
+  }
+
+  public async sendConsoleLog(clientData?: string[], preserveLog?: boolean) {
+    const logs = logHistory.getLogs();
+    if (!logs.length && !clientData?.length) {
+      return;
+    }
+
+    const publicKeys = this.userStates.map(us => us.getUserData().accountPublicKey);
+    const ensureJson = (log: any[]) =>
+      log.map(logArgs => {
+        try {
+          JSON.stringify(logArgs);
+          return logArgs;
+        } catch (e) {
+          return `${logArgs}`;
+        }
+      });
+    await this.rollupProvider.clientConsoleLog({
+      publicKeys: publicKeys.map(k => k.toString()),
+      logs: logs.map(ensureJson),
+      clientData,
+    });
+    if (!preserveLog) {
+      logHistory.clear(logs.length);
+    }
   }
 
   public async isAccountRegistered(accountPublicKey: GrumpkinAddress, includePending: boolean) {
