@@ -104,6 +104,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   private schnorr!: Schnorr;
   private syncSleep = new InterruptableSleep();
   private synchingPromise!: Promise<void>;
+  private treeSyncCount = 0;
   private debug = createDebugLogger('bb:core_sdk');
 
   constructor(
@@ -1102,12 +1103,20 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
    * This is always called on the serial queue.
    */
   private async sync() {
+    this.treeSyncCount++;
+    await this.syncBlocks();
+    this.treeSyncCount--;
+  }
+
+  private async syncBlocks() {
+    const currentTreeSyncCount = this.treeSyncCount;
     // Persistent data could have changed underfoot. Ensure this.sdkStatus and user states are up to date first.
     await this.readSyncInfo();
     await Promise.all(this.userStates.map(us => us.syncFromDb()));
 
     const { syncedToRollup } = this.sdkStatus;
     const from = syncedToRollup + 1;
+    const reallyOldSize = this.worldState.getSize();
 
     // First we focus on bringing the core in sync (mutable data tree layers and accounts).
     // Server will return a chunk of blocks.
@@ -1126,6 +1135,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       const offchainTxData = coreBlocks.map(b => b.offchainTxData);
       const subtreeRoots = coreBlocks.map(block => block.subtreeRoot!);
       this.debug(`inserting ${subtreeRoots.length} rollup roots into data tree...`);
+      const oldSize = this.worldState.getSize();
       await this.worldState.insertElements(rollups[0].dataStartIndex, subtreeRoots);
       this.debug(`processing aliases...`);
       await this.processAliases(rollups, offchainTxData);
@@ -1147,7 +1157,10 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
           oldRoot: oldRoot.toString('hex'),
           newRoot: newRoot.toString('hex'),
           newSize,
+          oldSize,
+          reallyOldSize,
           expectedDataRoot: expectedDataRoot.toString('hex'),
+          currentTreeSyncCount,
         });
         return;
       }
