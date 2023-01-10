@@ -1,5 +1,4 @@
 import { EthereumProvider, RequestArguments } from '@aztec/barretenberg/blockchain';
-import { retry } from '@aztec/barretenberg/retry';
 import { createDebugLogger } from '@aztec/barretenberg/log';
 
 const log = createDebugLogger('json_rpc_provider');
@@ -7,7 +6,7 @@ const log = createDebugLogger('json_rpc_provider');
 export class JsonRpcProvider implements EthereumProvider {
   private id = 0;
 
-  constructor(private host: string, private netMustSucceed = false) {}
+  constructor(private host: string) {}
 
   public async request({ method, params }: RequestArguments): Promise<any> {
     const body = {
@@ -34,29 +33,21 @@ export class JsonRpcProvider implements EthereumProvider {
   }
 
   private async fetch(body: any) {
-    const fn = async () => {
-      const resp = await fetch(this.host, {
-        method: 'POST',
-        body: JSON.stringify(body),
-        headers: { 'content-type': 'application/json' },
-      });
+    const resp = await fetch(this.host, {
+      method: 'POST',
+      body: JSON.stringify(body),
+      headers: { 'content-type': 'application/json' },
+    });
 
-      if (!resp.ok) {
-        throw new Error(resp.statusText);
-      }
-
-      const text = await resp.text();
-      try {
-        return JSON.parse(text);
-      } catch (err) {
-        throw new Error(`Failed to parse body as JSON: ${text}`);
-      }
-    };
-
-    if (this.netMustSucceed) {
-      return await retry(fn, 'JsonRpcProvider request');
+    if (!resp.ok) {
+      throw new Error(resp.statusText);
     }
 
-    return await fn();
+    const text = await resp.text();
+    try {
+      return JSON.parse(text);
+    } catch (err) {
+      throw new Error(`Failed to parse body as JSON: ${text}`);
+    }
   }
 }

@@ -15,7 +15,11 @@ if [ -z "${ETHEREUM_HOST-}" ]; then
   fi
 
   # Start anvil and wait till its port is open.
-  .foundry/bin/anvil --silent --host :: -p $ANVIL_PORT > /dev/null &
+  if [ -n "${VERBOSE-}" ]; then
+    .foundry/bin/anvil --chain-id 1337 --host :: -p $ANVIL_PORT &
+  else
+    .foundry/bin/anvil --silent --chain-id 1337 --host :: -p $ANVIL_PORT > /dev/null &
+  fi
 fi
 
 echo "Waiting for ethereum host at $ETHEREUM_HOST..."

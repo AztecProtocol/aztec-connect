@@ -5,7 +5,7 @@ import { Configurator } from './configurator.js';
 import { EthEventDao } from './entity/eth_event.js';
 
 async function getProvider(ethereumHost: string) {
-  const provider = new JsonRpcProvider(ethereumHost, true);
+  const provider = new JsonRpcProvider(ethereumHost);
 
   const chainId = parseInt(
     await provider.request({

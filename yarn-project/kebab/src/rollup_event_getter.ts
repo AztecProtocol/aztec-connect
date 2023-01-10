@@ -1,8 +1,10 @@
 import { EthAddress } from '@aztec/barretenberg/address';
+import { retry } from '@aztec/barretenberg/retry';
 import { getEarliestBlock } from '@aztec/blockchain';
 import { createDebugLogger } from '@aztec/barretenberg/log';
 import { JsonRpcProvider } from '@aztec/blockchain';
 import { EthLogsDb } from './log_db.js';
+import { EthereumRpc } from '@aztec/barretenberg/blockchain';
 
 export const ROLLUP_PROCESSED_EVENT_TOPIC = '0x14054a15b39bfd65ec00fc6d15c7e5f9cbc1dc6f452cbefa359b4da61ad89fb6';
 export const DEFI_BRIDGE_EVENT_TOPIC = '0x692cf5822a02f5edf084dc7249b3a06293621e069f11975ed70908ed10ed2e2c';
@@ -22,7 +24,8 @@ export type EthEvent = {
 
 export class RollupEventGetter {
   private lastQueriedBlockNum: number;
-  private debug = createDebugLogger('bb:rollup_event_getter');
+  private ethereumRpc: EthereumRpc;
+  private debug = createDebugLogger('aztec:rollup_event_getter');
 
   constructor(
     protected rollupContractAddress: EthAddress,
@@ -30,19 +33,8 @@ export class RollupEventGetter {
     private chainId: number,
     private logsDb: EthLogsDb,
   ) {
-    this.lastQueriedBlockNum = this.getEarliestBlock().earliestBlock;
-  }
-
-  public getEarliestBlock() {
-    return getEarliestBlock(this.chainId);
-  }
-
-  public async getLatestBlockNumber() {
-    return parseInt(
-      await this.provider.request({
-        method: 'eth_blockNumber',
-      }),
-    );
+    this.lastQueriedBlockNum = getEarliestBlock(chainId).earliestBlock;
+    this.ethereumRpc = new EthereumRpc(provider);
   }
 
   public getLastQueriedBlockNum(): number {
@@ -50,23 +42,26 @@ export class RollupEventGetter {
   }
 
   public async init() {
-    const lastSynchedBlock = await this.logsDb.getLastKnownBlockNumber();
-    await this.getAndStoreRollupBlocksFrom(lastSynchedBlock, this.logsDb);
+    return await retry(async () => {
+      const lastSynchedBlock = await this.logsDb.getLastKnownBlockNumber();
+      await this.getAndStoreRollupBlocksFrom(lastSynchedBlock, this.logsDb);
+    }, 'init');
   }
 
   public async getLatestRollupEvents(): Promise<EthEvent[]> {
-    const latestBlock = await this.getLatestBlockNumber();
-    if (latestBlock > this.lastQueriedBlockNum) {
-      this.debug(`getting new blocks, latest block ${latestBlock}, last queried block ${this.lastQueriedBlockNum}`);
-      return this.getAndStoreRollupBlocksFrom(this.lastQueriedBlockNum + 1, this.logsDb);
-    }
-    return [];
+    return await retry(async () => {
+      const latestBlock = await this.ethereumRpc.blockNumber();
+      if (latestBlock > this.lastQueriedBlockNum) {
+        this.debug(`getting new blocks, latest block ${latestBlock}, last queried block ${this.lastQueriedBlockNum}`);
+        return this.getAndStoreRollupBlocksFrom(this.lastQueriedBlockNum + 1, this.logsDb);
+      }
+      return [];
+    }, 'getLatestRollupEvents');
   }
 
-  // we do the DB storing inside here so that we are 100% certain that rollups are present
-  public async getAndStoreRollupBlocksFrom(blockNumber: number, db?: EthLogsDb): Promise<EthEvent[]> {
-    const { earliestBlock, chunk } = this.getEarliestBlock();
-    const latestBlock = await this.getLatestBlockNumber();
+  private async getAndStoreRollupBlocksFrom(blockNumber: number, db?: EthLogsDb): Promise<EthEvent[]> {
+    const { earliestBlock, chunk } = getEarliestBlock(this.chainId);
+    const latestBlock = await this.ethereumRpc.blockNumber();
     const initialStart = Math.max(blockNumber || 0, earliestBlock);
     let start = initialStart;
     let end = Math.min(start + chunk - 1, latestBlock);
