@@ -10,7 +10,7 @@ import fsExtra from 'fs-extra';
 const { mkdirpSync, pathExistsSync, readJsonSync, writeJsonSync } = fsExtra;
 import { FALAFEL_VERSION } from './version.js';
 
-const { DATA_DIR = './data' } = process.env;
+const { DATA_DIR = './data', INITIAL_RUNTIME_CONFIG_PATH = undefined } = process.env;
 
 export type SupportedDb = 'mysql' | 'postgres' | 'sqlite';
 
@@ -156,6 +156,7 @@ function getRuntimeConfigEnvVars(): Partial<RuntimeConfig> {
     feeGasPriceMultiplier: FEE_GAS_PRICE_MULTIPLIER ? +FEE_GAS_PRICE_MULTIPLIER : undefined,
     defaultDeFiBatchSize: DEFAULT_DEFI_BATCH_SIZE ? +DEFAULT_DEFI_BATCH_SIZE : undefined,
     feePayingAssetIds: FEE_PAYING_ASSET_IDS ? FEE_PAYING_ASSET_IDS.split(',').map(id => +id) : undefined,
+
     rollupBeneficiary: FEE_DISTRIBUTOR_ADDRESS ? EthAddress.fromString(FEE_DISTRIBUTOR_ADDRESS) : undefined,
   };
   return Object.fromEntries(Object.entries(envVars).filter(e => e[1] !== undefined));
@@ -172,7 +173,7 @@ export class Configurator {
    * Update the configuration with the saved runtime configuration (if it exists).
    * Save the new configuration to disk.
    */
-  constructor(private confPath = `${DATA_DIR}/config`) {
+  constructor(private confPath = `${DATA_DIR}/config`, private initialRuntimeConfigPath = INITIAL_RUNTIME_CONFIG_PATH) {
     if (process.env.JEST_WORKER_ID) {
       // Ensure when we run tests, we don't create any disk state. We have to do this horrific check due
       // to the fact the Configurator must be created globally as part of init_entities.
@@ -189,6 +190,9 @@ export class Configurator {
     const startupConfigEnvVars = getStartupConfigEnvVars();
     const runtimeConfigEnvVars = getRuntimeConfigEnvVars();
 
+    // Bootstrap the runtime config when in dev / testnet environments
+    const initialRuntimeConfig = this.readInitialRuntimeConfigFile(this.initialRuntimeConfigPath);
+
     if (pathExistsSync(this.confPath)) {
       // Erase all data if rollup contract changes.
       const saved: ConfVars = this.readConfigFile(this.confPath);
@@ -202,7 +206,7 @@ export class Configurator {
 
       // Priorities:
       // StartupConfig: Environment, saved, defaults.
-      // RuntimeConfig: Saved, Environment, defaults.
+      // RuntimeConfig: Saved, Initial, Environment, defaults.
       const { runtimeConfig: savedRuntimeConfig, ...savedStartupConfig } = saved;
       this.confVars = {
         ...defaultStartupConfig,
@@ -211,6 +215,7 @@ export class Configurator {
         runtimeConfig: {
           ...defaultRuntimeConfig,
           ...runtimeConfigEnvVars,
+          ...initialRuntimeConfig,
           ...savedRuntimeConfig,
         },
       };
@@ -223,6 +228,7 @@ export class Configurator {
         ...startupConfigEnvVars,
         runtimeConfig: {
           ...defaultRuntimeConfig,
+          ...initialRuntimeConfig,
           ...runtimeConfigEnvVars,
         },
       };
@@ -262,6 +268,21 @@ export class Configurator {
       },
     };
     this.writeConfigFile(this.confPath, this.confVars);
+  }
+
+  /** Read Initial Runtime Config
+   *
+   * @notice Read initial bootstrapping runtime config from a configured file.
+   *         If none is provided, then an empty object is returned.
+   *
+   * @param path
+   * @returns
+   */
+  private readInitialRuntimeConfigFile(path: string | undefined): Partial<RuntimeConfig> {
+    if (!path || !pathExistsSync(path)) {
+      return {};
+    }
+    return readJsonSync(path);
   }
 
   /**

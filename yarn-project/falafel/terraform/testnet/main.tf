@@ -233,6 +233,10 @@ resource "aws_ecs_task_definition" "falafel" {
       {
         "name": "BRIDGE_DATA_PROVIDER_CONTRACT_ADDRESS",
         "value": "${data.terraform_remote_state.contracts.outputs.bridge_data_provider_contract_address}"
+      },
+      {
+        "name": "INITIAL_RUNTIME_CONFIG_PATH",
+        "value": "./config/dev_testnet_initial_config.json"
       }
     ],
     "mountPoints": [
