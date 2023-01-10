@@ -14,11 +14,15 @@ if [ -z "${ETHEREUM_HOST-}" ]; then
     exit 1
   fi
 
+  [ -n "${FORK_URL-}" ] && FORK_URL_ARG="--fork-url $FORK_URL"
+  [ -n "${FORK_BLOCK-}" ] && FORK_BLOCK_ARG="--fork-block-number $FORK_BLOCK"
+  CHAIN_ID_ARG="--chain-id ${CHAIN_ID:-1337}"
+
   # Start anvil and wait till its port is open.
   if [ -n "${VERBOSE-}" ]; then
-    .foundry/bin/anvil --chain-id 1337 --host :: -p $ANVIL_PORT &
+    .foundry/bin/anvil ${FORK_BLOCK_ARG-} ${FORK_URL_ARG-} $CHAIN_ID_ARG --host :: -p $ANVIL_PORT &
   else
-    .foundry/bin/anvil --silent --chain-id 1337 --host :: -p $ANVIL_PORT > /dev/null &
+    .foundry/bin/anvil ${FORK_BLOCK_ARG-} ${FORK_URL_ARG-} $CHAIN_ID_ARG --host :: -p $ANVIL_PORT > /dev/null &
   fi
 fi
 

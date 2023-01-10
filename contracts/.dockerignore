@@ -4,3 +4,5 @@ out
 Dockerfile
 lib
 serve
+# Contains aztec fork specific vars.
+scripts/start_e2e_fork.sh
