@@ -1,5 +1,4 @@
 import { EthAddress } from '@aztec/barretenberg/address';
-import { retry } from '@aztec/barretenberg/retry';
 import { getEarliestBlock } from '@aztec/blockchain';
 import { createDebugLogger } from '@aztec/barretenberg/log';
 import { JsonRpcProvider } from '@aztec/blockchain';
@@ -42,21 +41,17 @@ export class RollupEventGetter {
   }
 
   public async init() {
-    return await retry(async () => {
-      const lastSynchedBlock = await this.logsDb.getLastKnownBlockNumber();
-      await this.getAndStoreRollupBlocksFrom(lastSynchedBlock, this.logsDb);
-    }, 'init');
+    const lastSynchedBlock = await this.logsDb.getLastKnownBlockNumber();
+    await this.getAndStoreRollupBlocksFrom(lastSynchedBlock, this.logsDb);
   }
 
   public async getLatestRollupEvents(): Promise<EthEvent[]> {
-    return await retry(async () => {
-      const latestBlock = await this.ethereumRpc.blockNumber();
-      if (latestBlock > this.lastQueriedBlockNum) {
-        this.debug(`getting new blocks, latest block ${latestBlock}, last queried block ${this.lastQueriedBlockNum}`);
-        return this.getAndStoreRollupBlocksFrom(this.lastQueriedBlockNum + 1, this.logsDb);
-      }
-      return [];
-    }, 'getLatestRollupEvents');
+    const latestBlock = await this.ethereumRpc.blockNumber();
+    if (latestBlock > this.lastQueriedBlockNum) {
+      this.debug(`getting new blocks, latest block ${latestBlock}, last queried block ${this.lastQueriedBlockNum}`);
+      return this.getAndStoreRollupBlocksFrom(this.lastQueriedBlockNum + 1, this.logsDb);
+    }
+    return [];
   }
 
   private async getAndStoreRollupBlocksFrom(blockNumber: number, db?: EthLogsDb): Promise<EthEvent[]> {

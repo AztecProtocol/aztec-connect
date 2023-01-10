@@ -31,7 +31,7 @@ function getEthereumBlockchainConfig({
 }
 
 async function getProvider(ethereumHost: string, privateKey: Buffer) {
-  const baseProvider = new JsonRpcProvider(ethereumHost);
+  const baseProvider = new JsonRpcProvider(ethereumHost, true);
   const ethereumRpc = new EthereumRpc(baseProvider);
   const chainId = await ethereumRpc.getChainId();
   const provider = new WalletProvider(baseProvider);
