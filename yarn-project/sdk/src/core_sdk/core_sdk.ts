@@ -104,6 +104,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   private schnorr!: Schnorr;
   private syncSleep = new InterruptableSleep();
   private synchingPromise!: Promise<void>;
+  private treeSyncCount = 0;
   private debug = createDebugLogger('bb:core_sdk');
 
   constructor(
@@ -1304,7 +1305,9 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       await this.syncUserStates(userSyncedToRollup + 1, syncedToRollup);
     } else {
       // User state is not lagging behind core --> sync both
+      this.treeSyncCount++;
       await this.syncBoth(syncedToRollup + 1);
+      this.treeSyncCount--;
     }
   }
 
@@ -1336,6 +1339,9 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
    */
   private async syncBoth(from: number) {
     const timer = new Timer();
+    const currentTreeSyncCount = this.treeSyncCount;
+    const reallyOldSize = this.worldState.getSize();
+
     const coreBlocks = await this.rollupProvider.getBlocks(from);
     if (!coreBlocks.length) {
       // nothing to do
@@ -1352,6 +1358,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     const offchainTxData = coreBlocks.map(b => b.offchainTxData);
     const subtreeRoots = coreBlocks.map(block => block.subtreeRoot!);
     this.debug(`inserting ${subtreeRoots.length} rollup roots into data tree...`);
+    const oldSize = this.worldState.getSize();
     await this.worldState.insertElements(rollups[0].dataStartIndex, subtreeRoots);
     this.debug(`processing aliases...`);
     await this.processAliases(rollups, offchainTxData);
@@ -1373,7 +1380,10 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
         oldRoot: oldRoot.toString('hex'),
         newRoot: newRoot.toString('hex'),
         newSize,
+        oldSize,
+        reallyOldSize,
         expectedDataRoot: expectedDataRoot.toString('hex'),
+        currentTreeSyncCount,
       });
       return;
     }
