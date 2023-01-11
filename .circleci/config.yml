@@ -671,7 +671,8 @@ jobs:
       - run:
           name: 'kebab'
           command: |
-            if [ -n "$CONTRACTS_REDEPLOYED" ]; then
+            LAST_COMMIT=$(last_successful_commit kebab $DEPLOY_TAG-deployed)
+            if changed $LAST_COMMIT "contracts/deploy/$VERSION_TAG"; then
               # Taint the efs file system to recreate.
               deploy kebab kebab aws_efs_file_system.kebab_data_store
             else
@@ -686,7 +687,8 @@ jobs:
       - run:
           name: 'falafel'
           command: |
-            if [ -n "$CONTRACTS_REDEPLOYED" ]; then
+            LAST_COMMIT=$(last_successful_commit falafel $DEPLOY_TAG-deployed)
+            if changed $LAST_COMMIT "contracts/deploy/$VERSION_TAG"; then
               # Taint the postgres db and efs file system to recreate them.
               # We include block-server as a service to restart to clear caches.
               deploy falafel "falafel block-server" "aws_db_instance.postgres aws_efs_file_system.falafel_data_store"
