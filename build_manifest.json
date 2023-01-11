@@ -137,7 +137,7 @@
   "faucet": {
     "buildDir": "faucet",
     "rebuildPatterns": ["^faucet/"],
-    "dependencies": []
+    "dependencies": ["contracts"]
   },
   "coinbase-exporter": {
     "buildDir": "metrics/coinbase-exporter",

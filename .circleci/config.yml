@@ -866,7 +866,8 @@ workflows:
       - wallet: *yarn_project
       # Not currently a yarn project due to using next.js, but should be.
       - faucet:
-          filters: *tag_filter
+          requires:
+            - contracts
       - end-to-end: *yarn_project
       - e2e-join:
           requires:
