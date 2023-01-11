@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { default as styled } from 'styled-components';
 import { default as useFetch } from 'use-http';
+import { Block } from '@aztec/barretenberg/block_source';
+import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 
 import { BlockStatusIndicator, getBlockStatus } from '../block_status/index.js';
 import { Button, Text } from '../components/index.js';
@@ -9,8 +11,9 @@ import { breakpoints, spacings } from '../styles/index.js';
 import { Sections, Section, SectionTitle } from '../template/index.js';
 import { TxList } from '../tx_list/index.js';
 import { BlockDetails, BlockDetailsPlaceholder, getEtherscanLink } from './block_details.js';
-import { POLL_INTERVAL } from '../config.js';
 import { Block as BlockInterface } from './types.js';
+import { deserializeBlocks } from '../block_utils.js';
+import { ProofId } from '@aztec/sdk';
 
 const BlockTitle = styled.div`
   display: flex;
@@ -55,35 +58,47 @@ const BackButtonRoot = styled.div`
   padding: ${spacings.xl} 0;
 `;
 
-interface BlockProps {
+interface BlockPageProps {
   id: number;
 }
 
-export const Block: React.FunctionComponent<BlockProps> = ({ id }) => {
+export const formatServerBlock = (block: Block): BlockInterface => {
+  const rollupProofData = RollupProofData.decode(block.encodedRollupProofData);
+  return {
+    id: block.rollupId,
+    mined: block.mined,
+    dataRoot: rollupProofData.newDataRoot.toString('hex'),
+    nullifierRoot: rollupProofData.newNullRoot.toString('hex'),
+    hash: block.txHash.toString(),
+    proofData: block.encodedRollupProofData.toString('hex'),
+    txs: rollupProofData.innerProofData
+      .filter(({ proofId }) => proofId !== ProofId.PADDING)
+      .map(innerProof => ({
+        proofId: innerProof.proofId,
+        id: innerProof.txId.toString('hex'),
+      })),
+  };
+};
+
+export const BlockPage: React.FunctionComponent<BlockPageProps> = ({ id }) => {
   const [blockData, setBlockData] = useState<BlockInterface | null>(null);
 
   const { get, loading, error, response } = useFetch();
 
   const fetchBlock = async () => {
-    const data = await get(`/rollup/${id}`);
-    if (response.ok) setBlockData(data);
+    await get(`/get-blocks?from=${id}&take=1`);
+    if (response.ok) {
+      const result = Buffer.from(await response.arrayBuffer());
+      const blocks = deserializeBlocks(result);
+      setBlockData(formatServerBlock(blocks[0]));
+    }
   };
 
   useEffect(() => {
-    let interval: number | null = null;
     if ((!blockData && !loading && !error) || !blockData?.mined) {
       fetchBlock().catch(err => console.log(`Error fetching block ${id}: `, err));
-    } else if (!blockData.mined) {
-      interval = window.setInterval(fetchBlock, POLL_INTERVAL);
-    } else if (blockData.mined && interval) {
-      clearInterval(interval);
     }
-    return () => {
-      if (interval) {
-        clearInterval(interval);
-      }
-    };
-  });
+  }, [loading, blockData, error]);
 
   const blockTitle = (
     <StyledSectionTitle
