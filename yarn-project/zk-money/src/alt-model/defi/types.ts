@@ -96,7 +96,6 @@ type AuxDataResolver =
     };
 
 export type DefiPublishStatsCacheArgs = [
-  number, // periodSeconds
   number, // bridgeAddressId
   number | undefined, // inputAssetIdA
   number | undefined, // inputAssetIdB
