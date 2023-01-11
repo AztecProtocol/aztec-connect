@@ -1375,7 +1375,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       await this.writeSyncInfo(-1);
       await this.rollupProvider.clientLog({
         message: 'Invalid dataRoot.',
-        synchingFromRollup: from - 1,
+        synchingFromRollup: from,
         blocksReceived: coreBlocks.length,
         oldRoot: oldRoot.toString('hex'),
         newRoot: newRoot.toString('hex'),
