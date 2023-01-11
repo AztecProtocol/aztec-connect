@@ -30,7 +30,7 @@ export interface FieldProps {
   value: string;
   label?: string;
   sublabel?: string | JSX.Element;
-  message?: string;
+  message?: string | JSX.Element;
   prefix?: string;
   placeholder?: string;
   className?: string;

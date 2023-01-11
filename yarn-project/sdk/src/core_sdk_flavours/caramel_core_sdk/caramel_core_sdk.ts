@@ -50,6 +50,10 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
     return await this.core.getRemoteStatus();
   }
 
+  public async sendConsoleLog(clientData?: string[], preserveLog?: boolean) {
+    return await this.core.sendConsoleLog(clientData, preserveLog);
+  }
+
   public async isAccountRegistered(accountPublicKey: string, includePending: boolean) {
     return await this.core.isAccountRegistered(accountPublicKey, includePending);
   }

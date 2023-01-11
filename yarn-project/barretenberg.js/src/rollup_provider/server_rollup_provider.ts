@@ -124,6 +124,10 @@ export class ServerRollupProvider extends ServerBlockSource implements RollupPro
     await this.fetch('/client-log', log);
   }
 
+  async clientConsoleLog(log: any) {
+    await this.fetch('/client-console-log', log);
+  }
+
   async getInitialWorldState() {
     const response = await this.fetch('/get-initial-world-state');
     const arrBuffer = await response.arrayBuffer();

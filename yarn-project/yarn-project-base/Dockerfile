@@ -5,10 +5,10 @@ FROM 278380418400.dkr.ecr.eu-west-2.amazonaws.com/contracts
 
 FROM node:18-alpine
 RUN apk update && apk add --no-cache build-base git python3 curl bash jq
-COPY --from=0 /usr/src/barretenberg/srs_db/ignition /usr/src/barretenberg/srs_db/ignition
-COPY --from=0 /usr/src/barretenberg/srs_db/download_ignition.sh /usr/src/barretenberg/srs_db/download_ignition.sh
-COPY --from=0 /usr/src/barretenberg/build/bin /usr/src/barretenberg/build/bin
-COPY --from=1 /usr/src/barretenberg/build/bin /usr/src/barretenberg/build-wasm/bin
+COPY --from=0 /usr/src/barretenberg/cpp/srs_db/ignition /usr/src/barretenberg/cpp/srs_db/ignition
+COPY --from=0 /usr/src/barretenberg/cpp/srs_db/download_ignition.sh /usr/src/barretenberg/cpp/srs_db/download_ignition.sh
+COPY --from=0 /usr/src/barretenberg/cpp/build/bin /usr/src/barretenberg/cpp/build/bin
+COPY --from=1 /usr/src/barretenberg/cpp/build/bin /usr/src/barretenberg/cpp/build-wasm/bin
 COPY --from=2 /usr/src/blockchain-vks/keys /usr/src/blockchain-vks/keys
 COPY --from=3 /usr/src/contracts /usr/src/contracts
 WORKDIR /usr/src/yarn-project
@@ -16,7 +16,7 @@ WORKDIR /usr/src/yarn-project
 COPY account-migrator/package.json account-migrator/package.json
 COPY barretenberg.js/package.json barretenberg.js/package.json
 COPY blockchain/package.json blockchain/package.json
-COPY blockchain-cli/package.json blockchain-cli/package.json
+COPY aztec-dev-cli/package.json aztec-dev-cli/package.json
 COPY contracts-verifier-test/package.json contracts-verifier-test/package.json
 COPY explorer/package.json explorer/package.json
 COPY halloumi/package.json halloumi/package.json

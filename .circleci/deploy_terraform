@@ -3,6 +3,7 @@ set -e
 
 REPOSITORY=$1
 TF_DIR=$2
+TO_TAINT=${3}
 
 if [ ! -d "$TF_DIR" ]; then
   echo "No terraform directory found at $TF_DIR. Skipping."
@@ -31,4 +32,9 @@ if [ -n "$REPOSITORY" ]; then
 fi
 
 terraform init -input=false $BACKEND_CONFIG
+
+for RESOURCE in $TO_TAINT; do
+  terraform taint $RESOURCE || true
+done
+
 terraform apply -input=false -auto-approve

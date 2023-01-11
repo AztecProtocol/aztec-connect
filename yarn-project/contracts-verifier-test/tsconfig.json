@@ -19,6 +19,5 @@
     "resolveJsonModule": true
   },
   "references": [{ "path": "../barretenberg.js/tsconfig.dest.json" }],
-  "include": ["verifier-fixtures"],
-  "files": ["./hardhat.config.ts"]
+  "include": ["verifier-fixtures"]
 }

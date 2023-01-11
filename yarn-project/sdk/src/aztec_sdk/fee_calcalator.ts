@@ -3,9 +3,9 @@ import { AssetValue } from '@aztec/barretenberg/asset';
 import { TxType } from '@aztec/barretenberg/blockchain';
 import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { DefiDepositProofData, JoinSplitProofData, ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
+import { roundUp } from '@aztec/barretenberg/rounding';
 import { ClientEthereumBlockchain } from '@aztec/blockchain';
 import { CoreSdkInterface } from '../core_sdk/index.js';
-import { roundUp } from './round_up.js';
 
 const accumeFees = (fees0: AssetValue[], fees1: AssetValue[]) =>
   !fees1.length ? fees0 : fees0.map((fee, i) => ({ ...fee, value: fee.value + fees1[i].value }));

@@ -62,8 +62,19 @@ export function appFactory(server: Server, prefix: string) {
       return;
     }
 
-    const result = await server.jsonRpc({ method, params });
-    ctx.body = { jsonrpc, id, result };
+    try {
+      const result = await server.jsonRpc({ method, params });
+      ctx.body = { jsonrpc, id, result };
+    } catch (err) {
+      if (err.message !== undefined && err.code !== undefined) {
+        // Propagate ProviderRpcError.
+        ctx.body = { jsonrpc, id, error: err };
+      } else {
+        ctx.body = { jsonrpc, id, error: { message: err.message, code: 5000 } };
+      }
+      console.log('RPC request: ', ctx.request.body);
+      console.log('RPC error response: ', ctx.body);
+    }
   });
 
   router.get('/', (ctx: Koa.Context) => {

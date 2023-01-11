@@ -113,9 +113,9 @@ export const randomRollup = (rollupId: number, rollupProof: RollupProofDao, mine
     interactionResult: randomBytes(32 * 32),
   });
 
-export const randomClaim = () =>
+export const randomClaim = (id: number) =>
   new ClaimDao({
-    id: randomBytes(4).readInt32BE(0),
+    id,
     nullifier: randomBytes(32),
     bridgeId: BridgeCallData.random().toBigInt(), // TODO: rename bridgeId to bridgeCallData
     depositValue: toBigIntBE(randomBytes(32)),

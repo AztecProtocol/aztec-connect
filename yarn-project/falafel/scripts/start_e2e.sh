@@ -2,11 +2,11 @@
 set -eu
 
 if [ -z "${NO_BUILD-}" ]; then
-  cd  ../../barretenberg/build
+  cd  ../../barretenberg/cpp/build
   make -j$(nproc) rollup_cli db_cli
   cd  ../build-wasm
   make -j$(nproc) barretenberg.wasm
-  cd ../../yarn-project/falafel
+  cd ../../../yarn-project/falafel
   yarn build
 fi
 

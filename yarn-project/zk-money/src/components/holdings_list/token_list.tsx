@@ -6,13 +6,26 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { HOLDINGS_PER_PAGE, slicePage } from './helpers.js';
 import { Holding } from './holding.js';
-import { usePendingBalances } from '../../alt-model/assets/l1_balance_hooks.js';
+import { PendingBalances, usePendingBalances } from '../../alt-model/assets/l1_balance_hooks.js';
 import style from './token_list.module.scss';
 
 interface TokenListProps {
   balances: AssetValue[] | undefined;
   onOpenShieldModal: (assetId: number) => void;
   onOpenSendModal: (assetId: number) => void;
+}
+
+function generateBalances(pendingBalances?: PendingBalances, balances?: AssetValue[]) {
+  if (!pendingBalances) return balances;
+
+  const allBalances = balances ? [...balances] : [];
+  Object.keys(pendingBalances).forEach(pendingAssetId => {
+    const balance = allBalances.find(balance => balance.assetId === Number(pendingAssetId));
+    if (!balance) {
+      allBalances.push({ assetId: Number(pendingAssetId), value: 0n });
+    }
+  });
+  return allBalances;
 }
 
 export function TokenList(props: TokenListProps) {
@@ -25,30 +38,16 @@ export function TokenList(props: TokenListProps) {
     navigate(`/earn${searchStr}`);
   };
 
-  if (!props.balances) return <></>;
-  if (props.balances.length === 0) {
-    if (pendingBalances && Object.keys(pendingBalances).length > 0) {
-      return (
-        <div>
-          {Object.keys(pendingBalances).map(pendingBalanceId => {
-            const pendingBalance = pendingBalances[pendingBalanceId];
-            const assetId = Number(pendingBalanceId);
-            return (
-              <Holding
-                assetValue={{ assetId, value: pendingBalance }}
-                onShield={() => props.onOpenShieldModal(assetId)}
-              />
-            );
-          })}
-        </div>
-      );
-    }
+  const allBalances = generateBalances(pendingBalances, props.balances);
+
+  if (!allBalances) return <></>;
+  if (allBalances.length === 0) {
     return <div className={style.noTokens}>You have no tokens yet</div>;
   }
 
   return (
     <>
-      {slicePage(props.balances ?? [], page).map(balance => {
+      {slicePage(allBalances ?? [], page).map(balance => {
         const { assetId } = balance;
         return (
           <Holding
@@ -60,9 +59,9 @@ export function TokenList(props: TokenListProps) {
           />
         );
       })}
-      {props.balances.length > HOLDINGS_PER_PAGE && (
+      {allBalances.length > HOLDINGS_PER_PAGE && (
         <Pagination
-          totalItems={props.balances?.length ?? 0}
+          totalItems={allBalances?.length ?? 0}
           itemsPerPage={HOLDINGS_PER_PAGE}
           page={page}
           onChangePage={setPage}

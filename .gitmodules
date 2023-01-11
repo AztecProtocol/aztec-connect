@@ -1,3 +1,6 @@
+[submodule "barretenberg"]
+	path = barretenberg
+	url = git@github.com:aztecprotocol/barretenberg
 [submodule "contracts/lib/forge-std"]
 	path = contracts/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
@@ -33,4 +36,4 @@
 [submodule "contracts/lib/aztec-connect-bridges"]
 	path = contracts/lib/aztec-connect-bridges
 	url = https://github.com/AztecProtocol/aztec-connect-bridges
-	branch = lh/deployments-update
+	branch = master

@@ -186,7 +186,7 @@ export class Contracts {
   }
 
   public async getBlockNumber() {
-    return await this.provider.getBlockNumber();
+    return await this.ethereumRpc.blockNumber();
   }
 
   public async signPersonalMessage(message: Buffer, address: EthAddress) {

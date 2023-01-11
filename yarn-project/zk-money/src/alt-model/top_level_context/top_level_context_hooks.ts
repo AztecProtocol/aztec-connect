@@ -2,7 +2,6 @@ import { useContext, useMemo } from 'react';
 import { TopLevelContext } from './top_level_context.js';
 import { useObs } from '../../app/util/index.js';
 import { AssetValue } from '@aztec/sdk';
-import { BridgeDataAdaptorsMethodCaches } from '../defi/bridge_data_adaptors/caches/bridge_data_adaptors_method_caches.js';
 
 function useTopLevelContext() {
   return useContext(TopLevelContext);
@@ -86,11 +85,9 @@ export function useDefiPulishStatsPollerCache() {
 }
 
 export function useBridgeDataAdaptorsMethodCaches() {
-  const context = useTopLevelContext();
-  return context ? context.bridgeDataAdaptorsMethodCaches : ({} as BridgeDataAdaptorsMethodCaches);
+  return useTopLevelContext().bridgeDataAdaptorsMethodCaches;
 }
 
 export function useDefiRecipes() {
-  const context = useTopLevelContext();
-  return context ? context.defiRecipes : [];
+  return useTopLevelContext().defiRecipes;
 }

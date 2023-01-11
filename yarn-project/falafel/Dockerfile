@@ -10,6 +10,7 @@ RUN yarn build && yarn formatting && yarn test
 # Prune dev dependencies. See comment in base image.
 RUN yarn cache clean
 RUN yarn workspaces focus --production > /dev/null
+RUN rm -rf /usr/src/contracts
 
 FROM node:18-alpine
 RUN apk update && apk add --no-cache llvm15-libs curl jq

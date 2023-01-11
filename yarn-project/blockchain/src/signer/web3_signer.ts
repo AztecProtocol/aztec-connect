@@ -18,9 +18,25 @@ export class Web3Signer implements EthereumSigner {
   }
 
   public async signTypedData(data: TypedData, address: EthAddress) {
+    // MetaMask and WalletConnect needs stringified data
+    let needToStringify = false;
+    try {
+      // Fetch client version, if MetaMask then stringify
+      const clientVersion: string = await this.provider.request({
+        method: 'web3_clientVersion',
+        params: [],
+      });
+      needToStringify = clientVersion.toLowerCase().includes('metamask');
+    } catch (err) {
+      // Wallet connect don't resolve web3_clientVersion, assume that failure is wallet connect
+      needToStringify = true;
+    }
+
+    const cleanedData = needToStringify ? JSON.stringify(data) : data;
+
     const result = await this.provider.request({
       method: 'eth_signTypedData_v4',
-      params: [address.toString(), data],
+      params: [address.toString(), cleanedData],
     });
     const signature = this.normaliseSignature(Buffer.from(result.slice(2), 'hex'));
     const r = signature.subarray(0, 32);

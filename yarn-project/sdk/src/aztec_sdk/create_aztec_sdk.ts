@@ -1,6 +1,6 @@
 import { EthereumProvider } from '@aztec/barretenberg/blockchain';
+import { createDebugLogger, enableLogs, logHistory } from '@aztec/barretenberg/log';
 import { ClientEthereumBlockchain } from '@aztec/blockchain';
-import { enableLogs, createDebugLogger } from '@aztec/barretenberg/log';
 import isNode from 'detect-node';
 import { CoreSdkInterface } from '../core_sdk/index.js';
 import {
@@ -101,6 +101,7 @@ export async function createHostedAztecSdk(ethereumProvider: EthereumProvider, o
 export async function createPlainAztecSdk(ethereumProvider: EthereumProvider, options: CreatePlainSdkOptions) {
   if (options.debug) {
     enableLogs(options.debug);
+    logHistory.enable();
   }
 
   const coreSdk = await createVanillaCoreSdk(options);

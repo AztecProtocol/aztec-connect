@@ -47,7 +47,7 @@ export class Server {
   private ethereumRpc: EthereumRpc;
   private blockNumber = -1;
   private log = createLogger('Server');
-  private debug = createDebugLogger('server');
+  private debug = createDebugLogger('aztec:server');
 
   constructor(
     provider: JsonRpcProvider,
@@ -103,7 +103,7 @@ export class Server {
       while (this.running) {
         await this.interruptableSleep.sleep(this.checkFrequency);
 
-        const newBlockNumber = await this.ethereumRpc.blockNumber();
+        const newBlockNumber = await this.ethereumRpc.blockNumber().catch(() => this.blockNumber);
         if (this.blockNumber != newBlockNumber) {
           this.debug(`new block number ${newBlockNumber}, purging cache.`);
           this.cachedResponses = {};
@@ -236,7 +236,7 @@ export class Server {
     // Here we filter any transaction receipts that would acknowledge state that is newer than what is in the cache.
     // This resolves the use case above.
     //
-    // The thoughtful engineer will subsequently imagine:
+    // One may subsequently imagine:
     // Alice makes a `call` request to check a bit of state. The result is cached.
     // Bob sends a transaction that modifies the state.
     // Charlie makes a `call` request to check a bit of state. The stale cached result is returned.

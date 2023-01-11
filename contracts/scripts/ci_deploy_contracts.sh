@@ -32,7 +32,7 @@ elif changed $LAST_COMMIT "contracts/deploy/$VERSION_TAG"; then
   # Contract addresses will be mounted in the serve directory
   docker run \
     -v $(pwd)/serve:/usr/src/contracts/serve \
-    -e ETHEREUM_HOST=$ETHEREUM_HOST -e PRIVATE_KEY=$PRIVATE_KEY -e FAUCET_CONTROLLER=$FAUCET_CONTROLLER -e UPGRADE=true -e network=None -e simulateAdmin=false \
+    -e ETHEREUM_HOST=$ETHEREUM_HOST -e PRIVATE_KEY=$PRIVATE_KEY -e FAUCET_CONTROLLER=$FAUCET_CONTROLLER \
     278380418400.dkr.ecr.eu-west-2.amazonaws.com/contracts:$COMMIT_HASH
 
   # Write the contract addresses as terraform variables

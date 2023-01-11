@@ -125,7 +125,8 @@ export interface RollupProvider extends BlockSource {
   getPendingTxs(): Promise<PendingTx[]>;
   getPendingNoteNullifiers(): Promise<Buffer[]>;
   getPendingDepositTxs(): Promise<DepositTx[]>;
-  clientLog(msg: any): Promise<void>;
+  clientLog(log: any): Promise<void>;
+  clientConsoleLog(log: any): Promise<void>;
   getInitialWorldState(): Promise<InitialWorldState>;
   isAccountRegistered(accountPublicKey: GrumpkinAddress): Promise<boolean>;
   isAliasRegistered(alias: string): Promise<boolean>;

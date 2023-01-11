@@ -25,6 +25,10 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
         "reference": "workspace:account-migrator"\
       },\
       {\
+        "name": "aztec-dev-cli",\
+        "reference": "workspace:aztec-dev-cli"\
+      },\
+      {\
         "name": "@aztec/barretenberg",\
         "reference": "workspace:barretenberg.js"\
       },\
@@ -35,10 +39,6 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
       {\
         "name": "@aztec/blockchain",\
         "reference": "workspace:blockchain"\
-      },\
-      {\
-        "name": "blockchain-cli",\
-        "reference": "workspace:blockchain-cli"\
       },\
       {\
         "name": "@aztec/contracts-verifier-test",\
@@ -102,7 +102,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
       ["@aztec/sdk", ["workspace:sdk"]],\
       ["account-migrator", ["workspace:account-migrator"]],\
       ["aztec-block-explorer", ["workspace:explorer"]],\
-      ["blockchain-cli", ["workspace:blockchain-cli"]],\
+      ["aztec-dev-cli", ["workspace:aztec-dev-cli"]],\
       ["end-to-end", ["workspace:end-to-end"]],\
       ["falafel", ["workspace:falafel"]],\
       ["hummus", ["workspace:hummus"]],\
@@ -292,7 +292,6 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["@aztec/eslint-config", "workspace:eslint-config"],\
             ["@rushstack/eslint-patch", "npm:1.1.4"],\
             ["@types/node", "npm:18.7.23"],\
-            ["ts-node", "virtual:4cf42c2f2a8aa147d524c15c0290174d77a2062937f0c22441901ac61d50212062460a38e714456279cdb4fab155b3b1d12acfb24cd6bb68fcc1837e921b5557#npm:10.9.1"],\
             ["typescript", "patch:typescript@npm%3A4.7.4#~builtin<compat/typescript>::version=4.7.4&hash=a1c5e5"]\
           ],\
           "linkType": "SOFT"\
@@ -18028,6 +18027,42 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           "linkType": "SOFT"\
         }]\
       ]],\
+      ["aztec-dev-cli", [\
+        ["workspace:aztec-dev-cli", {\
+          "packageLocation": "./aztec-dev-cli/",\
+          "packageDependencies": [\
+            ["aztec-dev-cli", "workspace:aztec-dev-cli"],\
+            ["@aztec/barretenberg", "workspace:barretenberg.js"],\
+            ["@aztec/blockchain", "workspace:blockchain"],\
+            ["@aztec/eslint-config", "workspace:eslint-config"],\
+            ["@ethersproject/abi", "npm:5.5.0"],\
+            ["@ethersproject/abstract-provider", "npm:5.5.1"],\
+            ["@ethersproject/contracts", "npm:5.5.0"],\
+            ["@ethersproject/experimental", "npm:5.5.0"],\
+            ["@ethersproject/providers", "npm:5.5.1"],\
+            ["@jest/globals", "npm:28.1.3"],\
+            ["@jest/types", "npm:28.1.3"],\
+            ["@rushstack/eslint-patch", "npm:1.1.4"],\
+            ["@types/bn.js", "npm:4.11.6"],\
+            ["@types/jest", "npm:28.1.6"],\
+            ["@types/koa", "npm:2.13.5"],\
+            ["@types/koa-compress", "npm:2.0.9"],\
+            ["@types/koa-router", "npm:7.4.4"],\
+            ["@types/koa__cors", "npm:3.3.0"],\
+            ["@types/node", "npm:18.7.23"],\
+            ["@types/source-map-support", "npm:0.5.6"],\
+            ["bip85", "npm:0.0.3"],\
+            ["commander", "npm:9.3.0"],\
+            ["ethers", "npm:5.5.1"],\
+            ["jest", "virtual:4cf42c2f2a8aa147d524c15c0290174d77a2062937f0c22441901ac61d50212062460a38e714456279cdb4fab155b3b1d12acfb24cd6bb68fcc1837e921b5557#npm:28.1.3"],\
+            ["ts-jest", "virtual:4cf42c2f2a8aa147d524c15c0290174d77a2062937f0c22441901ac61d50212062460a38e714456279cdb4fab155b3b1d12acfb24cd6bb68fcc1837e921b5557#npm:28.0.7"],\
+            ["ts-node", "virtual:4cf42c2f2a8aa147d524c15c0290174d77a2062937f0c22441901ac61d50212062460a38e714456279cdb4fab155b3b1d12acfb24cd6bb68fcc1837e921b5557#npm:10.9.1"],\
+            ["tsc-watch", "virtual:e35cb2f9a33ef1b8aada102e2350ccc0551c137001f6014fc1f11d4a3ec40651db24890427c255d134f29987a3e5475186f25e17bc3995d86758303b9bd18a6a#npm:5.0.3"],\
+            ["typescript", "patch:typescript@npm%3A4.7.4#~builtin<compat/typescript>::version=4.7.4&hash=a1c5e5"]\
+          ],\
+          "linkType": "SOFT"\
+        }]\
+      ]],\
       ["babel-eslint", [\
         ["npm:10.1.0", {\
           "packageLocation": "./.yarn/cache/babel-eslint-npm-10.1.0-6a6d2b1533-bdc1f62b6b.zip/node_modules/babel-eslint/",\
@@ -19286,42 +19321,6 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["blakejs", "npm:1.2.1"]\
           ],\
           "linkType": "HARD"\
-        }]\
-      ]],\
-      ["blockchain-cli", [\
-        ["workspace:blockchain-cli", {\
-          "packageLocation": "./blockchain-cli/",\
-          "packageDependencies": [\
-            ["blockchain-cli", "workspace:blockchain-cli"],\
-            ["@aztec/barretenberg", "workspace:barretenberg.js"],\
-            ["@aztec/blockchain", "workspace:blockchain"],\
-            ["@aztec/eslint-config", "workspace:eslint-config"],\
-            ["@ethersproject/abi", "npm:5.5.0"],\
-            ["@ethersproject/abstract-provider", "npm:5.5.1"],\
-            ["@ethersproject/contracts", "npm:5.5.0"],\
-            ["@ethersproject/experimental", "npm:5.5.0"],\
-            ["@ethersproject/providers", "npm:5.5.1"],\
-            ["@jest/globals", "npm:28.1.3"],\
-            ["@jest/types", "npm:28.1.3"],\
-            ["@rushstack/eslint-patch", "npm:1.1.4"],\
-            ["@types/bn.js", "npm:4.11.6"],\
-            ["@types/jest", "npm:28.1.6"],\
-            ["@types/koa", "npm:2.13.5"],\
-            ["@types/koa-compress", "npm:2.0.9"],\
-            ["@types/koa-router", "npm:7.4.4"],\
-            ["@types/koa__cors", "npm:3.3.0"],\
-            ["@types/node", "npm:18.7.23"],\
-            ["@types/source-map-support", "npm:0.5.6"],\
-            ["bip85", "npm:0.0.3"],\
-            ["commander", "npm:9.3.0"],\
-            ["ethers", "npm:5.5.1"],\
-            ["jest", "virtual:4cf42c2f2a8aa147d524c15c0290174d77a2062937f0c22441901ac61d50212062460a38e714456279cdb4fab155b3b1d12acfb24cd6bb68fcc1837e921b5557#npm:28.1.3"],\
-            ["ts-jest", "virtual:4cf42c2f2a8aa147d524c15c0290174d77a2062937f0c22441901ac61d50212062460a38e714456279cdb4fab155b3b1d12acfb24cd6bb68fcc1837e921b5557#npm:28.0.7"],\
-            ["ts-node", "virtual:4cf42c2f2a8aa147d524c15c0290174d77a2062937f0c22441901ac61d50212062460a38e714456279cdb4fab155b3b1d12acfb24cd6bb68fcc1837e921b5557#npm:10.9.1"],\
-            ["tsc-watch", "virtual:e35cb2f9a33ef1b8aada102e2350ccc0551c137001f6014fc1f11d4a3ec40651db24890427c255d134f29987a3e5475186f25e17bc3995d86758303b9bd18a6a#npm:5.0.3"],\
-            ["typescript", "patch:typescript@npm%3A4.7.4#~builtin<compat/typescript>::version=4.7.4&hash=a1c5e5"]\
-          ],\
-          "linkType": "SOFT"\
         }]\
       ]],\
       ["bluebird", [\

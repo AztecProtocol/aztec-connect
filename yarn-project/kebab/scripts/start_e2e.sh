@@ -2,6 +2,7 @@
 set -e
 
 if [ -z "${NO_BUILD-}" ]; then
+  echo "Building..."
   yarn build
 fi
 
