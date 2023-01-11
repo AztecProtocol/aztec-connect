@@ -49,6 +49,8 @@ function createTopLevelContextValue(
     stableEthereumProvider,
     chainLinkPollerCache,
     bridgeDataAdaptorsMethodCaches.underlyingAmountPollerCache,
+    bridgeDataAdaptorsMethodCaches.expectedOutputPollerCache,
+    bridgeDataAdaptorsMethodCaches.auxDataPollerCache,
   );
   const defiPulishStatsPollerCache = createDefiPublishStatsPollerCache(sdkObs);
 

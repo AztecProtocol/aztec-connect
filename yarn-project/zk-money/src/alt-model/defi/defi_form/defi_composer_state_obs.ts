@@ -14,6 +14,7 @@ export interface DefiComposerState {
   phase: DefiComposerPhase;
   error?: { phase: DefiComposerPhase; message: string };
   signingRetryable?: Retryable<unknown>;
+  backNoRetry?: boolean;
 }
 
 export class DefiComposerStateObs implements IObs<DefiComposerState> {
@@ -44,5 +45,9 @@ export class DefiComposerStateObs implements IObs<DefiComposerState> {
   error(message: string) {
     const error = { phase: this.obs.value.phase, message };
     this.obs.next({ phase: DefiComposerPhase.IDLE, error });
+  }
+
+  setBackNoRetry(value: boolean) {
+    this.obs.next({ ...this.value, backNoRetry: value });
   }
 }

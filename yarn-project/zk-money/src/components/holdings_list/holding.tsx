@@ -1,15 +1,17 @@
 import type { AssetValue } from '@aztec/sdk';
+import { ReactComponent as Clock } from '../../ui-components/images/clock.svg';
 import { SkeletonRect, Button, ButtonTheme, ButtonSize } from '../../ui-components/index.js';
 import { formatBulkPrice } from '../../app/index.js';
 import { useAmountBulkPrice, useSpendableBalance } from '../../alt-model/index.js';
 import { RemoteAsset } from '../../alt-model/types.js';
 import { ShieldedAssetIcon } from '../index.js';
 import { SHIELDABLE_ASSET_ADDRESSES } from '../../alt-model/known_assets/known_asset_addresses.js';
-import { useAmount } from '../../alt-model/asset_hooks.js';
+import { useAmount, useAsset } from '../../alt-model/asset_hooks.js';
 import { Amount } from '../../alt-model/assets/index.js';
 import { getIsDust } from '../../alt-model/assets/asset_helpers.js';
 import { useWalletInteractionIsOngoing } from '../../alt-model/wallet_interaction_hooks.js';
 import { useAccountState } from '../../alt-model/account_state/account_state_hooks.js';
+import { useL1Balances } from '../../alt-model/assets/l1_balance_hooks.js';
 import style from './holding.module.scss';
 
 interface HoldingProps {
@@ -19,8 +21,38 @@ interface HoldingProps {
   onGoToEarn?: (asset: RemoteAsset) => void;
 }
 
+export function PendingBalance({
+  l1PendingBalance,
+  targetAsset,
+}: {
+  l1PendingBalance?: bigint;
+  targetAsset: RemoteAsset;
+}) {
+  if (!l1PendingBalance) {
+    return null;
+  }
+
+  const pendingAmount = new Amount(l1PendingBalance, targetAsset);
+  const formattedPendingAmount = pendingAmount.format({
+    layer: 'L1',
+    uniform: true,
+    hideSymbol: true,
+  });
+
+  return (
+    <div className={style.pendingBalance}>
+      <div className={style.alert}>
+        <Clock className={style.clock} />
+      </div>{' '}
+      {formattedPendingAmount} pending, shield to complete
+    </div>
+  );
+}
+
 export function Holding({ assetValue, onSend, onShield, onGoToEarn }: HoldingProps) {
   const amount = useAmount(assetValue);
+  const targetAsset = useAsset(assetValue.assetId);
+  const { l1PendingBalance } = useL1Balances(targetAsset);
   const walletInteractionIsOngoing = useWalletInteractionIsOngoing();
   const asset = amount?.info;
   const spendableBalance = useSpendableBalance(assetValue.assetId);
@@ -41,15 +73,23 @@ export function Holding({ assetValue, onSend, onShield, onGoToEarn }: HoldingPro
 
   return (
     <div className={style.holdingWrapper}>
-      <ShieldedAssetIcon asset={asset} />
-      <div className={style.assetWrapper}>
-        <div className={style.holdingUnits}>{amount.format({ uniform: true })}</div>
-        <div className={style.spendable}>{`${spendableFormatted} available`}</div>
+      <div className={style.holdingInformation}>
+        <div className={style.asset}>
+          <ShieldedAssetIcon className={style.icon} asset={asset} />
+          <div className={style.assetWrapper}>
+            <div className={style.holdingUnits}>
+              {amount.format({ uniform: true })}
+              <div className={style.holdingAmount}>
+                {bulkPrice ? `($${formatBulkPrice(bulkPrice)})` : <SkeletonRect sizingContent="$1000.00" />}
+              </div>
+            </div>
+            <div className={style.details}>
+              <div className={style.spendableBalance}>{`${spendableFormatted} available`}</div>
+              <PendingBalance l1PendingBalance={l1PendingBalance} targetAsset={targetAsset} />
+            </div>
+          </div>
+        </div>
       </div>
-      <div className={style.holdingAmount}>
-        {bulkPrice ? `$${formatBulkPrice(bulkPrice)}` : <SkeletonRect sizingContent="$1000.00" />}
-      </div>
-
       <div className={style.buttonsWrapper}>
         {shieldSupported && (
           <Button

@@ -2,7 +2,7 @@
 
 ## Global Constants
 
-See [constants.hpp](../../barretenberg/src/aztec/rollup/proofs/notes/constants.hpp) and [constants.hpp](../../barretenberg/src/aztec/rollup/constants.hpp) for constants.
+See [constants.hpp](../../barretenberg/cpp/src/aztec/rollup/proofs/notes/constants.hpp) and [constants.hpp](../../barretenberg/cpp/src/aztec/rollup/constants.hpp) for constants.
 
 ## Pedersen background
 
@@ -131,7 +131,6 @@ Details on this are found [here](https://hackmd.io/@aztec-network/BJKHah_4d)
 - `nullifier = pedersen::compress(account_alias_hash);`
 - Pedersen GenratorIndex:`ACCOUNT_ALIAS_HASH_NULLIFIER` to compress `account_alias_hash`
 
-
 ## Account public key nullifier
 
 **Objectives** of this nullifier:
@@ -160,6 +159,7 @@ Details on this are found [here](https://hackmd.io/@aztec-network/BJKHah_4d)
 **Calculation**
 
 - We set out the computation steps below, with suggestions for changes:
+
   - `hashed_pk = account_private_key * G` (where `G` is a generator unique to this operation).
     - This `hashed_pk` is useful to demonstrate to a 3rd party that you've nullified something without having to provide your secret key.
   - `compressed_inputs = pedersen::compress(value_note_commitment, hashed_pk.x, hashed_pk.y, is_real_note)`

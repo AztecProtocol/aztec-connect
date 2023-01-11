@@ -9,6 +9,8 @@ import {
   TxHash,
   TypedData,
 } from '@aztec/barretenberg/blockchain';
+import { createLogger } from '@aztec/barretenberg/log';
+import { Block } from '@aztec/barretenberg/block_source';
 import { Web3Provider } from '@ethersproject/providers';
 import { Web3Signer } from '../signer/index.js';
 import { EthAsset, TokenAsset } from './asset/index.js';
@@ -24,6 +26,7 @@ import { RollupProcessor } from './rollup_processor/index.js';
 export class Contracts {
   private readonly provider!: Web3Provider;
   private readonly ethereumRpc!: EthereumRpc;
+  private log = createLogger('Contracts');
 
   constructor(
     private readonly rollupProcessor: RollupProcessor,
@@ -77,6 +80,10 @@ export class Contracts {
   }
 
   public async updateAssets() {
+    if ((await this.rollupProcessor.getSupportedAssetsLength()) === this.assets.length - 1) {
+      return;
+    }
+    this.log('Initialising supported assets...');
     const supportedAssets = await this.rollupProcessor.getSupportedAssets();
     const newAssets = await Promise.all(
       supportedAssets
@@ -86,6 +93,7 @@ export class Contracts {
         ),
     );
     this.assets = [...this.assets, ...newAssets];
+    this.log(`Supported assets: ${this.assets.map(a => a.getStaticInfo().symbol)}`);
   }
 
   public async getPerRollupState() {
@@ -144,12 +152,20 @@ export class Contracts {
     return await this.rollupProcessor.estimateGas(data);
   }
 
-  public async getRollupBlocksFrom(rollupId: number, minConfirmations = this.confirmations) {
+  public async getRollupBlocksFrom(rollupId: number, minConfirmations: number) {
     return await this.rollupProcessor.getRollupBlocksFrom(rollupId, minConfirmations);
   }
 
-  public async getRollupBlock(rollupId: number) {
-    return await this.rollupProcessor.getRollupBlock(rollupId);
+  public async callbackRollupBlocksFrom(
+    rollupId: number,
+    minConfirmations: number,
+    cb: (block: Block) => Promise<void>,
+  ) {
+    return await this.rollupProcessor.callbackRollupBlocksFrom(rollupId, minConfirmations, cb);
+  }
+
+  public async getRollupBlock(rollupId: number, minConfirmations: number) {
+    return await this.rollupProcessor.getRollupBlock(rollupId, minConfirmations);
   }
 
   public async getUserPendingDeposit(assetId: number, account: EthAddress) {
@@ -170,7 +186,7 @@ export class Contracts {
   }
 
   public async getBlockNumber() {
-    return await this.provider.getBlockNumber();
+    return await this.ethereumRpc.blockNumber();
   }
 
   public async signPersonalMessage(message: Buffer, address: EthAddress) {

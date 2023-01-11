@@ -9,3 +9,9 @@
   align-items: center;
   @include mixins.shadow_border;
 }
+
+.inModal {
+  @media (max-width: 768px) {
+    max-height: 80vh;
+  }
+}

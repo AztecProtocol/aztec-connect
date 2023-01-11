@@ -24,10 +24,14 @@
 }
 
 .toggle {
-  width: 40%;
+  width: 75%;
 }
 
 @media (max-width: 768px) {
+  .toggle {
+    width: 100%;
+  }
+
   .description {
     display: none;
   }

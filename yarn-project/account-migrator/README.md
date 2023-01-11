@@ -51,23 +51,23 @@ Examples:
 
 ## Generating account Data
 
-1. `yarn start migrate -d /home/data -a 0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba -u "https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35"`
+1. `yarn start migrate -d /home/data -a 0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba -u "https://mainnet.infura.io/v3/85712ac4df0446b58612ace3ed566352"`
 
-   Will extract account data from the Aztec 1 rollup contract at address 0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba. It will look for rollups from id 0 to infinity with at least 3 confirmations and using provider at "https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35". Will then store account data into file /home/data/accounts.
+   Will extract account data from the Aztec 1 rollup contract at address 0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba. It will look for rollups from id 0 to infinity with at least 3 confirmations and using provider at "https://mainnet.infura.io/v3/85712ac4df0446b58612ace3ed566352". Will then store account data into file /home/data/accounts.
 
-2. `yarn start migrate -d /home/data -a 0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba -u "https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35" -z`
+2. `yarn start migrate -d /home/data -a 0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba -u "https://mainnet.infura.io/v3/85712ac4df0446b58612ace3ed566352" -z`
 
-   Will extract account data from the Aztec Connect rollup contract at address 0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba. It will look for rollups from id 0 to infinity with at least 3 confirmations and using provider at "https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35". Will then store account data into file /home/data/accounts.
+   Will extract account data from the Aztec Connect rollup contract at address 0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba. It will look for rollups from id 0 to infinity with at least 3 confirmations and using provider at "https://mainnet.infura.io/v3/85712ac4df0446b58612ace3ed566352". Will then store account data into file /home/data/accounts.
 
-3. `yarn start migrate -d /home/data -f 5 -t 2001 -c 2 -a 0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba -u "https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35" -z`
+3. `yarn start migrate -d /home/data -f 5 -t 2001 -c 2 -a 0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba -u "https://mainnet.infura.io/v3/85712ac4df0446b58612ace3ed566352" -z`
 
-   Will extract account data from the Aztec Connect rollup contract at address 0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba. It will look for rollups from id 5 to 2001 with at least 2 confirmations and using provider at "https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35". Will then store account data into file /home/data/accounts.
+   Will extract account data from the Aztec Connect rollup contract at address 0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba. It will look for rollups from id 5 to 2001 with at least 2 confirmations and using provider at "https://mainnet.infura.io/v3/85712ac4df0446b58612ace3ed566352". Will then store account data into file /home/data/accounts.
 
 ## Verifying account data
 
-1. `yarn start migrate -d /home/data -v 1 -f 5 -t 2001 -c 2 -a 0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba -u "https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35"`
+1. `yarn start migrate -d /home/data -v 1 -f 5 -t 2001 -c 2 -a 0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba -u "https://mainnet.infura.io/v3/85712ac4df0446b58612ace3ed566352"`
 
-   Will extract account data from the Aztec 1 rollup contract at address 0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba. It will look for rollups from id 5 to 2001 with at least 2 confirmations and using provider at "https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35". Account data won't be stored, instead the tree roots will be generated from the on-chain data and verified against those stored in barretenberg.js/src/environment/init/init_config.ts for chain id 1
+   Will extract account data from the Aztec 1 rollup contract at address 0x737901bea3eeb88459df9ef1BE8fF3Ae1B42A2ba. It will look for rollups from id 5 to 2001 with at least 2 confirmations and using provider at "https://mainnet.infura.io/v3/85712ac4df0446b58612ace3ed566352". Account data won't be stored, instead the tree roots will be generated from the on-chain data and verified against those stored in barretenberg.js/src/environment/init/init_config.ts for chain id 1
 
 The data directory is required for both modes of operation as temporary files are always required, this directory must be created prior to running the application
 
@@ -76,6 +76,7 @@ The data directory is required for both modes of operation as temporary files ar
 ### Run local test
 
 Run the script below to run a full local test of the account hardener. This script handles launching ganache, halloumi, falafel, and even an e2e test before running the account hardener.
+
 ```
 ./scripts/harden-accounts-local.sh
 ```
@@ -94,11 +95,18 @@ First, launch the halloumi instance that the hardener will use for proof generat
 #### Run hardener
 
 Run the full sequence of hardener steps including `createHardener`, `genHardenProofs`, `hardenAccounts`, and `verifyHardened`:
+
 ```
 yarn start harden fullSequence -t <up-to-rollup-block> -a "<rollup-address>" --port 9082 -m true -c <#confirmations>
 ```
 
 > NOTE omit `-t` to run for _all_ blocks and _all_ accounts.
+
+Afterwards, you can verify that all accounts are hardened via:
+
+```
+yarn start harden verifyHardened -t <up-to-rollup-block> -a "<rollup-address>" --port 9082 -m true -c <#confirmations>
+```
 
 ### Run hardener step-by-step
 
@@ -114,6 +122,7 @@ First, launch the halloumi instance that the hardener will use for proof generat
 #### Create hardener account
 
 Create the hardener account which will be migrated to each vulnerable account's inverted public key and in doing so "harden" each account:
+
 ```
 yarn start harden createHardener -t <up-to-rollup-block> -a "<rollup-address>" --port 9082 -m true -c <#confirmations>
 ```
@@ -127,6 +136,7 @@ yarn start harden createHardener -t <up-to-rollup-block> -a "<rollup-address>" -
 #### Generate account harden proofs
 
 Next, generate the proofs that will harden the accounts:
+
 ```
 yarn start genHardenProofs -t <up-to-rollup-block> -a "<rollup-address>" --port 9082 -m true -c <#confirmations>
 ```
@@ -134,6 +144,7 @@ yarn start genHardenProofs -t <up-to-rollup-block> -a "<rollup-address>" --port 
 #### Harden accounts
 
 Now perform the actual harden operation. This submits the previously generated account hardening proofs to falafel for inclusion in the rollup:
+
 ```
 yarn start hardenAccounts -t <up-to-rollup-block> -a "<rollup-address>" --port 9082 -m true -c <#confirmation>
 ```
@@ -141,6 +152,7 @@ yarn start hardenAccounts -t <up-to-rollup-block> -a "<rollup-address>" --port 9
 #### Verify that accounts are hardened
 
 Finally, verify that all accounts in the specified block range have been hardened:
+
 ```
 yarn start verifyHardened -t <up-to-rollup-block> -a "<rollup-address>" --port 9082 -m true -c <#confirmation>`
 ```

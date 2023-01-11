@@ -42,6 +42,7 @@ export function SendModal({ assetId, onClose }: SendModalProps) {
         composerState={composerState}
         onSubmit={submit}
         onClose={onClose}
+        onBack={handleBack}
       />
     ) : (
       <SendFormFieldsPage

@@ -6,7 +6,7 @@ import { MemoryFifo } from '@aztec/barretenberg/fifo';
 import { ProofGenerator } from './proof_generator.js';
 import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import fs from 'fs-extra';
-const { writeFile, pathExists, mkdirp, rename } = fs;
+const { unlink, writeFile, pathExists, mkdirp, rename } = fs;
 
 enum CommandCodes {
   GET_JOIN_SPLIT_VK = 100,
@@ -151,6 +151,12 @@ export class CliProofGenerator implements ProofGenerator {
 
   private async ensureCrs() {
     const pointPerTranscript = 5040000;
+
+    if (this.maxCircuitSize < pointPerTranscript) {
+      await this.getPartialTranscript0();
+      return;
+    }
+
     for (let i = 0, fetched = 0; fetched < this.maxCircuitSize; ) {
       try {
         await this.downloadTranscript(i);
@@ -165,6 +171,10 @@ export class CliProofGenerator implements ProofGenerator {
 
   private async downloadTranscript(n: number) {
     const id = String(n).padStart(2, '0');
+    if (await pathExists(`./data/crs/transcript${id}.dat.partial`)) {
+      await unlink(`./data/crs/transcript${id}.dat`);
+      await unlink(`./data/crs/transcript${id}.dat.partial`);
+    }
     if (await pathExists(`./data/crs/transcript${id}.dat`)) {
       return;
     }
@@ -179,8 +189,48 @@ export class CliProofGenerator implements ProofGenerator {
     await rename(`./data/crs/transcript${id}.dat.progress`, `./data/crs/transcript${id}.dat`);
   }
 
+  /**
+   * Slower connections don't want to have to download 300+MB just to run in proverless mode.
+   * This is a bit of a hack but produces a transcript with just the right number of points.
+   * We track that it's "partial" with a file, so if we require more points we can easily detect and delete it.
+   */
+  private async getPartialTranscript0() {
+    const pointPerTranscript = 5040000;
+
+    console.log(`Downloading ${this.maxCircuitSize} points from transcript00.dat...`);
+
+    // We need (circuitSize + 1) number of g1 points.
+    const g1End = 28 + (this.maxCircuitSize + 1) * 64;
+
+    // Download required range of data.
+    const response = await fetch('https://aztec-ignition.s3.amazonaws.com/MAIN%20IGNITION/sealed/transcript00.dat', {
+      headers: {
+        Range: `bytes=0-${g1End - 1}`,
+      },
+    });
+
+    const g1Data = new Uint8Array(await response.arrayBuffer());
+
+    const g2Start = 28 + pointPerTranscript * 64;
+
+    const response2 = await fetch('https://aztec-ignition.s3.amazonaws.com/MAIN%20IGNITION/sealed/transcript00.dat', {
+      headers: {
+        Range: `bytes=${g2Start}-`,
+      },
+    });
+
+    const g2Data = new Uint8Array(await response2.arrayBuffer());
+
+    const partialTranscript = Buffer.concat([g1Data, Buffer.alloc(g2Start - g1End), g2Data]);
+
+    await mkdirp('./data/crs');
+    await writeFile(`./data/crs/transcript00.dat.progress`, partialTranscript);
+    await writeFile(`./data/crs/transcript00.dat.partial`, Buffer.alloc(0));
+    await rename(`./data/crs/transcript00.dat.progress`, `./data/crs/transcript00.dat`);
+  }
+
   private launch() {
-    const binPath = '../../barretenberg/build/bin/rollup_cli';
+    const binPath = '../../barretenberg/cpp/build/bin/rollup_cli';
     const binArgs = [
       './data/crs',
       this.txsPerInner.toString(),

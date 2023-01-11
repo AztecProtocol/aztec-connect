@@ -29,6 +29,15 @@ data "terraform_remote_state" "aztec2_iac" {
   }
 }
 
+data "terraform_remote_state" "contracts" {
+  backend = "s3"
+  config = {
+    bucket = "aztec-terraform"
+    key    = "${var.DEPLOY_TAG}/contracts"
+    region = "eu-west-2"
+  }
+}
+
 provider "aws" {
   profile = "default"
   region  = "eu-west-2"
@@ -108,26 +117,6 @@ resource "aws_ecs_task_definition" "kebab" {
   container_definitions = <<DEFINITIONS
 [
   {
-    "name": "${var.DEPLOY_TAG}-mainnet-fork",
-    "image": "trufflesuite/ganache",
-    "essential": true,
-    "command": ["-p=8545", "-f=https://mainnet.infura.io/v3/${var.TEST_INFURA_API_KEY}", "--chain.chainId=0xA57EC", "--fork.blockNumber=15918000", "--database.dbPath=/data", "-h=0.0.0.0", "-l=12000000", "-a=0"],
-    "mountPoints": [
-      {
-        "containerPath": "/data",
-        "sourceVolume": "efs-data-store"
-      }
-    ],
-    "logConfiguration": {
-      "logDriver": "awslogs",
-      "options": {
-        "awslogs-group": "${aws_cloudwatch_log_group.kebab_logs.name}",
-        "awslogs-region": "eu-west-2",
-        "awslogs-stream-prefix": "ecs"
-      }
-    }
-  },
-  {
     "name": "${var.DEPLOY_TAG}-kebab",
     "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/kebab:${var.DEPLOY_TAG}",
     "essential": true,
@@ -148,23 +137,35 @@ resource "aws_ecs_task_definition" "kebab" {
       },
       {
         "name": "ETHEREUM_HOST",
-        "value": "${var.TEST_NET_RPC_URL}"
+        "value": "https://${var.DEPLOY_TAG}-mainnet-fork.aztec.network:8545"
       },
       {
         "name": "FAUCET_OPERATOR",
         "value": "${var.FAUCET_OPERATOR_ADDRESS}"
       },
       {
-        "name": "REDEPLOY",
-        "value": "${var.REDEPLOY}"
-      },
-      {
         "name": "PRIVATE_KEY",
         "value": "${var.TEST_NET_ROOT_PRIVATE_KEY}"
       },
       {
-        "name": "ROLLUP_PROVIDER_ADDRESS",
-        "value": "0xA57EC00AfA2061565b9c8f4477E841F807222A6d"
+        "name": "ROLLUP_CONTRACT_ADDRESS",
+        "value": "${data.terraform_remote_state.contracts.outputs.rollup_contract_address}"
+      },
+      {
+        "name": "PERMIT_HELPER_CONTRACT_ADDRESS",
+        "value": "${data.terraform_remote_state.contracts.outputs.permit_helper_contract_address}"
+      },
+      {
+        "name": "FEE_DISTRIBUTOR_ADDRESS",
+        "value": "${data.terraform_remote_state.contracts.outputs.fee_distributor_address}"
+      },
+      {
+        "name": "PRICE_FEED_CONTRACT_ADDRESSES",
+        "value": "${data.terraform_remote_state.contracts.outputs.price_feed_contract_addresses}"
+      },
+      {
+        "name": "BRIDGE_DATA_PROVIDER_CONTRACT_ADDRESS",
+        "value": "${data.terraform_remote_state.contracts.outputs.bridge_data_provider_contract_address}"
       },
       {
         "name": "ADDITIONAL_PERMITTED_METHODS",
@@ -304,7 +305,6 @@ data "aws_alb" "aztec2" {
   arn = data.terraform_remote_state.aztec2_iac.outputs.alb_arn
 }
 
-# mainnet-fork DNS entry.
 resource "aws_route53_record" "mainnet-fork" {
   zone_id = data.terraform_remote_state.aztec2_iac.outputs.aws_route53_zone_id
   name    = "${var.DEPLOY_TAG}-eth-host"
@@ -315,3 +315,61 @@ resource "aws_route53_record" "mainnet-fork" {
     evaluate_target_health = true
   }
 }
+
+## Rate limit rules for clients, coming from aztec-connect-testnet-eth-host.aztec.network
+
+# resource "aws_waf_regex_pattern_set" "aztec_connect_testnet_host_pattern" {
+#   name                  = "tf_waf_regex_pattern_set"
+#   regex_pattern_strings = ["aztec-connect-testnet-eth-host.aztec.network"]
+# }
+
+# resource "aws_waf_regex_match_set" "aztec_connect_testnet_host_match" {
+#   name = "aztec_connect_testnet_eth_host_match"
+
+#   regex_match_tuple {
+#     field_to_match {
+#       data = "Host"
+#       type = "HEADER"
+#     }
+
+#     regex_pattern_set_id = aws_waf_regex_pattern_set.aztec_connect_testnet_host_pattern.id
+#     text_transformation  = "NONE"
+#   }
+# }
+
+# resource "aws_waf_rate_based_rule" "aztec_connect_testnet_rate_limit_rule" {
+#   depends_on  = [aws_waf_regex_match_set.aztec_connect_testnet_host_match]
+#   name        = "aztecConnectTestnetRateLimitRule"
+#   metric_name = "aztecConnectTestnetRateLimitRule"
+
+#   rate_key   = "IP"
+#   rate_limit = 5000
+
+#   predicates {
+#     data_id = aws_waf_regex_match_set.aztec_connect_testnet_host_match.id
+#     negated = false
+#     type    = "RegexMatch"
+#   }
+# }
+
+# resource "aws_waf_web_acl" "waf_acl" {
+#   depends_on = [
+#     aws_waf_rate_based_rule.aztec_connect_testnet_rate_limit_rule
+#   ]
+#   name        = "aztecConnectTestnetRateLimitAcl"
+#   metric_name = "aztecConnectTestnetRateLimitAcl"
+
+#   default_action {
+#     type = "ALLOW"
+#   }
+
+#   rules {
+#     action {
+#       type = "ALLOW"
+#     }
+
+#     priority = 1
+#     rule_id  = aws_waf_rate_based_rule.aztec_connect_testnet_rate_limit_rule.id
+#     type     = "RATE_BASED"
+#   }
+# }

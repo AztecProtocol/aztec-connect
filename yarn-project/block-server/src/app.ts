@@ -20,17 +20,21 @@ export function appFactory(server: Server, prefix: string) {
 
   router.get('/', (ctx: Koa.Context) => {
     ctx.body = {
-      serviceName: 'falafel',
+      serviceName: 'block-server',
       isReady: server.isReady(),
     };
     ctx.status = 200;
   });
 
   router.get('/get-blocks', (ctx: Koa.Context) => {
-    const from = ctx.query.from ? +ctx.query.from : undefined;
-    ctx.body = server.getBlockBuffers(from);
-    ctx.compress = false;
-    ctx.status = 200;
+    if (server.isReady()) {
+      const from = ctx.query.from ? +ctx.query.from : undefined;
+      ctx.body = server.getBlockBuffers(from);
+      ctx.compress = false;
+      ctx.status = 200;
+    } else {
+      ctx.status = 503;
+    }
   });
 
   router.get('/metrics', async (ctx: Koa.Context) => {

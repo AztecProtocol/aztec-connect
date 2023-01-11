@@ -21,7 +21,7 @@ const {
 
 async function main() {
   const serverConfig: ServerConfig = {
-    maxCircuitSize: +MAX_CIRCUIT_SIZE,
+    maxCircuitSize: PROVERLESS === 'true' ? 8192 : +MAX_CIRCUIT_SIZE,
     txsPerInner: +NUM_INNER_ROLLUP_TXS,
     innersPerRoot: +NUM_OUTER_ROLLUP_PROOFS,
     proverless: PROVERLESS === 'true',

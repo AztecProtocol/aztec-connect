@@ -17,8 +17,12 @@
 
 .content {
   padding: 32px;
-  background: rgba(0, 0, 0, 0.85);
+  background: white;
   border-radius: 20px;
+  border-top: 6px solid #ffd166;
+  border-bottom: 1px solid #ffd166;
+  border-left: 1px solid #ffd166;
+  border-right: 1px solid #ffd166;
 }
 
 .message {

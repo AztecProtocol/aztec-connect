@@ -9,12 +9,13 @@ import { useAmount } from '../../../alt-model/top_level_context/index.js';
 import { ShieldedAssetIcon } from '../../../components/shielded_asset_icon.js';
 import { UserDefiInteractionResultState, UserDefiTx } from '@aztec/sdk';
 import { SkeletonRect } from '../../../ui-components/index.js';
+import style from './defi_investment_value_fields.module.scss';
 
 function ValueField({ amount }: { amount?: Amount }) {
   if (!amount) return <SkeletonRect sizingContent="XXX 1.000000 zkETH" />;
   return (
     <>
-      <ShieldedAssetIcon size="s" asset={amount.info} />
+      <ShieldedAssetIcon className={style.icon} size="s" asset={amount.info} />
       {amount.format({ uniform: true })}
     </>
   );

@@ -30,7 +30,7 @@ export interface FieldProps {
   value: string;
   label?: string;
   sublabel?: string | JSX.Element;
-  message?: string;
+  message?: string | JSX.Element;
   prefix?: string;
   placeholder?: string;
   className?: string;
@@ -88,6 +88,7 @@ function AssetSelection(props: AssetSelectionProps) {
     <div className={style.assetWrapper}>
       {!props.disabled && props.assetOptions && (
         <Select
+          className={style.noBackground}
           allowEmptyValue={false}
           showBorder={false}
           value={props.selectedAsset.id}

@@ -1,5 +1,5 @@
 import { Column, Entity, Index, PrimaryColumn, AfterLoad } from 'typeorm';
-import { bufferColumn } from './init_entities.js';
+import { bufferColumn } from './buffer_column.js';
 import { bigintTransformer } from './transformer.js';
 
 @Entity({ name: 'claim' })
@@ -34,8 +34,7 @@ export class ClaimDao {
   public inputNullifier!: Buffer;
 
   @Column()
-  // Should be indexed, leaving out for now to get timings.
-  // @Index()
+  @Index()
   public interactionNonce!: number;
 
   @Column('text', { transformer: [bigintTransformer] })

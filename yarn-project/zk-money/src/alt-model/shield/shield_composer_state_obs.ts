@@ -16,6 +16,7 @@ export interface ShieldComposerState {
   error?: { phase: ShieldComposerPhase; message: string };
   prompt?: string;
   signingRetryable?: Retryable<unknown>;
+  backNoRetry?: boolean;
 }
 
 export class ShieldComposerStateObs implements IObs<ShieldComposerState> {
@@ -54,5 +55,9 @@ export class ShieldComposerStateObs implements IObs<ShieldComposerState> {
   error(message: string) {
     const error = { phase: this.obs.value.phase, message };
     this.obs.next({ phase: ShieldComposerPhase.IDLE, error });
+  }
+
+  setBackNoRetry(value: boolean) {
+    this.obs.next({ ...this.value, backNoRetry: value });
   }
 }

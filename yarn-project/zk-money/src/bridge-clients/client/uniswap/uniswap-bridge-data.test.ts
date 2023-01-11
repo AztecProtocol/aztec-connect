@@ -25,6 +25,7 @@ describe('uniswap bridge data', () => {
 
   let ethAsset: AztecAsset;
   let daiAsset: AztecAsset;
+  let icethAsset: AztecAsset;
   let emptyAsset: AztecAsset;
 
   beforeAll(() => {
@@ -39,6 +40,11 @@ describe('uniswap bridge data', () => {
       id: 1,
       assetType: AztecAssetType.ERC20,
       erc20Address: EthAddress.fromString('0x6B175474E89094C44Da98b954EedeAC495271d0F'),
+    };
+    icethAsset = {
+      id: 2,
+      assetType: AztecAssetType.ERC20,
+      erc20Address: EthAddress.fromString('0x7C07F7aBe10CE8e33DC6C5aD68FE033085256A84'),
     };
     emptyAsset = {
       id: 0,
@@ -222,6 +228,51 @@ describe('uniswap bridge data', () => {
 
     const referenceAuxData = BridgeCallData.fromString(referenceBridgeCallData).auxData;
     expect(auxData).toBe(referenceAuxData);
+  });
+
+  it('should correctly get auxData on ETH to icETH swap when there are no acceptable auxData in Falafel', async () => {
+    // A bridgeCallData with correct path but a min price set too low (reference DAI price corresponding to 820 DAI
+    // per ETH and the price in reference call data corresponding to more than 1000 DAI per ETH)
+    const referenceBridgeCallData = '0079030B32000800000000000000000000000000200000000000000000000011';
+    const referenceIcEthPrice = 0.93865905;
+
+    // Setup mocks
+    const mockedData = {
+      bridgeStatus: [
+        {
+          bridgeCallData: referenceBridgeCallData,
+        },
+        {
+          bridgeCallData: '000000000000000001000000000000000000000020000000000000060000000a',
+        },
+      ],
+      '0x7c07f7abe10ce8e33dc6c5ad68fe033085256a84': {
+        eth: referenceIcEthPrice,
+      },
+    };
+    global.fetch = jest.fn(() =>
+      Promise.resolve({
+        json: () => Promise.resolve(mockedData),
+      }),
+    ) as any;
+
+    // Initialize the class and get the auxData to check
+    const uniswapBridgeData = UniswapBridgeData.create(provider, bridgeAddressId, bridgeAddress);
+    const auxData = (await uniswapBridgeData.getAuxData(ethAsset, emptyAsset, icethAsset, emptyAsset))[0];
+
+    // auxData should be different from the ones in Falafel containing the same path but unacceptable price
+    const referenceAuxData = BridgeCallData.fromString(referenceBridgeCallData).auxData;
+    expect(auxData === referenceAuxData).toBeFalsy();
+
+    // Check that the path is set the same as in 1st bridgeCallData in mockedData
+    expect(referenceAuxData & uniswapBridgeData.PATH_MASK).toBe(auxData & uniswapBridgeData.PATH_MASK);
+
+    const referenceEthPrice = 10n ** 36n / (BigInt(referenceIcEthPrice * 10 ** 10) * 10n ** 8n);
+    const referencePriceWithIdealSlippage =
+      (referenceEthPrice * (10000n - uniswapBridgeData.IDEAL_SLIPPAGE_SETTING)) / 10000n / 10n ** 11n;
+
+    const priceWithIdealSlippage = uniswapBridgeData.decodePrice(auxData) / 10n ** 11n;
+    expect(priceWithIdealSlippage).toBe(referencePriceWithIdealSlippage);
   });
 
   it('should correctly get expected output', async () => {

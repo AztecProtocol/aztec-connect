@@ -21,11 +21,11 @@ const { ETHEREUM_HOST = 'http://localhost:8545', ROLLUP_HOST = 'http://localhost
 
 /**
  * Run the following:
- * blockchain: yarn start:ganache
+ * contracts: ./scripts/start_e2e.sh
  * kebab: yarn start:e2e
  * halloumi: yarn start:e2e
  * falafel: yarn start:e2e
- * end-to-end: yarn test e2e_non_fee_assets
+ * end-to-end: yarn test e2e_non_fee_assets.test.ts
  */
 
 describe('end-to-end non fee paying asset tests', () => {
@@ -64,9 +64,7 @@ describe('end-to-end non fee paying asset tests', () => {
     await sdk.awaitSynchronised();
 
     debug('minting non-fee-paying asset...');
-    await Promise.all(
-      addresses.map(address => sdk.mint(initialTokenBalance, address, { signingAddress: addresses[0] })),
-    );
+    await asyncMap(addresses, address => sdk.mint(initialTokenBalance, address, { signingAddress: addresses[0] }));
 
     debug(`adding users...`);
     const shieldEthValue = sdk.toBaseUnits(0, '0.01');

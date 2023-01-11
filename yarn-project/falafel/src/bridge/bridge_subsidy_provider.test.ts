@@ -1,7 +1,7 @@
 import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { BridgeConfig } from '@aztec/barretenberg/rollup_provider';
-import { BridgeResolver } from './bridge_resolver';
-import { BridgeSubsidyProvider } from './bridge_subsidy_provider';
+import { BridgeResolver } from './bridge_resolver.js';
+import { BridgeSubsidyProvider } from './bridge_subsidy_provider.js';
 import { jest } from '@jest/globals';
 import { BridgeSubsidy } from '@aztec/barretenberg/blockchain';
 

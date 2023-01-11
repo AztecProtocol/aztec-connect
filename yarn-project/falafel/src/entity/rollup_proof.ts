@@ -14,7 +14,7 @@ import {
   PrimaryColumn,
   Relation,
 } from 'typeorm';
-import { bufferColumn } from './init_entities.js';
+import { bufferColumn } from './buffer_column.js';
 import { RollupDao } from './rollup.js';
 import { TxDao } from './tx.js';
 

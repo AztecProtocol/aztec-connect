@@ -59,13 +59,14 @@ const ShieldIcon = styled.div<{ white?: boolean; hide?: boolean }>`
 
 export const ShieldedAssetIcon: React.FunctionComponent<{
   asset: RemoteAsset;
+  className?: string;
   white?: boolean;
   size?: Size | number;
   hideShield?: boolean;
-}> = ({ white, asset, size = 'm', hideShield }) => {
+}> = ({ className, white, asset, size = 'm', hideShield }) => {
   const icon = white ? getAssetIconWhite(asset.label) : getAssetIconGradient(asset.label);
   return (
-    <Root size={size} title={asset.name}>
+    <Root className={className} size={size} title={asset.name}>
       <AssetIcon icon={icon} />
       <ShieldIcon white={white} hide={hideShield} />
     </Root>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { GrumpkinAddress } from '@aztec/sdk';
+import { EthAddress, GrumpkinAddress } from '@aztec/sdk';
 import { Button } from '../../../../../ui-components/index.js';
 import { BorderBox } from '../../../../../components/border_box.js';
 import { CostBreakdown } from '../modal_molecules/cost_breakdown/index.js';
@@ -14,8 +14,9 @@ import {
   SendComposerPayload,
 } from '../../../../../alt-model/send/index.js';
 import { RetrySigningButton } from '../modal_molecules/retry_signing_button/index.js';
-import style from './send_confirmation_page.module.scss';
 import { useWalletInteractionIsOngoing } from '../../../../../alt-model/wallet_interaction_hooks.js';
+import { formatEthAddress } from '../../../../../app/util/helpers.js';
+import style from './send_confirmation_page.module.scss';
 
 interface SendConfirmationPageProps {
   composerState: SendComposerState;
@@ -23,6 +24,7 @@ interface SendConfirmationPageProps {
   state: SendFormDerivedData;
   onSubmit: () => void;
   onClose: () => void;
+  onBack: (() => void) | undefined;
 }
 
 function formatRecipient(recipientStr: string, sendMode: SendMode) {
@@ -31,7 +33,7 @@ function formatRecipient(recipientStr: string, sendMode: SendMode) {
       ? `aztec:${GrumpkinAddress.fromString(recipientStr).toShortString()}`
       : `@${recipientStr}`;
   }
-  return recipientStr;
+  return formatEthAddress(EthAddress.fromString(recipientStr));
 }
 
 export function SendConfirmationPage({
@@ -40,15 +42,31 @@ export function SendConfirmationPage({
   state,
   onSubmit,
   onClose,
+  onBack,
 }: SendConfirmationPageProps) {
   const [riskChecked, setRiskChecked] = useState(false);
   const walletInteractionIsOngoing = useWalletInteractionIsOngoing();
 
   const hasError = !!composerState?.error;
+  const backNoRetry = composerState?.backNoRetry;
   const isIdle = composerState.phase === SendComposerPhase.IDLE;
   const showingComplete = composerState.phase === SendComposerPhase.DONE;
   const showingDeclaration = isIdle && !hasError;
   const canSubmit = riskChecked && isIdle;
+
+  let buttonText = 'Confirm Transaction';
+  if (backNoRetry) {
+    buttonText = 'Go Back';
+  } else if (hasError) {
+    buttonText = 'Retry';
+  }
+
+  let onClick: (() => void) | undefined;
+  if (backNoRetry) {
+    onClick = onBack;
+  } else if (canSubmit) {
+    onClick = onSubmit;
+  }
 
   return (
     <div className={style.page2Wrapper}>
@@ -75,11 +93,7 @@ export function SendConfirmationPage({
               disabled={walletInteractionIsOngoing}
             />
           ) : (
-            <Button
-              text={hasError ? 'Retry' : 'Confirm Transaction'}
-              onClick={canSubmit ? onSubmit : undefined}
-              disabled={!canSubmit || walletInteractionIsOngoing}
-            />
+            <Button text={buttonText} onClick={onClick} disabled={!canSubmit || walletInteractionIsOngoing} />
           )}
         </div>
       )}

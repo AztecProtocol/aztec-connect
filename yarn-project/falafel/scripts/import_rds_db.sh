@@ -1,8 +1,9 @@
-#!/bin/sh
+#!/bin/bash
 
 DUMP_FILE=$1
-DB_NAME=${2:-"falafel"}
-DOCKER_VOLUME=${3:-"/var/lib/postgresql/data"}
+CONTAINER_ID=$2
+DB_NAME=${3:-"falafel"}
+DOCKER_VOLUME=${4:-"/var/lib/postgresql/data"}
 
 if [ $# -eq 0 ]; then
   echo "Please provide a dump file to import";
@@ -13,7 +14,11 @@ echo "This script defaults to using a docker volume at /var/lib/postgresql/data.
 echo "You can find your docker volumes by looking at the 'Destination' key after running command 'docker inspect -f '{{ json .Mounts }}' <CONTAINER_ID> | python -m json.tool'"
 
 echo "Importing $DUMP_FILE to docker..."
-CONTAINER_ID=$(docker ps | grep postgres | awk '{print $1}')
+
+if [ -z "$CONTAINER_ID" ]; then
+  CONTAINER_ID=$(docker ps | grep postgres | awk '{print $1}')
+fi
+
 # copy dump into container
 docker cp $DUMP_FILE $CONTAINER_ID:$DOCKER_VOLUME/db.dump
 

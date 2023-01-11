@@ -80,14 +80,14 @@ export function useGasUnitPrice() {
   return useObs(gasPricePoller.obs);
 }
 
+export function useDefiPulishStatsPollerCache() {
+  return useTopLevelContext().defiPulishStatsPollerCache;
+}
+
 export function useBridgeDataAdaptorsMethodCaches() {
   return useTopLevelContext().bridgeDataAdaptorsMethodCaches;
 }
 
 export function useDefiRecipes() {
   return useTopLevelContext().defiRecipes;
-}
-
-export function useDefiPulishStatsPollerCache() {
-  return useTopLevelContext().defiPulishStatsPollerCache;
 }

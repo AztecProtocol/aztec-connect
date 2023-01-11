@@ -107,23 +107,22 @@ export const randomRollup = (rollupId: number, rollupProof: RollupProofDao, mine
     id: rollupId,
     dataRoot: randomBytes(32),
     rollupProof,
-    created: new Date(),
     mined,
     assetMetrics: [],
     bridgeMetrics: [],
     interactionResult: randomBytes(32 * 32),
   });
 
-export const randomClaim = () =>
+export const randomClaim = (id: number) =>
   new ClaimDao({
-    id: randomBytes(4).readUInt32BE(0),
+    id,
     nullifier: randomBytes(32),
     bridgeId: BridgeCallData.random().toBigInt(), // TODO: rename bridgeId to bridgeCallData
     depositValue: toBigIntBE(randomBytes(32)),
     partialState: randomBytes(32),
     partialStateSecretEphPubKey: randomBytes(64),
     inputNullifier: randomBytes(32),
-    interactionNonce: randomBytes(4).readUInt32BE(0),
+    interactionNonce: randomBytes(4).readInt32BE(0),
     fee: toBigIntBE(randomBytes(32)),
     created: new Date(),
   });

@@ -18,14 +18,12 @@ export function ShieldMore(props: ShieldMoreProps) {
     <>
       <CardWrapper className={style.shieldMoreWrapper}>
         <div className={style.shieldMoreLabel}>Shield additional funds from L1</div>
-        <div className={style.modalAnchor}>
-          <Button
-            disabled={walletInteractionIsOngoing || !isSynced}
-            className={style.shieldMoreButton}
-            text="Shield More"
-            onClick={() => props.onOpenShieldModal()}
-          />
-        </div>
+        <Button
+          disabled={walletInteractionIsOngoing || !isSynced}
+          className={style.shieldMoreButton}
+          text="Shield More"
+          onClick={() => props.onOpenShieldModal()}
+        />
       </CardWrapper>
     </>
   );

@@ -22,7 +22,7 @@ export function useTrackedFieldChangeHandlers<TFields>(
   const fieldSettersRef = useRef<FieldSetters<TFields>>();
   if (!fieldSettersRef.current) {
     fieldSettersRef.current = mapObj(fields, (_, name) => (value: typeof _) => {
-      if (!touchedFields[name]) setTouchedFields({ ...touchedFields, [name]: true });
+      if (!touchedFields[name]) setTouchedFields(prevTouchedFields => ({ ...prevTouchedFields, [name]: true }));
       fieldsSetter(latestFields => ({ ...latestFields, [name]: value }));
     });
   }

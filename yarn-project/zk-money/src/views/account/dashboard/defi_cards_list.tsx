@@ -77,7 +77,7 @@ function useRecipeFilters() {
   return { filters, changeFilters };
 }
 
-function useValidRecipesOnly(recipes?: DefiRecipe[]) {
+export function useValidRecipesOnly(recipes?: DefiRecipe[]) {
   const { auxDataPollerCache } = useBridgeDataAdaptorsMethodCaches();
   const validRecipesObs = useMemo(() => {
     if (!recipes) return;

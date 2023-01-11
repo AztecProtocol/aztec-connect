@@ -16,16 +16,8 @@ function getRegisterFormWalletAccountFeedback(resources: RegisterFormResources, 
   }
 }
 
-function getRegisterFormSpendingKeysFeedback(_: RegisterFormResources, assessment: RegisterFormAssessment) {
-  if (assessment.spendingKey.issues.noSpendingKeyGenerated) {
-    return 'Please retrieve your spending key';
-  }
-  if (assessment.spendingKey.warnings.keysGeneratedFromDifferentWallets) {
-    return 'You have retrieved your spending keys from a different Ethereum wallet to the one you used for retrieving your Aztec account keys. This is allowed, but it is vitally important that you remember which Ethereum wallet you used for each, as you will be asked to retrieve both in the future.';
-  }
-}
-
-function getRegisterFormAliasFeedback(assessment: RegisterFormAssessment) {
+function getRegisterFormAliasFeedback(assessment: RegisterFormAssessment, touched: boolean) {
+  if (!touched) return;
   const { info, issues } = assessment.alias;
   if (issues.aliasAlreadyTaken) {
     return 'This alias is already taken';
@@ -41,10 +33,13 @@ export function getRegisterFormFeedback(
   touchedFields: TouchedFormFields<RegisterFormFields>,
   attemptedLock: boolean,
 ) {
-  const amount = getL1DepositAmountInputFeedback(resources, assessment);
+  const amount = getL1DepositAmountInputFeedback(
+    resources,
+    assessment,
+    (touchedFields.alias && touchedFields.speed) || attemptedLock,
+  );
   const walletAccount = getRegisterFormWalletAccountFeedback(resources, assessment);
-  const signingKeys = getRegisterFormSpendingKeysFeedback(resources, assessment);
   const footer = getL1DepositFooterFeedback(resources, assessment);
-  const alias = getRegisterFormAliasFeedback(assessment);
-  return { amount, walletAccount, footer, signingKeys, alias };
+  const alias = getRegisterFormAliasFeedback(assessment, touchedFields.alias || attemptedLock);
+  return { amount, walletAccount, footer, alias };
 }

@@ -2,6 +2,7 @@
 
 .link {
   color: black;
+  white-space: pre;
 }
 
 .link:active {
@@ -9,7 +10,7 @@
 }
 
 .label {
-  @include mixins.gradient_font;
+  color: #2f1f49;
   font-size: 18px;
   font-weight: 500;
   color: inherit;

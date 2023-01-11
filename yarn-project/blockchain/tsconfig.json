@@ -40,7 +40,5 @@
     "src/abis/contracts/AsyncBridge.sol/AsyncBridge.json",
     "src/abis/contracts/SyncBridge.sol/SyncBridge.json",
     "src/abis/contracts/ERC20Mintable.sol/ERC20Mintable.json"
-  ],
-
-  "files": ["./hardhat.config.ts"]
+  ]
 }

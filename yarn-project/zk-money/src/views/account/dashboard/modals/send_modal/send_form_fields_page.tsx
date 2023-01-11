@@ -11,6 +11,7 @@ import { SendFormDerivedData, SendMode, SendFormFeedback } from '../../../../../
 import { FooterSection } from '../sections/footer_section/index.js';
 import { AmountSelection } from '../../../../../components/index.js';
 import style from './send_form_fields_page.module.scss';
+import { getAssetWithdrawShown } from '../../../../../alt-model/known_assets/known_asset_display_data.js';
 
 interface SendProps {
   state: SendFormDerivedData;
@@ -51,11 +52,14 @@ export const SendFormFieldsPage: React.FunctionComponent<SendProps> = ({
 }) => {
   const { sendMode } = state.fields;
   const { asset } = state;
+  const canWithdraw = getAssetWithdrawShown(asset.label);
 
   return (
     <div className={style.root}>
       <div className={style.header}>
-        <Toggle className={style.toggle} value={sendMode} options={MODES} onChangeValue={onChangeSendMode} />
+        {canWithdraw && (
+          <Toggle className={style.toggle} value={sendMode} options={MODES} onChangeValue={onChangeSendMode} />
+        )}
         <DescriptionSection className={style.description} text={getDescription(sendMode)} />
       </div>
       <SplitSection

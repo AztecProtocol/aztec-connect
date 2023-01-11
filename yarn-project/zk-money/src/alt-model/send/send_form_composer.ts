@@ -46,6 +46,7 @@ export class SendComposer {
 
   async compose() {
     this.stateObs.clearError();
+    this.stateObs.setBackNoRetry(false);
     try {
       const { targetAmount, feeAmount, recipient } = this.payload;
       const { sdk, userId, awaitCorrectSigner } = this.deps;
@@ -93,6 +94,10 @@ export class SendComposer {
     } catch (error) {
       debug('Compose failed with error:', error);
       this.stateObs.error(error?.message?.toString());
+      if (error?.message?.toString() === 'Insufficient fee.') {
+        // update obs so user doesn't retry
+        this.stateObs.setBackNoRetry(true);
+      }
       return false;
     }
   }

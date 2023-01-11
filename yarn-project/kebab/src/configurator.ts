@@ -12,16 +12,7 @@ export interface StartupConfig {
   additionalPermittedMethods: string[];
   apiKeys: string[];
   indexing: boolean;
-}
-
-export interface RedeployConfig {
-  redeploy?: number;
-  rollupContractAddress?: EthAddress;
-  priceFeedContractAddresses?: EthAddress[];
-  permitHelperContractAddress?: EthAddress;
-  feeDistributorAddress?: EthAddress;
-  faucetContractAddress?: EthAddress;
-  bridgeDataProviderContractAddress?: EthAddress;
+  rollupContractAddress: EthAddress;
 }
 
 const defaultStartupConfig: StartupConfig = {
@@ -33,16 +24,7 @@ const defaultStartupConfig: StartupConfig = {
   additionalPermittedMethods: [],
   apiKeys: [],
   indexing: true,
-};
-
-const defaultRedeployConfig: RedeployConfig = {
-  redeploy: undefined,
   rollupContractAddress: EthAddress.ZERO,
-  priceFeedContractAddresses: [],
-  permitHelperContractAddress: EthAddress.ZERO,
-  feeDistributorAddress: EthAddress.ZERO,
-  faucetContractAddress: EthAddress.ZERO,
-  bridgeDataProviderContractAddress: EthAddress.ZERO,
 };
 
 function getStartupConfigEnvVars(): Partial<StartupConfig> {
@@ -55,6 +37,7 @@ function getStartupConfigEnvVars(): Partial<StartupConfig> {
     ADDITIONAL_PERMITTED_METHODS,
     API_KEYS,
     INDEXING,
+    ROLLUP_CONTRACT_ADDRESS,
   } = process.env;
 
   const envVars: Partial<StartupConfig> = {
@@ -63,16 +46,15 @@ function getStartupConfigEnvVars(): Partial<StartupConfig> {
     apiPrefix: API_PREFIX,
     typeOrmLogging: TYPEORM_LOGGING ? TYPEORM_LOGGING === 'true' : undefined,
     allowPrivilegedMethods: ALLOW_PRIVILEGED_METHODS ? ALLOW_PRIVILEGED_METHODS === 'true' : undefined,
-    additionalPermittedMethods: ADDITIONAL_PERMITTED_METHODS ? ADDITIONAL_PERMITTED_METHODS.split(',') : [],
-    apiKeys: API_KEYS ? API_KEYS.split(',') : [],
+    additionalPermittedMethods: ADDITIONAL_PERMITTED_METHODS ? ADDITIONAL_PERMITTED_METHODS.split(',') : undefined,
+    apiKeys: API_KEYS ? API_KEYS.split(',') : undefined,
     indexing: INDEXING ? INDEXING === 'true' : undefined,
+    rollupContractAddress: ROLLUP_CONTRACT_ADDRESS ? EthAddress.fromString(ROLLUP_CONTRACT_ADDRESS) : undefined,
   };
   return Object.fromEntries(Object.entries(envVars).filter(e => e[1] !== undefined));
 }
 
-export interface ConfVars extends StartupConfig {
-  redeployConfig: RedeployConfig;
-}
+export type ConfVars = StartupConfig;
 
 export class Configurator {
   private confVars!: ConfVars;
@@ -95,27 +77,17 @@ export class Configurator {
 
       // Priorities:
       // StartupConfig: Environment, saved, defaults.
-      // RedeployConfig: Don't take from the given environment
-      const { redeployConfig: savedRedeployConfig, ...savedStartupConfig } = saved;
+      // ContractConfig: Don't take from the given environment
       this.confVars = {
         ...defaultStartupConfig,
-        ...savedStartupConfig,
+        ...saved,
         ...startupConfigEnvVars,
-        redeployConfig: {
-          ...defaultRedeployConfig,
-          ...savedRedeployConfig,
-        },
       };
     } else {
-      // Priorities:
-      // StartupConfig: Environment, defaults.
-      // RedeployConfig: Just take the default
+      // Priorities: Environment, defaults.
       this.confVars = {
         ...defaultStartupConfig,
         ...startupConfigEnvVars,
-        redeployConfig: {
-          ...defaultRedeployConfig,
-        },
       };
     }
 
@@ -133,27 +105,7 @@ export class Configurator {
     const conf = readJsonSync(path);
     return {
       ...conf,
-      redeployConfig: {
-        ...conf.redeployConfig,
-        rollupContractAddress: conf.redeployConfig.rollupContractAddress
-          ? EthAddress.fromString(conf.redeployConfig.rollupContractAddress)
-          : EthAddress.ZERO,
-        permitHelperContractAddress: conf.redeployConfig.permitHelperContractAddress
-          ? EthAddress.fromString(conf.redeployConfig.permitHelperContractAddress)
-          : EthAddress.ZERO,
-        feeDistributorAddress: conf.redeployConfig.feeDistributorAddress
-          ? EthAddress.fromString(conf.redeployConfig.feeDistributorAddress)
-          : EthAddress.ZERO,
-        faucetContractAddress: conf.redeployConfig.faucetContractAddress
-          ? EthAddress.fromString(conf.redeployConfig.faucetContractAddress)
-          : EthAddress.ZERO,
-        bridgeDataProviderContractAddress: conf.redeployConfig.bridgeDataProviderContractAddress
-          ? EthAddress.fromString(conf.redeployConfig.bridgeDataProviderContractAddress)
-          : EthAddress.ZERO,
-        priceFeedContractAddresses: conf.redeployConfig.priceFeedContractAddresses
-          ? conf.redeployConfig.priceFeedContractAddresses.map(EthAddress.fromString)
-          : [],
-      },
+      rollupContractAddress: EthAddress.fromString(conf.rollupContractAddress),
     };
   }
 
@@ -164,30 +116,8 @@ export class Configurator {
   private writeConfigFile(path: string, conf: ConfVars) {
     const toWrite = {
       ...conf,
-      redeployConfig: {
-        ...conf.redeployConfig,
-        rollupContractAddress: conf.redeployConfig.rollupContractAddress?.toString(),
-        permitHelperContractAddress: conf.redeployConfig.permitHelperContractAddress?.toString(),
-        feeDistributorAddress: conf.redeployConfig.feeDistributorAddress?.toString(),
-        faucetContractAddress: conf.redeployConfig.faucetContractAddress?.toString(),
-        bridgeDataProviderContractAddress: conf.redeployConfig?.bridgeDataProviderContractAddress?.toString(),
-        priceFeedContractAddresses: conf.redeployConfig.priceFeedContractAddresses
-          ? conf.redeployConfig.priceFeedContractAddresses.map(x => x.toString())
-          : undefined,
-      },
+      rollupContractAddress: conf.rollupContractAddress.toString(),
     };
     writeJsonSync(path, toWrite);
-  }
-
-  public saveRedeployConfig(redeployConfig: RedeployConfig) {
-    const prevRedeployConfig = this.confVars.redeployConfig;
-    this.confVars = {
-      ...this.confVars,
-      redeployConfig: {
-        ...prevRedeployConfig,
-        ...redeployConfig,
-      },
-    };
-    this.writeConfigFile(this.confPath, this.confVars);
   }
 }

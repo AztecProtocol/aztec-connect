@@ -9,4 +9,3 @@ export * from './units.js';
 export * from './tokens/index.js';
 export * from './ganache/manipulate_blocks.js';
 export * from './earliest_block/index.js';
-export * from './deploy/deploy_contracts.js';

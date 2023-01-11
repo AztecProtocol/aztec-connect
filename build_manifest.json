@@ -1,26 +1,14 @@
 {
   "barretenberg-x86_64-linux-clang": {
-    "buildDir": "barretenberg",
+    "buildDir": "barretenberg/cpp",
     "dockerfile": "dockerfiles/Dockerfile.x86_64-linux-clang",
-    "rebuildPatterns": ["^barretenberg/"],
-    "dependencies": []
-  },
-  "barretenberg-x86_64-linux-clang-assert": {
-    "buildDir": "barretenberg",
-    "dockerfile": "dockerfiles/Dockerfile.x86_64-linux-clang-assert",
-    "rebuildPatterns": ["^barretenberg/"],
-    "dependencies": []
-  },
-  "barretenberg-x86_64-linux-gcc": {
-    "buildDir": "barretenberg",
-    "dockerfile": "dockerfiles/Dockerfile.x86_64-linux-gcc",
-    "rebuildPatterns": ["^barretenberg/"],
+    "rebuildPatterns": ["^barretenberg/cpp/"],
     "dependencies": []
   },
   "barretenberg-wasm-linux-clang": {
-    "buildDir": "barretenberg",
+    "buildDir": "barretenberg/cpp",
     "dockerfile": "dockerfiles/Dockerfile.wasm-linux-clang",
-    "rebuildPatterns": ["^barretenberg/"],
+    "rebuildPatterns": ["^barretenberg/cpp/"],
     "dependencies": []
   },
   "blockchain-vks": {
@@ -54,6 +42,13 @@
     "dockerfile": "blockchain/Dockerfile",
     "rebuildPatterns": ["^yarn-project/blockchain/"],
     "dependencies": ["barretenberg.js"]
+  },
+  "aztec-dev-cli": {
+    "buildDir": "yarn-project",
+    "projectDir": "yarn-project/aztec-dev-cli",
+    "dockerfile": "aztec-dev-cli/Dockerfile",
+    "rebuildPatterns": ["^yarn-project/aztec-dev-cli/"],
+    "dependencies": ["barretenberg.js", "blockchain"]
   },
   "contracts-verifier-test": {
     "buildDir": "yarn-project",

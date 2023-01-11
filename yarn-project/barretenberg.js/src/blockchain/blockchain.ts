@@ -1,5 +1,5 @@
 import { EthAddress } from '../address/index.js';
-import { BlockSource } from '../block_source/index.js';
+import { Block, BlockSource } from '../block_source/index.js';
 import { Asset } from './asset.js';
 import { BlockchainStatusSource } from './blockchain_status.js';
 import { EthereumProvider } from './ethereum_provider.js';
@@ -108,4 +108,6 @@ export interface Blockchain extends BlockSource, BlockchainStatusSource, Ethereu
   getBridgeSubsidy(bridgeCallData: bigint): Promise<BridgeSubsidy>;
 
   getBridgeData(bridgeAddressId: number): Promise<BridgeData>;
+
+  callbackRollupBlocksFrom(rollupId: number, cb: (block: Block) => Promise<void>);
 }

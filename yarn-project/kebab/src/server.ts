@@ -3,7 +3,12 @@ import { InterruptableSleep } from '@aztec/barretenberg/sleep';
 import { createLogger, createDebugLogger } from '@aztec/barretenberg/log';
 import { JsonRpcProvider } from '@aztec/blockchain';
 import { EthLogsDb, RollupLogsParamsQuery } from './log_db.js';
-import { DEFI_BRIDGE_EVENT_TOPIC, RollupEventGetter, ROLLUP_PROCESSED_EVENT_TOPIC } from './rollup_event_getter.js';
+import {
+  DEFI_BRIDGE_EVENT_TOPIC,
+  OFFCHAIN_EVENT_TOPIC,
+  RollupEventGetter,
+  ROLLUP_PROCESSED_EVENT_TOPIC,
+} from './rollup_event_getter.js';
 import { ConfVars } from './configurator.js';
 import { default as JSONNormalize } from 'json-normalize';
 
@@ -28,10 +33,6 @@ export interface RollupLogsParams {
   blockHash?: string;
 }
 
-function isPromise(obj: any): obj is Promise<any> {
-  return !!obj.then;
-}
-
 export class Server {
   private ready = false;
   private rollupEventGetter: RollupEventGetter;
@@ -40,13 +41,13 @@ export class Server {
   private runninSyncPromise!: Promise<void>;
   private interruptableSleep = new InterruptableSleep();
   private requestQueue: Array<() => void> = [];
-  private cachedResponses: { [key: string]: any } = {};
+  private cachedResponses: { [key: string]: Promise<any> | undefined } = {};
   private apiKeys: { [key: string]: boolean } = {};
   private provider: JsonRpcProvider;
   private ethereumRpc: EthereumRpc;
   private blockNumber = -1;
   private log = createLogger('Server');
-  private debug = createDebugLogger('server');
+  private debug = createDebugLogger('aztec:server');
 
   constructor(
     provider: JsonRpcProvider,
@@ -56,7 +57,7 @@ export class Server {
     private readonly configuration: ConfVars,
   ) {
     this.rollupEventGetter = new RollupEventGetter(
-      this.configuration.redeployConfig.rollupContractAddress!,
+      this.configuration.rollupContractAddress!,
       provider,
       chainId,
       logsDb,
@@ -84,10 +85,6 @@ export class Server {
     }
   }
 
-  public getRedeployConfig() {
-    return this.configuration.redeployConfig;
-  }
-
   public async start() {
     this.log('Server starting...');
     const { indexing } = this.configuration;
@@ -106,7 +103,7 @@ export class Server {
       while (this.running) {
         await this.interruptableSleep.sleep(this.checkFrequency);
 
-        const newBlockNumber = await this.ethereumRpc.blockNumber();
+        const newBlockNumber = await this.ethereumRpc.blockNumber().catch(() => this.blockNumber);
         if (this.blockNumber != newBlockNumber) {
           this.debug(`new block number ${newBlockNumber}, purging cache.`);
           this.cachedResponses = {};
@@ -160,7 +157,7 @@ export class Server {
       this.isReady() &&
       method?.startsWith('eth_getLogs') &&
       params[0].topics?.length &&
-      [ROLLUP_PROCESSED_EVENT_TOPIC, DEFI_BRIDGE_EVENT_TOPIC].includes(params[0].topics[0])
+      [ROLLUP_PROCESSED_EVENT_TOPIC, DEFI_BRIDGE_EVENT_TOPIC, OFFCHAIN_EVENT_TOPIC].includes(params[0].topics[0])
     ) {
       return await this.queryLogs(params[0]);
     } else {
@@ -239,7 +236,7 @@ export class Server {
     // Here we filter any transaction receipts that would acknowledge state that is newer than what is in the cache.
     // This resolves the use case above.
     //
-    // The thoughtful engineer will subsequently imagine:
+    // One may subsequently imagine:
     // Alice makes a `call` request to check a bit of state. The result is cached.
     // Bob sends a transaction that modifies the state.
     // Charlie makes a `call` request to check a bit of state. The stale cached result is returned.
@@ -248,7 +245,7 @@ export class Server {
     // You can actually never assume that a value returned by a `call` that is shared, is not immediately stale.
     // The fact that Bob's transaction happened before Charlie's call, but Charlie experiences the state change after,
     // is irrelevant.
-    if (args.method == 'eth_getTransactionReceipt' && result.blockNumber > this.blockNumber) {
+    if (args.method == 'eth_getTransactionReceipt' && result?.blockNumber > this.blockNumber) {
       this.debug(`discarding transaction receipt result until cache cleared.`);
       return null;
     }
@@ -259,8 +256,7 @@ export class Server {
   /**
    * Normalises the JSON (orders properties) to produce a consistent cache key.
    * If there's no entry, kick off a request and store the promise in the cache.
-   * If there's a promise in the cache the request is in flight, await it.
-   * If there's an entry in the cache, return it.
+   * If there's an entry in the cache, await the result and return it.
    */
   private async forwardEthRequestViaCache(args: RequestArguments) {
     const cacheKey = JSONNormalize.sha256Sync(args);
@@ -272,12 +268,9 @@ export class Server {
         this.provider.request(args).then(resolve).catch(reject);
       });
       return await this.cachedResponses[cacheKey];
-    } else if (isPromise(cacheResult)) {
-      this.debug(`cache key ${cacheKey} hit (in flight) for request: ${JSON.stringify(args)}`);
-      return await cacheResult;
     } else {
       this.debug(`cache key ${cacheKey} hit for request: ${JSON.stringify(args)}`);
-      return cacheResult;
+      return await cacheResult;
     }
   }
 

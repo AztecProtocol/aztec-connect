@@ -46,15 +46,18 @@ checkout: &checkout
 
       chmod 0600 .ssh/id_rsa
 
+      # IF YOU'RE CHANGING THIS, YOU ALSO WANT TO CHANGE: .circleci/remote_build/remote_build
       # Shallow checkout this commit.
       mkdir -p project
       cd project
       git init
       git remote add origin $CIRCLE_REPOSITORY_URL
+      # Only download metadata when fetching.
       git fetch --depth 50 --filter=blob:none origin $CIRCLE_SHA1
       git checkout FETCH_HEAD
 
-# This build step checks out the code from the benchmark-archive repository. The key is saved in CircleCi environment in base64 format.
+# This build step checks out the code from the benchmark-archive repository.
+# The key is saved in CircleCi environment in base64 format.
 # Initially it just fetches the latest version.
 benchmark_add_keys: &benchmark_add_keys
   run:
@@ -94,6 +97,7 @@ save_logs: &save_logs
     root: /tmp/test-logs
     paths:
       - ./*
+
 jobs:
   wasm-linux-clang:
     docker:
@@ -106,17 +110,6 @@ jobs:
           name: 'Build'
           command: cond_spot_run_build barretenberg-wasm-linux-clang 64
 
-  x86_64-linux-gcc:
-    docker:
-      - image: aztecprotocol/alpine-build-image
-    resource_class: small
-    steps:
-      - *checkout
-      - *setup_env
-      - run:
-          name: 'Build'
-          command: cond_spot_run_build barretenberg-x86_64-linux-gcc 64
-
   x86_64-linux-clang:
     docker:
       - image: aztecprotocol/alpine-build-image
@@ -128,126 +121,91 @@ jobs:
           name: 'Build'
           command: cond_spot_run_build barretenberg-x86_64-linux-clang 64
 
-  x86_64-linux-clang-assert:
-    docker:
-      - image: aztecprotocol/alpine-build-image
-    resource_class: small
-    steps:
-      - *checkout
-      - *setup_env
-      - run:
-          name: 'Build'
-          command: cond_spot_run_build barretenberg-x86_64-linux-clang-assert 64
+  # small-circuit-tests:
+  #   docker:
+  #     - image: aztecprotocol/alpine-build-image
+  #   resource_class: small
+  #   steps:
+  #     - *checkout
+  #     - *setup_env
+  #     - run:
+  #         name: 'Test'
+  #         command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert bb-tests
+  #     - *save_logs
 
-  barretenberg-tests:
-    docker:
-      - image: aztecprotocol/alpine-build-image
-    resource_class: small
-    steps:
-      - *checkout
-      - *setup_env
-      - run:
-          name: 'Test'
-          command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert bb-tests
-      - *save_logs
+  # tx-rollup-tests:
+  #   docker:
+  #     - image: aztecprotocol/alpine-build-image
+  #   resource_class: small
+  #   steps:
+  #     - *checkout
+  #     - *setup_env
+  #     - run:
+  #         name: 'Test'
+  #         command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert rollup_proofs_tx_rollup_tests --gtest_filter=-rollup_full_tests.*
+  #     - *save_logs
 
-  benchmark-aggregator:
-    docker:
-      - image: aztecprotocol/alpine-build-image
-    resource_class: small
-    steps:
-      - attach_workspace:
-          at: /tmp/test-logs
-      - *checkout
-      - *setup_env
-      - *benchmark_add_keys
-      - run:
-          name: 'Test'
-          command: store_test_benchmark_logs barretenberg-x86_64-linux-clang-assert
+  # tx-rollup-full-tests:
+  #   docker:
+  #     - image: aztecprotocol/alpine-build-image
+  #   resource_class: small
+  #   steps:
+  #     - *checkout
+  #     - *setup_env
+  #     - run:
+  #         name: 'Test'
+  #         command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert rollup_proofs_tx_rollup_tests --gtest_filter=rollup_full_tests.*
+  #     - *save_logs
 
-  stdlib-primitives-tests:
-    docker:
-      - image: aztecprotocol/alpine-build-image
-    resource_class: small
-    steps:
-      - *checkout
-      - *setup_env
-      - run:
-          name: 'Test'
-          command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert stdlib_primitives_tests
-      - *save_logs
+  # root-rollup-tests:
+  #   docker:
+  #     - image: aztecprotocol/alpine-build-image
+  #   resource_class: small
+  #   steps:
+  #     - *checkout
+  #     - *setup_env
+  #     - run:
+  #         name: 'Test'
+  #         command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert rollup_proofs_root_rollup_tests --gtest_filter=-root_rollup_full_tests.*
+  #     - *save_logs
 
-  stdlib-recursion-tests:
-    docker:
-      - image: aztecprotocol/alpine-build-image
-    resource_class: small
-    steps:
-      - *checkout
-      - *setup_env
-      - run:
-          name: 'Test'
-          command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert stdlib_recursion_tests
-      - *save_logs
+  # root-rollup-full-tests:
+  #   docker:
+  #     - image: aztecprotocol/alpine-build-image
+  #   resource_class: small
+  #   steps:
+  #     - *checkout
+  #     - *setup_env
+  #     - run:
+  #         name: 'Test'
+  #         command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert rollup_proofs_root_rollup_tests --gtest_filter=root_rollup_full_tests.*
+  #     - *save_logs
 
-  tx-rollup-tests:
-    docker:
-      - image: aztecprotocol/alpine-build-image
-    resource_class: small
-    steps:
-      - *checkout
-      - *setup_env
-      - run:
-          name: 'Test'
-          command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert rollup_proofs_tx_rollup_tests --gtest_filter=-rollup_full_tests.*
-      - *save_logs
+  # root-verifier-tests:
+  #   docker:
+  #     - image: aztecprotocol/alpine-build-image
+  #   resource_class: small
+  #   steps:
+  #     - *checkout
+  #     - *setup_env
+  #     - run:
+  #         name: 'Test'
+  #         command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert rollup_proofs_root_verifier_tests
+  #     - *save_logs
 
-  tx-rollup-full-tests:
-    docker:
-      - image: aztecprotocol/alpine-build-image
-    resource_class: small
-    steps:
-      - *checkout
-      - *setup_env
-      - run:
-          name: 'Test'
-          command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert rollup_proofs_tx_rollup_tests --gtest_filter=rollup_full_tests.*
-      - *save_logs
-
-  root-rollup-tests:
-    docker:
-      - image: aztecprotocol/alpine-build-image
-    resource_class: small
-    steps:
-      - *checkout
-      - *setup_env
-      - run:
-          name: 'Test'
-          command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert rollup_proofs_root_rollup_tests --gtest_filter=-root_rollup_full_tests.*
-      - *save_logs
-
-  root-rollup-full-tests:
-    docker:
-      - image: aztecprotocol/alpine-build-image
-    resource_class: small
-    steps:
-      - *checkout
-      - *setup_env
-      - run:
-          name: 'Test'
-          command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert rollup_proofs_root_rollup_tests --gtest_filter=root_rollup_full_tests.*
-      - *save_logs
-
-  root-verifier-tests:
-    docker:
-      - image: aztecprotocol/alpine-build-image
-    resource_class: small
-    steps:
-      - *checkout
-      - *setup_env
-      - run:
-          name: 'Test'
-          command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert rollup_proofs_root_verifier_tests
-      - *save_logs
+  # benchmark-aggregator:
+  #   docker:
+  #     - image: aztecprotocol/alpine-build-image
+  #   resource_class: small
+  #   steps:
+  #     - attach_workspace:
+  #         at: /tmp/test-logs
+  #     - *checkout
+  #     - *setup_env
+  #     - *benchmark_add_keys
+  #     - run:
+  #         name: 'Test'
+  #         command: store_test_benchmark_logs barretenberg-x86_64-linux-clang-assert
 
   blockchain-vks:
     docker:
@@ -314,6 +272,17 @@ jobs:
       - run:
           name: 'Build and test'
           command: build blockchain
+
+  aztec-dev-cli:
+    machine:
+      image: ubuntu-2004:202010-01
+    resource_class: large
+    steps:
+      - *checkout
+      - *setup_env
+      - run:
+          name: 'Build and test'
+          command: build aztec-dev-cli
 
   kebab:
     machine:
@@ -456,7 +425,7 @@ jobs:
       - *setup_env
       - run:
           name: 'Test'
-          command: cond_spot_run_tests end-to-end ./src/e2e_deposit.test.ts false 1 1 VerificationKey1x1
+          command: cond_spot_run_tests end-to-end ./src/e2e_deposit.test.ts 1 1 VerificationKey1x1
 
   e2e-payment:
     docker:
@@ -469,7 +438,7 @@ jobs:
           name: 'Test'
           command: cond_spot_run_tests end-to-end ./src/e2e.test.ts
 
-  e2e-permit:
+  e2e-deposit-permit:
     docker:
       - image: aztecprotocol/alpine-build-image
     resource_class: small
@@ -491,7 +460,7 @@ jobs:
           name: 'Test'
           command: cond_spot_run_tests end-to-end ./src/e2e_migrated_accounts.test.ts
 
-  e2e-migrate-account:
+  e2e-migrate-account-and-funds:
     docker:
       - image: aztecprotocol/alpine-build-image
     resource_class: small
@@ -513,7 +482,7 @@ jobs:
           name: 'Test'
           command: cond_spot_run_tests end-to-end ./src/e2e_account.test.ts
 
-  e2e-sync-defi:
+  e2e-sync-bridge:
     docker:
       - image: aztecprotocol/alpine-build-image
     resource_class: small
@@ -524,7 +493,7 @@ jobs:
           name: 'Test'
           command: cond_spot_run_tests end-to-end ./src/e2e_sync_bridge.test.ts
 
-  e2e-async-defi:
+  e2e-async-bridge:
     docker:
       - image: aztecprotocol/alpine-build-image
     resource_class: small
@@ -535,7 +504,7 @@ jobs:
           name: 'Test'
           command: cond_spot_run_tests end-to-end ./src/e2e_async_bridge.test.ts
 
-  e2e-defi:
+  e2e-subsidy:
     docker:
       - image: aztecprotocol/alpine-build-image
     resource_class: small
@@ -544,9 +513,9 @@ jobs:
       - *setup_env
       - run:
           name: 'Test'
-          command: cond_spot_run_tests end-to-end ./src/e2e_defi.test.ts
+          command: cond_spot_run_tests end-to-end ./src/e2e_subsidy.test.ts
 
-  e2e-defi-subsidy:
+  e2e-subsidy-async:
     docker:
       - image: aztecprotocol/alpine-build-image
     resource_class: small
@@ -555,7 +524,7 @@ jobs:
       - *setup_env
       - run:
           name: 'Test'
-          command: cond_spot_run_tests end-to-end ./src/e2e_defi_subsidy.test.ts
+          command: cond_spot_run_tests end-to-end ./src/e2e_subsidy_async.test.ts
 
   e2e-non-fee-assets:
     docker:
@@ -662,15 +631,12 @@ jobs:
           command: build coinbase-exporter
       - run:
           name: 'Build sidecar'
-          working_directory: metrics/sidecar
           command: build metrics-sidecar
       - run:
           name: 'Build prometheus'
-          working_directory: metrics/prometheus
           command: build prometheus
       - run:
           name: 'Build grafana'
-          working_directory: metrics/grafana
           command: build grafana
 
   deploy:
@@ -680,6 +646,18 @@ jobs:
     steps:
       - *checkout
       - *setup_env
+      - run:
+          name: 'derive keys'
+          command: |
+            ensure_repo aztec-dev-cli $ECR_REGION
+            docker run --rm $ECR_URL/aztec-dev-cli:cache-$COMMIT_HASH deriveKeys "$KEY_DERIVATION_MNEMONIC" >> $BASH_ENV
+      - run:
+          name: 'contracts'
+          working_directory: contracts
+          command: |
+            deploy_ecr contracts
+            deploy_dockerhub contracts
+            ./scripts/ci_deploy_contracts.sh
       - run:
           name: 'barretenberg.js'
           command: |
@@ -692,14 +670,32 @@ jobs:
             deploy_npm blockchain
       - run:
           name: 'kebab'
-          # Increment to force contract redeployment.
-          command: TF_VAR_REDEPLOY=9 deploy kebab
+          command: |
+            LAST_COMMIT=$(last_successful_commit kebab $DEPLOY_TAG-deployed)
+            if changed $LAST_COMMIT "contracts/deploy/$VERSION_TAG"; then
+              # Taint the efs file system to recreate.
+              deploy kebab kebab aws_efs_file_system.kebab_data_store
+            else
+              deploy kebab
+            fi
+            deploy_dockerhub kebab
       - run:
           name: 'halloumi'
-          command: deploy halloumi "halloumi halloumi-inner halloumi-outer"
+          command: |
+            deploy halloumi "halloumi halloumi-inner halloumi-outer"
+            deploy_dockerhub halloumi
       - run:
           name: 'falafel'
-          command: deploy falafel
+          command: |
+            LAST_COMMIT=$(last_successful_commit falafel $DEPLOY_TAG-deployed)
+            if changed $LAST_COMMIT "contracts/deploy/$VERSION_TAG"; then
+              # Taint the postgres db and efs file system to recreate them.
+              # We include block-server as a service to restart to clear caches.
+              deploy falafel "falafel block-server" "aws_db_instance.postgres aws_efs_file_system.falafel_data_store"
+            else
+              deploy falafel
+            fi
+            deploy_dockerhub falafel
       - run:
           name: 'block-server'
           command: deploy block-server
@@ -773,7 +769,7 @@ jobs:
       - *setup_env
       - run:
           name: 'coinbase-exporter'
-          command: deploy coinbase-exporter "" is_global
+          command: deploy_global coinbase-exporter
       - run:
           name: 'ecs-exporter'
           working_directory: metrics/ecs-exporter
@@ -783,10 +779,10 @@ jobs:
           command: deploy_ecr metrics-sidecar
       - run:
           name: 'prometheus'
-          command: deploy prometheus "" is_global
+          command: deploy_global prometheus
       - run:
           name: 'grafana'
-          command: deploy grafana "" is_global
+          command: deploy_global grafana
 
 # Repeatable config for defining the workflow below.
 tag_regex: &tag_regex /v[0-9]+(\.[0-9]+)*(-[a-zA-Z-]+\.[0-9]+)?/
@@ -817,36 +813,30 @@ workflows:
     when:
       equal: [system, << pipeline.parameters.workflow >>]
     jobs:
-      - x86_64-linux-gcc:
-          filters: *tag_filter
       - x86_64-linux-clang:
-          filters: *tag_filter
-      - x86_64-linux-clang-assert:
           filters: *tag_filter
       - wasm-linux-clang:
           filters: *tag_filter
-      - barretenberg-tests: *bb_test
-      - stdlib-primitives-tests: *bb_test
-      - benchmark-aggregator:
-          requires:
-            - barretenberg-tests
-            - stdlib-primitives-tests
-            - stdlib-recursion-tests
-            - tx-rollup-tests
-            - tx-rollup-full-tests
-            - root-verifier-tests
-            - root-rollup-tests
-            - root-rollup-full-tests
-          filters:
-            branches:
-              only:
-                - defi-bridge-project
-      - stdlib-recursion-tests: *bb_test
-      - tx-rollup-tests: *bb_test
-      - tx-rollup-full-tests: *bb_test
-      - root-rollup-tests: *bb_test
-      - root-rollup-full-tests: *bb_test
-      - root-verifier-tests: *bb_test
+      # - small-circuit-tests: *bb_test
+      # - tx-rollup-tests: *bb_test
+      # - tx-rollup-full-tests: *bb_test
+      # - root-rollup-tests: *bb_test
+      # - root-rollup-full-tests: *bb_test
+      # - root-verifier-tests: *bb_test
+      # - benchmark-aggregator:
+      #     requires:
+      #       - barretenberg-tests
+      #       - stdlib-primitives-tests
+      #       - stdlib-recursion-tests
+      #       - tx-rollup-tests
+      #       - tx-rollup-full-tests
+      #       - root-verifier-tests
+      #       - root-rollup-tests
+      #       - root-rollup-full-tests
+      #     filters:
+      #       branches:
+      #         only:
+      #           - defi-bridge-project
       - blockchain-vks:
           requires:
             - x86_64-linux-clang
@@ -863,6 +853,7 @@ workflows:
       - contracts-verifier-test: *yarn_project
       - barretenberg-js: *yarn_project
       - blockchain: *yarn_project
+      - aztec-dev-cli: *yarn_project
       - kebab: *yarn_project
       - halloumi: *yarn_project
       - falafel: *yarn_project
@@ -890,29 +881,26 @@ workflows:
       - e2e-browser: *e2e_test
       - e2e-chained-txs-with-spending-keys: *e2e_test
       - e2e-chained-txs: *e2e_test
-      - e2e-sync-defi: *e2e_test
-      - e2e-async-defi: *e2e_test
-      - e2e-defi: *e2e_test
-      - e2e-defi-subsidy: *e2e_test
-      - e2e-migrate-account: *e2e_test
+      - e2e-sync-bridge: *e2e_test
+      - e2e-async-bridge: *e2e_test
+      - e2e-subsidy: *e2e_test
+      - e2e-subsidy-async: *e2e_test
+      - e2e-migrate-account-and-funds: *e2e_test
       - e2e-migrated-accounts: *e2e_test
       - e2e-non-fee-assets: *e2e_test
       - e2e-payment: *e2e_test
-      - e2e-permit: *e2e_test
+      - e2e-deposit-permit: *e2e_test
       - e2e-prover: *e2e_test
       - e2e-virtual-assets: *e2e_test
-      - bb-join:
-          requires:
-            - x86_64-linux-gcc
-            - barretenberg-tests
-            - stdlib-primitives-tests
-            - stdlib-recursion-tests
-            - tx-rollup-tests
-            - tx-rollup-full-tests
-            - root-rollup-tests
-            - root-rollup-full-tests
-            - root-verifier-tests
-          filters: *deploy_filters
+      # - bb-join:
+      #     requires:
+      #       - small-circuit-tests
+      #       - tx-rollup-tests
+      #       - tx-rollup-full-tests
+      #       - root-rollup-tests
+      #       - root-rollup-full-tests
+      #       - root-verifier-tests
+      #     filters: *deploy_filters
       - yarn-join:
           requires:
             - explorer
@@ -922,26 +910,28 @@ workflows:
             - blockchain
             - contracts-verifier-test
             - barretenberg-js
+            - block-server
+            - aztec-dev-cli
           filters: *deploy_filters
       - deploy:
           requires:
             # Must list all projects at the end of a dependency chain.
-            - bb-join
+            # - bb-join
             - yarn-join
             - faucet
             - e2e-account
             - e2e-browser
             - e2e-chained-txs
             - e2e-chained-txs-with-spending-keys
-            - e2e-async-defi
-            - e2e-sync-defi
-            - e2e-defi
-            - e2e-defi-subsidy
-            - e2e-migrate-account
+            - e2e-async-bridge
+            - e2e-sync-bridge
+            - e2e-subsidy
+            - e2e-subsidy-async
+            - e2e-migrate-account-and-funds
             - e2e-migrated-accounts
             - e2e-non-fee-assets
             - e2e-payment
-            - e2e-permit
+            - e2e-deposit-permit
             - e2e-prover
             - e2e-virtual-assets
           filters: *deploy_filters
@@ -961,4 +951,3 @@ workflows:
       - deploy-website:
           requires:
             - website
-# VS Code Extension Version: 1.4.0

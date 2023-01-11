@@ -27,13 +27,18 @@ const {
 
 /*
  * Run the following:
- * blockchain: yarn start:ganache
+ * contracts: ./scripts/start_e2e.sh
  * kebab: yarn start:e2e
  * halloumi: yarn start:e2e
  * falafel: yarn start:e2e
  * hummus: yarn start
- * end-to-end: yarn test ./src/e2e_hosted_sdk.test.ts
+ * end-to-end: yarn test e2e_hosted_sdk.test.ts
+ *
+ * If running via docker:
+ * end-to-end: ONLY_TARGET=false ../../bootstrap_docker.sh
+ * end-to-end: TEST=e2e_browser.test.ts docker-compose -f ./scripts/docker-compose.yml up --force-recreate --exit-code-from end-to-end
  */
+
 describe('hummus terminal test', () => {
   let browser: Browser;
   let page: Page;
@@ -114,7 +119,7 @@ describe('hummus terminal test', () => {
     await sendCommand(`balance 0`);
     await sendCommand(`balance 1`);
 
-    await sendCommand(`defi 0.01 5 0 1`);
+    await sendCommand(`defi 0.01 1 0 1`); // note: updated from uniswap bridge to the dummy bridge
     await page.evaluate(() => window.aztecSdk.awaitAllUserTxsSettled());
 
     // Flushing claim through with a withdraw.

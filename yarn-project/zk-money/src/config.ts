@@ -57,9 +57,13 @@ const developmentConfig: ConfigVars = {
 function getEthereumHost(chainId: number) {
   switch (chainId) {
     case 5:
-      return 'https://goerli.infura.io/v3/6a04b7c89c5b421faefde663f787aa35';
+      return 'https://goerli.infura.io/v3/85712ac4df0446b58612ace3ed566352';
     case 1337:
       return 'http://localhost:8545';
+    case 0xe2e: {
+      const apiKey = localStorage.getItem('ETH_HOST_API_KEY') ?? '';
+      return `http://localhost:8545/${apiKey}`;
+    }
     case 0xa57ec: {
       const apiKey = localStorage.getItem('ETH_HOST_API_KEY') ?? '';
       return `https://aztec-connect-testnet-eth-host.aztec.network:8545/${apiKey}`;
@@ -139,6 +143,7 @@ function assembleConfig(
       'TB-275': toBaseUnits('10000', 18),
       'TB-400': toBaseUnits('10000', 18),
       wcDAI: toBaseUnits('10000', 18),
+      icETH: toBaseUnits('5', 18),
     },
     sessionTimeout: +(sessionTimeout || 1),
     debugFilter,

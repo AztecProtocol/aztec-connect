@@ -11,7 +11,7 @@ import {
   ManyToOne,
   PrimaryColumn,
 } from 'typeorm';
-import { bufferColumn } from './init_entities.js';
+import { bufferColumn } from './buffer_column.js';
 import { RollupProofDao } from './rollup_proof.js';
 
 @Entity({ name: 'tx' })
@@ -71,8 +71,7 @@ export class TxDao {
   public excessGas!: number;
 
   @Column({ nullable: false, default: false })
-  // Should be indexed, leaving out for now to get timings.
-  // @Index()
+  @Index()
   public secondClass?: boolean;
 
   @AfterLoad()
@@ -87,6 +86,9 @@ export class TxDao {
     }
     if (this.dataRootsIndex === null) {
       delete this.dataRootsIndex;
+    }
+    if (this.mined === null) {
+      delete this.mined;
     }
   }
 

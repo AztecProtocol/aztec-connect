@@ -87,7 +87,6 @@ export class RollupAggregator {
       id: rootRollup.rollupId,
       dataRoot: this.worldStateDb.getRoot(0),
       rollupProof: rollupProofDao,
-      created: new Date(),
     });
 
     await this.rollupDb.addRollup(rollupDao);

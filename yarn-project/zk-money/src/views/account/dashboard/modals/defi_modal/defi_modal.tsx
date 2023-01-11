@@ -46,6 +46,7 @@ export function DefiModal({ recipe, flowDirection, onClose }: DefiModalProps) {
         lockedComposerPayload={lockedComposerPayload}
         onSubmit={submit}
         onClose={onClose}
+        onBack={handleBack}
         validationResult={validationResult}
       />
     ) : (

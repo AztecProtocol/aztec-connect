@@ -35,13 +35,11 @@ const initialAccounts = {
 
 /**
  * Run the following:
- * blockchain: yarn start:ganache
+ * contracts: ./scripts/start_e2e.sh
  * kebab: yarn start:e2e
  * halloumi: yarn start:e2e
  * falafel: yarn start:e2e
- * end-to-end: NODE_OPTIONS=--openssl-legacy-provider yarn test ./src/e2e_migrated_accounts.test.ts
- *
- * Not including the legacy ssl thing above throws a weird error in node 16+.
+ * end-to-end: yarn test e2e_migrated_accounts.test.ts
  */
 
 describe('end-to-end migrated tests', () => {

@@ -1,130 +1,78 @@
 version: '3'
 services:
-  ganache:
-    image: trufflesuite/ganache
-    environment:
-      NODE_OPTIONS: --max_old_space_size=3072
-    command: -h='0.0.0.0' -p=8544 -q -l 15000000 -e 10000 -m='test test test test test test test test test test test junk'
-    ports:
-      - '8544:8544'
-
   contracts:
-    image: 278380418400.dkr.ecr.eu-west-2.amazonaws.com/contracts:latest
+    image: aztecprotocol/contracts:latest
     environment:
-      ETHEREUM_HOST: http://ganache:8544
-      ROLLUP_PROVIDER_ADDRESS: null # Defaults to address from private key TODO: what to set to
-      SAFE_ADDRESS: '0x7095057A08879e09DC1c0a85520e3160A0F67C96'
-      VERIFIER_TYPE: 'MockVerifier'
-      UPGRADE: 'true'
-      PRIVATE_KEY: '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80' # /0 from MNEMONIC used in ganache service above
-      SERVE_PORT: 8547 # Port where deployed contracts are served
-    depends_on:
-      - ganache
-    ports:
-      - '8547:8547'
-    entrypoint: >
-      sh -c "
-        while ! curl -X POST --data '{\"jsonrpc\":\"2.0\",\"method\":\"eth_blockNumber\",\"params\":[]}' http://ganache:8544; do
-          sleep 1
-        done
-        sh scripts/deploy_e2e.sh
-        sh scripts/serve.sh "
+      ETHEREUM_HOST: ${ETHEREUM_HOST:-}
+      VK: ${VK:-}
+      PORT: 8547
+    command: ./scripts/start_e2e.sh
 
   kebab:
-    image: 278380418400.dkr.ecr.eu-west-2.amazonaws.com/kebab:latest
+    image: aztecprotocol/kebab:latest
     environment:
-      ETHEREUM_HOST: http://ganache:8544
+      ETHEREUM_HOST: ${ETHEREUM_HOST:-http://contracts:8544}
+      CONTRACTS_HOST: http://contracts:8547
+      NO_BUILD: 'true'
       PORT: 8545
-      ALLOW_PRIVILEGED_METHODS: 'true'
-      VK: ${VK}
-      REDEPLOY: 1
     depends_on:
-      - ganache
       - contracts
-    command: >
-      sh -c "
-      set -e;
-      yarn start
-      "
-    ports:
-      - '8545:8545'
+    command: start:e2e
 
   halloumi1:
-    image: 278380418400.dkr.ecr.eu-west-2.amazonaws.com/halloumi:latest
+    image: aztecprotocol/halloumi:latest
     environment:
-      NODE_ENV: production
-      NUM_INNER_ROLLUP_TXS: ${NUM_INNER_ROLLUP_TXS}
-      NUM_OUTER_ROLLUP_PROOFS: ${NUM_OUTER_ROLLUP_PROOFS}
+      NUM_INNER_ROLLUP_TXS: ${NUM_INNER_ROLLUP_TXS:-3}
+      NUM_OUTER_ROLLUP_PROOFS: ${NUM_OUTER_ROLLUP_PROOFS:-2}
       PERSIST: 'false'
-      PROVERLESS: ${PROVERLESS}
+      PROVERLESS: ${PROVERLESS:-true}
       JOB_SERVER_URL: http://falafel:8082
 
   halloumi2:
-    image: 278380418400.dkr.ecr.eu-west-2.amazonaws.com/halloumi:latest
+    image: aztecprotocol/halloumi:latest
     environment:
-      NODE_ENV: production
-      NUM_INNER_ROLLUP_TXS: ${NUM_INNER_ROLLUP_TXS}
-      NUM_OUTER_ROLLUP_PROOFS: ${NUM_OUTER_ROLLUP_PROOFS}
+      NUM_INNER_ROLLUP_TXS: ${NUM_INNER_ROLLUP_TXS:-3}
+      NUM_OUTER_ROLLUP_PROOFS: ${NUM_OUTER_ROLLUP_PROOFS:-2}
       PERSIST: 'false'
-      PROVERLESS: ${PROVERLESS}
+      PROVERLESS: ${PROVERLESS:-true}
       JOB_SERVER_URL: http://falafel:8082
 
   falafel:
-    image: 278380418400.dkr.ecr.eu-west-2.amazonaws.com/falafel:latest
+    image: aztecprotocol/falafel:latest
     environment:
       ETHEREUM_HOST: http://kebab:8545
-      NUM_INNER_ROLLUP_TXS: ${NUM_INNER_ROLLUP_TXS}
-      NUM_OUTER_ROLLUP_PROOFS: ${NUM_OUTER_ROLLUP_PROOFS}
-      NODE_ENV: production
-      PROVERLESS: ${PROVERLESS}
-      FEE_PAYING_ASSET_IDS: 0,1
-      FEE_GAS_PRICE_MULTIPLIER: 0.01
-      DEBUG: 'bb:rollup_processor,log*_rollup_db'
+      CONTRACTS_HOST: http://contracts:8547
+      NUM_INNER_ROLLUP_TXS: ${NUM_INNER_ROLLUP_TXS:-3}
+      NUM_OUTER_ROLLUP_PROOFS: ${NUM_OUTER_ROLLUP_PROOFS:-2}
+      PROVERLESS: ${PROVERLESS:-true}
+      NO_BUILD: 'true'
+      PORT: 8081
     depends_on:
       - kebab
-    command: >
-      sh -c "
-      set -e;
-      while ! nc -z kebab 8545; do sleep 1; done;
-      yarn start
-      "
-    ports:
-      - '8081:8081'
+    command: start:e2e
 
-  sdk:
-    image: 278380418400.dkr.ecr.eu-west-2.amazonaws.com/sdk:latest
-    depends_on:
-      - falafel
-    command: >
-      sh -c "
-      echo http://falafel:8081 > /usr/src/sdk/dest/ROLLUP_PROVIDER_URL;
-      yarn start
-      "
-    ports:
-      - '1234:1234'
+  # sdk:
+  #   image: aztecprotocol/sdk:latest
+  #   environment:
+  #     ROLLUP_HOST: http://falafel:8081
+  #   depends_on:
+  #     - falafel
+  #   command: start:e2e
+  #   ports:
+  #     - '1234:1234'
 
   hummus:
-    image: 278380418400.dkr.ecr.eu-west-2.amazonaws.com/hummus:latest
-    depends_on:
-      - sdk
-    ports:
-      - '8080:8080'
+    image: aztecprotocol/hummus:latest
+    # depends_on:
+    #   - sdk
 
   end-to-end:
-    image: 278380418400.dkr.ecr.eu-west-2.amazonaws.com/end-to-end:latest
+    image: aztecprotocol/end-to-end:latest
     environment:
       ETHEREUM_HOST: http://kebab:8545
       ROLLUP_HOST: http://falafel:8081
       SDK_HOST: http://sdk:1234
       HUMMUS_HOST: http://hummus:8080
-      PROVERLESS: ${PROVERLESS}
     depends_on:
       - hummus
-    command: >
-      sh -c "
-      apk add curl jq bash;
-      ./scripts/wait_till_ready;
-      yarn test ${TEST:-./src/e2e.test.ts} falafel 8081
-      "
-volumes:
-  env_data:
+    command: ${TEST:-./src/e2e.test.ts}

@@ -41,6 +41,7 @@ export function ShieldModal(props: ShieldModalProps) {
         lockedComposerPayload={lockedComposerPayload}
         onSubmit={submit}
         onClose={onClose}
+        onBack={handleBack}
       />
     ) : (
       <ShieldPage1

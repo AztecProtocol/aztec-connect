@@ -19,7 +19,7 @@ export function InteractiveTooltip({ className, content }: InteractiveTooltipPro
 
   return (
     <div className={style.infoWrapper}>
-      {showTooltip && <Tooltip content={content} />}
+      {showTooltip && <Tooltip className={style.tooltip} content={content} />}
       <div>
         <div onClick={toggle} className={cx(style.infoTooltip, className, { closeTooltip: showTooltip })} />
       </div>

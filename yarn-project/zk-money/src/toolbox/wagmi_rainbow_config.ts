@@ -1,5 +1,6 @@
 import '@rainbow-me/rainbowkit/styles.css';
 import { wallet, connectorsForWallets } from '@rainbow-me/rainbowkit';
+
 import { configureChains, createClient, Chain, chain } from 'wagmi';
 import { infuraProvider } from 'wagmi/providers/infura';
 import { jsonRpcProvider } from 'wagmi/providers/jsonRpc';
@@ -11,6 +12,8 @@ function getChain(chainId: number): Chain {
       return chain.mainnet;
     case 1337:
       return chain.localhost;
+    case 0xe2e:
+      return { ...chain.localhost, id: 0xe2e };
     case 0xa57ec:
       return {
         id: 0xa57ec,
@@ -45,6 +48,7 @@ function getPublicProvider(config: Config) {
       }
     }
     case 1337:
+    case 0xe2e:
     case 0xa57ec:
     case 0xdef:
       return jsonRpcProvider({ rpc: () => ({ http: config.ethereumHost }) });
@@ -58,7 +62,8 @@ export function getWagmiRainbowConfig(config: Config) {
     [getChain(config.chainId)],
     [getPublicProvider(config)],
   );
-  const wallets = [wallet.metaMask({ chains }), wallet.walletConnect({ chains })];
+
+  const wallets = [wallet.metaMask({ chains }), wallet.walletConnect({ chains }), wallet.brave({ chains })];
   const connectors = connectorsForWallets([{ groupName: 'Supported', wallets }]);
   const wagmiClient = createClient({
     autoConnect: true,

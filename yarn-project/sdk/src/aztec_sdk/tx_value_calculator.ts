@@ -3,9 +3,9 @@ import { AssetValue } from '@aztec/barretenberg/asset';
 import { TxType } from '@aztec/barretenberg/blockchain';
 import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { DefiSettlementTime, TxSettlementTime } from '@aztec/barretenberg/rollup_provider';
+import { roundUp } from '@aztec/barretenberg/rounding';
 import { ClientEthereumBlockchain } from '@aztec/blockchain';
 import { CoreSdkInterface } from '../core_sdk/index.js';
-import { roundUp } from './round_up.js';
 
 export interface GetMaxTxValueOptions {
   userSpendingKeyRequired?: boolean;

@@ -34,14 +34,13 @@ export class WorldStateDb {
   private stdioQueue = new MemoryFifo<() => Promise<void>>();
   private roots: Buffer[] = [];
   private sizes: bigint[] = [];
-  private binPath = '../../barretenberg/build/bin/db_cli';
+  private binPath = '../../barretenberg/cpp/build/bin/db_cli';
 
   constructor(private dbPath: string = './data/world_state.db') {}
 
   public async start() {
     await this.launch();
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.processStdioQueue();
+    void this.processStdioQueue();
   }
 
   public stop() {

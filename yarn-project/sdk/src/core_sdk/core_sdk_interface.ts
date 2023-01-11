@@ -32,6 +32,8 @@ export interface CoreSdkInterface {
 
   getRemoteStatus(): Promise<RollupProviderStatus>;
 
+  sendConsoleLog(clientData?: string[], preserveLog?: boolean): Promise<void>;
+
   isAccountRegistered(accountPublicKey: GrumpkinAddress, includePending: boolean): Promise<boolean>;
 
   isAliasRegistered(alias: string, includePending: boolean): Promise<boolean>;
@@ -103,13 +105,13 @@ export interface CoreSdkInterface {
     userId: GrumpkinAddress,
     bridgeCallData: BridgeCallData,
     depositValue: bigint,
-    inputNotes: Note[],
+    fee: bigint,
     spendingPublicKey: GrumpkinAddress,
-  ): Promise<JoinSplitProofInput>;
+  ): Promise<JoinSplitProofInput[]>;
 
   createDefiProof(input: JoinSplitProofInput, txRefNo: number): Promise<ProofOutput>;
 
-  sendProofs(proofs: ProofOutput[], proofTxs?: Tx[], proofRequestData?: any): Promise<TxId[]>;
+  sendProofs(proofs: ProofOutput[], proofTxs?: Tx[]): Promise<TxId[]>;
 
   awaitSynchronised(timeout?: number): Promise<void>;
 

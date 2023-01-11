@@ -1,7 +1,9 @@
 import { getAssetIcon } from '../../../../../../alt-model/known_assets/known_asset_display_data.js';
 import { RemoteAsset } from '../../../../../../alt-model/types.js';
 import { ShieldedAssetIcon } from '../../../../../../components/index.js';
-import style from './cost_breakdown_rows.module.css';
+import { bindStyle } from '../../../../../../ui-components/index.js';
+import style from './cost_breakdown_rows.module.scss';
+const cx = bindStyle(style);
 
 function renderIcon(assetIsZk?: boolean, asset?: RemoteAsset) {
   if (!asset) return;
@@ -42,7 +44,10 @@ export function CostBreakdownValueRow({ label, cost, asset, value, assetIsZk }: 
       <div className={style.values}>
         <div className={style.cost}>{cost}</div>
         <div className={style.assetIcon}>{renderIcon(assetIsZk, asset)}</div>
-        <div className={style.amount}>{value}</div>
+        <div className={style.amount}>
+          {value}
+          <div className={style.inlineCost}>({cost})</div>
+        </div>
       </div>
     </div>
   );
@@ -69,7 +74,7 @@ export function CostBreakdownInvestmentRow({
       <div className={style.values}>
         <div className={style.cost}>{cost}</div>
         <div className={style.assetIcon}>{renderIcon(true, asset)}</div>
-        <div className={style.amount}>
+        <div className={cx(style.amount, style.conversionAmount)}>
           <div>{value}</div>
           {conversionValue && <div className={style.conversionValue}>≈ {conversionValue}</div>}
         </div>

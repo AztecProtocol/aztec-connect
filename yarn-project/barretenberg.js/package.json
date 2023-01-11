@@ -39,6 +39,7 @@
     "./retry": "./dest/retry/index.js",
     "./rollup_proof": "./dest/rollup_proof/index.js",
     "./rollup_provider": "./dest/rollup_provider/index.js",
+    "./rounding": "./dest/rounding/index.js",
     "./serialize": "./dest/serialize/index.js",
     "./sleep": "./dest/sleep/index.js",
     "./timer": "./dest/timer/index.js",

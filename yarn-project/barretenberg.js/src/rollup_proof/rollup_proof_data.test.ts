@@ -137,7 +137,7 @@ describe('RollupProofData', () => {
   it('should get tx ids from buffer', () => {
     const inners = [randomDepositProofData(), randomDepositProofData()];
     const rollupProofData = createRollupProofData(inners);
-    const expected = rollupProofData.innerProofData.filter(i => !i.isPadding()).map(i => i.txId);
+    const expected = rollupProofData.getNonPaddingProofs().map(i => i.txId);
     const txIds = RollupProofData.getTxIdsFromBuffer(rollupProofData.toBuffer());
     expect(txIds).toEqual(expected);
   });

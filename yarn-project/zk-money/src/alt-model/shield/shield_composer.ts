@@ -14,7 +14,7 @@ import { retryUntil, withinTimeLimit, CachedStep } from '../../app/util/index.js
 import { WalletAccountEnforcer } from './ensured_provider.js';
 import { Network } from '../../app/networks.js';
 import { ShieldComposerPhase, ShieldComposerStateObs } from './shield_composer_state_obs.js';
-// import { KNOWN_MAINNET_ASSET_ADDRESSES } from '../known_assets/known_asset_addresses.js';
+import { KNOWN_MAINNET_ASSET_ADDRESSES } from '../known_assets/known_asset_addresses.js';
 import { createSigningRetryableGenerator } from '../forms/composer_helpers.js';
 import { FEE_SIG_FIGURES } from '../forms/constants.js';
 import { ActiveSignerObs } from '../defi/defi_form/correct_provider_hooks.js';
@@ -61,6 +61,7 @@ export class ShieldComposer {
 
   async compose() {
     this.stateObs.clearError();
+    this.stateObs.setBackNoRetry(false);
     try {
       // Each step is only attempted if it hasn't already succeeded on a previous run.
       const controller = await this.cachedSteps.createController.exec(() => this.createController());
@@ -167,13 +168,12 @@ export class ShieldComposer {
   }
 
   private isDai() {
-    return false;
-    // try {
-    //   return this.payload.targetOutput.id === this.deps.sdk.getAssetIdByAddress(KNOWN_MAINNET_ASSET_ADDRESSES.DAI);
-    // } catch {
-    //   // This should only happen when testing with a backend that isn't forked from mainnet
-    //   return false;
-    // }
+    try {
+      return this.payload.targetOutput.id === this.deps.sdk.getAssetIdByAddress(KNOWN_MAINNET_ASSET_ADDRESSES.DAI);
+    } catch {
+      // This should only happen when testing with a backend that isn't forked from mainnet
+      return false;
+    }
   }
 
   private async approveProof(controller: DepositController) {
@@ -228,9 +228,10 @@ export class ShieldComposer {
     const isPayingFeeWithNotes = targetOutput.id !== fee.id;
     const layer = isPayingFeeWithNotes ? 'L1' : 'L2';
     this.stateObs.error(
-      `Gas prices have increased since starting this transaction and the rollup provider has rejected it as result. You can wait for gas prices to go back down and attempt your transaction again, or start the shielding process again at the higher fee. (Latest fee quote: ${latestFeeAmount.format(
+      `Gas prices have increased since starting this transaction and the rollup provider has rejected it as a result. You can wait for gas prices to go back down and attempt your transaction again, or start the shielding process again at the higher fee. (Latest fee quote: ${latestFeeAmount.format(
         { layer },
       )})`,
     );
+    this.stateObs.setBackNoRetry(true);
   }
 }

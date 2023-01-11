@@ -3,17 +3,14 @@ sourceMapSupport.install();
 import 'log-timestamp';
 import 'reflect-metadata';
 import http from 'http';
-import { Container } from 'typedi';
 import { appFactory } from './app.js';
 import { Server } from './server.js';
 import { getComponents } from './get_components.js';
 import { Metrics } from './metrics/index.js';
-import { configurator } from './entity/init_entities.js';
+import { configurator } from './configurator.js';
 
 async function main() {
-  const { signingAddress, blockchain, rollupDb, worldStateDb, barretenberg, dataSource } = await getComponents(
-    configurator,
-  );
+  const { signingAddress, blockchain, rollupDb, worldStateDb, barretenberg } = await getComponents(configurator);
   const {
     apiPrefix,
     serverAuthToken,
@@ -41,11 +38,7 @@ async function main() {
   process.once('SIGTERM', shutdown);
   process.once('SIGUSR1', shutdownAndClearDb);
 
-  Container.set({ id: 'connection', factory: () => dataSource });
-  Container.set({ id: 'rollupDb', factory: () => rollupDb });
-  Container.set({ id: 'server', factory: () => server });
-
-  const app = await appFactory(server, apiPrefix, metrics, serverAuthToken);
+  const app = appFactory(server, apiPrefix, metrics, serverAuthToken);
 
   const httpServer = http.createServer(app.callback());
   httpServer.listen(port);

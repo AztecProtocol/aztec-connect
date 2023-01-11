@@ -38,7 +38,7 @@ describe('decode_error', () => {
   /* Not sure of the long term viability of this test. But might prove useful to keep around.
   it('should correctly decode real failed goerli tx', async () => {
     const contract = new Contract(EthAddress.ZERO.toString(), abi);
-    const provider = new JsonRpcProvider('https://goerli.infura.io/v3/6a04b7c89c5b421faefde663f787aa35');
+    const provider = new JsonRpcProvider('https://goerli.infura.io/v3/85712ac4df0446b58612ace3ed566352');
     const err = await decodeErrorFromContractByTxHash(
       contract,
       TxHash.fromString('0x8b2e077c71709f1b3eadcb66cf8822d232d0ce84ab51fcf182e169de02e8d3a7'),

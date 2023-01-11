@@ -3,8 +3,7 @@ set -e
 
 REPOSITORY=$1
 SERVICES=${2:-$REPOSITORY}
-# A global deploy, doesn't namespace under a deploy tag (e.g. company website, metrics)
-IS_GLOBAL=$3
+TO_TAINT=$3
 
 cd $(query_manifest projectDir $REPOSITORY)
 
@@ -19,21 +18,12 @@ if ! check_rebuild "$LAST_SUCCESSFUL_COMMIT" $REPOSITORY; then
   exit 0
 fi
 
-if [ -n "$IS_GLOBAL" ]; then
-  deploy_terraform "" ./terraform
+deploy_terraform $REPOSITORY ./terraform/$VERSION_TAG "$TO_TAINT"
 
-  # Restart services.
-  for SERVICE in $SERVICES; do
-    deploy_service $SERVICE
-  done
-else
-  deploy_terraform $REPOSITORY ./terraform/$VERSION_TAG
-
-  # Restart services.
-  for SERVICE in $SERVICES; do
-    deploy_service $DEPLOY_TAG-$SERVICE
-  done
-fi
+# Restart services.
+for SERVICE in $SERVICES; do
+  deploy_service $DEPLOY_TAG-$SERVICE
+done
 
 # Tag the image as deployed.
 tag_remote_image $REPOSITORY cache-$COMMIT_HASH cache-$COMMIT_HASH-$DEPLOY_TAG-deployed

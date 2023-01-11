@@ -6,35 +6,30 @@
 .headerRoot {
   display: flex;
   justify-content: space-between;
+  gap: 60px;
   margin: 35px 0 50px 0;
   align-items: center;
   align-self: center;
+  z-index: 5;
   @include mixins.max_element_width;
 }
 
 .logoRoot {
-  display: flex;
   align-items: center;
-  flex-shrink: 0;
-  line-height: 0;
   width: 245px;
   cursor: pointer;
+
+  @media (max-width: 768px) {
+    transform-origin: center left;
+    transform: scale(0.66);
+    width: calc(245px * 0.66);
+  }
 }
 
 .logo {
-  clip-path: url(#svgPath);
-  background: linear-gradient(
-    101.14deg,
-    white 0%,
-    white 33.333%,
-    colors.$gradient_from 66.666%,
-    colors.$gradient_from 69%,
-    colors.$gradient_to 82%
-  );
   background-size: 300% 300%;
   overflow: initial;
   height: 48px;
-  transition: background-position 1.25s cubic-bezier(0.215, 0.61, 0.355, 1);
 }
 
 .logo.gradient {
@@ -47,6 +42,7 @@
 
 .accountRoot {
   display: flex;
+  margin-left: auto;
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
@@ -71,20 +67,13 @@
   font-size: 24px;
   letter-spacing: 0.03em;
   cursor: pointer;
-}
-
-.link.white {
-  @include mixins.gradient_font;
-}
-
-.link.gradient {
-  color: white;
+  color: #2f1f49;
 }
 
 .navLink {
-  border-bottom: 2px solid rgba(255, 255, 255, 0);
+  border-bottom: 2px solid transparent;
   position: relative;
-  padding-bottom: 5px;
+  padding-bottom: 4px;
   opacity: 1;
   margin-top: 5px;
   font-weight: 450;
@@ -99,12 +88,27 @@
   opacity: 0.5;
 }
 
-.navLink.white.active::before {
-  @include mixins.gradient_border(0px, 0 0 2px 0);
+.navLink.active {
+  border-bottom: 2px solid #2f1f49;
 }
 
-.navLink.gradient.active::before {
-  @include mixins.gradient_border(0px, 0 0 2px 0, white, white);
+.alert {
+  position: absolute;
+  top: -6px;
+  right: -16px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 500;
+  align-items: center;
+
+  @media (max-width: 480px) {
+    right: 35px;
+    top: -5px;
+  }
 }
 
 .balanceLink {
@@ -148,7 +152,6 @@
 }
 
 .disableAnimation {
-  clip-path: initial;
   transition: initial;
 }
 
@@ -160,11 +163,15 @@
   .accountRoot {
     gap: 40px;
   }
+
+  .headerRoot {
+    gap: 40px;
+  }
 }
 
 @media (max-width: 900px) {
   .headerRoot {
-    margin: 35px 0 80px 0;
+    margin: 35px 0 85px 0;
   }
 
   .accountComponent {
@@ -177,20 +184,18 @@
     gap: 40px;
   }
 
-  .logoRoot {
-    transform: scale(0.75);
-    width: calc(245px * 0.75);
-    transform-origin: center left;
-  }
-
   .link {
     width: 100%;
   }
 }
 
 @media (max-width: 480px) {
+  .logoRoot {
+    top: 26px;
+  }
+
   .headerRoot {
-    margin: 35px 0 50px 0;
+    margin: 35px 0 118px 0;
   }
 
   .accountRoot {
@@ -237,6 +242,7 @@
   }
 
   .accountComponent {
-    display: none;
+    left: 10%;
+    right: 10%;
   }
 }

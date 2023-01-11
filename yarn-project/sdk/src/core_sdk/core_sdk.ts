@@ -2,13 +2,13 @@ import { AliasHash } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
-import { AccountProver, JoinSplitProver, ProofData, ProofId, UnrolledProver } from '@aztec/barretenberg/client_proofs';
+import { AccountProver, JoinSplitProver, ProofId, UnrolledProver } from '@aztec/barretenberg/client_proofs';
 import { NetCrs } from '@aztec/barretenberg/crs';
 import { keccak256, Blake2s, Pedersen, randomBytes, Schnorr } from '@aztec/barretenberg/crypto';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
 import { InitHelpers } from '@aztec/barretenberg/environment';
 import { FftFactory } from '@aztec/barretenberg/fft';
-import { createDebugLogger } from '@aztec/barretenberg/log';
+import { createDebugLogger, logHistory } from '@aztec/barretenberg/log';
 import { NoteAlgorithms, NoteDecryptor } from '@aztec/barretenberg/note_algorithms';
 import { OffchainAccountData } from '@aztec/barretenberg/offchain_tx_data';
 import { Pippenger } from '@aztec/barretenberg/pippenger';
@@ -260,6 +260,32 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
 
   public async getRemoteStatus() {
     return await this.rollupProvider.getStatus();
+  }
+
+  public async sendConsoleLog(clientData?: string[], preserveLog?: boolean) {
+    const logs = logHistory.getLogs();
+    if (!logs.length && !clientData?.length) {
+      return;
+    }
+
+    const publicKeys = this.userStates.map(us => us.getUserData().accountPublicKey);
+    const ensureJson = (log: any[]) =>
+      log.map(logArgs => {
+        try {
+          JSON.stringify(logArgs);
+          return logArgs;
+        } catch (e) {
+          return `${logArgs}`;
+        }
+      });
+    await this.rollupProvider.clientConsoleLog({
+      publicKeys: publicKeys.map(k => k.toString()),
+      logs: logs.map(ensureJson),
+      clientData,
+    });
+    if (!preserveLog) {
+      logHistory.clear(logs.length);
+    }
   }
 
   public async isAccountRegistered(accountPublicKey: GrumpkinAddress, includePending: boolean) {
@@ -588,58 +614,24 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
         throw new Error(`Failed to find notes that sum to ${privateInput}.`);
       }
 
-      const proofInputs: JoinSplitProofInput[] = [];
-      const settledNotes = notes.filter(n => !n.pending);
-      let firstNote = notes.find(n => n.pending) || settledNotes.shift()!;
-      const lastNote = settledNotes.pop();
+      const { proofInputs, outputNotes } = await this.createChainedProofInputs(userId, spendingPublicKey, notes);
+      const proofInput = await this.paymentProofCreator.createProofInput(
+        user,
+        outputNotes,
+        privateInput,
+        recipientPrivateOutput,
+        senderPrivateOutput,
+        publicInput,
+        publicOutput,
+        assetId,
+        noteRecipient,
+        recipientSpendingKeyRequired,
+        publicOwner,
+        spendingPublicKey,
+        allowChain,
+      );
 
-      // Create chained txs to generate one large value note.
-      for (const note of settledNotes) {
-        const inputNotes = [firstNote, note];
-        const noteSum = inputNotes.reduce((sum, n) => sum + n.value, BigInt(0));
-        const proofInput = await this.paymentProofCreator.createProofInput(
-          user,
-          inputNotes,
-          noteSum, // privateInput
-          BigInt(0), // recipientPrivateOutput
-          noteSum, // senderPrivateOutput
-          BigInt(0), // publicInput,
-          BigInt(0), // publicOutput
-          assetId,
-          userId, // noteRecipient
-          spendingKeyRequired,
-          undefined, // publicOwner
-          spendingPublicKey,
-          2,
-        );
-        proofInputs.push(proofInput);
-        firstNote = treeNoteToNote(proofInput.tx.outputNotes[1], user.accountPrivateKey, this.noteAlgos, {
-          allowChain: true,
-        });
-      }
-
-      // Spend the last note and the large value note for whatever this payment proof is for.
-      {
-        const inputNotes = lastNote ? [firstNote, lastNote] : [firstNote];
-        const proofInput = await this.paymentProofCreator.createProofInput(
-          user,
-          inputNotes,
-          privateInput,
-          recipientPrivateOutput,
-          senderPrivateOutput,
-          publicInput,
-          publicOutput,
-          assetId,
-          noteRecipient,
-          recipientSpendingKeyRequired,
-          publicOwner,
-          spendingPublicKey,
-          allowChain,
-        );
-        proofInputs.push(proofInput);
-      }
-
-      return proofInputs;
+      return [...proofInputs, proofInput];
     });
   }
 
@@ -726,21 +718,228 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     userId: GrumpkinAddress,
     bridgeCallData: BridgeCallData,
     depositValue: bigint,
-    inputNotes: Note[],
+    fee: bigint,
     spendingPublicKey: GrumpkinAddress,
   ) {
     return await this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
       const userState = this.getUserState(userId);
       const user = userState.getUserData();
-      return await this.defiDepositProofCreator.createProofInput(
+
+      // The goal here is to create the necessary inputs for a defi tx
+      // A defi tx can have either 1 or 2 input assets.
+
+      // If it has 1 input asset
+      // then we can use both input notes to achieve the required deposit + fee value
+      // and we can create a chain of J/S txs to merge/split notes to achieve the required input
+
+      // If it has 2 input assets then we are more restricted
+      // We can only have 1 input note for each asset and we can only have 1 chain of J/S txs
+      // to merge/splt notes in order to achieve the correct input for an asset
+      // So, for example. We have 2 assets A and B.
+      // We could create a chain of J/S txs to produce a single note for input asset B.
+      // Then we MUST have a single note of the exact size for input asset A.
+      // If we don't then we can't execute the tx.
+
+      // An additional thing to note is that the fee, if there is one is paid for by input asset A
+      // So the input note/s for asset A will need to include the requested fee value
+
+      let notesA: Note[] = [];
+      let notesB: Note[] = [];
+      let requireJoinSplitForAssetB = false;
+      const hasTwoAssets = bridgeCallData.numInputAssets === 2;
+      const spendingKeyRequired = !spendingPublicKey.equals(userId);
+      if (hasTwoAssets) {
+        // We have 2 input assets, so it's the more complex situation as explained above
+        const assetIdB = bridgeCallData.inputAssetIdB!;
+        // Look for a single note for asset B
+        const note2 = await userState.pickNote(assetIdB, depositValue, spendingKeyRequired);
+        // If we found a single note, great. If not then look for multiple notes.
+        notesB = note2 ? [note2] : await userState.pickNotes(assetIdB, depositValue, spendingKeyRequired);
+        if (!notesB.length) {
+          throw new Error(`Failed to find notes of asset ${assetIdB} that sum to ${depositValue}.`);
+        }
+
+        // If we need more than 1 note for asset B OR the single note we found is too large
+        // then we require J/S txs on asset A
+        // We will not be able to use J/S on input asset A!! This is checked further down...
+        requireJoinSplitForAssetB = notesB.length > 1 || notesB[0].value !== depositValue;
+      }
+
+      {
+        const assetIdA = bridgeCallData.inputAssetIdA;
+        const valueA = depositValue + fee;
+        // If a J/S operation is required for asset B then we require that the input note for asset A is NOT pending
+        // Also, if any of the input notes for asset B are pending then we require that the input note for asset A is NOT pending
+        const excludePendingNotes = requireJoinSplitForAssetB || notesB.some(n => n.pending);
+        // If we have 2 input assets then search for a single note
+        const note1 = hasTwoAssets
+          ? await userState.pickNote(assetIdA, valueA, spendingKeyRequired, excludePendingNotes)
+          : undefined;
+        // If we have a single note, great! If not then search for more notes
+        notesA = note1
+          ? [note1]
+          : await userState.pickNotes(assetIdA, valueA, spendingKeyRequired, excludePendingNotes);
+        if (!notesA.length) {
+          throw new Error(`Failed to find notes of asset ${assetIdA} that sum to ${valueA}.`);
+        }
+
+        // Here we are checking to see if we can execute the tx.
+        // If the total note value for asset A is greater then required then we require J/S txs on asset A
+        // If the number of notes for asset A is greater than 2 then we require J/S txs on asset A
+        // If the number of notes for asset A is greater than 1 AND we have 2 input assets then we require J/S txs on asset A
+        const totalInputNoteValueForAssetA = notesA.reduce((sum, note) => sum + note.value, BigInt(0));
+        const requireJoinSplitForAssetA =
+          totalInputNoteValueForAssetA > valueA || notesA.length > 2 || (hasTwoAssets && notesA.length > 1);
+
+        // At this point, if we need J/S txs on both input assets then the tx can't be executed
+        if (requireJoinSplitForAssetA && requireJoinSplitForAssetB) {
+          throw new Error(`Cannot find a note with the exact value for asset ${assetIdA}. Require ${valueA}.`);
+        }
+      }
+
+      const joinSplitProofInputs: JoinSplitProofInput[] = [];
+      const outputNotes: Note[] = [];
+      {
+        // Here we need to generate the proof inputs based on the notes collected above
+        // For asset A, we need the deposit value + any fee
+        // If there is only 1 input asset (asset A) AND we have more than 2 notes then remove 1 non-pending note from the pack (if there is one)
+        // Also reduce the target value by the value of this note
+        let targetValue = depositValue + fee;
+        const reservedNote = !hasTwoAssets && notesA.length > 2 ? notesA.find(n => !n.pending) : undefined;
+        if (reservedNote) {
+          outputNotes.push(reservedNote);
+          targetValue -= reservedNote.value;
+        }
+        // We now need to produce J/S txs as required to give us the required number of notes for asset A
+        // If we have 2 input assets then we require a single note as output from these txs
+        // If we have reserved a note above then we require a single note as output from these txs
+        // Otherwise we can have 2 notes as output from these txs
+        // One thing to note is that we may have a perfect-sized note for asset A here
+        // In this case, this next operation should produce no J/S txs!
+        // Another thing to note is that the check for non-pending notes above is significant
+        // The output from the following operation will be a pending note and a tx can't have 2 pending input notes
+        const numberOfOutputNotes = hasTwoAssets || reservedNote ? 1 : 2;
+        const { proofInputs, outputNotes: outputNotesA } = await this.createChainedProofInputs(
+          userId,
+          spendingPublicKey,
+          notesA.filter(n => n !== reservedNote),
+          targetValue,
+          numberOfOutputNotes,
+        );
+        joinSplitProofInputs.push(...proofInputs);
+        outputNotes.push(...outputNotesA);
+      }
+      if (hasTwoAssets) {
+        // Having produced the required note for asset A above (and any required J/S txs)
+        // We now need to do the same for asset B
+        // As we have 2 assets then we must produce a single output note for this asset
+        const { proofInputs, outputNotes: outputNotesB } = await this.createChainedProofInputs(
+          userId,
+          spendingPublicKey,
+          notesB,
+          depositValue,
+          1,
+        );
+        joinSplitProofInputs.push(...proofInputs);
+        outputNotes.push(...outputNotesB);
+      }
+
+      const defiProofInput = await this.defiDepositProofCreator.createProofInput(
         user,
         bridgeCallData,
         depositValue,
-        inputNotes,
+        outputNotes,
         spendingPublicKey,
       );
+
+      return [...joinSplitProofInputs, defiProofInput];
     });
+  }
+
+  private async createChainedProofInputs(
+    userId: GrumpkinAddress,
+    spendingPublicKey: GrumpkinAddress,
+    notes: Note[],
+    targetValue?: bigint,
+    numberOfOutputNotes = 2,
+  ) {
+    const userState = this.getUserState(userId);
+    const user = userState.getUserData();
+    const spendingKeyRequired = !spendingPublicKey.equals(userId);
+
+    const proofInputs: JoinSplitProofInput[] = [];
+    let outputNotes: Note[] = notes;
+
+    if (notes.length > 2) {
+      // We have more than 2 notes so we want to J/S them down to just 2
+      // We do this by splitting the notes into settled and pending (there must be at most 1 pending note!)
+      // Then we pair a settled note with a settled/pending note to produce a pending output note.
+      // Then we pair that pending output note with another settled note to produce a new pending output note
+      // Repeat this until we have 2 notes remaining, one pending and one settled
+      const settledNotes = notes.filter(n => !n.pending);
+      let firstNote = notes.find(n => n.pending) || settledNotes.shift()!;
+      const lastNote = settledNotes.pop()!;
+      const assetId = firstNote.assetId;
+
+      // Create chained txs to generate 2 output notes
+      for (const note of settledNotes) {
+        const inputNotes = [firstNote, note];
+        const noteSum = inputNotes.reduce((sum, n) => sum + n.value, BigInt(0));
+        const proofInput = await this.paymentProofCreator.createProofInput(
+          user,
+          inputNotes,
+          noteSum, // privateInput
+          BigInt(0), // recipientPrivateOutput
+          noteSum, // senderPrivateOutput
+          BigInt(0), // publicInput,
+          BigInt(0), // publicOutput
+          assetId,
+          userId, // noteRecipient
+          spendingKeyRequired,
+          undefined, // publicOwner
+          spendingPublicKey,
+          2,
+        );
+        proofInputs.push(proofInput);
+        firstNote = treeNoteToNote(proofInput.tx.outputNotes[1], user.accountPrivateKey, this.noteAlgos, {
+          allowChain: true,
+        });
+      }
+
+      outputNotes = [firstNote, lastNote];
+    }
+
+    // If the sum of our output notes does not exactly match the value requested then we must perform 1 final J/S
+    // Also, if the current number of output notes is greater than that requested then we must perform 1 final J/S
+    const noteSum = outputNotes.reduce((sum, n) => sum + n.value, BigInt(0));
+    if ((targetValue !== undefined && noteSum !== targetValue) || outputNotes.length > numberOfOutputNotes) {
+      const senderPrivateOutput = targetValue !== undefined ? targetValue : noteSum;
+      const recipientPrivateOutput = noteSum - senderPrivateOutput;
+      const proofInput = await this.paymentProofCreator.createProofInput(
+        user,
+        outputNotes,
+        noteSum, // privateInput
+        recipientPrivateOutput,
+        senderPrivateOutput,
+        BigInt(0), // publicInput,
+        BigInt(0), // publicOutput
+        outputNotes[0].assetId,
+        userId, // noteRecipient
+        spendingKeyRequired,
+        undefined, // publicOwner
+        spendingPublicKey,
+        3,
+      );
+      proofInputs.push(proofInput);
+      outputNotes = [
+        treeNoteToNote(proofInput.tx.outputNotes[1], user.accountPrivateKey, this.noteAlgos, {
+          allowChain: true,
+        }),
+      ];
+    }
+
+    return { proofInputs, outputNotes };
   }
 
   public async createDefiProof(input: JoinSplitProofInput, txRefNo: number) {
@@ -758,7 +957,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     });
   }
 
-  public async sendProofs(proofs: ProofOutput[], proofTxs: Tx[] = [], proofRequestData?: any) {
+  public async sendProofs(proofs: ProofOutput[], proofTxs: Tx[] = []) {
     return await this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
 
@@ -768,18 +967,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
         depositSignature: signature,
       }));
 
-      const txIds = await this.rollupProvider.sendTxs([...proofTxs, ...txs]).catch(async e => {
-        if (e.message === 'Insufficient fee.') {
-          await this.rollupProvider.clientLog({
-            error: e.message,
-            proofRequestData,
-            proofs: proofs.map(p => ProofId[p.tx.proofId]),
-            proofTxs: proofTxs.map(p => ProofId[ProofData.getProofIdFromBuffer(p.proofData)]),
-            elapsed: Date.now() - (proofRequestData?.created || 0),
-          });
-        }
-        throw e;
-      });
+      const txIds = await this.rollupProvider.sendTxs([...proofTxs, ...txs]);
 
       for (const proof of proofs) {
         const { userId } = proof.tx;
@@ -1014,7 +1202,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
 
   private async computeJoinSplitProvingKey() {
     this.debug('release account proving key...');
-    await this.accountProver.releaseKey();
+    await this.accountProver?.releaseKey();
     this.debug('computing join-split proving key...');
     await this.joinSplitProver.computeKey();
     this.debug('done.');
@@ -1098,96 +1286,113 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
   }
 
   /**
-   * Every time called, determine the lowest `from` block, and download and process the next chunk of blocks.
-   * Will always first bring the data tree into sync, and then forward the blocks onto user states.
-   * This is always called on the serial queue.
+   * Every time called, determine the lowest `from` block for core and user states. If some user state is synced to
+   * a lower block, use this iteration for that user state to catch up (by calling syncUserStates(...) function).
+   * If not, fetch the following chunk of blocks and apply them to both core and user states (syncBoth(...) function).
    */
   private async sync() {
-    this.treeSyncCount++;
-    await this.syncBlocks();
-    this.treeSyncCount--;
-  }
-
-  private async syncBlocks() {
-    const currentTreeSyncCount = this.treeSyncCount;
     // Persistent data could have changed underfoot. Ensure this.sdkStatus and user states are up to date first.
     await this.readSyncInfo();
     await Promise.all(this.userStates.map(us => us.syncFromDb()));
 
     const { syncedToRollup } = this.sdkStatus;
-    const from = syncedToRollup + 1;
-    const reallyOldSize = this.worldState.getSize();
 
-    // First we focus on bringing the core in sync (mutable data tree layers and accounts).
-    // Server will return a chunk of blocks.
-    const timer = new Timer();
-    const coreBlocks = await this.rollupProvider.getBlocks(from);
-    if (coreBlocks.length) {
-      this.debug(`creating contexts for blocks ${from} to ${from + coreBlocks.length - 1}...`);
-    }
-    const coreBlockContexts = coreBlocks.map(b => BlockContext.fromBlock(b, this.pedersen));
-
-    if (coreBlocks.length) {
-      // For debugging corrupted data root.
-      const oldRoot = this.worldState.getRoot();
-
-      const rollups = coreBlockContexts.map(b => b.rollup);
-      const offchainTxData = coreBlocks.map(b => b.offchainTxData);
-      const subtreeRoots = coreBlocks.map(block => block.subtreeRoot!);
-      this.debug(`inserting ${subtreeRoots.length} rollup roots into data tree...`);
-      const oldSize = this.worldState.getSize();
-      await this.worldState.insertElements(rollups[0].dataStartIndex, subtreeRoots);
-      this.debug(`processing aliases...`);
-      await this.processAliases(rollups, offchainTxData);
-      await this.writeSyncInfo(rollups[rollups.length - 1].rollupId);
-
-      // TODO: Ugly hotfix. Find root cause.
-      // We expect our data root to be equal to the new data root in the last block we processed.
-      // UPDATE: Possibly solved. But leaving in for now. Can monitor for clientLogs.
-      const expectedDataRoot = rollups[rollups.length - 1].newDataRoot;
-      const newRoot = this.worldState.getRoot();
-      if (!newRoot.equals(expectedDataRoot)) {
-        const newSize = this.worldState.getSize();
-        await this.reinitDataTree();
-        await this.writeSyncInfo(-1);
-        await this.rollupProvider.clientLog({
-          message: 'Invalid dataRoot.',
-          synchingFromRollup: syncedToRollup,
-          blocksReceived: coreBlocks.length,
-          oldRoot: oldRoot.toString('hex'),
-          newRoot: newRoot.toString('hex'),
-          newSize,
-          oldSize,
-          reallyOldSize,
-          expectedDataRoot: expectedDataRoot.toString('hex'),
-          currentTreeSyncCount,
-        });
-        return;
-      }
-
-      this.debug(`forwarding blocks to user states...`);
-      await Promise.all(this.userStates.map(us => us.processBlocks(coreBlockContexts)));
-
-      this.debug(`finished processing blocks ${from} to ${from + coreBlocks.length - 1} in ${timer.s()}s...`);
-    }
-
-    // Secondly we want bring user states in sync. Determine the lowest block.
+    // Determine the lowest synced block of all user states
     const userSyncedToRollup = Math.min(...this.userStates.map(us => us.getUserData().syncedToRollup));
 
-    // If it's lower than we downloaded for core, fetch and process blocks.
     if (userSyncedToRollup < syncedToRollup) {
-      const timer = new Timer();
-      const from = userSyncedToRollup + 1;
-      this.debug(`fetching blocks from ${from} for user states...`);
-      const userBlocks = await this.rollupProvider.getBlocks(from);
-      this.debug(`creating contexts for blocks ${from} to ${from + userBlocks.length - 1}...`);
-      const userBlockContexts = userBlocks.map(b => BlockContext.fromBlock(b, this.pedersen));
-      this.debug(`forwarding blocks to user states...`);
-      await Promise.all(this.userStates.map(us => us.processBlocks(userBlockContexts)));
-      this.debug(
-        `finished processing user state blocks ${from} to ${from + userBlocks.length - 1} in ${timer.s()}s...`,
-      );
+      // Some user state is lagging behind core --> first make the user state catch up to core
+      await this.syncUserStates(userSyncedToRollup + 1, syncedToRollup);
+    } else {
+      // User state is not lagging behind core --> sync both
+      this.treeSyncCount++;
+      await this.syncBoth(syncedToRollup + 1);
+      this.treeSyncCount--;
     }
+  }
+
+  /**
+   * @notice Fetches blocks and applies them to user states
+   * @from Number of a block from which to sync
+   * @to Number of a block up to which to sync
+   */
+  private async syncUserStates(from: number, to: number) {
+    const timer = new Timer();
+    this.debug(`fetching blocks from ${from} for user states...`);
+    let userBlocks = await this.rollupProvider.getBlocks(from);
+    // Filter blocks with higher `rollupId`/`block height` than `to`
+    userBlocks = userBlocks.filter(block => block.rollupId <= to);
+    if (!userBlocks.length) {
+      // nothing to do
+      return;
+    }
+    this.debug(`creating contexts for blocks ${from} to ${from + userBlocks.length - 1}...`);
+    const userBlockContexts = userBlocks.map(b => BlockContext.fromBlock(b, this.pedersen));
+    this.debug(`forwarding blocks to user states...`);
+    await Promise.all(this.userStates.map(us => us.processBlocks(userBlockContexts)));
+    this.debug(`finished processing user state blocks ${from} to ${from + userBlocks.length - 1} in ${timer.s()}s...`);
+  }
+
+  /**
+   * @notice Fetches blocks and applies them to both core and user states
+   * @from Number of a block from which to sync
+   */
+  private async syncBoth(from: number) {
+    const timer = new Timer();
+    const currentTreeSyncCount = this.treeSyncCount;
+    const reallyOldSize = this.worldState.getSize();
+
+    const coreBlocks = await this.rollupProvider.getBlocks(from);
+    if (!coreBlocks.length) {
+      // nothing to do
+      return;
+    }
+    this.debug(`creating contexts for blocks ${from} to ${from + coreBlocks.length - 1}...`);
+    const coreBlockContexts = coreBlocks.map(b => BlockContext.fromBlock(b, this.pedersen));
+
+    // For debugging corrupted data root.
+    const oldRoot = this.worldState.getRoot();
+
+    // First bring the core in sync (mutable data tree layers and accounts).
+    const rollups = coreBlockContexts.map(b => b.rollup);
+    const offchainTxData = coreBlocks.map(b => b.offchainTxData);
+    const subtreeRoots = coreBlocks.map(block => block.subtreeRoot!);
+    this.debug(`inserting ${subtreeRoots.length} rollup roots into data tree...`);
+    const oldSize = this.worldState.getSize();
+    await this.worldState.insertElements(rollups[0].dataStartIndex, subtreeRoots);
+    this.debug(`processing aliases...`);
+    await this.processAliases(rollups, offchainTxData);
+    await this.writeSyncInfo(rollups[rollups.length - 1].rollupId);
+
+    // TODO: Ugly hotfix. Find root cause.
+    // We expect our data root to be equal to the new data root in the last block we processed.
+    // UPDATE: Possibly solved. But leaving in for now. Can monitor for clientLogs.
+    const expectedDataRoot = rollups[rollups.length - 1].newDataRoot;
+    const newRoot = this.worldState.getRoot();
+    if (!newRoot.equals(expectedDataRoot)) {
+      const newSize = this.worldState.getSize();
+      await this.reinitDataTree();
+      await this.writeSyncInfo(-1);
+      await this.rollupProvider.clientLog({
+        message: 'Invalid dataRoot.',
+        synchingFromRollup: from,
+        blocksReceived: coreBlocks.length,
+        oldRoot: oldRoot.toString('hex'),
+        newRoot: newRoot.toString('hex'),
+        newSize,
+        oldSize,
+        reallyOldSize,
+        expectedDataRoot: expectedDataRoot.toString('hex'),
+        currentTreeSyncCount,
+      });
+      return;
+    }
+
+    // Second apply the blocks to user states
+    this.debug(`forwarding blocks to user states...`);
+    await Promise.all(this.userStates.map(us => us.processBlocks(coreBlockContexts)));
+
+    this.debug(`finished processing blocks ${from} to ${from + coreBlocks.length - 1} in ${timer.s()}s...`);
   }
 
   /**

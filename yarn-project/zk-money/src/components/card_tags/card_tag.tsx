@@ -8,8 +8,4 @@ export const CardTag = styled.div`
   height: 28px;
   display: flex;
   align-items: center;
-
-  @media (max-width: 480px) {
-    font-size: 11px;
-  }
 `;

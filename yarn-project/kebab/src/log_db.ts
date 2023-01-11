@@ -115,4 +115,9 @@ export class EthLogsDb {
       transactionIndex: `0x${transactionIndex?.toString(16)}`,
     };
   }
+
+  public async getLastKnownBlockNumber() {
+    const latest = await this.ethEventRep.find({ order: { blockNumber: 'DESC' }, take: 1 });
+    return latest[0]?.blockNumber || 0;
+  }
 }

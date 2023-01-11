@@ -14,11 +14,19 @@ import { Loader, LoaderSize } from '../../../ui-components/index.js';
 import { useCachedAlias } from '../../../alt-model/alias_hooks.js';
 import style from './balance.module.scss';
 import { useUserTxs } from '../../../alt-model/user_tx_hooks.js';
+import { SynchronisationLoadingBar } from '../../../components/index.js';
 
 function LoadingFallback() {
   return (
     <div className={style.loadingRoot}>
       <Loader size={LoaderSize.ExtraLarge} />
+    </div>
+  );
+}
+function SyncingFallback() {
+  return (
+    <div className={style.loadingRoot}>
+      <SynchronisationLoadingBar />
     </div>
   );
 }
@@ -72,6 +80,7 @@ export function Balance(props: BalanceProps) {
   }, [txs]);
 
   if (isLoading) return <LoadingFallback />;
+  if (accountState?.isSyncing && accountState.isRegistered) return <SyncingFallback />;
 
   if (!accountState || !accountState.isRegistered)
     return (

@@ -1,0 +1,36 @@
+version: '3'
+services:
+  fork:
+    image: ghcr.io/foundry-rs/foundry:nightly-8c4294c1d2321e20a3543fbd9a813d47053a8303
+    entrypoint: 'anvil -p=8545 --host 0.0.0.0 --fork-url ${FORK_URL} --chain-id ${CHAIN_ID}'
+    ports:
+      - '8545:8545'
+
+  contracts:
+    platform: linux/amd64
+    image: aztecprotocol/contracts:latest
+    environment:
+      ETHEREUM_HOST: http://fork:8545
+      PORT: 8547
+    command: ./scripts/start_e2e.sh
+    depends_on:
+      - fork
+
+  falafel:
+    platform: linux/amd64
+    image: aztecprotocol/falafel:latest
+    environment:
+      ETHEREUM_HOST: http://fork:8545
+      CONTRACTS_HOST: http://contracts:8547
+      NUM_INNER_ROLLUP_TXS: ${NUM_INNER_ROLLUP_TXS:-3}
+      NUM_OUTER_ROLLUP_PROOFS: ${NUM_OUTER_ROLLUP_PROOFS:-1}
+      PROVERLESS: 'true'
+      MAX_CIRCUIT_SIZE: 8192
+      PROOF_GENERATOR_MODE: local
+      NO_BUILD: 'true'
+      PORT: 8081
+    depends_on:
+      - contracts
+    command: start:e2e
+    ports:
+      - '8081:8081'

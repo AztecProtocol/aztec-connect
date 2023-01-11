@@ -1,0 +1,10 @@
+.root {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  overflow: hidden;
+  background-color: #f6fbfc;
+  background-image: linear-gradient(#f6fbfc, #d8d4e7);
+}

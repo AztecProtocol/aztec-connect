@@ -12,6 +12,7 @@ const log = createLogger('am:harden_accounts');
  */
 export enum HardenCommand {
   FULL_SEQUENCE,
+  PULL_ACCOUNTS,
   CREATE_HARDENER,
   GEN_HARDEN_PROOFS,
   HARDEN_ACCOUNTS,
@@ -43,18 +44,16 @@ export async function harden(command: HardenCommand, options: any) {
     options.to,
     options.numWorkers,
     options.memoryDb,
-    command != HardenCommand.CREATE_HARDENER && command != HardenCommand.FULL_SEQUENCE, // useCachedHardener - use file cache post-hardener-creation
     options.liveRun,
   );
 
   await hardener.init();
   if (command == HardenCommand.FULL_SEQUENCE) {
-    log('Executing the full sequence of hardener steps');
+    log('Executing the full sequence of hardener steps except verification');
     await hardener.pullAccountsToHarden();
     await hardener.createHardenerAccount();
     await hardener.generateAndStoreProofs();
     await hardener.monitorAndSubmitProofs();
-    await hardener.verifyAccountsHardened();
   } else {
     log(`Executing single hardener step: ${HardenCommand[command]}`);
 
@@ -62,7 +61,8 @@ export async function harden(command: HardenCommand, options: any) {
     // Don't need to pull accounts when just submitting harden proofs to falafel (HARDEN_ACCOUNTS mode)
     // because they should all already be stored to in file.
     if (command != HardenCommand.HARDEN_ACCOUNTS) {
-      await hardener.pullAccountsToHarden();
+      const needWorldState = command == HardenCommand.PULL_ACCOUNTS || command == HardenCommand.CREATE_HARDENER;
+      await hardener.pullAccountsToHarden(needWorldState);
     }
 
     switch (command) {
@@ -80,6 +80,9 @@ export async function harden(command: HardenCommand, options: any) {
       }
       case HardenCommand.VERIFY_HARDENED: {
         await hardener.verifyAccountsHardened();
+        break;
+      }
+      default: {
         break;
       }
     }

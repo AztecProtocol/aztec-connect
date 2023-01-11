@@ -2,15 +2,14 @@ import { EthAddress } from '@aztec/barretenberg/address';
 import { toBigIntBE, toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { Blockchain, TxType } from '@aztec/barretenberg/blockchain';
 import { Block } from '@aztec/barretenberg/block_source';
-import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { DefiDepositProofData, JoinSplitProofData, ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
 import { InitHelpers } from '@aztec/barretenberg/environment';
-import { MemoryFifo } from '@aztec/barretenberg/fifo';
+import { SerialQueue } from '@aztec/barretenberg/fifo';
 import { createLogger } from '@aztec/barretenberg/log';
 import { DefiInteractionNote, NoteAlgorithms, TreeClaimNote } from '@aztec/barretenberg/note_algorithms';
 import { OffchainDefiDepositData } from '@aztec/barretenberg/offchain_tx_data';
 import { InnerProofData, RollupProofData } from '@aztec/barretenberg/rollup_proof';
-import { BridgePublishQuery, BridgePublishQueryResult } from '@aztec/barretenberg/rollup_provider';
+import { BridgePublishQuery } from '@aztec/barretenberg/rollup_provider';
 import { serializeBufferArrayToVector } from '@aztec/barretenberg/serialize';
 import { Timer } from '@aztec/barretenberg/timer';
 import { WorldStateConstants } from '@aztec/barretenberg/world_state';
@@ -30,9 +29,10 @@ import { getTxTypeFromInnerProofData } from './get_tx_type.js';
 import { Metrics } from './metrics/index.js';
 import { createDefiRollupTx } from './pipeline_coordinator/bridge_tx_queue.js';
 import { RollupTimeout, RollupTimeouts } from './pipeline_coordinator/publish_time_manager.js';
-import { parseInteractionResult, RollupDb } from './rollup_db/index.js';
+import { RollupDb } from './rollup_db/index.js';
 import { RollupPipeline, RollupPipelineFactory } from './rollup_pipeline.js';
 import { TxFeeResolver } from './tx_fee_resolver/index.js';
+import { BridgeStatsQueryHandler } from './bridge/bridge_stats_query.js';
 
 const innerProofDataToTxDao = (tx: InnerProofData, offchainTxData: Buffer, created: Date, txType: TxType) => {
   const txDao = new TxDao();
@@ -46,21 +46,6 @@ const innerProofDataToTxDao = (tx: InnerProofData, offchainTxData: Buffer, creat
   txDao.txType = txType;
   txDao.excessGas = 0;
   return txDao;
-};
-
-const rollupDaoToBlockBuffer = (dao: RollupDao) => {
-  return new Block(
-    dao.ethTxHash!,
-    dao.created,
-    dao.id,
-    dao.rollupProof.rollupSize,
-    dao.rollupProof.encodedProofData!,
-    dao.rollupProof.txs.map(tx => tx.offchainTxData),
-    parseInteractionResult(dao.interactionResult!),
-    dao.gasUsed!,
-    toBigIntBE(dao.gasPrice!),
-    dao.subtreeRoot,
-  ).toBuffer();
 };
 
 interface BridgeStat {
@@ -77,13 +62,12 @@ type TxPoolProfile = {
 };
 
 export class WorldState {
-  private blockQueue = new MemoryFifo<Block>();
+  private serialQueue = new SerialQueue();
   private pipeline?: RollupPipeline;
-  private blockBufferCache: Buffer[] = [];
   private txPoolProfile!: TxPoolProfile;
   private txPoolProfileValidUntil!: Date;
   private initialSubtreeRootsCache: Buffer[] = [];
-  private runningPromise!: Promise<void>;
+  private bridgeStatsQueryHandler: BridgeStatsQueryHandler;
 
   constructor(
     public rollupDb: RollupDb,
@@ -93,6 +77,7 @@ export class WorldState {
     private noteAlgo: NoteAlgorithms,
     private metrics: Metrics,
     private txFeeResolver: TxFeeResolver,
+    private disablePipeline = false,
     private expireTxPoolAfter = 60 * 1000,
     private log = createLogger('WorldState'),
   ) {
@@ -103,23 +88,22 @@ export class WorldState {
       pendingSecondClassTxCount: 0,
       pendingBridgeStats: [],
     };
+    this.bridgeStatsQueryHandler = new BridgeStatsQueryHandler(rollupDb, txFeeResolver);
   }
 
   public async start() {
     await this.worldStateDb.start();
 
+    this.serialQueue.start();
+
+    // Syncs rollups that are on-chain but not yet in our db.
     await this.syncState();
 
-    // Get all settled rollups, and convert them to block buffers for shipping to clients.
-    // New blocks will be appended as they are received.
-    this.blockBufferCache = (await this.rollupDb.getSettledRollups(0)).map(rollupDaoToBlockBuffer);
-
-    this.blockchain.on('block', block => this.blockQueue.put(block));
-    await this.blockchain.start(await this.rollupDb.getNextRollupId());
-
-    this.runningPromise = this.blockQueue.process(block => this.handleBlock(block));
-
     this.startNewPipeline();
+
+    // Subscribe to sync any new rollups.
+    this.blockchain.on('block', block => this.serialQueue.put(() => this.handleBlock(block)));
+    await this.blockchain.start(await this.rollupDb.getNextRollupId());
   }
 
   public setTxFeeResolver(txFeeResolver: TxFeeResolver) {
@@ -128,10 +112,6 @@ export class WorldState {
 
   public getRollupSize() {
     return this.pipelineFactory.getRollupSize();
-  }
-
-  public getBlockBuffers(from: number, take?: number) {
-    return this.blockBufferCache.slice(from, take ? from + take : undefined);
   }
 
   public getNextPublishTime() {
@@ -191,62 +171,15 @@ export class WorldState {
   }
 
   public async queryBridgeStats(query: BridgePublishQuery) {
-    const currentTime = new Date();
-    const queryThreshold = new Date(currentTime.getTime() - query.periodSeconds * 1000);
-    const rollups = await this.rollupDb.getSettledRollupsAfterTime(queryThreshold);
-    const interactionsByBridgeCallData: { [key: string]: [Date] } = {};
-    let totalTimePeriod = 0;
-    let numInteractionPeriods = 0;
-    let totalGas = 0;
-    for (const rollup of rollups) {
-      const bridgeCallDatas = RollupProofData.getBridgeCallDatas(rollup.rollupProof.encodedProofData);
-      for (const bcd of bridgeCallDatas.map(x => BridgeCallData.fromBuffer(x))) {
-        let gasForBridge = 0;
-        try {
-          gasForBridge = this.txFeeResolver.getFullBridgeGas(bcd.toBigInt());
-        } catch (error) {
-          continue;
-        }
-        if (bcd.bridgeAddressId !== query.bridgeAddressId) {
-          continue;
-        }
-        if (query.inputAssetIdA !== undefined && query.inputAssetIdA !== bcd.inputAssetIdA) {
-          continue;
-        }
-        if (query.inputAssetIdB !== undefined && query.inputAssetIdB !== bcd.inputAssetIdB) {
-          continue;
-        }
-        if (query.outputAssetIdA !== undefined && query.outputAssetIdA !== bcd.outputAssetIdA) {
-          continue;
-        }
-        if (query.outputAssetIdB !== undefined && query.outputAssetIdB !== bcd.outputAssetIdB) {
-          continue;
-        }
-        if (query.auxData !== undefined && query.auxData !== bcd.auxData) {
-          continue;
-        }
-        const bcdString = bcd.toString();
-        if (interactionsByBridgeCallData[bcdString] === undefined) {
-          interactionsByBridgeCallData[bcdString] = [rollup.mined!];
-          continue;
-        }
-        interactionsByBridgeCallData[bcdString].push(rollup.mined!);
-        const newArray = interactionsByBridgeCallData[bcdString];
-        totalTimePeriod += (newArray[newArray.length - 1].getTime() - newArray[newArray.length - 2].getTime()) / 1000;
-        numInteractionPeriods++;
-        totalGas += gasForBridge;
-      }
-    }
-    return {
-      averageTimeout: numInteractionPeriods === 0 ? 0 : totalTimePeriod / numInteractionPeriods,
-      averageGasPerHour: totalTimePeriod === 0 ? 0 : totalGas / (1000 * 60 * 60),
-      query,
-    } as BridgePublishQueryResult;
+    return await this.bridgeStatsQueryHandler.processBridgeQuery(query);
   }
 
   public async stop(flushQueue = false) {
-    flushQueue ? this.blockQueue.end() : this.blockQueue.cancel();
-    await this.runningPromise;
+    if (flushQueue) {
+      await this.serialQueue.end();
+    } else {
+      this.serialQueue.cancel();
+    }
     await this.blockchain.stop();
     await this.pipeline?.stop(false);
     this.worldStateDb.stop();
@@ -328,23 +261,31 @@ export class WorldState {
       this.log('Data tree already has information. Skipping merkle tree genesis sync.');
     }
 
-    const accountDaos = accounts.map(
-      a =>
-        new AccountDao({
-          accountPublicKey: a.alias.address,
-          aliasHash: a.alias.aliasHash,
-        }),
-    );
-    await this.rollupDb.addAccounts(accountDaos);
+    if ((await this.rollupDb.getAccountCount()) === 0) {
+      const accountDaos = accounts.map(
+        a =>
+          new AccountDao({
+            accountPublicKey: a.alias.address,
+            aliasHash: a.alias.aliasHash,
+          }),
+      );
+      this.log(`Adding ${accountDaos.length} accounts to db...`);
+      await this.rollupDb.addAccounts(accountDaos);
+    } else {
+      this.log('Account db already has entries. Skipping account genesis sync.');
+    }
   }
 
   private async syncStateFromBlockchain(nextRollupId: number) {
     this.log(`Syncing state from rollup ${nextRollupId}...`);
-    const blocks = await this.blockchain.getBlocks(nextRollupId);
 
-    for (const block of blocks) {
-      await this.updateDbs(block);
-    }
+    // Once this returns, all blocks will be on the serialQueue.
+    await this.blockchain.callbackRollupBlocksFrom(nextRollupId, block =>
+      this.serialQueue.put(() => this.updateDbs(block)),
+    );
+
+    // Wait until we've fully processed the serialQueue before continuing.
+    await this.serialQueue.syncPoint();
   }
 
   /**
@@ -354,6 +295,14 @@ export class WorldState {
    */
   private async syncState() {
     this.printState();
+
+    // Cleanup transient state.
+    // TODO: If we can get rid of bridgeMetrics associated to an in-progress rollup, or remove need for that
+    // key constraint, we can get rid of unsettled rollups in db altogether.
+    // Would also enable to remove branching logic between "our rollup", "someone elses rollup" in processing rollups.
+    await this.rollupDb.deleteUnsettledRollups();
+    await this.rollupDb.deleteOrphanedRollupProofs();
+
     const nextRollupId = await this.rollupDb.getNextRollupId();
     const updateDbsStart = new Timer();
     if (nextRollupId === 0) {
@@ -361,10 +310,6 @@ export class WorldState {
     }
     await this.syncStateFromBlockchain(nextRollupId);
     await this.cacheInitialStateSubtreeRoots();
-
-    // This deletes all proofs created until now. Not ideal, figure out a way to resume.
-    await this.rollupDb.deleteUnsettledRollups();
-    await this.rollupDb.deleteOrphanedRollupProofs();
 
     this.log(`Database synched in ${updateDbsStart.s()}s.`);
   }
@@ -399,8 +344,12 @@ export class WorldState {
   }
 
   private startNewPipeline() {
+    if (this.disablePipeline) {
+      return;
+    }
+    this.log('Starting new pipeline...');
     this.pipeline = this.pipelineFactory.create();
-    void this.pipeline.start().catch(err => {
+    this.pipeline.start().catch(err => {
       this.pipeline = undefined;
       this.log('PIPELINE PANIC! Handle the exception!');
       this.log(err);
@@ -414,7 +363,10 @@ export class WorldState {
    * Starts a new pipeline.
    */
   private async handleBlock(block: Block) {
-    await this.pipeline?.stop(false);
+    if (this.pipeline) {
+      this.log('Stopping existing pipeline...');
+      await this.pipeline.stop(false);
+    }
     await this.updateDbs(block);
     this.startNewPipeline();
   }
@@ -438,11 +390,11 @@ export class WorldState {
 
     if (rollupIsOurs) {
       // This must be the rollup we just published. Commit the world state.
-      this.log(`Rollup ${rollupId} was ours, committing our world state`);
+      this.log(`World state db already up-to-date. Comitting.`);
       await this.worldStateDb.commit();
     } else {
-      // Someone elses rollup. Discard any of our world state modifications and update world state with new rollup.
-      this.log(`Rollup ${rollupId} was not ours, taking new world state from received rollup`);
+      // Discard any of our world state modifications and update world state with new rollup.
+      this.log(`World state db doesn't match that of rollup. Discarding local changes and recomputing...`);
       await this.worldStateDb.rollback();
       await this.addRollupToWorldState(decodedRollupProofData);
     }
@@ -455,18 +407,21 @@ export class WorldState {
       await this.purgeInvalidTxs();
     }
 
+    // Purge the bridgeQuery cache.
+    this.bridgeStatsQueryHandler.onNewRollup();
+
     this.printState();
     end();
   }
 
   private async purgeInvalidTxs() {
+    this.log('Purging invalid txs...');
     const pendingTxs = await this.rollupDb.getPendingTxs();
     const txsToPurge = await this.validateTxs(pendingTxs);
-    if (!txsToPurge.length) {
-      return;
+    if (txsToPurge.length) {
+      await this.rollupDb.deleteTxsById(txsToPurge);
     }
-    await this.rollupDb.deleteTxsById(txsToPurge);
-    this.log(`Purged ${txsToPurge.length} txs from pool`);
+    this.log(`Purged ${txsToPurge.length} txs from pool.`);
   }
 
   private async validateTxs(txs: TxDao[]) {
@@ -556,6 +511,9 @@ export class WorldState {
   private async processDefiProofs(rollup: RollupProofData, offchainTxData: Buffer[], block: Block) {
     const { innerProofData, dataStartIndex, bridgeCallDatas, rollupId } = rollup;
     const { interactionResult } = block;
+    const claimsToAdd: ClaimDao[] = [];
+    const confirmClaimedNullifiers: Buffer[] = [];
+
     let offChainIndex = 0;
     for (let i = 0; i < innerProofData.length; ++i) {
       const proofData = innerProofData[i];
@@ -593,11 +551,11 @@ export class WorldState {
             fee,
             created: new Date(),
           });
-          await this.rollupDb.addClaim(claim);
+          claimsToAdd.push(claim);
           break;
         }
         case ProofId.DEFI_CLAIM:
-          await this.rollupDb.confirmClaimed(proofData.nullifier1, block.created);
+          confirmClaimedNullifiers.push(proofData.nullifier1);
           break;
       }
       offChainIndex++;
@@ -607,12 +565,22 @@ export class WorldState {
       this.log(
         `Received defi note result ${defiNote.result}, input ${defiNote.totalInputValue}, outputs ${defiNote.totalOutputValueA}/${defiNote.totalOutputValueB}, for nonce ${defiNote.nonce}`,
       );
-      await this.rollupDb.updateClaimsWithResultRollupId(defiNote.nonce, rollupId);
     }
+
+    // need to add the claims first as there may be claims added here that are updated further down
+    await this.rollupDb.addClaims(claimsToAdd);
+
+    await Promise.all([
+      this.rollupDb.confirmClaimed(confirmClaimedNullifiers, block.mined),
+      this.rollupDb.updateClaimsWithResultRollupId(
+        interactionResult.map(ir => ir.nonce),
+        rollupId,
+      ),
+    ]);
   }
 
   private async confirmOrAddRollupToDb(rollup: RollupProofData, offchainTxData: Buffer[], block: Block) {
-    const { txHash, encodedRollupProofData, created, interactionResult } = block;
+    const { txHash, encodedRollupProofData, mined: created, interactionResult } = block;
 
     const assetMetrics = await this.getAssetMetrics(rollup, interactionResult);
 
@@ -627,6 +595,7 @@ export class WorldState {
       subtreeDepth,
     );
 
+    this.log(`Rollup num txs: ${rollup.getNonPaddingProofs().length}`);
     this.log(`Rollup subtree root: ${subtreeRoot.toString('hex')}`);
     this.log(`Rollup gas used: ${block.gasUsed}`);
     this.log(`Rollup gas price: ${fromBaseUnits(block.gasPrice, 9, 2)} gwei`);
@@ -641,7 +610,7 @@ export class WorldState {
         rollup.rollupId,
         block.gasUsed,
         block.gasPrice,
-        block.created,
+        block.mined,
         block.txHash,
         interactionResult,
         txIds,
@@ -650,24 +619,21 @@ export class WorldState {
         subtreeRoot,
       );
 
-      for (const inner of rollup.innerProofData) {
-        if (inner.isPadding()) {
-          continue;
-        }
+      for (const inner of rollup.getNonPaddingProofs()) {
         const tx = rollupProof.txs.find(tx => tx.id.equals(inner.txId));
         if (!tx) {
           this.log('Rollup tx missing. Not tracking time...');
           continue;
         }
-        this.metrics.txSettlementDuration(block.created.getTime() - tx.created.getTime());
+        this.metrics.txSettlementDuration(block.mined.getTime() - tx.created.getTime());
       }
 
       await this.metrics.rollupReceived(rollupDao);
     } else {
       this.log(`Adding rollup ${rollup.rollupId} from someone else`);
       // Not a rollup we created. Add or replace rollup.
-      const txs = rollup.innerProofData
-        .filter(tx => !tx.isPadding())
+      const txs = rollup
+        .getNonPaddingProofs()
         .map((p, i) => innerProofDataToTxDao(p, offchainTxData[i], created, getTxTypeFromInnerProofData(p)));
       const rollupProofDao = new RollupProofDao({
         id: rollup.rollupHash,
@@ -685,8 +651,7 @@ export class WorldState {
         dataRoot: rollup.newDataRoot,
         rollupProof: rollupProofDao,
         ethTxHash: txHash,
-        mined: block.created,
-        created: block.created,
+        mined: block.mined,
         interactionResult: serializeBufferArrayToVector(interactionResult.map(r => r.toBuffer())),
         gasPrice: toBufferBE(block.gasPrice, 32),
         gasUsed: block.gasUsed,
@@ -698,9 +663,6 @@ export class WorldState {
       await this.rollupDb.addRollup(rollupDao);
       await this.metrics.rollupReceived(rollupDao);
     }
-
-    const rollupDao = (await this.rollupDb.getRollup(rollup.rollupId))!;
-    this.blockBufferCache.push(rollupDaoToBlockBuffer(rollupDao!));
   }
 
   private async getAssetMetrics(rollup: RollupProofData, interactionResults: DefiInteractionNote[]) {
@@ -798,6 +760,7 @@ export class WorldState {
     if (currentSize > dataStartIndex) {
       // The tree data is immutable, so we can assume if it's larger than the current start index, that this
       // data has been inserted before. e.g. maybe just the sql db was erased, but we still have the tree data.
+      this.log(`Data tree size of ${currentSize} is > ${dataStartIndex}, skipping updates.`);
       return;
     }
 

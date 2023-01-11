@@ -15,8 +15,9 @@ import {SyncBridge} from "../../test/mocks/SyncBridge.sol";
 import {AsyncBridge} from "../../test/mocks/AsyncBridge.sol";
 import {IDefiBridge} from "core/interfaces/IDefiBridge.sol";
 import {AztecFaucet} from "periphery/AztecFaucet.sol";
-import {MockPriceFeed} from "bridge-tests/bridges/liquity/utils/MockPriceFeed.sol";
-import {DataProviderDeployment} from "bridge-deployments/dataprovider/DataProviderDeployment.s.sol";
+import {MockChainlinkOracle} from "../../test/mocks/MockChainlinkOracle.sol";
+import {MockBridgeDataProvider} from "../../test/mocks/MockBridgeDataProvider.sol";
+
 
 contract ChainSpecificSetup is Test {
     // Mainnet fork key addresses
@@ -114,9 +115,9 @@ contract ChainSpecificSetup is Test {
         public
         returns (BridgePeripheryAddresses memory)
     {
-        uint256 daiPrice = 1 * 10 ** 15; // 1000 DAI/ETH
+        int256 daiPrice = 1 * 10 ** 15; // 1000 DAI/ETH
         uint256 initialEthSupply = 0.1 ether;
-        uint256 initialTokenSupply = (initialEthSupply * 1 ether) / daiPrice;
+        uint256 initialTokenSupply = (initialEthSupply * 1 ether) / uint256(daiPrice);
 
         // Removes the caps to not run into unwanted issues in E2E tests
         vm.broadcast();
@@ -127,29 +128,35 @@ contract ChainSpecificSetup is Test {
         ERC20Permit btc = deployERC20(_proxy, _permitHelper, "BTC", 8); // asset 2
 
         // Deploy dummy bridge
-        deployDummyBridge(_proxy, [address(dai), address(btc)]);
-
-        // Deploy mock data provider
-        DataProviderDeployment dataProviderDeployment = new DataProviderDeployment();
-        address dataProvider = dataProviderDeployment.deploy(); // broadcast done internally
+        deployDummyBridge(_proxy, [address(dai), address(btc)]); // bridge 1
 
         // Deploy sync and async bridge
-        SyncBridge syncBridge = deploySyncBridge(_proxy, address(dai));
-        AsyncBridge asyncBridge = deployAsyncBridge(_proxy, address(dai));
+        SyncBridge syncBridge = deploySyncBridge(_proxy, address(dai)); // bridge 2
+        AsyncBridge asyncBridge = deployAsyncBridge(_proxy, address(dai)); // bridge 3
+
+        // Deploy mock data provider
+        vm.broadcast();
+        MockBridgeDataProvider mockDataProvider = new MockBridgeDataProvider();
+
+        // Set mock bridge data
+        vm.broadcast();
+        mockDataProvider.setBridgeData(1, address(syncBridge), 50000, "Sync Bridge");
+        vm.broadcast();
+        mockDataProvider.setBridgeData(2, address(asyncBridge), 50000, "Async Bridge");
 
         // Deploy Price Feeds
         vm.broadcast();
-        MockPriceFeed gasPriceFeed = new MockPriceFeed(20 gwei);
+        MockChainlinkOracle gasPriceFeed = new MockChainlinkOracle(20 gwei);
 
         vm.broadcast();
-        MockPriceFeed daiPriceFeed = new MockPriceFeed(daiPrice);
+        MockChainlinkOracle daiPriceFeed = new MockChainlinkOracle(daiPrice);
 
         // Deploy faucet
         address faucet = deployFaucet(_faucetOperator);
 
         // return all of the addresses that have just been deployed
         return BridgePeripheryAddresses({
-            dataProvider: dataProvider,
+            dataProvider: address(mockDataProvider),
             gasPriceFeed: address(gasPriceFeed),
             daiPriceFeed: address(daiPriceFeed),
             faucet: faucet,
@@ -229,7 +236,7 @@ contract ChainSpecificSetup is Test {
 
         for (uint256 i; i < assets.length; ++i) {
             vm.broadcast();
-            ERC20Permit(assets[i]).mint(_proxy, topupTokenValue);
+            ERC20Permit(assets[i]).mint(address(dummyDefiBridge), topupTokenValue);
         }
 
         vm.broadcast();

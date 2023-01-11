@@ -17,18 +17,16 @@ export function DefiInvestmentRow({ position, onOpenDefiExitModal }: DefiInvestm
   const { recipe } = position;
   return (
     <div className={style.root}>
-      <div className={cx(style.segment, style.nameWrapper)}>
+      <div className={cx(style.firstSegment, style.segment, style.nameWrapper)}>
         <img className={style.logo} src={recipe.miniLogo} alt="" />
         <div className={style.name}>{recipe.name}</div>
       </div>
-      <div className={style.separator} />
       <div className={cx(style.segment, style.apyWrapper)}>
         <div className={style.apy}>{renderPositionKeyStat(position)}</div>
       </div>
       <div className={cx(style.segment, style.valueWrapper)}>
         <div className={style.value}>{renderValueField(position)}</div>
       </div>
-      <div className={style.separator} />
       <div className={style.lastSegment}>{renderInteractionField(position, onOpenDefiExitModal)}</div>
     </div>
   );
