@@ -29,6 +29,7 @@ services:
       PROOF_GENERATOR_MODE: local
       NO_BUILD: 'true'
       PORT: 8081
+      INITIAL_RUNTIME_CONFIG_PATH: './config/dev_testnet_initial_config.json'
     depends_on:
       - contracts
     command: start:e2e
