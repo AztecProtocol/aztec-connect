@@ -113,6 +113,7 @@ export interface DefiRecipe {
   exitBridgeAddressId?: number;
   address: EthAddress;
   isAsync?: boolean;
+  asyncOpenTooltip?: string;
   flow: BridgeFlowAssets;
   openHandleAsset?: RemoteAsset;
   valueEstimationInteractionAssets: BridgeInteractionAssets;
