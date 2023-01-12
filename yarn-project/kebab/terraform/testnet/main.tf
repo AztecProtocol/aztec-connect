@@ -137,7 +137,7 @@ resource "aws_ecs_task_definition" "kebab" {
       },
       {
         "name": "ETHEREUM_HOST",
-        "value": "https://${var.DEPLOY_TAG}-mainnet-fork.aztec.network:8545"
+        "value": "https://${var.DEPLOY_TAG}-mainnet-fork.aztec.network:8545/${var.AC_TEST_FORK_API_KEY}"
       },
       {
         "name": "FAUCET_OPERATOR",
