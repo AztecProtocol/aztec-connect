@@ -29,7 +29,8 @@ export function appFactory(server: Server, prefix: string) {
   router.get('/get-blocks', (ctx: Koa.Context) => {
     if (server.isReady()) {
       const from = ctx.query.from ? +ctx.query.from : undefined;
-      const take = ctx.query.take ? Math.min(+ctx.query.take, 100) : undefined;
+      // ensure take is between 0 -> 100
+      const take = ctx.query.take ? Math.min(Math.max(+ctx.query.take, 0), 100) : undefined;
       ctx.body = server.getBlockBuffers(from, take);
       ctx.compress = false;
       ctx.status = 200;

@@ -51,7 +51,7 @@ export const BlockList: React.FunctionComponent<BlockListProps> = ({
       if (response.ok) {
         const result = Buffer.from(await response.arrayBuffer());
         const blocks = deserializeBlocks(result);
-        setBlocks(blocks.map(formatServerBlock));
+        setBlocks(blocks.reverse().map(formatServerBlock));
       }
     }
   };

@@ -203,7 +203,8 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
   });
 
   router.get('/get-blocks', recordMetric, async (ctx: Koa.Context) => {
-    const take = ctx.query.take ? Math.min(+ctx.query.take, 100) : 100;
+    // ensure take is between 0 -> 100
+    const take = ctx.query.take ? Math.min(Math.max(+ctx.query.take, 0), 100) : 100;
     const blocks = ctx.query.from ? await server.getBlockBuffers(+ctx.query.from, take) : [];
     const response = Buffer.concat([
       numToInt32BE(await server.getLatestRollupId()),
