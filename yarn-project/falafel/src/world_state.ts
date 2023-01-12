@@ -380,6 +380,11 @@ export class WorldState {
     const decodedRollupProofData = RollupProofData.decode(encodedRollupProofData);
     const { rollupId, rollupHash, newDataRoot, newNullRoot, newDataRootsRoot, newDefiRoot } = decodedRollupProofData;
 
+    const nextExpectedRollupId = await this.rollupDb.getNextRollupId();
+    if (rollupId !== nextExpectedRollupId) {
+      this.log(`Received rollup ${rollupId} but we were expecting ${nextExpectedRollupId}!! Ignoring rollup.`);
+      return;
+    }
     this.log(`Processing rollup ${rollupId}: ${rollupHash.toString('hex')}...`);
 
     const rollupIsOurs =
