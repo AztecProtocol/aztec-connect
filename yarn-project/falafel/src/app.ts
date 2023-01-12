@@ -33,7 +33,7 @@ const toDepositTxJson = ({ proofData }: TxDao): DepositTxJson => {
   return {
     assetId: proof.publicAssetId,
     value: proof.publicValue.toString(),
-    publicOwner: proof.publicOwner.toString(),
+    publicOwner: proof.publicOwner.toLowerCaseAddress(),
   };
 };
 
