@@ -804,7 +804,9 @@ jobs:
       - *setup_env
       - run:
           name: 'set environment'
-          command: echo export VERSION_TAG=dev >> $BASH_ENV
+          command: |
+            echo export VERSION_TAG=dev >> $BASH_ENV
+            echo export DEPLOY_TAG=aztec-connect-dev >> $BASH_ENV
       - run:
           name: 'derive keys'
           command: |
@@ -826,7 +828,9 @@ jobs:
       - *setup_env
       - run:
           name: 'set environment'
-          command: echo export VERSION_TAG=testnet >> $BASH_ENV
+          command: |
+            echo export VERSION_TAG=testnet >> $BASH_ENV
+            echo export DEPLOY_TAG=aztec-connect-testnet >> $BASH_ENV
       - run:
           name: 'derive keys'
           command: |
