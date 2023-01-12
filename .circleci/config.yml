@@ -1012,6 +1012,7 @@ workflows:
       equal: [mainnet-fork-dev, << pipeline.parameters.workflow >>]
     jobs:
       - mainnet-fork
+      - aztec-dev-cli
       - deploy-mainnet-fork-dev:
           requires:
             - mainnet-fork
@@ -1020,6 +1021,7 @@ workflows:
       equal: [mainnet-fork-testnet, << pipeline.parameters.workflow >>]
     jobs:
       - mainnet-fork
+      - aztec-dev-cli
       - deploy-mainnet-fork-testnet:
           requires:
             - mainnet-fork
