@@ -6,6 +6,14 @@ describe('address', () => {
     expect(address.toString()).toBe('0xc6d9d2cD449A754c494264e1809c50e34D64562b');
   });
 
+  it('should return correct lower case string', () => {
+    const address = EthAddress.fromString('0xc6d9d2cd449a754c494264e1809c50e34d64562b');
+    expect(address.toString()).toBe('0xc6d9d2cD449A754c494264e1809c50e34D64562b');
+    expect(address.toLowerCaseAddress()).toBe('0xc6d9d2cd449a754c494264e1809c50e34d64562b');
+    const fromLowerCase = EthAddress.fromString(address.toLowerCaseAddress());
+    expect(address.equals(fromLowerCase)).toBe(true);
+  });
+
   it('should return correct buffer', () => {
     const address = EthAddress.fromString('0xc6d9d2cd449a754c494264e1809c50e34d64562b');
     expect(address.toBuffer()).toEqual(Buffer.from('c6d9d2cD449A754c494264e1809c50e34D64562b', 'hex'));
