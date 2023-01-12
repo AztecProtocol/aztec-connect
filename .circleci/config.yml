@@ -815,7 +815,7 @@ jobs:
           working_directory: mainnet-fork # redeploy the fork and taint the state file system
           command: |
             deploy_ecr mainnet-fork
-            deploy_terraform "" ./terraform "aws_efs_file_system.mainnet_fork_data_store"
+            deploy_terraform "" ./terraform/dev "aws_efs_file_system.mainnet_fork_data_store"
 
   deploy-mainnet-fork-testnet:
     machine:
@@ -837,7 +837,7 @@ jobs:
           working_directory: mainnet-fork # redeploy the fork and taint the state file system
           command: |
             deploy_ecr mainnet-fork
-            deploy_terraform "" ./terraform "aws_efs_file_system.mainnet_fork_data_store"
+            deploy_terraform "" ./terraform/testnet "aws_efs_file_system.mainnet_fork_data_store"
 
 # Repeatable config for defining the workflow below.
 tag_regex: &tag_regex /v[0-9]+(\.[0-9]+)*(-[a-zA-Z-]+\.[0-9]+)?/
