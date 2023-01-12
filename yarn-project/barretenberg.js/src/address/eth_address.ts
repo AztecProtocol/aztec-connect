@@ -106,6 +106,10 @@ export class EthAddress {
     return EthAddress.toChecksumAddress(this.buffer.toString('hex'));
   }
 
+  public toLowerCaseAddress() {
+    return '0x' + this.buffer.toString('hex').toLowerCase();
+  }
+
   public toBuffer() {
     return this.buffer;
   }
