@@ -1289,6 +1289,15 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
           await this.serialQueue.push(() => this.sync());
         } catch (err) {
           this.debug('sync() failed:', err);
+          try {
+            await this.rollupProvider.clientLog({
+              message: 'sync failed',
+              error: err,
+            });
+          } catch (err) {
+            this.debug('client log failed:', err);
+          }
+
           await this.syncSleep.sleep(10000);
         }
         if (this.isSynchronised() && this.userStates.every(us => us.isSynchronised(this.sdkStatus.latestRollupId))) {
@@ -1391,10 +1400,13 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     const subtreeRoots = coreBlocks.map(block => block.subtreeRoot!);
     this.debug(`inserting ${subtreeRoots.length} rollup roots into data tree...`);
     const oldSize = this.worldState.getSize();
-    await this.worldState.insertElements(rollups[0].dataStartIndex, subtreeRoots);
+    await this.logOnFailure(
+      () => this.worldState.insertElements(rollups[0].dataStartIndex, subtreeRoots),
+      'worldState.insertElements',
+    );
     this.debug(`processing aliases...`);
-    await this.processAliases(rollups, offchainTxData);
-    await this.writeSyncInfo(rollups[rollups.length - 1].rollupId);
+    await this.logOnFailure(() => this.processAliases(rollups, offchainTxData), 'processAliases');
+    await this.logOnFailure(() => this.writeSyncInfo(rollups[rollups.length - 1].rollupId), 'writeSyncInfo');
 
     // TODO: Ugly hotfix. Find root cause.
     // We expect our data root to be equal to the new data root in the last block we processed.
@@ -1422,9 +1434,27 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
 
     // Second apply the blocks to user states
     this.debug(`forwarding blocks to user states...`);
-    await Promise.all(this.userStates.map(us => us.processBlocks(coreBlockContexts)));
+    await this.logOnFailure(
+      () => Promise.all(this.userStates.map(us => us.processBlocks(coreBlockContexts))),
+      'userState.processBlocks',
+    );
 
     this.debug(`finished processing blocks ${from} to ${from + coreBlocks.length - 1} in ${timer.s()}s...`);
+  }
+
+  /**
+   * Executes the given async function and submits a client log and rethrows in case of failure
+   */
+  private async logOnFailure<T>(fn: () => Promise<T>, description: string) {
+    try {
+      return await fn();
+    } catch (err) {
+      await this.rollupProvider.clientLog({
+        message: description,
+        error: err,
+      });
+      throw err;
+    }
   }
 
   /**
