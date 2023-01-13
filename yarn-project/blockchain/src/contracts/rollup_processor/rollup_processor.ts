@@ -592,21 +592,21 @@ export class RollupProcessor {
       // look backwards to find the latest rollup, then stop
       let end = latestBlock;
       let start = Math.max(end - rollupChunkSize, earliestBlock);
+      let block: Block | undefined;
 
-      while (end > earliestBlock) {
+      while (end > earliestBlock && !block) {
         this.debug(`fetching rollup events between blocks ${start} and ${end}...`);
         const rollupFilter = this.rollupProcessor.filters.RollupProcessed();
         const allEvents = await this.rollupProcessor.queryFilter(rollupFilter, start, end);
         const events = allEvents.filter(e => currentBlockNumber - e.blockNumber + 1 >= minConfirmations);
-        if (events.length) {
-          let block: Block | undefined;
-          await this.getRollupBlocksFromEvents(events.slice(-1), b => Promise.resolve(void (block = b)));
-          return block;
+        for (let i = events.length - 1; i >= 0 && !block; i--) {
+          await this.getRollupBlocksFromEvents([events[i]], b => Promise.resolve(void (block = b)));
         }
 
         end = Math.max(start - 1, earliestBlock);
         start = Math.max(end - rollupChunkSize, earliestBlock);
       }
+      return block;
     };
 
     const findSpecificBlock = async () => {
@@ -645,6 +645,12 @@ export class RollupProcessor {
     const allOffchainDataEvents = await this.getOffchainDataEvents(rollupEvents);
     this.debug(`offchain data events fetched in ${offchainEventsTimer.s()}s.`);
 
+    // if any rollup's off-chain events are not present we need to exclude that rollup and any further rollups
+    const firstInvalidOffchainDataIndex = allOffchainDataEvents.findIndex(x => !x.length);
+    if (firstInvalidOffchainDataIndex != -1) {
+      rollupEvents.splice(firstInvalidOffchainDataIndex);
+    }
+
     // We want to concurrently perform network io and processing of results, but retain ordered output.
     // We create a tiny data pipeline to queue output of network IO for ordered processing.
     const processQueue = new MemoryFifo<any>();
@@ -657,9 +663,16 @@ export class RollupProcessor {
     // the processQueue and consuming lots of memory, when the consumer is slow.
     const queueSemaphore = new Semaphore(20);
 
+    // If we encounter a block that does not have it's full compliment of defi notes then we will
+    // need to stop the pipeline from publishing that block and any further blocks
+    let stop = false;
+
     // Start processing results of IO.
     const processPromise = processQueue.process(async ({ event, metaPromise }) => {
       try {
+        if (stop) {
+          return;
+        }
         const meta = await metaPromise;
         const rollupMetadata: RollupMetadata = {
           event,
@@ -669,14 +682,18 @@ export class RollupProcessor {
           offchainDataTxs: meta[3],
           offchainDataReceipts: meta[4],
         };
-        await cb(this.rollupMetadataToBlock(rollupMetadata, allDefiNotes));
+        const defiNotesForRollup = this.defiNotesForBlock(rollupMetadata, allDefiNotes);
+        await cb(this.rollupMetadataToBlock(rollupMetadata, defiNotesForRollup));
+      } catch (err) {
+        stop = true;
+        console.log(err);
       } finally {
         queueSemaphore.release();
       }
     });
 
     // Kick off io.
-    for (let i = 0; i < rollupEvents.length; ++i) {
+    for (let i = 0; i < rollupEvents.length && !stop; ++i) {
       await queueSemaphore.acquire();
       const event = rollupEvents[i];
       const offchainData = allOffchainDataEvents[i];
@@ -695,7 +712,7 @@ export class RollupProcessor {
     await processPromise;
   }
 
-  private rollupMetadataToBlock(meta: RollupMetadata, allDefiNotes: any) {
+  private defiNotesForBlock(meta: RollupMetadata, allDefiNotes: any) {
     // we now have the tx details and defi notes for this batch of rollup events
     // we need to assign the defi notes to their specified rollup
     // assign the set of defi notes for this rollup and decode the block
@@ -703,11 +720,16 @@ export class RollupProcessor {
     const defiNotesForThisRollup: DefiInteractionEvent[] = [];
     for (const hash of hashesForThisRollup) {
       if (!allDefiNotes[hash]) {
-        console.log(`Unable to locate defi interaction note for hash ${hash}!`);
-        continue;
+        throw new Error(
+          `Unable to locate defi interaction note for hash ${hash} in rollup ${meta.event.args?.rollupId}!`,
+        );
       }
       defiNotesForThisRollup.push(allDefiNotes[hash]!);
     }
+    return defiNotesForThisRollup;
+  }
+
+  private rollupMetadataToBlock(meta: RollupMetadata, defiNotesForThisRollup: DefiInteractionEvent[]) {
     const block = this.decodeBlock(
       { ...meta.tx, timestamp: meta.block.timestamp },
       meta.receipt,

@@ -28,9 +28,6 @@ export class BridgeStatsQueryHandler {
     }
 
     const queryFn = async () => {
-      // The client should not be able to decide the threshold? Makes our life hard for zero gain.
-      // Fix to 14 days.
-      // TODO: Remove from query.
       const currentTime = Date.now();
       const queryThreshold = new Date(currentTime - PERIOD_SECONDS * 1000);
 

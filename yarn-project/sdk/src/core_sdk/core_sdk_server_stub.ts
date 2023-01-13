@@ -137,6 +137,7 @@ export class CoreSdkServerStub {
     recipient: string,
     recipientSpendingKeyRequired: boolean,
     txRefNo: number,
+    timeout?: number,
   ) {
     const proofOutput = await this.core.createDepositProof(
       assetId,
@@ -146,6 +147,7 @@ export class CoreSdkServerStub {
       GrumpkinAddress.fromString(recipient),
       recipientSpendingKeyRequired,
       txRefNo,
+      timeout,
     );
     return proofOutputToJson(proofOutput);
   }
@@ -181,8 +183,8 @@ export class CoreSdkServerStub {
     return proofInputs.map(joinSplitProofInputToJson);
   }
 
-  public async createPaymentProof(input: JoinSplitProofInputJson, txRefNo: number) {
-    const proofOutput = await this.core.createPaymentProof(joinSplitProofInputFromJson(input), txRefNo);
+  public async createPaymentProof(input: JoinSplitProofInputJson, txRefNo: number, timeout?: number) {
+    const proofOutput = await this.core.createPaymentProof(joinSplitProofInputFromJson(input), txRefNo, timeout);
     return proofOutputToJson(proofOutput);
   }
 
@@ -228,8 +230,8 @@ export class CoreSdkServerStub {
     return accountProofInputToJson(proofInput);
   }
 
-  public async createAccountProof(proofInput: AccountProofInputJson, txRefNo: number) {
-    const proofOutput = await this.core.createAccountProof(accountProofInputFromJson(proofInput), txRefNo);
+  public async createAccountProof(proofInput: AccountProofInputJson, txRefNo: number, timeout?: number) {
+    const proofOutput = await this.core.createAccountProof(accountProofInputFromJson(proofInput), txRefNo, timeout);
     return proofOutputToJson(proofOutput);
   }
 
@@ -250,8 +252,8 @@ export class CoreSdkServerStub {
     return proofInputs.map(joinSplitProofInputToJson);
   }
 
-  public async createDefiProof(input: JoinSplitProofInputJson, txRefNo: number) {
-    const proofOutput = await this.core.createDefiProof(joinSplitProofInputFromJson(input), txRefNo);
+  public async createDefiProof(input: JoinSplitProofInputJson, txRefNo: number, timeout?: number) {
+    const proofOutput = await this.core.createDefiProof(joinSplitProofInputFromJson(input), txRefNo, timeout);
     return proofOutputToJson(proofOutput);
   }
 

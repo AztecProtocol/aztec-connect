@@ -20,9 +20,11 @@ export class EthEventDao {
   public blockNumber!: number;
 
   @Column()
+  @Index()
   public blockHash!: string;
 
   @Column()
+  @Index()
   public address!: string;
 
   @Column()
@@ -30,6 +32,7 @@ export class EthEventDao {
   public mainTopic!: string;
 
   @Column('simple-array')
+  @Index()
   public topics!: string[];
 
   @Column('text')

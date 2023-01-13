@@ -38,12 +38,12 @@ interface TxDetailsProps {
 export const TxDetails: React.FunctionComponent<TxDetailsProps> = ({ tx }) => {
   const { id, proofId, newNote1, newNote2, nullifier1, nullifier2, block } = tx;
 
-  const created = block?.created;
+  const mined = block?.mined;
   const statusTag = <StyledProofTypeTag proofId={proofId} />;
 
   const summaryNode = (
     <BlockSummary title="Transaction" titleContent={statusTag}>
-      <InfoRow title="TIMESTAMP">{created ? <Timestamp time={created} /> : 'Pending...'}</InfoRow>
+      <InfoRow title="TIMESTAMP">{mined ? <Timestamp time={mined} /> : 'Pending...'}</InfoRow>
       {renderTypedTxDetails(tx)}
       <InfoRow title="NULLIFIERS">
         <HashValue value={`0x${nullifier1}`} />

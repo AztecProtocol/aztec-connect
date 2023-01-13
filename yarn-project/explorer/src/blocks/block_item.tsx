@@ -192,8 +192,8 @@ interface BlockProps {
   block: Block;
 }
 
-export const BlockItem: React.FunctionComponent<BlockProps> = ({ block }) => {
-  const { id, hash, numTxs, created } = block;
+const BlockItemComponent: React.FunctionComponent<BlockProps> = ({ block }) => {
+  const { id, hash, numTxs, mined } = block;
   const status = getBlockStatus(block);
 
   return (
@@ -210,7 +210,7 @@ export const BlockItem: React.FunctionComponent<BlockProps> = ({ block }) => {
             } else if (sizeLte(breakpoint, 's')) {
               hashStr = `${hash.slice(0, 8)}...${hash.slice(-6)}`;
             }
-            return <BlockHash text={`0x${hashStr}`} weight="light" monospace />;
+            return <BlockHash text={hashStr} weight="light" monospace />;
           })()}
           {breakpoint === 'xs' && <LineBreak />}
           {breakpoint !== 'xs' && <Divider />}
@@ -218,7 +218,7 @@ export const BlockItem: React.FunctionComponent<BlockProps> = ({ block }) => {
             <TxsNo text={`${numTxs} `} />
             <Unit text="txs" />
           </TxsRoot>
-          <TimeAgo time={moment(created)}>
+          <TimeAgo time={moment(mined)}>
             {({ text }: any) => {
               const [, value, unit] = text.match(/^([0-9]{1,})(.+)$/) || ['', ''];
               return (
@@ -238,3 +238,12 @@ export const BlockItem: React.FunctionComponent<BlockProps> = ({ block }) => {
     </DeviceWidth>
   );
 };
+
+export const BlockItem = React.memo(
+  BlockItemComponent,
+  (prev: BlockProps, next: BlockProps) =>
+    prev.block.id === next.block.id &&
+    prev.block.hash === next.block.hash &&
+    prev.block.numTxs === next.block.numTxs &&
+    prev.block.mined === next.block.mined,
+);

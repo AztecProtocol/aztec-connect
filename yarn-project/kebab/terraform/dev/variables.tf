@@ -17,3 +17,7 @@ variable "FAUCET_OPERATOR_ADDRESS" {
 variable "DEV_NET_API_KEY" {
   type = string
 }
+
+variable "AC_DEV_FORK_API_KEY" {
+  type = string
+}

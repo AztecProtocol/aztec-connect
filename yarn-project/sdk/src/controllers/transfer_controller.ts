@@ -28,7 +28,7 @@ export class TransferController {
     this.requireFeePayingTx = !!fee.value && fee.assetId !== assetValue.assetId;
   }
 
-  public async createProof() {
+  public async createProof(timeout?: number) {
     const { assetId, value } = this.assetValue;
     const privateInput = value + (!this.requireFeePayingTx ? this.fee.value : BigInt(0));
     const spendingPublicKey = this.userSigner.getPublicKey();
@@ -69,7 +69,7 @@ export class TransferController {
       this.feeProofOutputs = [];
       for (const proofInput of feeProofInputs) {
         proofInput.signature = await this.userSigner.signMessage(proofInput.signingData);
-        this.feeProofOutputs.push(await this.core.createPaymentProof(proofInput, txRefNo));
+        this.feeProofOutputs.push(await this.core.createPaymentProof(proofInput, txRefNo, timeout));
       }
     }
 
@@ -77,7 +77,7 @@ export class TransferController {
       const proofOutputs: ProofOutput[] = [];
       for (const proofInput of proofInputs) {
         proofInput.signature = await this.userSigner.signMessage(proofInput.signingData);
-        proofOutputs.push(await this.core.createPaymentProof(proofInput, txRefNo));
+        proofOutputs.push(await this.core.createPaymentProof(proofInput, txRefNo, timeout));
       }
       this.proofOutputs = proofOutputs;
     }

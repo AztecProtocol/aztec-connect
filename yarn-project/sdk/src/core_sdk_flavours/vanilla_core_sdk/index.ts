@@ -9,7 +9,7 @@ import { mkdirSync } from 'fs';
 import { default as levelup, LevelUp } from 'levelup';
 import { CoreSdk, CoreSdkOptions } from '../../core_sdk/index.js';
 import { DexieDatabase, SQLDatabase } from '../../database/index.js';
-import { getNumWorkers } from '../get_num_workers.js';
+import { getDeviceMemory, getNumCpu, getNumWorkers } from '../../get_num_workers/index.js';
 import { SDK_VERSION } from '../../version.js';
 import { createDebugLogger } from '@aztec/barretenberg/log';
 import { default as memdown } from 'memdown';
@@ -61,6 +61,7 @@ export async function createVanillaCoreSdk(options: VanillaCoreSdkOptions) {
   }
 
   debug('creating pooled vanilla core sdk...');
+  debug(`cpu: ${getNumCpu()}, workers: ${numWorkers}, memory: ${getDeviceMemory()}`);
   const wasm = await BarretenbergWasm.new('main');
   const workerPool = await WorkerPool.new(wasm, numWorkers);
   const noteDecryptor = new PooledNoteDecryptor(workerPool);

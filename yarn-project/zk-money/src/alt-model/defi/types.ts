@@ -96,7 +96,6 @@ type AuxDataResolver =
     };
 
 export type DefiPublishStatsCacheArgs = [
-  number, // periodSeconds
   number, // bridgeAddressId
   number | undefined, // inputAssetIdA
   number | undefined, // inputAssetIdB
@@ -113,6 +112,7 @@ export interface DefiRecipe {
   exitBridgeAddressId?: number;
   address: EthAddress;
   isAsync?: boolean;
+  asyncOpenTooltip?: string;
   flow: BridgeFlowAssets;
   openHandleAsset?: RemoteAsset;
   valueEstimationInteractionAssets: BridgeInteractionAssets;

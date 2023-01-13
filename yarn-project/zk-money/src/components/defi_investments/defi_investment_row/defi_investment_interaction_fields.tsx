@@ -84,10 +84,27 @@ function AsyncEntering(props: { tx: UserDefiTx }) {
 }
 
 function AsyncOpen(props: { tx: UserDefiTx; recipe: DefiRecipe }) {
+  const [showTooltip, setShowTooltip] = useState(false);
+
+  const handleMouseOver = () => {
+    setShowTooltip(true);
+  };
+
+  const handleMouseLeave = () => {
+    setShowTooltip(false);
+  };
+
   const date = props.recipe.getAsyncResolutionDate?.(props.tx);
   if (!date) return <></>;
   const dateStr = dateFormatter.format(date);
-  return <div className={style.fixedTerm}>Funds locked until {dateStr}</div>;
+  return (
+    <div className={style.fixedTerm} onMouseEnter={handleMouseOver} onMouseLeave={handleMouseLeave}>
+      Funds locked until {dateStr}
+      {props.recipe.asyncOpenTooltip && showTooltip && (
+        <Tooltip className={style.tooltip} content={props.recipe.asyncOpenTooltip} />
+      )}
+    </div>
+  );
 }
 
 function AsyncExiting(props: { tx: UserDefiTx }) {

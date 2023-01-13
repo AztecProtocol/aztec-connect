@@ -1,8 +1,8 @@
 version: '3'
 services:
   fork:
-    image: ghcr.io/foundry-rs/foundry:nightly-8c4294c1d2321e20a3543fbd9a813d47053a8303
-    entrypoint: 'anvil -p=8545 --host 0.0.0.0 --fork-url ${FORK_URL} --chain-id ${CHAIN_ID}'
+    image: ghcr.io/foundry-rs/foundry:nightly-a44aa13cfc23491ba32aaedc093e9488c1a6db43
+    entrypoint: 'anvil -p 8545 --host 0.0.0.0 --fork-url ${FORK_URL} --chain-id ${CHAIN_ID}'
     ports:
       - '8545:8545'
 
@@ -29,6 +29,8 @@ services:
       PROOF_GENERATOR_MODE: local
       NO_BUILD: 'true'
       PORT: 8081
+      INITIAL_RUNTIME_CONFIG_PATH: './config/dev_testnet_initial_config.json'
+
     depends_on:
       - contracts
     command: start:e2e

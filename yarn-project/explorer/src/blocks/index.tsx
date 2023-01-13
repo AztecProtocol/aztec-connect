@@ -52,7 +52,7 @@ export const Blocks: React.FunctionComponent<BlocksProps> = ({ blocksPerPage = 5
 
   return (
     <>
-      <BlockList page={page} blocksPerPage={blocksPerPage} />
+      <BlockList loading={!status} page={page} blocksPerPage={blocksPerPage} totalBlocks={status?.totalBlocks || 0} />
       <PaginationRoot>
         {!loading && !error && status && (
           <DeviceWidth>

@@ -19,3 +19,7 @@ variable "TEST_NET_API_KEY" {
   type = string
 }
 
+variable "AC_TEST_FORK_API_KEY" {
+  type = string
+}
+

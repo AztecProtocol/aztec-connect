@@ -4,6 +4,11 @@ import ResolveTypeScriptPlugin from 'resolve-typescript-plugin';
 import CopyWebpackPlugin from 'copy-webpack-plugin';
 import HTMLWebpackPlugin from 'html-webpack-plugin';
 import webpack from 'webpack';
+import path from 'path';
+
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
 
 export default {
   target: 'web',
@@ -45,6 +50,19 @@ export default {
   ],
   resolve: {
     plugins: [new ResolveTypeScriptPlugin()],
+    fallback: {
+      crypto: false,
+      os: false,
+      fs: false,
+      path: false,
+      url: false,
+      worker_threads: false,
+      stream: false,
+      string_decoder: false,
+      events: require.resolve('events/'),
+      buffer: require.resolve('buffer/'),
+      util: require.resolve('util/'),
+    },
   },
   devServer: {
     historyApiFallback: true,

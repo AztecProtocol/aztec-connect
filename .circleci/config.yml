@@ -619,6 +619,17 @@ jobs:
           name: 'Build and test'
           command: build website
 
+  mainnet-fork:
+    machine:
+      image: ubuntu-2004:202010-01
+    resource_class: large
+    steps:
+      - *checkout
+      - *setup_env
+      - run:
+          name: 'Build and test'
+          command: build mainnet-fork
+
   metrics:
     machine:
       image: ubuntu-2004:202010-01
@@ -784,6 +795,54 @@ jobs:
           name: 'grafana'
           command: deploy_global grafana
 
+  deploy-mainnet-fork-dev:
+    machine:
+      image: ubuntu-2004:202010-01
+    resource_class: medium
+    steps:
+      - *checkout
+      - *setup_env
+      - run:
+          name: 'set environment'
+          command: |
+            echo export VERSION_TAG=dev >> $BASH_ENV
+            echo export DEPLOY_TAG=aztec-connect-dev >> $BASH_ENV
+      - run:
+          name: 'derive keys'
+          command: |
+            ensure_repo aztec-dev-cli $ECR_REGION
+            docker run --rm $ECR_URL/aztec-dev-cli:cache-$COMMIT_HASH deriveKeys "$KEY_DERIVATION_MNEMONIC" >> $BASH_ENV
+      - run:
+          name: 'deploy-mainnet-fork'
+          working_directory: mainnet-fork # redeploy the fork and taint the state file system
+          command: |
+            deploy_ecr mainnet-fork
+            deploy_terraform mainnet-fork ./terraform/dev "aws_efs_file_system.mainnet_fork_data_store"
+
+  deploy-mainnet-fork-testnet:
+    machine:
+      image: ubuntu-2004:202010-01
+    resource_class: medium
+    steps:
+      - *checkout
+      - *setup_env
+      - run:
+          name: 'set environment'
+          command: |
+            echo export VERSION_TAG=testnet >> $BASH_ENV
+            echo export DEPLOY_TAG=aztec-connect-testnet >> $BASH_ENV
+      - run:
+          name: 'derive keys'
+          command: |
+            ensure_repo aztec-dev-cli $ECR_REGION
+            docker run --rm $ECR_URL/aztec-dev-cli:cache-$COMMIT_HASH deriveKeys "$KEY_DERIVATION_MNEMONIC" >> $BASH_ENV
+      - run:
+          name: 'deploy-mainnet-fork'
+          working_directory: mainnet-fork # redeploy the fork and taint the state file system
+          command: |
+            deploy_ecr mainnet-fork
+            deploy_terraform mainnet-fork ./terraform/testnet "aws_efs_file_system.mainnet_fork_data_store"
+
 # Repeatable config for defining the workflow below.
 tag_regex: &tag_regex /v[0-9]+(\.[0-9]+)*(-[a-zA-Z-]+\.[0-9]+)?/
 tag_filter: &tag_filter
@@ -866,7 +925,8 @@ workflows:
       - wallet: *yarn_project
       # Not currently a yarn project due to using next.js, but should be.
       - faucet:
-          filters: *tag_filter
+          requires:
+            - contracts
       - end-to-end: *yarn_project
       - e2e-join:
           requires:
@@ -951,3 +1011,21 @@ workflows:
       - deploy-website:
           requires:
             - website
+  mainnet-fork-dev:
+    when:
+      equal: [mainnet-fork-dev, << pipeline.parameters.workflow >>]
+    jobs:
+      - mainnet-fork
+      - aztec-dev-cli
+      - deploy-mainnet-fork-dev:
+          requires:
+            - mainnet-fork
+  mainnet-fork-testnet:
+    when:
+      equal: [mainnet-fork-testnet, << pipeline.parameters.workflow >>]
+    jobs:
+      - mainnet-fork
+      - aztec-dev-cli
+      - deploy-mainnet-fork-testnet:
+          requires:
+            - mainnet-fork

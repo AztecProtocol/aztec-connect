@@ -8,7 +8,6 @@ const POLL_INTERVAL = 1000 * 60 * 60;
 export function createDefiPublishStatsPollerCache(sdkObs: SdkObs) {
   return new LazyInitDeepCacheMap(
     ([
-      periodSeconds,
       bridgeAddressId,
       inputAssetIdA,
       inputAssetIdB,
@@ -20,7 +19,6 @@ export function createDefiPublishStatsPollerCache(sdkObs: SdkObs) {
         if (!sdk) return undefined;
         return () =>
           sdk.queryDefiPublishStats({
-            periodSeconds,
             bridgeAddressId,
             inputAssetIdA,
             inputAssetIdB,

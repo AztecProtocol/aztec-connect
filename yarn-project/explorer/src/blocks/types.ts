@@ -3,8 +3,7 @@ export interface Block {
   hash: string;
   numTxs: number;
   ethTxHash?: string;
-  created: Date;
-  mined?: Date;
+  mined: Date;
 }
 
 export interface BlocksQueryData {

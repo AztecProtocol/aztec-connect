@@ -7,7 +7,7 @@ import { PooledPippenger } from '@aztec/barretenberg/pippenger';
 import { createDispatchProxyFromFn } from '@aztec/barretenberg/transport';
 import { BarretenbergWasm, WorkerPool } from '@aztec/barretenberg/wasm';
 import { CoreSdkClientStub, CoreSdkSerializedInterface, CoreSdkServerStub } from '../../core_sdk/index.js';
-import { getNumWorkers } from '../get_num_workers.js';
+import { getNumWorkers } from '../../get_num_workers/index.js';
 import { JobQueueDispatch, JobQueueInterface, JobQueueWorker } from '../job_queue/index.js';
 import { createDispatchFn, TransportClient } from '../transport.js';
 import { BananaCoreSdkOptions } from './banana_core_sdk_options.js';

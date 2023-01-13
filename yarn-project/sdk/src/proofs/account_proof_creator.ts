@@ -54,10 +54,14 @@ export class AccountProofCreator {
     return { tx, signingData };
   }
 
-  public async createProof({ tx, signature }: AccountProofInput, txRefNo: number): Promise<ProofOutput> {
+  public async createProof(
+    { tx, signature }: AccountProofInput,
+    txRefNo: number,
+    timeout?: number,
+  ): Promise<ProofOutput> {
     debug('creating proof...');
     const start = new Date().getTime();
-    const proof = await this.prover.createAccountProof(tx, signature!);
+    const proof = await this.prover.createAccountProof(tx, signature!, timeout);
     debug(`created proof: ${new Date().getTime() - start}ms`);
     debug(`proof size: ${proof.length}`);
 

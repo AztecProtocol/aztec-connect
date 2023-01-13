@@ -2,7 +2,6 @@ import { ProofId } from '@aztec/sdk';
 
 export interface Block {
   id: number;
-  created: Date;
   mined?: Date;
 }
 

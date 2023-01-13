@@ -88,7 +88,7 @@ export function DefiConfirmationPage({
       </BorderBox>
       {!showingComplete && (
         <div className={style.footer}>
-          {recipe.id === 'element-finance.DAI-to-DAI' && (
+          {recipe.isAsync && (
             <div className={style.feedback}>Please be aware that your funds will be locked until maturity</div>
           )}
           {composerState.signingRetryable ? (

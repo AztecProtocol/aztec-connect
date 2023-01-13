@@ -67,22 +67,21 @@ interface BlockDetailsProps {
 }
 
 export const BlockDetails: React.FunctionComponent<BlockDetailsProps> = ({ block, network }) => {
-  const { hash, ethTxHash, dataRoot, proofData, nullifierRoot, created } = block;
+  const { hash, ethTxHash, dataRoot, proofData, nullifierRoot, mined } = block;
 
   const summaryNode = (
     <BlockSummary title="Block Header">
       <InfoRow title="TIMESTAMP">
-        {!!ethTxHash && (
-          <TimestampRoot>
-            <Timestamp time={created} />
+        <TimestampRoot>
+          <Timestamp time={mined} />
+          {!!ethTxHash && (
             <EtherScanLink href={getEtherscanLink(network, ethTxHash)} target="_blank">
               <EtherScanIcon src={etherscanIcon} />
             </EtherScanLink>
-          </TimestampRoot>
-        )}
-        {!ethTxHash && 'Pending...'}
+          )}
+        </TimestampRoot>
       </InfoRow>
-      <InfoRow title="BLOCK HASH">{<HashValue value={`0x${hash}`} />}</InfoRow>
+      <InfoRow title="BLOCK HASH">{<HashValue value={hash} />}</InfoRow>
       <InfoRow title="DATA ROOT">
         <HashValue value={`0x${dataRoot}`} />
       </InfoRow>

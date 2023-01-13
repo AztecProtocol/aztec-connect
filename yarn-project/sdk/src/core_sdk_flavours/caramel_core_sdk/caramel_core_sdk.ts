@@ -95,6 +95,7 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
     recipient: string,
     recipientSpendingKeyRequired: boolean,
     txRefNo: number,
+    timeout?: number,
   ) {
     return await this.core.createDepositProof(
       assetId,
@@ -104,6 +105,7 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
       recipient,
       recipientSpendingKeyRequired,
       txRefNo,
+      timeout,
     );
   }
 
@@ -138,13 +140,13 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
     );
   }
 
-  public async createPaymentProof(input: JoinSplitProofInputJson, txRefNo: number) {
+  public async createPaymentProof(input: JoinSplitProofInputJson, txRefNo: number, timeout?: number) {
     const {
       tx: { outputNotes },
     } = joinSplitProofInputFromJson(input);
     const userId = outputNotes[1].ownerPubKey;
     await this.checkPermission(userId.toString());
-    return this.core.createPaymentProof(input, txRefNo);
+    return this.core.createPaymentProof(input, txRefNo, timeout);
   }
 
   public async createAccountProofSigningData(
@@ -188,12 +190,12 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
     );
   }
 
-  public async createAccountProof(input: AccountProofInputJson, txRefNo: number) {
+  public async createAccountProof(input: AccountProofInputJson, txRefNo: number, timeout?: number) {
     const {
       tx: { accountPublicKey },
     } = accountProofInputFromJson(input);
     await this.checkPermission(accountPublicKey.toString());
-    return this.core.createAccountProof(input, txRefNo);
+    return this.core.createAccountProof(input, txRefNo, timeout);
   }
 
   public async createDefiProofInput(
@@ -207,13 +209,13 @@ export class CaramelCoreSdk extends EventEmitter implements CoreSdkSerializedInt
     return this.core.createDefiProofInput(userId, bridgeCallData, depositValue, fee, spendingPublicKey);
   }
 
-  public async createDefiProof(input: JoinSplitProofInputJson, txRefNo: number) {
+  public async createDefiProof(input: JoinSplitProofInputJson, txRefNo: number, timeout?: number) {
     const {
       tx: { outputNotes },
     } = joinSplitProofInputFromJson(input);
     const userId = outputNotes[1].ownerPubKey;
     await this.checkPermission(userId.toString());
-    return this.core.createDefiProof(input, txRefNo);
+    return this.core.createDefiProof(input, txRefNo, timeout);
   }
 
   public async sendProofs(proofs: ProofOutputJson[], proofTxs: TxJson[] = []) {

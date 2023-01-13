@@ -13,6 +13,8 @@ import { DCABridgeData } from '../../../bridge-clients/client/dca/dca-bridge-dat
 export const SEVEN_DAY_DCA_CARD_DAI_TO_ETH: CreateRecipeArgs = {
   id: 'seven-day-dca.DAI-to-ETH',
   isAsync: true,
+  asyncOpenTooltip:
+    'DCA positions are closed on L1 by arbitragers. This can take several days to settle after the DCA window. Thank you for your patience.',
   bridgeBinding: 'DCA_400K',
   flowBindings: {
     type: 'async',

@@ -30,17 +30,8 @@ async function main() {
     process.exit(0);
   };
 
-  const shutdownAndClearDb = async () => {
-    await server.stop();
-    await logDb.eraseDb();
-    await dbConn.close();
-    console.log('Kebab Database erased.');
-    process.exit(0);
-  };
-
   process.once('SIGINT', shutdown);
   process.once('SIGTERM', shutdown);
-  process.once('SIGUSR1', shutdownAndClearDb);
 
   const app = appFactory(server, apiPrefix);
   const httpServer = http.createServer(app.callback());

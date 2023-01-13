@@ -1,7 +1,7 @@
+import { SerialQueue } from '@aztec/barretenberg/fifo';
 import { Connection, Repository, Between, Like, getConnection } from 'typeorm';
-
 import { EthEventDao } from './entity/eth_event.js';
-import { EthEvent } from './rollup_event_getter.js';
+import { EthEvent } from './eth_event.js';
 
 export interface RollupLogsParamsQuery {
   topics: string[];
@@ -11,14 +11,49 @@ export interface RollupLogsParamsQuery {
   blockHash?: string;
 }
 
-export class EthLogsDb {
+export interface EventStore {
+  addEthLogs(logs: EthEvent[]): Promise<void>;
+}
+
+export class EthLogsDb implements EventStore {
   private ethEventRep: Repository<EthEventDao>;
+  private jobQueue = new SerialQueue();
 
   constructor(private connection: Connection) {
     this.ethEventRep = this.connection.getRepository(EthEventDao);
+    this.jobQueue.start();
   }
 
-  public async addEthLogs(logs: EthEvent[]) {
+  /**
+   * PUBLIC INTERFACE
+   * All DB methods should be executed on the job queue to ensure required synchronisation
+   */
+
+  public async getLastEvent(mainTopic: string): Promise<EthEvent | undefined> {
+    return await this.synchronise(() => this._getLastEvent(mainTopic));
+  }
+
+  public async queryEthLogs(params: RollupLogsParamsQuery): Promise<EthEvent[]> {
+    return await this.synchronise(() => this._queryEthLogs(params));
+  }
+
+  public async addEthLogs(logs: EthEvent[]): Promise<void> {
+    await this.synchronise(() => this._addEthLogs(logs));
+  }
+
+  public async stop() {
+    await this.jobQueue.end();
+  }
+
+  /**
+   * PRIVATE METHODS
+   */
+
+  private async synchronise<T>(fn: () => Promise<T>): Promise<T> {
+    return await this.jobQueue.put(fn);
+  }
+
+  private async _addEthLogs(logs: EthEvent[]) {
     let commited = false;
     let batchSize = 200;
     while (!commited) {
@@ -51,7 +86,7 @@ export class EthLogsDb {
     }
   }
 
-  public async queryEthLogs(params: RollupLogsParamsQuery): Promise<EthEvent[]> {
+  private async _queryEthLogs(params: RollupLogsParamsQuery): Promise<EthEvent[]> {
     const query: any = {
       ...(params.blockHash && { blockHash: params.blockHash.toLowerCase() }),
       ...(params.address && { address: params.address.toLowerCase() }),
@@ -73,28 +108,12 @@ export class EthLogsDb {
     return result.map(this.serializeData);
   }
 
-  public async getAllEventLogs() {
-    const allRollupEvents = await this.ethEventRep.find();
-    return allRollupEvents;
+  private async _getLastEvent(mainTopic: string): Promise<EthEvent | undefined> {
+    const latest = await this.ethEventRep.find({ where: { mainTopic }, order: { blockNumber: 'DESC' }, take: 1 });
+    return latest.length ? this.serializeData(latest[0]) : undefined;
   }
 
-  public async getRollupEventsInBlockRange(fromBlock: number, toBlock: number) {
-    const events = await this.ethEventRep.find({
-      where: {
-        blockNumber: Between(fromBlock, toBlock),
-      },
-    });
-
-    return events;
-  }
-
-  public async eraseDb() {
-    await this.connection.transaction(async transactionalEntityManager => {
-      await transactionalEntityManager.delete(this.ethEventRep.target, {});
-    });
-  }
-
-  public formatData(ethEvent: EthEvent): EthEventDao {
+  private formatData(ethEvent: EthEvent): EthEventDao {
     const { logIndex, transactionIndex, blockNumber, topics, ...event } = ethEvent;
     return new EthEventDao({
       ...event,
@@ -114,10 +133,5 @@ export class EthLogsDb {
       logIndex: `0x${logIndex?.toString(16)}`,
       transactionIndex: `0x${transactionIndex?.toString(16)}`,
     };
-  }
-
-  public async getLastKnownBlockNumber() {
-    const latest = await this.ethEventRep.find({ order: { blockNumber: 'DESC' }, take: 1 });
-    return latest[0]?.blockNumber || 0;
   }
 }
