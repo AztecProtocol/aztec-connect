@@ -21,9 +21,9 @@ import { Balance } from './account/dashboard/balance.js';
 import { DefiModal, DefiModalProps } from './account/dashboard/modals/defi_modal/defi_modal.js';
 import { Home } from './home.js';
 import { Toasts } from './toasts/toasts.js';
-import { usePendingBalances } from '../alt-model/assets/l1_balance_hooks.js';
 import { useDefiRecipes } from '../alt-model/top_level_context/index.js';
 import { useValidRecipesOnly } from './account/dashboard/defi_cards_list.js';
+import { useL1PendingBalances } from '../alt-model/assets/l1_balance_hooks.js';
 import './app.css';
 
 const getIsCookieAccepted = () => Cookie.get('accepted') === 'true';
@@ -48,9 +48,10 @@ interface ViewsProps {
 }
 
 export function Views({ config }: ViewsProps) {
+  const { pendingBalancesObs } = useContext(TopLevelContext);
   const [defiModalProps, setDefiModalProps] = useState<DefiModalProps>();
   const navigate = useNavigate();
-  const pendingBalances = usePendingBalances();
+  const pendingBalances = useL1PendingBalances();
   const accountState = useAccountState();
   const location = useLocation();
   const uncheckedRecipes = useDefiRecipes();
@@ -58,6 +59,10 @@ export function Views({ config }: ViewsProps) {
   const theme = getTheme(location);
   const hasAccountState = !!accountState;
   const isLoggedIn = !!accountState?.isRegistered;
+
+  useEffect(() => {
+    pendingBalancesObs.set(pendingBalances);
+  }, [pendingBalancesObs, pendingBalances]);
 
   const handleCloseDefiModal = () => {
     setDefiModalProps(undefined);

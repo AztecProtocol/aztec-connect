@@ -33,8 +33,11 @@ export function useRemoteAssets() {
 }
 
 export function useToasts() {
-  const { toastsObs } = useTopLevelContext();
-  return useObs(toastsObs);
+  return useObs(useTopLevelContext().toastsObs);
+}
+
+export function usePendingBalances() {
+  return useObs(useTopLevelContext().pendingBalancesObs);
 }
 
 export function useWalletInteractionToasts() {

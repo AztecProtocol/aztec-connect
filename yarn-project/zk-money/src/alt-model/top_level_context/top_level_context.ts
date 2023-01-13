@@ -14,6 +14,7 @@ import type { DefiPulishStatsPollerCache } from '../defi/defi_publish_stats_poll
 import type { AccountStateManager } from '../account_state/account_state_manager.js';
 import type { AliasManager } from '../account_state/alias_manager.js';
 import type { RegistrationsRepo } from '../registrations_data/index.js';
+import type { PendingBalancesObs } from './pending_balances_obs.js';
 
 export interface TopLevelContextValue {
   config: Config;
@@ -21,6 +22,7 @@ export interface TopLevelContextValue {
   sdkObs: SdkObs;
   accountStateManager: AccountStateManager;
   aliasManager: AliasManager;
+  pendingBalancesObs: PendingBalancesObs;
   toastsObs: ToastsObs;
   walletInteractionToastsObs: ToastsObs;
   remoteStatusPoller: RemoteStatusPoller;
