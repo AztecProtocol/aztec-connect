@@ -252,7 +252,7 @@ export class DepositHandler {
     await this.awaitTransaction('deposit pending funds', checkOnchainData, timeout, interval);
   }
 
-  public async createProof(txRefNo = 0) {
+  public async createProof(txRefNo = 0, timeout?: number) {
     const { assetId, value } = this.publicInput;
     const privateOutput = value - this.fee.value;
     this.depositProofOutput = await this.core.createDepositProof(
@@ -263,6 +263,7 @@ export class DepositHandler {
       this.recipient,
       this.recipientSpendingKeyRequired,
       txRefNo,
+      timeout,
     );
   }
 

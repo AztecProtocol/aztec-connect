@@ -23,9 +23,9 @@ export class DepositController extends DepositHandler {
     super(assetValue, fee, depositor, recipient, recipientSpendingKeyRequired, core, blockchain, provider);
   }
 
-  public async createProof() {
-    // txRefNo is not defined for creating a single deposit proof.
-    await super.createProof();
+  public async createProof(timeout?: number) {
+    // txRefNo is not required for creating a single deposit proof.
+    await super.createProof(0, timeout);
   }
 
   public exportProofTxs() {

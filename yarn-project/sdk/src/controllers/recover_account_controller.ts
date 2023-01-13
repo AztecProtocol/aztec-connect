@@ -30,11 +30,11 @@ export class RecoverAccountController extends DepositHandler {
     this.requireDeposit = !!this.publicInput.value;
   }
 
-  public async createProof() {
+  public async createProof(timeout?: number) {
     const txRefNo = this.requireDeposit ? createTxRefNo() : 0;
 
     if (this.requireDeposit) {
-      await super.createProof(txRefNo);
+      await super.createProof(txRefNo, timeout);
     }
 
     const {
@@ -52,7 +52,7 @@ export class RecoverAccountController extends DepositHandler {
       undefined,
     );
     proofInput.signature = signature;
-    this.proofOutput = await this.core.createAccountProof(proofInput, txRefNo);
+    this.proofOutput = await this.core.createAccountProof(proofInput, txRefNo, timeout);
   }
 
   public exportProofTxs() {

@@ -46,7 +46,7 @@ export class DefiController {
     this.requireFeePayingTx = !!fee.value && fee.assetId !== bridgeCallData.inputAssetIdA;
   }
 
-  public async createProof() {
+  public async createProof(timeout?: number) {
     const { value } = this.assetValue;
     const spendingPublicKey = this.userSigner.getPublicKey();
     const spendingKeyRequired = !spendingPublicKey.equals(this.userId);
@@ -67,9 +67,9 @@ export class DefiController {
     const joinSplitProofInputs = proofInputs.slice(0, -1);
     const defiProofInput = proofInputs[proofInputs.length - 1];
     for (const proofInput of joinSplitProofInputs) {
-      this.jsProofOutputs.push(await this.core.createPaymentProof(proofInput, txRefNo));
+      this.jsProofOutputs.push(await this.core.createPaymentProof(proofInput, txRefNo, timeout));
     }
-    this.proofOutput = await this.core.createDefiProof(defiProofInput, txRefNo);
+    this.proofOutput = await this.core.createDefiProof(defiProofInput, txRefNo, timeout);
 
     if (this.requireFeePayingTx) {
       const feeProofInputs = await this.core.createPaymentProofInputs(
@@ -89,7 +89,7 @@ export class DefiController {
       this.feeProofOutputs = [];
       for (const proofInput of feeProofInputs) {
         proofInput.signature = await this.userSigner.signMessage(proofInput.signingData);
-        this.feeProofOutputs.push(await this.core.createPaymentProof(proofInput, txRefNo));
+        this.feeProofOutputs.push(await this.core.createPaymentProof(proofInput, txRefNo, timeout));
       }
     }
   }

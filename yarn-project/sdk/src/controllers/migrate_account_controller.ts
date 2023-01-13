@@ -31,11 +31,11 @@ export class MigrateAccountController extends DepositHandler {
     this.requireDeposit = !!this.publicInput.value;
   }
 
-  public async createProof() {
+  public async createProof(timeout?: number) {
     const txRefNo = this.requireDeposit ? createTxRefNo() : 0;
 
     if (this.requireDeposit) {
-      await super.createProof(txRefNo);
+      await super.createProof(txRefNo, timeout);
     }
 
     const spendingPublicKey = this.userSigner.getPublicKey();
@@ -49,7 +49,7 @@ export class MigrateAccountController extends DepositHandler {
       this.newAccountPrivateKey,
     );
     proofInput.signature = await this.userSigner.signMessage(proofInput.signingData);
-    this.proofOutput = await this.core.createAccountProof(proofInput, txRefNo);
+    this.proofOutput = await this.core.createAccountProof(proofInput, txRefNo, timeout);
   }
 
   public exportProofTxs() {

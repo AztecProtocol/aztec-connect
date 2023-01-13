@@ -60,6 +60,7 @@ export interface CoreSdkInterface {
     recipient: GrumpkinAddress,
     recipientSpendingKeyRequired: boolean,
     txRefNo: number,
+    timeout?: number,
   ): Promise<ProofOutput>;
 
   createPaymentProofInputs(
@@ -77,7 +78,7 @@ export interface CoreSdkInterface {
     allowChain: number,
   ): Promise<JoinSplitProofInput[]>;
 
-  createPaymentProof(input: JoinSplitProofInput, txRefNo: number): Promise<ProofOutput>;
+  createPaymentProof(input: JoinSplitProofInput, txRefNo: number, timeout?: number): Promise<ProofOutput>;
 
   createAccountProofSigningData(
     userId: GrumpkinAddress,
@@ -99,7 +100,7 @@ export interface CoreSdkInterface {
     newAccountPrivateKey: Buffer | undefined,
   ): Promise<AccountProofInput>;
 
-  createAccountProof(input: AccountProofInput, txRefNo: number): Promise<ProofOutput>;
+  createAccountProof(input: AccountProofInput, txRefNo: number, timeout?: number): Promise<ProofOutput>;
 
   createDefiProofInput(
     userId: GrumpkinAddress,
@@ -109,7 +110,7 @@ export interface CoreSdkInterface {
     spendingPublicKey: GrumpkinAddress,
   ): Promise<JoinSplitProofInput[]>;
 
-  createDefiProof(input: JoinSplitProofInput, txRefNo: number): Promise<ProofOutput>;
+  createDefiProof(input: JoinSplitProofInput, txRefNo: number, timeout?: number): Promise<ProofOutput>;
 
   sendProofs(proofs: ProofOutput[], proofTxs?: Tx[]): Promise<TxId[]>;
 

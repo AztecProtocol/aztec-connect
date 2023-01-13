@@ -23,7 +23,7 @@ export class FeeController {
     }
   }
 
-  public async createProof() {
+  public async createProof(timeout?: number) {
     const spendingPublicKey = this.userSigner.getPublicKey();
     const spendingKeyRequired = !spendingPublicKey.equals(this.userId);
     const feeProofInputs = await this.core.createPaymentProofInputs(
@@ -45,7 +45,7 @@ export class FeeController {
     this.feeProofOutputs = [];
     for (const proofInput of feeProofInputs) {
       proofInput.signature = await this.userSigner.signMessage(proofInput.signingData);
-      this.feeProofOutputs.push(await this.core.createPaymentProof(proofInput, txRefNo));
+      this.feeProofOutputs.push(await this.core.createPaymentProof(proofInput, txRefNo, timeout));
     }
   }
 

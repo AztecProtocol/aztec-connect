@@ -127,6 +127,7 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
     recipient: GrumpkinAddress,
     recipientSpendingKeyRequired: boolean,
     txRefNo: number,
+    timeout?: number,
   ) {
     const json = await this.backend.createDepositProof(
       assetId,
@@ -136,6 +137,7 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
       recipient.toString(),
       recipientSpendingKeyRequired,
       txRefNo,
+      timeout,
     );
     return proofOutputFromJson(json);
   }
@@ -171,8 +173,8 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
     return proofInputs.map(joinSplitProofInputFromJson);
   }
 
-  public async createPaymentProof(input: JoinSplitProofInput, txRefNo: number) {
-    const json = await this.backend.createPaymentProof(joinSplitProofInputToJson(input), txRefNo);
+  public async createPaymentProof(input: JoinSplitProofInput, txRefNo: number, timeout?: number) {
+    const json = await this.backend.createPaymentProof(joinSplitProofInputToJson(input), txRefNo, timeout);
     return proofOutputFromJson(json);
   }
 
@@ -218,8 +220,8 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
     return accountProofInputFromJson(json);
   }
 
-  public async createAccountProof(proofInput: AccountProofInput, txRefNo: number) {
-    const json = await this.backend.createAccountProof(accountProofInputToJson(proofInput), txRefNo);
+  public async createAccountProof(proofInput: AccountProofInput, txRefNo: number, timeout?: number) {
+    const json = await this.backend.createAccountProof(accountProofInputToJson(proofInput), txRefNo, timeout);
     return proofOutputFromJson(json);
   }
 
@@ -240,8 +242,8 @@ export class CoreSdkClientStub extends EventEmitter implements CoreSdkInterface 
     return proofInputs.map(joinSplitProofInputFromJson);
   }
 
-  public async createDefiProof(input: JoinSplitProofInput, txRefNo: number) {
-    const json = await this.backend.createDefiProof(joinSplitProofInputToJson(input), txRefNo);
+  public async createDefiProof(input: JoinSplitProofInput, txRefNo: number, timeout?: number) {
+    const json = await this.backend.createDefiProof(joinSplitProofInputToJson(input), txRefNo, timeout);
     return proofOutputFromJson(json);
   }
 

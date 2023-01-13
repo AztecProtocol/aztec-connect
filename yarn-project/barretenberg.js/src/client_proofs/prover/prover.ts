@@ -3,6 +3,7 @@ import { Fft } from '../../fft/index.js';
 import { Pippenger } from '../../pippenger/index.js';
 import { BarretenbergWasm, BarretenbergWorker } from '../../wasm/index.js';
 import { Transfer } from '../../transport/index.js';
+import { TimeoutTask } from '../../timer/index.js';
 
 const debug = createDebugLogger('bb:prover');
 
@@ -35,6 +36,8 @@ class Timer {
  * Fft implementation was initialised with.
  */
 export class Prover {
+  private interruptPromise!: Promise<any>;
+
   constructor(
     private wasm: BarretenbergWorker | BarretenbergWasm,
     private pippenger: Pippenger,
@@ -46,11 +49,17 @@ export class Prover {
     return this.wasm as BarretenbergWorker;
   }
 
-  private async proverCall(name: string, ...args: any[]) {
-    return await this.wasm.asyncCall(this.callPrefix + name, ...args);
+  public async createProof(proverPtr: number, timeout?: number) {
+    const task = new TimeoutTask(async () => await this.prove(proverPtr), timeout, 'createProof');
+    this.interruptPromise = task.getInterruptPromise();
+    return await task.exec();
   }
 
-  public async createProof(proverPtr: number) {
+  private async proverCall(name: string, ...args: any[]) {
+    return await Promise.race([this.wasm.asyncCall(this.callPrefix + name, ...args), this.interruptPromise]);
+  }
+
+  private async prove(proverPtr: number) {
     await this.wasm.acquire();
     try {
       const circuitSize = await this.proverCall('prover_get_circuit_size', proverPtr);
