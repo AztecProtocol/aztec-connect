@@ -4,13 +4,13 @@ set -e
 # Do not deploy if a mainnet deployment
 case $VERSION_TAG in
   testnet)
-    export ETHEREUM_HOST=https://aztec-connect-$VERSION_TAG-mainnet-fork.aztec.network:8545/$AC_TEST_FORK_API_KEY
+    export ETHEREUM_HOST=https://aztec-connect-$VERSION_TAG-mainnet-fork.aztec.network:8545/$TEST_FORK_API_KEY
     export PRIVATE_KEY=$TF_VAR_TEST_NET_ROOT_PRIVATE_KEY
     export DEPLOYER_ADDRESS=$TF_VAR_TEST_NET_DEPLOYER_ADDRESS
     export FAUCET_CONTROLLER=$TF_VAR_TEST_NET_FAUCET_OPERATOR_ADDRESS
     ;;
   dev)
-    export ETHEREUM_HOST=https://aztec-connect-$VERSION_TAG-mainnet-fork.aztec.network:8545/$AC_DEV_FORK_API_KEY
+    export ETHEREUM_HOST=https://aztec-connect-$VERSION_TAG-mainnet-fork.aztec.network:8545/$DEV_FORK_API_KEY
     export PRIVATE_KEY=$TF_VAR_DEV_NET_ROOT_PRIVATE_KEY
     export DEPLOYER_ADDRESS=$TF_VAR_DEV_NET_DEPLOYER_ADDRESS
     export FAUCET_CONTROLLER=$TF_VAR_DEV_NET_FAUCET_OPERATOR_ADDRESS

@@ -109,10 +109,18 @@ function flattenToEnvVars(keyResult: KeyResult, prefix = ''): EnvVar[] {
   }
 }
 
+/**Derive Deployment Keys
+ *
+ * @notice Keys listed below are specific to Aztec Connect. If running any other
+ *         service they will need to be updated accordingly.
+ *
+ * @param mnemonic
+ * @returns
+ */
 export function deriveDeploymentKeys(mnemonic: string) {
   const keyDefs: KeyDef[] = [
     {
-      name: 'AC_DEV',
+      name: 'DEV',
       type: 'mnemonic',
       length: 12,
       children: [
@@ -128,10 +136,11 @@ export function deriveDeploymentKeys(mnemonic: string) {
             { name: 'ROLLUP_PROVIDER', type: 'eth_keypair' },
           ],
         },
+        { name: 'NEXTAUTH_JWT_SECRET', type: 'hex', length: 32 },
       ],
     },
     {
-      name: 'AC_TEST',
+      name: 'TEST',
       type: 'mnemonic',
       length: 12,
       children: [
@@ -148,10 +157,11 @@ export function deriveDeploymentKeys(mnemonic: string) {
           ],
         },
         { name: 'SERVER_AUTH_TOKEN', type: 'base64', length: 16 },
+        { name: 'NEXTAUTH_JWT_SECRET', type: 'hex', length: 32 },
       ],
     },
     {
-      name: 'AC_PROD',
+      name: 'PROD',
       type: 'mnemonic',
       length: 12,
       children: [
