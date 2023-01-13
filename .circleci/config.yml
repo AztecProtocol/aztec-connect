@@ -27,6 +27,11 @@ parameters:
   workflow:
     type: string
     default: 'system'
+  target:
+    type: enum
+    default: 'dev'
+    description: The environment to trigger redeploys to
+    enum: ['dev', 'testnet']
 
 # This build step checks out the code from the repository. It has a hardcoded readonly key to allow the checkout.
 # Initially it just fetches the repo metadata for the current commit hash to a depth of 50 commits.
@@ -626,6 +631,11 @@ jobs:
     steps:
       - *checkout
       - *setup_env
+      - run: # Building the fork requires keys to be derived
+          name: 'Derive keys'
+          command: |
+            ensure_repo aztec-dev-cli $ECR_REGION
+            docker run --rm $ECR_URL/aztec-dev-cli:cache-$COMMIT_HASH deriveKeys "$KEY_DERIVATION_MNEMONIC" >> $BASH_ENV
       - run:
           name: 'Build and test'
           command: build mainnet-fork
@@ -799,12 +809,6 @@ jobs:
     machine:
       image: ubuntu-2004:202010-01
     resource_class: medium
-    parameters:
-      target:
-        type: enum
-        default: 'dev'
-        description: The environment to trigger the redeploy to
-        enum: ['dev', 'testnet']
     environment:
       FORCE_DEPLOY: 'true'
     steps:
@@ -813,7 +817,7 @@ jobs:
       - run:
           name: 'set environment'
           command: |
-            echo export VERSION_TAG=<< parameters.target >> >> $BASH_ENV
+            echo export VERSION_TAG=<< pipeline.parameters.target >> >> $BASH_ENV
             echo export DEPLOY_TAG=aztec-connect-$VERSION_TAG >> $BASH_ENV
       - run:
           name: 'derive keys'
@@ -1014,8 +1018,6 @@ workflows:
       equal: [redeploy-mainnet-fork, << pipeline.parameters.workflow >>]
     jobs:
       - mainnet-fork
-      - aztec-dev-cli
       - deploy-mainnet-fork:
           requires:
             - mainnet-fork
-            - aztec-dev-cli
