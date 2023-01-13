@@ -26,7 +26,7 @@ import { Metrics } from './metrics/index.js';
 import { Server } from './server.js';
 import { Tx, TxRequest } from './tx_receiver/index.js';
 
-const { mkdirpSync, writeJsonSync } = fsExtra;
+const { mkdirp, writeJson } = fsExtra;
 
 const toDepositTxJson = ({ proofData }: TxDao): DepositTxJson => {
   const proof = JoinSplitProofData.fromBuffer(proofData);
@@ -163,7 +163,7 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     const log = JSON.parse((await stream.readAll()) as string);
     const clientIp = requestIp.getClientIp(ctx.request);
     const userAgent = ctx.request.header['user-agent'];
-    const origin = ctx.request.origin;
+    const origin = ctx.header.origin;
     const data = {
       ...log,
       clientIp,
@@ -177,7 +177,7 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
   router.post('/client-console-log', async (ctx: Koa.Context) => {
     const stream = new PromiseReadable(ctx.req);
     // TODO - only allow post from whitelisted domains
-    const origin = ctx.request.origin;
+    const origin = ctx.header.origin;
     const log = JSON.parse((await stream.readAll()) as string);
     const { publicKeys } = log;
     if (!publicKeys) {
@@ -197,8 +197,8 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     const dir = `${configurator.getDataDir()}/client-logs`;
     const publicKey = publicKeys[0] || GrumpkinAddress.ZERO.toString();
     const filename = `${dir}/${publicKey.slice(2, 10)}_${publicKey.slice(-4)}-${clientIp}-${timestamp}`;
-    mkdirpSync(dir);
-    writeJsonSync(filename, data);
+    await mkdirp(dir);
+    await writeJson(filename, data);
     ctx.status = 200;
   });
 

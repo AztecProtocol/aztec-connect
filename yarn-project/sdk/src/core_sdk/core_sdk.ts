@@ -282,6 +282,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       publicKeys: publicKeys.map(k => k.toString()),
       logs: logs.map(ensureJson),
       clientData,
+      clientUrl: location?.href,
     });
     if (!preserveLog) {
       logHistory.clear(logs.length);
