@@ -172,7 +172,7 @@ export function deriveDeploymentKeys(mnemonic: string) {
     { name: 'DOCKERHUB_PASSWORD', type: 'base64', length: 20 },
   ];
 
-  const envVarToShellExport = ({ key, value }: EnvVar) => `export ${key}=${value}`;
+  const envVarToShellExport = ({ key, value }: EnvVar) => `export ${key}="${value}"`;
   const toTfEnvVar = ({ key, value }: EnvVar) => ({ key: 'TF_VAR_' + key, value });
 
   const envVars = keyDefs.map((k, i) => deriveKey(mnemonic, i, k)).flatMap(r => flattenToEnvVars(r));

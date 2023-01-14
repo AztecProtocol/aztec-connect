@@ -1,4 +1,4 @@
-#!bin/bash
+#!/bin/bash
 set -e
 
 # When destroying and applying mainnet fork terraform, it may not be 
@@ -8,10 +8,10 @@ set -e
 
 case $VERSION_TAG in
   testnet)
-    export ETHEREUM_HOST="https://aztec-connect-$VERSION_TAG-mainnet-fork.aztec.network:8545/$AC_TEST_FORK_API_KEY"
+    export ETHEREUM_HOST="https://aztec-connect-$VERSION_TAG-mainnet-fork.aztec.network:8545/$TEST_FORK_API_KEY"
     ;;
   dev)
-    export ETHEREUM_HOST="https://aztec-connect-$VERSION_TAG-mainnet-fork.aztec.network:8545/$AC_DEV_FORK_API_KEY"
+    export ETHEREUM_HOST="https://aztec-connect-$VERSION_TAG-mainnet-fork.aztec.network:8545/$DEV_FORK_API_KEY"
     ;;
   *)
     echo "No configuration for VERSION_TAG=$VERSION_TAG, skipping contract deployment."
@@ -19,15 +19,8 @@ case $VERSION_TAG in
     ;;
 esac
 
-# Parameters to handle performing retries
-NUMBER_OF_RETRIES=15
-WAIT_TIME=20
-I=0
-until [ "$I" -ge $NUMBER_OF_RETRIES ]
-do
-   curl -H "Content-Type: application/json" -X POST --data '{"method":"eth_chainId","params":[],"id":49,"jsonrpc":"2.0"}' $ETHEREUM_HOST \
-    && break
-   I=$((I+1))
-   echo "Retrying $I of $NUMBER_OF_RETRIES times, waiting 20 seconds"
-   sleep $WAIT_TIME
-done
+curl -H "Content-Type: application/json" -X POST --data '{"method":"eth_chainId","params":[],"id":49,"jsonrpc":"2.0"}' \
+  --connect-timeout 30 \
+  --retry 15 \
+  --retry-delay 20 \
+  $ETHEREUM_HOST
