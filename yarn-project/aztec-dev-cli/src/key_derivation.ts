@@ -136,7 +136,6 @@ export function deriveDeploymentKeys(mnemonic: string) {
             { name: 'ROLLUP_PROVIDER', type: 'eth_keypair' },
           ],
         },
-        { name: 'NEXTAUTH_JWT_SECRET', type: 'hex', length: 32 },
       ],
     },
     {
@@ -157,7 +156,6 @@ export function deriveDeploymentKeys(mnemonic: string) {
           ],
         },
         { name: 'SERVER_AUTH_TOKEN', type: 'base64', length: 16 },
-        { name: 'NEXTAUTH_JWT_SECRET', type: 'hex', length: 32 },
       ],
     },
     {
