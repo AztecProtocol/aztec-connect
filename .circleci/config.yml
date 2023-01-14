@@ -1017,7 +1017,10 @@ workflows:
     when:
       equal: [redeploy-mainnet-fork, << pipeline.parameters.workflow >>]
     jobs:
-      - mainnet-fork
+      - aztec-dev-cli
+      - mainnet-fork:
+          requires:
+            - aztec-dev-cli
       - deploy-mainnet-fork:
           requires:
             - mainnet-fork
