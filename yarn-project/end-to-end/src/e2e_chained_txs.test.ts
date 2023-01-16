@@ -235,12 +235,12 @@ describe('end-to-end chained txs tests', () => {
       }
 
       // Account 0 transfers to account 2.
-      const transferValue = sdk.toBaseUnits(assetId, '0.021'); // Should pick 3 notes, including the pending note.
+      const transferValue = sdk.toBaseUnits(assetId, '0.0211'); // Should pick 3 notes, including the pending note.
       const [transferFee] = await sdk.getTransferFees(assetId, { userId, assetValue: transferValue });
       {
         const recipientIndex = 2;
         const [baseFee] = await sdk.getTransferFees(assetId);
-        expect(transferFee.value).toEqual(baseFee.value * 3n);
+        expect(transferFee.value).toEqual(baseFee.value * 2n);
 
         debug(
           `transferring ${sdk.fromBaseUnits(transferValue, true)} (fee: ${sdk.fromBaseUnits(
