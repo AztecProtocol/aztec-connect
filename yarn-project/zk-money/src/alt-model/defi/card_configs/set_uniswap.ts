@@ -12,7 +12,7 @@ import setMiniLogo from '../../../images/set_mini_logo.svg';
 
 export const SET_UNISWAP_CARD: CreateRecipeArgs = {
   id: 'set-uniswap.ETH-to-icETH',
-  unlisted: true,
+  unlisted: !localStorage.getItem('show_unpublished_defi_cards'),
   bridgeBinding: 'Uniswap_800K',
   gradient: ['rgb(76, 113, 236)', 'rgb(76, 113, 236)'],
   openHandleAssetBinding: 'icETH',

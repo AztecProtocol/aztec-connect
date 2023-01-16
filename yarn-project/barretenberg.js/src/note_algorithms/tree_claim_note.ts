@@ -37,9 +37,7 @@ export class TreeClaimNote {
   static fromBuffer(buf: Buffer) {
     const value = toBigIntBE(buf.slice(0, 32));
     let offset = 32;
-    const bridgeCallData = BridgeCallData.fromBuffer(
-      buf.slice(offset, offset + BridgeCallData.ENCODED_LENGTH_IN_BYTES),
-    );
+    const bridgeCallData = BridgeCallData.fromBuffer(buf.slice(offset, offset + BridgeCallData.SIZE));
     offset += 32;
     const defiInteractionNonce = buf.readUInt32BE(offset);
     offset += 4;

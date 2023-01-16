@@ -25,7 +25,7 @@ const extractBigInt = (val: bigint, offset: number, size: number) =>
 
 export class BridgeCallData {
   static ZERO = new BridgeCallData(0, 0, 0);
-  static ENCODED_LENGTH_IN_BYTES = 32;
+  static SIZE = 32;
 
   public readonly bitConfig: BitConfig;
 

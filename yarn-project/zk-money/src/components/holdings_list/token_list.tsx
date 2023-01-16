@@ -1,12 +1,13 @@
+import { useState } from 'react';
 import { AssetValue } from '@aztec/sdk';
+import { useNavigate } from 'react-router-dom';
 import { recipeFiltersToSearchStr } from '../../alt-model/defi/recipe_filters.js';
 import { RemoteAsset } from '../../alt-model/types.js';
 import { Pagination } from '../../components/pagination.js';
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { HOLDINGS_PER_PAGE, slicePage } from './helpers.js';
 import { Holding } from './holding.js';
-import { PendingBalances, usePendingBalances } from '../../alt-model/assets/l1_balance_hooks.js';
+import { usePendingBalances } from '../../alt-model/top_level_context/top_level_context_hooks.js';
+import { PendingBalances } from '../../alt-model/top_level_context/pending_balances_obs.js';
 import style from './token_list.module.scss';
 
 interface TokenListProps {
@@ -29,9 +30,9 @@ function generateBalances(pendingBalances?: PendingBalances, balances?: AssetVal
 }
 
 export function TokenList(props: TokenListProps) {
+  const pendingBalances = usePendingBalances();
   const [page, setPage] = useState(1);
   const navigate = useNavigate();
-  const pendingBalances = usePendingBalances();
 
   const handleGoToEarn = (asset: RemoteAsset) => {
     const searchStr = recipeFiltersToSearchStr({ assetSymbol: asset.symbol });

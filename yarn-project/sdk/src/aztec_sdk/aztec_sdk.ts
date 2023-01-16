@@ -29,7 +29,7 @@ import {
   WithdrawController,
   createTxRefNo,
 } from '../controllers/index.js';
-import { CoreSdkInterface, SdkEvent } from '../core_sdk/index.js';
+import { CoreSdk, SdkEvent } from '../core_sdk/index.js';
 import { ProofOutput } from '../proofs/index.js';
 import { SchnorrSigner, Signer } from '../signer/index.js';
 import { RecoveryData, RecoveryPayload } from '../user/index.js';
@@ -52,11 +52,7 @@ export class AztecSdk extends EventEmitter {
   private feeCalculator: FeeCalculator;
   private txValueCalculator: TxValueCalculator;
 
-  constructor(
-    private core: CoreSdkInterface,
-    private blockchain: ClientEthereumBlockchain,
-    private provider: EthereumProvider,
-  ) {
+  constructor(private core: CoreSdk, private blockchain: ClientEthereumBlockchain, private provider: EthereumProvider) {
     super();
 
     this.feeCalculator = new FeeCalculator(core, blockchain);

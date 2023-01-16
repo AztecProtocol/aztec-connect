@@ -6,7 +6,6 @@ import {
   EthAddress,
   GrumpkinAddress,
   SdkEvent,
-  SdkFlavour,
   setPostDebugLogHook,
   sha256,
   TxSettlementTime,
@@ -183,7 +182,6 @@ export function MinForm({ chainId, rpc, serverUrl }: MinFormProps) {
                   const sdk = await createAztecSdk(provider!, {
                     serverUrl,
                     debug: 'bb:*',
-                    flavour: SdkFlavour.PLAIN,
                     numWorkers: 4,
                   });
                   await sdk.run();

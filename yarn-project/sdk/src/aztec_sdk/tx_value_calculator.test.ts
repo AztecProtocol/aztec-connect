@@ -3,7 +3,7 @@ import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { randomBytes } from '@aztec/barretenberg/crypto';
 import { DefiSettlementTime, TxSettlementTime } from '@aztec/barretenberg/rollup_provider';
 import { ClientEthereumBlockchain } from '@aztec/blockchain';
-import { CoreSdkInterface } from '../core_sdk/index.js';
+import { CoreSdk } from '../core_sdk/index.js';
 import { NotePicker } from '../note_picker/index.js';
 import { TxValueCalculator } from './tx_value_calculator.js';
 import { jest } from '@jest/globals';
@@ -13,7 +13,7 @@ type Mockify<T> = {
 };
 
 describe('tx value calculator', () => {
-  let core: Mockify<CoreSdkInterface>;
+  let core: Mockify<CoreSdk>;
   let blockchain: Mockify<ClientEthereumBlockchain>;
   let txValueCalculator: TxValueCalculator;
   const assetId = 1;
@@ -102,7 +102,7 @@ describe('tx value calculator', () => {
       isEmpty: jest.fn<any>().mockResolvedValue(false),
     } as any;
 
-    txValueCalculator = new TxValueCalculator(core, blockchain as any);
+    txValueCalculator = new TxValueCalculator(core as any, blockchain as any);
 
     mockTxFees();
   });

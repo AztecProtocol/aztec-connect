@@ -1,3 +1,4 @@
+import { CoreSdk } from './core_sdk/index.js';
 export { SDK_VERSION } from './version.js';
 export * from './aztec_sdk/index.js';
 export * from './controllers/index.js';
@@ -39,4 +40,6 @@ export {
 // Exposing for medici. Remove once they have proper multisig api.
 export * from './proofs/index.js';
 export { BarretenbergWasm } from '@aztec/barretenberg/wasm';
-export { CoreSdkInterface } from './core_sdk/index.js';
+export type CoreSdkInterface = {
+  [K in keyof CoreSdk]: CoreSdk[K];
+};

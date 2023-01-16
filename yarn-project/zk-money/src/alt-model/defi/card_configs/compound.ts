@@ -12,7 +12,7 @@ import { CompoundBridgeData } from '../../../bridge-clients/client/compound/comp
 
 export const COMPOUND_DAI_CARD: CreateRecipeArgs = {
   id: 'compound.DAI-to-weETH',
-  unlisted: true,
+  unlisted: !localStorage.getItem('show_unpublished_defi_cards'),
   bridgeBinding: 'ERC4626_400K',
   exitBridgeBinding: 'ERC4626_300K',
   gradient: ['rgb(96, 208, 153)', 'rgb(96, 208, 153)'],

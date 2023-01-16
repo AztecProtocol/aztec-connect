@@ -109,10 +109,18 @@ function flattenToEnvVars(keyResult: KeyResult, prefix = ''): EnvVar[] {
   }
 }
 
+/**Derive Deployment Keys
+ *
+ * @notice Keys listed below are specific to Aztec Connect. If running any other
+ *         service they will need to be updated accordingly.
+ *
+ * @param mnemonic
+ * @returns
+ */
 export function deriveDeploymentKeys(mnemonic: string) {
   const keyDefs: KeyDef[] = [
     {
-      name: 'AC_DEV',
+      name: 'DEV',
       type: 'mnemonic',
       length: 12,
       children: [
@@ -131,7 +139,7 @@ export function deriveDeploymentKeys(mnemonic: string) {
       ],
     },
     {
-      name: 'AC_TEST',
+      name: 'TEST',
       type: 'mnemonic',
       length: 12,
       children: [
@@ -151,7 +159,7 @@ export function deriveDeploymentKeys(mnemonic: string) {
       ],
     },
     {
-      name: 'AC_PROD',
+      name: 'PROD',
       type: 'mnemonic',
       length: 12,
       children: [
@@ -162,7 +170,7 @@ export function deriveDeploymentKeys(mnemonic: string) {
     { name: 'DOCKERHUB_PASSWORD', type: 'base64', length: 20 },
   ];
 
-  const envVarToShellExport = ({ key, value }: EnvVar) => `export ${key}=${value}`;
+  const envVarToShellExport = ({ key, value }: EnvVar) => `export ${key}="${value}"`;
   const toTfEnvVar = ({ key, value }: EnvVar) => ({ key: 'TF_VAR_' + key, value });
 
   const envVars = keyDefs.map((k, i) => deriveKey(mnemonic, i, k)).flatMap(r => flattenToEnvVars(r));

@@ -2,7 +2,7 @@ import createDebug from 'debug';
 import { EthAddress, TxSettlementTime } from '@aztec/sdk';
 import { useState } from 'react';
 import { useAccount, useNetwork } from 'wagmi';
-import { useL1Balances } from '../assets/l1_balance_hooks.js';
+import { useL1Balance } from '../assets/l1_balance_hooks.js';
 import { useEstimatedShieldingGasCosts } from './shielding_gas_estimate_hooks.js';
 import { useDepositFeeAmounts } from './deposit_fee_hooks.js';
 import { useTrackedFieldChangeHandlers } from '../form_fields_hooks.js';
@@ -19,7 +19,12 @@ import { chainIdToNetwork } from '../../app/networks.js';
 import { useAccountState } from '../account_state/account_state_hooks.js';
 import { useUserIdForRecipientStr } from '../alias_hooks.js';
 import { useActiveSignerObs, useAwaitCorrectProvider } from '../defi/defi_form/correct_provider_hooks.js';
-import { useSdk, useConfig, useAmountFactory } from '../top_level_context/top_level_context_hooks.js';
+import {
+  useSdk,
+  useConfig,
+  useAmountFactory,
+  usePendingBalances,
+} from '../top_level_context/top_level_context_hooks.js';
 import { removePrefixFromRecipient } from '../../views/account/dashboard/modals/sections/recipient_section/helpers.js';
 
 const debug = createDebug('zm:shield_form_hooks');
@@ -52,7 +57,10 @@ export function useShieldForm(
   const userId = accountState?.userId;
   const amountFactory = useAmountFactory();
   const targetAsset = useAsset(fields.assetId);
-  const { l1Balance, l1PendingBalance } = useL1Balances(targetAsset);
+  const pendingBalances = usePendingBalances();
+  const l1Balance = useL1Balance(targetAsset);
+
+  const l1PendingBalance = pendingBalances?.[targetAsset.id] ?? 0n;
   const { approveProofGasCost, depositFundsGasCost } = useEstimatedShieldingGasCosts(depositor, targetAsset?.id);
   const feeAmounts = useDepositFeeAmounts(fields.assetId);
   const feeAmount = feeAmounts?.[fields.speed];

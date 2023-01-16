@@ -1,47 +1,19 @@
 import { PooledPedersen, SinglePedersen } from '@aztec/barretenberg/crypto';
 import { PooledFftFactory, SingleFftFactory } from '@aztec/barretenberg/fft';
+import { createDebugLogger } from '@aztec/barretenberg/log';
+import { PooledNoteDecryptor, SingleNoteDecryptor } from '@aztec/barretenberg/note_algorithms';
 import { PooledPippenger, SinglePippenger } from '@aztec/barretenberg/pippenger';
 import { ServerRollupProvider } from '@aztec/barretenberg/rollup_provider';
 import { BarretenbergWasm, WorkerPool } from '@aztec/barretenberg/wasm';
-import { PooledNoteDecryptor, SingleNoteDecryptor } from '@aztec/barretenberg/note_algorithms';
-import isNode from 'detect-node';
-import { mkdirSync } from 'fs';
-import { default as levelup, LevelUp } from 'levelup';
-import { CoreSdk, CoreSdkOptions } from '../../core_sdk/index.js';
-import { DexieDatabase, SQLDatabase } from '../../database/index.js';
-import { getDeviceMemory, getNumCpu, getNumWorkers } from '../../get_num_workers/index.js';
-import { SDK_VERSION } from '../../version.js';
-import { createDebugLogger } from '@aztec/barretenberg/log';
-import { default as memdown } from 'memdown';
-import { levelUpNodeFactory } from './node/index.js';
-import { levelUpWebFactory } from './browser/index.js';
+import { getDb } from '../database/index.js';
+import { getDeviceMemory, getNumCpu, getNumWorkers } from '../get_num_workers/index.js';
+import { getLevelDb } from '../level_db/index.js';
+import { SDK_VERSION } from '../version.js';
+import { CoreSdk, CoreSdkOptions } from './index.js';
 
 const debug = createDebugLogger('bb:create_vanilla_core_sdk');
 
-export function getLevelDb(memoryDb = false, identifier?: string): LevelUp {
-  if (isNode) {
-    const folder = identifier ? `/${identifier}` : '';
-    const dbPath = `./data${folder}`;
-    if (memoryDb) {
-      return levelup(memdown());
-    } else {
-      mkdirSync(dbPath, { recursive: true });
-      return levelUpNodeFactory(`${dbPath}/aztec2-sdk.db`);
-    }
-  } else {
-    return levelUpWebFactory(`aztec2-sdk`);
-  }
-}
-
-export async function getDb(memoryDb = false, identifier?: string) {
-  if (isNode) {
-    return await SQLDatabase.getDb(memoryDb, identifier);
-  } else {
-    return new DexieDatabase();
-  }
-}
-
-export interface VanillaCoreSdkOptions extends CoreSdkOptions {
+export interface CreateCoreSdkOptions extends CoreSdkOptions {
   memoryDb?: boolean; // node only
   identifier?: string; // node only
   numWorkers?: number;
@@ -52,7 +24,7 @@ export interface VanillaCoreSdkOptions extends CoreSdkOptions {
  * This is used in backend node apps.
  * Dapps should use either strawberry or chocolate.
  */
-export async function createVanillaCoreSdk(options: VanillaCoreSdkOptions) {
+export async function createCoreSdk(options: CreateCoreSdkOptions) {
   const { numWorkers = getNumWorkers() } = options;
 
   if (numWorkers === 0) {
@@ -70,7 +42,7 @@ export async function createVanillaCoreSdk(options: VanillaCoreSdkOptions) {
   const fftFactory = new PooledFftFactory(workerPool);
   const { memoryDb, identifier, serverUrl, pollInterval, noVersionCheck } = options;
 
-  const leveldb = getLevelDb(memoryDb, identifier);
+  const leveldb = getLevelDb('aztec2-sdk', memoryDb, identifier);
   const db = await getDb(memoryDb, identifier);
 
   const host = new URL(serverUrl);
@@ -91,7 +63,7 @@ export async function createVanillaCoreSdk(options: VanillaCoreSdkOptions) {
   return coreSdk;
 }
 
-async function createWorkerlessSdk(options: VanillaCoreSdkOptions) {
+async function createWorkerlessSdk(options: CreateCoreSdkOptions) {
   const wasm = await BarretenbergWasm.new('main');
   const noteDecryptor = new SingleNoteDecryptor(wasm);
   const pedersen = new SinglePedersen(wasm);
@@ -99,7 +71,7 @@ async function createWorkerlessSdk(options: VanillaCoreSdkOptions) {
   const fftFactory = new SingleFftFactory(wasm);
   const { memoryDb, identifier, serverUrl, pollInterval, noVersionCheck } = options;
 
-  const leveldb = getLevelDb(memoryDb, identifier);
+  const leveldb = getLevelDb('aztec2-sdk', memoryDb, identifier);
   const db = await getDb(memoryDb, identifier);
 
   const host = new URL(serverUrl);

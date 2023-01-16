@@ -19,6 +19,7 @@
   "dependencies": {
     "@aztec/barretenberg": "workspace:^",
     "@aztec/blockchain": "workspace:^",
+    "@aztec/sdk": "^2.1.75",
     "@ethersproject/abi": "5.5.0",
     "@ethersproject/abstract-provider": "5.5.1",
     "@ethersproject/contracts": "5.5.0",

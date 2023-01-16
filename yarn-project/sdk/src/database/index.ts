@@ -1,3 +1,13 @@
+import isNode from 'detect-node';
+import { DexieDatabase } from './dexie_database.js';
+import { SQLDatabase } from './node/index.js';
+
 export * from './database.js';
-export * from './dexie_database.js';
-export * from './node/index.js';
+
+export async function getDb(memoryDb = false, identifier?: string) {
+  if (isNode) {
+    return await SQLDatabase.getDb(memoryDb, identifier);
+  } else {
+    return new DexieDatabase();
+  }
+}

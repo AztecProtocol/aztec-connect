@@ -3,7 +3,7 @@ import { AssetValue } from '@aztec/barretenberg/asset';
 import { EthereumProvider } from '@aztec/barretenberg/blockchain';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { ClientEthereumBlockchain } from '@aztec/blockchain';
-import { CoreSdkInterface } from '../core_sdk/index.js';
+import { CoreSdk } from '../core_sdk/index.js';
 import { ProofOutput, proofOutputToProofTx } from '../proofs/index.js';
 import { RecoveryPayload } from '../user/index.js';
 import { createTxRefNo } from './create_tx_ref_no.js';
@@ -19,7 +19,7 @@ export class RecoverAccountController extends DepositHandler {
     public readonly deposit: AssetValue,
     public readonly fee: AssetValue,
     public readonly depositor = EthAddress.ZERO,
-    protected readonly core: CoreSdkInterface,
+    protected readonly core: CoreSdk,
     blockchain: ClientEthereumBlockchain,
     provider: EthereumProvider,
   ) {

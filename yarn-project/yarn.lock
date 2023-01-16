@@ -42,6 +42,28 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@aztec/barretenberg@npm:2.1.76":
+  version: 2.1.76
+  resolution: "@aztec/barretenberg@npm:2.1.76"
+  dependencies:
+    "@types/levelup": ^4.3.0
+    browserify-cipher: ^1.0.1
+    cross-fetch: ^3.1.5
+    debug: ^4.3.4
+    detect-node: ^2.1.0
+    fs-extra: 10.0.0
+    hash.js: ^1.1.7
+    leveldown: ^6.1.1
+    levelup: ^5.1.1
+    memdown: ^6.1.1
+    promise-readable: ^5.0.4
+    sha3: ^2.1.3
+    supports-color: 7.2.0
+    tslib: ^2.0.0
+  checksum: 5bcc0db8f41007c3efb681cc62569cf409e3c9223b2a9acd9709bf7099bd42d74abc68e5a3f79d02e32e9e0653e160dcdb81759dbf1b8e9b1a42776a9e2d5b1e
+  languageName: node
+  linkType: hard
+
 "@aztec/barretenberg@workspace:^, @aztec/barretenberg@workspace:barretenberg.js":
   version: 0.0.0-use.local
   resolution: "@aztec/barretenberg@workspace:barretenberg.js"
@@ -119,6 +141,26 @@ __metadata:
     typescript: ^4.7.4
   languageName: unknown
   linkType: soft
+
+"@aztec/blockchain@npm:2.1.76":
+  version: 2.1.76
+  resolution: "@aztec/blockchain@npm:2.1.76"
+  dependencies:
+    "@aztec/barretenberg": 2.1.76
+    "@ethersproject/abi": 5.5.0
+    "@ethersproject/abstract-provider": 5.5.1
+    "@ethersproject/contracts": 5.5.0
+    "@ethersproject/experimental": 5.5.0
+    "@ethersproject/providers": 5.5.1
+    "@uniswap/v2-core": ^1.0.1
+    "@uniswap/v2-periphery": ^1.1.0-beta.0
+    cross-fetch: ^3.1.5
+    debug: ^4.3.4
+    ethers: 5.5.1
+    sha3: ^2.1.4
+  checksum: fafc9978c717fc024eff24dbb5d83ed5ae9b9f6d4cf3c6d68989f33136c4b0abd1ea6f6000357e402046f82423b2c3912c607e85c8016780e44e3a4d349b505d
+  languageName: node
+  linkType: hard
 
 "@aztec/blockchain@workspace:^, @aztec/blockchain@workspace:blockchain":
   version: 0.0.0-use.local
@@ -220,6 +262,28 @@ __metadata:
     typescript: ^4.7.4
   languageName: unknown
   linkType: soft
+
+"@aztec/sdk@npm:^2.1.75":
+  version: 2.1.76
+  resolution: "@aztec/sdk@npm:2.1.76"
+  dependencies:
+    "@aztec/barretenberg": 2.1.76
+    "@aztec/blockchain": 2.1.76
+    detect-node: ^2.1.0
+    dexie: 3.0.1
+    events: ^3.3.0
+    level-js: ^6.1.0
+    leveldown: ^6.1.1
+    levelup: ^5.1.1
+    memdown: ^6.1.1
+    serve: ^14.0.1
+    sqlite3: ^5.0.9
+    supports-color: 7.2.0
+    tslib: ^2.4.0
+    typeorm: ^0.3.10
+  checksum: 0f35fc0ad349ad32db176f3bb1662863e38f8a349e2b2f91a898b6a174320a0d6ec0aa9c9a369641f83b855817a074b96044d37147f4d893883518ad32f35061
+  languageName: node
+  linkType: hard
 
 "@aztec/sdk@workspace:^, @aztec/sdk@workspace:sdk":
   version: 0.0.0-use.local
@@ -10329,6 +10393,7 @@ __metadata:
     "@aztec/barretenberg": "workspace:^"
     "@aztec/blockchain": "workspace:^"
     "@aztec/eslint-config": "workspace:^"
+    "@aztec/sdk": ^2.1.75
     "@ethersproject/abi": 5.5.0
     "@ethersproject/abstract-provider": 5.5.1
     "@ethersproject/contracts": 5.5.0

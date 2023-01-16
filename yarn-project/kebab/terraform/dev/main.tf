@@ -137,35 +137,11 @@ resource "aws_ecs_task_definition" "kebab" {
       },
       {
         "name": "ETHEREUM_HOST",
-        "value": "https://${var.DEPLOY_TAG}-mainnet-fork.aztec.network:8545/${var.AC_DEV_FORK_API_KEY}"
-      },
-      {
-        "name": "FAUCET_OPERATOR",
-        "value": "${var.FAUCET_OPERATOR_ADDRESS}"
-      },
-      {
-        "name": "PRIVATE_KEY",
-        "value": "${var.DEV_NET_ROOT_PRIVATE_KEY}"
+        "value": "https://${var.DEPLOY_TAG}-mainnet-fork.aztec.network:8545/${var.DEV_FORK_API_KEY}"
       },
       {
         "name": "ROLLUP_CONTRACT_ADDRESS",
         "value": "${data.terraform_remote_state.contracts.outputs.rollup_contract_address}"
-      },
-      {
-        "name": "PERMIT_HELPER_CONTRACT_ADDRESS",
-        "value": "${data.terraform_remote_state.contracts.outputs.permit_helper_contract_address}"
-      },
-      {
-        "name": "FEE_DISTRIBUTOR_ADDRESS",
-        "value": "${data.terraform_remote_state.contracts.outputs.fee_distributor_address}"
-      },
-      {
-        "name": "PRICE_FEED_CONTRACT_ADDRESSES",
-        "value": "${data.terraform_remote_state.contracts.outputs.price_feed_contract_addresses}"
-      },
-      {
-        "name": "BRIDGE_DATA_PROVIDER_CONTRACT_ADDRESS",
-        "value": "${data.terraform_remote_state.contracts.outputs.bridge_data_provider_contract_address}"
       },
       {
         "name": "ADDITIONAL_PERMITTED_METHODS",
@@ -173,7 +149,7 @@ resource "aws_ecs_task_definition" "kebab" {
       },
       {
         "name": "API_KEYS",
-        "value": "${var.DEV_NET_API_KEY}"
+        "value": "${var.DEV_KEBAB_API_KEY}"
       }
     ],
     "mountPoints": [

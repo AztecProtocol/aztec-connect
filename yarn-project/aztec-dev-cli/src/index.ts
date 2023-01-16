@@ -18,7 +18,7 @@ import {
   AztecFaucetJson,
   ElementBridge as ElementBridgeJson,
 } from './abis/index.js';
-
+import { createAztecSdk, SdkFlavour, AliasHash, BarretenbergWasm, Blake2s } from '@aztec/sdk';
 const { PRIVATE_KEY } = process.env;
 
 export const abis: { [key: string]: any } = {
@@ -230,9 +230,63 @@ export async function profileElement(
   console.log('Element summary ', summary);
 }
 
+export async function findAliasCollisions(
+  alias: string,
+  provider: EthereumProvider,
+  rollupProviderUrl: string,
+  memoryDb = false,
+) {
+  const wasm = await BarretenbergWasm.new('main');
+  const blake2s = new Blake2s(wasm);
+  const sdk = await createAztecSdk(provider, {
+    serverUrl: rollupProviderUrl,
+    pollInterval: 10000,
+    memoryDb: memoryDb, // if false will save chain data to file
+    debug: 'bb:core_sdk',
+    flavour: SdkFlavour.PLAIN,
+    minConfirmation: 1,
+  });
+  await sdk.run();
+  await sdk.awaitSynchronised();
+  const isLetter = (char: string) => {
+    return char.toLowerCase() != char.toUpperCase();
+  };
+  /// Generate alternative version of alias with different casing
+  const inner = async (alias: string, index: number, collisions: { [key: string]: string }) => {
+    if (index == alias.length) {
+      const isRegistered = await sdk.isAliasRegistered(alias, false);
+      if (isRegistered) {
+        collisions[alias] = AliasHash.fromAlias(alias, blake2s).toString();
+      }
+      return;
+    }
+    await inner(alias, index + 1, collisions);
+
+    // Numbers cannot be upper and lower case, so no need to check those.
+    if (isLetter(alias.charAt(index))) {
+      const temp = alias.substring(0, index) + alias.charAt(index).toUpperCase() + alias.substring(index + 1);
+      await inner(temp, index + 1, collisions);
+    }
+  };
+  const collisions: { [key: string]: string } = {};
+  await inner(alias.toLowerCase(), 0, collisions);
+  await sdk.destroy();
+  console.log(`Registered aliases similar to "${alias}":`, collisions);
+}
+
 const program = new Command();
 
 async function main() {
+  program
+    .command('findAliasCollisions')
+    .argument('<alias>', 'alias to check')
+    .argument('[url]', 'your ethereum rpc url', 'http://localhost:8545')
+    .argument('[rollupProviderUrl]', 'rollup provider url', 'https://api.aztec.network/aztec-connect-prod/falafel')
+    .argument('[memoryDb]', 'use memory db', false)
+    .action(async (alias: string, url: string, rollupProviderUrl: string, memoryDb: boolean) => {
+      await findAliasCollisions(alias, getProvider(url), rollupProviderUrl, memoryDb);
+    });
+
   program
     .command('deriveKeys')
     .description('derive keys')

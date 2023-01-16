@@ -2,7 +2,7 @@ import { GrumpkinAddress } from '../address/index.js';
 import { toBigIntBE, toBufferBE } from '../bigint_buffer/index.js';
 import { Grumpkin } from '../ecc/grumpkin/index.js';
 import { numToUInt32BE } from '../serialize/index.js';
-import { ViewingKey } from '../viewing_key/index.js';
+import { ViewingKey, ViewingKeyData } from '../viewing_key/index.js';
 import { DecryptedNote } from './decrypted_note.js';
 import { deriveNoteSecret } from './derive_note_secret.js';
 
@@ -41,13 +41,8 @@ export class TreeNote {
   }
 
   createViewingKey(ephPrivKey: Buffer, grumpkin: Grumpkin) {
-    const noteBuf = Buffer.concat([
-      toBufferBE(this.value, 32),
-      numToUInt32BE(this.assetId),
-      numToUInt32BE(+this.accountRequired),
-      this.creatorPubKey,
-    ]);
-    return ViewingKey.createFromEphPriv(noteBuf, this.ownerPubKey, ephPrivKey, grumpkin);
+    const data = new ViewingKeyData(this.value, this.assetId, this.accountRequired, this.creatorPubKey);
+    return ViewingKey.createFromEphPriv(data, this.ownerPubKey, ephPrivKey, grumpkin);
   }
 
   static fromBuffer(buf: Buffer) {
@@ -110,11 +105,11 @@ export class TreeNote {
     return new TreeNote(ownerPubKey, value, assetId, accountRequired, noteSecret, creatorPubKey, inputNullifier);
   }
 
-  static recover({ noteBuf, noteSecret }: DecryptedNote, inputNullifier: Buffer, ownerPubKey: GrumpkinAddress) {
-    const value = toBigIntBE(noteBuf.slice(0, 32));
-    const assetId = noteBuf.readUInt32BE(32);
-    const accountRequired = !!noteBuf.readUInt32BE(36);
-    const creatorPubKey = noteBuf.slice(40, 72);
+  static recover(decryptedNote: DecryptedNote, inputNullifier: Buffer, ownerPubKey: GrumpkinAddress) {
+    const {
+      data: { value, assetId, accountRequired, creatorPubKey },
+      noteSecret,
+    } = decryptedNote;
     return new TreeNote(ownerPubKey, value, assetId, accountRequired, noteSecret, creatorPubKey, inputNullifier);
   }
 }
