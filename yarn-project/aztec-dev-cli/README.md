@@ -19,6 +19,7 @@ Options:
   -h, --help                                                                             display help for command
 
 Commands:
+  findAliasCollisions <alias> [url] [rollupProviderUrl] [memoryDb]                       computes case-variations for the alias and prints them
   deriveKeys <mnemonic>                                                                  derive keys
   pkFromStore <file> [password]                                                          print a private key from an encrypted keystore file
   pkFromMnemonic <mnemonic> [derivation path]                                            print a private key derived from a mnemonic
@@ -49,3 +50,5 @@ Derive keys is a useful cli that can create all of the secrets required to run t
 ### Notes
 
 JSON files inside `/src/abis` are symlinked to files inside the contracts out folder
+
+The `@aztec/sdk` version can differ between deployments, e.g., production might differ from devnet etc.

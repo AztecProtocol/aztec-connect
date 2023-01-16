@@ -168,6 +168,27 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
         }]\
       ]],\
       ["@aztec/barretenberg", [\
+        ["npm:2.1.76", {\
+          "packageLocation": "./.yarn/cache/@aztec-barretenberg-npm-2.1.76-09adf43574-5bcc0db8f4.zip/node_modules/@aztec/barretenberg/",\
+          "packageDependencies": [\
+            ["@aztec/barretenberg", "npm:2.1.76"],\
+            ["@types/levelup", "npm:4.3.3"],\
+            ["browserify-cipher", "npm:1.0.1"],\
+            ["cross-fetch", "npm:3.1.5"],\
+            ["debug", "virtual:4cf42c2f2a8aa147d524c15c0290174d77a2062937f0c22441901ac61d50212062460a38e714456279cdb4fab155b3b1d12acfb24cd6bb68fcc1837e921b5557#npm:4.3.4"],\
+            ["detect-node", "npm:2.1.0"],\
+            ["fs-extra", "npm:10.0.0"],\
+            ["hash.js", "npm:1.1.7"],\
+            ["leveldown", "npm:6.1.1"],\
+            ["levelup", "npm:5.1.1"],\
+            ["memdown", "npm:6.1.1"],\
+            ["promise-readable", "npm:5.0.4"],\
+            ["sha3", "npm:2.1.4"],\
+            ["supports-color", "npm:7.2.0"],\
+            ["tslib", "npm:2.4.0"]\
+          ],\
+          "linkType": "HARD"\
+        }],\
         ["workspace:barretenberg.js", {\
           "packageLocation": "./barretenberg.js/",\
           "packageDependencies": [\
@@ -250,6 +271,25 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
         }]\
       ]],\
       ["@aztec/blockchain", [\
+        ["npm:2.1.76", {\
+          "packageLocation": "./.yarn/cache/@aztec-blockchain-npm-2.1.76-24e2fa01c6-fafc9978c7.zip/node_modules/@aztec/blockchain/",\
+          "packageDependencies": [\
+            ["@aztec/blockchain", "npm:2.1.76"],\
+            ["@aztec/barretenberg", "npm:2.1.76"],\
+            ["@ethersproject/abi", "npm:5.5.0"],\
+            ["@ethersproject/abstract-provider", "npm:5.5.1"],\
+            ["@ethersproject/contracts", "npm:5.5.0"],\
+            ["@ethersproject/experimental", "npm:5.5.0"],\
+            ["@ethersproject/providers", "npm:5.5.1"],\
+            ["@uniswap/v2-core", "npm:1.0.1"],\
+            ["@uniswap/v2-periphery", "npm:1.1.0-beta.0"],\
+            ["cross-fetch", "npm:3.1.5"],\
+            ["debug", "virtual:e9a07d9e500f265638a80b6a2d60a63d2c1402dd6a58d2f05af9d82e52be33df29a16291c32b33b9e23f1a0efea054868bd3312893433fe0583e4dba376fe47e#npm:4.3.4"],\
+            ["ethers", "npm:5.5.1"],\
+            ["sha3", "npm:2.1.4"]\
+          ],\
+          "linkType": "HARD"\
+        }],\
         ["workspace:blockchain", {\
           "packageLocation": "./blockchain/",\
           "packageDependencies": [\
@@ -359,6 +399,27 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
         }]\
       ]],\
       ["@aztec/sdk", [\
+        ["npm:2.1.76", {\
+          "packageLocation": "./.yarn/cache/@aztec-sdk-npm-2.1.76-c7f26350c8-0f35fc0ad3.zip/node_modules/@aztec/sdk/",\
+          "packageDependencies": [\
+            ["@aztec/sdk", "npm:2.1.76"],\
+            ["@aztec/barretenberg", "npm:2.1.76"],\
+            ["@aztec/blockchain", "npm:2.1.76"],\
+            ["detect-node", "npm:2.1.0"],\
+            ["dexie", "npm:3.0.1"],\
+            ["events", "npm:3.3.0"],\
+            ["level-js", "npm:6.1.0"],\
+            ["leveldown", "npm:6.1.1"],\
+            ["levelup", "npm:5.1.1"],\
+            ["memdown", "npm:6.1.1"],\
+            ["serve", "npm:14.0.1"],\
+            ["sqlite3", "virtual:9fe0621c2f7452e546afb7407263191bb0ff23335513d4fd321b647e96c783bd3533ee8c741b409ee3ca4a469ab9f9512eb07ca312f25e666f781e44aabf80c5#npm:5.0.9"],\
+            ["supports-color", "npm:7.2.0"],\
+            ["tslib", "npm:2.4.0"],\
+            ["typeorm", "virtual:9fe0621c2f7452e546afb7407263191bb0ff23335513d4fd321b647e96c783bd3533ee8c741b409ee3ca4a469ab9f9512eb07ca312f25e666f781e44aabf80c5#npm:0.3.10"]\
+          ],\
+          "linkType": "HARD"\
+        }],\
         ["workspace:sdk", {\
           "packageLocation": "./sdk/",\
           "packageDependencies": [\
@@ -18037,6 +18098,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["@aztec/barretenberg", "workspace:barretenberg.js"],\
             ["@aztec/blockchain", "workspace:blockchain"],\
             ["@aztec/eslint-config", "workspace:eslint-config"],\
+            ["@aztec/sdk", "npm:2.1.76"],\
             ["@ethersproject/abi", "npm:5.5.0"],\
             ["@ethersproject/abstract-provider", "npm:5.5.1"],\
             ["@ethersproject/contracts", "npm:5.5.0"],\

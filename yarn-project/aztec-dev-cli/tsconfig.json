@@ -5,7 +5,7 @@
     "module": "NodeNext",
     "outDir": "dest",
     "strict": true,
-    "noImplicitAny": true,
+    "noImplicitAny": false,
     "noUnusedLocals": true,
     "noImplicitThis": false,
     "esModuleInterop": true,
