@@ -41,7 +41,6 @@ import { MutexSerialQueue, SerialQueue } from '../serial_queue/index.js';
 import { SchnorrSigner } from '../signer/index.js';
 import { UserData } from '../user/index.js';
 import { UserState, UserStateEvent, UserStateFactory } from '../user_state/index.js';
-import { CoreSdkInterface } from './core_sdk_interface.js';
 import { CoreSdkOptions } from './core_sdk_options.js';
 import { SdkEvent, SdkStatus } from './sdk_status.js';
 import { sdkVersion } from './sdk_version.js';
@@ -70,7 +69,7 @@ enum SdkInitState {
  * By default, the serial queue is protected with a cross-process mutex, ensuring that if multiple instances
  * of the CoreSdk exist in different processes, that they will not modify state at the same time.
  */
-export class CoreSdk extends EventEmitter implements CoreSdkInterface {
+export class CoreSdk extends EventEmitter {
   private dataVersion = 1;
   private options!: CoreSdkOptions;
   private worldState!: WorldState;
@@ -604,7 +603,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     publicOwner: EthAddress | undefined,
     spendingPublicKey: GrumpkinAddress,
     allowChain: number,
-  ) {
+  ): Promise<JoinSplitProofInput[]> {
     return await this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
 
@@ -729,7 +728,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     depositValue: bigint,
     fee: bigint,
     spendingPublicKey: GrumpkinAddress,
-  ) {
+  ): Promise<JoinSplitProofInput[]> {
     return await this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
       const userState = this.getUserState(userId);

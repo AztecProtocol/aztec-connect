@@ -1,7 +1,7 @@
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetValue } from '@aztec/barretenberg/asset';
 import { TxId } from '@aztec/barretenberg/tx_id';
-import { CoreSdkInterface } from '../core_sdk/index.js';
+import { CoreSdk } from '../core_sdk/index.js';
 import { ProofOutput, proofOutputToProofTx } from '../proofs/index.js';
 import { Signer } from '../signer/index.js';
 import { createTxRefNo } from './create_tx_ref_no.js';
@@ -19,7 +19,7 @@ export class TransferController {
     public readonly fee: AssetValue,
     public readonly recipient: GrumpkinAddress,
     public readonly recipientSpendingKeyRequired: boolean,
-    private readonly core: CoreSdkInterface,
+    private readonly core: CoreSdk,
   ) {
     if (!assetValue.value) {
       throw new Error('Value must be greater than 0.');

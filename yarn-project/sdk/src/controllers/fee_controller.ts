@@ -2,7 +2,7 @@ import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetValue } from '@aztec/barretenberg/asset';
 import { Tx } from '@aztec/barretenberg/rollup_provider';
 import { TxId } from '@aztec/barretenberg/tx_id';
-import { CoreSdkInterface } from '../core_sdk/index.js';
+import { CoreSdk } from '../core_sdk/index.js';
 import { ProofOutput } from '../proofs/index.js';
 import { Signer } from '../signer/index.js';
 import { createTxRefNo } from './create_tx_ref_no.js';
@@ -16,7 +16,7 @@ export class FeeController {
     private readonly userSigner: Signer,
     public readonly proofTxs: Tx[],
     public readonly fee: AssetValue,
-    private readonly core: CoreSdkInterface,
+    private readonly core: CoreSdk,
   ) {
     if (!fee.value) {
       throw new Error('Fee cannot be 0.');

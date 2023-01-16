@@ -5,7 +5,7 @@ import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { DefiSettlementTime, TxSettlementTime } from '@aztec/barretenberg/rollup_provider';
 import { roundUp } from '@aztec/barretenberg/rounding';
 import { ClientEthereumBlockchain } from '@aztec/blockchain';
-import { CoreSdkInterface } from '../core_sdk/index.js';
+import { CoreSdk } from '../core_sdk/index.js';
 
 export interface GetMaxTxValueOptions {
   userSpendingKeyRequired?: boolean;
@@ -15,7 +15,7 @@ export interface GetMaxTxValueOptions {
 }
 
 export class TxValueCalculator {
-  constructor(private readonly core: CoreSdkInterface, private readonly blockchain: ClientEthereumBlockchain) {}
+  constructor(private readonly core: CoreSdk, private readonly blockchain: ClientEthereumBlockchain) {}
 
   public async getMaxWithdrawValue(
     userId: GrumpkinAddress,

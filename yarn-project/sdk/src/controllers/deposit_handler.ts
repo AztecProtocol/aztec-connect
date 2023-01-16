@@ -11,7 +11,7 @@ import {
   validateSignature,
   Web3Signer,
 } from '@aztec/blockchain';
-import { CoreSdkInterface } from '../core_sdk/index.js';
+import { CoreSdk } from '../core_sdk/index.js';
 import { ProofOutput } from '../proofs/index.js';
 
 export class DepositHandler {
@@ -36,7 +36,7 @@ export class DepositHandler {
     public readonly depositor: EthAddress,
     public readonly recipient: GrumpkinAddress,
     public readonly recipientSpendingKeyRequired: boolean,
-    protected readonly core: CoreSdkInterface,
+    protected readonly core: CoreSdk,
     private readonly blockchain: ClientEthereumBlockchain,
     private readonly provider: EthereumProvider,
   ) {

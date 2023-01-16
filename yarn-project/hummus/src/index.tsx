@@ -1,4 +1,4 @@
-import { enableLogs, isLogEnabled, JsonRpcProvider, SdkFlavour, WalletProvider } from '@aztec/sdk';
+import { enableLogs, isLogEnabled, JsonRpcProvider, WalletProvider } from '@aztec/sdk';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { createGlobalStyle } from 'styled-components';
@@ -46,13 +46,9 @@ async function main() {
   const debug = window.localStorage.getItem('debug') || 'bb:*';
   const deployTag = await getDeployTag();
 
-  // const flavour = SdkFlavour.HOSTED;
-  // const serverUrl = deployTag ? `https://${deployTag}-sdk.aztec.network/` : 'http://localhost:1234';
-
-  const flavour = SdkFlavour.PLAIN;
   const serverUrl = deployTag ? `https://api.aztec.network/${deployTag}/falafel` : 'http://localhost:8081';
 
-  const terminalHandler = new TerminalHandler(terminal, window.ethereum, { debug, serverUrl, flavour });
+  const terminalHandler = new TerminalHandler(terminal, window.ethereum, { debug, serverUrl });
   terminalHandler.start();
 
   // Allows injecting a provider externally (e.g. from puppeteer).
