@@ -7,7 +7,7 @@ import { OffchainDefiDepositData } from './offchain_defi_deposit_data.js';
 
 describe('OffchainDefiDepositData', () => {
   it('convert offchain defi deposit data to and from buffer', () => {
-    const userData = new OffchainDefiDepositData(
+    const offchainData = new OffchainDefiDepositData(
       BridgeCallData.random(),
       randomBytes(32), // partialState
       GrumpkinAddress.random(), // partialStateSecretEphPubKey
@@ -16,9 +16,24 @@ describe('OffchainDefiDepositData', () => {
       ViewingKey.random(),
       123,
     );
-    const buf = userData.toBuffer();
+    const buf = offchainData.toBuffer();
     expect(buf.length).toBe(OffchainDefiDepositData.SIZE);
-    expect(OffchainDefiDepositData.fromBuffer(buf)).toEqual(userData);
+    expect(OffchainDefiDepositData.fromBuffer(buf)).toEqual(offchainData);
+  });
+
+  it('get viewing key buffer from offchain data buffer', () => {
+    const viewingKey = ViewingKey.random();
+    const offchainData = new OffchainDefiDepositData(
+      BridgeCallData.random(),
+      randomBytes(32), // partialState
+      GrumpkinAddress.random(), // partialStateSecretEphPubKey
+      toBigIntBE(randomBytes(32)), // depositValue
+      toBigIntBE(randomBytes(32)), // txFee
+      viewingKey,
+      123,
+    );
+    const buf = offchainData.toBuffer();
+    expect(OffchainDefiDepositData.getViewingKeyBuffer(buf)).toEqual(viewingKey.toBuffer());
   });
 
   it('throw if partial state is not 32 bytes', () => {
