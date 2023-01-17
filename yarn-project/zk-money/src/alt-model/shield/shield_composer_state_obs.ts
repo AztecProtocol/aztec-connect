@@ -13,7 +13,7 @@ export enum ShieldComposerPhase {
 }
 export interface ShieldComposerState {
   phase: ShieldComposerPhase;
-  error?: { phase: ShieldComposerPhase; message: string };
+  error?: { phase: ShieldComposerPhase; message: string; raw: unknown };
   prompt?: string;
   signingRetryable?: Retryable<unknown>;
   backNoRetry?: boolean;
@@ -52,8 +52,8 @@ export class ShieldComposerStateObs implements IObs<ShieldComposerState> {
     this.obs.next({ ...this.value, signingRetryable: undefined });
   }
 
-  error(message: string) {
-    const error = { phase: this.obs.value.phase, message };
+  error(message: string, raw: unknown) {
+    const error = { phase: this.obs.value.phase, message, raw };
     this.obs.next({ phase: ShieldComposerPhase.IDLE, error });
   }
 

@@ -1,6 +1,7 @@
 import { StepStatus, SubmissionFlow, ActiveSubmissionFlowItem } from '../../../../../../ui-components/index.js';
 import { ShieldComposerPhase, ShieldComposerState } from '../../../../../../alt-model/shield/index.js';
 import { SubmissionItemPrompt } from '../../modal_molecules/submission_item_prompt/index.js';
+import { ReportErrorButton } from '../../../../../../components/report_error_button/index.js';
 
 const STEPS = [
   { phase: ShieldComposerPhase.GENERATE_SPENDING_KEY, label: 'Generating Spending Key' },
@@ -23,7 +24,12 @@ function getActiveItem({ composerState, requiresSpendingKey }: ShieldSubmissionS
   const steps = requiresSpendingKey ? STEPS : STEPS_WITHOUT_SPENDING_KEY;
   if (error) {
     const idx = steps.findIndex(x => x.phase === error.phase);
-    const expandedContent = <SubmissionItemPrompt errored>{error.message}</SubmissionItemPrompt>;
+    const expandedContent = (
+      <SubmissionItemPrompt errored>
+        {error.message}
+        <ReportErrorButton error={error.raw} />
+      </SubmissionItemPrompt>
+    );
     return { idx, status: StepStatus.ERROR, expandedContent };
   }
   const idx = steps.findIndex(x => x.phase === phase);

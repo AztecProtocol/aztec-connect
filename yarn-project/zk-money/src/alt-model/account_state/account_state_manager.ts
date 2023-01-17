@@ -53,6 +53,9 @@ export class AccountStateManager {
   }
 
   async setActiveUser(sdk: AztecSdk, userId: GrumpkinAddress, deriverEthAddress: EthAddress) {
+    // Call clear in case we've failed to do so already. (Otherwise two user
+    // subscriptions will fight over the state.)
+    this.clearActiveUser();
     debug('Setting active user');
     const added = await sdk.userExists(userId);
     if (!added) {
@@ -64,6 +67,7 @@ export class AccountStateManager {
   }
 
   async clearActiveUser() {
+    debug('Clearing active user');
     this.unlisten?.();
     this.unlisten = undefined;
     this.stateObs.next(undefined);

@@ -12,7 +12,7 @@ export enum DefiComposerPhase {
 
 export interface DefiComposerState {
   phase: DefiComposerPhase;
-  error?: { phase: DefiComposerPhase; message: string };
+  error?: { phase: DefiComposerPhase; message: string; raw: unknown };
   signingRetryable?: Retryable<unknown>;
   backNoRetry?: boolean;
 }
@@ -42,8 +42,8 @@ export class DefiComposerStateObs implements IObs<DefiComposerState> {
     this.obs.next({ ...this.obs.value, error: undefined });
   }
 
-  error(message: string) {
-    const error = { phase: this.obs.value.phase, message };
+  error(message: string, raw: unknown) {
+    const error = { phase: this.obs.value.phase, message, raw };
     this.obs.next({ phase: DefiComposerPhase.IDLE, error });
   }
 

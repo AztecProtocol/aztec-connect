@@ -11,6 +11,7 @@ const networks: Network[] = [
   { chainId: 5, network: 'goerli' },
   { chainId: 42, network: 'kovan' },
   { chainId: 1337, network: 'ganache', isFrequent: true },
+  { chainId: 31337, network: 'ganache', isFrequent: true },
   { chainId: 0xa57ec, network: 'mainnet-fork', isFrequent: true },
   { chainId: 0xdef, network: 'mainnet-fork', isFrequent: true },
 ];

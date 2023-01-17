@@ -12,7 +12,7 @@ export enum SendComposerPhase {
 
 export interface SendComposerState {
   phase: SendComposerPhase;
-  error?: { phase: SendComposerPhase; message: string };
+  error?: { phase: SendComposerPhase; message: string; raw: unknown };
   signingRetryable?: Retryable<unknown>;
   backNoRetry?: boolean;
 }
@@ -42,8 +42,8 @@ export class SendComposerStateObs implements IObs<SendComposerState> {
     this.obs.next({ ...this.obs.value, error: undefined });
   }
 
-  error(message: string) {
-    const error = { phase: this.obs.value.phase, message };
+  error(message: string, raw: unknown) {
+    const error = { phase: this.obs.value.phase, message, raw };
     this.obs.next({ phase: SendComposerPhase.IDLE, error });
   }
 
