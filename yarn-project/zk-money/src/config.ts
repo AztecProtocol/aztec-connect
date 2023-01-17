@@ -9,15 +9,12 @@ export interface Config {
   explorerUrl: string;
   chainId: number;
   ethereumHost: string;
-  mainnetEthereumHost: string;
   txAmountLimits: Record<AssetLabel, bigint>;
-  sessionTimeout: number;
   debugFilter: string;
 }
 
 interface ConfigVars {
   deployTag: string;
-  sessionTimeout: string;
   debugFilter: string;
 }
 
@@ -33,19 +30,16 @@ const removeEmptyValues = (vars: ConfigVars): Partial<ConfigVars> => {
 
 const fromLocalStorage = (): ConfigVars => ({
   deployTag: localStorage.getItem('zm_deployTag') || '',
-  sessionTimeout: localStorage.getItem('zm_sessionTimeout') || '',
   debugFilter: localStorage.getItem('zm_debug') ?? '',
 });
 
 const fromEnvVars = (): ConfigVars => ({
   deployTag: process.env.REACT_APP_DEPLOY_TAG || '',
-  sessionTimeout: process.env.REACT_APP_SESSION_TIMEOUT || '',
   debugFilter: process.env.REACT_APP_DEBUG ?? '',
 });
 
 const productionConfig: ConfigVars = {
   deployTag: '',
-  sessionTimeout: '30', // days
   debugFilter: 'zm:*,bb:*',
 };
 
@@ -97,14 +91,12 @@ function getDeployConfig(deployTag: string, rollupProviderUrl: string, chainId: 
     const explorerUrl = `https://${deployTag}-explorer.aztec.network`;
 
     const ethereumHost = getEthereumHost(chainId);
-    const mainnetEthereumHost = getEthereumHost(1);
-    return { deployTag, hostedSdkUrl, rollupProviderUrl, explorerUrl, chainId, ethereumHost, mainnetEthereumHost };
+    return { deployTag, hostedSdkUrl, rollupProviderUrl, explorerUrl, chainId, ethereumHost };
   } else {
     const hostedSdkUrl = `${window.location.protocol}//${window.location.hostname}:1234`;
     const explorerUrl = `${window.location.protocol}//${window.location.hostname}:3000`;
     const ethereumHost = `${window.location.protocol}//${window.location.hostname}:8545`;
-    const mainnetEthereumHost = getEthereumHost(1);
-    return { deployTag, hostedSdkUrl, rollupProviderUrl, explorerUrl, chainId, ethereumHost, mainnetEthereumHost };
+    return { deployTag, hostedSdkUrl, rollupProviderUrl, explorerUrl, chainId, ethereumHost };
   }
 }
 
@@ -122,7 +114,7 @@ function assembleConfig(
   rawConfig: ReturnType<typeof getRawConfigWithOverrides>,
   deployConfig: ReturnType<typeof getDeployConfig>,
 ): Config {
-  const { sessionTimeout, debugFilter } = rawConfig;
+  const { debugFilter } = rawConfig;
 
   return {
     ...deployConfig,
@@ -145,7 +137,6 @@ function assembleConfig(
       wcDAI: toBaseUnits('10000', 18),
       icETH: toBaseUnits('5', 18),
     },
-    sessionTimeout: +(sessionTimeout || 1),
     debugFilter,
   };
 }

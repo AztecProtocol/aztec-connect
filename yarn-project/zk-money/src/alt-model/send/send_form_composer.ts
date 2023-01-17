@@ -93,7 +93,7 @@ export class SendComposer {
       return txId;
     } catch (error) {
       debug('Compose failed with error:', error);
-      this.stateObs.error(error?.message?.toString());
+      this.stateObs.error(error?.message?.toString(), error);
       if (error?.message?.toString() === 'Insufficient fee.') {
         // update obs so user doesn't retry
         this.stateObs.setBackNoRetry(true);

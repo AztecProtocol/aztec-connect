@@ -5,6 +5,7 @@ import {
 } from '../modal_molecules/spending_key_generation_step_hooks/index.js';
 import { SendComposerPhase, SendComposerState } from '../../../../../alt-model/send/send_composer_state_obs.js';
 import { SubmissionItemPrompt } from '../modal_molecules/submission_item_prompt/submission_item_prompt.js';
+import { ReportErrorButton } from '../../../../../components/report_error_button/index.js';
 
 interface SendSubmissionStepsProps {
   composerState: SendComposerState;
@@ -23,7 +24,12 @@ function getActiveItem(
 ): ActiveSubmissionFlowItem {
   if (error) {
     const idx = steps.findIndex(x => x.phase === error.phase);
-    const expandedContent = <SubmissionItemPrompt errored>{error.message}</SubmissionItemPrompt>;
+    const expandedContent = (
+      <SubmissionItemPrompt errored>
+        {error.message}
+        <ReportErrorButton error={error.raw} />
+      </SubmissionItemPrompt>
+    );
     return { idx, status: StepStatus.ERROR, expandedContent };
   }
   const idx = steps.findIndex(x => x.phase === phase);

@@ -5,6 +5,7 @@ import {
   SpendKeyGenerationStep,
   useSpendingKeyGenerationStep,
 } from '../../modal_molecules/spending_key_generation_step_hooks/spending_key_generation_step_hooks.js';
+import { ReportErrorButton } from '../../../../../../components/report_error_button/index.js';
 
 interface DefiSubmissionStepsProps {
   composerState: DefiComposerState;
@@ -24,7 +25,12 @@ function getActiveItem(
 ): ActiveSubmissionFlowItem {
   if (error) {
     const idx = steps.findIndex(x => x.phase === error.phase);
-    const expandedContent = <SubmissionItemPrompt errored>{error.message}</SubmissionItemPrompt>;
+    const expandedContent = (
+      <SubmissionItemPrompt errored>
+        {error.message}
+        <ReportErrorButton error={error.raw} />
+      </SubmissionItemPrompt>
+    );
     return { idx, status: StepStatus.ERROR, expandedContent };
   }
   const idx = steps.findIndex(x => x.phase === phase);
