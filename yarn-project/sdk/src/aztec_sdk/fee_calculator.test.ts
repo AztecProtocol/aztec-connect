@@ -3,7 +3,7 @@ import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
 import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { ClientEthereumBlockchain } from '@aztec/blockchain';
-import { CoreSdkInterface } from '../core_sdk/index.js';
+import { CoreSdk } from '../core_sdk/index.js';
 import { FeeCalculator } from './fee_calcalator.js';
 import { jest } from '@jest/globals';
 
@@ -12,7 +12,7 @@ type Mockify<T> = {
 };
 
 describe('fee calculator', () => {
-  let core: Mockify<CoreSdkInterface>;
+  let core: Mockify<CoreSdk>;
   let blockchain: Mockify<ClientEthereumBlockchain>;
   let feeCalculator: FeeCalculator;
   const assetId = 1;
@@ -74,7 +74,7 @@ describe('fee calculator', () => {
       isEmpty: jest.fn<any>().mockResolvedValue(false),
     } as any;
 
-    feeCalculator = new FeeCalculator(core, blockchain as any);
+    feeCalculator = new FeeCalculator(core as any, blockchain as any);
 
     mockTxFees();
   });

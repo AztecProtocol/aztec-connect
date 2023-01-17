@@ -71,21 +71,21 @@ export const NetworkStats: React.FunctionComponent = () => {
               size={statSize}
               icon={blocksIcon}
               label="BLOCKS"
-              value={error || loading ? '' : status && status.totalBlocks}
+              value={error || (loading && !status) ? '' : status && status.totalBlocks}
             />
             <StyledStat
               theme="primary"
               size={statSize}
               icon={txsIcon}
               label="TRANSACTIONS"
-              value={error || loading ? '' : status && status.totalTxs}
+              value={error || (loading && !status) ? '' : status && status.totalTxs}
             />
             <StyledStat
               theme="secondary"
               size={statSize}
               icon={pendingTxsIcon}
               label="PENDING TXS"
-              value={error || loading ? '' : status && status.pendingTxCount}
+              value={error || (loading && !status) ? '' : status && status.pendingTxCount}
             />
             <StyledStat
               theme="secondary"
@@ -93,7 +93,7 @@ export const NetworkStats: React.FunctionComponent = () => {
               icon={blockTimeIcon}
               label={'NEXT BLOCK IN'}
               value={
-                error || loading || !status || (status && !status.nextPublishTime) ? (
+                error || (loading && !status) || !status || (status && !status.nextPublishTime) ? (
                   'Idle'
                 ) : (
                   <Countdown

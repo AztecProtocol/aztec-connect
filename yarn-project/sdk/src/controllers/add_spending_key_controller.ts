@@ -1,7 +1,7 @@
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetValue } from '@aztec/barretenberg/asset';
 import { TxId } from '@aztec/barretenberg/tx_id';
-import { CoreSdkInterface } from '../core_sdk/index.js';
+import { CoreSdk } from '../core_sdk/index.js';
 import { ProofOutput, proofOutputToProofTx } from '../proofs/index.js';
 import { Signer } from '../signer/index.js';
 import { createTxRefNo } from './create_tx_ref_no.js';
@@ -18,12 +18,12 @@ export class AddSpendingKeyController {
     public readonly spendingPublicKey1: GrumpkinAddress,
     public readonly spendingPublicKey2: GrumpkinAddress | undefined,
     public readonly fee: AssetValue,
-    private readonly core: CoreSdkInterface,
+    private readonly core: CoreSdk,
   ) {
     this.requireFeePayingTx = !!fee.value;
   }
 
-  public async createProof() {
+  public async createProof(timeout?: number) {
     const txRefNo = this.requireFeePayingTx ? createTxRefNo() : 0;
     const spendingPublicKey = this.userSigner.getPublicKey();
 
@@ -46,7 +46,7 @@ export class AddSpendingKeyController {
       this.feeProofOutputs = [];
       for (const proofInput of feeProofInputs) {
         proofInput.signature = await this.userSigner.signMessage(proofInput.signingData);
-        this.feeProofOutputs.push(await this.core.createPaymentProof(proofInput, txRefNo));
+        this.feeProofOutputs.push(await this.core.createPaymentProof(proofInput, txRefNo, timeout));
       }
     }
 
@@ -61,7 +61,7 @@ export class AddSpendingKeyController {
         undefined,
       );
       proofInput.signature = await this.userSigner.signMessage(proofInput.signingData);
-      this.proofOutput = await this.core.createAccountProof(proofInput, txRefNo);
+      this.proofOutput = await this.core.createAccountProof(proofInput, txRefNo, timeout);
     }
   }
 

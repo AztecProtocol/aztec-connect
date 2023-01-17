@@ -5,7 +5,7 @@ import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { DefiDepositProofData, JoinSplitProofData, ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
 import { roundUp } from '@aztec/barretenberg/rounding';
 import { ClientEthereumBlockchain } from '@aztec/blockchain';
-import { CoreSdkInterface } from '../core_sdk/index.js';
+import { CoreSdk } from '../core_sdk/index.js';
 
 const accumeFees = (fees0: AssetValue[], fees1: AssetValue[]) =>
   !fees1.length ? fees0 : fees0.map((fee, i) => ({ ...fee, value: fee.value + fees1[i].value }));
@@ -21,7 +21,7 @@ export interface GetFeesOptions {
 }
 
 export class FeeCalculator {
-  constructor(private readonly core: CoreSdkInterface, private readonly blockchain: ClientEthereumBlockchain) {}
+  constructor(private readonly core: CoreSdk, private readonly blockchain: ClientEthereumBlockchain) {}
 
   public async getDepositFees(assetId: number, options: { feeSignificantFigures?: number } = {}) {
     return await this.getTransactionFees(assetId, TxType.DEPOSIT, options);

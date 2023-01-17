@@ -172,8 +172,7 @@ export class UserState extends EventEmitter {
       decryptedTreeNotes,
       inputNullifiers,
       noteCommitments,
-      this.userData.accountPrivateKey,
-      this.grumpkin,
+      this.userData.accountPublicKey,
       this.noteAlgos,
     );
 

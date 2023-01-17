@@ -141,7 +141,8 @@ function SignatureToast(props: { message?: string; onSubmit?: () => void; submit
 function WaitingForSignatureToast(props: { onRetry: () => void }) {
   const [retryEnabled, setRetryEnabled] = useState(false);
   useEffect(() => {
-    setTimeout(() => setRetryEnabled(true), TIMEOUT_BEFORE_ENABLING_RETRY);
+    const task = setTimeout(() => setRetryEnabled(true), TIMEOUT_BEFORE_ENABLING_RETRY);
+    return () => clearTimeout(task);
   }, []);
 
   const handleRetry = () => {

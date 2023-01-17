@@ -50,9 +50,11 @@ describe('NotePicker', () => {
   describe('pick', () => {
     it('pick notes whose sum is equal to or larger than the required sum', () => {
       const notePicker = new NotePicker(notes);
+      expectNoteValues(notePicker.pick(24n), [7n, 9n, 10n]);
       expectNoteValues(notePicker.pick(20n), [1n, 9n, 10n]);
       expectNoteValues(notePicker.pick(15n), [7n, 9n]);
-      expectNoteValues(notePicker.pick(10n), [3n, 7n]);
+      expectNoteValues(notePicker.pick(10n), [1n, 9n]);
+      expectNoteValues(notePicker.pick(8n), [1n, 7n]);
       expectNoteValues(notePicker.pick(7n), [7n]);
     });
 
@@ -64,31 +66,45 @@ describe('NotePicker', () => {
       ];
       const notePicker = new NotePicker([...notes, ...pendingNotes]);
       expectNoteValues(notePicker.pick(36n), [1n, 3n, 6n, 7n, 9n, 10n]);
-      expectNoteValues(notePicker.pick(11n), [4n, 7n]);
+      expectNoteValues(notePicker.pick(11n), [1n, 10n]);
+    });
+
+    it('will work with only pending notes', () => {
+      const pendingNotes = [
+        randomNote(4n, { allowChain, pending }),
+        randomNote(4n, { pending }),
+        randomNote(6n, { allowChain, pending }),
+      ];
+      const notePicker = new NotePicker(pendingNotes);
+      expectNoteValues(notePicker.pick(7n), []);
+      expectNoteValues(notePicker.pick(6n), [6n]);
+      expectNoteValues(notePicker.pick(5n), [6n]);
+      expectNoteValues(notePicker.pick(4n), [4n]);
+      expectNoteValues(notePicker.pick(3n), [4n]);
     });
 
     it('will not pick a pending note if excluded', () => {
-      const pendingNotes = [randomNote(4n, { allowChain, pending })];
+      const pendingNotes = [randomNote(11n, { allowChain, pending })];
       const notePicker = new NotePicker([...notes, ...pendingNotes]);
-      expectNoteValues(notePicker.pick(11n, { excludePendingNotes }), [2n, 9n]);
+      expectNoteValues(notePicker.pick(21n, { excludePendingNotes }), [2n, 9n, 10n]);
     });
 
     it('will not pick a pending note with allowChain set to false', () => {
-      const pendingNotes = [randomNote(4n, { pending })];
+      const pendingNotes = [randomNote(11n, { pending })];
       const notePicker = new NotePicker([...notes, ...pendingNotes]);
-      expectNoteValues(notePicker.pick(11n), [2n, 9n]);
+      expectNoteValues(notePicker.pick(21n), [2n, 9n, 10n]);
     });
 
     it('will not pick excluded notes', () => {
       const notePicker = new NotePicker(notes);
-      expectNoteValues(notePicker.pick(10n), [3n, 7n]);
+      expectNoteValues(notePicker.pick(10n), [1n, 9n]);
       {
-        const excludedNullifiers = computeNullifiers([7n]);
-        expectNoteValues(notePicker.pick(10n, { excludedNullifiers }), [1n, 9n]);
+        const excludedNullifiers = computeNullifiers([9n]);
+        expectNoteValues(notePicker.pick(10n, { excludedNullifiers }), [10n]);
       }
       {
-        const excludedNullifiers = computeNullifiers([1n, 3n]);
-        expectNoteValues(notePicker.pick(10n, { excludedNullifiers }), [10n]);
+        const excludedNullifiers = computeNullifiers([1n, 10n]);
+        expectNoteValues(notePicker.pick(10n, { excludedNullifiers }), [2n, 9n]);
       }
       {
         const excludedNullifiers = computeNullifiers([7n, 9n, 10n]);
@@ -97,17 +113,34 @@ describe('NotePicker', () => {
     });
 
     it('pick a settled note if there is more than one note with the exact value', () => {
-      const pendingNotes = [randomNote(7n, { allowChain, pending })];
+      const pendingNotes = [randomNote(10n, { allowChain, pending })];
       const notePicker = new NotePicker([...notes, ...pendingNotes]);
-      expect(notePicker.pick(7n)).toEqual([expect.objectContaining({ value: 7n, pending: false })]);
+      expect(notePicker.pick(19n)).toEqual([
+        expect.objectContaining({ value: 9n, pending: false }),
+        expect.objectContaining({ value: 10n, pending: false }),
+      ]);
     });
 
     it('pick registered notes', () => {
       const notePicker = new NotePicker(mixedNotes);
-      const excludedNullifiers = computeNullifiers([19n]);
-      expectNoteValues(notePicker.pick(7n, { ownerAccountRequired }), [5n, 19n]);
-      expectNoteValues(notePicker.pick(7n, { ownerAccountRequired, excludedNullifiers }), [17n]);
+      const excludedNullifiers = computeNullifiers([17n]);
+      expectNoteValues(notePicker.pick(7n, { ownerAccountRequired }), [5n, 17n]);
+      expectNoteValues(notePicker.pick(7n, { ownerAccountRequired, excludedNullifiers }), [5n, 19n]);
       expectNoteValues(notePicker.pick(7n, { ownerAccountRequired, excludePendingNotes }), [17n, 19n]);
+    });
+
+    it('should pick among a large number of notes', () => {
+      const notes = randomNotes(
+        Array(1000)
+          .fill(null)
+          .map((_, i) => BigInt(i) + 1n),
+      );
+      const notePicker = new NotePicker(notes);
+      const value = 400_000n;
+
+      const pickedNotes = notePicker.pick(value);
+      console.log(pickedNotes.length);
+      expect(pickedNotes.reduce((acc, curr) => acc + curr.value, 0n)).toBeGreaterThanOrEqual(value);
     });
   });
 

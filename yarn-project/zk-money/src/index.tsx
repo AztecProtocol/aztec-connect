@@ -11,7 +11,6 @@ import { AppInitFailed } from './views/app_init_failed.js';
 import { getSupportStatus } from './device_support.js';
 import { Toolbox } from './toolbox/index.js';
 import { getWagmiRainbowConfig } from './toolbox/wagmi_rainbow_config.js';
-import './log_exporter.js';
 
 const PROD_EXPLORER_URL = 'https://aztec-connect-prod-explorer.aztec.network/';
 

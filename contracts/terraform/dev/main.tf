@@ -65,13 +65,3 @@ output "price_feed_contract_addresses" {
   value = "${var.PRICE_FEED_CONTRACT_ADDRESSES}"
 }
 
-variable "ETHEREUM_HOST" {
-  type    = string
-  default = ""
-}
-
-output "ethereum_host" {
-  value = "${var.ETHEREUM_HOST}"
-}
-
-

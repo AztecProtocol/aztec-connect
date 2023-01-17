@@ -27,6 +27,11 @@ parameters:
   workflow:
     type: string
     default: 'system'
+  target:
+    type: enum
+    default: 'dev'
+    description: The environment to trigger redeploys to
+    enum: ['dev', 'testnet']
 
 # This build step checks out the code from the repository. It has a hardcoded readonly key to allow the checkout.
 # Initially it just fetches the repo metadata for the current commit hash to a depth of 50 commits.
@@ -619,6 +624,22 @@ jobs:
           name: 'Build and test'
           command: build website
 
+  mainnet-fork:
+    machine:
+      image: ubuntu-2004:202010-01
+    resource_class: large
+    steps:
+      - *checkout
+      - *setup_env
+      - run: # Building the fork requires keys to be derived
+          name: 'Derive keys'
+          command: |
+            ensure_repo aztec-dev-cli $ECR_REGION
+            docker run --rm $ECR_URL/aztec-dev-cli:cache-$COMMIT_HASH deriveKeys "$KEY_DERIVATION_MNEMONIC" >> $BASH_ENV
+      - run:
+          name: 'Build and test'
+          command: build mainnet-fork
+
   metrics:
     machine:
       image: ubuntu-2004:202010-01
@@ -784,6 +805,46 @@ jobs:
           name: 'grafana'
           command: deploy_global grafana
 
+  deploy-mainnet-fork:
+    machine:
+      image: ubuntu-2004:202010-01
+    resource_class: medium
+    environment:
+      FORCE_DEPLOY: 'true'
+    steps:
+      - *checkout
+      - *setup_env
+      - run:
+          name: 'set environment'
+          command: |
+            echo export VERSION_TAG=<< pipeline.parameters.target >> >> $BASH_ENV
+            echo export DEPLOY_TAG=aztec-connect-$VERSION_TAG >> $BASH_ENV
+      - run:
+          name: 'derive keys'
+          command: |
+            ensure_repo aztec-dev-cli $ECR_REGION
+            docker run --rm $ECR_URL/aztec-dev-cli:cache-$COMMIT_HASH deriveKeys "$KEY_DERIVATION_MNEMONIC" >> $BASH_ENV
+      - run:
+          name: 'deploy-mainnet-fork'
+          working_directory: mainnet-fork # redeploy the fork and taint the state file system
+          command: deploy_terraform mainnet-fork ./terraform/$VERSION_TAG aws_efs_file_system.mainnet_fork_data_store
+      - run:
+          name: 'Wait for fork' # Wait for a successful health-check
+          command: wait_for_fork
+      - run:
+          name: 'Deploy contracts'
+          working_directory: contracts
+          command: ./scripts/ci_deploy_contracts.sh
+      - run:
+          name: 'Redeploy kebab'
+          command: deploy kebab kebab aws_efs_file_system.kebab_data_store
+      - run:
+          name: 'Redeploy falafel'
+          command: deploy falafel "falafel block-server" "aws_db_instance.postgres aws_efs_file_system.falafel_data_store"
+      - run:
+          name: 'Redeploy faucet'
+          command: deploy faucet
+
 # Repeatable config for defining the workflow below.
 tag_regex: &tag_regex /v[0-9]+(\.[0-9]+)*(-[a-zA-Z-]+\.[0-9]+)?/
 tag_filter: &tag_filter
@@ -866,7 +927,8 @@ workflows:
       - wallet: *yarn_project
       # Not currently a yarn project due to using next.js, but should be.
       - faucet:
-          filters: *tag_filter
+          requires:
+            - contracts
       - end-to-end: *yarn_project
       - e2e-join:
           requires:
@@ -951,3 +1013,14 @@ workflows:
       - deploy-website:
           requires:
             - website
+  redeploy-mainnet-fork:
+    when:
+      equal: [redeploy-mainnet-fork, << pipeline.parameters.workflow >>]
+    jobs:
+      - aztec-dev-cli
+      - mainnet-fork:
+          requires:
+            - aztec-dev-cli
+      - deploy-mainnet-fork:
+          requires:
+            - mainnet-fork

@@ -1,5 +1,3 @@
-import { SortedNotes } from './sorted_notes.js';
-import { pick } from './pick.js';
 import { Note } from '../note/index.js';
 
 const noteSum = (notes: Note[]) => notes.reduce((sum, { value }) => sum + value, BigInt(0));
@@ -11,82 +9,128 @@ interface NotePickerOptions {
 }
 
 export class NotePicker {
-  private readonly spendableNotes: SortedNotes;
-  private readonly settledNotes: SortedNotes;
-  private readonly unregisteredSpendableNotes: SortedNotes;
-  private readonly unregisteredSettledNotes: SortedNotes;
+  // Sometimes we prefer pending notes to have higher/lower index that non-pending notes with the same value
+  private readonly sortedNotes: {
+    pendingAreLower: Note[];
+    pendingAreHigher: Note[];
+  };
 
   constructor(notes: Note[] = []) {
-    const registeredNotes = notes.filter(n => n.ownerAccountRequired);
-    this.spendableNotes = new SortedNotes(registeredNotes.filter(n => !n.pending || n.allowChain));
-    this.settledNotes = new SortedNotes(registeredNotes.filter(n => !n.pending));
-
-    const unregisteredNotes = notes.filter(n => !n.ownerAccountRequired);
-    this.unregisteredSpendableNotes = new SortedNotes(unregisteredNotes.filter(n => !n.pending || n.allowChain));
-    this.unregisteredSettledNotes = new SortedNotes(unregisteredNotes.filter(n => !n.pending));
+    // Filter non spendable
+    const validNotes = notes.filter(note => !note.pending || note.allowChain);
+    this.sortedNotes = {
+      pendingAreLower: this.sortNotes(validNotes, true),
+      pendingAreHigher: this.sortNotes(validNotes, false),
+    };
   }
 
   public pick(
     value: bigint,
-    { excludedNullifiers = [], excludePendingNotes, ownerAccountRequired }: NotePickerOptions = {},
+    { excludedNullifiers, excludePendingNotes, ownerAccountRequired }: NotePickerOptions = {},
   ): Note[] {
-    const maxNotes = this.getMaxSpendableNotes(excludedNullifiers, excludePendingNotes, ownerAccountRequired, 2);
-    const maxValue = noteSum(maxNotes);
-    if (!maxValue) {
+    const filteredNotes = this.filterByOptions(this.getSortedNotes(true), {
+      excludedNullifiers,
+      excludePendingNotes,
+      ownerAccountRequired,
+    });
+    let minimumNumberOfNotes = this.findMinimumNotes(value, filteredNotes);
+    if (!minimumNumberOfNotes) {
+      // Not enough notes
       return [];
     }
-
-    if (value > maxValue) {
-      const notes = [
-        ...this.pick(value - maxValue, {
-          excludedNullifiers: [...excludedNullifiers, ...maxNotes.map(n => n.nullifier)],
-          excludePendingNotes: excludePendingNotes || maxNotes.some(n => n.pending),
-          ownerAccountRequired,
-        }),
-        ...maxNotes,
-      ];
-      return noteSum(notes) >= value ? notes : [];
+    // We can pick 2 notes with the same cost
+    if (minimumNumberOfNotes === 1) {
+      minimumNumberOfNotes = 2;
     }
 
-    const spendableNotes = this.getSortedNotes(excludedNullifiers, excludePendingNotes, ownerAccountRequired);
-    const notes = pick(spendableNotes, value) || [];
-    const sum = noteSum(notes);
-    if (sum === value) {
-      return notes;
+    let pickedNotes = this.getMaxSpendableNotes(
+      excludedNullifiers,
+      excludePendingNotes,
+      ownerAccountRequired,
+      minimumNumberOfNotes,
+    ).reverse();
+    pickedNotes = this.reducePickedNotesValues(pickedNotes, value, {
+      excludedNullifiers,
+      excludePendingNotes,
+      ownerAccountRequired,
+    });
+    const exactNoteMatch = pickedNotes.find(note => note.value === value);
+
+    if (exactNoteMatch) {
+      return [exactNoteMatch];
+    } else {
+      return pickedNotes;
     }
-    const note = spendableNotes.findLast(n => n.value === value);
-    return note ? [note] : notes;
   }
 
-  public pickOne(
-    value: bigint,
-    { excludedNullifiers, excludePendingNotes, ownerAccountRequired }: NotePickerOptions = {},
-  ) {
-    const settledNote = this.getSortedNotes(excludedNullifiers, true, ownerAccountRequired).find(n => n.value >= value);
-    if (excludePendingNotes) {
-      return settledNote;
+  private reducePickedNotesValues(selectionToImprove: Note[], targetValue: bigint, options: NotePickerOptions) {
+    const pickedNotes = selectionToImprove.slice();
+    const availableNotes = this.filterByOptions(this.getSortedNotes(false), options);
+
+    let excessValue = 0n;
+    let usedNullifiers: Buffer[] = [];
+    let unusedNotes: Note[] = [];
+    let hasPending = false;
+
+    for (let index = 0; index < pickedNotes.length; index++) {
+      const noteToImprove = pickedNotes[index];
+
+      excessValue = noteSum(pickedNotes) - targetValue;
+      usedNullifiers = pickedNotes.map(note => note.nullifier);
+      unusedNotes = availableNotes.filter(note => !usedNullifiers.includes(note.nullifier));
+      hasPending = pickedNotes.some(note => note.pending);
+
+      const minimumValue = noteToImprove.value - excessValue;
+      const betterNoteIndex = unusedNotes.findIndex(
+        potentallyBetterNote =>
+          potentallyBetterNote.value >= minimumValue &&
+          potentallyBetterNote.value < noteToImprove.value &&
+          (!potentallyBetterNote.pending || !hasPending || noteToImprove.pending),
+      );
+
+      if (betterNoteIndex === -1) {
+        // No better note found, cannot improve further the set
+        return pickedNotes;
+      }
+      const betterNote = unusedNotes[betterNoteIndex];
+      pickedNotes[index] = betterNote;
     }
 
-    const pendingNote = this.getSortedNotes(excludedNullifiers, false, ownerAccountRequired).find(
-      n => n.value >= value,
-    );
-    if (!settledNote || !pendingNote) {
-      return settledNote || pendingNote;
+    return pickedNotes;
+  }
+
+  private findMinimumNotes(value: bigint, notes: Note[]) {
+    let minimumNotes = 0;
+    let accumulatedValue = 0n;
+    let hasPendingNote = false;
+
+    for (let index = notes.length - 1; index >= 0; index--) {
+      const note = notes[index];
+      if (!note.pending || !hasPendingNote) {
+        minimumNotes++;
+        accumulatedValue += note.value;
+        hasPendingNote = hasPendingNote || note.pending;
+
+        if (accumulatedValue >= value) {
+          return minimumNotes;
+        }
+      }
     }
-    return settledNote.value <= pendingNote.value ? settledNote : pendingNote;
+
+    return 0;
+  }
+
+  public pickOne(value: bigint, options: NotePickerOptions = {}) {
+    const filteredNotes = this.filterByOptions(this.getSortedNotes(false), options);
+    return filteredNotes.find(note => note.value >= value);
   }
 
   public getSum() {
-    return noteSum(this.settledNotes.notes) + noteSum(this.unregisteredSettledNotes.notes);
+    return noteSum(this.getSortedNotes().filter(note => !note.pending));
   }
 
-  public getSpendableNoteValues({
-    excludedNullifiers,
-    excludePendingNotes,
-    ownerAccountRequired,
-  }: NotePickerOptions = {}) {
-    const { notes } = this.getSortedNotes(excludedNullifiers, excludePendingNotes, ownerAccountRequired);
-    return notes.map(n => n.value);
+  public getSpendableNoteValues(options: NotePickerOptions = {}) {
+    return this.filterByOptions(this.getSortedNotes(true), options).map(note => note.value);
   }
 
   public getMaxSpendableNoteValues({
@@ -105,24 +149,53 @@ export class NotePicker {
     ownerAccountRequired = false,
     numNotes?: number,
   ) {
-    const spendableNotes = this.getSortedNotes(excludedNullifiers, excludePendingNotes, ownerAccountRequired);
-    const notes: Note[] = [];
+    const filteredNotes = this.filterByOptions(this.getSortedNotes(true), {
+      excludedNullifiers,
+      excludePendingNotes,
+      ownerAccountRequired,
+    });
     let hasPendingNote = false;
-    spendableNotes.findLast(note => {
+    const notes: Note[] = [];
+
+    for (const note of filteredNotes.reverse()) {
       if (!note.pending || !hasPendingNote) {
         notes.push(note);
         hasPendingNote = hasPendingNote || note.pending;
       }
-      return notes.length === numNotes;
-    });
+      if (notes.length === numNotes) {
+        return notes;
+      }
+    }
+
     return notes;
   }
 
-  private getSortedNotes(excludedNullifiers: Buffer[] = [], excludePendingNotes = false, ownerAccountRequired = false) {
-    const [settledNotes, spendableNotes] = ownerAccountRequired
-      ? [this.settledNotes, this.spendableNotes]
-      : [this.unregisteredSettledNotes, this.unregisteredSpendableNotes];
-    const notes = excludePendingNotes ? settledNotes : spendableNotes;
-    return notes.filter(({ nullifier }) => !excludedNullifiers.some(n => n.equals(nullifier)));
+  private getSortedNotes(pendingAreLower = false) {
+    return pendingAreLower ? this.sortedNotes.pendingAreLower : this.sortedNotes.pendingAreHigher;
+  }
+
+  private sortNotes(notes: Note[], pendingAreLower: boolean) {
+    return notes.slice().sort((a, b) => {
+      if (a.value < b.value) {
+        return -1;
+      }
+      if (a.value > b.value) {
+        return 1;
+      }
+      const pendingDiff = Number(a.pending) - Number(b.pending);
+      return pendingAreLower ? -pendingDiff : pendingDiff;
+    });
+  }
+
+  private filterByOptions(
+    notes: Note[],
+    { excludedNullifiers = [], excludePendingNotes = false, ownerAccountRequired = false }: NotePickerOptions = {},
+  ) {
+    return notes.filter(
+      note =>
+        !excludedNullifiers.some(n => n.equals(note.nullifier)) &&
+        (!excludePendingNotes || !note.pending) &&
+        (ownerAccountRequired ? note.ownerAccountRequired : !note.ownerAccountRequired),
+    );
   }
 }

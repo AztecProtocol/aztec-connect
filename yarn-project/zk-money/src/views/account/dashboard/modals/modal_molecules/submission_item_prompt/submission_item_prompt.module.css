@@ -8,6 +8,10 @@
   line-height: 150%;
   padding: 10px 30px;
   background-color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
 }
 
 .errored {

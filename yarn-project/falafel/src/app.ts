@@ -13,7 +13,6 @@ import {
   bridgePublishQueryResultToJson,
 } from '@aztec/barretenberg/rollup_provider';
 import { numToInt32BE, serializeBufferArrayToVector } from '@aztec/barretenberg/serialize';
-import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import cors from '@koa/cors';
 import fsExtra from 'fs-extra';
 import Koa, { Context, DefaultState } from 'koa';
@@ -27,7 +26,7 @@ import { Metrics } from './metrics/index.js';
 import { Server } from './server.js';
 import { Tx, TxRequest } from './tx_receiver/index.js';
 
-const { mkdirpSync, writeJsonSync } = fsExtra;
+const { mkdirp, writeJson } = fsExtra;
 
 const toDepositTxJson = ({ proofData }: TxDao): DepositTxJson => {
   const proof = JoinSplitProofData.fromBuffer(proofData);
@@ -164,7 +163,7 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     const log = JSON.parse((await stream.readAll()) as string);
     const clientIp = requestIp.getClientIp(ctx.request);
     const userAgent = ctx.request.header['user-agent'];
-    const origin = ctx.request.origin;
+    const origin = ctx.header.origin;
     const data = {
       ...log,
       clientIp,
@@ -178,7 +177,7 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
   router.post('/client-console-log', async (ctx: Koa.Context) => {
     const stream = new PromiseReadable(ctx.req);
     // TODO - only allow post from whitelisted domains
-    const origin = ctx.request.origin;
+    const origin = ctx.header.origin;
     const log = JSON.parse((await stream.readAll()) as string);
     const { publicKeys } = log;
     if (!publicKeys) {
@@ -198,13 +197,15 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     const dir = `${configurator.getDataDir()}/client-logs`;
     const publicKey = publicKeys[0] || GrumpkinAddress.ZERO.toString();
     const filename = `${dir}/${publicKey.slice(2, 10)}_${publicKey.slice(-4)}-${clientIp}-${timestamp}`;
-    mkdirpSync(dir);
-    writeJsonSync(filename, data);
+    await mkdirp(dir);
+    await writeJson(filename, data);
     ctx.status = 200;
   });
 
   router.get('/get-blocks', recordMetric, async (ctx: Koa.Context) => {
-    const blocks = ctx.query.from ? await server.getBlockBuffers(+ctx.query.from, 100) : [];
+    // ensure take is between 0 -> 100
+    const take = ctx.query.take ? Math.min(Math.max(+ctx.query.take, 0), 100) : 100;
+    const blocks = ctx.query.from ? await server.getBlockBuffers(+ctx.query.from, take) : [];
     const response = Buffer.concat([
       numToInt32BE(await server.getLatestRollupId()),
       serializeBufferArrayToVector(blocks),
@@ -212,48 +213,6 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     ctx.compress = false;
     ctx.body = response;
     ctx.status = 200;
-  });
-
-  router.get('/rollups', recordMetric, async (ctx: Koa.Context) => {
-    const { skip = 0, take = 5 } = ctx.query;
-    const blocks = await server.getRollups(+skip, +take);
-    ctx.body = blocks.map(({ id, rollupProof, ethTxHash, mined }) => ({
-      id,
-      hash: rollupProof.id.toString('hex'),
-      numTxs: rollupProof.txs.length,
-      ethTxHash: ethTxHash?.toString(),
-      mined,
-    }));
-    ctx.status = 200;
-  });
-
-  router.get('/rollup/:rollupId', async (ctx: Koa.Context) => {
-    const { rollupId } = ctx.params;
-    const rollup = await server.getRollupById(+rollupId);
-    if (!rollup) {
-      ctx.status = 404;
-    } else {
-      const { rollupProof } = rollup;
-      const rollupProofData = RollupProofData.decode(rollupProof.encodedProofData);
-      ctx.body = {
-        id: rollup.id,
-        hash: rollupProof.id.toString('hex'),
-        numTxs: rollupProof.txs.length,
-        ethTxHash: rollup.ethTxHash?.toString(),
-        proofData: rollupProof.encodedProofData.toString('hex'),
-        dataRoot: rollupProofData.newDataRoot.toString('hex'),
-        nullifierRoot: rollupProofData.newNullRoot.toString('hex'),
-        mined: rollup.mined,
-        txs: rollupProof.txs.map(({ id, ...tx }) => {
-          const joinSplit = new ProofData(tx.proofData);
-          return {
-            id: id.toString('hex'),
-            proofId: joinSplit.proofId,
-          };
-        }),
-      };
-      ctx.status = 200;
-    }
   });
 
   router.get('/tx/:txId', async (ctx: Koa.Context) => {

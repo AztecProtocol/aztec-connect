@@ -8,7 +8,7 @@ const Root = styled(Text)`
 `;
 
 interface TimestampProps {
-  time: string | Date;
+  time: Date;
 }
 
 export const Timestamp: React.FunctionComponent<TimestampProps> = ({ time }) => {

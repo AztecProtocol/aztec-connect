@@ -11,7 +11,7 @@ import { Amount } from '../../alt-model/assets/index.js';
 import { getIsDust } from '../../alt-model/assets/asset_helpers.js';
 import { useWalletInteractionIsOngoing } from '../../alt-model/wallet_interaction_hooks.js';
 import { useAccountState } from '../../alt-model/account_state/account_state_hooks.js';
-import { useL1Balances } from '../../alt-model/assets/l1_balance_hooks.js';
+import { usePendingBalances } from '../../alt-model/top_level_context/top_level_context_hooks.js';
 import style from './holding.module.scss';
 
 interface HoldingProps {
@@ -52,7 +52,7 @@ export function PendingBalance({
 export function Holding({ assetValue, onSend, onShield, onGoToEarn }: HoldingProps) {
   const amount = useAmount(assetValue);
   const targetAsset = useAsset(assetValue.assetId);
-  const { l1PendingBalance } = useL1Balances(targetAsset);
+  const l1PendingBalance = usePendingBalances()[assetValue.assetId];
   const walletInteractionIsOngoing = useWalletInteractionIsOngoing();
   const asset = amount?.info;
   const spendableBalance = useSpendableBalance(assetValue.assetId);

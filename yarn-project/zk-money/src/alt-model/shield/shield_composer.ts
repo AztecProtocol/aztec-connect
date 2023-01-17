@@ -78,7 +78,7 @@ export class ShieldComposer {
         return false;
       }
       debug('Compose failed with error:', error);
-      this.stateObs.error(error?.message?.toString());
+      this.stateObs.error(error?.message?.toString(), error);
       return false;
     }
   }
@@ -231,6 +231,7 @@ export class ShieldComposer {
       `Gas prices have increased since starting this transaction and the rollup provider has rejected it as a result. You can wait for gas prices to go back down and attempt your transaction again, or start the shielding process again at the higher fee. (Latest fee quote: ${latestFeeAmount.format(
         { layer },
       )})`,
+      null,
     );
     this.stateObs.setBackNoRetry(true);
   }

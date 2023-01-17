@@ -3,7 +3,7 @@ import { AssetValue } from '@aztec/barretenberg/asset';
 import { EthereumProvider } from '@aztec/barretenberg/blockchain';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { ClientEthereumBlockchain } from '@aztec/blockchain';
-import { CoreSdkInterface } from '../core_sdk/index.js';
+import { CoreSdk } from '../core_sdk/index.js';
 import { ProofOutput, proofOutputToProofTx } from '../proofs/index.js';
 import { SchnorrSigner } from '../signer/index.js';
 import { createTxRefNo } from './create_tx_ref_no.js';
@@ -23,7 +23,7 @@ export class RegisterController extends DepositHandler {
     public readonly deposit: AssetValue,
     public readonly fee: AssetValue,
     public readonly depositor = EthAddress.ZERO,
-    protected readonly core: CoreSdkInterface,
+    protected readonly core: CoreSdk,
     blockchain: ClientEthereumBlockchain,
     provider: EthereumProvider,
   ) {
@@ -31,7 +31,7 @@ export class RegisterController extends DepositHandler {
     this.requireDeposit = !!this.publicInput.value;
   }
 
-  public async createProof() {
+  public async createProof(timeout?: number) {
     const accountPublicKey = await this.core.derivePublicKey(this.accountPrivateKey);
     if (!accountPublicKey.equals(this.userId)) {
       throw new Error('`accountPrivateKey` does not belong to the user.');
@@ -40,7 +40,7 @@ export class RegisterController extends DepositHandler {
     const txRefNo = this.requireDeposit ? createTxRefNo() : 0;
 
     if (this.requireDeposit) {
-      await super.createProof(txRefNo);
+      await super.createProof(txRefNo, timeout);
     }
 
     const proofInput = await this.core.createAccountProofInput(
@@ -54,7 +54,7 @@ export class RegisterController extends DepositHandler {
     );
     const signer = new SchnorrSigner(this.core, accountPublicKey, this.accountPrivateKey);
     proofInput.signature = await signer.signMessage(proofInput.signingData);
-    this.proofOutput = await this.core.createAccountProof(proofInput, txRefNo);
+    this.proofOutput = await this.core.createAccountProof(proofInput, txRefNo, timeout);
   }
 
   public exportProofTxs() {

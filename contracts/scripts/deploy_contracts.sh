@@ -20,7 +20,10 @@ export NETWORK=${NETWORK:-None}
 export SIMULATE_ADMIN=${SIMULATE_ADMIN:-false}
 
 # Set Rollup provider address to the deployer if none is provided
-DEPLOYER_ADDRESS=$(cast w a --private-key "$PRIVATE_KEY")
+TEMP=$(cast w a --private-key "$PRIVATE_KEY")
+# For me, Cast returns 'Address: <Address Value>'. Remove the prefix if present
+WITHOUT_PREFIX=${TEMP#*: }
+DEPLOYER_ADDRESS=$WITHOUT_PREFIX
 ROLLUP_PROVIDER_ADDRESS=${ROLLUP_PROVIDER_ADDRESS:-$DEPLOYER_ADDRESS}
 FAUCET_CONTROLLER=${FAUCET_CONTROLLER:-$DEPLOYER_ADDRESS}
 SAFE_ADDRESS=${SAFE_ADDRESS:-$DEPLOYER_ADDRESS}

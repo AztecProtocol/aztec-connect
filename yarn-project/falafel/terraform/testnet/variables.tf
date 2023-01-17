@@ -1,8 +1,8 @@
-variable "TEST_NET_ROOT_PRIVATE_KEY" {
+variable "TEST_FORK_ROLLUP_PROVIDER_PRIVATE_KEY" {
   type = string
 }
 
-variable "SERVER_AUTH_TOKEN" {
+variable "TEST_SERVER_AUTH_TOKEN" {
   type = string
 }
 
@@ -10,6 +10,6 @@ variable "DEPLOY_TAG" {
   type = string
 }
 
-variable "TEST_NET_API_KEY" {
+variable "TEST_KEBAB_API_KEY" {
   type = string
 }

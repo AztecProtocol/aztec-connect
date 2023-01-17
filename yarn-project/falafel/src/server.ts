@@ -364,18 +364,6 @@ export class Server {
     return blocks.map(rollupDaoToBlockBuffer);
   }
 
-  public async getRollups(from: number, take: number) {
-    // TODO: Deprecate this. We don't want to support external parties making these requests.
-    const data = await this.rollupDb.getRollups(take!, from!, true);
-    return data;
-  }
-
-  public async getRollupById(rollupId: number) {
-    // TODO: Deprecate this. We don't want to support external parties making these requests.
-    const rollup = await this.rollupDb.getRollup(rollupId);
-    return rollup;
-  }
-
   public async getLatestRollupId() {
     return (await this.rollupDb.getNextRollupId()) - 1;
   }

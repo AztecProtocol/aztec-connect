@@ -16,6 +16,7 @@ import { AccountStateManager } from '../account_state/account_state_manager.js';
 import { AliasManager } from '../account_state/alias_manager.js';
 import { createDefiPublishStatsPollerCache } from '../defi/defi_publish_stats_poller_cache.js';
 import { RegistrationsRepo } from '../registrations_data/index.js';
+import { PendingBalancesObs } from './pending_balances_obs.js';
 
 function createTopLevelContextValue(
   config: Config,
@@ -27,6 +28,7 @@ function createTopLevelContextValue(
   const aliasManager = new AliasManager();
   accountStateManager.attemptRecoverSession(); // TODO: consider where this should live
   const toastsObs = new ToastsObs();
+  const pendingBalancesObs = new PendingBalancesObs();
   const walletInteractionToastsObs = new ToastsObs();
   const remoteStatusPoller = createSdkRemoteStatusPoller(sdkObs, initialRollupProviderStatus);
 
@@ -58,6 +60,7 @@ function createTopLevelContextValue(
     config,
     stableEthereumProvider,
     sdkObs,
+    pendingBalancesObs,
     accountStateManager,
     aliasManager,
     toastsObs,

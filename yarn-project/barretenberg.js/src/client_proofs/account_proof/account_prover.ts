@@ -1,5 +1,6 @@
-import { Transfer } from '../../transport/index.js';
 import { SchnorrSignature } from '../../crypto/index.js';
+import { executeTimeout } from '../../timer/index.js';
+import { Transfer } from '../../transport/index.js';
 import { UnrolledProver } from '../prover/index.js';
 import { AccountTx } from './account_tx.js';
 
@@ -10,9 +11,13 @@ export class AccountProver {
     return proverless ? 512 : 32 * 1024;
   }
 
-  public async computeKey() {
+  public async computeKey(timeout?: number) {
     const worker = this.prover.getWorker();
-    await worker.asyncCall('account__init_proving_key', this.mock);
+    await executeTimeout(
+      async () => await worker.asyncCall('account__init_proving_key', this.mock),
+      timeout,
+      'AccountProver.computeKey',
+    );
   }
 
   public async releaseKey() {
@@ -49,14 +54,14 @@ export class AccountProver {
     return Buffer.from(await worker.sliceMemory(0, 32));
   }
 
-  public async createAccountProof(tx: AccountTx, signature: SchnorrSignature) {
+  public async createAccountProof(tx: AccountTx, signature: SchnorrSignature, timeout?: number) {
     const worker = this.prover.getWorker();
     const buf = Buffer.concat([tx.toBuffer(), signature.toBuffer()]);
     const mem = await worker.call('bbmalloc', buf.length);
     await worker.transferToHeap(buf, mem);
     const proverPtr = await worker.asyncCall('account__new_prover', mem, this.mock);
     await worker.call('bbfree', mem);
-    const proof = await this.prover.createProof(proverPtr);
+    const proof = await this.prover.createProof(proverPtr, timeout);
     await worker.call('account__delete_prover', proverPtr);
     return proof;
   }

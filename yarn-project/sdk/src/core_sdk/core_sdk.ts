@@ -4,7 +4,7 @@ import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { AccountProver, JoinSplitProver, ProofId, UnrolledProver } from '@aztec/barretenberg/client_proofs';
 import { NetCrs } from '@aztec/barretenberg/crs';
-import { keccak256, Blake2s, Pedersen, randomBytes, Schnorr } from '@aztec/barretenberg/crypto';
+import { Blake2s, keccak256, Pedersen, randomBytes, Schnorr } from '@aztec/barretenberg/crypto';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
 import { InitHelpers } from '@aztec/barretenberg/environment';
 import { FftFactory } from '@aztec/barretenberg/fft';
@@ -20,12 +20,14 @@ import { Timer } from '@aztec/barretenberg/timer';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { BarretenbergWasm, WorkerPool } from '@aztec/barretenberg/wasm';
 import { WorldState, WorldStateConstants } from '@aztec/barretenberg/world_state';
+import isNode from 'detect-node';
 import { EventEmitter } from 'events';
 import { LevelUp } from 'levelup';
 import { BlockContext } from '../block_context/block_context.js';
 import { CorePaymentTx, createCorePaymentTxForRecipient } from '../core_tx/index.js';
 import { Alias, Database } from '../database/index.js';
-import { parseGenesisAliasesAndKeys, getUserSpendingKeysFromGenesisData } from '../genesis_state/index.js';
+import { getUserSpendingKeysFromGenesisData, parseGenesisAliasesAndKeys } from '../genesis_state/index.js';
+import { getDeviceMemory } from '../get_num_workers/index.js';
 import { Note, treeNoteToNote } from '../note/index.js';
 import {
   AccountProofCreator,
@@ -37,13 +39,13 @@ import {
 } from '../proofs/index.js';
 import { MutexSerialQueue, SerialQueue } from '../serial_queue/index.js';
 import { SchnorrSigner } from '../signer/index.js';
+import { UserData } from '../user/index.js';
 import { UserState, UserStateEvent, UserStateFactory } from '../user_state/index.js';
-import { CoreSdkInterface } from './core_sdk_interface.js';
 import { CoreSdkOptions } from './core_sdk_options.js';
 import { SdkEvent, SdkStatus } from './sdk_status.js';
 import { sdkVersion } from './sdk_version.js';
-import { UserData } from '../user/index.js';
-import isNode from 'detect-node';
+
+const CREATE_PROOF_TIMEOUT = 60 * 1000;
 
 enum SdkInitState {
   // Constructed but uninitialized. Unusable.
@@ -67,7 +69,7 @@ enum SdkInitState {
  * By default, the serial queue is protected with a cross-process mutex, ensuring that if multiple instances
  * of the CoreSdk exist in different processes, that they will not modify state at the same time.
  */
-export class CoreSdk extends EventEmitter implements CoreSdkInterface {
+export class CoreSdk extends EventEmitter {
   private dataVersion = 1;
   private options!: CoreSdkOptions;
   private worldState!: WorldState;
@@ -282,6 +284,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       publicKeys: publicKeys.map(k => k.toString()),
       logs: logs.map(ensureJson),
       clientData,
+      clientUrl: location?.href,
     });
     if (!preserveLog) {
       logHistory.clear(logs.length);
@@ -519,12 +522,6 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
           await this.createJoinSplitProofCreator(proverless);
           await this.createAccountProofCreator(proverless);
 
-          if (this.userStates.length) {
-            await this.computeJoinSplitProvingKey();
-          } else {
-            await this.computeAccountProvingKey();
-          }
-
           // Makes the saved proving keys considered valid. Hence set this after they're saved.
           await this.db.addKey('verifierContractAddress', verifierContractAddress.toBuffer());
         });
@@ -549,6 +546,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     recipient: GrumpkinAddress,
     recipientSpendingKeyRequired: boolean,
     txRefNo: number,
+    timeout = CREATE_PROOF_TIMEOUT,
   ) {
     return await this.statelessSerialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
@@ -583,8 +581,12 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       );
       const signature = await signer.signMessage(proofInput.signingData);
 
-      await this.computeJoinSplitProvingKey();
-      return this.paymentProofCreator.createProof(user, { ...proofInput, signature }, txRefNo);
+      await this.computeJoinSplitProvingKey(timeout);
+
+      return this.runOrClientLog(
+        () => this.paymentProofCreator.createProof(user, { ...proofInput, signature }, txRefNo, timeout),
+        'Failed to create deposit proof.',
+      );
     });
   }
 
@@ -601,7 +603,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     publicOwner: EthAddress | undefined,
     spendingPublicKey: GrumpkinAddress,
     allowChain: number,
-  ) {
+  ): Promise<JoinSplitProofInput[]> {
     return await this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
 
@@ -635,7 +637,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     });
   }
 
-  public async createPaymentProof(input: JoinSplitProofInput, txRefNo: number) {
+  public async createPaymentProof(input: JoinSplitProofInput, txRefNo: number, timeout = CREATE_PROOF_TIMEOUT) {
     return await this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
 
@@ -644,9 +646,12 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       const userState = this.getUserState(userId);
       const user = userState.getUserData();
 
-      await this.computeJoinSplitProvingKey();
+      await this.computeJoinSplitProvingKey(timeout);
 
-      return await this.paymentProofCreator.createProof(user, input, txRefNo);
+      return this.runOrClientLog(
+        () => this.paymentProofCreator.createProof(user, input, txRefNo, timeout),
+        'Failed to create payment proof.',
+      );
     });
   }
 
@@ -704,13 +709,16 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     });
   }
 
-  public async createAccountProof(input: AccountProofInput, txRefNo: number) {
+  public async createAccountProof(input: AccountProofInput, txRefNo: number, timeout = CREATE_PROOF_TIMEOUT) {
     return await this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
 
-      await this.computeAccountProvingKey();
+      await this.computeAccountProvingKey(timeout);
 
-      return await this.accountProofCreator.createProof(input, txRefNo);
+      return this.runOrClientLog(
+        () => this.accountProofCreator.createProof(input, txRefNo, timeout),
+        'Failed to create account proof.',
+      );
     });
   }
 
@@ -720,7 +728,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     depositValue: bigint,
     fee: bigint,
     spendingPublicKey: GrumpkinAddress,
-  ) {
+  ): Promise<JoinSplitProofInput[]> {
     return await this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
       const userState = this.getUserState(userId);
@@ -942,7 +950,7 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     return { proofInputs, outputNotes };
   }
 
-  public async createDefiProof(input: JoinSplitProofInput, txRefNo: number) {
+  public async createDefiProof(input: JoinSplitProofInput, txRefNo: number, timeout = CREATE_PROOF_TIMEOUT) {
     return await this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
 
@@ -951,9 +959,12 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
       const userState = this.getUserState(userId);
       const user = userState.getUserData();
 
-      await this.computeJoinSplitProvingKey();
+      await this.computeJoinSplitProvingKey(timeout);
 
-      return await this.defiDepositProofCreator.createProof(user, input, txRefNo);
+      return this.runOrClientLog(
+        () => this.defiDepositProofCreator.createProof(user, input, txRefNo, timeout),
+        'Failed to create defi proof.',
+      );
     });
   }
 
@@ -1200,20 +1211,40 @@ export class CoreSdk extends EventEmitter implements CoreSdkInterface {
     this.accountProofCreator = new AccountProofCreator(this.accountProver, this.worldState, this.db);
   }
 
-  private async computeJoinSplitProvingKey() {
+  private async computeJoinSplitProvingKey(timeout?: number) {
     this.debug('release account proving key...');
     await this.accountProver?.releaseKey();
     this.debug('computing join-split proving key...');
-    await this.joinSplitProver.computeKey();
+    await this.runOrClientLog(
+      () => this.joinSplitProver.computeKey(timeout),
+      'Failed to compute join split proving key.',
+    );
     this.debug('done.');
   }
 
-  private async computeAccountProvingKey() {
+  private async computeAccountProvingKey(timeout?: number) {
     this.debug('release join-split proving key...');
     await this.joinSplitProver.releaseKey();
     this.debug('computing account proving key...');
-    await this.accountProver.computeKey();
+    await this.runOrClientLog(() => this.accountProver.computeKey(timeout), 'Failed to compute account proving key.');
     this.debug('done.');
+  }
+
+  private async runOrClientLog<T>(fn: () => Promise<T>, message: string) {
+    const start = Date.now();
+    try {
+      return await fn();
+    } catch (e: any) {
+      const log = {
+        message,
+        error: e.message,
+        timeUsed: Date.now() - start,
+        memory: getDeviceMemory(),
+      };
+      await this.rollupProvider.clientLog(log);
+      this.debug(log);
+      throw e;
+    }
   }
 
   /**

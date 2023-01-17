@@ -1,3 +1,4 @@
+import { executeTimeout } from '../../timer/index.js';
 import { Transfer } from '../../transport/index.js';
 import { UnrolledProver } from '../prover/index.js';
 import { JoinSplitTx } from './join_split_tx.js';
@@ -9,9 +10,13 @@ export class JoinSplitProver {
     return proverless ? 512 : 64 * 1024;
   }
 
-  public async computeKey() {
+  public async computeKey(timeout?: number) {
     const worker = this.prover.getWorker();
-    await worker.asyncCall('join_split__init_proving_key', this.mock);
+    await executeTimeout(
+      async () => await worker.asyncCall('join_split__init_proving_key', this.mock),
+      timeout,
+      'JoinSplitProver.computeKey',
+    );
   }
 
   public async releaseKey() {
@@ -48,14 +53,14 @@ export class JoinSplitProver {
     return Buffer.from(await worker.sliceMemory(0, 32));
   }
 
-  public async createProof(tx: JoinSplitTx) {
+  public async createProof(tx: JoinSplitTx, timeout?: number) {
     const buf = tx.toBuffer();
     const worker = this.prover.getWorker();
     const mem = await worker.call('bbmalloc', buf.length);
     await worker.transferToHeap(buf, mem);
     const proverPtr = await worker.asyncCall('join_split__new_prover', mem, this.mock);
     await worker.call('bbfree', mem);
-    const proof = await this.prover.createProof(proverPtr);
+    const proof = await this.prover.createProof(proverPtr, timeout);
     await worker.call('join_split__delete_prover', proverPtr);
     return proof;
   }

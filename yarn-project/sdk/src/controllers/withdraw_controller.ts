@@ -1,7 +1,7 @@
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { AssetValue } from '@aztec/barretenberg/asset';
 import { TxId } from '@aztec/barretenberg/tx_id';
-import { CoreSdkInterface } from '../core_sdk/index.js';
+import { CoreSdk } from '../core_sdk/index.js';
 import { ProofOutput, proofOutputToProofTx } from '../proofs/index.js';
 import { Signer } from '../signer/index.js';
 import { createTxRefNo } from './create_tx_ref_no.js';
@@ -18,7 +18,7 @@ export class WithdrawController {
     public readonly assetValue: AssetValue,
     public readonly fee: AssetValue,
     public readonly recipient: EthAddress,
-    private readonly core: CoreSdkInterface,
+    private readonly core: CoreSdk,
   ) {
     if (!assetValue.value) {
       throw new Error('Value must be greater than 0.');
@@ -27,7 +27,7 @@ export class WithdrawController {
     this.requireFeePayingTx = !!fee.value && fee.assetId !== assetValue.assetId;
   }
 
-  public async createProof() {
+  public async createProof(timeout?: number) {
     const { assetId, value } = this.assetValue;
     const privateInput = value + (!this.requireFeePayingTx ? this.fee.value : BigInt(0));
     const spendingPublicKey = this.userSigner.getPublicKey();
@@ -68,7 +68,7 @@ export class WithdrawController {
       this.feeProofOutputs = [];
       for (const proofInput of feeProofInputs) {
         proofInput.signature = await this.userSigner.signMessage(proofInput.signingData);
-        this.feeProofOutputs.push(await this.core.createPaymentProof(proofInput, txRefNo));
+        this.feeProofOutputs.push(await this.core.createPaymentProof(proofInput, txRefNo, timeout));
       }
     }
 
@@ -76,7 +76,7 @@ export class WithdrawController {
       const proofOutputs: ProofOutput[] = [];
       for (const proofInput of proofInputs) {
         proofInput.signature = await this.userSigner.signMessage(proofInput.signingData);
-        proofOutputs.push(await this.core.createPaymentProof(proofInput, txRefNo));
+        proofOutputs.push(await this.core.createPaymentProof(proofInput, txRefNo, timeout));
       }
       this.proofOutputs = proofOutputs;
     }

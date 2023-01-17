@@ -1,7 +1,6 @@
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import ResolveTypeScriptPlugin from 'resolve-typescript-plugin';
-import HtmlWebpackPlugin from 'html-webpack-plugin';
 import CopyWebpackPlugin from 'copy-webpack-plugin';
 import webpack from 'webpack';
 import path from 'path';
@@ -13,8 +12,6 @@ export default {
   target: 'web',
   mode: 'production',
   entry: {
-    sw: './src/core_sdk_flavours/chocolate_core_sdk/shared_worker.ts',
-    if: './src/core_sdk_flavours/caramel_core_sdk/app.ts',
     main: './src/index.ts',
   },
   module: {
@@ -37,7 +34,6 @@ export default {
     outputModule: true,
   },
   plugins: [
-    new HtmlWebpackPlugin({ title: '', chunks: ['if'] }),
     new webpack.DefinePlugin({ 'process.env.NODE_DEBUG': false }),
     new webpack.DefinePlugin({ 'process.env.COMMIT_TAG': `"${process.env.COMMIT_TAG || ''}"` }),
     new webpack.ProvidePlugin({ Buffer: ['buffer', 'Buffer'] }),

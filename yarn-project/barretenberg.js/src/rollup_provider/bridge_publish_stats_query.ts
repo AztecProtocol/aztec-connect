@@ -1,5 +1,4 @@
 export interface BridgePublishQuery {
-  periodSeconds: number;
   bridgeAddressId: number;
   inputAssetIdA?: number;
   inputAssetIdB?: number;
@@ -15,7 +14,6 @@ export interface BridgePublishQueryResult {
 }
 
 export interface BridgePublishQueryJson {
-  periodSeconds: number;
   bridgeAddressId: number;
   inputAssetIdA?: number;
   inputAssetIdB?: number;

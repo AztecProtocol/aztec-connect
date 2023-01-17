@@ -1,29 +1,18 @@
 import { EthereumRpc, RequestArguments } from '@aztec/barretenberg/blockchain';
-import { InterruptableSleep } from '@aztec/barretenberg/sleep';
+import { InterruptableSleep, sleep } from '@aztec/barretenberg/sleep';
 import { createLogger, createDebugLogger } from '@aztec/barretenberg/log';
-import { JsonRpcProvider } from '@aztec/blockchain';
-import { EthLogsDb, RollupLogsParamsQuery } from './log_db.js';
-import {
-  DEFI_BRIDGE_EVENT_TOPIC,
-  OFFCHAIN_EVENT_TOPIC,
-  RollupEventGetter,
-  ROLLUP_PROCESSED_EVENT_TOPIC,
-} from './rollup_event_getter.js';
+import { getEarliestBlock, JsonRpcProvider } from '@aztec/blockchain';
+import { EthLogsDb, EventStore, RollupLogsParamsQuery } from './log_db.js';
 import { ConfVars } from './configurator.js';
 import { default as JSONNormalize } from 'json-normalize';
-
-/**
- * Do not cache eth_getTransactionReceipt without careful consideration of how it impacts consistency.
- * Discussed in forwardEthRequest.
- */
-const REQUEST_TYPES_TO_CACHE = [
-  'eth_chainId',
-  'eth_call',
-  'eth_gasPrice',
-  'eth_getBalance',
-  'eth_estimateGas',
-  'eth_blockNumber',
-];
+import {
+  ChainProperties,
+  EventRetrieverErrors,
+  extractEventErrorType,
+  TopicEventRetriever,
+} from './topic_event_retriever.js';
+import { EVENT_PROPERTIES, REQUEST_TYPES_TO_CACHE } from './config.js';
+import { EthEvent } from './eth_event.js';
 
 export interface RollupLogsParams {
   topics: string[];
@@ -35,17 +24,17 @@ export interface RollupLogsParams {
 
 export class Server {
   private ready = false;
-  private rollupEventGetter: RollupEventGetter;
+  private eventRetrievers: TopicEventRetriever[] = [];
   private readonly checkFrequency = 5 * 1000;
   private running = false;
-  private runninSyncPromise!: Promise<void>;
+  private runningSyncPromise!: Promise<void>;
   private interruptableSleep = new InterruptableSleep();
-  private requestQueue: Array<() => void> = [];
   private cachedResponses: { [key: string]: Promise<any> | undefined } = {};
   private apiKeys: { [key: string]: boolean } = {};
   private provider: JsonRpcProvider;
   private ethereumRpc: EthereumRpc;
   private blockNumber = -1;
+  private eventSyncedToBlockNumber = -1;
   private log = createLogger('Server');
   private debug = createDebugLogger('aztec:server');
 
@@ -56,32 +45,20 @@ export class Server {
     chainId: number,
     private readonly configuration: ConfVars,
   ) {
-    this.rollupEventGetter = new RollupEventGetter(
-      this.configuration.rollupContractAddress!,
-      provider,
-      chainId,
-      logsDb,
-    );
-    for (const key of this.configuration.apiKeys) {
-      this.apiKeys[key] = true;
-    }
-
     this.provider = new JsonRpcProvider(ethereumHost);
     this.ethereumRpc = new EthereumRpc(this.provider);
-  }
 
-  private async retrieveMoreBlocks() {
-    try {
-      // take a copy of the outstanding requests queue and we will resolve them all after taking the latest chain state
-      const outstandingRequests = this.requestQueue;
-      this.requestQueue = [];
-      await this.lookForBlocks();
-      // any outstanding requests waiting for that last sync can now be fulfilled
-      for (const request of outstandingRequests) {
-        request();
-      }
-    } catch (err) {
-      this.log('Error while looking for new rollup events: ', err.message);
+    const { chunk, earliestBlock } = getEarliestBlock(chainId);
+    this.eventRetrievers = EVENT_PROPERTIES.map(ep => {
+      const chainProperties = {
+        earliestBlock: earliestBlock,
+        logBatchSize: chunk,
+        rollupContractAddress: configuration.rollupContractAddress,
+      } as ChainProperties;
+      return new TopicEventRetriever(provider, logsDb, chainProperties, ep);
+    });
+    for (const key of this.configuration.apiKeys) {
+      this.apiKeys[key] = true;
     }
   }
 
@@ -90,14 +67,45 @@ export class Server {
     const { indexing } = this.configuration;
 
     this.running = true;
+    this.blockNumber = await this.ethereumRpc.blockNumber();
 
     if (indexing) {
-      this.log('Performing initial sync...');
-      await this.rollupEventGetter.init();
+      let success = false;
+      while (!success) {
+        success = true;
+        try {
+          this.log(`Performing initial sync to block ${this.blockNumber}...`);
+          // write the events directly to the DB stream by stream
+          // we are not yet accepting client requests so no concern around consistency
+          const results = await Promise.allSettled(
+            this.eventRetrievers.map(x => x.syncToLatest(this.blockNumber, this.logsDb)),
+          );
+          for (const errorType of results.map(x => extractEventErrorType(x))) {
+            if (errorType.type === EventRetrieverErrors.STREAM) {
+              // problems with the stream need investigation, throw here to prevent startup
+              throw new Error(errorType.message);
+            } else if (errorType.type !== EventRetrieverErrors.NONE) {
+              this.log(errorType.message);
+              success = false;
+            }
+          }
+        } catch (err) {
+          this.log(err);
+          this.log('Server not starting');
+          return;
+        }
+        // if we did not successfully initialise then retry after a sleep
+        if (!success) {
+          this.log(`Failed initial sync, will retry again shortly...`);
+          await sleep(this.checkFrequency);
+        }
+      }
+
+      this.eventSyncedToBlockNumber = this.blockNumber;
     }
     this.ready = true;
 
-    this.runninSyncPromise = (async () => {
+    this.runningSyncPromise = (async () => {
       this.blockNumber = await this.ethereumRpc.blockNumber();
 
       while (this.running) {
@@ -111,8 +119,15 @@ export class Server {
         }
 
         // if we are still running, or there are requests queued, then we need to look for further blocks
-        if ((indexing && this.running) || this.requestQueue.length) {
-          await this.retrieveMoreBlocks();
+        if (indexing && this.running) {
+          const success = await this.retrieveNewEvents(newBlockNumber);
+          if (!success) {
+            this.log(`Stopping further event syncing`);
+            this.ready = false;
+            this.running = false;
+            break;
+          }
+          this.eventSyncedToBlockNumber = newBlockNumber;
         }
       }
     })();
@@ -124,20 +139,22 @@ export class Server {
     this.ready = false;
     this.running = false;
     this.interruptableSleep.interrupt();
-    await this.runninSyncPromise;
+    await this.runningSyncPromise;
+    await this.logsDb.stop();
   }
 
   public isReady() {
     return this.ready;
   }
 
-  public allowPrivilegedMethods() {
-    return this.configuration.allowPrivilegedMethods;
-  }
-
-  // Why are there not just privileged and unprivileged methods??
-  public additionalPermittedMethods() {
-    return this.configuration.additionalPermittedMethods;
+  public methodIsPermitted(method: string | undefined) {
+    if (this.configuration.allowPrivilegedMethods) {
+      return true;
+    }
+    if (method === undefined) {
+      return false;
+    }
+    return method.startsWith('eth_') || this.configuration.additionalPermittedMethods.includes(method);
   }
 
   public isValidApiKey(keyProvided: string | undefined) {
@@ -157,7 +174,7 @@ export class Server {
       this.isReady() &&
       method?.startsWith('eth_getLogs') &&
       params[0].topics?.length &&
-      [ROLLUP_PROCESSED_EVENT_TOPIC, DEFI_BRIDGE_EVENT_TOPIC, OFFCHAIN_EVENT_TOPIC].includes(params[0].topics[0])
+      this.topicIsIndexed(params[0].topics[0])
     ) {
       return await this.queryLogs(params[0]);
     } else {
@@ -167,9 +184,57 @@ export class Server {
 
   // PRIVATE METHODS:
 
+  private async retrieveNewEvents(latestBlock: number) {
+    try {
+      // in order to ensure consistency between log streams we will have the event retrievers write to a local cache
+      // then we will commit that complete cache atomically to the database
+      const events: EthEvent[] = [];
+      const eventStore = {
+        addEthLogs: async (logs: EthEvent[]) => {
+          events.push(...logs);
+          await Promise.resolve();
+        },
+      } as EventStore;
+      const results = await Promise.allSettled(this.eventRetrievers.map(x => x.syncToLatest(latestBlock, eventStore)));
+      // if any of the syncs failed then don't write anything
+      // we want to remain as consistent as possible
+      let success = true;
+      for (const errorType of results.map(x => extractEventErrorType(x))) {
+        if (errorType.type === EventRetrieverErrors.STREAM) {
+          // problems with the stream need investigation, throw here to prevent startup
+          throw new Error(errorType.message);
+        } else if (errorType.type !== EventRetrieverErrors.NONE) {
+          success = false;
+        }
+      }
+      if (success) {
+        await this.writeEventsToDB(events);
+      }
+    } catch (err) {
+      this.log(err.message);
+      return false;
+    }
+    return true;
+  }
+
+  private async writeEventsToDB(events: EthEvent[]) {
+    if (!events.length) {
+      return;
+    }
+    try {
+      await this.logsDb.addEthLogs(events);
+    } catch (err) {
+      this.log(`Failed to write events to DB!`, err);
+    }
+  }
+
+  private topicIsIndexed(topic: string) {
+    return EVENT_PROPERTIES.map(x => x.mainTopic).includes(topic);
+  }
+
   // querying for eth logs that may be in our DB
   private async queryLogs(params: RollupLogsParams) {
-    const ourLatestBlock = this.rollupEventGetter.getLastQueriedBlockNum();
+    const ourLatestBlock = this.eventSyncedToBlockNumber;
     const requestedStartBlock =
       !params.fromBlock || params.fromBlock === 'latest' ? ourLatestBlock : parseInt(params.fromBlock);
     const requestedEndBlock =
@@ -178,34 +243,12 @@ export class Server {
       return [];
     }
 
-    if (requestedEndBlock <= ourLatestBlock) {
-      const query = {
-        topics: params.topics,
-        address: params.address,
-        fromBlock: requestedStartBlock,
-        toBlock: requestedEndBlock,
-      };
-      return await this.getLogs(query);
-    }
-
-    // requested block is higher than our latest block, add a request to the outstanding queue and wait on it
-    const requestPromise = new Promise<void>(resolve => {
-      this.requestQueue.push(resolve);
-    });
-    this.log(`Client waiting for new blocks ${requestedStartBlock} -> ${requestedEndBlock}...`);
-    await requestPromise;
-    // a block sync has occured since we started our request. now fulfill the request as much as we can
-    const newLatestBlock = this.rollupEventGetter.getLastQueriedBlockNum();
-    const newRequestedEndBlock = requestedEndBlock > newLatestBlock ? newLatestBlock : requestedEndBlock;
     const query = {
       topics: params.topics,
       address: params.address,
       fromBlock: requestedStartBlock,
-      toBlock: newRequestedEndBlock,
+      toBlock: requestedEndBlock,
     };
-    if (newRequestedEndBlock < requestedStartBlock) {
-      return [];
-    }
     return await this.getLogs(query);
   }
 
@@ -271,13 +314,6 @@ export class Server {
     } else {
       this.debug(`cache key ${cacheKey} hit for request: ${JSON.stringify(args)}`);
       return await cacheResult;
-    }
-  }
-
-  private async lookForBlocks(): Promise<void> {
-    const latestEvents = await this.rollupEventGetter.getLatestRollupEvents();
-    if (latestEvents.length && this.ready) {
-      await this.logsDb.addEthLogs(latestEvents);
     }
   }
 }

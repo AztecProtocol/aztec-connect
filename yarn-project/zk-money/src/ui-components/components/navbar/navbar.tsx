@@ -5,7 +5,7 @@ import { ReactComponent as MobileNavbarTrade } from '../../../images/mobile_navb
 import { ReactComponent as MobileNavbarWallet } from '../../../images/mobile_navbar_wallet.svg';
 import { ReactComponent as Clock } from '../../images/clock.svg';
 import { bindStyle } from '../../../ui-components/util/classnames.js';
-import { PendingBalances } from '../../../alt-model/assets/l1_balance_hooks.js';
+import { PendingBalances } from '../../../alt-model/top_level_context/pending_balances_obs.js';
 import style from './navbar.module.scss';
 
 const cx = bindStyle(style);

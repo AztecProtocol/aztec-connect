@@ -100,11 +100,16 @@ export class PaymentProofCreator {
     return { ...proofInput, signingData };
   }
 
-  public async createProof(user: UserData, { tx, signature, viewingKeys }: JoinSplitProofInput, txRefNo: number) {
+  public async createProof(
+    user: UserData,
+    { tx, signature, viewingKeys }: JoinSplitProofInput,
+    txRefNo: number,
+    timeout?: number,
+  ) {
     debug('creating proof...');
     const start = new Date().getTime();
     tx.signature = signature!;
-    const proof = await this.prover.createProof(tx);
+    const proof = await this.prover.createProof(tx, timeout);
     debug(`created proof: ${new Date().getTime() - start}ms`);
     debug(`proof size: ${proof.length}`);
 

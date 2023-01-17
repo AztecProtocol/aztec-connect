@@ -11,8 +11,7 @@ export interface Block {
   proofData?: string;
   nullifierRoot?: string;
   ethTxHash?: string;
-  created: Date;
-  mined?: Date;
+  mined: Date;
 }
 
 export interface BlockQueryData {

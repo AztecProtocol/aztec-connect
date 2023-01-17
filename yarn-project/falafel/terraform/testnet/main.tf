@@ -176,15 +176,15 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "ETHEREUM_HOST",
-        "value": "https://${var.DEPLOY_TAG}-eth-host.aztec.network:8545/${var.TEST_NET_API_KEY}"
+        "value": "https://${var.DEPLOY_TAG}-eth-host.aztec.network:8545/${var.TEST_KEBAB_API_KEY}"
       },
       {
         "name": "PRIVATE_KEY",
-        "value": "${var.TEST_NET_ROOT_PRIVATE_KEY}"
+        "value": "${var.TEST_FORK_ROLLUP_PROVIDER_PRIVATE_KEY}"
       },
       {
         "name": "SERVER_AUTH_TOKEN",
-        "value": "${var.SERVER_AUTH_TOKEN}"
+        "value": "${var.TEST_SERVER_AUTH_TOKEN}"
       },
       {
         "name": "API_PREFIX",

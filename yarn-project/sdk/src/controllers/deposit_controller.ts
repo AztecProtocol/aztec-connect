@@ -3,7 +3,7 @@ import { AssetValue } from '@aztec/barretenberg/asset';
 import { EthereumProvider } from '@aztec/barretenberg/blockchain';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { ClientEthereumBlockchain } from '@aztec/blockchain';
-import { CoreSdkInterface } from '../core_sdk/index.js';
+import { CoreSdk } from '../core_sdk/index.js';
 import { proofOutputToProofTx } from '../proofs/index.js';
 import { DepositHandler } from './deposit_handler.js';
 
@@ -16,16 +16,16 @@ export class DepositController extends DepositHandler {
     public readonly depositor: EthAddress,
     public readonly recipient: GrumpkinAddress,
     public readonly recipientSpendingKeyRequired: boolean,
-    protected readonly core: CoreSdkInterface,
+    protected readonly core: CoreSdk,
     blockchain: ClientEthereumBlockchain,
     provider: EthereumProvider,
   ) {
     super(assetValue, fee, depositor, recipient, recipientSpendingKeyRequired, core, blockchain, provider);
   }
 
-  public async createProof() {
-    // txRefNo is not defined for creating a single deposit proof.
-    await super.createProof();
+  public async createProof(timeout?: number) {
+    // txRefNo is not required for creating a single deposit proof.
+    await super.createProof(0, timeout);
   }
 
   public exportProofTxs() {
