@@ -47,7 +47,9 @@ export const BlockList: React.FunctionComponent<BlockListProps> = ({
 
   const fetchBlocks = async () => {
     if (!statusLoading) {
-      await get(`/get-blocks?from=${Math.max(0, totalBlocks - blocksPerPage * page)}&take=${blocksPerPage}`);
+      const from = Math.max(0, totalBlocks - blocksPerPage * page);
+      const take = Math.min(blocksPerPage, totalBlocks - blocksPerPage * (page - 1));
+      await get(`/get-blocks?from=${from}&take=${take}`);
       if (response.ok) {
         const result = Buffer.from(await response.arrayBuffer());
         const blocks = deserializeBlocks(result);
