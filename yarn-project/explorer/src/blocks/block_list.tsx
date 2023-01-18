@@ -4,7 +4,6 @@ import { default as useFetch } from 'use-http';
 import { Block } from '@aztec/barretenberg/block_source';
 
 import { Text } from '../components/index.js';
-import { POLL_INTERVAL } from '../config.js';
 import { spacings } from '../styles/index.js';
 import { BlockItem, BlockItemPlaceholder } from './block_item.js';
 import { Block as BlockListType } from './types.js';
@@ -43,6 +42,7 @@ export const BlockList: React.FunctionComponent<BlockListProps> = ({
   loading: statusLoading,
 }) => {
   const [blocks, setBlocks] = useState<BlockListType[]>([]);
+  const [initialised, setInitialised] = useState<boolean>(false);
   const { get, response, loading, error } = useFetch();
 
   const fetchBlocks = async () => {
@@ -57,22 +57,12 @@ export const BlockList: React.FunctionComponent<BlockListProps> = ({
   };
 
   useEffect(() => {
-    fetchBlocks().catch(() => console.log('Error fetching initial blocks'));
+    fetchBlocks()
+      .catch(() => console.log('Error fetching initial blocks'))
+      .finally(() => setInitialised(true));
   }, [page, totalBlocks, statusLoading]);
 
-  useEffect(() => {
-    let interval: number | null = null;
-    if (page === 1) {
-      interval = window.setInterval(fetchBlocks, POLL_INTERVAL);
-    }
-    return () => {
-      if (interval !== null) {
-        clearInterval(interval);
-      }
-    };
-  }, [page, totalBlocks, statusLoading]);
-
-  if (loading && !blocks.length) {
+  if (loading && !blocks.length && !initialised) {
     return (
       <BlockRowRoot>
         {[...Array(blocksPerPage)].map((_, i) => (

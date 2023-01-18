@@ -1,13 +1,10 @@
-import React, { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import React from 'react';
 import { default as styled } from 'styled-components';
-import { default as useFetch } from 'use-http';
 
 import { DeviceWidth } from '../components/index.js';
 import { Pagination } from '../pagination/index.js';
 import { sizeLte, spacings } from '../styles/index.js';
 import { BlockList } from './block_list.js';
-import { POLL_INTERVAL } from '../config.js';
 import { NetworkStatsQueryData } from '../network_stats/types.js';
 
 const PaginationRoot = styled.div`
@@ -17,44 +14,25 @@ const PaginationRoot = styled.div`
 `;
 
 interface BlocksProps {
+  status?: NetworkStatsQueryData;
+  page?: number;
+  loading: boolean;
+  error: boolean;
   blocksPerPage?: number;
 }
 
-export const Blocks: React.FunctionComponent<BlocksProps> = ({ blocksPerPage = 5 }) => {
-  const [status, setStatus] = useState<NetworkStatsQueryData>();
-
-  const urlQuery = new URLSearchParams(useLocation().search);
-  const page = +(urlQuery.get('p') || 1);
-
-  const { get, response, loading, error } = useFetch();
-
-  const fetchNetworkStats = async () => {
-    const data = await get('/status');
-    if (response.ok) setStatus(data);
-  };
-
-  // initialize
-  useEffect(() => {
-    fetchNetworkStats().catch(() => console.log('Error fetching stats'));
-  }, []);
-
-  useEffect(() => {
-    let interval: number | null = null;
-    if (page === 1) {
-      interval = window.setInterval(fetchNetworkStats, POLL_INTERVAL);
-    }
-    return () => {
-      if (interval !== null) {
-        clearInterval(interval);
-      }
-    };
-  }, [page]);
-
+export const Blocks: React.FunctionComponent<BlocksProps> = ({
+  status,
+  page = 1,
+  loading,
+  error,
+  blocksPerPage = 5,
+}) => {
   return (
     <>
       <BlockList loading={!status} page={page} blocksPerPage={blocksPerPage} totalBlocks={status?.totalBlocks || 0} />
       <PaginationRoot>
-        {!loading && !error && status && (
+        {!(loading && !status?.totalBlocks) && !error && status && (
           <DeviceWidth>
             {({ breakpoint }) => (
               <Pagination
