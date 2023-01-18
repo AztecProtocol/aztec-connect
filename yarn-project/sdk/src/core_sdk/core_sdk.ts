@@ -152,7 +152,7 @@ export class CoreSdk extends EventEmitter {
       // Tasks in serialQueue require states like notes and hash path, which will need the sdk to sync to (ideally)
       // the latest block. Tasks in statelessSerialQueue don't.
 
-      this.serialQueue = new MutexSerialQueue(this.db, 'aztec_core_sdk', 60000);
+      this.serialQueue = new MutexSerialQueue(this.db, 'aztec_core_sdk', 30000);
       this.statelessSerialQueue = new MutexSerialQueue(this.db, 'aztec_core_sdk_stateless');
       this.noteAlgos = new NoteAlgorithms(this.barretenberg);
       this.blake2s = new Blake2s(this.barretenberg);
