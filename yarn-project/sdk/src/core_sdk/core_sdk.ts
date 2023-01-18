@@ -106,7 +106,6 @@ export class CoreSdk extends EventEmitter {
   private schnorr!: Schnorr;
   private syncSleep = new InterruptableSleep();
   private synchingPromise!: Promise<void>;
-  private treeSyncCount = 0;
   private debug = createDebugLogger('bb:core_sdk');
 
   constructor(
@@ -152,7 +151,8 @@ export class CoreSdk extends EventEmitter {
       this.options = options;
       // Tasks in serialQueue require states like notes and hash path, which will need the sdk to sync to (ideally)
       // the latest block. Tasks in statelessSerialQueue don't.
-      this.serialQueue = new MutexSerialQueue(this.db, 'aztec_core_sdk');
+
+      this.serialQueue = new MutexSerialQueue(this.db, 'aztec_core_sdk', 60000);
       this.statelessSerialQueue = new MutexSerialQueue(this.db, 'aztec_core_sdk_stateless');
       this.noteAlgos = new NoteAlgorithms(this.barretenberg);
       this.blake2s = new Blake2s(this.barretenberg);
@@ -1251,6 +1251,7 @@ export class CoreSdk extends EventEmitter {
    * If the world state has no data, download the initial world state data and process it.
    */
   private async genesisSync(commitmentsOnly = false) {
+    await this.worldState.syncFromDb();
     if (this.worldState.getSize() > 0) {
       return;
     }
@@ -1334,7 +1335,6 @@ export class CoreSdk extends EventEmitter {
     // Persistent data could have changed underfoot. Ensure this.sdkStatus and user states are up to date first.
     await this.readSyncInfo();
     await Promise.all(this.userStates.map(us => us.syncFromDb()));
-
     const { syncedToRollup } = this.sdkStatus;
 
     // Determine the lowest synced block of all user states
@@ -1345,9 +1345,7 @@ export class CoreSdk extends EventEmitter {
       await this.syncUserStates(userSyncedToRollup + 1, syncedToRollup);
     } else {
       // User state is not lagging behind core --> sync both
-      this.treeSyncCount++;
       await this.syncBoth(syncedToRollup + 1);
-      this.treeSyncCount--;
     }
   }
 
@@ -1379,8 +1377,6 @@ export class CoreSdk extends EventEmitter {
    */
   private async syncBoth(from: number) {
     const timer = new Timer();
-    const currentTreeSyncCount = this.treeSyncCount;
-    const reallyOldSize = this.worldState.getSize();
 
     const coreBlocks = await this.rollupProvider.getBlocks(from);
     if (!coreBlocks.length) {
@@ -1424,9 +1420,7 @@ export class CoreSdk extends EventEmitter {
         newRoot: newRoot.toString('hex'),
         newSize,
         oldSize,
-        reallyOldSize,
         expectedDataRoot: expectedDataRoot.toString('hex'),
-        currentTreeSyncCount,
       });
       return;
     }
