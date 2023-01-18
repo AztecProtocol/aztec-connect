@@ -18,8 +18,7 @@
     "hummus",
     "end-to-end",
     "wallet",
-    "wasabi",
-    "zk-money"
+    "wasabi"
   ],
   "devDependencies": {
     "@babel/core": "^7.18.10",

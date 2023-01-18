@@ -28,7 +28,6 @@ COPY hummus/package.json hummus/package.json
 COPY end-to-end/package.json end-to-end/package.json
 COPY wallet/package.json wallet/package.json
 COPY wasabi/package.json wasabi/package.json
-COPY zk-money/package.json zk-money/package.json
 # All workspaces use the linting config, so always include it.
 COPY eslint-config eslint-config
 COPY .pnp.cjs .pnp.loader.mjs .yarnrc.yml package.json babel.config.json yarn.lock .prettierrc.js ./

@@ -388,17 +388,6 @@ jobs:
           name: 'Build and test'
           command: build wallet
 
-  zk-money:
-    machine:
-      image: ubuntu-2004:202010-01
-    resource_class: large
-    steps:
-      - *checkout
-      - *setup_env
-      - run:
-          name: 'Build and test'
-          command: build zk-money
-
   faucet:
     machine:
       image: ubuntu-2004:202010-01
@@ -730,11 +719,6 @@ jobs:
           name: 'wasabi'
           command: deploy wasabi
       - run:
-          name: 'zk-money'
-          command: |
-            deploy_ecr zk-money
-            deploy_s3 zk-money
-      - run:
           name: 'hummus'
           command: |
             deploy_ecr hummus
@@ -923,7 +907,6 @@ workflows:
       - wasabi: *yarn_project
       - hummus: *yarn_project
       - explorer: *yarn_project
-      - zk-money: *yarn_project
       - wallet: *yarn_project
       # Not currently a yarn project due to using next.js, but should be.
       - faucet:
@@ -968,7 +951,6 @@ workflows:
             - explorer
             - wallet
             - wasabi
-            - zk-money
             - blockchain
             - contracts-verifier-test
             - barretenberg-js

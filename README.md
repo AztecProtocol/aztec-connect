@@ -21,7 +21,6 @@ The Aztec 2.0 system consists of the following sub projects.
 - `sdk` - SDK for interacting with a rollup provider.
 - `wasabi` - Load testing tool.
 - `website` - Company website.
-- `zk-money` - Aztec 2.0 main website.
 
 ### Contributing
 
