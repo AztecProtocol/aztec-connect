@@ -126,13 +126,6 @@
     "rebuildPatterns": ["^yarn-project/explorer/"],
     "dependencies": ["sdk"]
   },
-  "zk-money": {
-    "buildDir": "yarn-project",
-    "projectDir": "yarn-project/zk-money",
-    "dockerfile": "zk-money/Dockerfile",
-    "rebuildPatterns": ["^yarn-project/zk-money/"],
-    "dependencies": ["sdk"]
-  },
   "wallet": {
     "buildDir": "yarn-project",
     "projectDir": "yarn-project/wallet",

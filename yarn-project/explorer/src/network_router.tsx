@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter } from 'react-router-dom';
-import { Provider as FetchProvider } from 'use-http';
+import { CachePolicies, Provider as FetchProvider } from 'use-http';
 
 import { App } from './app.js';
 import { Network } from './config.js';
@@ -11,7 +11,7 @@ export const NetworkRouter: React.FunctionComponent<{ network: Network }> = prop
 
   return (
     <NetworkContext.Provider value={props.network}>
-      <FetchProvider url={endpoint}>
+      <FetchProvider url={endpoint} options={{ cachePolicy: CachePolicies.CACHE_AND_NETWORK }}>
         <BrowserRouter basename={baseUrl}>
           <App />
         </BrowserRouter>

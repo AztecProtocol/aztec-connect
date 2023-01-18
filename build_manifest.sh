@@ -24,7 +24,6 @@ PROJECTS=(
   # wallet:yarn-project
   end-to-end:yarn-project
   # wasabi:yarn-project
-  # zk-money:yarn-project
   # explorer:yarn-project
   # faucet:faucet
 )
