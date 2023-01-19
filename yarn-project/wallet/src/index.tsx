@@ -41,6 +41,7 @@ function getChainIdRpcHostMap(chainId: number): { [chainId: number]: string } {
       1: 'https://mainnet.infura.io/v3/85712ac4df0446b58612ace3ed566352',
       5: 'https://goerli.infura.io/v3/85712ac4df0446b58612ace3ed566352',
       1337: 'http://localhost:8545',
+      0x57a9e: 'https://aztec-connect-stage-eth-host.aztec.network:8545',
       0xa57ec: 'https://aztec-connect-testnet-eth-host.aztec.network:8545',
       0xdef: 'https://aztec-connect-dev-eth-host.aztec.network:8545',
     };

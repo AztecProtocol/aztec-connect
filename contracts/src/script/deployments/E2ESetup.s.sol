@@ -213,7 +213,7 @@ contract E2ESetup is Test {
             initDataSize = 0;
         } else {
             uint256 chainId = block.chainid;
-            if (chainId == 677868 || chainId == 3567 /* 0xa57ec || 0xdef */ ) {
+            if (chainId == 677868 || chainId == 359070 || chainId == 3567 || chainId == 359070 /* 0xa57ec ||0x57a9e || 0xdef */ ) {
                 initDataRoot = 0x2a460f05d3dbdbb1d6ed8c3a1e589b13561dca0d49e4d496ae0d1d15c4aa1c68;
                 initNullRoot = 0x1cb59b327064120bdf5ba23096b76cfe1ca8a45ab3db1b4f033bca92443cc025;
                 initRootsRoot = 0x1c8ca5c80e65a610ca9326c65b7e1906864ad84e6c4d70e406f770f939934ecf;

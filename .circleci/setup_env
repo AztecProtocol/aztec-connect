@@ -17,6 +17,7 @@ BRANCH=$5
 BUILD_SYSTEM_PATH=$(pwd)
 PROJECT=$(cat ../PROJECT)
 VERSION=$(cat ../VERSION)
+SPECIFIED_VERSION_TAG=$(cat ../VERSION_TAG)
 
 echo "Setting up environment COMMIT_HASH=$COMMIT_HASH, COMMIT_TAG=$COMMIT_TAG, JOB_NAME=$JOB_NAME, GIT_REPOSITORY_URL=$GIT_REPOSITORY_URL"
 
@@ -48,7 +49,7 @@ if [ -n "$COMMIT_TAG" ]; then
   fi
 else
   # We have no commit tag. This is one of our development project branches.
-  VERSION_TAG=dev
+  VERSION_TAG=$SPECIFIED_VERSION_TAG
 fi
 
 # - The deploy tag (used in api paths, subdomains), is a concatenation of the project name and version tag,

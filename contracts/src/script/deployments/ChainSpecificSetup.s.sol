@@ -28,7 +28,7 @@ contract ChainSpecificSetup is Test {
     address internal constant MAINNET_GAS_PRICE_FEED = 0x169E633A2D1E6c10dD91238Ba11c4A708dfEF37C;
     address internal constant MAINNET_DAI_PRICE_FEED = 0x773616E4d11A78F511299002da57A0a94577F1f4;
 
-    /// @notice Addresses that are returned when setting up for testnet
+    /// @notice Addresses that are returned when setting up a testnet
     struct BridgePeripheryAddresses {
         address dataProvider;
         address gasPriceFeed;
@@ -51,7 +51,8 @@ contract ChainSpecificSetup is Test {
     {
         uint256 chainId = block.chainid;
 
-        if (chainId == 1 || chainId == 3567 || chainId == 677868) {
+        //   mainnet          dev               stage                testnet
+        if (chainId == 1 || chainId == 3567 || chainId == 359070 || chainId == 677868) {
             // Deploy Data Provider and list bridges | assets
             (address dataProvider, address feeDistributor) = setupAssetAndBridgesMainnet(_proxy, _permitHelper, _safe);
 

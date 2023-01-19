@@ -96,7 +96,7 @@ resource "aws_ecs_task_definition" "block-server" {
       },
       {
         "name": "FALAFEL_URL",
-        "value": "http://aztec-connect-prod-falafel.local/aztec-connect-prod/falafel"
+        "value": "http://${var.DEPLOY_TAG}-falafel.local/${var.DEPLOY_TAG}/falafel"
       },
       {
         "name": "API_PREFIX",

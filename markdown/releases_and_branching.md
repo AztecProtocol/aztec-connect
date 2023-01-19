@@ -6,15 +6,17 @@ Releases are deployed every other Monday. The changes to be released are isolate
 
 Under Aztec connect the long lived branches are:
 
-| Name                  | Role        | Env                                 |
-| --------------------- | ----------- | ----------------------------------- |
-| `defi-bridge-project` | Development | `aztec-connect-dev-*` (ganache)     |
-| `v2.1-testnet`        | Staging     | `aztec-connect-testnet-*` (ganache) |
-| `v2.1`                | Release     | `aztec-connect-prod-*` (mainnet)    |
+| Name                  | Role           | Env                               |
+| --------------------- | -------------- | --------------------------------- |
+| `defi-bridge-project` | Development    | `aztec-connect-dev-*` (anvil)     |
+| `stage`               | Staging        | `aztec-connect-stage-*` (anvil)   |
+| `v2.1-testnet`        | Public Testnet | `aztec-connect-testnet-*` (anvil) |
+| `v2.1`                | Release        | `aztec-connect-prod-*` (mainnet)  |
 
 Changes between long-lived branches are propagated with regular merges. Changes applied to long-lived branches from other branches, such as feature branches, are squashed and merged. E.g.:
 
-- Merge `defi-bridge-project` -> `v2.1-testnet`
+- Merge `defi-bridge-project` -> `stage`
+- Merge `stage` -> `v2-1-testnet`
 - Merge `v2.1-testnet` -> `defi-bridge-project`
 - Squash and merge `some-hotfix` -> `v2.1`
 - Squash and merge `some-feature` -> `defi-bridge-project`
@@ -23,9 +25,13 @@ Changes between long-lived branches are propagated with regular merges. Changes 
 
 At the time of writing `v2.1` is the active release branch &ndash; under the ultra plonk project this will likely be `v2.2`. The release branch exists to reflect the state of the code that has been deployed to production, and is thus branch from which production deployments are triggered.
 
-## Staging (testnet) branch
+## Staging (stage) branch
 
-(At the time of writing this is a planned branch rather than one that actually exists.) The staging branch and its counterpart environment exist to isolate and QA changes in the run up to a release. The active development branch should be merged into the staging branch on the Thursday prior to release. Any bug fixes required in this period are merged both to the staging branch and the active development branch.
+The staging branch and its counterpart environment exist to isolate and QA changes in the run up to a release. The active development branch should be merged into the staging branch as required. Any bug fixes required in this period are merged both to the staging branch and the active development branch.
+
+## Public Testnet (v2.1-testnet)
+
+The staging branch and its counterpart environment exist to isolate and QA changes in the run up to a release. The active development branch should be merged into the staging branch on the Thursday prior to release. Any bug fixes required in this period are merged both to the staging branch and the active development branch.
 
 ## Hotfix branches
 
