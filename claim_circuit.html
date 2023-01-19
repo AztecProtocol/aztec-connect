@@ -1,0 +1,390 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Claim Circuit - Aztec Connect</title>
+        <!-- Custom HTML head -->
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="theme/css/style.css">
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Intro</a></li><li class="chapter-item expanded affix "><li class="part-title">Other</li><li class="chapter-item expanded "><a href="primitives.html"><strong aria-hidden="true">2.</strong> Primitives</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="schnorr.html"><strong aria-hidden="true">2.1.</strong> Schnorr Signatures</a></li><li class="chapter-item expanded "><a href="uint.html"><strong aria-hidden="true">2.2.</strong> Unsigned integers</a></li></ol></li><li class="chapter-item expanded "><a href="notes_and_nullifiers.html"><strong aria-hidden="true">3.</strong> Notes & Nullifiers</a></li><li class="chapter-item expanded "><a href="defi_bridge_interface.html"><strong aria-hidden="true">4.</strong> Defi Bridge Interface</a></li><li class="chapter-item expanded affix "><li class="part-title">'App' Circuits</li><li class="chapter-item expanded "><a href="account_circuit.html"><strong aria-hidden="true">5.</strong> Account Circuit</a></li><li class="chapter-item expanded "><a href="join_split_circuit.html"><strong aria-hidden="true">6.</strong> Join-Split Circuit</a></li><li class="chapter-item expanded "><a href="claim_circuit.html" class="active"><strong aria-hidden="true">7.</strong> Claim Circuit</a></li><li class="chapter-item expanded affix "><li class="part-title">Rollup Circuits</li><li class="chapter-item expanded "><a href="rollup_circuit.html"><strong aria-hidden="true">8.</strong> Rollup Circuit</a></li><li class="chapter-item expanded "><a href="root_rollup_circuit.html"><strong aria-hidden="true">9.</strong> Root Rollup Circuit</a></li><li class="chapter-item expanded "><a href="root_verifier_circuit.html"><strong aria-hidden="true">10.</strong> Root Verifier Circuit</a></li><li class="chapter-item expanded affix "><li class="part-title">Contracts</li><li class="chapter-item expanded "><a href="rollup_contract.html"><strong aria-hidden="true">11.</strong> Rollup Contract</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Aztec Connect</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <!-- Page table of contents -->
+                        <div class="sidetoc"><nav class="pagetoc"></nav></div>
+
+                        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css" integrity="sha384-AfEj0r4/OFrOo5t7NnNe46zW/tFgW6x/bCJG8FqQCEo3+Aro6EYUG4+cU+KJWu/X" crossorigin="anonymous">
+<h1 id="claim-circuit"><a class="header" href="#claim-circuit">Claim circuit</a></h1>
+<p>This circuit enables converting a claim note into two value notes, according to the defi interaction result.</p>
+<h2 id="diagrams"><a class="header" href="#diagrams">Diagrams</a></h2>
+<ul>
+<li><a href="https://app.diagrams.net/#G1rbBywUqM78RkCNcI0jmie6-N79PY0lqv">The entire defi process</a></li>
+</ul>
+<h2 id="before-the-claim-circuit"><a class="header" href="#before-the-claim-circuit">Before the claim circuit</a></h2>
+<p>A defi interaction is a multi-step process which <em>ends</em> with the claim circuit being verified on-chain. There are more complete explanations of the whole process for many individual dApps on hackmd under the 'Aztec Connect' tag.
+Here's a very brief summary of the defi interaction process:</p>
+<ul>
+<li>A user wishes to interact with an Ethereum L1 dApp privately. They can use Aztec Connect to hide their identity from observers. The values they send will still be visible (but not traceable back to them). Let's use Uniswap as an example.</li>
+<li>The user wishes to convert 1 ETH to DAI tokens.</li>
+<li>They submit a 'defi deposit' of 1 ETH.
+<ul>
+<li>A join-split proof is generated in 'defi deposit' mode, which spends the 1 ETH and creates a partial claim note (see the diagrams or the join-split markdown file).</li>
+</ul>
+</li>
+<li>The rollup provider bundles (sums) the user's request to deposit 1 ETH into uniswap with the requests of any other users who wanted to deposit ETH to uniswap. User costs are amortised this way.</li>
+<li>The rollup provider is able to assign a <code>bridge_call_data</code> to each 'bundle', and with knowledge of this <code>bridge_call_data</code> and the <code>total_input_value</code> being deposited, the rollup provider can 'complete' each user's partial claim note. I.e. the rollup provider creates a completed 'claim note' for each user. This claim note can be used later in the process to withdraw DAI via the claim circuit.</li>
+<li>This bundled (summed) deposit of X ETH is sent to a 'Defi Bridge Contract' - a contract specifically designed to perform swaps between Aztec Connect users and Uniswap.</li>
+<li>The Defi Bridge Contract sends the <code>total_input_value = X</code> ETH to Uniswap (along with some parameters which we won't go into here), and receives back Y DAI.</li>
+<li>The rollup contract emits an event which says &quot;X ETH was swapped for Y DAI, and here is a 'defi interaction nonce' which represents this interaction&quot;.</li>
+<li>The rollup provider listens for this event to learn whether their interaction was successful, and to learn the new data: <code>total_output_value_a = Y</code>, <code>defi_interaction_nonce = defi_interaction_nonce</code>.</li>
+<li>The rollup provider is now in a position to submit a <em>claim</em> (using the claim circuit) <em>on behalf of</em> each user who partook in the defi interaction.
+<ul>
+<li>Take note of this. Submission of a claim needn't be done by the user; no private key is required. The rollup provider is incentivised to generate a claim proof by being offered a fee via the earlier join-split proof.</li>
+</ul>
+</li>
+</ul>
+<p>Now we can get into the details of the claim circuit.</p>
+<h2 id="claim-circuit-1"><a class="header" href="#claim-circuit-1">Claim circuit</a></h2>
+<p>At a high level, the claim circuit does the following:</p>
+<ul>
+<li>Spends a user's claim note;</li>
+<li>Refers to a particular defi interaction note (which contains uniquely-identifying details of a particular defi interaction);</li>
+<li>Outputs up-to two output 'value notes' whose values are proportional to the amount originally defi-deposited by this user.
+<ul>
+<li><code>output_note_1.value = ( user_input_amount / total_input_amount ) * total_output_amount_a</code></li>
+<li><code>output_note_2.value = ( user_input_amount / total_input_amount ) * total_output_amount_b</code></li>
+</ul>
+</li>
+</ul>
+<p>(In our earlier example, <code>ouput_note_1.value = ( 1 / X ) * Y</code> DAI).</p>
+<h3 id="details"><a class="header" href="#details">Details</a></h3>
+<h4 id="inputs"><a class="header" href="#inputs">Inputs</a></h4>
+<p>Recall that all inner circuits must have the <strong>same number of public inputs</strong> as they will be used homogenously by the rollup circuit. Hence, some of the inputs to a claim circuit are unused and so set to 0.</p>
+<h5 id="public-inputs"><a class="header" href="#public-inputs">Public Inputs</a></h5>
+<ul>
+<li><code>proof_id = ProofIds::DEFI_CLAIM</code></li>
+<li><code>output_note_commitment_1</code></li>
+<li><code>output_note_commitment_2</code></li>
+<li><code>nullifier1</code></li>
+<li><code>nullifier2</code></li>
+<li><code>public_value = 0</code></li>
+<li><code>public_owner = 0</code></li>
+<li><code>asset_id = 0</code></li>
+<li><code>data_root</code></li>
+<li><code>claim_note.fee</code></li>
+<li><code>claim_note_data.bridge_call_data_local.input_asset_id</code></li>
+<li><code>claim_note.bridge_call_data</code></li>
+<li><code>defi_deposit_value = 0</code></li>
+<li><code>defi_root</code></li>
+<li><code>backward_link = 0</code></li>
+<li><code>allow_chain = 0</code></li>
+</ul>
+<h5 id="private-inputs"><a class="header" href="#private-inputs">Private Inputs</a></h5>
+<ul>
+<li><code>claim_note_index</code></li>
+<li><code>claim_note_path</code></li>
+<li>
+<pre><code>claim_note: {
+    deposit_value,
+    bridge_call_data, // actually a public input
+    defi_interaction_nonce,
+    fee,             // actually a public input
+    value_note_partial_commitment,
+    input_nullifier,
+}
+</code></pre>
+</li>
+<li><code>defi_interaction_note_path</code></li>
+<li>
+<pre><code>defi_interaction_note: {
+    bridge_call_data,
+    defi_interaction_nonce,
+    total_input_value,
+    total_output_value_a,
+    total_output_value_b,
+    defi_interaction_result,
+    commitment,
+}
+</code></pre>
+</li>
+<li><code>output_value_a</code></li>
+<li><code>output_value_b</code></li>
+</ul>
+<h4 id="circuit-logic-pseudocode"><a class="header" href="#circuit-logic-pseudocode">Circuit Logic (Pseudocode)</a></h4>
+<p><em>Note: for Pedersen commitments, different generators are used for different types of commitment.</em></p>
+<p>Computed vars:</p>
+<ul>
+<li>
+<p>Extract data from the <code>claim_note.bridge_call_data</code>:</p>
+<ul>
+<li>
+<pre><code>bridge_call_data_local = {
+    bridge_address_id, // represents a defi bridge contract address
+    input_asset_id_a,
+    input_asset_id_b,     // if virtual, is the defi_interaction nonce from when a loan/LP position was opened
+    output_asset_id_a,
+    output_asset_id_b,
+
+                       // during some earlier defi interaction by the user
+    bit_config,
+    aux_data,
+}
+</code></pre>
+</li>
+</ul>
+</li>
+<li>
+<p>The same data is also currently extracted from the <code>defi_interaction_note.bridge_call_data</code>. This is redundant, but we'll only need to remove these extra constraints if we ever approach the next power of 2.</p>
+</li>
+<li>
+<p>Extract config data from <code>bit_config</code>:</p>
+<ul>
+<li>
+<pre><code>bit_config = {
+  second_input_in_use,
+  second_output_in_use,
+}
+</code></pre>
+</li>
+</ul>
+</li>
+<li>
+<pre><code>claim_note.commitment = pedersen(
+    pedersen(deposit_value, bridge_call_data, value_note_partial_commitment, input_nullifier),
+    defi_interaction_nonce,
+    fee,
+)
+</code></pre>
+</li>
+<li>
+<pre><code>defi_interaction_note.commitment = pedersen(
+    bridge_call_data,
+    total_input_value,
+    total_output_value_a,
+    total_output_value_b,
+    defi_interaction_nonce,
+    defi_interaction_result,
+)
+</code></pre>
+</li>
+<li>
+<p><code>output_value_1 = defi_interaction_result ? output_value_a : claim_note.deposit_value</code> (give a refund if the interaction failed).</p>
+</li>
+<li>
+<p><code>output_asset_id_1 = defi_interaction_result ? output_asset_id_a : input_asset_id</code></p>
+</li>
+<li>
+<p><code>output_value_2 = second_output_virtual ? output_value_a : output_value_b</code></p>
+<ul>
+<li>If the second output is virtual, its value must equal that of the first output.</li>
+</ul>
+</li>
+<li>
+<p><code>output_asset_id_2 = second_output_virtual ? concat(1, defi_interaction_nonce) : output_asset_id_b</code></p>
+<ul>
+<li>If virtual, attach a record of this 'opening defi interaction nonce' to the note, via the asset_id field.</li>
+</ul>
+</li>
+</ul>
+<p>Checks:</p>
+<ul>
+<li>Many values are range-checked. See <a href="../../barretenberg/src/aztec/rollup/proofs/notes/constants.hpp">constants.hpp</a> and <a href="../../barretenberg/src/aztec/rollup/constants.hpp">constants.hpp</a> for the variables whose bit-lengths are constrained.</li>
+<li>Check <code>bit_config</code> vars:</li>
+<li>Extract <code>second_input_in_use</code> and <code>second_output_in_use</code> from <code>claim_note_data.bridge_call_data_local.config</code>
+// The below six constraints are exercised in bridge_call_data.hpp, see comments there for elaboration</li>
+<li><code>!(input_asset_id_b.is_zero) must_imply config.second_input_in_use</code></li>
+<li><code>!(input_asset_id_b.is_zero) must_imply config.second_output_in_use</code></li>
+<li><code>config.second_input_in_use must_imply input_asset_id_a != input_asset_id_b</code></li>
+<li><code>config.second_output_in_use &amp;&amp; both_outputs_real must_imply output_asset_id_a != output_asset_id_b</code></li>
+<li><code>first_output_virtual must_imply output_asset_id_a == virtual_asset_id_placeholder</code></li>
+<li><code>second_output_virtual must_imply output_asset_id_b == virtual_asset_id_placeholder</code></li>
+<li><code>require(claim_note.deposit_value != 0)</code></li>
+<li><code>require(deposit_value &lt;= total_input_value)</code></li>
+<li><code>require(output_value_a &lt;= total_output_value_a)</code></li>
+<li><code>require(output_value_b &lt;= total_output_value_b)</code></li>
+<li><code>require(claim_note.bridge_call_data == defi_interaction_note.bridge_call_data)</code></li>
+<li><code>require(claim_note.defi_interaction_nonce == defi_interaction_note.defi_interaction_nonce)</code></li>
+<li>Check claim note exists in the data tree using <code>data_root, claim_note_path, claim_note_index, claim_note.commitment</code>.</li>
+<li>Check defi interaction note exists in the data tree using <code>defi_root, defi_interaction_note_path, defi_interaction_nonce</code>.
+<ul>
+<li>Note: the leaf index of a defi interaction note is its <code>defi_interaction_nonce</code>. The <code>defi_interaction_nonce</code> is derived in the rollup circuit at the time the defi deposit (join split) is processed.</li>
+</ul>
+</li>
+</ul>
+<p>Ratio Checks (very complex code):</p>
+<ul>
+<li>Ensure <code>output_value_a == (deposit / total_input_value) * total_output_value_a</code>, unless <code>output_value_a == 0 &amp;&amp; total_output_value_a == 0</code> (i.e. unless no value was returned by the bridge contract for output_a).</li>
+<li>Ensure <code>output_value_b == (deposit / total_input_value) * total_output_value_b</code>, unless <code>output_value_b == 0 &amp;&amp; total_output_value_b == 0</code> (i.e. unless no value was returned by the bridge contract for output_b).</li>
+<li>(Also prevent zero denominators <code>total_input_value</code>, <code>total_output_value_a</code>, and <code>total_output_value_b</code>).</li>
+</ul>
+<p>Computed public inputs:</p>
+<ul>
+<li><code>nullifier_1 = pedersen(claim_note.commitment)</code></li>
+<li><code>nullifier_2 = pedersen(defi_interaction_note.commitment, claim_note.commitment)</code></li>
+<li><code>output_note_commitment1 = pedersen(value_note_partial_commitment, output_value_1, output_asset_id_1, nullifier_1)</code></li>
+<li><code>output_note_commitment2 = (second_output_virtual ^ second_output_real) ? pedersen(value_note_partial_commitment, output_value_2, output_asset_id_2, nullifier_2) : 0</code></li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="join_split_circuit.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                            <a rel="next" href="rollup_circuit.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="join_split_circuit.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                    <a rel="next" href="rollup_circuit.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+        <script type="text/javascript">
+            window.playground_copyable = true;
+        </script>
+        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
+        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+        <script type="text/javascript" src="theme/sidebar.js"></script>
+    </body>
+</html>

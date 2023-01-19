@@ -1,0 +1,579 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Join-Split Circuit - Aztec Connect</title>
+        <!-- Custom HTML head -->
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="theme/css/style.css">
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="intro.html"><strong aria-hidden="true">1.</strong> Intro</a></li><li class="chapter-item expanded affix "><li class="part-title">Other</li><li class="chapter-item expanded "><a href="primitives.html"><strong aria-hidden="true">2.</strong> Primitives</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="schnorr.html"><strong aria-hidden="true">2.1.</strong> Schnorr Signatures</a></li><li class="chapter-item expanded "><a href="uint.html"><strong aria-hidden="true">2.2.</strong> Unsigned integers</a></li></ol></li><li class="chapter-item expanded "><a href="notes_and_nullifiers.html"><strong aria-hidden="true">3.</strong> Notes & Nullifiers</a></li><li class="chapter-item expanded "><a href="defi_bridge_interface.html"><strong aria-hidden="true">4.</strong> Defi Bridge Interface</a></li><li class="chapter-item expanded affix "><li class="part-title">'App' Circuits</li><li class="chapter-item expanded "><a href="account_circuit.html"><strong aria-hidden="true">5.</strong> Account Circuit</a></li><li class="chapter-item expanded "><a href="join_split_circuit.html" class="active"><strong aria-hidden="true">6.</strong> Join-Split Circuit</a></li><li class="chapter-item expanded "><a href="claim_circuit.html"><strong aria-hidden="true">7.</strong> Claim Circuit</a></li><li class="chapter-item expanded affix "><li class="part-title">Rollup Circuits</li><li class="chapter-item expanded "><a href="rollup_circuit.html"><strong aria-hidden="true">8.</strong> Rollup Circuit</a></li><li class="chapter-item expanded "><a href="root_rollup_circuit.html"><strong aria-hidden="true">9.</strong> Root Rollup Circuit</a></li><li class="chapter-item expanded "><a href="root_verifier_circuit.html"><strong aria-hidden="true">10.</strong> Root Verifier Circuit</a></li><li class="chapter-item expanded affix "><li class="part-title">Contracts</li><li class="chapter-item expanded "><a href="rollup_contract.html"><strong aria-hidden="true">11.</strong> Rollup Contract</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Aztec Connect</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <!-- Page table of contents -->
+                        <div class="sidetoc"><nav class="pagetoc"></nav></div>
+
+                        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.min.css" integrity="sha384-AfEj0r4/OFrOo5t7NnNe46zW/tFgW6x/bCJG8FqQCEo3+Aro6EYUG4+cU+KJWu/X" crossorigin="anonymous">
+<h1 id="joinsplit-circuit"><a class="header" href="#joinsplit-circuit">JoinSplit Circuit</a></h1>
+<h3 id="circuit-description"><a class="header" href="#circuit-description">Circuit Description</a></h3>
+<p>This circuit allows notes to be spent.</p>
+<p>The circuit takes in two input notes, and two new output notes, and updates the Note Tree and Nullifier Tree accordingly.</p>
+<h3 id="circuit-inputs-summary"><a class="header" href="#circuit-inputs-summary">Circuit Inputs: Summary</a></h3>
+<p>The inputs for the join-split circuit are all elements of the field <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.974998em;vertical-align:-0.286108em;"></span><span class="mord"><span class="mord mathbb">F</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.15139200000000003em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">p</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.286108em;"><span></span></span></span></span></span></span></span></span></span> from the BN254 specification.</p>
+<h3 id="public-inputs-detail"><a class="header" href="#public-inputs-detail">Public Inputs: Detail</a></h3>
+<ol>
+<li>
+<p><code>proof_id</code></p>
+</li>
+<li>
+<p><code>output_note_commitment_1</code></p>
+</li>
+<li>
+<p><code>output_note_commitment_2</code></p>
+</li>
+<li>
+<p><code>nullifier_1</code></p>
+</li>
+<li>
+<p><code>nullifier_2</code></p>
+</li>
+<li>
+<p><code>public_value</code></p>
+</li>
+<li>
+<p><code>public_owner</code></p>
+</li>
+<li>
+<p><code>public_asset_id</code></p>
+</li>
+<li>
+<p><code>old_data_tree_root</code></p>
+</li>
+<li>
+<p><code>tx_fee</code></p>
+</li>
+<li>
+<p><code>tx_fee_asset_id</code></p>
+</li>
+<li>
+<p><code>bridge_call_data</code></p>
+</li>
+<li>
+<p><code>defi_deposit_value</code></p>
+</li>
+<li>
+<p><code>defi_root</code> // Note: this will not be used by the circuit, but is included so that the number of public inputs is uniform across base-level circuits.</p>
+</li>
+<li>
+<p><code>backward_link</code></p>
+</li>
+<li>
+<p><code>allow_chain</code></p>
+</li>
+</ol>
+<h3 id="private-inputs-detail"><a class="header" href="#private-inputs-detail">Private Inputs: Detail</a></h3>
+<pre><code class="language-js">{
+  asset_id,
+  num_input_notes,
+
+  input_note_1_index,
+  input_note_2_index,
+
+  input_note_1_path,
+  input_note_2_path,
+
+  input_note_1: {
+    value,
+    secret,
+    owner,
+    asset_id,
+    account_required,
+    creator_pk,
+    input_nullifier,
+  },
+
+  input_note_2: {
+    value,
+    secret,
+    owner,
+    asset_id,
+    account_required,
+    creator_pk,
+    input_nullifier,
+  },
+
+  output_note_1: {
+    value,
+    secret,
+    owner,
+    asset_id,
+    account_required,
+    creator_pk, // (creator_pk = optional public key of note creator)
+    input_nullifier,
+  },
+
+  output_note_2: {
+    value,
+    secret,
+    owner,
+    asset_id,
+    account_required,
+    creator_pk, // (creator_pk = optional public key of note creator)
+    input_nullifier,
+  },
+
+  partial_claim_note_data: {
+    deposit_value,
+    bridge_call_data_local: {
+      bridge_address_id,
+      input_asset_id_a,
+      input_asset_id_b,
+      output_asset_id_a,
+      output_asset_id_b,
+      config: {
+        second_input_in_use,
+        second_output_in_use,
+      },
+      aux_data,
+    },
+    note_secret,
+    input_nullifier,
+  },
+
+  account_private_key,
+  alias_hash,
+  account_required,
+  account_note_index,
+  account_note_path,
+
+  signing_pk, // (a.k.a. spending public key)
+  signature,
+}
+</code></pre>
+<h3 id="index-of-functions"><a class="header" href="#index-of-functions">Index of Functions</a></h3>
+<p>In the Pseudocode to follow, we use the following function names. See <a href="./notes_and_nullifiers.html">notes &amp; nullifiers</a> for more details.</p>
+<ul>
+<li><code>public_key()</code> derives a public key from a given secret key.</li>
+<li><code>value_note_commit()</code> - <strong>Value note commitment function</strong>, which is assumed to be
+<ul>
+<li>Collision-resistant</li>
+<li>Field-friendly, which means the output value only depends on the inputs as field elements, and doesn’t change e.g. when input changes from a to a+r as bit string.</li>
+</ul>
+</li>
+<li><code>partial_value_note_commit()</code> - <strong>Partial value note commitment function</strong>. Has the same assumptions as <code>value_note_commit</code>. Uses a different generator. Stresses that the data being committed to is <em>partial</em> - a subset of the data committed to by <code>value_note_commit</code>.</li>
+<li><code>partial_claim_note_commit()</code> - <strong>Partial claim note commitment function</strong>. Has the same assumptions as <code>value_note_commit</code>. Uses a different generator. Stresses that the data being committed to is <em>partial</em> - a subset of the data committed to by <code>claim_note_commit</code> (in the claim circuit).</li>
+<li><code>account_note_commit()</code> - <strong>Account note commitment function</strong>, which is assumed to be collision resistant.</li>
+<li><code>compute_nullifier()</code> - <strong>Nullifier Function</strong>, which we assume can be modeled as a random oracle, and only depends on <code>account_private_key</code> <span class="katex"><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord mathnormal">m</span><span class="mord mathnormal">o</span><span class="mord mathnormal">d</span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span></span></span></span>.</li>
+</ul>
+<h3 id="circuit-logic-pseudocode"><a class="header" href="#circuit-logic-pseudocode">Circuit Logic (Pseudocode)</a></h3>
+<pre><code class="language-js">
+// range checks:
+  for i = 1,2:
+  {
+    check:
+      input_note_i_index &lt; 2 ** DATA_TREE_DEPTH
+      input_note_i.value &lt; 2 ** NOTE_VALUE_BIT_LENGTH
+      output_note_i.value &lt; 2 ** NOTE_VALUE_BIT_LENGTH
+  }
+
+  partial_claim_note.deposit_value &lt; 2 ** DEFI_DEPOSIT_VALUE_BIT_LENGTH
+
+  asset_id &lt; 2 ** MAX_NUM_ASSETS_BIT_LENGTH
+  public_value &lt; 2 ** NOTE_VALUE_BIT_LENGTH
+  tx_fee &lt; 2 ** TX_FEE_BIT_LENGTH
+
+  account_note_index &lt; 2 ** DATA_TREE_DEPTH
+  alias_hash &lt; 2 ** ALIAS_HASH_BIT_LENGTH
+  account_required &lt; 2
+
+  num_input_notes in {0, 1, 2}
+  allow_chain in {0, 1, 2, 3}
+
+// tx type initialisations:
+  const is_deposit = proof_id == DEPOSIT
+  const is_withdraw = proof_id == WITHDRAW
+  const is_send = proof_id == SEND
+  const is_defi_deposit = proof_id == DEFI_DEPOSIT
+  const is_public_tx = is_deposit || is_withdraw
+
+// public value initialisations
+  const public_asset_id = is_public_tx ? asset_id : 0;
+  const public_input = is_deposit ? public_value : 0;
+  const public_output = is_withdraw ? public_value : 0;
+
+// account initialisations
+  const account_pk = public_key(account_private_key);
+  const signer_pk = account_required ? signing_pk.x : account_pk.x;
+
+  const account_note = {
+    alias_hash,
+    account_pk,
+    signer_pk,
+  };
+  const account_note_commitment = account_note_commit(account_note);
+
+// commitments
+  for i in 1,2
+  {
+    input_note_i.commitment = value_note_commit(input_note_i);
+    output_note_i.commitment = value_note_commit(output_note_i);
+  }
+
+// Data validity checks:
+  require(num_input_notes = 0 || 1 || 2); // it's pseudocode!
+  require(is_deposit || is_send || is_withdraw || is_defi_deposit);
+
+  if(num_input_notes == 0) require(is_deposit);
+
+  if (is_public_tx) {
+    require(public_value &gt; 0);
+    require(public_owner &gt; 0);
+  } else {
+    require(public_value == 0);
+    require(public_owner == 0);
+  }
+
+  require(input_note_1.commitment != input_note_2.commitment);
+
+  require(
+    (asset_id == input_note_1.asset_id) &amp;&amp;
+    (asset_id == output_note_1.asset_id) &amp;&amp;
+    (asset_id == output_note_2.asset_id) &amp;&amp;
+  );
+
+  if (
+    (num_input_notes == 2) &amp;&amp;
+    !is_defi_deposit
+  ) {
+    require(input_note_1.asset_id == input_note_2.asset_id);
+  }
+
+  require(account_private_key != 0);
+
+  const account_public_key = public_key(account_private_key);
+  require(
+    account_public_key == input_note_1.owner &amp;&amp;
+    account_public_key == input_note_2.owner
+  );
+
+  require(
+    account_required == input_note_1.account_required &amp;&amp;
+    account_required == input_note_2.account_required
+  );
+
+  if (output_note_1.creator_pubkey) {
+    require(account_public_key == output_note_1.creator_pubkey);
+  }
+
+  if (output_note_2.creator_pubkey) {
+    require(account_public_key == output_note_2.creator_pubkey);
+  }
+
+// Defi deposit
+
+  let output_note_1_commitment = output_note_1.commitment; // supersedes output_note_1.commitment frin here on in.
+  let input_note_2_value = input_note_2.value; // supersedes input_note_2.value from here on in.
+  let output_note_1_value = output_note_1.value;
+  let defi_deposit_value = 0;
+  if (is_defi_deposit) {
+    const partial_value_note = {
+      secret: partial_claim_note_data.note_secret,
+      owner: input_note_1.owner,
+      account_required: input_note_1.account_required,
+      creator_pubkey = 0,
+    };
+    const partial_value_note_commitment = partial_value_note_commit(partial_value_note);
+
+    const partial_claim_note = {
+      deposit_value: partial_claim_note_data.deposit_value,
+      bridge_call_data: partial_claim_note_data.bridge_call_data_local.to_field(),
+      partial_value_note_commitment,
+      input_nullifier: partial_claim_note_data.input_nullifier,
+    }
+    const partial_claim_note_commitment = partial_claim_note_commit(partial_claim_note)
+
+    output_note_1_commitment = partial_claim_note_commitment;
+
+    defi_deposit_value = partial_claim_note.deposit_value;
+
+    require(defi_deposit_value &gt; 0);
+
+    const { bridge_call_data_local } = partial_claim_note_data;
+    const bridge_call_data = bridge_call_data_local.to_field();
+
+    require(bridge_call_data_local.input_asset_id_a == input_note_1.asset_id);
+
+    if (input_note_2_in_use &amp;&amp; (input_note_1.asset_id != input_note_2.asset_id)) {
+      require(defi_deposit_value == input_note_2.value);
+      require(bridge_call_data_local.config.second_input_in_use);
+      input_note_2_value = 0; // set to 0 for the 'conservation of value' equations below.
+    }
+
+    if (bridge_call_data_local.config.second_input_in_use) {
+      require(input_note_2_in_use);
+      require(input_note_2.asset_id == bridge_call_data_local.input_asset_id_b);
+    }
+
+    output_note_1_value = 0; // set to 0, since the partial claim note replaces it.
+  }
+
+// Conservation of value: no value created or destroyed:
+  const total_in_value = public_input + input_note_1.value + input_note_2_value
+  const total_out_value = public_output + (is_defi_deposit ? defi_deposit_value : output_note_1_value) + output_note_2.valuue
+
+// fee
+  const tx_fee = total_in_value - total_out_value // (no underflow allowed)
+
+
+// Check input notes are valid:
+  let input_note_1_in_use = num_input_notes &gt;= 1;
+  let input_note_2_in_use = num_input_notes == 2;
+
+  for i = 1,2:
+  {
+    if (input_note_i_in_use) {
+      const input_note_commitment_i = value_note_commit(input_note_i);
+      const exists = check_membership(
+        input_note_commitment_i, input_note_i_index, input_note_i_path, old_data_tree_root
+      );
+      require(exists);
+    } else {
+      require(input_note_i.value == 0);
+    }
+  }
+
+// Compute nullifiers
+  for i = 1,2:
+  {
+    nullifier_i = compute_nullifier(
+      input_note_i.commitment,
+      account_private_key,
+      input_note_i_in_use,
+    );
+  }
+
+  require(
+    output_note_1.input_nullifier == nullifier_1 &amp;&amp;
+    output_note_2.input_nullifier == nullifier_2 &amp;&amp;
+    partial_claim_note.input_nullifier == is_defi_deposit ? nullifier_1 : 0;
+  )
+
+// Verify account ownership
+  check_membership(account_note_commitment, account_note_index, account_note_path, old_data_tree_root);
+
+  message = (
+    public_value,
+    public_owner,
+    public_asset_id,
+    output_note_1_commitment, // notice this is NOT output_note_1.commitment
+    output_note_2.commitment,
+    nullifier_1,
+    nullifier_2,
+    backward_link,
+    allow_chain,
+  );
+
+  verify_signature(
+    message,
+    signature,
+    signer_public_key
+  );
+
+// Check chained transaction inputs are valid:
+  const backward_link_in_use = inputs.backward_link != 0;
+  const note1_propagated = inputs.backward_link == input_note_1.commitment;
+  const note2_propagated = inputs.backward_link == input_note_2.commitment;
+
+  if (backward_link_in_use) require(note1_propagated || note2_propagated);
+
+  if (is_defi_deposit) require(allow_chain != 1);
+
+  if (inputs.allow_chain == 1) require(output_note_1.owner == input_note_1.owner);
+  if (inputs.allow_chain == 2) require(output_note_2.owner == input_note_1.owner);
+
+// Constrain unused public inputs to zero:
+  require(defi_root == 0);
+
+// Set public inputs (simply listed here without syntax):
+  proof_id,
+  output_note_1_commitment,
+  output_note_2.commitment,
+  nullifier_1,
+  nullifier_2,
+  public_value,
+  public_owner,
+  public_asset_id,
+
+  old_data_tree_root,
+  tx_fee,
+  asset_id,
+  bridge_call_data,
+  defi_deposit_value,
+  defi_root,
+  backward_link,
+  allow_chain
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="account_circuit.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                            <a rel="next" href="claim_circuit.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="account_circuit.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                    <a rel="next" href="claim_circuit.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+        <script type="text/javascript">
+            window.playground_copyable = true;
+        </script>
+        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
+        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+        <script type="text/javascript" src="theme/sidebar.js"></script>
+    </body>
+</html>
