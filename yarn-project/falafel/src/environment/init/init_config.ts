@@ -9,7 +9,7 @@ const initConfig = {
   '677868' /* 0xa57ec */: {
     accountsData: `${dataDir}/mainnet_fork/accounts`,
   },
-  '359070' /* 0x57a9e */: {
+  '359059' /* 0x57a93 */: {
     accountsData: `${dataDir}/mainnet_fork/accounts`,
   },
   '3567' /* 0xdef */: {

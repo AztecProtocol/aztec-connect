@@ -52,7 +52,7 @@ contract ChainSpecificSetup is Test {
         uint256 chainId = block.chainid;
 
         //   mainnet          dev               stage                testnet
-        if (chainId == 1 || chainId == 3567 || chainId == 359070 || chainId == 677868) {
+        if (chainId == 1 || chainId == 3567 || chainId == 359059 || chainId == 677868) {
             // Deploy Data Provider and list bridges | assets
             (address dataProvider, address feeDistributor) = setupAssetAndBridgesMainnet(_proxy, _permitHelper, _safe);
 
