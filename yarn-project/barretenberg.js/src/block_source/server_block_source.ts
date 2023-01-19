@@ -79,10 +79,13 @@ export class ServerBlockSource extends EventEmitter implements BlockSource {
     }
   }
 
-  public async getBlocks(from?: number) {
+  public async getBlocks(from?: number, take?: number) {
     const url = new URL(`${this.baseUrl}/get-blocks`);
     if (from !== undefined) {
       url.searchParams.append('from', from.toString());
+    }
+    if (take !== undefined) {
+      url.searchParams.append('take', take.toString());
     }
     const init = this.version ? ({ headers: { version: this.version } } as RequestInit) : {};
     const response = await this.awaitSucceed(() => fetch(url.toString(), init));
