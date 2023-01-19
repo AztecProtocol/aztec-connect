@@ -1,6 +1,7 @@
 import { AliasHash } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
+import { DecodedBlock } from '@aztec/barretenberg/block_source';
 import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { AccountProver, JoinSplitProver, ProofId, UnrolledProver } from '@aztec/barretenberg/client_proofs';
 import { NetCrs } from '@aztec/barretenberg/crs';
@@ -1522,5 +1523,10 @@ export class CoreSdk extends EventEmitter {
 
   public async queryDefiPublishStats(query: BridgePublishQuery): Promise<BridgePublishQueryResult> {
     return await this.rollupProvider.queryDefiPublishStats(query);
+  }
+
+  public async getBlocks(from: number, take = 1): Promise<DecodedBlock[]> {
+    const rawBlocks = await this.rollupProvider.getBlocks(from, Math.min(Math.max(take, 1), 5));
+    return rawBlocks.map(x => new DecodedBlock(x));
   }
 }

@@ -15,6 +15,7 @@ import {
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { BarretenbergWasm } from '@aztec/barretenberg/wasm';
 import { roundUp } from '@aztec/barretenberg/rounding';
+import { DecodedBlock } from '@aztec/barretenberg/block_source';
 import { ClientEthereumBlockchain, validateSignature, Web3Signer } from '@aztec/blockchain';
 import { EventEmitter } from 'events';
 import {
@@ -653,6 +654,10 @@ export class AztecSdk extends EventEmitter {
 
   public async getDefiTxs(userId: GrumpkinAddress) {
     return (await this.getUserTxs(userId)).filter(tx => tx.proofId === ProofId.DEFI_DEPOSIT) as UserDefiTx[];
+  }
+
+  public async getBlocks(from: number, take = 1): Promise<DecodedBlock[]> {
+    return await this.core.getBlocks(from, take);
   }
 
   // Exposing for medici. Remove once they have proper multisig api.
