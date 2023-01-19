@@ -321,6 +321,12 @@ export class CoreSdk extends EventEmitter {
     return aliases[0]?.accountPublicKey;
   }
 
+  public async getAccountIndex(alias: string) {
+    const aliasHash = this.computeAliasHash(alias);
+    const aliases = await this.db.getAliases(aliasHash);
+    return aliases[0]?.index;
+  }
+
   public async getTxFees(assetId: number) {
     return await this.rollupProvider.getTxFees(assetId);
   }

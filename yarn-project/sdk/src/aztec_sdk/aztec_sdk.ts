@@ -149,6 +149,10 @@ export class AztecSdk extends EventEmitter {
     return await this.core.getAccountPublicKey(alias);
   }
 
+  public async getAccountIndex(alias: string) {
+    return await this.core.getAccountIndex(alias);
+  }
+
   public async getTxFees(assetId: number, { feeSignificantFigures = 0 } = {}) {
     const txFees = await this.core.getTxFees(assetId);
     return txFees.map(fees =>
