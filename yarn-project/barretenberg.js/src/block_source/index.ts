@@ -77,10 +77,11 @@ export class Block {
 export interface BlockSource extends EventEmitter {
   /**
    * Returns blocks from rollup id `from`.
+   * If take is provided, will limit the number of returned blocks
    * This does not guarantee all blocks are returned. It may return a subset, and the
    * client should use `getLatestRollupId()` to determine if it needs to make further requests.
    */
-  getBlocks(from: number): Promise<Block[]>;
+  getBlocks(from: number, take?: number): Promise<Block[]>;
 
   /**
    * Starts emitting rollup blocks.
@@ -100,3 +101,4 @@ export interface BlockSource extends EventEmitter {
 
 export * from './server_block_source.js';
 export * from './defi_interaction_event.js';
+export * from './decoded_block.js';

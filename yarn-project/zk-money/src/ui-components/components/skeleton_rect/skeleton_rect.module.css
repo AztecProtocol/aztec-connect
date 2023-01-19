@@ -1,9 +1,0 @@
-.root {
-  display: inline-block;
-  background-color: #ddd;
-  border-radius: 5px;
-}
-
-.invisible {
-  visibility: hidden;
-}

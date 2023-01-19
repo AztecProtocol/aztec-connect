@@ -1,11 +1,16 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
+import { default as useFetch } from 'use-http';
 import { default as styled } from 'styled-components';
+
 import { Blocks } from '../blocks/index.js';
 import blobIcon from '../images/blob.svg';
 import { NetworkStats } from '../network_stats/index.js';
+import { NetworkStatsQueryData } from '../network_stats/types.js';
 import { SearchBar } from '../search_bar/index.js';
 import { breakpoints, spacings } from '../styles/index.js';
 import { Sections, Section } from '../template/index.js';
+import { POLL_INTERVAL } from '../config.js';
 
 const StyledSections = styled(Sections)`
   position: relative;
@@ -68,6 +73,35 @@ const Blob = styled.img`
 `;
 
 export const Overview: React.FunctionComponent = () => {
+  const [status, setStatus] = useState<NetworkStatsQueryData>();
+
+  const urlQuery = new URLSearchParams(useLocation().search);
+  const page = +(urlQuery.get('p') || 1);
+
+  const { get, response, loading, error } = useFetch();
+
+  const fetchStatus = async () => {
+    const data = await get('/status');
+    if (response.ok) setStatus(data);
+  };
+
+  // initialize
+  useEffect(() => {
+    fetchStatus().catch(() => console.log('Error fetching stats'));
+  }, []);
+
+  useEffect(() => {
+    let interval: number | null = null;
+    if (page === 1) {
+      interval = window.setInterval(fetchStatus, POLL_INTERVAL);
+    }
+    return () => {
+      if (interval !== null) {
+        clearInterval(interval);
+      }
+    };
+  }, [page]);
+
   const blocksTitleNode = (
     <BlocksTitle>
       <>{'Latest Blocks'}</>
@@ -80,10 +114,10 @@ export const Overview: React.FunctionComponent = () => {
   return (
     <StyledSections>
       <StyledSection title="Network Stats">
-        <NetworkStats />
+        <NetworkStats status={status} loading={loading} error={!!error} />
       </StyledSection>
       <StyledSection title={blocksTitleNode}>
-        <Blocks />
+        <Blocks status={status} page={page} loading={loading} error={!!error} />
       </StyledSection>
       <Blob src={blobIcon} />
     </StyledSections>

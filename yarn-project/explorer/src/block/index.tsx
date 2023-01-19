@@ -69,7 +69,8 @@ export const formatServerBlock = (block: Block): BlockInterface => {
     mined: block.mined,
     dataRoot: rollupProofData.newDataRoot.toString('hex'),
     nullifierRoot: rollupProofData.newNullRoot.toString('hex'),
-    hash: block.txHash.toString(),
+    hash: rollupProofData.rollupHash.toString('hex'),
+    ethTxHash: block.txHash.toString(),
     proofData: block.encodedRollupProofData.toString('hex'),
     txs: rollupProofData.innerProofData
       .filter(({ proofId }) => proofId !== ProofId.PADDING)
