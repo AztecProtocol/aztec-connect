@@ -1,1 +1,4 @@
-../prod/variables.tf
+
+variable "DEPLOY_TAG" {
+  type = string
+}
