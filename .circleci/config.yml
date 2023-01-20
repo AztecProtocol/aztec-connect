@@ -1004,6 +1004,14 @@ workflows:
       - mainnet-fork:
           requires:
             - aztec-dev-cli
+      - contracts
+      - falafel
+      - faucet
+      - kebab
       - deploy-mainnet-fork:
           requires:
             - mainnet-fork
+            - contracts
+            - falafel
+            - faucet
+            - kebab
