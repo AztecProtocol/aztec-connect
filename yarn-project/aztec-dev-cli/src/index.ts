@@ -318,10 +318,11 @@ export async function fetchDataProviderData(url: string, deployTag: string) {
 }
 
 export async function fetchAllDataProviderData() {
-  const deployTags = ['aztec-connect-dev', 'aztec-connect-testnet', 'aztec-connect-prod'];
+  const deployTags = ['aztec-connect-dev', 'aztec-connect-testnet', 'aztec-connect-stage', 'aztec-connect-prod'];
   const rpcUrls = [
     'https://aztec-connect-dev-eth-host.aztec.network:8545/e265e055c977fee83d415d3edeb26953',
     'https://aztec-connect-testnet-eth-host.aztec.network:8545/20ceb3a1db59c9b71315d98530093f94',
+    'https://aztec-connect-stage-eth-host.aztec.network:8545/496405d10ea8bade3b4f91ee51399ab1',
     'https://aztec-connect-prod-eth-host.aztec.network:8545',
   ];
   const data: RegistrationsDataRaw = {};
