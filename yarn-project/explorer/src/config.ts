@@ -1,6 +1,15 @@
 import { BlockchainStatus, getRollupProviderStatus } from '@aztec/sdk';
 
+export const ACCEPTABLE_DEPLOY_TAGS = [
+  'aztec-connect-prod',
+  'aztec-connect-dev',
+  'aztec-connect-stage',
+  'aztec-connect-testnet',
+  'localhost',
+];
+
 export interface Network {
+  deployTag: string;
   name: string;
   baseUrl: string;
   endpoint: string;
@@ -27,6 +36,7 @@ export async function getNetwork(): Promise<Network> {
 
   if (!deployTag || chainId === 1337) {
     return {
+      deployTag,
       name: 'ganache',
       baseUrl: '/ganache',
       endpoint,
@@ -35,35 +45,29 @@ export async function getNetwork(): Promise<Network> {
     };
   }
 
-  switch (chainId) {
-    case 5:
-      return {
-        name: 'goerli',
-        baseUrl: '/goerli',
-        endpoint,
-        etherscanUrl: 'https://goerli.etherscan.io',
-        blockchainStatus,
-      };
-    case 0xa57ec:
-    case 0xdef:
-      return {
-        name: 'mainnet-fork',
-        baseUrl: '',
-        endpoint,
-        etherscanUrl: '',
-        blockchainStatus,
-      };
-    case 1:
-      return {
-        name: 'mainnet',
-        baseUrl: '',
-        endpoint,
-        etherscanUrl: 'https://etherscan.io',
-        blockchainStatus,
-      };
-    default:
-      throw new Error(`Unknown chain id: ${chainId}`);
-  }
+  const getChainName = (chainId: number) => {
+    switch (chainId) {
+      case 1:
+        return 'mainnet';
+      case 0xdef:
+        return 'devnet';
+      case 0x57a9e:
+        return 'stage';
+      case 0xa57ec:
+        return 'testnet';
+      default:
+        throw new Error(`Unknown chain id: ${chainId}`);
+    }
+  };
+
+  return {
+    deployTag,
+    name: getChainName(chainId),
+    baseUrl: '',
+    endpoint,
+    etherscanUrl: chainId == 1 ? 'https://etherscan.io' : '',
+    blockchainStatus,
+  };
 }
 
 export const POLL_INTERVAL = 5000;
