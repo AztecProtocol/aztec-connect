@@ -34,7 +34,7 @@ LAST_COMMIT=$(last_successful_commit contracts $DEPLOY_TAG-deployed)
 
 if [ -z "$LAST_COMMIT" ]; then
   echo "No successful last deploy found. Change .redeploy to manually trigger a deployment."
-elif changed $LAST_COMMIT "contracts/deploy/$VERSION_TAG" || [ "$FORCE_DEPLOY" == "true"]; then
+elif changed $LAST_COMMIT "contracts/deploy/$VERSION_TAG" || [ "$FORCE_DEPLOY" == "true" ]; then
   echo "Redeploying contracts..."
 
   mkdir -p serve
