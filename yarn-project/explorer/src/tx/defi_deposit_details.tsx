@@ -12,9 +12,9 @@ function getBridgeInteractionDescription(deployTag: string, bridgeCallData: Brid
     return {
       bridgeName: `Bridge ${bridgeCallData.bridgeAddressId}`,
       inputAssetA: `asset ${bridgeCallData.inputAssetIdA}`,
-      inputAssetB: `asset ${bridgeCallData.inputAssetIdB}`,
+      inputAssetB: bridgeCallData.inputAssetIdB ? `asset ${bridgeCallData.inputAssetIdB}` : null,
       outputAssetA: `asset ${bridgeCallData.outputAssetIdA}`,
-      outputAssetB: `asset ${bridgeCallData.outputAssetIdB}`,
+      outputAssetB: bridgeCallData.outputAssetIdB ? `asset ${bridgeCallData.outputAssetIdB}` : null,
     };
   }
 
@@ -53,8 +53,9 @@ export function DefiDepositDetails({ tx }: { tx: Tx }) {
 
   const onchainDefiDepositData = OffchainDefiDepositData.fromBuffer(Buffer.from(tx.offchainTxData, 'hex'));
   const { bridgeCallData, depositValue } = onchainDefiDepositData;
-  const asset = useAsset(bridgeCallData.inputAssetIdA);
-  const assetIcon = getAssetIcon(asset);
+  const inputAssetA = useAsset(bridgeCallData.inputAssetIdA);
+  const inputAssetB = bridgeCallData.inputAssetIdB ? useAsset(bridgeCallData.inputAssetIdB) : null;
+  const assetIcon = getAssetIcon(inputAssetA);
   const details = getBridgeInteractionDescription(network.deployTag, bridgeCallData);
 
   return (
@@ -65,7 +66,9 @@ export function DefiDepositDetails({ tx }: { tx: Tx }) {
       <InfoRow title="INPUT AMOUNT">
         <Value
           icon={assetIcon}
-          text={`${formatAsset(asset, depositValue)} ${details.inputAssetB ? ' and ' + details.inputAssetB : ''}`}
+          text={`${formatAsset(inputAssetA, depositValue)} ${
+            inputAssetB ? ' and ' + formatAsset(inputAssetB, depositValue) : ''
+          }`}
           monospace
         />
       </InfoRow>
