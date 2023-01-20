@@ -29,6 +29,7 @@ export TF_VAR_COMMIT_HASH=$COMMIT_HASH
 # Otherwise use the key as specified in the terraform.
 if [ -n "$REPOSITORY" ]; then
   BACKEND_CONFIG=-backend-config="key=$DEPLOY_TAG/$REPOSITORY"
+  echo "Using backend key $DEPLOY_TAG/$REPOSITORY"
 fi
 
 terraform init -input=false $BACKEND_CONFIG
