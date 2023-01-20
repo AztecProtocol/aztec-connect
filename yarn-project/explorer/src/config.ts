@@ -51,7 +51,7 @@ export async function getNetwork(): Promise<Network> {
         return 'mainnet';
       case 0xdef:
         return 'devnet';
-      case 0x57a9e:
+      case 0x57a93:
         return 'stage';
       case 0xa57ec:
         return 'testnet';
