@@ -220,6 +220,10 @@ resource "aws_ecs_task_definition" "falafel" {
       {
         "name": "PUBLISH_INTERVAL",
         "value": "14400"
+      },
+      {
+        "name": "NODE_ARGS",
+        "value": "--inspect=0.0.0.0:9229"
       }
     ],
     "mountPoints": [
