@@ -15,6 +15,7 @@ import {
   BridgeMetricsDao,
 } from './entity/index.js';
 import { CachedRollupDb, LogRollupDb, SyncRollupDb, TypeOrmRollupDb } from './rollup_db/index.js';
+import { VERSION_HASH } from './package_version.js';
 
 function getEthereumBlockchainConfig({
   runtimeConfig: { gasLimit },
@@ -117,6 +118,7 @@ export async function getComponents(configurator: Configurator) {
   console.log(`Proverless: ${proverless}`);
   console.log(`Bridge data provider address: ${bridgeDataProviderAddress}`);
   console.log(`Falafel version: ${version}`);
+  console.log(`Commit hash: ${VERSION_HASH}`);
 
   if (priceFeedContractAddresses.length < feePayingAssetIds.length) {
     throw new Error('There should be one price feed contract address per fee paying asset.');

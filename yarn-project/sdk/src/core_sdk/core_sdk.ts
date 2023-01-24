@@ -30,6 +30,7 @@ import { Alias, Database } from '../database/index.js';
 import { getUserSpendingKeysFromGenesisData, parseGenesisAliasesAndKeys } from '../genesis_state/index.js';
 import { getDeviceMemory } from '../get_num_workers/index.js';
 import { Note, treeNoteToNote } from '../note/index.js';
+import { VERSION_HASH } from '../package_version.js';
 import {
   AccountProofCreator,
   AccountProofInput,
@@ -148,6 +149,7 @@ export class CoreSdk extends EventEmitter {
 
     try {
       this.debug(`initializing...${sdkVersion ? ` (version: ${sdkVersion})` : ''}`);
+      this.debug(`Version hash: ${VERSION_HASH}`);
 
       this.options = options;
       // Tasks in serialQueue require states like notes and hash path, which will need the sdk to sync to (ideally)
@@ -1247,6 +1249,7 @@ export class CoreSdk extends EventEmitter {
         error: e.message,
         timeUsed: Date.now() - start,
         memory: getDeviceMemory(),
+        sdkVersion: VERSION_HASH,
       };
       await this.rollupProvider.clientLog(log);
       this.debug(log);
@@ -1300,6 +1303,7 @@ export class CoreSdk extends EventEmitter {
             await this.rollupProvider.clientLog({
               message: 'sync failed',
               error: err,
+              sdkVersion: VERSION_HASH,
             });
           } catch (err) {
             this.debug('client log failed:', err);
@@ -1428,6 +1432,7 @@ export class CoreSdk extends EventEmitter {
         newSize,
         oldSize,
         expectedDataRoot: expectedDataRoot.toString('hex'),
+        sdkVersion: VERSION_HASH,
       });
       return;
     }
@@ -1452,6 +1457,7 @@ export class CoreSdk extends EventEmitter {
       await this.rollupProvider.clientLog({
         message: description,
         error: err,
+        sdkVersion: VERSION_HASH,
       });
       throw err;
     }
