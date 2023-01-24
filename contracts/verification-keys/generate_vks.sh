@@ -6,7 +6,7 @@ PROD=$1
 
 OUTPUT_DIR=../../contracts/src/core/verifier/keys
 
-cd ../../barretenberg && mkdir -p build && cd build && cmake .. && make -j$(nproc) keygen
+cd ../../aztec-connect-cpp/ && mkdir -p build && cd build && cmake .. && cmake --build . --parallel --target keygen
 
 if [ -z "$PROD" ]; then
   ./bin/keygen 1 1 $OUTPUT_DIR true 2> >(awk '$0="mock: "$0' 1>&2)

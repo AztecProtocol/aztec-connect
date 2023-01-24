@@ -3,10 +3,7 @@ set -e
 
 yarn clean
 
-pushd ../../barretenberg/cpp/build
-make -j$(nproc) db_cli
-cd ../build-wasm
-make -j$(nproc) barretenberg.wasm
-popd
+cmake --build ../../aztec-connect-cpp/build      --parallel --target db_cli
+cmake --build ../../aztec-connect-cpp/build-wasm --parallel --target aztec-connect.wasm
 
 yarn build

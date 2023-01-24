@@ -17,9 +17,9 @@ EventEmitter.defaultMaxListeners = 30;
 export async function fetchCode() {
   if (isNode) {
     const __dirname = dirname(fileURLToPath(import.meta.url));
-    return await readFile(__dirname + '/barretenberg.wasm');
+    return await readFile(__dirname + '/aztec-connect.wasm');
   } else {
-    const res = await fetch('/barretenberg.wasm');
+    const res = await fetch('/aztec-connect.wasm');
     return Buffer.from(await res.arrayBuffer());
   }
 }
@@ -75,6 +75,9 @@ export class BarretenbergWasm extends EventEmitter {
 
       /* eslint-disable camelcase */
       wasi_snapshot_preview1: {
+        clock_time_get: () => {
+          this.debug('clock_time_get');
+        },
         environ_get: () => {
           this.debug('environ_get');
         },

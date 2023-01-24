@@ -7,8 +7,8 @@
 # Commenting out a few projects, as the main use case is now to build the images needed to run end-to-end tests.
 # If wanting to just see if docker images actually build, you can temporarily uncomment required projects.
 PROJECTS=(
-  barretenberg:barretenberg/cpp:./dockerfiles/Dockerfile.x86_64-linux-clang:barretenberg-x86_64-linux-clang
-  barretenberg:barretenberg/cpp:./dockerfiles/Dockerfile.wasm-linux-clang:barretenberg-wasm-linux-clang
+  aztec-connect-cpp:aztec-connect-cpp:./dockerfiles/Dockerfile.x86_64-linux-clang:aztec-connect-cpp-x86_64-linux-clang
+  aztec-connect-cpp:aztec-connect-cpp:./dockerfiles/Dockerfile.wasm-linux-clang:aztec-connect-cpp-wasm-linux-clang
   blockchain-vks:blockchain-vks
   mainnet-fork:mainnet-fork
   contracts:contracts

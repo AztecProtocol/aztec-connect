@@ -1,21 +1,21 @@
 {
-  "barretenberg-x86_64-linux-clang": {
-    "buildDir": "barretenberg/cpp",
+  "aztec-connect-cpp-x86_64-linux-clang": {
+    "buildDir": "aztec-connect-cpp",
     "dockerfile": "dockerfiles/Dockerfile.x86_64-linux-clang",
-    "rebuildPatterns": ["^barretenberg/cpp/"],
+    "rebuildPatterns": ["^aztec-connect-cpp/"],
     "dependencies": []
   },
-  "barretenberg-wasm-linux-clang": {
-    "buildDir": "barretenberg/cpp",
+  "aztec-connect-cpp-wasm-linux-clang": {
+    "buildDir": "aztec-connect-cpp",
     "dockerfile": "dockerfiles/Dockerfile.wasm-linux-clang",
-    "rebuildPatterns": ["^barretenberg/cpp/"],
+    "rebuildPatterns": ["^aztec-connect-cpp/"],
     "dependencies": []
   },
   "blockchain-vks": {
     "buildDir": "blockchain-vks",
     "dockerfile": "Dockerfile",
     "rebuildPatterns": ["^blockchain-vks/"],
-    "dependencies": ["barretenberg-x86_64-linux-clang"]
+    "dependencies": ["aztec-connect-cpp-x86_64-linux-clang"]
   },
   "mainnet-fork": {
     "buildDir": "mainnet-fork",
@@ -33,7 +33,7 @@
     "buildDir": "yarn-project",
     "dockerfile": "yarn-project-base/Dockerfile",
     "rebuildPatterns": ["^yarn-project/yarn-project-base/", "^yarn-project/yarn.lock"],
-    "dependencies": ["barretenberg-x86_64-linux-clang", "barretenberg-wasm-linux-clang", "blockchain-vks", "contracts"]
+    "dependencies": ["aztec-connect-cpp-x86_64-linux-clang", "aztec-connect-cpp-wasm-linux-clang", "blockchain-vks", "contracts"]
   },
   "barretenberg.js": {
     "buildDir": "yarn-project",

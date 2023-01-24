@@ -113,7 +113,7 @@ jobs:
       - *setup_env
       - run:
           name: 'Build'
-          command: cond_spot_run_build barretenberg-wasm-linux-clang 64
+          command: cond_spot_run_build aztec-connect-cpp-wasm-linux-clang 64
 
   x86_64-linux-clang:
     docker:
@@ -124,7 +124,7 @@ jobs:
       - *setup_env
       - run:
           name: 'Build'
-          command: cond_spot_run_build barretenberg-x86_64-linux-clang 64
+          command: cond_spot_run_build aztec-connect-cpp-x86_64-linux-clang 64
 
   # small-circuit-tests:
   #   docker:
@@ -135,7 +135,7 @@ jobs:
   #     - *setup_env
   #     - run:
   #         name: 'Test'
-  #         command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert bb-tests
+  #         command: cond_spot_run_tests aztec-connect-cpp-x86_64-linux-clang-assert ac-tests
   #     - *save_logs
 
   # tx-rollup-tests:
@@ -147,7 +147,7 @@ jobs:
   #     - *setup_env
   #     - run:
   #         name: 'Test'
-  #         command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert rollup_proofs_tx_rollup_tests --gtest_filter=-rollup_full_tests.*
+  #         command: cond_spot_run_tests aztec-connect-cpp-x86_64-linux-clang-assert rollup_proofs_tx_rollup_tests --gtest_filter=-rollup_full_tests.*
   #     - *save_logs
 
   # tx-rollup-full-tests:
@@ -159,7 +159,7 @@ jobs:
   #     - *setup_env
   #     - run:
   #         name: 'Test'
-  #         command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert rollup_proofs_tx_rollup_tests --gtest_filter=rollup_full_tests.*
+  #         command: cond_spot_run_tests aztec-connect-cpp-x86_64-linux-clang-assert rollup_proofs_tx_rollup_tests --gtest_filter=rollup_full_tests.*
   #     - *save_logs
 
   # root-rollup-tests:
@@ -171,7 +171,7 @@ jobs:
   #     - *setup_env
   #     - run:
   #         name: 'Test'
-  #         command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert rollup_proofs_root_rollup_tests --gtest_filter=-root_rollup_full_tests.*
+  #         command: cond_spot_run_tests aztec-connect-cpp-x86_64-linux-clang-assert rollup_proofs_root_rollup_tests --gtest_filter=-root_rollup_full_tests.*
   #     - *save_logs
 
   # root-rollup-full-tests:
@@ -183,7 +183,7 @@ jobs:
   #     - *setup_env
   #     - run:
   #         name: 'Test'
-  #         command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert rollup_proofs_root_rollup_tests --gtest_filter=root_rollup_full_tests.*
+  #         command: cond_spot_run_tests aztec-connect-cpp-x86_64-linux-clang-assert rollup_proofs_root_rollup_tests --gtest_filter=root_rollup_full_tests.*
   #     - *save_logs
 
   # root-verifier-tests:
@@ -195,7 +195,7 @@ jobs:
   #     - *setup_env
   #     - run:
   #         name: 'Test'
-  #         command: cond_spot_run_tests barretenberg-x86_64-linux-clang-assert rollup_proofs_root_verifier_tests
+  #         command: cond_spot_run_tests aztec-connect-cpp-x86_64-linux-clang-assert rollup_proofs_root_verifier_tests
   #     - *save_logs
 
   # benchmark-aggregator:
@@ -210,7 +210,7 @@ jobs:
   #     - *benchmark_add_keys
   #     - run:
   #         name: 'Test'
-  #         command: store_test_benchmark_logs barretenberg-x86_64-linux-clang-assert
+  #         command: store_test_benchmark_logs aztec-connect-cpp-x86_64-linux-clang-assert
 
   blockchain-vks:
     docker:

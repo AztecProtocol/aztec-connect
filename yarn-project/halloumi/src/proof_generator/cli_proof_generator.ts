@@ -230,7 +230,7 @@ export class CliProofGenerator implements ProofGenerator {
   }
 
   private launch() {
-    const binPath = '../../barretenberg/cpp/build/bin/rollup_cli';
+    const binPath = '../../aztec-connect-cpp/build/bin/rollup_cli';
     const binArgs = [
       './data/crs',
       this.txsPerInner.toString(),
