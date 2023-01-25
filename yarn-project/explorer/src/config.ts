@@ -17,17 +17,20 @@ export interface Network {
   blockchainStatus: BlockchainStatus;
 }
 
-async function getDeployTag() {
-  // All s3 deployments have a file called DEPLOY_TAG in their root containing the deploy tag.
-  if (process.env.NODE_ENV === 'production') {
-    return await fetch('/DEPLOY_TAG').then(resp => resp.text());
+async function getInferredDeployTag() {
+  // If we haven't overridden our deploy tag, we discover it at runtime. All s3 deployments have a file
+  // called DEPLOY_TAG in their root containing the deploy tag.
+  if (process.env.NODE_ENV !== 'development') {
+    const resp = await fetch('/DEPLOY_TAG');
+    const text = await resp.text();
+    return text.replace('\n', '');
   } else {
     return '';
   }
 }
 
 export async function getNetwork(): Promise<Network> {
-  const deployTag = await getDeployTag();
+  const deployTag = await getInferredDeployTag();
 
   const rollupProviderUrl = deployTag ? `https://api.aztec.network/${deployTag}/falafel` : 'http://localhost:8081';
   const endpoint = `${rollupProviderUrl}`;
