@@ -239,12 +239,6 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     ctx.status = 200;
   });
 
-  router.get('/latest-rollup-id', async (ctx: Koa.Context) => {
-    ctx.body = await server.getLatestRollupId();
-    ctx.compress = false;
-    ctx.status = 200;
-  });
-
   router.get('/tx/:txId', async (ctx: Koa.Context) => {
     const { txId } = ctx.params;
     const tx = await server.getTxById(txId);
