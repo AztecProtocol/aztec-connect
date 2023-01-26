@@ -26,16 +26,34 @@ export function appFactory(server: Server, prefix: string) {
     ctx.status = 200;
   });
 
-  router.get('/get-blocks', (ctx: Koa.Context) => {
-    if (server.isReady()) {
-      const from = ctx.query.from ? +ctx.query.from : undefined;
-      // ensure take is between 0 -> 100
-      const take = ctx.query.take ? Math.min(Math.max(+ctx.query.take, 0), 100) : undefined;
-      ctx.body = server.getBlockBuffers(from, take);
+  // Insertion of new leaves into the merkle tree is most efficient when done in the "multiples of 2" leaves. For this
+  // reason we want to be inserting chunks of 128 leaves when possible. At genesis, the Aztec Connect system didn't
+  // start from 0 rollup blocks/leaves but instead from `numInitialSubtreeRoots` leaves (in Aztec Connect production
+  // this number is 73). These initial blocks contain aliases from the old system. We expect the SDK to request only
+  // `firstTake` amount of blocks upon sync initialization which will ensure that the inefficent insertion happens only
+  // once and the following insertions are done in multiples of 128.
+  router.get('/get-blocks', async (ctx: Koa.Context) => {
+    if (!server.isReady()) {
+      ctx.status = 503;
+      return;
+    }
+    const from = +ctx.query.from!;
+    // Throw 400 if `from` is not a number or is negative or `take` is defined but not a number.
+    if (isNaN(from) || from < 0 || (ctx.query.take !== undefined && isNaN(+ctx.query.take))) {
+      ctx.status = 400;
+    } else {
+      // Ensure take is between 0 -> 128
+      const take = ctx.query.take ? Math.min(Math.max(+ctx.query.take, 0), 128) : 128;
+      const [blocksBuffer, takeFullfilled] = server.getBlockBuffers(from, take);
+      ctx.body = blocksBuffer;
       ctx.compress = false;
       ctx.status = 200;
-    } else {
-      ctx.status = 503;
+      const numInitialSubtreeRoots = await server.getNumInitialSubtreeRoots();
+      const firstTake = 128 - (numInitialSubtreeRoots % 128);
+      if (takeFullfilled && (((from - firstTake) % 128 === 0 && take === 128) || (from === 0 && take === firstTake))) {
+        // Set cache headers to cache the response for 1 year (recommended max value).
+        ctx.set('Cache-Control', 'public, max-age=31536000, immutable');
+      }
     }
   });
 

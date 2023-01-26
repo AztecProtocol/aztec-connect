@@ -34,6 +34,18 @@ const initConfig = {
       aliases: ['legacy1', 'legacy2', 'legacy3', 'legacy4', 'legacy5', 'legacy6', 'legacy7', 'legacy8', 'legacy9'],
     },
   },
+  '359059': /* 0x57a93 */ {
+    initRoots: {
+      initDataRoot: '2a460f05d3dbdbb1d6ed8c3a1e589b13561dca0d49e4d496ae0d1d15c4aa1c68',
+      initNullRoot: '1cb59b327064120bdf5ba23096b76cfe1ca8a45ab3db1b4f033bca92443cc025',
+      initRootsRoot: '1c8ca5c80e65a610ca9326c65b7e1906864ad84e6c4d70e406f770f939934ecf',
+    },
+    initDataSize: 18,
+    initAccounts: {
+      mnemonic: 'cherry pretty dog employ tonight dry feature blade bean spray sleep fresh',
+      aliases: ['legacy1', 'legacy2', 'legacy3', 'legacy4', 'legacy5', 'legacy6', 'legacy7', 'legacy8', 'legacy9'],
+    },
+  },
   default: {
     initRoots: {
       initDataRoot: '1417c092da90cfd39679299b8e381dd295dba6074b410e830ef6d3b7040b6eac',

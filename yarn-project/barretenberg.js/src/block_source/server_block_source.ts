@@ -18,12 +18,10 @@ export class ServerBlockSource extends EventEmitter implements BlockSource {
   }
 
   public async getLatestRollupId() {
-    const url = new URL(`${this.baseUrl}/get-blocks`);
+    const url = new URL(`${this.baseUrl}/latest-rollup-id`);
     const init = this.version ? ({ headers: { version: this.version } } as RequestInit) : {};
     const response = await this.awaitSucceed(() => fetch(url.toString(), init));
-    const result = Buffer.from(await response.arrayBuffer());
-    const des = new Deserializer(result);
-    return des.int32();
+    return Number(await response.text());
   }
 
   public async start(from = 0) {
@@ -79,11 +77,9 @@ export class ServerBlockSource extends EventEmitter implements BlockSource {
     }
   }
 
-  public async getBlocks(from?: number, take?: number) {
+  public async getBlocks(from: number, take?: number) {
     const url = new URL(`${this.baseUrl}/get-blocks`);
-    if (from !== undefined) {
-      url.searchParams.append('from', from.toString());
-    }
+    url.searchParams.append('from', from.toString());
     if (take !== undefined) {
       url.searchParams.append('take', take.toString());
     }
@@ -91,7 +87,6 @@ export class ServerBlockSource extends EventEmitter implements BlockSource {
     const response = await this.awaitSucceed(() => fetch(url.toString(), init));
     const result = Buffer.from(await response.arrayBuffer());
     const des = new Deserializer(result);
-    des.int32();
     return des.deserializeArray(Block.deserialize);
   }
 

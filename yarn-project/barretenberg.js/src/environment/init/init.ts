@@ -16,6 +16,8 @@ const ADDRESS_LENGTH = 64;
 const ALIAS_HASH_LENGTH = 28;
 const NULLIFIER_LENGTH = 32;
 const SIGNING_KEY_LENGTH = 32;
+export const LENGTH_OF_ACCOUNT_DATA =
+  ALIAS_HASH_LENGTH + ADDRESS_LENGTH + 2 * NOTE_LENGTH + 2 * NULLIFIER_LENGTH + 2 * SIGNING_KEY_LENGTH;
 
 export interface AccountNotePair {
   note1: Buffer;
@@ -163,15 +165,13 @@ export class InitHelpers {
   }
 
   public static parseAccountTreeData(data: Buffer) {
-    const lengthOfAccountData =
-      ALIAS_HASH_LENGTH + ADDRESS_LENGTH + 2 * NOTE_LENGTH + 2 * NULLIFIER_LENGTH + 2 * SIGNING_KEY_LENGTH;
-    const numAccounts = data.length / lengthOfAccountData;
+    const numAccounts = data.length / LENGTH_OF_ACCOUNT_DATA;
     if (numAccounts === 0) {
       return [];
     }
     const accounts = new Array<AccountData>(numAccounts);
     for (let i = 0; i < numAccounts; i++) {
-      let start = i * lengthOfAccountData;
+      let start = i * LENGTH_OF_ACCOUNT_DATA;
       const alias: AccountAlias = {
         aliasHash: data.slice(start, start + ALIAS_HASH_LENGTH),
         address: data.slice(start + ALIAS_HASH_LENGTH, start + (ALIAS_HASH_LENGTH + ADDRESS_LENGTH)),

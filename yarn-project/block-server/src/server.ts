@@ -1,6 +1,6 @@
-import { ServerBlockSource } from '@aztec/barretenberg/block_source';
 import { createLogger } from '@aztec/barretenberg/log';
-import { numToInt32BE, serializeBufferArrayToVector } from '@aztec/barretenberg/serialize';
+import { ServerRollupProvider } from '@aztec/barretenberg/rollup_provider';
+import { serializeBufferArrayToVector } from '@aztec/barretenberg/serialize';
 import { InterruptableSleep } from '@aztec/barretenberg/sleep';
 
 export class Server {
@@ -8,13 +8,14 @@ export class Server {
   private runningPromise?: Promise<void>;
   private blockBufferCache: Buffer[] = [];
   private ready = false;
-  private serverBlockSource: ServerBlockSource;
+  private serverRollupProvider: ServerRollupProvider;
   private interruptableSleep = new InterruptableSleep();
   private reqMisses = 0;
   private reqMissTime = 0;
+  private numInitialSubtreeRoots?: number;
 
   constructor(falafelUrl: URL, private log = createLogger('Server')) {
-    this.serverBlockSource = new ServerBlockSource(falafelUrl);
+    this.serverRollupProvider = new ServerRollupProvider(falafelUrl);
   }
 
   public async start() {
@@ -23,7 +24,7 @@ export class Server {
     const getBlocks = async (from: number) => {
       while (true) {
         try {
-          const blocks = await this.serverBlockSource.getBlocks(from);
+          const blocks = await this.serverRollupProvider.getBlocks(from);
           return blocks.map(b => b.toBuffer());
         } catch (err: any) {
           this.log(`getBlocks failed, will retry: ${err.message}`);
@@ -56,7 +57,7 @@ export class Server {
         }
       }
     })();
-
+    await this.getNumInitialSubtreeRoots();
     this.ready = true;
   }
 
@@ -74,13 +75,16 @@ export class Server {
   }
 
   public async getLatestRollupId() {
-    return await this.serverBlockSource.getLatestRollupId();
+    return await this.serverRollupProvider.getLatestRollupId();
   }
 
-  public getBlockBuffers(from?: number, take = 100) {
+  /*
+   * Returns a buffer containing the requested blocks, and a boolean indicating whether there was `take` blocks
+   * available. If not, the buffer will contain less than `take` blocks.
+   */
+  public getBlockBuffers(from: number, take: number): [Buffer, boolean] {
     const start = new Date().getTime();
-    const blocks = from !== undefined ? this.blockBufferCache.slice(from, take ? from + take : undefined) : [];
-    const buf = Buffer.concat([numToInt32BE(this.blockBufferCache.length - 1), serializeBufferArrayToVector(blocks)]);
+    const blocks = this.blockBufferCache.slice(from, from + take);
     const time = new Date().getTime() - start;
     if (blocks.length) {
       this.log(`Served ${blocks.length} blocks from ${from} to ${from! + take - 1} in ${time}ms.`);
@@ -94,6 +98,15 @@ export class Server {
         this.reqMisses = 0;
       }
     }
-    return buf;
+    return [serializeBufferArrayToVector(blocks), blocks.length === take];
+  }
+
+  public async getNumInitialSubtreeRoots() {
+    if (this.numInitialSubtreeRoots === undefined) {
+      const worldState = await this.serverRollupProvider.getInitialWorldState();
+      this.numInitialSubtreeRoots = worldState.initialSubtreeRoots.length;
+      this.log(`Num initial subtree roots: ${this.numInitialSubtreeRoots}`);
+    }
+    return this.numInitialSubtreeRoots;
   }
 }

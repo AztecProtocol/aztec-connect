@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { Web3Provider } from '@ethersproject/providers';
-import { Contract } from 'ethers';
+import { Contract, BigNumber } from 'ethers';
 import { EthAddress } from '@aztec/barretenberg/address';
 import { EthereumProvider, EthereumRpc, TxHash } from '@aztec/barretenberg/blockchain';
 import { Command } from 'commander';
@@ -17,14 +17,16 @@ import {
   RollupProcessor as RollupProcessorJson,
   AztecFaucetJson,
   ElementBridge as ElementBridgeJson,
+  DataProviderJson,
 } from './abis/index.js';
-import { createAztecSdk, SdkFlavour, AliasHash, BarretenbergWasm, Blake2s } from '@aztec/sdk';
+import { createAztecSdk, SdkFlavour, AliasHash, BarretenbergWasm, Blake2s, getRollupProviderStatus } from '@aztec/sdk';
 const { PRIVATE_KEY } = process.env;
 
 export const abis: { [key: string]: any } = {
   Rollup: RollupProcessorJson,
   Element: ElementBridgeJson,
   AztecFaucet: AztecFaucetJson,
+  DataProvider: DataProviderJson,
 };
 
 const getProvider = (url = 'http://localhost:8545') => {
@@ -274,9 +276,69 @@ export async function findAliasCollisions(
   console.log(`Registered aliases similar to "${alias}":`, collisions);
 }
 
+export interface DataProviderData {
+  assets: {
+    [assetName: string]: string;
+  };
+  bridges: { [bridgeName: string]: number };
+  assetList: string[];
+}
+
+export interface RegistrationsDataRaw {
+  [deployTag: string]: DataProviderData;
+}
+
+export async function fetchDataProviderData(url: string, deployTag: string) {
+  // Fetch the data provider contract address
+  const provider = getProvider(url);
+  const rollupProviderUrl = `https://api.aztec.network/${deployTag}/falafel`;
+  const status = await getRollupProviderStatus(rollupProviderUrl);
+  const dataProviderAddress = status.blockchainStatus.bridgeDataProvider.toString();
+  const dataProvider = new Contract(dataProviderAddress, abis['DataProvider'].abi, new Web3Provider(provider));
+
+  const assetsRaw = await dataProvider.getAssets();
+  const bridgesRaw = await dataProvider.getBridges();
+
+  const assets: { [key: string]: string } = {};
+  const assetList: string[] = [];
+  assetsRaw.forEach((asset: { assetAddress: string; assetId: number; label: string }) => {
+    assets[asset.label] = asset.assetAddress;
+    assetList.push(asset.label);
+  });
+  const bridges = {};
+  bridgesRaw.forEach((bridge: { bridgeAddress: string; bridgeAddressId: BigNumber; label: string }) => {
+    if (bridge.label !== '') bridges[bridge.label] = bridge.bridgeAddressId.toNumber();
+  });
+
+  return {
+    assetList,
+    assets,
+    bridges,
+  };
+}
+
+export async function fetchAllDataProviderData() {
+  const deployTags = ['aztec-connect-dev', 'aztec-connect-testnet', 'aztec-connect-stage', 'aztec-connect-prod'];
+  const rpcUrls = [
+    'https://aztec-connect-dev-eth-host.aztec.network:8545/e265e055c977fee83d415d3edeb26953',
+    'https://aztec-connect-testnet-eth-host.aztec.network:8545/20ceb3a1db59c9b71315d98530093f94',
+    'https://aztec-connect-stage-eth-host.aztec.network:8545/496405d10ea8bade3b4f91ee51399ab1',
+    'https://aztec-connect-prod-eth-host.aztec.network:8545',
+  ];
+  const data: RegistrationsDataRaw = {};
+  for (let i = 0; i < deployTags.length; i++) {
+    data[deployTags[i]] = await fetchDataProviderData(rpcUrls[i], deployTags[i]);
+  }
+  console.log(JSON.stringify(data, null, 2));
+}
+
 const program = new Command();
 
 async function main() {
+  program.command('fetchAllDataProviderData').action(async () => {
+    await fetchAllDataProviderData();
+  });
+
   program
     .command('findAliasCollisions')
     .argument('<alias>', 'alias to check')

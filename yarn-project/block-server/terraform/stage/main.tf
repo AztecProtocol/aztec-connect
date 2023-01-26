@@ -1,3 +1,5 @@
+
+
 terraform {
   backend "s3" {
     bucket = "aztec-terraform"
@@ -96,11 +98,11 @@ resource "aws_ecs_task_definition" "block-server" {
       },
       {
         "name": "FALAFEL_URL",
-        "value": "http://${var.DEPLOY_TAG}-falafel.local/${var.DEPLOY_TAG}/falafel"
+        "value": "http://aztec-connect-dev-falafel.local/aztec-connect-dev/falafel"
       },
       {
         "name": "API_PREFIX",
-        "value": "/aztec-connect-prod/falafel"
+        "value": "/aztec-connect-dev/falafel"
       }
     ],
     "logConfiguration": {
@@ -145,7 +147,7 @@ resource "aws_ecs_service" "block-server" {
   name                               = "${var.DEPLOY_TAG}-block-server"
   cluster                            = data.terraform_remote_state.setup_iac.outputs.ecs_cluster_id
   launch_type                        = "FARGATE"
-  desired_count                      = 4
+  desired_count                      = 1
   deployment_maximum_percent         = 100
   deployment_minimum_healthy_percent = 0
   platform_version                   = "1.4.0"
@@ -204,7 +206,7 @@ resource "aws_alb_target_group" "block-server" {
 
 resource "aws_lb_listener_rule" "api" {
   listener_arn = data.terraform_remote_state.aztec2_iac.outputs.alb_listener_arn
-  priority     = 419
+  priority     = 412
 
   action {
     type             = "forward"

@@ -13,6 +13,9 @@ case $VERSION_TAG in
   dev)
     export ETHEREUM_HOST="https://aztec-connect-$VERSION_TAG-mainnet-fork.aztec.network:8545/$DEV_FORK_API_KEY"
     ;;
+  stage)
+    export ETHEREUM_HOST="https://aztec-connect-$VERSION_TAG-mainnet-fork.aztec.network:8545/$STAGE_FORK_API_KEY"
+    ;;
   *)
     echo "No configuration for VERSION_TAG=$VERSION_TAG, skipping contract deployment."
     exit 0

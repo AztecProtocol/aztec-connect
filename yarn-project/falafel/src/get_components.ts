@@ -66,17 +66,12 @@ export function getOrmConfig(configurator: Configurator): DataSourceOptions {
   }
 }
 
-async function getRollupDb(configurator: Configurator, dataRoot: Buffer, erase = false) {
+async function getRollupDb(configurator: Configurator, dataRoot: Buffer) {
   const ormConfig = getOrmConfig(configurator);
   const dataSource = new DataSource(ormConfig);
   await dataSource.initialize();
 
   const typeOrmRollupDb = new LogRollupDb(new TypeOrmRollupDb(dataSource, dataRoot), 'log_typeorm_rollup_db');
-
-  if (erase) {
-    console.log('Erasing sql database...');
-    await typeOrmRollupDb.eraseDb();
-  }
 
   // If we're using sqlite, wrap in a serialization layer to ensure no more than 1 request on the connection at a time.
   const syncRollupDb =
@@ -139,17 +134,12 @@ export async function getComponents(configurator: Configurator) {
   );
   const chainId = await blockchain.getChainId();
 
-  const erase = configurator.getRollupContractChanged();
-
   // Create sql db component.
   const { dataRoot } = InitHelpers.getInitRoots(chainId);
-  const { rollupDb } = await getRollupDb(configurator, dataRoot, erase);
+  const { rollupDb } = await getRollupDb(configurator, dataRoot);
 
   // Create world state db.
   const worldStateDb = new WorldStateDb(`${configurator.getDataDir()}/world_state.db`);
-  if (erase) {
-    worldStateDb.destroy();
-  }
 
   // Create barrtetenberg wasm instance.
   const barretenberg = await BarretenbergWasm.new();

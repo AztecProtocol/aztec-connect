@@ -19,6 +19,7 @@ Options:
   -h, --help                                                                             display help for command
 
 Commands:
+  fetchAllDataProviderData                                                               fetches labels from dataproviders on dev, testnet and prod
   findAliasCollisions <alias> [url] [rollupProviderUrl] [memoryDb]                       computes case-variations for the alias and prints them
   deriveKeys <mnemonic>                                                                  derive keys
   pkFromStore <file> [password]                                                          print a private key from an encrypted keystore file
