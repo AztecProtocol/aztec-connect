@@ -7,7 +7,7 @@ import { AccountProver, JoinSplitProver, ProofId, UnrolledProver } from '@aztec/
 import { NetCrs } from '@aztec/barretenberg/crs';
 import { Blake2s, keccak256, Pedersen, randomBytes, Schnorr } from '@aztec/barretenberg/crypto';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
-import { InitHelpers } from '@aztec/barretenberg/environment';
+import { InitHelpers, LENGTH_OF_ACCOUNT_DATA } from '@aztec/barretenberg/environment';
 import { FftFactory } from '@aztec/barretenberg/fft';
 import { createDebugLogger, logHistory } from '@aztec/barretenberg/log';
 import { NoteAlgorithms, NoteDecryptor } from '@aztec/barretenberg/note_algorithms';
@@ -109,6 +109,7 @@ export class CoreSdk extends EventEmitter {
   private syncSleep = new InterruptableSleep();
   private synchingPromise!: Promise<void>;
   private debug = createDebugLogger('bb:core_sdk');
+  private initialTreeSize!: number;
 
   constructor(
     private leveldb: LevelUp,
@@ -414,6 +415,15 @@ export class CoreSdk extends EventEmitter {
     return serverData.initialAccounts;
   }
 
+  private async getInitialTreeSize(): Promise<number> {
+    if (this.initialTreeSize === undefined) {
+      const numGenesisAccounts = (await this.retrieveGenesisData()).length / LENGTH_OF_ACCOUNT_DATA;
+      this.initialTreeSize = Math.ceil(numGenesisAccounts / this.sdkStatus.rollupSize);
+      this.debug('initial tree size set to ', this.initialTreeSize);
+    }
+    return this.initialTreeSize;
+  }
+
   public async removeUser(userId: GrumpkinAddress) {
     return await this.serialQueue.push(async () => {
       const userState = this.getUserState(userId);
@@ -523,6 +533,7 @@ export class CoreSdk extends EventEmitter {
         await initPippenngerPromise;
 
         await this.genesisSync();
+        await this.getInitialTreeSize();
         this.startReceivingBlocks();
 
         await this.statelessSerialQueue.push(async () => {
@@ -1272,6 +1283,7 @@ export class CoreSdk extends EventEmitter {
     this.debug(
       `received genesis state with ${initialState.initialAccounts.length} bytes and ${initialState.initialSubtreeRoots.length} sub-tree roots`,
     );
+
     await this.db.setGenesisData(initialState.initialAccounts);
     await this.worldState.insertElements(0, initialState.initialSubtreeRoots);
     if (!commitmentsOnly) {
@@ -1351,26 +1363,40 @@ export class CoreSdk extends EventEmitter {
     // Determine the lowest synced block of all user states
     const userSyncedToRollup = Math.min(...this.userStates.map(us => us.getUserData().syncedToRollup));
 
+    // Insertion of new leaves into the merkle tree is most efficient when done in the "multiples of 2" leaves. For this
+    // reason we want to be inserting chunks of 128 leaves when possible. At genesis, the Aztec Connect system didn't
+    // start from 0 rollup blocks/leaves but instead from `initialSubtreeRootsLength` leaves (in Aztec Connect production
+    // this number is 73). These initial blocks contain aliases from the old system. The SDK requests only `firstTake`
+    // amount of blocks upon sync initialization which will ensure that the inefficent insertion happens only once and
+    // the following insertions are done in multiples of 128.
+    const firstTake = 128 - ((await this.getInitialTreeSize()) % 128);
+    const from = Math.min(syncedToRollup, userSyncedToRollup) + 1;
+    let take = from < firstTake ? firstTake - from : 128 - ((from - firstTake) % 128);
+
     if (userSyncedToRollup < syncedToRollup) {
       // Some user state is lagging behind core --> first make the user state catch up to core
-      await this.syncUserStates(userSyncedToRollup + 1, syncedToRollup);
+
+      // Ensure user state is never synced to a higher block than core by capping the take amount
+      take = Math.min(take, syncedToRollup - userSyncedToRollup);
+      await this.syncUserStates(from, take);
     } else {
       // User state is not lagging behind core --> sync both
-      await this.syncBoth(syncedToRollup + 1);
+      await this.syncBoth(from, take);
     }
   }
 
   /**
    * @notice Fetches blocks and applies them to user states
    * @from Number of a block from which to sync
-   * @to Number of a block up to which to sync
+   * @take Number of blocks to fetch
    */
-  private async syncUserStates(from: number, to: number) {
+  private async syncUserStates(from: number, take: number) {
     const timer = new Timer();
     this.debug(`fetching blocks from ${from} for user states...`);
-    let userBlocks = await this.rollupProvider.getBlocks(from);
-    // Filter blocks with higher `rollupId`/`block height` than `to`
-    userBlocks = userBlocks.filter(block => block.rollupId <= to);
+    let userBlocks = await this.rollupProvider.getBlocks(from, take);
+    // Filter blocks with higher `rollupId`/`block height` than `to` --> this should not be necessary in case `take`
+    // param was respected by the server but we do it just in case.
+    userBlocks = userBlocks.filter(block => block.rollupId < from + take);
     if (!userBlocks.length) {
       // nothing to do
       return;
@@ -1385,11 +1411,12 @@ export class CoreSdk extends EventEmitter {
   /**
    * @notice Fetches blocks and applies them to both core and user states
    * @from Number of a block from which to sync
+   * @take Number of blocks to fetch
    */
-  private async syncBoth(from: number) {
+  private async syncBoth(from: number, take: number) {
     const timer = new Timer();
 
-    const coreBlocks = await this.rollupProvider.getBlocks(from);
+    const coreBlocks = await this.rollupProvider.getBlocks(from, take);
     if (!coreBlocks.length) {
       // nothing to do
       return;
