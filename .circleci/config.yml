@@ -126,77 +126,99 @@ jobs:
           name: 'Build'
           command: cond_spot_run_build aztec-connect-cpp-x86_64-linux-clang 64
 
-  # small-circuit-tests:
-  #   docker:
-  #     - image: aztecprotocol/alpine-build-image
-  #   resource_class: small
-  #   steps:
-  #     - *checkout
-  #     - *setup_env
-  #     - run:
-  #         name: 'Test'
-  #         command: cond_spot_run_tests aztec-connect-cpp-x86_64-linux-clang-assert ac-tests
-  #     - *save_logs
+  x86_64-linux-clang-assert:
+    docker:
+      - image: aztecprotocol/alpine-build-image
+    resource_class: small
+    steps:
+      - *checkout
+      - *setup_env
+      - run:
+          name: 'Build'
+          command: cond_spot_run_build aztec-connect-cpp-x86_64-linux-clang-assert 64
 
-  # tx-rollup-tests:
-  #   docker:
-  #     - image: aztecprotocol/alpine-build-image
-  #   resource_class: small
-  #   steps:
-  #     - *checkout
-  #     - *setup_env
-  #     - run:
-  #         name: 'Test'
-  #         command: cond_spot_run_tests aztec-connect-cpp-x86_64-linux-clang-assert rollup_proofs_tx_rollup_tests --gtest_filter=-rollup_full_tests.*
-  #     - *save_logs
+  x86_64-linux-gcc:
+    docker:
+      - image: aztecprotocol/alpine-build-image
+    resource_class: small
+    steps:
+      - *checkout
+      - *setup_env
+      - run:
+          name: 'Build'
+          command: cond_spot_run_build aztec-connect-cpp-x86_64-linux-gcc 64
 
-  # tx-rollup-full-tests:
-  #   docker:
-  #     - image: aztecprotocol/alpine-build-image
-  #   resource_class: small
-  #   steps:
-  #     - *checkout
-  #     - *setup_env
-  #     - run:
-  #         name: 'Test'
-  #         command: cond_spot_run_tests aztec-connect-cpp-x86_64-linux-clang-assert rollup_proofs_tx_rollup_tests --gtest_filter=rollup_full_tests.*
-  #     - *save_logs
+  small-circuit-tests:
+    docker:
+      - image: aztecprotocol/alpine-build-image
+    resource_class: small
+    steps:
+      - *checkout
+      - *setup_env
+      - run:
+          name: 'Test'
+          command: cond_spot_run_tests aztec-connect-cpp-x86_64-linux-clang-assert ac-tests
+      - *save_logs
 
-  # root-rollup-tests:
-  #   docker:
-  #     - image: aztecprotocol/alpine-build-image
-  #   resource_class: small
-  #   steps:
-  #     - *checkout
-  #     - *setup_env
-  #     - run:
-  #         name: 'Test'
-  #         command: cond_spot_run_tests aztec-connect-cpp-x86_64-linux-clang-assert rollup_proofs_root_rollup_tests --gtest_filter=-root_rollup_full_tests.*
-  #     - *save_logs
+  tx-rollup-tests:
+    docker:
+      - image: aztecprotocol/alpine-build-image
+    resource_class: small
+    steps:
+      - *checkout
+      - *setup_env
+      - run:
+          name: 'Test'
+          command: cond_spot_run_tests aztec-connect-cpp-x86_64-linux-clang-assert rollup_proofs_tx_rollup_tests --gtest_filter=-rollup_full_tests.*
+      - *save_logs
 
-  # root-rollup-full-tests:
-  #   docker:
-  #     - image: aztecprotocol/alpine-build-image
-  #   resource_class: small
-  #   steps:
-  #     - *checkout
-  #     - *setup_env
-  #     - run:
-  #         name: 'Test'
-  #         command: cond_spot_run_tests aztec-connect-cpp-x86_64-linux-clang-assert rollup_proofs_root_rollup_tests --gtest_filter=root_rollup_full_tests.*
-  #     - *save_logs
+  tx-rollup-full-tests:
+    docker:
+      - image: aztecprotocol/alpine-build-image
+    resource_class: small
+    steps:
+      - *checkout
+      - *setup_env
+      - run:
+          name: 'Test'
+          command: cond_spot_run_tests aztec-connect-cpp-x86_64-linux-clang-assert rollup_proofs_tx_rollup_tests --gtest_filter=rollup_full_tests.*
+      - *save_logs
 
-  # root-verifier-tests:
-  #   docker:
-  #     - image: aztecprotocol/alpine-build-image
-  #   resource_class: small
-  #   steps:
-  #     - *checkout
-  #     - *setup_env
-  #     - run:
-  #         name: 'Test'
-  #         command: cond_spot_run_tests aztec-connect-cpp-x86_64-linux-clang-assert rollup_proofs_root_verifier_tests
-  #     - *save_logs
+  root-rollup-tests:
+    docker:
+      - image: aztecprotocol/alpine-build-image
+    resource_class: small
+    steps:
+      - *checkout
+      - *setup_env
+      - run:
+          name: 'Test'
+          command: cond_spot_run_tests aztec-connect-cpp-x86_64-linux-clang-assert rollup_proofs_root_rollup_tests --gtest_filter=-root_rollup_full_tests.*
+      - *save_logs
+
+  root-rollup-full-tests:
+    docker:
+      - image: aztecprotocol/alpine-build-image
+    resource_class: small
+    steps:
+      - *checkout
+      - *setup_env
+      - run:
+          name: 'Test'
+          command: cond_spot_run_tests aztec-connect-cpp-x86_64-linux-clang-assert rollup_proofs_root_rollup_tests --gtest_filter=root_rollup_full_tests.*
+      - *save_logs
+
+  root-verifier-tests:
+    docker:
+      - image: aztecprotocol/alpine-build-image
+    resource_class: small
+    steps:
+      - *checkout
+      - *setup_env
+      - run:
+          name: 'Test'
+          command: cond_spot_run_tests aztec-connect-cpp-x86_64-linux-clang-assert rollup_proofs_root_verifier_tests
+      - *save_logs
 
   # benchmark-aggregator:
   #   docker:
@@ -838,7 +860,7 @@ tag_regex: &tag_regex /v[0-9]+(\.[0-9]+)*(-[a-zA-Z-]+\.[0-9]+)?/
 tag_filter: &tag_filter
   tags:
     only: *tag_regex
-bb_test: &bb_test
+ac_test: &ac_test
   requires:
     - x86_64-linux-clang-assert
   filters: *tag_filter
@@ -863,16 +885,20 @@ workflows:
     when:
       equal: [system, << pipeline.parameters.workflow >>]
     jobs:
-      - x86_64-linux-clang:
-          filters: *tag_filter
       - wasm-linux-clang:
           filters: *tag_filter
-      # - small-circuit-tests: *bb_test
-      # - tx-rollup-tests: *bb_test
-      # - tx-rollup-full-tests: *bb_test
-      # - root-rollup-tests: *bb_test
-      # - root-rollup-full-tests: *bb_test
-      # - root-verifier-tests: *bb_test
+      - x86_64-linux-clang:
+          filters: *tag_filter
+      - x86_64-linux-clang-assert:
+          filters: *tag_filter
+      - x86_64-linux-gcc:
+          filters: *tag_filter
+      - small-circuit-tests: *ac_test
+      - tx-rollup-tests: *ac_test
+      - tx-rollup-full-tests: *ac_test
+      - root-rollup-tests: *ac_test
+      - root-rollup-full-tests: *ac_test
+      - root-verifier-tests: *ac_test
       # - benchmark-aggregator:
       #     requires:
       #       - barretenberg-tests
