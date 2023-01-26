@@ -9,7 +9,8 @@ import { Server } from './server.js';
 const { PORT = '8084', FALAFEL_URL = 'http://localhost:8081', API_PREFIX = '' } = process.env;
 
 async function main() {
-  const server = new Server(new URL(FALAFEL_URL));
+  const falafelUrl = new URL(FALAFEL_URL);
+  const server = new Server(falafelUrl);
 
   const shutdown = async () => {
     await server.stop();

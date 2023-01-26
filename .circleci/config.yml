@@ -802,12 +802,14 @@ jobs:
           name: 'set environment'
           command: |
             echo export VERSION_TAG=<< pipeline.parameters.target >> >> $BASH_ENV
-            echo export DEPLOY_TAG=aztec-connect-$VERSION_TAG >> $BASH_ENV
+            echo export DEPLOY_TAG=aztec-connect-<< pipeline.parameters.target >> >> $BASH_ENV
+            source $BASH_ENV
       - run:
           name: 'derive keys'
           command: |
             ensure_repo aztec-dev-cli $ECR_REGION
             docker run --rm $ECR_URL/aztec-dev-cli:cache-$COMMIT_HASH deriveKeys "$KEY_DERIVATION_MNEMONIC" >> $BASH_ENV
+            source $BASH_ENV
       - run:
           name: 'deploy-mainnet-fork'
           working_directory: mainnet-fork # redeploy the fork and taint the state file system
@@ -818,7 +820,9 @@ jobs:
       - run:
           name: 'Deploy contracts'
           working_directory: contracts
-          command: ./scripts/ci_deploy_contracts.sh
+          command: |
+            deploy_ecr contracts 
+            ./scripts/ci_deploy_contracts.sh
       - run:
           name: 'Redeploy kebab'
           command: deploy kebab kebab aws_efs_file_system.kebab_data_store
@@ -1004,6 +1008,14 @@ workflows:
       - mainnet-fork:
           requires:
             - aztec-dev-cli
+      - contracts
+      - falafel
+      - faucet
+      - kebab
       - deploy-mainnet-fork:
           requires:
             - mainnet-fork
+            - contracts
+            - falafel
+            - faucet
+            - kebab

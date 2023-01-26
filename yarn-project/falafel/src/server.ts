@@ -41,6 +41,7 @@ export class Server {
   private blacklistProvider: AztecBlacklistProvider;
   private addressCheckProviders: AddressCheckProviders;
   private ready = false;
+  private initialAccounts: Buffer = Buffer.alloc(0);
 
   constructor(
     private configurator: Configurator,
@@ -151,6 +152,7 @@ export class Server {
 
   public async start() {
     this.log('Initializing...');
+    await this.cacheInitialAccounts();
 
     await this.proofGenerator.start();
     await this.txFeeResolver.start();
@@ -318,11 +320,11 @@ export class Server {
     return this.txFeeResolver.getDefiFees(bridgeCallData);
   }
 
-  public async getInitialWorldState(): Promise<InitialWorldState> {
-    const chainId = await this.blockchain.getChainId();
-    const accountFileName = InitAccountFiles.getAccountDataFile(chainId);
-    const initialAccounts = accountFileName ? await InitHelpers.readData(accountFileName) : Buffer.alloc(0);
-    return { initialAccounts, initialSubtreeRoots: this.worldState.getInitialStateSubtreeRoots() };
+  public getInitialWorldState(): InitialWorldState {
+    return {
+      initialAccounts: this.initialAccounts,
+      initialSubtreeRoots: this.worldState.getInitialStateSubtreeRoots(),
+    };
   }
 
   public async queryBridgeStats(query: BridgePublishQuery) {
@@ -392,5 +394,11 @@ export class Server {
   public flushTxs() {
     this.log('Flushing queued transactions...');
     this.worldState.flushTxs();
+  }
+
+  private async cacheInitialAccounts() {
+    const chainId = await this.blockchain.getChainId();
+    const accountFileName = InitAccountFiles.getAccountDataFile(chainId);
+    this.initialAccounts = accountFileName ? await InitHelpers.readData(accountFileName) : Buffer.alloc(0);
   }
 }
