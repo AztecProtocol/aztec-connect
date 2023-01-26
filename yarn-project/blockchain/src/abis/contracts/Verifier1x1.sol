@@ -1,0 +1,1 @@
+../../../../../contracts/out/Verifier1x1.sol/

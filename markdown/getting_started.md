@@ -114,7 +114,7 @@ The rollup server.
 
 During development you'll want to run `yarn start:dev` to watch and rebuild as files change.
 
-If running against a real blockchain such as ganache, you'll want to deploy to ganache first:
+If running against a local or fork blockchain such as anvil, you'll want to deploy to there first:
 
 ```
 export ETHEREUM_HOST=http://localhost:8545
@@ -130,17 +130,7 @@ During development you'll want to run `yarn build:dev` to watch and rebuild both
 
 ### End-to-end
 
-Ensure you've installed ganache globally:
-
-```
-yarn global add ganache-cli
-```
-
-Run a local ganache instance.
-
-```
-ganache-cli -d
-```
+Ensure you've installed anvil globally. Run `bootstrap.sh` to install foundry (anvil included), then run `anvil` in your terminal.
 
 Run `falafel` as above. Run `yarn test ./src/e2e.test.ts` to run the tests.
 

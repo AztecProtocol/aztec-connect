@@ -15,9 +15,8 @@ import { TxId } from '@aztec/barretenberg/tx_id';
 import { ViewingKey } from '@aztec/barretenberg/viewing_key';
 import { WorldStateConstants } from '@aztec/barretenberg/world_state';
 import { randomBytes } from '@aztec/barretenberg/crypto';
-import { Keccak } from 'sha3';
-import { Web3Signer } from '../../../signer/index.js';
 import { EthereumProvider } from '@aztec/barretenberg/blockchain';
+import { keccak256, Web3Signer } from '@aztec/sdk';
 
 const numToBuffer = (num: number) => numToUInt32BE(num, 32);
 
@@ -32,9 +31,14 @@ const extendRoots = (roots: Buffer[], size = MAX_NUMBER_OF_ROLLUPS_PER_TEST) => 
   ...[...Array(size - roots.length)].map(() => randomBytes(32)),
 ];
 
-const dataRoots = extendRoots([WorldStateConstants.EMPTY_DATA_ROOT]);
-const nullifierRoots = extendRoots([WorldStateConstants.EMPTY_NULL_ROOT]);
-const dataRootRoots = extendRoots([WorldStateConstants.EMPTY_ROOT_ROOT]);
+// Roots fetched form default @ "barretenberg.js/src/environment/init/init_config.js"
+const dataRoots = extendRoots([Buffer.from('1417c092da90cfd39679299b8e381dd295dba6074b410e830ef6d3b7040b6eac', 'hex')]);
+const nullifierRoots = extendRoots([
+  Buffer.from('0225131cf7530ba9f617dba641b32020a746a6e0124310c09aac7c7c8a2e0ce5', 'hex'),
+]);
+const dataRootRoots = extendRoots([
+  Buffer.from('08ddeab28afc61bd560f0153f7399c9bb437c7cd280d0f4c19322227fcd80e05', 'hex'),
+]);
 const defiRoots = extendRoots([WorldStateConstants.EMPTY_DEFI_ROOT]);
 
 export class InnerProofOutput {
@@ -221,7 +225,7 @@ export const createSigData = (
     toBufferBE(feeLimit, 32),
     feeDistributorAddress.toBuffer(),
   ]);
-  return new Keccak(256).update(message).digest();
+  return keccak256(message);
 };
 
 export const createRollupProof = (
@@ -240,7 +244,8 @@ export const createRollupProof = (
 ) => {
   const { innerProofs, totalTxFees, offchainTxData } = innerProofOutput;
 
-  const dataStartIndexBuf = numToBuffer(dataStartIndex === undefined ? rollupId * rollupSize * 2 : dataStartIndex);
+  // Start from 16 as falafel defaults to have 16 notes
+  const dataStartIndexBuf = numToBuffer(dataStartIndex === undefined ? 8 + rollupId * rollupSize * 2 : dataStartIndex);
 
   const totalTxFeePublicInputs = totalTxFees.filter(fee => fee).map(fee => toBufferBE(fee, 32));
   for (let i = totalTxFeePublicInputs.length; i < numberOfAssets; ++i) {

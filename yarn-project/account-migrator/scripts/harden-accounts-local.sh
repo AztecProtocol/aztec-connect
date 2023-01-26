@@ -3,7 +3,7 @@
 # This script is used to launch a full test of the account hardener.
 # This is NOT to be used for tests on a live/external network.
 # The steps performed by this script include:
-#   * Launch ganache, kebab, halloumi (twice), and falafel
+#   * Launch anvil, kebab, halloumi (twice), and falafel
 #     * Wait for all subprocesses so that the user can Ctrl-z / background
 #       * Also so that child processes do not keep running after script exits
 #       * If any of the required subprocesses fail, kills all of them
@@ -63,11 +63,11 @@ function wait_until_log_ready() {
   # Loop/sleep here until kebab is ready (check its log file for the keyline below)
   echo "Watching $1 log file to wait until it is ready to proceed ($2)"
   while ! grep "$3" $2 > /dev/null 2>&1; do
-    # Make sure all background processes are still running (e.g. maybe ganache, kebab, 2 halloumis, falafel...)
+    # Make sure all background processes are still running (e.g. maybe anvil, kebab, 2 halloumis, falafel...)
     if [[ "$(jobs -r | wc -l)" != $4 ]]; then
       jobs -l
       echo "Only $(jobs -r | wc -l) of the expected $4 processes are still running"
-      die "Failure in ganache, kebab, halloumi or falafel. Check logs: $LOG_DIR/*.log"
+      die "Failure in anvil, kebab, halloumi or falafel. Check logs: $LOG_DIR/*.log"
     fi
     sleep 2  # wait a bit and check again whether process is ready
     echo -n "."
@@ -80,7 +80,7 @@ echo "********************************************"
 echo "          Running harden test"
 echo "********************************************"
 
-GANACHE_LOG=$LOG_DIR/ganache-local-setup.log
+ANVIL_LOG=$LOG_DIR/anvil-local-setup.log
 KEBAB_LOG=$LOG_DIR/kebab-local-setup.log
 FALAFEL_LOG=$LOG_DIR/falafel-local-setup.log
 
@@ -96,21 +96,21 @@ export PERSIST=false
 export PROVERLESS=true
 
 # These following applications need to be run for a fully LOCAL test
-echo "Running local ganache instance. Output in '$GANACHE_LOG'"
-(cd ../blockchain && yarn start:ganache > $GANACHE_LOG 2>&1) &
-# wait for ganache to start up before proceeding
-wait_until_log_ready ganache $GANACHE_LOG "RPC Listening on " 1
+echo "Running local anvil instance. Output in '$ANVIL_LOG'"
+(cd ../../contracts && ./scripts/start_e2e.sh  > $ANVIL_LOG 2>&1) &
+# wait for anvil to start up before proceeding
+wait_until_log_ready anvil $ANVIL_LOG "Serving contracts output" 1
 
 echo "Running local kebab instance . Output in '$KEBAB_LOG'"
 (cd ../kebab && ETHEREUM_HOST=http://localhost:8544 yarn start:e2e > $KEBAB_LOG 2>&1) &
 # wait for kebab to start up before proceeding
-wait_until_log_ready kebab $KEBAB_LOG "Server: Ready to receive requests..." 2
+wait_until_log_ready kebab $KEBAB_LOG "Server: Server started, indexing:" 2
 
 echo "Running the halloumi instance to communicate with falafel and generate rollup blocks. Output in '$LOG_DIR/halloumi-local-setup.log'"
 (cd ../halloumi && DEBUG=bb:* yarn start > $LOG_DIR/halloumi-local-setup.log 2>&1) &
 # don't need to wait for halloumi to be ready
 
-echo "Running the falafel instance to populate ganache with rollup blocks. Output in '$FALAFEL_LOG'"
+echo "Running the falafel instance to populate anvil with rollup blocks. Output in '$FALAFEL_LOG'"
 (cd ../falafel && ETHEREUM_HOST=http://localhost:8545 DEBUG=bb:* yarn start:e2e > $FALAFEL_LOG 2>&1) &
 # wait for falafel to start up before proceeding
 wait_until_log_ready falafel $FALAFEL_LOG "Server: Ready to receive txs." 4
@@ -156,14 +156,14 @@ EOF
   DEBUG=am:* yarn start harden verifyHardened  -a "${rollupAddress}" --port 9082 -m true -c 0
 } || {
   # Don't kill the program here in case user wants to rerun one of the harden commands while this remains in bg
-  echo "Failure in harden test. Keeping ganache, halloumi, and falafel running..."
+  echo "Failure in harden test. Keeping anvil, halloumi, and falafel running..."
   echo "To only rerun the account-migrator's harden functions, Ctrl-z then run 'bg' followed by one of the following commands:"
   echo "$USAGE"
 }
 
-echo "Done with harden test. Ctrl-c to quit ganache, halloumi and falafel."
+echo "Done with harden test. Ctrl-c to quit anvil, halloumi and falafel."
 echo
 
-# The `wait` command below ensures that all backgrounded processes (ganache, halloumis, falafel)
+# The `wait` command below ensures that all backgrounded processes (anvil, halloumis, falafel)
 # must exit before this script exits
 wait

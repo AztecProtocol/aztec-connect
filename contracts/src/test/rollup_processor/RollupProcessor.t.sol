@@ -23,6 +23,10 @@ contract RollupProcessorTest is TestBase {
         addressWithCode = address(new EmptyContract());
     }
 
+    function testRollupProviderSet() public {
+        assertEq(rollupProcessor.rollupProviders(ROLLUP_PROVIDER), true);
+    }
+
     function testCheckInitialCapValuesForEth() public {
         (uint128 available, uint32 lastUpdatedTimestamp, uint32 pendingCap, uint32 dailyCap, uint8 precision) =
             rollupProcessor.caps(0); // ethAssetId
@@ -112,4 +116,16 @@ contract RollupProcessorTest is TestBase {
         vm.expectRevert(RollupProcessorV2.INVALID_BRIDGE_GAS.selector);
         rollupProcessor.setSupportedBridge(address(addressWithCode), gasLimit);
     }
+
+    function testOwnerCanSetAllowThirdPartyContractFlag() public {
+        // another address cannot set the flag
+        vm.prank(address(0xbeefbabe));
+        vm.expectRevert();
+        rollupProcessor.setAllowThirdPartyContracts(true);
+
+        assertEq(rollupProcessor.allowThirdPartyContracts(), false, "Flag not set");
+        rollupProcessor.setAllowThirdPartyContracts(true);
+        assertEq(rollupProcessor.allowThirdPartyContracts(), true, "Flag not set");
+    }
+
 }
