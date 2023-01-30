@@ -465,17 +465,6 @@ jobs:
           name: 'Test'
           command: cond_spot_run_tests end-to-end ./src/e2e_deposit_permit.test.ts
 
-  e2e-rollup-processor:
-    docker:
-      - image: aztecprotocol/alpine-build-image
-    resource_class: small
-    steps:
-      - *checkout
-      - *setup_env
-      - run:
-          name: 'Test'
-          command: cond_spot_run_tests end-to-end ./src/e2e_rollup_processor.test.ts 3 2 AlwaysTrueVerifier
-
   e2e-migrated-accounts:
     docker:
       - image: aztecprotocol/alpine-build-image
@@ -618,6 +607,17 @@ jobs:
       - run:
           name: 'Test'
           command: cond_spot_run_tests end-to-end ./src/e2e_deposit_approval.test.ts
+
+  int-rollup-processor:
+    docker:
+      - image: aztecprotocol/alpine-build-image
+    resource_class: small
+    steps:
+      - *checkout
+      - *setup_env
+      - run:
+          name: 'Test'
+          command: cond_spot_run_tests end-to-end ./src/int_rollup_processor.test.ts 3 2 AlwaysTrueVerifier
 
   e2e-join:
     docker:
@@ -978,7 +978,6 @@ workflows:
       - e2e-account: *e2e_test
       - e2e-browser: *e2e_test
       - e2e-chained-txs-with-spending-keys: *e2e_test
-      - e2e-rollup-processor: *e2e_test
       - e2e-chained-txs: *e2e_test
       - e2e-sync-bridge: *e2e_test
       - e2e-async-bridge: *e2e_test
@@ -992,6 +991,7 @@ workflows:
       - e2e-prover: *e2e_test
       - e2e-virtual-assets: *e2e_test
       - e2e-deposit-approval: *e2e_test
+      - int-rollup-processor: *e2e_test
       # - bb-join:
       #     requires:
       #       - small-circuit-tests
@@ -1025,7 +1025,6 @@ workflows:
             - e2e-async-bridge
             - e2e-sync-bridge
             - e2e-subsidy
-            - e2e-rollup-processor
             - e2e-subsidy-async
             - e2e-migrate-account-and-funds
             - e2e-migrated-accounts
@@ -1035,6 +1034,7 @@ workflows:
             - e2e-prover
             - e2e-virtual-assets
             - e2e-deposit-approval
+            - int-rollup-processor
           filters: *deploy_filters
   metrics:
     when:

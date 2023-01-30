@@ -15,10 +15,12 @@ for KEY in ROLLUP_CONTRACT_ADDRESS DAI_CONTRACT_ADDRESS BTC_CONTRACT_ADDRESS; do
     export $KEY=$VALUE
 done
 
-echo "Waiting until $ROLLUP_HOST is ready..."
-while ! curl -s $ROLLUP_HOST > /dev/null || [ "$(curl -s $ROLLUP_HOST | jq .isReady)" = "false" ]; do
-    sleep 1
-done
+if [[ "$1" != *int_* ]] ; then
+  echo "Waiting until $ROLLUP_HOST is ready..."
+  while ! curl -s $ROLLUP_HOST > /dev/null || [ "$(curl -s $ROLLUP_HOST | jq .isReady)" = "false" ]; do
+      sleep 1
+  done
+fi
 
 if [ -z "${DEBUG-}" ]; then
   export DEBUG="bb:e2e*"

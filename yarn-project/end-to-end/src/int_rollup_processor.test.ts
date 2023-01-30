@@ -1,12 +1,4 @@
-import {
-  AztecSdk,
-  BridgeCallData,
-  createAztecSdk,
-  EthAddress,
-  InnerProofData,
-  RollupProofData,
-  WalletProvider,
-} from '@aztec/sdk';
+import { BridgeCallData, EthAddress, InnerProofData, RollupProofData, WalletProvider } from '@aztec/sdk';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
 import { createFundedWalletProvider } from './create_funded_wallet_provider.js';
@@ -34,7 +26,6 @@ EventEmitter.defaultMaxListeners = 30;
 
 const {
   ETHEREUM_HOST = 'http://localhost:8545',
-  ROLLUP_HOST = 'http://localhost:8081',
   DAI_CONTRACT_ADDRESS = '',
   ROLLUP_CONTRACT_ADDRESS = '',
 } = process.env;
@@ -45,7 +36,7 @@ const {
  * This means that falafel will throw in the background, but this don't matter much to us here.
  *
  * Run the following:
- * contracts: VERIFIER_TYPE="AlwaysTrueVerifier" ./scripts/start_e2e.sh
+ * contracts: VK="AlwaysTrueVerifier" ./scripts/start_e2e.sh
  * kebab: yarn start:e2e
  * halloumi: yarn start:e2e
  * falafel: yarn start:e2e
@@ -55,9 +46,8 @@ const {
  *
  */
 
-describe('end-to-end rollup processor test', () => {
+describe('integration rollup processor test', () => {
   let provider: WalletProvider;
-  let sdk: AztecSdk;
   let addresses: EthAddress[] = [];
 
   let rollupProcessorAddress: EthAddress;
@@ -76,11 +66,11 @@ describe('end-to-end rollup processor test', () => {
   };
 
   beforeAll(async () => {
-    debug(`funding initial ETH accounts...`);
+    debug(`Preparing provider and assets...`);
     const initialBalance = 2n * 10n ** 16n; // 0.02
 
     const testMnemonic = 'test test test test test test test test test test test junk';
-    provider = await createFundedWalletProvider(ETHEREUM_HOST, 2, 2, undefined, initialBalance, testMnemonic);
+    provider = await createFundedWalletProvider(ETHEREUM_HOST, 2, 0, undefined, initialBalance, testMnemonic);
     addresses = provider.getAccounts();
 
     // Allow direct interaction with the rollup processor
@@ -90,19 +80,6 @@ describe('end-to-end rollup processor test', () => {
     // Setup for Dai interactions
     daiAddress = EthAddress.fromString(DAI_CONTRACT_ADDRESS);
     dai = await TokenAsset.fromAddress(daiAddress, provider, 100000);
-
-    sdk = await createAztecSdk(provider, {
-      serverUrl: ROLLUP_HOST,
-      pollInterval: 1000,
-      memoryDb: true,
-      minConfirmation: 1,
-    });
-    await sdk.run();
-    await sdk.awaitSynchronised();
-  });
-
-  afterAll(async () => {
-    await sdk.destroy();
   });
 
   it('Should process all proof types and get specified blocks', async () => {
@@ -112,12 +89,20 @@ describe('end-to-end rollup processor test', () => {
     const bridgeCallData = new BridgeCallData(bridgeAddressId, tokenAAssetId, tokenAAssetId);
 
     const userAAddress = addresses[1];
-    const initialBalance = sdk.toBaseUnits(inputAssetId, '300');
+    const initialBalance = 300n * 10n ** BigInt(dai.getStaticInfo().decimals);
     const depositAmount = 100n;
     const sendAmount = 6n;
     const defiDepositAmount = 6n;
     const defiOutputAmount = 100n * 10n ** 18n; // fixed inside the mock bridge to return 100 tokens
     const withdrawalAmount = 10n;
+
+    // Deposit Dai into the contract
+    debug(`Mint and deposit ${depositAmount} Dai into the contract`);
+    await dai.mint(initialBalance, userAAddress);
+    await dai.approve(depositAmount, userAAddress, rollupProcessor.address);
+    await rollupProcessor.depositPendingFunds(inputAssetId, depositAmount, undefined, {
+      signingAddress: userAAddress,
+    });
 
     // Number of bridge calls per rollup * number of rollups before the defi interactions
     const interactionNonce = RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK * 2;
@@ -155,13 +140,6 @@ describe('end-to-end rollup processor test', () => {
       interactionResult,
       RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK,
     );
-
-    // Deposit Dai into the contract
-    await sdk.mint(initialBalance, userAAddress);
-    await dai.approve(depositAmount, userAAddress, rollupProcessor.address);
-    await rollupProcessor.depositPendingFunds(inputAssetId, depositAmount, undefined, {
-      signingAddress: userAAddress,
-    });
 
     debug('Sending proofs');
     for (let rollupId = 0; rollupId < innerProofOutputs.length; rollupId++) {
