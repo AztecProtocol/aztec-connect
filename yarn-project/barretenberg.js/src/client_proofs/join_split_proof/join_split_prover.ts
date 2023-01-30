@@ -1,6 +1,7 @@
 import { executeTimeout } from '../../timer/index.js';
 import { Transfer } from '../../transport/index.js';
 import { UnrolledProver } from '../prover/index.js';
+import { createJoinSplitProofSigningData } from './create_join_split_proof_signing_data.js';
 import { JoinSplitTx } from './join_split_tx.js';
 
 export class JoinSplitProver {
@@ -48,9 +49,7 @@ export class JoinSplitProver {
 
   public async computeSigningData(tx: JoinSplitTx) {
     const worker = this.prover.getWorker();
-    await worker.transferToHeap(tx.toBuffer(), 0);
-    await worker.call('join_split__compute_signing_data', 0, 0);
-    return Buffer.from(await worker.sliceMemory(0, 32));
+    return await createJoinSplitProofSigningData(tx, worker);
   }
 
   public async createProof(tx: JoinSplitTx, timeout?: number) {

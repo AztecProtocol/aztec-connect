@@ -29,7 +29,7 @@ import { CacheRequest } from '../cache_request/index.js';
 import { CoreAccountTx, CoreDefiTx, CorePaymentTx, PaymentProofId } from '../core_tx/index.js';
 import { Database } from '../database/index.js';
 import { Note } from '../note/index.js';
-import { NotePicker } from '../note_picker/index.js';
+import { NotePicker, NotePickerOptions } from '../note_picker/index.js';
 import { ProofOutput } from '../proofs/index.js';
 import { UserData } from '../user/index.js';
 
@@ -240,72 +240,80 @@ export class UserState extends EventEmitter {
     this.debug(`done in ${timer.s()}s.`);
   }
 
-  public async pickNotes(assetId: number, value: bigint, ownerAccountRequired = false, excludePendingNotes = false) {
+  public async pickNotes(assetId: number, value: bigint, options: NotePickerOptions = {}) {
     const { notePicker } = (await this.notePickersRequest.get()).find(np => np.assetId === assetId) || {};
     if (!notePicker) {
       return [];
     }
-    const excludedNullifiers = await this.pendingNoteNullifiersRequest.get();
-    return notePicker.pick(value, { ownerAccountRequired, excludePendingNotes, excludedNullifiers });
+    const pendingNullifiers = await this.pendingNoteNullifiersRequest.get();
+    return notePicker.pick(value, {
+      ...options,
+      excludedNullifiers: [...(options.excludedNullifiers || []), ...pendingNullifiers],
+    });
   }
 
-  public async pickNote(assetId: number, value: bigint, ownerAccountRequired = false, excludePendingNotes = false) {
+  public async pickNote(assetId: number, value: bigint, options: NotePickerOptions = {}) {
     const { notePicker } = (await this.notePickersRequest.get()).find(np => np.assetId === assetId) || {};
     if (!notePicker) {
       return;
     }
-    const excludedNullifiers = await this.pendingNoteNullifiersRequest.get();
-    return notePicker.pickOne(value, { ownerAccountRequired, excludePendingNotes, excludedNullifiers });
+    const pendingNullifiers = await this.pendingNoteNullifiersRequest.get();
+    return notePicker.pickOne(value, {
+      ...options,
+      excludedNullifiers: [...(options.excludedNullifiers || []), ...pendingNullifiers],
+    });
   }
 
-  public async getSpendableNoteValues(assetId: number, ownerAccountRequired = false, excludePendingNotes = false) {
+  public async getSpendableNoteValues(assetId: number, options: NotePickerOptions = {}) {
     const { notePicker } = (await this.notePickersRequest.get()).find(np => np.assetId === assetId) || {};
     if (!notePicker) {
       return [];
     }
-    const excludedNullifiers = await this.pendingNoteNullifiersRequest.get();
-    return notePicker.getSpendableNoteValues({ ownerAccountRequired, excludePendingNotes, excludedNullifiers });
+    const pendingNullifiers = await this.pendingNoteNullifiersRequest.get();
+    return notePicker.getSpendableNoteValues({
+      ...options,
+      excludedNullifiers: [...(options.excludedNullifiers || []), ...pendingNullifiers],
+    });
   }
 
-  public async getSpendableSum(assetId: number, ownerAccountRequired = false, excludePendingNotes = false) {
+  public async getSpendableSum(assetId: number, options: NotePickerOptions = {}) {
     const { notePicker } = (await this.notePickersRequest.get()).find(np => np.assetId === assetId) || {};
     if (!notePicker) {
       return BigInt(0);
     }
-    const excludedNullifiers = await this.pendingNoteNullifiersRequest.get();
+    const pendingNullifiers = await this.pendingNoteNullifiersRequest.get();
     return notePicker
-      .getSpendableNoteValues({ ownerAccountRequired, excludePendingNotes, excludedNullifiers })
+      .getSpendableNoteValues({
+        ...options,
+        excludedNullifiers: [...(options.excludedNullifiers || []), ...pendingNullifiers],
+      })
       .reduce((sum, v) => sum + v, BigInt(0));
   }
 
-  public async getSpendableSums(ownerAccountRequired = false, excludePendingNotes = false) {
-    const excludedNullifiers = await this.pendingNoteNullifiersRequest.get();
+  public async getSpendableSums(options: NotePickerOptions = {}) {
+    const pendingNullifiers = await this.pendingNoteNullifiersRequest.get();
     return (await this.notePickersRequest.get())
       .map(({ assetId, notePicker }) => ({
         assetId,
         value: notePicker
-          .getSpendableNoteValues({ ownerAccountRequired, excludePendingNotes, excludedNullifiers })
+          .getSpendableNoteValues({
+            ...options,
+            excludedNullifiers: [...(options.excludedNullifiers || []), ...pendingNullifiers],
+          })
           .reduce((sum, v) => sum + v, BigInt(0)),
       }))
       .filter(assetValue => assetValue.value > BigInt(0));
   }
 
-  public async getMaxSpendableNoteValues(
-    assetId: number,
-    ownerAccountRequired = false,
-    excludePendingNotes = false,
-    numNotes?: number,
-  ) {
+  public async getMaxSpendableNoteValues(assetId: number, options: NotePickerOptions & { numNotes?: number } = {}) {
     const { notePicker } = (await this.notePickersRequest.get()).find(np => np.assetId === assetId) || {};
     if (!notePicker) {
       return [];
     }
-    const excludedNullifiers = await this.pendingNoteNullifiersRequest.get();
+    const pendingNullifiers = await this.pendingNoteNullifiersRequest.get();
     return notePicker.getMaxSpendableNoteValues({
-      ownerAccountRequired,
-      excludePendingNotes,
-      excludedNullifiers,
-      numNotes,
+      ...options,
+      excludedNullifiers: [...(options.excludedNullifiers || []), ...pendingNullifiers],
     });
   }
 
