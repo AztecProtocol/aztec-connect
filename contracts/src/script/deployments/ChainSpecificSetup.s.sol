@@ -33,6 +33,8 @@ contract ChainSpecificSetup is Test {
         address dataProvider;
         address gasPriceFeed;
         address daiPriceFeed;
+        address dai;
+        address btc;
         address faucet;
         address feeDistributor;
     }
@@ -63,6 +65,8 @@ contract ChainSpecificSetup is Test {
                 dataProvider: dataProvider,
                 gasPriceFeed: MAINNET_GAS_PRICE_FEED,
                 daiPriceFeed: MAINNET_DAI_PRICE_FEED,
+                dai: DAI,
+                btc: address(0),
                 faucet: faucet,
                 feeDistributor: feeDistributor
             });
@@ -160,6 +164,8 @@ contract ChainSpecificSetup is Test {
             dataProvider: address(mockDataProvider),
             gasPriceFeed: address(gasPriceFeed),
             daiPriceFeed: address(daiPriceFeed),
+            dai: address(dai),
+            btc: address(btc),
             faucet: faucet,
             feeDistributor: address(0) // Not required in end to end tests
         });

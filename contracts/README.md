@@ -35,7 +35,7 @@ The verifier test is available in `yarn-project/contracts-verifier-test`.
 
 ## e2e tests
 
-The familiar tmux-scripts and docker-compose setups will automatically deploy a new set of contracts to a ganache instance for you.  
+The familiar tmux-scripts and docker-compose setups will automatically deploy a new set of contracts to a anvil instance for you.  
 If you would just like to run the deployment script for testing purposes, `deploy_local` will set reasonable defaults and then run the testing script.
 
 ## Devnet / Stage / Testnet Deployments

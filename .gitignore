@@ -4,3 +4,4 @@ node_modules
 .terraform
 .cache
 .clangd
+yarn-project/*/src/package_version.ts

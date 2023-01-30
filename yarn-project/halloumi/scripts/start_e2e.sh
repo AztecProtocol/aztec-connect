@@ -1,9 +1,7 @@
 #!/bin/sh
 set -eu
 
-cd  ../../barretenberg/cpp/build
-make -j$(nproc) rollup_cli
-cd ../../../yarn-project/halloumi
+cmake --build ../../aztec-connect-cpp/build --parallel --target rollup_cli
 
 export NUM_INNER_ROLLUP_TXS=${NUM_INNER_ROLLUP_TXS:-3}
 export NUM_OUTER_ROLLUP_PROOFS=${NUM_OUTER_ROLLUP_PROOFS:-2}

@@ -1,0 +1,4 @@
+build*/
+src/wasi-sdk-*
+src/rollup/proofs/*/fixtures
+.vscode

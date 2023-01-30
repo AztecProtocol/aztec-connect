@@ -1,0 +1,19 @@
+version: '3'
+services:
+  contracts:
+    platform: linux/amd64
+    image: aztecprotocol/contracts:latest
+    environment:
+      ETHEREUM_HOST: ${ETHEREUM_HOST:-}
+      VK: ${VK:-}
+      PORT: 8547
+    command: ./scripts/start_e2e.sh
+    ports:
+      - '8545:8544'
+
+  end-to-end:
+    image: aztecprotocol/end-to-end:latest
+    environment:
+      ETHEREUM_HOST: http://contracts:8544
+      CONTRACTS_HOST: http://contracts:8547
+    command: ${TEST:-./src/int_rollup_processor.test.ts}

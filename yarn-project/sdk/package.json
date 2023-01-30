@@ -11,13 +11,14 @@
   "license": "GPL-2.0",
   "type": "module",
   "scripts": {
-    "build": "yarn clean && tsc -b tsconfig.dest.json && webpack",
+    "version_hash": "node -p \"`export const VERSION_HASH = '${COMMIT_HASH:-}';`\" > src/package_version.ts",
+    "build": "yarn clean && yarn version_hash && tsc -b tsconfig.dest.json && webpack",
     "build:dev": "tsc -b tsconfig.dest.json --watch & webpack watch",
     "start": "serve -p 1234 ./dest",
     "start:e2e": "./scripts/start_e2e.sh",
     "test": "NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache",
     "formatting": "run -T prettier --check ./src && run -T eslint --max-warnings 0 ./src",
-    "clean": "rm -rf ./dest .tsbuildinfo"
+    "clean": "rm -rf ./dest .tsbuildinfo ./src/package_version.ts"
   },
   "jest": {
     "preset": "ts-jest/presets/default-esm",

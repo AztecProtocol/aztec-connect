@@ -4,7 +4,7 @@ This folder contains repositories that aid in performing end to end tests on the
 
 Each test will require compilation and running a running instance of:
 
-- ganache
+- anvil
 - contracts
 - barretenberg
 - kebab
@@ -62,7 +62,7 @@ The script splits tmux into a number of panes.
 
 1. Pane one contains (behind)
 
-- An instance of ganache running on 8545
+- An instance of anvil running on 8545
 - An shell that deploys contracts then serves them on port 8547
 
 2. Pane two contains (what you see)

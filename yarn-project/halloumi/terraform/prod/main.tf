@@ -119,8 +119,8 @@ resource "aws_ec2_fleet" "halloumi_inner" {
 
   target_capacity_specification {
     default_target_capacity_type = "spot"
-    total_target_capacity        = 16
-    spot_target_capacity         = 3
+    total_target_capacity        = 8
+    spot_target_capacity         = 7
     on_demand_target_capacity    = 1
   }
 
@@ -253,7 +253,7 @@ resource "aws_ecs_service" "halloumi_inner" {
   name                               = "${var.DEPLOY_TAG}-halloumi-inner"
   cluster                            = data.terraform_remote_state.setup_iac.outputs.ecs_cluster_id
   launch_type                        = "EC2"
-  desired_count                      = 16
+  desired_count                      = 8
   deployment_maximum_percent         = 100
   deployment_minimum_healthy_percent = 0
 

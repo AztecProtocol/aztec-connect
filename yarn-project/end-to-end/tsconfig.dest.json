@@ -1,5 +1,9 @@
 {
   "extends": ".",
-  "references": [{ "path": "../blockchain/tsconfig.dest.json" }, { "path": "../sdk/tsconfig.dest.json" }],
+  "references": [
+    { "path": "../blockchain/tsconfig.dest.json" },
+    { "path": "../sdk/tsconfig.dest.json" },
+    { "path": "../barretenberg.js/tsconfig.dest.json" }
+  ],
   "exclude": ["**/*.test.*"]
 }

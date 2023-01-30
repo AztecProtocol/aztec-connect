@@ -7,6 +7,10 @@ import { Web3Provider } from '@ethersproject/providers';
 import { EthAddress } from '@aztec/barretenberg/address';
 import { CurveStablePool, FactoryAbi, ProviderAbi, RegistryAbi, Zap } from '../abis.js';
 
+/** Token Store
+ *
+ * @notice Acquire tokens on a mainnet fork by swapping for the required tokens on Uniswap
+ */
 export class TokenStore {
   private providerContract?: Contract;
   private registryContract?: Contract;

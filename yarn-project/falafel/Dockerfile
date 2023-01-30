@@ -6,6 +6,8 @@ RUN cd barretenberg.js && yarn build
 
 COPY falafel falafel
 WORKDIR /usr/src/yarn-project/falafel
+ARG ARG_COMMIT_HASH
+ENV COMMIT_HASH=$ARG_COMMIT_HASH
 RUN yarn build && yarn formatting && yarn test
 # Prune dev dependencies. See comment in base image.
 RUN yarn cache clean

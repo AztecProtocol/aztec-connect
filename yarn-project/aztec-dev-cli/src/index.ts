@@ -383,7 +383,7 @@ async function main() {
     .command('setTime')
     .description('advance the blockchain time')
     .argument('<time>', 'the time you wish to set for the next block, unix timestamp format')
-    .argument('[url]', 'your ganache url', 'http://localhost:8545')
+    .argument('[url]', 'your fork url', 'http://localhost:8545')
     .action(async (time: any, url: any) => {
       const provider = getProvider(url);
       const date = new Date(parseInt(time));
@@ -397,7 +397,7 @@ async function main() {
     .argument('<contractAddress>', 'the address of the deployed contract, as a hex string')
     .argument('<contractName>', 'the name of the contract, valid values: Rollup, Element')
     .argument('<txHash>', 'the tx hash that you wish to decode, as a hex string')
-    .argument('[url]', 'your ganache url', 'http://localhost:8545')
+    .argument('[url]', 'your fork url', 'http://localhost:8545')
     .action(async (contractAddress, contractName, txHash, url) => {
       const provider = getProvider(url);
       const error = await decodeError(EthAddress.fromString(contractAddress), contractName, txHash, provider);
@@ -414,7 +414,7 @@ async function main() {
     .argument('<contractAddress>', 'the address of the deployed contract, as a hex string')
     .argument('<contractName>', 'the name of the contract, valid values: Rollup, Element')
     .argument('<selector>', 'the 4 byte selector that you wish to decode, as a hex string 0x...')
-    .argument('[url]', 'your ganache url', 'http://localhost:8545')
+    .argument('[url]', 'your fork url', 'http://localhost:8545')
     .action((contractAddress, contractName, selector, url) => {
       const provider = getProvider(url);
       if (selector.length == 10) {
@@ -433,7 +433,7 @@ async function main() {
     .description('finalise an asynchronous defi interaction')
     .argument('<rollupAddress>', 'the address of the deployed rollup contract, as a hex string')
     .argument('<nonce>', 'the nonce you wish to finalise, as a number')
-    .argument('[url]', 'your ganache url', 'http://localhost:8545')
+    .argument('[url]', 'your fork url', 'http://localhost:8545')
     .action(async (rollupAddress, nonce, url) => {
       const provider = getProvider(url);
       const rollupProcessor = new RollupProcessor(rollupAddress, provider);
@@ -453,7 +453,7 @@ async function main() {
     .argument('<eventName>', 'the name of the emitted event')
     .argument('<from>', 'the block number to search from')
     .argument('[to]', 'the block number to search to, defaults to the latest block')
-    .argument('[url]', 'your ganache url', 'http://localhost:8545')
+    .argument('[url]', 'your fork url', 'http://localhost:8545')
     .action(async (contractAddress, contractName, eventName, from, to, url) => {
       const provider = getProvider(url);
       const logs = await retrieveEvents(
@@ -482,7 +482,7 @@ async function main() {
     )
     .argument('[recipient]', 'the address of the account to receive the tokens defaults to the spender', undefined)
     .argument('[maxAmountToSpend]', 'optional limit of the amount to spend', BigInt(10n ** 21n).toString())
-    .argument('[url]', 'your ganache url', 'http://localhost:8545')
+    .argument('[url]', 'your fork url', 'http://localhost:8545')
     .action(async (token, tokenQuantity, spender, recipient, maxAmountToSpend, url) => {
       const ourProvider = getProvider(url);
       const ethereumRpc = new EthereumRpc(ourProvider);
@@ -522,7 +522,7 @@ async function main() {
       'the address of the account to purchase the token defaults to 1st default account 0xf39...',
       undefined,
     )
-    .argument('[url]', 'your ganache url', 'http://localhost:8545')
+    .argument('[url]', 'your fork url', 'http://localhost:8545')
     .action(async (token, account, url) => {
       const ourProvider = getProvider(url);
       const accounts = await new EthereumRpc(ourProvider).getAccounts();
@@ -559,7 +559,7 @@ async function main() {
     .argument('<contractAddress>', 'the address of the deployed contract, as a hex string')
     .argument('<contractName>', 'the name of the contract, valid values: Rollup, Element')
     .argument('[type]', 'optional filter for the type of selectors, e.g. error, event')
-    .argument('[url]', 'your ganache url', 'http://localhost:8545')
+    .argument('[url]', 'your fork url', 'http://localhost:8545')
     .action((contractAddress, contractName, type, url) => {
       const ourProvider = getProvider(url);
       const selectorMap = getContractSelectors(EthAddress.fromString(contractAddress), contractName, ourProvider, type);
@@ -574,7 +574,7 @@ async function main() {
     .argument('<rollupProviderUrl>', "Falafel's endpoint in the required environemnt")
     .argument('<from>', 'the block number to search from')
     .argument('[to]', 'the block number to search to, defaults to the latest block')
-    .argument('[url]', 'your ganache url', 'http://localhost:8545')
+    .argument('[url]', 'your fork url', 'http://localhost:8545')
     .action(async (rollupAddress, elementAddress, rollupProviderUrl, from, to, url) => {
       const provider = getProvider(url);
       await profileElement(

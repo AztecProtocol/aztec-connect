@@ -1,0 +1,1 @@
+aztec_connect_module(ci_failsafe)

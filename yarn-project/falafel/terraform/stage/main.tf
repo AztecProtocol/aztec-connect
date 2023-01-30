@@ -212,10 +212,6 @@ resource "aws_ecs_task_definition" "falafel" {
         "value": "true"
       },
       {
-        "name": "PROOF_GENERATOR_MODE",
-        "value": "split"
-      },
-      {
         "name": "ROLLUP_CONTRACT_ADDRESS",
         "value": "${data.terraform_remote_state.contracts.outputs.rollup_contract_address}"
       },

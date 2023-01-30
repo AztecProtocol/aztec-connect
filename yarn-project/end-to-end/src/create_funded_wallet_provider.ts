@@ -26,7 +26,7 @@ export async function createFundedWalletProvider(
   const ethereumProvider = new JsonRpcProvider(host);
   const walletProvider = new WalletProvider(ethereumProvider);
   const ethereumRpc = new EthereumRpc(ethereumProvider);
-  const ganacheAccount = (await ethereumRpc.getAccounts())[0];
+  const forkAccount = (await ethereumRpc.getAccounts())[0];
   const ethAsset = new EthAsset(walletProvider);
 
   if (mnemonic) {
@@ -37,7 +37,7 @@ export async function createFundedWalletProvider(
     }
   }
 
-  const funder = privateKey && privateKey.length ? walletProvider.addAccount(privateKey) : ganacheAccount;
+  const funder = privateKey && privateKey.length ? walletProvider.addAccount(privateKey) : forkAccount;
   debug(`funder: ${funder.toString()}`);
 
   for (let i = 0; i < numAccountToFund; ++i) {

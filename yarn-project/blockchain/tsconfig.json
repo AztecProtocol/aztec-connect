@@ -22,7 +22,6 @@
     "src",
     "src/abis/mocks/*.json",
     "src/abis/bridges/*/*.json",
-    "src/abis/contracts/ERC20Permit.sol/ERC20Permit.json",
     "src/abis/contracts/IDefiBridge.sol/IDefiBridge.json",
     "src/abis/contracts/DefiBridgeProxy.sol/DefiBridgeProxy.json",
     "src/abis/contracts/AztecFeeDistributor.sol/AztecFeeDistributor.json",
@@ -37,8 +36,6 @@
     "src/abis/contracts/TransparentUpgradeableProxy.sol/TransparentUpgradeableProxy.json",
     "src/abis/contracts/PermitHelper.sol/PermitHelper.json",
     "src/abis/contracts/AztecFaucet.sol/AztecFaucet.json",
-    "src/abis/contracts/AsyncBridge.sol/AsyncBridge.json",
-    "src/abis/contracts/SyncBridge.sol/SyncBridge.json",
     "src/abis/contracts/ERC20Mintable.sol/ERC20Mintable.json"
   ]
 }

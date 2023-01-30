@@ -181,7 +181,7 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     const log = JSON.parse((await stream.readAll()) as string);
     const { publicKeys } = log;
     if (!publicKeys) {
-      throw new Error('Invalid log.');
+      throw new Error('Invalid client console log.');
     }
 
     // TODO - reject if submitted in N seconds.

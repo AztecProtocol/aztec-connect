@@ -1,8 +1,6 @@
 #!/bin/bash
 set -e
 
-pushd ../../barretenberg/cpp/build
-make -j$(nproc) rollup_cli
-popd
+cmake --build ../../aztec-connect-cpp/build --parallel --target rollup_cli
 
 yarn build
