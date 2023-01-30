@@ -323,7 +323,7 @@ In the Pseudocode to follow, we use the following function names. See [notes & n
 // Verify account ownership
   check_membership(account_note_commitment, account_note_index, account_note_path, old_data_tree_root);
 
-  message = (
+  const message = (
     public_value,
     public_owner,
     public_asset_id,
@@ -335,13 +335,29 @@ In the Pseudocode to follow, we use the following function names. See [notes & n
     allow_chain,
   );
 
-  verify_signature(
+  const verified = verify_signature(
     message,
     signature,
     signer_public_key
   );
 
-// Check chained transaction inputs are valid:
+  const is_same_owner =
+    input_note_1.owner == output_note_1.owner && input_note_2.owner == output_note_2.owner;
+  const is_same_amount = total_in_value == total_out_value;
+  // is_same_account_flag:
+  //   we rely on input_note_1.account_required == input_note_2.account_required being checked already
+  const is_same_account_flag = input_note_1.account_required == output_note_1.account_required &&
+                                        input_note_2.account_required == output_note_2.account_required;
+  // is_merge_send:
+  //   if true, we can elide our signature as this is a same-owner, same-amount send
+  //   where one of the output notes has value 0. In addition, we shouldn't have output notes
+  //   that do not need an account if input notes needed an account, and vice versa
+  //   Caveat: A signature of all 0's will still fail basic checks
+  const is_merge_send = is_send && (output_note_1_value == 0 || output_note_2_value == 0) && is_same_owner &&
+                                is_same_amount && is_same_account_flag;
+  require(verified || is_merge_send);
+
+  // Check chained transaction inputs are valid:
   const backward_link_in_use = inputs.backward_link != 0;
   const note1_propagated = inputs.backward_link == input_note_1.commitment;
   const note2_propagated = inputs.backward_link == input_note_2.commitment;
@@ -353,25 +369,27 @@ In the Pseudocode to follow, we use the following function names. See [notes & n
   if (inputs.allow_chain == 1) require(output_note_1.owner == input_note_1.owner);
   if (inputs.allow_chain == 2) require(output_note_2.owner == input_note_1.owner);
 
-// Constrain unused public inputs to zero:
+  // Constrain unused public inputs to zero:
   require(defi_root == 0);
 
-// Set public inputs (simply listed here without syntax):
-  proof_id,
-  output_note_1_commitment,
-  output_note_2.commitment,
-  nullifier_1,
-  nullifier_2,
-  public_value,
-  public_owner,
-  public_asset_id,
+  // finally, we have formed our public inputs
+  set_public_inputs({
+    proof_id,
+    output_note_1_commitment,
+    output_note_2.commitment,
+    nullifier_1,
+    nullifier_2,
+    public_value,
+    public_owner,
+    public_asset_id,
 
-  old_data_tree_root,
-  tx_fee,
-  asset_id,
-  bridge_call_data,
-  defi_deposit_value,
-  defi_root,
-  backward_link,
-  allow_chain
+    old_data_tree_root,
+    tx_fee,
+    asset_id,
+    bridge_call_data,
+    defi_deposit_value,
+    defi_root,
+    backward_link,
+    allow_chain
+  });
 ```
