@@ -78,7 +78,8 @@ resource "aws_db_subnet_group" "default" {
 }
 
 resource "aws_db_instance" "postgres" {
-  allocated_storage      = 8
+  allocated_storage      = 20
+  max_allocated_storage  = 100
   db_subnet_group_name   = aws_db_subnet_group.default.name
   engine                 = "postgres"
   engine_version         = "13.7"
@@ -91,6 +92,7 @@ resource "aws_db_instance" "postgres" {
   username               = "username"
   vpc_security_group_ids = [data.terraform_remote_state.setup_iac.outputs.security_group_private_id]
   skip_final_snapshot    = true
+  apply_immediately      = true
 }
 
 # Configure an EFS filesystem.
