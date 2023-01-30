@@ -25,6 +25,7 @@ import isNode from 'detect-node';
 import { EventEmitter } from 'events';
 import { LevelUp } from 'levelup';
 import { BlockContext } from '../block_context/block_context.js';
+import { sendClientLog, sendClientConsoleLog } from '../client_log/client_log.js';
 import { CorePaymentTx, createCorePaymentTxForRecipient } from '../core_tx/index.js';
 import { Alias, Database } from '../database/index.js';
 import { getUserSpendingKeysFromGenesisData, parseGenesisAliasesAndKeys } from '../genesis_state/index.js';
@@ -284,7 +285,7 @@ export class CoreSdk extends EventEmitter {
           return `${logArgs}`;
         }
       });
-    await this.rollupProvider.clientConsoleLog({
+    await sendClientConsoleLog(this.rollupProvider, {
       publicKeys: publicKeys.map(k => k.toString()),
       logs: logs.map(ensureJson),
       clientData,
@@ -1260,9 +1261,8 @@ export class CoreSdk extends EventEmitter {
         error: e.message,
         timeUsed: Date.now() - start,
         memory: getDeviceMemory(),
-        sdkVersion: VERSION_HASH,
       };
-      await this.rollupProvider.clientLog(log);
+      await sendClientLog(this.rollupProvider, log);
       this.debug(log);
       throw e;
     }
@@ -1312,10 +1312,9 @@ export class CoreSdk extends EventEmitter {
         } catch (err) {
           this.debug('sync() failed:', err);
           try {
-            await this.rollupProvider.clientLog({
+            await sendClientLog(this.rollupProvider, {
               message: 'sync failed',
               error: err,
-              sdkVersion: VERSION_HASH,
             });
           } catch (err) {
             this.debug('client log failed:', err);
@@ -1450,7 +1449,7 @@ export class CoreSdk extends EventEmitter {
       const newSize = this.worldState.getSize();
       await this.reinitDataTree();
       await this.writeSyncInfo(-1);
-      await this.rollupProvider.clientLog({
+      await sendClientLog(this.rollupProvider, {
         message: 'Invalid dataRoot.',
         synchingFromRollup: from,
         blocksReceived: coreBlocks.length,
@@ -1459,7 +1458,6 @@ export class CoreSdk extends EventEmitter {
         newSize,
         oldSize,
         expectedDataRoot: expectedDataRoot.toString('hex'),
-        sdkVersion: VERSION_HASH,
       });
       return;
     }
@@ -1481,10 +1479,9 @@ export class CoreSdk extends EventEmitter {
     try {
       return await fn();
     } catch (err) {
-      await this.rollupProvider.clientLog({
+      await sendClientLog(this.rollupProvider, {
         message: description,
         error: err,
-        sdkVersion: VERSION_HASH,
       });
       throw err;
     }
