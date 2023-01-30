@@ -110,8 +110,6 @@ describe('end-to-end defi tests', () => {
       const [defiTx] = await sdk.getDefiTxs(userIds[0]);
       const expectedInputBalance = shieldValue.value - depositValue.value - fee.value;
       expect(defiTx).toMatchObject({ bridgeCallData: bridgeCallData, depositValue, fee });
-      // TODO: There is a faulure down here. Not sure why it reverts. But I better check it out.
-      // Do some tracing with foundry, probably need to be running ganache outside of tmux to copy paste
       expect(defiTx.interactionResult).toMatchObject({ isAsync: false, success: true });
       expect((await sdk.getBalance(userIds[0], inputAssetIdA)).value).toBe(expectedInputBalance);
       expect((await sdk.getBalance(userIds[0], outputAssetIdA)).value).toBe(

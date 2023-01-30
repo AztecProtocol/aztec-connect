@@ -2,7 +2,7 @@
 
 ## Global Constants
 
-See [constants.hpp](../../barretenberg/cpp/src/aztec/rollup/proofs/notes/constants.hpp) and [constants.hpp](../../barretenberg/cpp/src/aztec/rollup/constants.hpp) for constants.
+See [constants.hpp](../../aztec-connect-cpp/src/rollup/proofs/notes/constants.hpp) and [constants.hpp](../../aztec-connect-cpp/src/rollup/constants.hpp) for constants.
 
 ## Pedersen background
 

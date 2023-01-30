@@ -30,8 +30,8 @@ export default {
     new CopyWebpackPlugin({
       patterns: [
         {
-          from: `${path.dirname(require.resolve(`@aztec/sdk`))}/barretenberg.wasm`,
-          to: 'barretenberg.wasm',
+          from: `${path.dirname(require.resolve(`@aztec/sdk`))}/aztec-connect.wasm`,
+          to: 'aztec-connect.wasm',
         },
         {
           from: `${path.dirname(require.resolve(`@aztec/sdk`))}/web_worker.js`,

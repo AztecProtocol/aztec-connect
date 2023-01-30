@@ -1,0 +1,22 @@
+#!/bin/bash
+set -e
+
+TESTS=$1
+shift
+
+$(aws ecr get-login --region us-east-2 --no-include-email) 2> /dev/null
+
+IMAGE_URI=278380418400.dkr.ecr.us-east-2.amazonaws.com/aztec-connect-cpp-x86_64-linux-clang-assert:cache-$COMMIT_HASH
+
+docker pull $IMAGE_URI
+
+if [ -f "$TESTS" ]; then
+  TESTS=$(cat $TESTS | tr '\n' ' ')
+fi
+
+docker run --rm -t $IMAGE_URI /bin/sh -c "\
+  set -e; \
+  cd /usr/src/aztec-connect-cpp/barretenberg/cpp/srs_db; \
+  ./download_ignition.sh 1; \
+  cd /usr/src/aztec-connect-cpp/build; \
+  for BIN in $TESTS; do ./bin/\$BIN $@; done"

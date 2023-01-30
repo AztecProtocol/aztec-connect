@@ -1,14 +1,14 @@
-FROM 278380418400.dkr.ecr.eu-west-2.amazonaws.com/barretenberg-x86_64-linux-clang
-FROM 278380418400.dkr.ecr.eu-west-2.amazonaws.com/barretenberg-wasm-linux-clang
+FROM 278380418400.dkr.ecr.eu-west-2.amazonaws.com/aztec-connect-cpp-x86_64-linux-clang
+FROM 278380418400.dkr.ecr.eu-west-2.amazonaws.com/aztec-connect-cpp-wasm-linux-clang
 FROM 278380418400.dkr.ecr.eu-west-2.amazonaws.com/blockchain-vks
 FROM 278380418400.dkr.ecr.eu-west-2.amazonaws.com/contracts
 
 FROM node:18-alpine
 RUN apk update && apk add --no-cache build-base git python3 curl bash jq
-COPY --from=0 /usr/src/barretenberg/cpp/srs_db/ignition /usr/src/barretenberg/cpp/srs_db/ignition
-COPY --from=0 /usr/src/barretenberg/cpp/srs_db/download_ignition.sh /usr/src/barretenberg/cpp/srs_db/download_ignition.sh
-COPY --from=0 /usr/src/barretenberg/cpp/build/bin /usr/src/barretenberg/cpp/build/bin
-COPY --from=1 /usr/src/barretenberg/cpp/build/bin /usr/src/barretenberg/cpp/build-wasm/bin
+COPY --from=0 /usr/src/aztec-connect-cpp/barretenberg/cpp/srs_db/ignition /usr/src/aztec-connect-cpp/barretenberg/cpp/srs_db/ignition
+COPY --from=0 /usr/src/aztec-connect-cpp/barretenberg/cpp/srs_db/download_ignition.sh /usr/src/aztec-connect-cpp/barretenberg/cpp/srs_db/download_ignition.sh
+COPY --from=0 /usr/src/aztec-connect-cpp/build/bin /usr/src/aztec-connect-cpp/build/bin
+COPY --from=1 /usr/src/aztec-connect-cpp/build/bin /usr/src/aztec-connect-cpp/build-wasm/bin
 COPY --from=2 /usr/src/blockchain-vks/keys /usr/src/blockchain-vks/keys
 COPY --from=3 /usr/src/contracts /usr/src/contracts
 WORKDIR /usr/src/yarn-project

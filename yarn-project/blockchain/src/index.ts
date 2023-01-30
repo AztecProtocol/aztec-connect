@@ -7,5 +7,5 @@ export * from './signer/index.js';
 export * from './validate_signature.js';
 export * from './units.js';
 export * from './tokens/index.js';
-export * from './ganache/manipulate_blocks.js';
+export * from './fork_helpers/manipulate_blocks.js';
 export * from './earliest_block/index.js';

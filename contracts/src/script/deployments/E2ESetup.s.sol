@@ -97,12 +97,19 @@ contract E2ESetup is Test {
 
         address verifier;
         if (stringEq(_verifier, "VerificationKey1x1")) {
+            emit log_string("Using 1x1 Verifier");
             vm.broadcast();
             verifier = address(new Verifier1x1());
         } else if (stringEq(_verifier, "VerificationKey28x32")) {
+            emit log_string("Using 28x32 Verifier");
             vm.broadcast();
             verifier = address(new Verifier28x32());
+        } else if (stringEq(_verifier, "AlwaysTrueVerifier")) {
+            emit log_string("Using Always True Verifier");
+            vm.broadcast();
+            verifier = address(new AlwaysTrueVerifier());
         } else {
+            emit log_string("Using Mock Verifier");
             vm.broadcast();
             verifier = address(new MockVerifier());
         }
@@ -287,6 +294,8 @@ contract E2ESetup is Test {
         json.serialize("BRIDGE_DATA_PROVIDER_CONTRACT_ADDRESS", _peripheryAddresses.dataProvider);
         json.serialize("GAS_PRICE_FEED_CONTRACT_ADDRESS", _peripheryAddresses.gasPriceFeed);
         json.serialize("DAI_PRICE_FEED_CONTRACT_ADDRESS", _peripheryAddresses.daiPriceFeed);
+        json.serialize("DAI_CONTRACT_ADDRESS", _peripheryAddresses.dai);
+        json.serialize("BTC_CONTRACT_ADDRESS", _peripheryAddresses.btc);
         json.serialize("FAUCET_CONTRACT_ADDRESS", _peripheryAddresses.faucet);
         json = json.serialize("VERSION", RollupProcessorV2(_proxy).getImplementationVersion());
 
@@ -308,6 +317,8 @@ contract E2ESetup is Test {
         emit log_named_address("BridgeDataProvider  ", _peripheryAddresses.dataProvider);
         emit log_named_address("GasPriceFeed  ", _peripheryAddresses.gasPriceFeed);
         emit log_named_address("DaiPriceFeed  ", _peripheryAddresses.daiPriceFeed);
+        emit log_named_address("DaiToken      ", _peripheryAddresses.dai);
+        emit log_named_address("BtcToken      ", _peripheryAddresses.btc);
         emit log_named_address("Faucet        ", _peripheryAddresses.faucet);
 
         emit log_named_uint("Version      ", RollupProcessorV2(_proxy).getImplementationVersion());

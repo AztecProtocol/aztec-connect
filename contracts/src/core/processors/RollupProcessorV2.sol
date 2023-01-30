@@ -1155,7 +1155,7 @@ contract RollupProcessorV2 is IRollupProcessorV2, Decoder, Initializable, Access
      *          When we have the case that the `storedDataSize % numDataLeaves == 0`, we are perfectly dividing. This
      *      means that the incoming rollup matches perfectly with a boundry of the next subtree.
      *          When this is not the case, we have to compute an offset that we then apply so that the full state can
-     *      be build with a bunch of same-sized trees (when the rollup is not full we insert a tree with some zero
+     *      be built with a bunch of same-sized trees (when the rollup is not full we insert a tree with some zero
      *      leaves). This offset can be computed as `numDataLeaves - (storedDataSize % numDataLeaves)` and is,
      *      essentially, how big a "space" we should leave so that the currently inserted subtree ends exactly at
      *      the subtree boundry. The value is always >= 0. In the function below we won’t hit the zero case, because

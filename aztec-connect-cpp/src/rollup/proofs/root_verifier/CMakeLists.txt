@@ -1,0 +1,1 @@
+aztec_connect_module(rollup_proofs_root_verifier rollup_proofs_root_rollup)

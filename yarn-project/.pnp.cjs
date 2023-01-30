@@ -282,9 +282,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["cross-fetch", "npm:3.1.5"],\
             ["debug", "virtual:e9a07d9e500f265638a80b6a2d60a63d2c1402dd6a58d2f05af9d82e52be33df29a16291c32b33b9e23f1a0efea054868bd3312893433fe0583e4dba376fe47e#npm:4.3.4"],\
             ["ethers", "npm:5.5.1"],\
-            ["ganache", "npm:7.5.0"],\
             ["jest", "virtual:4cf42c2f2a8aa147d524c15c0290174d77a2062937f0c22441901ac61d50212062460a38e714456279cdb4fab155b3b1d12acfb24cd6bb68fcc1837e921b5557#npm:28.1.3"],\
-            ["sha3", "npm:2.1.4"],\
             ["ts-jest", "virtual:4cf42c2f2a8aa147d524c15c0290174d77a2062937f0c22441901ac61d50212062460a38e714456279cdb4fab155b3b1d12acfb24cd6bb68fcc1837e921b5557#npm:28.0.7"],\
             ["ts-node", "virtual:4cf42c2f2a8aa147d524c15c0290174d77a2062937f0c22441901ac61d50212062460a38e714456279cdb4fab155b3b1d12acfb24cd6bb68fcc1837e921b5557#npm:10.9.1"],\
             ["tsc-watch", "virtual:e35cb2f9a33ef1b8aada102e2350ccc0551c137001f6014fc1f11d4a3ec40651db24890427c255d134f29987a3e5475186f25e17bc3995d86758303b9bd18a6a#npm:5.0.3"],\
@@ -5666,17 +5664,6 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           "linkType": "HARD"\
         }]\
       ]],\
-      ["@trufflesuite/bigint-buffer", [\
-        ["npm:1.1.10", {\
-          "packageLocation": "./.yarn/unplugged/@trufflesuite-bigint-buffer-npm-1.1.10-f7d8ee5ed8/node_modules/@trufflesuite/bigint-buffer/",\
-          "packageDependencies": [\
-            ["@trufflesuite/bigint-buffer", "npm:1.1.10"],\
-            ["node-gyp", "npm:9.0.0"],\
-            ["node-gyp-build", "npm:4.4.0"]\
-          ],\
-          "linkType": "HARD"\
-        }]\
-      ]],\
       ["@tsconfig/node10", [\
         ["npm:1.0.9", {\
           "packageLocation": "./.yarn/cache/@tsconfig-node10-npm-1.0.9-f2e2d20feb-a33ae4dc2a.zip/node_modules/@tsconfig/node10/",\
@@ -5782,14 +5769,6 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           "packageLocation": "./.yarn/cache/@types-bn.js-npm-4.11.6-85f0d125f5-7f66f2c7b7.zip/node_modules/@types/bn.js/",\
           "packageDependencies": [\
             ["@types/bn.js", "npm:4.11.6"],\
-            ["@types/node", "npm:18.0.0"]\
-          ],\
-          "linkType": "HARD"\
-        }],\
-        ["npm:5.1.1", {\
-          "packageLocation": "./.yarn/cache/@types-bn.js-npm-5.1.1-346449981b-e50ed2dd3a.zip/node_modules/@types/bn.js/",\
-          "packageDependencies": [\
-            ["@types/bn.js", "npm:5.1.1"],\
             ["@types/node", "npm:18.0.0"]\
           ],\
           "linkType": "HARD"\
@@ -6339,15 +6318,6 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           "linkType": "HARD"\
         }]\
       ]],\
-      ["@types/lru-cache", [\
-        ["npm:5.1.1", {\
-          "packageLocation": "./.yarn/cache/@types-lru-cache-npm-5.1.1-46aaa305fe-e1d6c0085f.zip/node_modules/@types/lru-cache/",\
-          "packageDependencies": [\
-            ["@types/lru-cache", "npm:5.1.1"]\
-          ],\
-          "linkType": "HARD"\
-        }]\
-      ]],\
       ["@types/memdown", [\
         ["npm:3.0.0", {\
           "packageLocation": "./.yarn/cache/@types-memdown-npm-3.0.0-0199aac661-ccdb3fa2e7.zip/node_modules/@types/memdown/",\
@@ -6549,15 +6519,6 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           "packageLocation": "./.yarn/cache/@types-scheduler-npm-0.16.2-ba3a7d8c68-b6b4dcfeae.zip/node_modules/@types/scheduler/",\
           "packageDependencies": [\
             ["@types/scheduler", "npm:0.16.2"]\
-          ],\
-          "linkType": "HARD"\
-        }]\
-      ]],\
-      ["@types/seedrandom", [\
-        ["npm:3.0.1", {\
-          "packageLocation": "./.yarn/cache/@types-seedrandom-npm-3.0.1-bfe00cb708-d9755452f2.zip/node_modules/@types/seedrandom/",\
-          "packageDependencies": [\
-            ["@types/seedrandom", "npm:3.0.1"]\
           ],\
           "linkType": "HARD"\
         }]\
@@ -9346,17 +9307,6 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           "linkType": "HARD"\
         }]\
       ]],\
-      ["bufferutil", [\
-        ["npm:4.0.5", {\
-          "packageLocation": "./.yarn/unplugged/bufferutil-npm-4.0.5-88cc521694/node_modules/bufferutil/",\
-          "packageDependencies": [\
-            ["bufferutil", "npm:4.0.5"],\
-            ["node-gyp", "npm:9.0.0"],\
-            ["node-gyp-build", "npm:4.4.0"]\
-          ],\
-          "linkType": "HARD"\
-        }]\
-      ]],\
       ["bytes", [\
         ["npm:3.0.0", {\
           "packageLocation": "./.yarn/cache/bytes-npm-3.0.0-19be09472d-a2b386dd81.zip/node_modules/bytes/",\
@@ -10967,13 +10917,6 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
         }]\
       ]],\
       ["emittery", [\
-        ["npm:0.10.0", {\
-          "packageLocation": "./.yarn/cache/emittery-npm-0.10.0-35900f559d-2616a802df.zip/node_modules/emittery/",\
-          "packageDependencies": [\
-            ["emittery", "npm:0.10.0"]\
-          ],\
-          "linkType": "HARD"\
-        }],\
         ["npm:0.10.2", {\
           "packageLocation": "./.yarn/cache/emittery-npm-0.10.2-aac10498b5-ee3e21788b.zip/node_modules/emittery/",\
           "packageDependencies": [\
@@ -11048,6 +10991,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           "packageLocation": "./end-to-end/",\
           "packageDependencies": [\
             ["end-to-end", "workspace:end-to-end"],\
+            ["@aztec/barretenberg", "workspace:barretenberg.js"],\
             ["@aztec/blockchain", "workspace:blockchain"],\
             ["@aztec/eslint-config", "workspace:eslint-config"],\
             ["@aztec/sdk", "workspace:sdk"],\
@@ -12243,25 +12187,6 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           "packageLocation": "./.yarn/cache/functions-have-names-npm-1.2.3-e5cf1e2208-c3f1f5ba20.zip/node_modules/functions-have-names/",\
           "packageDependencies": [\
             ["functions-have-names", "npm:1.2.3"]\
-          ],\
-          "linkType": "HARD"\
-        }]\
-      ]],\
-      ["ganache", [\
-        ["npm:7.5.0", {\
-          "packageLocation": "./.yarn/unplugged/ganache-npm-7.5.0-39a409db90/node_modules/ganache/",\
-          "packageDependencies": [\
-            ["ganache", "npm:7.5.0"],\
-            ["@trufflesuite/bigint-buffer", "npm:1.1.10"],\
-            ["@types/bn.js", "npm:5.1.1"],\
-            ["@types/lru-cache", "npm:5.1.1"],\
-            ["@types/seedrandom", "npm:3.0.1"],\
-            ["bufferutil", "npm:4.0.5"],\
-            ["emittery", "npm:0.10.0"],\
-            ["keccak", "npm:3.0.2"],\
-            ["leveldown", "npm:6.1.0"],\
-            ["secp256k1", "npm:4.0.3"],\
-            ["utf-8-validate", "npm:5.0.7"]\
           ],\
           "linkType": "HARD"\
         }]\
@@ -14757,19 +14682,6 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           "linkType": "SOFT"\
         }]\
       ]],\
-      ["keccak", [\
-        ["npm:3.0.2", {\
-          "packageLocation": "./.yarn/unplugged/keccak-npm-3.0.2-6e9dec8765/node_modules/keccak/",\
-          "packageDependencies": [\
-            ["keccak", "npm:3.0.2"],\
-            ["node-addon-api", "npm:2.0.2"],\
-            ["node-gyp", "npm:9.0.0"],\
-            ["node-gyp-build", "npm:4.4.0"],\
-            ["readable-stream", "npm:3.6.0"]\
-          ],\
-          "linkType": "HARD"\
-        }]\
-      ]],\
       ["keygrip", [\
         ["npm:1.1.0", {\
           "packageLocation": "./.yarn/cache/keygrip-npm-1.1.0-8da030c3ff-078cd16a46.zip/node_modules/keygrip/",\
@@ -14970,17 +14882,6 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
         }]\
       ]],\
       ["leveldown", [\
-        ["npm:6.1.0", {\
-          "packageLocation": "./.yarn/unplugged/leveldown-npm-6.1.0-c2d7a4250d/node_modules/leveldown/",\
-          "packageDependencies": [\
-            ["leveldown", "npm:6.1.0"],\
-            ["abstract-leveldown", "npm:7.2.0"],\
-            ["napi-macros", "npm:2.0.0"],\
-            ["node-gyp", "npm:9.0.0"],\
-            ["node-gyp-build", "npm:4.4.0"]\
-          ],\
-          "linkType": "HARD"\
-        }],\
         ["npm:6.1.1", {\
           "packageLocation": "./.yarn/unplugged/leveldown-npm-6.1.1-1f5cdc0718/node_modules/leveldown/",\
           "packageDependencies": [\
@@ -15762,14 +15663,6 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
         }]\
       ]],\
       ["node-addon-api", [\
-        ["npm:2.0.2", {\
-          "packageLocation": "./.yarn/unplugged/node-addon-api-npm-2.0.2-8c2c1e9782/node_modules/node-addon-api/",\
-          "packageDependencies": [\
-            ["node-addon-api", "npm:2.0.2"],\
-            ["node-gyp", "npm:9.0.0"]\
-          ],\
-          "linkType": "HARD"\
-        }],\
         ["npm:4.3.0", {\
           "packageLocation": "./.yarn/unplugged/node-addon-api-npm-4.3.0-a07a1232df/node_modules/node-addon-api/",\
           "packageDependencies": [\
@@ -17774,19 +17667,6 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           "packageLocation": "./.yarn/cache/scrypt-js-npm-3.0.1-fd2d3fa606-b7c7d1a68d.zip/node_modules/scrypt-js/",\
           "packageDependencies": [\
             ["scrypt-js", "npm:3.0.1"]\
-          ],\
-          "linkType": "HARD"\
-        }]\
-      ]],\
-      ["secp256k1", [\
-        ["npm:4.0.3", {\
-          "packageLocation": "./.yarn/unplugged/secp256k1-npm-4.0.3-b4e9ce065b/node_modules/secp256k1/",\
-          "packageDependencies": [\
-            ["secp256k1", "npm:4.0.3"],\
-            ["elliptic", "npm:6.5.4"],\
-            ["node-addon-api", "npm:2.0.2"],\
-            ["node-gyp", "npm:9.0.0"],\
-            ["node-gyp-build", "npm:4.4.0"]\
           ],\
           "linkType": "HARD"\
         }]\
@@ -20258,17 +20138,6 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           "packagePeers": [\
             "@types/react",\
             "react"\
-          ],\
-          "linkType": "HARD"\
-        }]\
-      ]],\
-      ["utf-8-validate", [\
-        ["npm:5.0.7", {\
-          "packageLocation": "./.yarn/unplugged/utf-8-validate-npm-5.0.7-88d731f8ad/node_modules/utf-8-validate/",\
-          "packageDependencies": [\
-            ["utf-8-validate", "npm:5.0.7"],\
-            ["node-gyp", "npm:9.0.0"],\
-            ["node-gyp-build", "npm:4.4.0"]\
           ],\
           "linkType": "HARD"\
         }]\

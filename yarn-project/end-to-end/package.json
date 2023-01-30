@@ -15,6 +15,8 @@
     "preset": "ts-jest/presets/default-esm",
     "globals": {
       "ts-jest": {
+        "diagnostics": false,
+        "tsconfig": "tsconfig.json",
         "useESM": true
       }
     },
@@ -25,6 +27,7 @@
     "rootDir": "./src"
   },
   "dependencies": {
+    "@aztec/barretenberg": "workspace:^",
     "@aztec/blockchain": "workspace:^",
     "@aztec/eslint-config": "workspace:^",
     "@aztec/sdk": "workspace:^",

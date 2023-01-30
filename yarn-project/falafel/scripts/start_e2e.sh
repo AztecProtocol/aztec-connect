@@ -2,11 +2,9 @@
 set -eu
 
 if [ -z "${NO_BUILD-}" ]; then
-  cd  ../../barretenberg/cpp/build
-  make -j$(nproc) rollup_cli db_cli
-  cd  ../build-wasm
-  make -j$(nproc) barretenberg.wasm
-  cd ../../../yarn-project/falafel
+  cmake --build ../../aztec-connect-cpp/build      --parallel --target rollup_cli --target db_cli
+  cmake --build ../../aztec-connect-cpp/build-wasm --parallel --target aztec-connect.wasm
+
   yarn build
 fi
 

@@ -76,7 +76,7 @@ export class FileCrs {
 }
 
 export class Crs {
-  private SRS_PATH = '../../barretenberg/cpp/srs_db/ignition/transcript00.dat';
+  private SRS_PATH = '../../aztec-connect-cpp/barretenberg/cpp/srs_db/ignition/transcript00.dat';
   private crs: FileCrs | NetCrs;
 
   constructor(public readonly numPoints: number) {

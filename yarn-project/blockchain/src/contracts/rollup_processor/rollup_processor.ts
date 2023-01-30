@@ -364,11 +364,14 @@ export class RollupProcessor {
     return result;
   }
 
-  public async sendRollupTxs({ rollupProofTx, offchainDataTxs }: { rollupProofTx: Buffer; offchainDataTxs: Buffer[] }) {
+  public async sendRollupTxs(
+    { rollupProofTx, offchainDataTxs }: { rollupProofTx: Buffer; offchainDataTxs: Buffer[] },
+    options: SendTxOptions = {},
+  ) {
     for (const tx of offchainDataTxs) {
       await this.sendTx(tx);
     }
-    await this.sendTx(rollupProofTx);
+    return await this.sendTx(rollupProofTx, options);
   }
 
   public async sendTx(data: Buffer, options: SendTxOptions = {}) {
@@ -386,6 +389,14 @@ export class RollupProcessor {
     };
     const txResponse = await signer.sendTransaction(txRequest).catch(fixEthersStackTrace);
     return TxHash.fromString(txResponse.hash);
+  }
+
+  public async getTxReceipt(txHash: TxHash) {
+    const txReceipt = await this.provider.waitForTransaction(txHash.toString());
+    if (!txReceipt) {
+      throw new Error('Tx receipt not found');
+    }
+    return txReceipt;
   }
 
   public async depositPendingFunds(

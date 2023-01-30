@@ -6,14 +6,9 @@ export { default as CurveStablePool } from './abis/mocks/ICurveStablePool.json' 
 export { default as WETH9 } from './abis/mocks/WETH9.json' assert { type: 'json' };
 export { default as ISwapRouter } from './abis/mocks/ISwapRouter.json' assert { type: 'json' };
 export { default as ERC20 } from './abis/mocks/ERC20.json' assert { type: 'json' };
-export { default as UniswapBridge } from './abis/mocks/SimpleUniBridge.json' assert { type: 'json' };
-export { default as DummyDefiBridge } from './abis/mocks/DummyDefiBridge.json' assert { type: 'json' };
-export { default as MockDefiBridge } from './abis/mocks/MockDefiBridge.json' assert { type: 'json' };
 
-export { default as MockPriceFeed } from './abis/mocks/MockPriceFeed.json' assert { type: 'json' };
 export { default as MockBridgeDataProvider } from './abis/mocks/MockBridgeDataProvider.json' assert { type: 'json' };
 export { default as IBridgeDataProvider } from './abis/mocks/IBridgeDataProvider.json' assert { type: 'json' };
-export { default as ERC20Permit } from './abis/contracts/ERC20Permit.sol/ERC20Permit.json' assert { type: 'json' };
 export { default as IDefiBridge } from './abis/contracts/IDefiBridge.sol/IDefiBridge.json' assert { type: 'json' };
 
 export { default as UniswapV2PairJson } from '@uniswap/v2-core/build/UniswapV2Pair.json' assert { type: 'json' };
@@ -45,6 +40,4 @@ export { default as ILido } from './abis/bridges/ILido.sol/ILido.json' assert { 
 export { default as IWstETH } from './abis/bridges/IWstETH.sol/IWstETH.json' assert { type: 'json' };
 export { default as IVault } from './abis/bridges/IVault.sol/IVault.json' assert { type: 'json' };
 
-export { default as AsyncBridge } from './abis/contracts/AsyncBridge.sol/AsyncBridge.json' assert { type: 'json' };
-export { default as SyncBridge } from './abis/contracts/SyncBridge.sol/SyncBridge.json' assert { type: 'json' };
 export { default as ERC20Mintable } from './abis/contracts/ERC20Mintable.sol/ERC20Mintable.json' assert { type: 'json' };

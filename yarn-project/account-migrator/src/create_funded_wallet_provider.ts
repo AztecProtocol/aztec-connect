@@ -2,7 +2,6 @@ import { EthAsset, EthereumRpc, JsonRpcProvider, WalletProvider } from '@aztec/s
 import { createDebugLogger } from '@aztec/barretenberg/log';
 import { randomBytes } from 'crypto';
 
-
 /**
  * NOTE: this function was pulled in from end-to-end tests for convenience
  *
@@ -21,13 +20,13 @@ export async function createFundedWalletProvider(
   host: string,
   accounts: number,
   numAccountToFund = accounts,
-  initialBalance = 10n ** 18n
+  initialBalance = 10n ** 18n,
 ) {
   const debug = createDebugLogger('am:create_funded_wallet_provider');
   const ethereumProvider = new JsonRpcProvider(host);
   const walletProvider = new WalletProvider(ethereumProvider);
   const ethereumRpc = new EthereumRpc(ethereumProvider);
-  const ganacheAccount = (await ethereumRpc.getAccounts())[0];
+  const forkAccount = (await ethereumRpc.getAccounts())[0];
   const ethAsset = new EthAsset(walletProvider);
 
   for (let i = 0; i < accounts; ++i) {
@@ -37,7 +36,7 @@ export async function createFundedWalletProvider(
   for (let i = 0; i < numAccountToFund; ++i) {
     const to = walletProvider.getAccount(i);
     debug(`funding wallet: ${to.toString()}`);
-    await ethAsset.transfer(initialBalance, ganacheAccount, to, { gasLimit: 1000000 });
+    await ethAsset.transfer(initialBalance, forkAccount, to, { gasLimit: 1000000 });
   }
 
   return walletProvider;

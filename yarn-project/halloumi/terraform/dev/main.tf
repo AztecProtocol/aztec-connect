@@ -186,11 +186,21 @@ DEFINITIONS
 resource "aws_ecs_service" "halloumi" {
   name                               = "${var.DEPLOY_TAG}-halloumi"
   cluster                            = data.terraform_remote_state.setup_iac.outputs.ecs_cluster_id
-  launch_type                        = "FARGATE"
-  desired_count                      = 8
+  desired_count                      = 4
   deployment_maximum_percent         = 100
   deployment_minimum_healthy_percent = 0
   platform_version                   = "1.4.0"
+
+  capacity_provider_strategy {
+    base              = 1
+    capacity_provider = "FARGATE"
+    weight            = 0
+  }
+
+  capacity_provider_strategy {
+    capacity_provider = "FARGATE_SPOT"
+    weight            = 100
+  }
 
   network_configuration {
     subnets = [

@@ -7,7 +7,7 @@ The Aztec 2.0 system consists of the following sub projects.
 - `blockchain` - TypeScript for interacting with smart contracts and the blockchain.
 - `contracts` - Solidity smart contracts.
 - `documentation` - Documentation frontend website.
-- `end-to-end` - End to end tests. Uses docker to launch ganache, falafel, and run test suite against them.
+- `end-to-end` - End to end tests. Uses docker to launch a mainnet fork, falafel, and run test suite against them.
 - `explorer` - Block explorer frontend website.
 - `falafel` - Rollup server.
 - `faucet` - ETH & ERC20 faucet for Aztec mainnet fork.
