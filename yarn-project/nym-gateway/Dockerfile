@@ -23,7 +23,5 @@ RUN curl -L https://github.com/nymtech/nym/releases/download/nym-binaries-v1.1.7
 RUN chmod +x nym-client
 RUN chmod +x start-nym.sh
 
-RUN ./nym-client init --id=Aztec-${DEPLOY_TAG}
-
 EXPOSE 80
 ENTRYPOINT ["./start-nym.sh"]
