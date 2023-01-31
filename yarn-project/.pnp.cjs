@@ -73,6 +73,10 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
         "reference": "workspace:kebab"\
       },\
       {\
+        "name": "nym-gateway",\
+        "reference": "workspace:nym-gateway"\
+      },\
+      {\
         "name": "@aztec/sdk",\
         "reference": "workspace:sdk"\
       },\
@@ -103,6 +107,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
       ["falafel", ["workspace:falafel"]],\
       ["hummus", ["workspace:hummus"]],\
       ["kebab", ["workspace:kebab"]],\
+      ["nym-gateway", ["workspace:nym-gateway"]],\
       ["wallet", ["workspace:wallet"]],\
       ["wasabi", ["workspace:wasabi"]]\
     ],\
@@ -6625,6 +6630,14 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           "packageLocation": "./.yarn/cache/@types-ws-npm-8.5.3-ae52c483f1-0ce46f850d.zip/node_modules/@types/ws/",\
           "packageDependencies": [\
             ["@types/ws", "npm:8.5.3"],\
+            ["@types/node", "npm:18.0.0"]\
+          ],\
+          "linkType": "HARD"\
+        }],\
+        ["npm:8.5.4", {\
+          "packageLocation": "./.yarn/cache/@types-ws-npm-8.5.4-c0237574ef-fefbad20d2.zip/node_modules/@types/ws/",\
+          "packageDependencies": [\
+            ["@types/ws", "npm:8.5.4"],\
             ["@types/node", "npm:18.0.0"]\
           ],\
           "linkType": "HARD"\
@@ -15864,6 +15877,23 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           "linkType": "HARD"\
         }]\
       ]],\
+      ["nym-gateway", [\
+        ["workspace:nym-gateway", {\
+          "packageLocation": "./nym-gateway/",\
+          "packageDependencies": [\
+            ["nym-gateway", "workspace:nym-gateway"],\
+            ["@rushstack/eslint-patch", "npm:1.2.0"],\
+            ["@types/node", "npm:18.7.23"],\
+            ["@types/ws", "npm:8.5.4"],\
+            ["log-timestamp", "npm:0.3.0"],\
+            ["ts-node", "virtual:4cf42c2f2a8aa147d524c15c0290174d77a2062937f0c22441901ac61d50212062460a38e714456279cdb4fab155b3b1d12acfb24cd6bb68fcc1837e921b5557#npm:10.9.1"],\
+            ["tsc-watch", "virtual:3ed453741dd1c55180fd1fad4cd0fcdffabc505f93d97f79e1a5d11f7f6de4db4baff61fd7a3d8edb64f1580a1bcbb20cdfc6b35c7857a994806bb40c0edc122#npm:6.0.0"],\
+            ["typescript", "patch:typescript@npm%3A4.7.4#~builtin<compat/typescript>::version=4.7.4&hash=a1c5e5"],\
+            ["ws", "virtual:3ed453741dd1c55180fd1fad4cd0fcdffabc505f93d97f79e1a5d11f7f6de4db4baff61fd7a3d8edb64f1580a1bcbb20cdfc6b35c7857a994806bb40c0edc122#npm:8.12.0"]\
+          ],\
+          "linkType": "SOFT"\
+        }]\
+      ]],\
       ["oauth-sign", [\
         ["npm:0.9.0", {\
           "packageLocation": "./.yarn/cache/oauth-sign-npm-0.9.0-7aa9422221-8f5497a127.zip/node_modules/oauth-sign/",\
@@ -18262,6 +18292,13 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["string-argv", "npm:0.1.2"]\
           ],\
           "linkType": "HARD"\
+        }],\
+        ["npm:0.3.1", {\
+          "packageLocation": "./.yarn/cache/string-argv-npm-0.3.1-b4f6cd3d7b-efbd0289b5.zip/node_modules/string-argv/",\
+          "packageDependencies": [\
+            ["string-argv", "npm:0.3.1"]\
+          ],\
+          "linkType": "HARD"\
         }]\
       ]],\
       ["string-length", [\
@@ -19330,6 +19367,30 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["tsc-watch", "npm:5.0.3"]\
           ],\
           "linkType": "SOFT"\
+        }],\
+        ["npm:6.0.0", {\
+          "packageLocation": "./.yarn/cache/tsc-watch-npm-6.0.0-efdb4f396c-34e74a703e.zip/node_modules/tsc-watch/",\
+          "packageDependencies": [\
+            ["tsc-watch", "npm:6.0.0"]\
+          ],\
+          "linkType": "SOFT"\
+        }],\
+        ["virtual:3ed453741dd1c55180fd1fad4cd0fcdffabc505f93d97f79e1a5d11f7f6de4db4baff61fd7a3d8edb64f1580a1bcbb20cdfc6b35c7857a994806bb40c0edc122#npm:6.0.0", {\
+          "packageLocation": "./.yarn/__virtual__/tsc-watch-virtual-ea0d11ca3a/0/cache/tsc-watch-npm-6.0.0-efdb4f396c-34e74a703e.zip/node_modules/tsc-watch/",\
+          "packageDependencies": [\
+            ["tsc-watch", "virtual:3ed453741dd1c55180fd1fad4cd0fcdffabc505f93d97f79e1a5d11f7f6de4db4baff61fd7a3d8edb64f1580a1bcbb20cdfc6b35c7857a994806bb40c0edc122#npm:6.0.0"],\
+            ["@types/typescript", null],\
+            ["cross-spawn", "npm:7.0.3"],\
+            ["node-cleanup", "npm:2.1.2"],\
+            ["ps-tree", "npm:1.2.0"],\
+            ["string-argv", "npm:0.3.1"],\
+            ["typescript", "patch:typescript@npm%3A4.7.4#~builtin<compat/typescript>::version=4.7.4&hash=a1c5e5"]\
+          ],\
+          "packagePeers": [\
+            "@types/typescript",\
+            "typescript"\
+          ],\
+          "linkType": "HARD"\
         }],\
         ["virtual:e35cb2f9a33ef1b8aada102e2350ccc0551c137001f6014fc1f11d4a3ec40651db24890427c255d134f29987a3e5475186f25e17bc3995d86758303b9bd18a6a#npm:5.0.3", {\
           "packageLocation": "./.yarn/__virtual__/tsc-watch-virtual-88e6086058/0/cache/tsc-watch-npm-5.0.3-596701168c-abd63295dd.zip/node_modules/tsc-watch/",\
@@ -21478,6 +21539,13 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           ],\
           "linkType": "SOFT"\
         }],\
+        ["npm:8.12.0", {\
+          "packageLocation": "./.yarn/cache/ws-npm-8.12.0-4e21348613-818ff3f874.zip/node_modules/ws/",\
+          "packageDependencies": [\
+            ["ws", "npm:8.12.0"]\
+          ],\
+          "linkType": "SOFT"\
+        }],\
         ["npm:8.7.0", {\
           "packageLocation": "./.yarn/cache/ws-npm-8.7.0-880cfc8423-078fa2dbc0.zip/node_modules/ws/",\
           "packageDependencies": [\
@@ -21498,6 +21566,23 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["ws", "npm:8.8.1"]\
           ],\
           "linkType": "SOFT"\
+        }],\
+        ["virtual:3ed453741dd1c55180fd1fad4cd0fcdffabc505f93d97f79e1a5d11f7f6de4db4baff61fd7a3d8edb64f1580a1bcbb20cdfc6b35c7857a994806bb40c0edc122#npm:8.12.0", {\
+          "packageLocation": "./.yarn/__virtual__/ws-virtual-97e4af9b5d/0/cache/ws-npm-8.12.0-4e21348613-818ff3f874.zip/node_modules/ws/",\
+          "packageDependencies": [\
+            ["ws", "virtual:3ed453741dd1c55180fd1fad4cd0fcdffabc505f93d97f79e1a5d11f7f6de4db4baff61fd7a3d8edb64f1580a1bcbb20cdfc6b35c7857a994806bb40c0edc122#npm:8.12.0"],\
+            ["@types/bufferutil", null],\
+            ["@types/utf-8-validate", null],\
+            ["bufferutil", null],\
+            ["utf-8-validate", null]\
+          ],\
+          "packagePeers": [\
+            "@types/bufferutil",\
+            "@types/utf-8-validate",\
+            "bufferutil",\
+            "utf-8-validate"\
+          ],\
+          "linkType": "HARD"\
         }],\
         ["virtual:5053a4c5f52e5dd5694b34feff48eeebd2cc3ae5d7c5bcadbe0497d0673fc650b4054670b22c130f38dec9c304e2675024367f643d6800e2a5f7d45a53c2a4a5#npm:8.8.1", {\
           "packageLocation": "./.yarn/__virtual__/ws-virtual-61e449f995/0/cache/ws-npm-8.8.1-955e8c9f58-2152cf862c.zip/node_modules/ws/",\

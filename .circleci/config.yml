@@ -355,6 +355,17 @@ jobs:
           name: 'Build and test'
           command: build block-server
 
+  nym-gateway:
+    machine:
+      image: ubuntu-2004:202010-01
+    resource_class: small
+    steps:
+      - *checkout
+      - *setup_env
+      - run:
+          name: 'Build'
+          command: build nym-gateway
+
   sdk:
     machine:
       image: ubuntu-2004:202010-01
@@ -754,6 +765,9 @@ jobs:
           name: 'block-server'
           command: deploy block-server
       - run:
+          name: 'nym-gateway'
+          command: deploy nym-gateway
+      - run:
           name: 'sdk'
           command: |
             deploy_ecr sdk
@@ -865,7 +879,7 @@ jobs:
           name: 'Deploy contracts'
           working_directory: contracts
           command: |
-            deploy_ecr contracts 
+            deploy_ecr contracts
             ./scripts/ci_deploy_contracts.sh
       - run:
           name: 'Redeploy kebab'
@@ -956,6 +970,7 @@ workflows:
       - halloumi: *yarn_project
       - falafel: *yarn_project
       - block-server: *yarn_project
+      - nym-gateway
       - sdk: *yarn_project
       - wasabi: *yarn_project
       - hummus: *yarn_project
