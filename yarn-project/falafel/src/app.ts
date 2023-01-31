@@ -89,6 +89,11 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     await next();
   };
 
+  const recordParamUrlMetric = (url: string) => async (ctx: Koa.Context, next: () => Promise<void>) => {
+    metrics.httpEndpoint(url);
+    await next();
+  };
+
   const checkReady = async (ctx: Koa.Context, next: () => Promise<void>) => {
     if (!server.isReady()) {
       ctx.status = 503;
@@ -239,7 +244,7 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     ctx.status = 200;
   });
 
-  router.get('/tx/:txId', async (ctx: Koa.Context) => {
+  router.get('/tx/:txId', recordParamUrlMetric('/tx'), async (ctx: Koa.Context) => {
     const { txId } = ctx.params;
     const tx = await server.getTxById(txId);
     if (!tx) {
