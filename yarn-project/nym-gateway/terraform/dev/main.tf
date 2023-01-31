@@ -116,6 +116,10 @@ resource "aws_ecs_task_definition" "nym-gateway" {
       {
         "name": "NYM_PORT",
         "value": "1977"
+      },
+      {
+        "name": "DEPLOY_TAG",
+        "value": "${var.DEPLOY_TAG}"
       }
     ],
     "mountPoints": [
@@ -147,6 +151,10 @@ resource "aws_ecs_task_definition" "nym-gateway" {
       {
         "name": "DEPLOY_TAG",
         "value": "${var.DEPLOY_TAG}"
+      },
+      {
+        "name": "SERVICE",
+        "value": "${var.DEPLOY_TAG}-nym-gateway"
       }
     ],
     "logConfiguration": {
