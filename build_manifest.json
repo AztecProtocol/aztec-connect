@@ -103,6 +103,13 @@
     "rebuildPatterns": ["^yarn-project/block-server/"],
     "dependencies": ["barretenberg.js"]
   },
+  "nym-gateway": {
+    "buildDir": "yarn-project/nym-gateway",
+    "projectDir": "yarn-project/nym-gateway",
+    "dockerfile": "Dockerfile",
+    "rebuildPatterns": ["^yarn-project/nym-gateway/"],
+    "dependencies": []
+  },
   "sdk": {
     "buildDir": "yarn-project",
     "projectDir": "yarn-project/sdk",
