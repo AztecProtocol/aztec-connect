@@ -357,7 +357,7 @@ jobs:
 
   nym-gateway:
     machine:
-      image: ubuntu-2004:202010-01
+      image: aztecprotocol/alpine-build-image
     resource_class: small
     steps:
       - *checkout
