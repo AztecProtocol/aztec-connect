@@ -85,7 +85,7 @@ This circuit verifies up to 28 inner rollup proofs.
 The inner rollup/root rollup design was introduced in order to enable better parallelism.
 
 Knowledge of the existence of the _root verifier circuit_ is likely beyond the scope of this audit.
-It is used to simplify the computations required by the smart contract [PLONK verifier](../../../../blockchain/contracts/verifier/StandardVerifier.sol).
+It is used to simplify the computations required by the smart contract [PLONK verifier](https://github.com/AztecProtocol/aztec-connect/blob/master/blockchain/contracts/verifier/StandardVerifier.sol).
 All other circuits/proofs are created using the “Turbo PLONK” ZK-SNARK proving system.
 
 Regular PLONK proofs are slower to construct but faster to verify compared to Turbo PLONK proofs.
@@ -113,7 +113,7 @@ Each transaction type is defined via a _proofId_ variable attached to the transa
 
 Each user transaction in the rollup block will have 8 `uint256` variables associated with it, present in the transaction calldata when `processRollup(...)` is called.
 While represented as a `uint256` in the smart contract, these variables are big integers taken modulo the BN254 elliptic curve group order.
-This is verified in [StandardVerifier.sol](../../../../blockchain/contracts/verifier/StandardVerifier.sol).
+This is verified in [StandardVerifier.sol](https://github.com/AztecProtocol/aztec-connect/blob/master/blockchain/contracts/verifier/StandardVerifier.sol).
 Not all fields are used by all transaction types.
 
 | publicInput | name            | description                                                                         |
@@ -259,7 +259,8 @@ If the _DefiBridgeProxy_ call fails, we record this in the `defiInteractionResul
 This allows for a future _defiClaim_ transaction to convert any linked claim notes back into value notes.
 This effectively returns the value (less the fee) to the user.
 
-The expected interface for defi bridges is defined in [IDefiBridge](../../../../blockchain/contracts/interfaces/IDefiBridge.sol).
+The expected interface for defi bridges is defined in [IDefiBridge](https://github.com/AztecProtocol/aztec-connect/blob/master/blockchain/contracts/interfaces/IDefiBridge.sol).
 
-## Encoding and Decoding  of Proof Data
-For info about proof data encoding check out documentation of [Decoder](../../../../blockchain/contracts/Decoder.sol) contract.
+## Encoding and Decoding of Proof Data
+
+For info about proof data encoding check out documentation of [Decoder](https://github.com/AztecProtocol/aztec-connect/blob/master/blockchain/contracts/Decoder.sol) contract.
