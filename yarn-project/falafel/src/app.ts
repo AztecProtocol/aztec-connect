@@ -90,7 +90,7 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
   };
 
   const recordParamUrlMetric = (url: string) => async (ctx: Koa.Context, next: () => Promise<void>) => {
-    metrics.httpEndpoint(url);
+    metrics.httpEndpoint(`${prefix}${url}`);
     await next();
   };
 
