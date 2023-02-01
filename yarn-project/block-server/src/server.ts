@@ -74,8 +74,8 @@ export class Server {
     return this.ready;
   }
 
-  public async getLatestRollupId() {
-    return await this.serverRollupProvider.getLatestRollupId();
+  public getLatestRollupId() {
+    return this.blockBufferCache.length - 1;
   }
 
   /*
