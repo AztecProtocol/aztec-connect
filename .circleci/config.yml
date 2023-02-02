@@ -1,7 +1,6 @@
 # This config consists of currently 3 workflows.
 # - system: The main Aztec infrastructure, services, frontends etc.
 # - metrics: The metrics grafana and prometheus instances, and some prometheus data sources.
-# - website: The company website.
 #
 # The default workflow is system. To trigger the other workflows, trigger a workflow from CCI
 # setting a string variable called `workflow` to another name.
@@ -657,17 +656,6 @@ jobs:
           name: 'Noop'
           command: echo Noop
 
-  website:
-    machine:
-      image: ubuntu-2004:202010-01
-    resource_class: large
-    steps:
-      - *checkout
-      - *setup_env
-      - run:
-          name: 'Build and test'
-          command: build website
-
   mainnet-fork:
     machine:
       image: ubuntu-2004:202010-01
@@ -808,20 +796,6 @@ jobs:
   #         name: 'Test'
   #         working_directory: end-to-end/scripts
   #         command: ./run_smoketest
-
-  deploy-website:
-    machine:
-      image: ubuntu-2004:202010-01
-    resource_class: medium
-    steps:
-      - *checkout
-      - *setup_env
-      - run:
-          name: 'website'
-          working_directory: website
-          command: |
-            deploy_ecr website
-            deploy_s3 website is_global
 
   deploy-metrics:
     machine:
@@ -1059,14 +1033,6 @@ workflows:
       - deploy-metrics:
           requires:
             - metrics
-  website:
-    when:
-      equal: [website, << pipeline.parameters.workflow >>]
-    jobs:
-      - website
-      - deploy-website:
-          requires:
-            - website
   redeploy-mainnet-fork:
     when:
       equal: [redeploy-mainnet-fork, << pipeline.parameters.workflow >>]

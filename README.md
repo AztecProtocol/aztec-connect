@@ -20,7 +20,6 @@ The Aztec 2.0 system consists of the following sub projects.
 - `metrics` - Metrics collection tooling.
 - `sdk` - SDK for interacting with a rollup provider.
 - `wasabi` - Load testing tool.
-- `website` - Company website.
 
 ### Contributing
 
