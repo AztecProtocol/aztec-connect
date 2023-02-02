@@ -22,6 +22,14 @@ import {
 import { createAztecSdk, SdkFlavour, AliasHash, BarretenbergWasm, Blake2s, getRollupProviderStatus } from '@aztec/sdk';
 const { PRIVATE_KEY } = process.env;
 
+const deployTags = ['aztec-connect-dev', 'aztec-connect-testnet', 'aztec-connect-stage', 'aztec-connect-prod'];
+const rpcUrls = [
+  'https://aztec-connect-dev-eth-host.aztec.network:8545/e265e055c977fee83d415d3edeb26953',
+  'https://aztec-connect-testnet-eth-host.aztec.network:8545/20ceb3a1db59c9b71315d98530093f94',
+  'https://aztec-connect-stage-eth-host.aztec.network:8545/496405d10ea8bade3b4f91ee51399ab1',
+  'https://aztec-connect-prod-eth-host.aztec.network:8545',
+];
+
 export const abis: { [key: string]: any } = {
   Rollup: RollupProcessorJson,
   Element: ElementBridgeJson,
@@ -317,24 +325,57 @@ export async function fetchDataProviderData(url: string, deployTag: string) {
   };
 }
 
-export async function fetchAllDataProviderData() {
-  const deployTags = ['aztec-connect-dev', 'aztec-connect-testnet', 'aztec-connect-stage', 'aztec-connect-prod'];
-  const rpcUrls = [
-    'https://aztec-connect-dev-eth-host.aztec.network:8545/e265e055c977fee83d415d3edeb26953',
-    'https://aztec-connect-testnet-eth-host.aztec.network:8545/20ceb3a1db59c9b71315d98530093f94',
-    'https://aztec-connect-stage-eth-host.aztec.network:8545/496405d10ea8bade3b4f91ee51399ab1',
-    'https://aztec-connect-prod-eth-host.aztec.network:8545',
-  ];
+export async function fetchAllDataProviderData(silent = false) {
   const data: RegistrationsDataRaw = {};
   for (let i = 0; i < deployTags.length; i++) {
     data[deployTags[i]] = await fetchDataProviderData(rpcUrls[i], deployTags[i]);
   }
-  console.log(JSON.stringify(data, null, 2));
+  if (!silent) {
+    console.log(JSON.stringify(data, null, 2));
+  }
+  return data;
+}
+
+export async function getBeautifulBridgeConfig(deployTag: string) {
+  const rollupProviderUrl = `https://api.aztec.network/${deployTag}/falafel`;
+  const status = await getRollupProviderStatus(rollupProviderUrl);
+  const bridgeConfigs = status.runtimeConfig.bridgeConfigs;
+  const dataProviderData = await fetchDataProviderData(rpcUrls[deployTags.indexOf(deployTag)], deployTag);
+
+  const bridges = dataProviderData.bridges;
+  const reverseBridges = {};
+  Object.keys(bridges).forEach(key => {
+    reverseBridges[bridges[key]] = key;
+  });
+
+  const beautiful = bridgeConfigs.map(bridgeConfig => {
+    const bridgeName = reverseBridges[bridgeConfig.bridgeAddressId];
+    bridgeConfig.permittedAssets.sort();
+    const permittedAssets = bridgeConfig.permittedAssets.map(assetId => {
+      return assetId > dataProviderData.assetList.length
+        ? `NO_NAME (assetId: ${assetId})`
+        : `${dataProviderData.assetList[assetId]} (assetId: ${assetId})`;
+    });
+    return {
+      bridgeName,
+      ...bridgeConfig,
+      permittedAssets,
+    };
+  });
+  beautiful.sort((a, b) => a.bridgeAddressId - b.bridgeAddressId);
+  console.log(JSON.stringify(beautiful, null, 2));
 }
 
 const program = new Command();
 
 async function main() {
+  program
+    .command('getBeautifulBridgeConfig')
+    .argument('<deployTag>', 'deploy tag')
+    .action(async (deployTag: string) => {
+      await getBeautifulBridgeConfig(deployTag);
+    });
+
   program.command('fetchAllDataProviderData').action(async () => {
     await fetchAllDataProviderData();
   });
