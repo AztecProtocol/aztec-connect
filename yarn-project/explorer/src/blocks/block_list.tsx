@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { default as styled } from 'styled-components';
-import { default as useFetch } from 'use-http';
-import { Block } from '@aztec/barretenberg/block_source';
 
 import { Text } from '../components/index.js';
 import { spacings } from '../styles/index.js';
 import { BlockItem, BlockItemPlaceholder } from './block_item.js';
 import { Block as BlockListType } from './types.js';
-import { deserializeBlocks } from '../block_utils.js';
+import { RollupProviderContext } from '../context.js';
+import { DecodedBlock } from '@aztec/sdk';
 
 const BlockRowRoot = styled.div`
   margin-top: -${spacings.s};
@@ -28,11 +27,11 @@ interface BlockListProps {
   loading: boolean;
 }
 
-export const formatServerBlock = (block: Block): BlockListType => ({
+export const formatServerBlock = (block: DecodedBlock): BlockListType => ({
   id: block.rollupId,
-  mined: block.mined,
-  numTxs: block.offchainTxData.length,
-  hash: block.txHash.toString(),
+  mined: block.minedTime,
+  numTxs: block.numRollupTxs,
+  hash: block.ethTxHash.toString(),
 });
 
 export const BlockList: React.FunctionComponent<BlockListProps> = ({
@@ -43,17 +42,22 @@ export const BlockList: React.FunctionComponent<BlockListProps> = ({
 }) => {
   const [blocks, setBlocks] = useState<BlockListType[]>([]);
   const [initialised, setInitialised] = useState<boolean>(false);
-  const { get, response, loading, error } = useFetch();
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<any | null>(null);
+  const rollupProvider = React.useContext(RollupProviderContext);
 
   const fetchBlocks = async () => {
     if (!statusLoading) {
       const from = Math.max(0, totalBlocks - blocksPerPage * page);
       const take = Math.min(blocksPerPage, totalBlocks - blocksPerPage * (page - 1));
-      await get(`/get-blocks?from=${from}&take=${take}`);
-      if (response.ok) {
-        const result = Buffer.from(await response.arrayBuffer());
-        const blocks = deserializeBlocks(result);
-        setBlocks(blocks.reverse().map(formatServerBlock));
+      try {
+        setLoading(true);
+        const blocks = await rollupProvider.getBlocks(from, take);
+        setLoading(false);
+        setBlocks(blocks.reverse().map(x => formatServerBlock(new DecodedBlock(x))));
+      } catch (err) {
+        setLoading(false);
+        setError(err);
       }
     }
   };
@@ -75,6 +79,7 @@ export const BlockList: React.FunctionComponent<BlockListProps> = ({
       </BlockRowRoot>
     );
   }
+
   if (error) {
     return (
       <BlockRowRoot>
@@ -89,6 +94,7 @@ export const BlockList: React.FunctionComponent<BlockListProps> = ({
       </BlockRowRoot>
     );
   }
+
   return (
     <BlockRowRoot>
       {blocks.map(block => (

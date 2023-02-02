@@ -8377,7 +8377,6 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           "packageLocation": "./explorer/",\
           "packageDependencies": [\
             ["aztec-block-explorer", "workspace:explorer"],\
-            ["@aztec/barretenberg", "workspace:barretenberg.js"],\
             ["@aztec/eslint-config", "workspace:eslint-config"],\
             ["@aztec/sdk", "workspace:sdk"],\
             ["@rushstack/eslint-patch", "npm:1.2.0"],\
@@ -8390,7 +8389,6 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["@types/react-dom", "npm:18.0.6"],\
             ["@types/react-router-dom", "npm:5.3.3"],\
             ["@types/styled-components", "npm:5.1.26"],\
-            ["bn.js", "npm:5.2.1"],\
             ["buffer", "npm:6.0.3"],\
             ["class-validator", "npm:0.13.2"],\
             ["classnames", "npm:2.3.1"],\
@@ -8415,7 +8413,6 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["ts-loader", "virtual:0ccdc7d837e2266d21cabf202cc695e33e96daa4499d9ea2fa1887a44c8e8b91fee89b38879cbdf28572ef8e4727432e02f1996d5b78afcce3fe61de33044a27#npm:9.3.1"],\
             ["typescript", "patch:typescript@npm%3A4.7.4#~builtin<compat/typescript>::version=4.7.4&hash=a1c5e5"],\
             ["use-http", "virtual:0ccdc7d837e2266d21cabf202cc695e33e96daa4499d9ea2fa1887a44c8e8b91fee89b38879cbdf28572ef8e4727432e02f1996d5b78afcce3fe61de33044a27#npm:1.0.27"],\
-            ["util", "npm:0.12.5"],\
             ["webpack", "virtual:0ccdc7d837e2266d21cabf202cc695e33e96daa4499d9ea2fa1887a44c8e8b91fee89b38879cbdf28572ef8e4727432e02f1996d5b78afcce3fe61de33044a27#npm:5.74.0"],\
             ["webpack-cli", "virtual:0ccdc7d837e2266d21cabf202cc695e33e96daa4499d9ea2fa1887a44c8e8b91fee89b38879cbdf28572ef8e4727432e02f1996d5b78afcce3fe61de33044a27#npm:4.10.0"]\
           ],\
