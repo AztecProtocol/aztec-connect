@@ -1,12 +1,11 @@
 #!/bin/bash
 set -e
 
-cd ../../../barretenberg/cpp
 if [ -d "./src" ]; then
-  mkdir -p build && cd build && rm -rf ./data && cmake .. && make -j$(nproc) tx_factory rollup_cli && cd ..
+  (cd ../../../aztec-connect-cpp/ && mkdir -p build && cd build && rm -rf ./data && cmake .. && cmake --build . --parallel --target tx_factory --target rollup_cli)
 fi
-cd srs_db && ./download_ignition.sh 1
-cd ../../../yarn-project/contracts-verifier-test/verifier-fixtures
+
+(cd ../../../aztec-connect-cpp/barretenberg/cpp/srs_db && ./download_ignition.sh 1)
 
 # input format: num_txs | inner size | outer size | is mock
 ./create_rollup_proof.sh 4 3 2 true

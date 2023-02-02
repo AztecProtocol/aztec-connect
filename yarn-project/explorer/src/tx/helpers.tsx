@@ -61,17 +61,3 @@ export function getAssetIcon(asset?: BlockchainAsset): string | undefined {
       return wstEthIcon;
   }
 }
-
-export function getBridgeProtocolName(bridgeAddressId: number) {
-  switch (bridgeAddressId) {
-    case 1:
-      return 'Element Fixed Yield';
-    case 2:
-    case 3:
-      return 'Lido Staking';
-    case 4:
-      return 'Ace of ZK';
-    case 5:
-      return 'Lido Staking × Curve';
-  }
-}

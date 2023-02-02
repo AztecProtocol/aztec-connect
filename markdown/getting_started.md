@@ -41,42 +41,57 @@ Webpack projects should still `yarn link` to the Commonjs builds, but use `alias
 configurations to then replace imports of libraries with their ES6 versions, and be sure to import ES6 version
 in `package.json` for production builds.
 
-### Barretenberg
+### Aztec Connect Cpp
 
 This is our C++ codebase. The script will create two build directories `build` and `build-wasm`.
 The relevant binaries are:
 
-- `./build/src/aztec/rollup/rollup_cli/rollup_cli`
-- `./build/src/aztec/rollup/db_cli/db_cli`
-- `./build/src/aztec/rollup/keygen/keygen`
-- `./build-wasm/src/aztec/barretenberg.wasm`
+- `./build/bin/rollup_cli`
+- `./build/bin/db_cli`
+- `./build/bin/tx_factory`
+- `./build/bin/keygen`
+- `./build-wasm/bin/aztec-connect.wasm`
 
 `rollup_cli` is the rollup proof generator. `db_cli` is the merkle tree database. `keygen` is used to create the
 solidity verification key contracts.
 
-It is currently essential that the same compilier is used to build `rollup_cli` and `barretenberg.wasm`, as `rollup_cli`
+It is currently essential that the same compilier is used to build `rollup_cli` and `aztec-connect.wasm`, as `rollup_cli`
 independently computes the verification key for the inner proofs, and gcc and clang will actually produce different
 circuits due to them differing in expression evaluation orders. As we can currently only build the WASM with clang,
 you must use clang to build `rollup_cli` as well. The bootstrap script will use clang as default.
 
 During development you may find yourself needing to rebuild these binaries as they change.
 
-In `./build`
+```
+cmake --build build      --parallel --target rollup_cli --target db_cli --target tx_factory --target keygen
+cmake --build build-wasm --parallel --target aztec-connect.wasm
+```
+
+### Barretenberg
+
+This is our C++ cryptography library. The script will create two build directories `build` and `build-wasm`.
+The relevant libraries are:
+
+- `./build/lib/libbarretenberg.a`
+- `./build/lib/libenv.a`
+- `./build/lib/lib*.a`
+- `./build-wasm/lib/libbarretenberg.a`
+- `./build-wasm/lib/libenv.a`
+- `./build-wasm/lib/lib*.a`
+
+`libbarretenberg.a` is the full library archive of the barretenberg code. Other `lib*.a` are smaller partial libararies.
+
+During development you may find yourself needing to rebuild these binaries as they change. Generally you can just rebuild the Aztec Connect Cpp binaries, but you can also build the barretenberg libraries directly.
 
 ```
-make -j$(nproc) rollup_cli db_cli keygen
-```
-
-In `./build-wasm`
-
-```
-make -j$(nproc) barretenberg.wasm
+cmake --build build      --parallel --target barretenberg --target env
+cmake --build build-wasm --parallel --target barretenberg --target env
 ```
 
 ### Barrentenberg.js
 
-TypeScript wrapper around `barretenberg.wasm`. There is a symlink to the built WASM file at
-`./src/wasm/barretenberg.wasm`. The build directory `dest` will end up with copies of the
+TypeScript wrapper around `aztec-connect.wasm`. There is a symlink to the built WASM file at
+`./src/wasm/aztec-connect.wasm`. The build directory `dest` will end up with copies of the
 actual artifact. Running `yarn symlink-wasm` replaces it with a symlink. The bootstrap script does this as default.
 
 During development you'll want to run `yarn build:dev` to watch and rebuild both builds as files change.
@@ -91,7 +106,7 @@ During development you'll want to run `yarn build:dev` to watch and rebuild both
 
 If you change the contracts, you'll need to run `yarn compile` to recompile.
 
-If you change the circuits in barretenberg, you'll need to run `generate_vks.sh` to regenerate the verification key contracts.
+If you change the circuits in `barretenberg` or `aztec-connect-cpp`, you'll need to run `generate_vks.sh` to regenerate the verification key contracts.
 
 ### Falafel
 
@@ -99,7 +114,7 @@ The rollup server.
 
 During development you'll want to run `yarn start:dev` to watch and rebuild as files change.
 
-If running against a real blockchain such as ganache, you'll want to deploy to ganache first:
+If running against a local or fork blockchain such as anvil, you'll want to deploy to there first:
 
 ```
 export ETHEREUM_HOST=http://localhost:8545
@@ -115,17 +130,7 @@ During development you'll want to run `yarn build:dev` to watch and rebuild both
 
 ### End-to-end
 
-Ensure you've installed ganache globally:
-
-```
-yarn global add ganache-cli
-```
-
-Run a local ganache instance.
-
-```
-ganache-cli -d
-```
+Ensure you've installed anvil globally. Run `bootstrap.sh` to install foundry (anvil included), then run `anvil` in your terminal.
 
 Run `falafel` as above. Run `yarn test ./src/e2e.test.ts` to run the tests.
 

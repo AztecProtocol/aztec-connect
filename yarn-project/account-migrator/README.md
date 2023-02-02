@@ -75,7 +75,7 @@ The data directory is required for both modes of operation as temporary files ar
 
 ### Run local test
 
-Run the script below to run a full local test of the account hardener. This script handles launching ganache, halloumi, falafel, and even an e2e test before running the account hardener.
+Run the script below to run a full local test of the account hardener. This script handles launching anvil, halloumi, falafel, and even an e2e test before running the account hardener.
 
 ```
 ./scripts/harden-accounts-local.sh

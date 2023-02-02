@@ -41,12 +41,12 @@ yarn install --immutable
 cd ..
 
 # We only bootstrap projects that produce artefacts needed for running end-to-end tests and frontends.
-# barretenberg outputs db_cli, rollup_cli and barretenberg.wasm.
+# aztec-connect-cpp outputs db_cli, rollup_cli and aztec-connect.wasm.
 # contracts outputs smart contract abis.
 # barretenberg.js outputs a webpacked web worker.
 # sdk produces a webpacked version needed by frontends.
 PROJECTS=(
-  "barretenberg/cpp:./bootstrap.sh db_cli rollup_cli"
+  "aztec-connect-cpp:./bootstrap.sh db_cli rollup_cli"
   "contracts:./bootstrap.sh"
   "yarn-project/barretenberg.js:./bootstrap.sh"
   "yarn-project/sdk:yarn build"

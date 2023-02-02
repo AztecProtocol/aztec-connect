@@ -17,6 +17,13 @@ case $VERSION_TAG in
     export FAUCET_CONTROLLER=$TF_VAR_DEV_FORK_FAUCET_OPERATOR_ADDRESS
     export ROLLUP_PROVIDER_ADDRESS=$TF_VAR_DEV_FORK_ROLLUP_PROVIDER_ADDRESS
     ;;
+  stage)
+    export ETHEREUM_HOST=https://aztec-connect-$VERSION_TAG-mainnet-fork.aztec.network:8545/$STAGE_FORK_API_KEY
+    export PRIVATE_KEY=$TF_VAR_STAGE_FORK_CONTRACTS_DEPLOYER_PRIVATE_KEY
+    export DEPLOYER_ADDRESS=$TF_VAR_STAGE_FORK_CONTRACTS_DEPLOYER_ADDRESS
+    export FAUCET_CONTROLLER=$TF_VAR_STAGE_FORK_FAUCET_OPERATOR_ADDRESS
+    export ROLLUP_PROVIDER_ADDRESS=$TF_VAR_STAGE_FORK_ROLLUP_PROVIDER_ADDRESS
+    ;;
   *)
     echo "No configuration for VERSION_TAG=$VERSION_TAG, skipping contract deployment."
     exit 0
@@ -27,7 +34,7 @@ LAST_COMMIT=$(last_successful_commit contracts $DEPLOY_TAG-deployed)
 
 if [ -z "$LAST_COMMIT" ]; then
   echo "No successful last deploy found. Change .redeploy to manually trigger a deployment."
-elif changed $LAST_COMMIT "contracts/deploy/$VERSION_TAG" || [ "$FORCE_DEPLOY" == "true"]; then
+elif changed $LAST_COMMIT "contracts/deploy/$VERSION_TAG" || [ "$FORCE_DEPLOY" == "true" ]; then
   echo "Redeploying contracts..."
 
   mkdir -p serve

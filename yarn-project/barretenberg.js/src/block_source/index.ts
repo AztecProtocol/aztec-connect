@@ -76,8 +76,7 @@ export class Block {
 
 export interface BlockSource extends EventEmitter {
   /**
-   * Returns blocks from rollup id `from`.
-   * If take is provided, will limit the number of returned blocks
+   * Returns up to `take` blocks from rollup id `from`.
    * This does not guarantee all blocks are returned. It may return a subset, and the
    * client should use `getLatestRollupId()` to determine if it needs to make further requests.
    */

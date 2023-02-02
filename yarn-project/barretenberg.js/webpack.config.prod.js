@@ -33,8 +33,8 @@ export default {
       patterns: [
         {
           // Point directly to the built file, not the symlink, else copy-on-change doesn't work...
-          from: `../../barretenberg/cpp/build-wasm/bin/barretenberg.wasm`,
-          to: 'wasm/barretenberg.wasm',
+          from: `../../aztec-connect-cpp/build-wasm/bin/aztec-connect.wasm`,
+          to: 'wasm/aztec-connect.wasm',
         },
       ],
     }),

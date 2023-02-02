@@ -1,12 +1,13 @@
 #!/bin/bash
 set -e
 
-OUTPUT_DIR=../../../blockchain-vks/keys
+OUTPUT_DIR=../../blockchain-vks/keys
 
-cd ../barretenberg/cpp/srs_db
-./download_ignition.sh 1
+cd ../aztec-connect-cpp/
 
-cd ../build
+(cd barretenberg/cpp/srs_db && ./download_ignition.sh 1)
+
+cd build
 
 mkdir -p $OUTPUT_DIR
 

@@ -168,6 +168,26 @@ export function deriveDeploymentKeys(mnemonic: string) {
       ],
     },
     { name: 'DOCKERHUB_PASSWORD', type: 'base64', length: 20 },
+    {
+      name: 'STAGE',
+      type: 'mnemonic',
+      length: 12,
+      children: [
+        { name: 'KEBAB_API_KEY', type: 'hex', length: 32 },
+        { name: 'FORK_API_KEY', type: 'hex', length: 32 },
+        {
+          name: 'FORK',
+          type: 'mnemonic',
+          length: 12,
+          children: [
+            { name: 'CONTRACTS_DEPLOYER', type: 'eth_keypair' },
+            { name: 'FAUCET_OPERATOR', type: 'eth_keypair' },
+            { name: 'ROLLUP_PROVIDER', type: 'eth_keypair' },
+          ],
+        },
+        { name: 'SERVER_AUTH_TOKEN', type: 'base64', length: 16 },
+      ],
+    },
   ];
 
   const envVarToShellExport = ({ key, value }: EnvVar) => `export ${key}="${value}"`;

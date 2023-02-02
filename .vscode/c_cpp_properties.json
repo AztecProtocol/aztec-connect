@@ -2,7 +2,7 @@
   "configurations": [
     {
       "name": "Linux",
-      "includePath": ["${workspaceFolder}/**", "${workspaceFolder}/barretenberg/cpp/src/aztec"],
+      "includePath": ["${workspaceFolder}/**", "${workspaceFolder}/aztec-connect-cpp/src", "${workspaceFolder}/aztec-connect-cpp/barretenberg/cpp/src/aztec"],
       "defines": [],
       "compilerPath": "/usr/bin/clang",
       "cStandard": "c11",

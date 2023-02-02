@@ -73,6 +73,8 @@ export class TxFeeAllocator {
     // determine the fee paying asset type for this block of txs
     for (let i = 0; i < txs.length; i++) {
       const tx = txs[i];
+      const txType = txTypes[i];
+      this.log(`Tx (${i + 1}/${txs.length}): ${tx.proof.txId.toString('hex')}, type: ${TxType[txType]}`);
       const txFeeAssetId = tx.proof.feeAssetId;
       const isFeePayingAsset = this.txFeeResolver.isFeePayingAsset(txFeeAssetId);
       const txFee = toBigIntBE(tx.proof.txFee);

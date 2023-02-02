@@ -164,7 +164,6 @@ function getRuntimeConfigEnvVars(): Partial<RuntimeConfig> {
 
 export class Configurator {
   private confVars!: ConfVars;
-  private rollupContractChanged = false;
 
   /**
    * Builds a launch time configuration from environment variables.
@@ -196,13 +195,6 @@ export class Configurator {
     if (pathExistsSync(this.confPath)) {
       // Erase all data if rollup contract changes.
       const saved: ConfVars = this.readConfigFile(this.confPath);
-      const { rollupContractAddress } = startupConfigEnvVars;
-      if (rollupContractAddress && !rollupContractAddress.equals(saved.rollupContractAddress)) {
-        console.log(
-          `Rollup contract changed: ${saved.rollupContractAddress.toString()} -> ${rollupContractAddress.toString()}`,
-        );
-        this.rollupContractChanged = true;
-      }
 
       // Priorities:
       // StartupConfig: Environment, saved, defaults.
@@ -243,10 +235,6 @@ export class Configurator {
 
   public getDataDir() {
     return DATA_DIR;
-  }
-
-  public getRollupContractChanged() {
-    return this.rollupContractChanged;
   }
 
   public getDbType(): SupportedDb {

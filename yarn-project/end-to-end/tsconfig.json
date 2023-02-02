@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
-    "target": "esnext",
-    "module": "node16",
+    "target": "es2020",
+    "module": "NodeNext",
     "lib": ["dom", "esnext", "es2017.object"],
     "outDir": "dest",
     "strict": true,
@@ -12,8 +12,16 @@
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "inlineSourceMap": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "useUnknownInCatchVariables": false,
+    "composite": true,
+    "tsBuildInfoFile": ".tsbuildinfo",
+    "skipLibCheck": true
   },
-  "references": [{ "path": "../blockchain/tsconfig.dest.json" }, { "path": "../sdk/tsconfig.dest.json" }],
+  "references": [
+    { "path": "../blockchain/tsconfig.dest.json" },
+    { "path": "../sdk/tsconfig.dest.json" },
+    { "path": "../barretenberg.js/tsconfig.dest.json" }
+  ],
   "include": ["src"]
 }
