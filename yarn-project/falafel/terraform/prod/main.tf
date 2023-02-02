@@ -193,11 +193,11 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "PRIVATE_KEY",
-        "value": "${var.PRIVATE_KEY_MAINNET_AC}"
+        "value": "${var.PROD_ROLLUP_PROVIDER_PRIVATE_KEY}"
       },
       {
         "name": "SERVER_AUTH_TOKEN",
-        "value": "${var.SERVER_AUTH_TOKEN}"
+        "value": "${var.PROD_SERVER_AUTH_TOKEN}"
       },
       {
         "name": "API_PREFIX",
