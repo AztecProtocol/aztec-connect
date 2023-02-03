@@ -845,9 +845,10 @@ jobs:
       - run:
           name: 'deploy-mainnet-fork'
           working_directory: mainnet-fork # redeploy the fork and taint the state file system
-          command: |
-            deploy_terraform mainnet-fork ./terraform/$VERSION_TAG aws_efs_file_system.mainnet_fork_data_store
-            ./scripts/wait_for_fork
+          command: deploy_terraform mainnet-fork ./terraform/$VERSION_TAG aws_efs_file_system.mainnet_fork_data_store
+      - run:
+          name: 'Wait for fork' # Wait for a successful health-check
+          command: wait_for_fork
       - run:
           name: 'Deploy contracts'
           working_directory: contracts

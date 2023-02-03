@@ -83,11 +83,8 @@ export class ServerBlockSource extends EventEmitter implements BlockSource {
     if (take !== undefined) {
       url.searchParams.append('take', take.toString());
     }
-    const options: RequestInit = {
-      cache: 'force-cache',
-      headers: this.version ? { version: this.version } : {},
-    };
-    const response = await this.awaitSucceed(() => fetch(url.toString(), options));
+    const init = this.version ? ({ headers: { version: this.version } } as RequestInit) : {};
+    const response = await this.awaitSucceed(() => fetch(url.toString(), init));
     const result = Buffer.from(await response.arrayBuffer());
     const des = new Deserializer(result);
     return des.deserializeArray(Block.deserialize);
