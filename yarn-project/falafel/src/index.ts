@@ -44,11 +44,6 @@ async function main() {
   httpServer.listen(port);
   console.log(`Server listening on port ${port}.`);
 
-  // TODO: remove once production DB is migrated
-  console.log('Migrating exiting rollups...');
-  await rollupDb.populatePositions();
-  console.log('Migration completed!');
-
   await server.start();
 }
 
