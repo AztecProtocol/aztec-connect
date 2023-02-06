@@ -253,6 +253,10 @@ export class SyncRollupDb implements RollupDb {
     return this.synchronise(() => this.rollupDb.deleteUnsettledClaimTxs());
   }
 
+  public resetPositionOnTxsWithoutRollupProof() {
+    return this.synchronise(() => this.rollupDb.resetPositionOnTxsWithoutRollupProof());
+  }
+
   public getAssetMetrics(assetId: number) {
     return this.synchronise(() => this.rollupDb.getAssetMetrics(assetId));
   }
@@ -280,5 +284,10 @@ export class SyncRollupDb implements RollupDb {
 
   public eraseDb() {
     return this.synchronise(() => this.rollupDb.eraseDb());
+  }
+
+  // TODO: remove once production DB is migrated
+  public async populatePositions() {
+    await this.rollupDb.populatePositions();
   }
 }

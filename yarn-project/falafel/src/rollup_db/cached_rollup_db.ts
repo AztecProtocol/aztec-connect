@@ -313,6 +313,10 @@ export class CachedRollupDb implements RollupDb {
     this.refreshPromise = undefined;
   }
 
+  public async resetPositionOnTxsWithoutRollupProof() {
+    await this.underlying.resetPositionOnTxsWithoutRollupProof();
+  }
+
   public async getTx(txId: Buffer) {
     return await this.underlying.getTx(txId);
   }
@@ -412,5 +416,10 @@ export class CachedRollupDb implements RollupDb {
   public async eraseDb() {
     await this.underlying.eraseDb();
     this.refreshPromise = undefined;
+  }
+
+  // TODO: remove once production DB is migrated
+  public async populatePositions() {
+    await this.underlying.populatePositions();
   }
 }
