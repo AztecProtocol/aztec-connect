@@ -292,9 +292,4 @@ export class LogRollupDb implements RollupDb {
     this.debug(`${name}: ${timer.ms()}ms`);
     return result;
   }
-
-  // TODO: remove once production DB is migrated
-  public async populatePositions() {
-    await this.rollupDb.populatePositions();
-  }
 }
