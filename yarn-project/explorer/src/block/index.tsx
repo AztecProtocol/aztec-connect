@@ -1,19 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { default as styled } from 'styled-components';
-import { default as useFetch } from 'use-http';
-import { Block } from '@aztec/barretenberg/block_source';
-import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
+import { DecodedBlock, ProofId } from '@aztec/sdk';
 
 import { BlockStatusIndicator, getBlockStatus } from '../block_status/index.js';
 import { Button, Text } from '../components/index.js';
-import { NetworkContext } from '../context.js';
+import { NetworkContext, RollupProviderContext } from '../context.js';
 import { breakpoints, spacings } from '../styles/index.js';
 import { Sections, Section, SectionTitle } from '../template/index.js';
 import { TxList } from '../tx_list/index.js';
 import { BlockDetails, BlockDetailsPlaceholder, getEtherscanLink } from './block_details.js';
 import { Block as BlockInterface } from './types.js';
-import { deserializeBlocks } from '../block_utils.js';
-import { ProofId } from '@aztec/sdk';
 
 const BlockTitle = styled.div`
   display: flex;
@@ -62,17 +58,16 @@ interface BlockPageProps {
   id: number;
 }
 
-export const formatServerBlock = (block: Block): BlockInterface => {
-  const rollupProofData = RollupProofData.decode(block.encodedRollupProofData);
+export const formatServerBlock = (block: DecodedBlock): BlockInterface => {
   return {
     id: block.rollupId,
-    mined: block.mined,
-    dataRoot: rollupProofData.newDataRoot.toString('hex'),
-    nullifierRoot: rollupProofData.newNullRoot.toString('hex'),
-    hash: rollupProofData.rollupHash.toString('hex'),
-    ethTxHash: block.txHash.toString(),
-    proofData: block.encodedRollupProofData.toString('hex'),
-    txs: rollupProofData.innerProofData
+    mined: block.minedTime,
+    dataRoot: block.newDataRoot.toString('hex'),
+    nullifierRoot: block.newNullRoot.toString('hex'),
+    hash: block.rollupHash.toString('hex'),
+    ethTxHash: block.ethTxHash.toString(),
+    proofData: block.rawProofData.toString('hex'),
+    txs: block.innerProofData
       .filter(({ proofId }) => proofId !== ProofId.PADDING)
       .map(innerProof => ({
         proofId: innerProof.proofId,
@@ -83,23 +78,28 @@ export const formatServerBlock = (block: Block): BlockInterface => {
 
 export const BlockPage: React.FunctionComponent<BlockPageProps> = ({ id }) => {
   const [blockData, setBlockData] = useState<BlockInterface | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<any | null>(null);
 
-  const { get, loading, error, response } = useFetch();
+  const rollupProvider = React.useContext(RollupProviderContext);
 
   const fetchBlock = async () => {
-    await get(`/get-blocks?from=${id}&take=1`);
-    if (response.ok) {
-      const result = Buffer.from(await response.arrayBuffer());
-      const blocks = deserializeBlocks(result);
-      setBlockData(formatServerBlock(blocks[0]));
+    setLoading(true);
+    try {
+      const blocks = await rollupProvider.getBlocks(id, 1);
+      setLoading(false);
+      setBlockData(formatServerBlock(new DecodedBlock(blocks[0])));
+    } catch (err) {
+      setLoading(false);
+      setError(err);
     }
   };
 
   useEffect(() => {
-    if ((!blockData && !loading && !error) || !blockData?.mined) {
-      fetchBlock().catch(err => console.log(`Error fetching block ${id}: `, err));
+    if (!loading && !blockData) {
+      fetchBlock().catch(() => console.log('Error fetching block'));
     }
-  }, [loading, blockData, error]);
+  }, [loading, blockData]);
 
   const blockTitle = (
     <StyledSectionTitle

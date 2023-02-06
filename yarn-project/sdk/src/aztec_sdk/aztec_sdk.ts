@@ -36,7 +36,7 @@ import { SchnorrSigner, Signer } from '../signer/index.js';
 import { RecoveryData, RecoveryPayload } from '../user/index.js';
 import { UserAccountTx, UserDefiTx, UserPaymentTx } from '../user_tx/index.js';
 import { AztecSdkUser } from './aztec_sdk_user.js';
-import { FeeCalculator, GetFeesOptions } from './fee_calcalator.js';
+import { FeeCalculator, GetFeesOptions } from './fee_calculator.js';
 import { groupUserTxs } from './group_user_txs.js';
 import { TxValueCalculator, GetMaxTxValueOptions } from './tx_value_calculator.js';
 

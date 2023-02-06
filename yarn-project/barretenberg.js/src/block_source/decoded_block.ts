@@ -84,6 +84,12 @@ export class DecodedBlock {
   get offchainData() {
     return this.block.offchainTxData;
   }
+  get rollupHash() {
+    return this.getDecodedProof().rollupHash;
+  }
+  get rawProofData() {
+    return this.block.encodedRollupProofData;
+  }
 
   private getDecodedProof() {
     if (!this.decoded) {

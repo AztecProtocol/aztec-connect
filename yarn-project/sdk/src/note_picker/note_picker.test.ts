@@ -6,17 +6,17 @@ const computeNullifier = (value: bigint) => toBufferBE(value, 32);
 
 const computeNullifiers = (values: bigint[]) => values.map(computeNullifier);
 
-const randomNote = (value: bigint, { allowChain = false, pending = false, ownerAccountRequired = false } = {}) =>
+const randomNote = (value: bigint, { allowChain = false, pending = false, spendingKeyRequired = false } = {}) =>
   ({
     value,
     nullifier: computeNullifier(value),
     allowChain,
     pending,
-    ownerAccountRequired,
+    ownerAccountRequired: spendingKeyRequired,
   } as Note);
 
 const randomRegisteredNote = (value: bigint, { allowChain = false, pending = false } = {}) =>
-  randomNote(value, { allowChain, pending, ownerAccountRequired: true });
+  randomNote(value, { allowChain, pending, spendingKeyRequired: true });
 
 const randomNotes = (values: bigint[]) => values.map(value => randomNote(value));
 
@@ -33,7 +33,7 @@ const expectNoteValues = (notes: Note[], expected: bigint[]) => {
 describe('NotePicker', () => {
   const allowChain = true;
   const pending = true;
-  const ownerAccountRequired = true;
+  const spendingKeyRequired = true;
   const notes = randomNotes([10n, 1n, 7n, 9n, 3n, 2n]);
   const excludePendingNotes = true;
   const mixedNotes = [
@@ -124,9 +124,9 @@ describe('NotePicker', () => {
     it('pick registered notes', () => {
       const notePicker = new NotePicker(mixedNotes);
       const excludedNullifiers = computeNullifiers([17n]);
-      expectNoteValues(notePicker.pick(7n, { ownerAccountRequired }), [5n, 17n]);
-      expectNoteValues(notePicker.pick(7n, { ownerAccountRequired, excludedNullifiers }), [5n, 19n]);
-      expectNoteValues(notePicker.pick(7n, { ownerAccountRequired, excludePendingNotes }), [17n, 19n]);
+      expectNoteValues(notePicker.pick(7n, { spendingKeyRequired }), [5n, 17n]);
+      expectNoteValues(notePicker.pick(7n, { spendingKeyRequired, excludedNullifiers }), [5n, 19n]);
+      expectNoteValues(notePicker.pick(7n, { spendingKeyRequired, excludePendingNotes }), [17n, 19n]);
     });
 
     it('should pick among a large number of notes', () => {
@@ -139,7 +139,6 @@ describe('NotePicker', () => {
       const value = 400_000n;
 
       const pickedNotes = notePicker.pick(value);
-      console.log(pickedNotes.length);
       expect(pickedNotes.reduce((acc, curr) => acc + curr.value, 0n)).toBeGreaterThanOrEqual(value);
     });
   });
@@ -186,7 +185,7 @@ describe('NotePicker', () => {
 
     it('pick registered notes if specified', () => {
       const notePicker = new NotePicker(mixedNotes);
-      expect(notePicker.pickOne(7n, { ownerAccountRequired })!.value).toBe(17n);
+      expect(notePicker.pickOne(7n, { spendingKeyRequired })!.value).toBe(17n);
     });
   });
 
@@ -237,7 +236,7 @@ describe('NotePicker', () => {
 
     it('calculate the sum of spendable registered notes', () => {
       const notePicker = new NotePicker(mixedNotes);
-      expectValues(notePicker.getSpendableNoteValues({ ownerAccountRequired }), [19n, 17n, 5n]);
+      expectValues(notePicker.getSpendableNoteValues({ spendingKeyRequired }), [19n, 17n, 5n]);
     });
   });
 
@@ -258,9 +257,9 @@ describe('NotePicker', () => {
 
     it('get the sum of the n largest spendable registered notes', () => {
       const notePicker = new NotePicker(mixedNotes);
-      expectValues(notePicker.getMaxSpendableNoteValues({ ownerAccountRequired }), [19n, 17n, 5n]);
-      expectValues(notePicker.getMaxSpendableNoteValues({ ownerAccountRequired, numNotes: 2 }), [19n, 17n]);
-      expectValues(notePicker.getMaxSpendableNoteValues({ ownerAccountRequired, numNotes: 1 }), [19n]);
+      expectValues(notePicker.getMaxSpendableNoteValues({ spendingKeyRequired }), [19n, 17n, 5n]);
+      expectValues(notePicker.getMaxSpendableNoteValues({ spendingKeyRequired, numNotes: 2 }), [19n, 17n]);
+      expectValues(notePicker.getMaxSpendableNoteValues({ spendingKeyRequired, numNotes: 1 }), [19n]);
     });
 
     it('get the sum of the n largest spendable notes without excluded notes', () => {

@@ -52,6 +52,13 @@ export class ProofData {
   static getProofIdFromBuffer(rawProofData: Buffer) {
     return rawProofData.readUInt32BE(ProofDataOffsets.PROOF_ID);
   }
+  static allowChainFromNote1(allowChain: number) {
+    return [1, 3].includes(allowChain);
+  }
+
+  static allowChainFromNote2(allowChain: number) {
+    return [2, 3].includes(allowChain);
+  }
 
   private txId_: Buffer | undefined;
 
@@ -106,12 +113,12 @@ export class ProofData {
 
   get allowChainFromNote1() {
     const allowChain = this.allowChain.readUInt32BE(28);
-    return [1, 3].includes(allowChain);
+    return ProofData.allowChainFromNote1(allowChain);
   }
 
   get allowChainFromNote2() {
     const allowChain = this.allowChain.readUInt32BE(28);
-    return [2, 3].includes(allowChain);
+    return ProofData.allowChainFromNote2(allowChain);
   }
 
   get feeAssetId() {

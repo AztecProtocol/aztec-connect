@@ -22,6 +22,7 @@ export * from '@aztec/barretenberg/blockchain';
 export * from '@aztec/barretenberg/timer';
 export * from '@aztec/barretenberg/log';
 export * from '@aztec/barretenberg/offchain_tx_data';
+export { DecodedBlock } from '@aztec/barretenberg/block_source';
 
 export {
   JsonRpcProvider,

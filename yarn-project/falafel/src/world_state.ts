@@ -34,7 +34,13 @@ import { RollupPipeline, RollupPipelineFactory } from './rollup_pipeline.js';
 import { TxFeeResolver } from './tx_fee_resolver/index.js';
 import { BridgeStatsQueryHandler } from './bridge/bridge_stats_query.js';
 
-const innerProofDataToTxDao = (tx: InnerProofData, offchainTxData: Buffer, created: Date, txType: TxType) => {
+const innerProofDataToTxDao = (
+  tx: InnerProofData,
+  offchainTxData: Buffer,
+  created: Date,
+  txType: TxType,
+  position: number,
+) => {
   const txDao = new TxDao();
   txDao.id = tx.txId;
   txDao.proofData = tx.toBuffer();
@@ -45,6 +51,7 @@ const innerProofDataToTxDao = (tx: InnerProofData, offchainTxData: Buffer, creat
   txDao.mined = created;
   txDao.txType = txType;
   txDao.excessGas = 0;
+  txDao.position = position;
   return txDao;
 };
 
@@ -637,9 +644,25 @@ export class WorldState {
     } else {
       this.log(`Adding rollup ${rollup.rollupId} from someone else`);
       // Not a rollup we created. Add or replace rollup.
-      const txs = rollup
-        .getNonPaddingProofs()
-        .map((p, i) => innerProofDataToTxDao(p, offchainTxData[i], created, getTxTypeFromInnerProofData(p)));
+      const txs: TxDao[] = [];
+
+      // offChainData is present only for non-padding proofs so we have to track the index separately
+      let offChainDataIndex = 0;
+      for (const [i, proof] of rollup.innerProofData.entries()) {
+        if (!proof.isPadding()) {
+          txs.push(
+            innerProofDataToTxDao(
+              proof,
+              offchainTxData[offChainDataIndex],
+              created,
+              getTxTypeFromInnerProofData(proof),
+              i,
+            ),
+          );
+          offChainDataIndex++;
+        }
+      }
+
       const rollupProofDao = new RollupProofDao({
         id: rollup.rollupHash,
         txs,

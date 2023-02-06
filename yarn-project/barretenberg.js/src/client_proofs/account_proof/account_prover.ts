@@ -3,6 +3,7 @@ import { executeTimeout } from '../../timer/index.js';
 import { Transfer } from '../../transport/index.js';
 import { UnrolledProver } from '../prover/index.js';
 import { AccountTx } from './account_tx.js';
+import { createAccountProofSigningData } from './create_account_proof_signing_data.js';
 
 export class AccountProver {
   constructor(private prover: UnrolledProver, public readonly mock = false) {}
@@ -49,9 +50,7 @@ export class AccountProver {
 
   public async computeSigningData(tx: AccountTx) {
     const worker = this.prover.getWorker();
-    await worker.transferToHeap(tx.toBuffer(), 0);
-    await worker.call('account__compute_signing_data', 0, 0);
-    return Buffer.from(await worker.sliceMemory(0, 32));
+    return await createAccountProofSigningData(tx, worker);
   }
 
   public async createAccountProof(tx: AccountTx, signature: SchnorrSignature, timeout?: number) {

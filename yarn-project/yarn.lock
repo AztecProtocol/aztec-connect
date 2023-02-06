@@ -4926,6 +4926,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/ws@npm:^8.5.4":
+  version: 8.5.4
+  resolution: "@types/ws@npm:8.5.4"
+  dependencies:
+    "@types/node": "*"
+  checksum: fefbad20d211929bb996285c4e6f699b12192548afedbe4930ab4384f8a94577c9cd421acaad163cacd36b88649509970a05a0b8f20615b30c501ed5269038d1
+  languageName: node
+  linkType: hard
+
 "@types/yargs-parser@npm:*":
   version: 21.0.0
   resolution: "@types/yargs-parser@npm:21.0.0"
@@ -6150,7 +6159,6 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "aztec-block-explorer@workspace:explorer"
   dependencies:
-    "@aztec/barretenberg": "workspace:^"
     "@aztec/eslint-config": "workspace:^"
     "@aztec/sdk": "workspace:^"
     "@rushstack/eslint-patch": ^1.2.0
@@ -6163,7 +6171,6 @@ __metadata:
     "@types/react-dom": ^18.0.6
     "@types/react-router-dom": ^5.1.5
     "@types/styled-components": ^5.1.26
-    bn.js: ^5.1.3
     buffer: ^6.0.3
     class-validator: ^0.13.2
     classnames: ^2.2.6
@@ -6188,7 +6195,6 @@ __metadata:
     ts-loader: ^9.3.1
     typescript: ^4.7.4
     use-http: ^1.0.27
-    util: ^0.12.5
     webpack: ^5.74.0
     webpack-cli: ^4.10.0
   languageName: unknown
@@ -6564,7 +6570,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"bn.js@npm:^5.0.0, bn.js@npm:^5.1.3, bn.js@npm:^5.2.1":
+"bn.js@npm:^5.0.0, bn.js@npm:^5.2.1":
   version: 5.2.1
   resolution: "bn.js@npm:5.2.1"
   checksum: 3dd8c8d38055fedfa95c1d5fc3c99f8dd547b36287b37768db0abab3c239711f88ff58d18d155dd8ad902b0b0cee973747b7ae20ea12a09473272b0201c9edd3
@@ -12580,6 +12586,21 @@ __metadata:
   languageName: node
   linkType: hard
 
+"nym-gateway@workspace:nym-gateway":
+  version: 0.0.0-use.local
+  resolution: "nym-gateway@workspace:nym-gateway"
+  dependencies:
+    "@rushstack/eslint-patch": ^1.2.0
+    "@types/node": ^18.7.23
+    "@types/ws": ^8.5.4
+    log-timestamp: ^0.3.0
+    ts-node: ^10.9.1
+    tsc-watch: ^6.0.0
+    typescript: ^4.7.4
+    ws: ^8.12.0
+  languageName: unknown
+  linkType: soft
+
 "oauth-sign@npm:~0.9.0":
   version: 0.9.0
   resolution: "oauth-sign@npm:0.9.0"
@@ -14610,6 +14631,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"string-argv@npm:^0.3.1":
+  version: 0.3.1
+  resolution: "string-argv@npm:0.3.1"
+  checksum: efbd0289b599bee808ce80820dfe49c9635610715429c6b7cc50750f0437e3c2f697c81e5c390208c13b5d5d12d904a1546172a88579f6ee5cbaaaa4dc9ec5cf
+  languageName: node
+  linkType: hard
+
 "string-length@npm:^4.0.1":
   version: 4.0.2
   resolution: "string-length@npm:4.0.2"
@@ -15250,6 +15278,22 @@ __metadata:
   bin:
     tsc-watch: index.js
   checksum: abd63295dd5fda098a45d27912031e6c35a95f1aa20d7a86d6ad1469580400069e6476f2ffd4b88e37886d016443e60b1ae2dbcaf756e324efc67d0fa713fb15
+  languageName: node
+  linkType: hard
+
+"tsc-watch@npm:^6.0.0":
+  version: 6.0.0
+  resolution: "tsc-watch@npm:6.0.0"
+  dependencies:
+    cross-spawn: ^7.0.3
+    node-cleanup: ^2.1.2
+    ps-tree: ^1.2.0
+    string-argv: ^0.3.1
+  peerDependencies:
+    typescript: "*"
+  bin:
+    tsc-watch: dist/lib/tsc-watch.js
+  checksum: 34e74a703ecb28689d0f6ba311781ff68be47f5f095439654b095f3ea4a5921708fca61b5727e33527639a9a147b42d10bc3fe3595afee92b41b2bacfba06043
   languageName: node
   linkType: hard
 
@@ -16452,6 +16496,21 @@ __metadata:
     utf-8-validate:
       optional: true
   checksum: c3c100a181b731f40b7f2fddf004aa023f79d64f489706a28bc23ff88e87f6a64b3c6651fbec3a84a53960b75159574d7a7385709847a62ddb7ad6af76f49138
+  languageName: node
+  linkType: hard
+
+"ws@npm:^8.12.0":
+  version: 8.12.0
+  resolution: "ws@npm:8.12.0"
+  peerDependencies:
+    bufferutil: ^4.0.1
+    utf-8-validate: ">=5.0.2"
+  peerDependenciesMeta:
+    bufferutil:
+      optional: true
+    utf-8-validate:
+      optional: true
+  checksum: 818ff3f8749c172a95a114cceb8b89cedd27e43a82d65c7ad0f7882b1e96a2ee6709e3746a903c3fa88beec0c8bae9a9fcd75f20858b32a166dfb7519316a5d7
   languageName: node
   linkType: hard
 

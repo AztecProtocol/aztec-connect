@@ -39,6 +39,7 @@ export const randomTx = ({
   accountPublicKey = GrumpkinAddress.random(),
   aliasHash = AliasHash.random(),
   creationTime = now.add(1, 's').toDate(),
+  position = -1,
 } = {}) => {
   const proofId = txTypeToProofId(txType);
   const isPublic =
@@ -68,6 +69,7 @@ export const randomTx = ({
     signature: signature.length ? signature : undefined,
     txType,
     excessGas: 50000,
+    position,
   });
 };
 

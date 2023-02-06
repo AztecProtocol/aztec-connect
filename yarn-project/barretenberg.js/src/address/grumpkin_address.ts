@@ -24,6 +24,10 @@ export class GrumpkinAddress {
     return new GrumpkinAddress(Buffer.from(address.replace(/^0x/i, ''), 'hex'));
   }
 
+  public static fromPrivateKey(privateKey: Buffer, grumpkin: Grumpkin) {
+    return new GrumpkinAddress(grumpkin.mul(Grumpkin.generator, privateKey));
+  }
+
   /**
    * NOT a valid address! Do not use in proofs.
    */

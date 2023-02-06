@@ -87,6 +87,7 @@ In the unfortunate event when both output values are zeros, this function should
 | 218          | 32         | `bridgeAddressId` | id of bridge smart contract address                                                 |
 
 Bit Config Definition
+
 | bit | meaning |
 | --- | --- |
 | 0 | firstInputVirtual |

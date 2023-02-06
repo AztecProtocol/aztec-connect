@@ -96,6 +96,7 @@ describe('pipeline_coordinator', () => {
       deleteUnsettledRollups: jest.fn(),
       deleteOrphanedRollupProofs: jest.fn(),
       deleteUnsettledClaimTxs: jest.fn(),
+      resetPositionOnTxsWithoutRollupProof: jest.fn(),
       getLastSettledRollup: jest.fn<any>().mockResolvedValue(undefined),
       getPendingTxs: jest.fn<any>().mockResolvedValue([]),
       getPendingSecondClassTxs: jest.fn<any>().mockResolvedValue([]),
