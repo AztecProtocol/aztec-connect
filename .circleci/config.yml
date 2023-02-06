@@ -400,17 +400,6 @@ jobs:
           name: 'Build and test'
           command: build hummus
 
-  explorer:
-    machine:
-      image: ubuntu-2004:202010-01
-    resource_class: large
-    steps:
-      - *checkout
-      - *setup_env
-      - run:
-          name: 'Build and test'
-          command: build explorer
-
   wallet:
     machine:
       image: ubuntu-2004:202010-01
@@ -777,11 +766,6 @@ jobs:
             deploy_ecr wallet
             deploy_s3 wallet
       - run:
-          name: 'explorer'
-          command: |
-            deploy_ecr explorer
-            deploy_s3 explorer
-      - run:
           name: 'faucet'
           command: deploy faucet
 
@@ -949,7 +933,6 @@ workflows:
       - sdk: *yarn_project
       - wasabi: *yarn_project
       - hummus: *yarn_project
-      - explorer: *yarn_project
       - wallet: *yarn_project
       # Not currently a yarn project due to using next.js, but should be.
       - faucet:
@@ -993,7 +976,6 @@ workflows:
       #     filters: *deploy_filters
       - yarn-join:
           requires:
-            - explorer
             - wallet
             - wasabi
             - blockchain
