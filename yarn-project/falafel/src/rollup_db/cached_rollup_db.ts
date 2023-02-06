@@ -417,9 +417,4 @@ export class CachedRollupDb implements RollupDb {
     await this.underlying.eraseDb();
     this.refreshPromise = undefined;
   }
-
-  // TODO: remove once production DB is migrated
-  public async populatePositions() {
-    await this.underlying.populatePositions();
-  }
 }

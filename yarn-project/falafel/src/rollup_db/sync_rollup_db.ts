@@ -285,9 +285,4 @@ export class SyncRollupDb implements RollupDb {
   public eraseDb() {
     return this.synchronise(() => this.rollupDb.eraseDb());
   }
-
-  // TODO: remove once production DB is migrated
-  public async populatePositions() {
-    await this.rollupDb.populatePositions();
-  }
 }

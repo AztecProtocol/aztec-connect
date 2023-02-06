@@ -516,38 +516,4 @@ export class TypeOrmRollupDb implements RollupDb {
       await transactionalEntityManager.delete(this.txRep.target, {});
     });
   }
-
-  // TODO: remove once production DB is migrated
-  public async populatePositions() {
-    // Iterates over all rollups and populates the position field in the txs.
-    const lastRollup = await this.getLastSettledRollup();
-    if (!lastRollup) {
-      this.debug('No rollups found, skipping position population.');
-      return;
-    }
-    for (let id = 0; id <= lastRollup!.id; id++) {
-      if (id % 100 == 0) {
-        console.log(`Populating tx positions for rollup ${id}...`);
-      }
-      const rollup = nullToUndefined(
-        await this.rollupRep.findOne({
-          where: { id },
-          relations: ['rollupProof'],
-        }),
-      );
-      if (!rollup) {
-        throw new Error(`Could not find rollup with id ${id}`);
-      }
-      const decodedProofData = RollupProofData.decode(rollup.rollupProof.encodedProofData);
-
-      await this.connection.transaction(async transactionalEntityManager => {
-        for (const [i, proof] of decodedProofData.innerProofData.entries()) {
-          if (!proof.isPadding()) {
-            // await this.txRep.update({ id: proof.txId }, { position: i });
-            await transactionalEntityManager.update<TxDao>(this.txRep.target, { id: proof.txId }, { position: i });
-          }
-        }
-      });
-    }
-  }
 }
