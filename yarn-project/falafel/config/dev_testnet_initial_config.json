@@ -16,13 +16,13 @@
       "numTxs": 30,
       "gas": 250000,
       "bridgeAddressId": 3,
-      "permittedAssets": [0, 1, 3, 4, 10, 15]
+      "permittedAssets": [0, 1, 3, 4]
     },
     {
       "numTxs": 30,
       "gas": 800000,
       "bridgeAddressId": 4,
-      "permittedAssets": [0, 1, 3, 4, 10, 15]
+      "permittedAssets": [0, 1, 3, 4]
     },
     {
       "numTxs": 20,
@@ -46,7 +46,7 @@
       "numTxs": 30,
       "gas": 400000,
       "bridgeAddressId": 9,
-      "permittedAssets": [0, 1, 8, 9, 13]
+      "permittedAssets": [0, 1, 8, 9]
     },
     {
       "numTxs": 10,
