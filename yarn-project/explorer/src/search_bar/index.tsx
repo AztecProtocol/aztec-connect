@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useHistory } from 'react-router-dom';
 import { default as useFetch } from 'use-http';
-import { deserializeBlocks } from '../block_utils.js';
 
 import { Input } from '../components/index.js';
+import { RollupProviderContext } from '../context.js';
 import searchSvg from '../images/search.svg';
 
 export const SearchBar: React.FunctionComponent = () => {
@@ -14,8 +14,8 @@ export const SearchBar: React.FunctionComponent = () => {
   const [value, setValue] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
-  const { get: searchById, response } = useFetch(`/get-blocks?from=${value}&take=1`);
   const { get: searchByHash } = useFetch(`/tx/${value}`);
+  const rollupProvider = React.useContext(RollupProviderContext);
 
   useEffect(() => {
     if (!history || !searchTerm || (!idData && !hashData)) return;
@@ -40,9 +40,7 @@ export const SearchBar: React.FunctionComponent = () => {
     setSearchTerm(term);
 
     if (term.match(/^[0-9]+$/)) {
-      await searchById();
-      const result = Buffer.from(await response.arrayBuffer());
-      const blocks = deserializeBlocks(result);
+      const blocks = await rollupProvider.getBlocks(+value, 1);
       setIdData(blocks[0].rollupId?.toString());
     } else if (term.match(/^(0x)?[0-9a-f]{64}$/i)) {
       const data = await searchByHash();

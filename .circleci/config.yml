@@ -1,7 +1,6 @@
 # This config consists of currently 3 workflows.
 # - system: The main Aztec infrastructure, services, frontends etc.
 # - metrics: The metrics grafana and prometheus instances, and some prometheus data sources.
-# - website: The company website.
 #
 # The default workflow is system. To trigger the other workflows, trigger a workflow from CCI
 # setting a string variable called `workflow` to another name.
@@ -355,6 +354,17 @@ jobs:
           name: 'Build and test'
           command: build block-server
 
+  nym-gateway:
+    machine:
+      image: ubuntu-2004:202010-01
+    resource_class: medium
+    steps:
+      - *checkout
+      - *setup_env
+      - run:
+          name: 'Build'
+          command: build nym-gateway
+
   sdk:
     machine:
       image: ubuntu-2004:202010-01
@@ -646,17 +656,6 @@ jobs:
           name: 'Noop'
           command: echo Noop
 
-  website:
-    machine:
-      image: ubuntu-2004:202010-01
-    resource_class: large
-    steps:
-      - *checkout
-      - *setup_env
-      - run:
-          name: 'Build and test'
-          command: build website
-
   mainnet-fork:
     machine:
       image: ubuntu-2004:202010-01
@@ -754,6 +753,9 @@ jobs:
           name: 'block-server'
           command: deploy block-server
       - run:
+          name: 'nym-gateway'
+          command: deploy nym-gateway
+      - run:
           name: 'sdk'
           command: |
             deploy_ecr sdk
@@ -794,20 +796,6 @@ jobs:
   #         name: 'Test'
   #         working_directory: end-to-end/scripts
   #         command: ./run_smoketest
-
-  deploy-website:
-    machine:
-      image: ubuntu-2004:202010-01
-    resource_class: medium
-    steps:
-      - *checkout
-      - *setup_env
-      - run:
-          name: 'website'
-          working_directory: website
-          command: |
-            deploy_ecr website
-            deploy_s3 website is_global
 
   deploy-metrics:
     machine:
@@ -865,7 +853,7 @@ jobs:
           name: 'Deploy contracts'
           working_directory: contracts
           command: |
-            deploy_ecr contracts 
+            deploy_ecr contracts
             ./scripts/ci_deploy_contracts.sh
       - run:
           name: 'Redeploy kebab'
@@ -956,6 +944,7 @@ workflows:
       - halloumi: *yarn_project
       - falafel: *yarn_project
       - block-server: *yarn_project
+      - nym-gateway
       - sdk: *yarn_project
       - wasabi: *yarn_project
       - hummus: *yarn_project
@@ -1044,14 +1033,6 @@ workflows:
       - deploy-metrics:
           requires:
             - metrics
-  website:
-    when:
-      equal: [website, << pipeline.parameters.workflow >>]
-    jobs:
-      - website
-      - deploy-website:
-          requires:
-            - website
   redeploy-mainnet-fork:
     when:
       equal: [redeploy-mainnet-fork, << pipeline.parameters.workflow >>]

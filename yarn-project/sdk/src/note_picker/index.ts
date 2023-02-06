@@ -2,10 +2,10 @@ import { Note } from '../note/index.js';
 
 const noteSum = (notes: Note[]) => notes.reduce((sum, { value }) => sum + value, BigInt(0));
 
-interface NotePickerOptions {
+export interface NotePickerOptions {
   excludedNullifiers?: Buffer[];
   excludePendingNotes?: boolean;
-  ownerAccountRequired?: boolean;
+  spendingKeyRequired?: boolean;
 }
 
 export class NotePicker {
@@ -26,12 +26,12 @@ export class NotePicker {
 
   public pick(
     value: bigint,
-    { excludedNullifiers, excludePendingNotes, ownerAccountRequired }: NotePickerOptions = {},
+    { excludedNullifiers, excludePendingNotes, spendingKeyRequired }: NotePickerOptions = {},
   ): Note[] {
     const filteredNotes = this.filterByOptions(this.getSortedNotes(true), {
       excludedNullifiers,
       excludePendingNotes,
-      ownerAccountRequired,
+      spendingKeyRequired,
     });
     let minimumNumberOfNotes = this.findMinimumNotes(value, filteredNotes);
     if (!minimumNumberOfNotes) {
@@ -46,13 +46,13 @@ export class NotePicker {
     let pickedNotes = this.getMaxSpendableNotes(
       excludedNullifiers,
       excludePendingNotes,
-      ownerAccountRequired,
+      spendingKeyRequired,
       minimumNumberOfNotes,
     ).reverse();
     pickedNotes = this.reducePickedNotesValues(pickedNotes, value, {
       excludedNullifiers,
       excludePendingNotes,
-      ownerAccountRequired,
+      spendingKeyRequired,
     });
     const exactNoteMatch = pickedNotes.find(note => note.value === value);
 
@@ -136,23 +136,23 @@ export class NotePicker {
   public getMaxSpendableNoteValues({
     excludedNullifiers,
     excludePendingNotes,
-    ownerAccountRequired,
+    spendingKeyRequired,
     numNotes,
   }: NotePickerOptions & { numNotes?: number } = {}) {
-    const notes = this.getMaxSpendableNotes(excludedNullifiers, excludePendingNotes, ownerAccountRequired, numNotes);
+    const notes = this.getMaxSpendableNotes(excludedNullifiers, excludePendingNotes, spendingKeyRequired, numNotes);
     return notes.map(n => n.value);
   }
 
   private getMaxSpendableNotes(
     excludedNullifiers: Buffer[] = [],
     excludePendingNotes = false,
-    ownerAccountRequired = false,
+    spendingKeyRequired = false,
     numNotes?: number,
   ) {
     const filteredNotes = this.filterByOptions(this.getSortedNotes(true), {
       excludedNullifiers,
       excludePendingNotes,
-      ownerAccountRequired,
+      spendingKeyRequired,
     });
     let hasPendingNote = false;
     const notes: Note[] = [];
@@ -189,13 +189,13 @@ export class NotePicker {
 
   private filterByOptions(
     notes: Note[],
-    { excludedNullifiers = [], excludePendingNotes = false, ownerAccountRequired = false }: NotePickerOptions = {},
+    { excludedNullifiers = [], excludePendingNotes = false, spendingKeyRequired = false }: NotePickerOptions = {},
   ) {
     return notes.filter(
       note =>
         !excludedNullifiers.some(n => n.equals(note.nullifier)) &&
         (!excludePendingNotes || !note.pending) &&
-        (ownerAccountRequired ? note.ownerAccountRequired : !note.ownerAccountRequired),
+        (spendingKeyRequired ? note.ownerAccountRequired : !note.ownerAccountRequired),
     );
   }
 }

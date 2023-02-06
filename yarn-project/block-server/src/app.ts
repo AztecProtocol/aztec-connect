@@ -57,6 +57,12 @@ export function appFactory(server: Server, prefix: string) {
     }
   });
 
+  router.get('/latest-rollup-id', (ctx: Koa.Context) => {
+    ctx.body = server.getLatestRollupId();
+    ctx.compress = false;
+    ctx.status = 200;
+  });
+
   router.get('/metrics', async (ctx: Koa.Context) => {
     ctx.body = '';
 

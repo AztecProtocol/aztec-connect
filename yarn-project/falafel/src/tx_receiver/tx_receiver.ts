@@ -85,6 +85,7 @@ export class TxReceiver {
         const { proof } = txs[i];
         const txType = await getTxTypeFromProofData(proof, this.blockchain);
         this.metrics.txReceived(txType, txRequest.requestSender.originUrl);
+        this.log(`Received tx (${i + 1}/${txs.length}): ${proof.txId.toString('hex')}, type: ${TxType[txType]}`);
         txTypes.push(txType);
       }
 
@@ -92,7 +93,13 @@ export class TxReceiver {
       if (!secondClass) {
         const txFeeAllocator = new TxFeeAllocator(this.txFeeResolver);
         const validation = txFeeAllocator.validateReceivedTxs(txs, txTypes);
+        this.log(
+          `Gas Required/Provided: ${validation.gasRequired}/${validation.gasProvided}. Fee asset index: ${validation.feePayingAsset}. Feeless txs: ${validation.hasFeelessTxs}.`,
+        );
         if (validation.gasProvided < validation.gasRequired) {
+          this.log(
+            `Txs only contained enough fee to pay for ${validation.gasProvided} gas, but it needed ${validation.gasRequired}.`,
+          );
           txFeeAllocator.printFeeBreakdown(txs, txTypes);
           throw new Error('Insufficient fee.');
         }

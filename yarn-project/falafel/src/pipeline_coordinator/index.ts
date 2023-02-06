@@ -155,6 +155,7 @@ export class PipelineCoordinator {
     await this.rollupDb.deleteUnsettledRollups();
     await this.rollupDb.deleteOrphanedRollupProofs();
     await this.rollupDb.deleteUnsettledClaimTxs();
+    await this.rollupDb.resetPositionOnTxsWithoutRollupProof();
     const lastRollup = await this.rollupDb.getLastSettledRollup();
     const rollupId = lastRollup ? lastRollup.id + 1 : 0;
 

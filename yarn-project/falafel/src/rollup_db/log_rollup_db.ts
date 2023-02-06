@@ -258,6 +258,12 @@ export class LogRollupDb implements RollupDb {
     return this.time('deleteUnsettledClaimTxs', () => this.rollupDb.deleteUnsettledClaimTxs());
   }
 
+  public resetPositionOnTxsWithoutRollupProof() {
+    return this.time('resetPositionOnTxsWithoutRollupProof', () =>
+      this.rollupDb.resetPositionOnTxsWithoutRollupProof(),
+    );
+  }
+
   public getAssetMetrics(assetId: number) {
     return this.time('getAssetMetrics', () => this.rollupDb.getAssetMetrics(assetId));
   }
@@ -285,5 +291,10 @@ export class LogRollupDb implements RollupDb {
     const result = await fn();
     this.debug(`${name}: ${timer.ms()}ms`);
     return result;
+  }
+
+  // TODO: remove once production DB is migrated
+  public async populatePositions() {
+    await this.rollupDb.populatePositions();
   }
 }

@@ -19,6 +19,7 @@ Options:
   -h, --help                                                                             display help for command
 
 Commands:
+  getBeautifulBridgeConfig <deploy_tag>                                                  fetches a beautiful version of the bridge config from a deployment
   fetchAllDataProviderData                                                               fetches labels from dataproviders on dev, testnet and prod
   findAliasCollisions <alias> [url] [rollupProviderUrl] [memoryDb]                       computes case-variations for the alias and prints them
   deriveKeys <mnemonic>                                                                  derive keys

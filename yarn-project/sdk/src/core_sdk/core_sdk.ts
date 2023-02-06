@@ -3,7 +3,7 @@ import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
 import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { DecodedBlock } from '@aztec/barretenberg/block_source';
 import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
-import { AccountProver, JoinSplitProver, ProofId, UnrolledProver } from '@aztec/barretenberg/client_proofs';
+import { AccountProver, JoinSplitProver, ProofId } from '@aztec/barretenberg/client_proofs';
 import { NetCrs } from '@aztec/barretenberg/crs';
 import { Blake2s, keccak256, Pedersen, randomBytes, Schnorr } from '@aztec/barretenberg/crypto';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
@@ -24,22 +24,25 @@ import { WorldState, WorldStateConstants } from '@aztec/barretenberg/world_state
 import isNode from 'detect-node';
 import { EventEmitter } from 'events';
 import { LevelUp } from 'levelup';
+import { KeyPairAuthAlgorithms } from '../auth_algorithms/key_pair_auth_algorithms.js';
 import { BlockContext } from '../block_context/block_context.js';
 import { sendClientLog, sendClientConsoleLog } from '../client_log/client_log.js';
 import { CorePaymentTx, createCorePaymentTxForRecipient } from '../core_tx/index.js';
 import { Alias, Database } from '../database/index.js';
 import { getUserSpendingKeysFromGenesisData, parseGenesisAliasesAndKeys } from '../genesis_state/index.js';
 import { getDeviceMemory } from '../get_num_workers/index.js';
-import { Note, treeNoteToNote } from '../note/index.js';
+import { ConstantKeyPair } from '../key_pair/index.js';
 import { VERSION_HASH } from '../package_version.js';
 import {
-  AccountProofCreator,
   AccountProofInput,
-  DefiDepositProofCreator,
   JoinSplitProofInput,
-  PaymentProofCreator,
+  joinSplitTxInputToJoinSplitTx,
+  joinSplitTxToJoinSplitTxInput,
   ProofOutput,
 } from '../proofs/index.js';
+import { DefiProofInput, PaymentProofInput, ProofInputFactory } from '../proofs/proof_input/index.js';
+import { ProofOutputFactory } from '../proofs/proof_output/index.js';
+import { ProofRequestDataFactory } from '../proofs/proof_request_data/index.js';
 import { MutexSerialQueue, SerialQueue } from '../serial_queue/index.js';
 import { SchnorrSigner } from '../signer/index.js';
 import { UserData } from '../user/index.js';
@@ -47,8 +50,6 @@ import { UserState, UserStateEvent, UserStateFactory } from '../user_state/index
 import { CoreSdkOptions } from './core_sdk_options.js';
 import { SdkEvent, SdkStatus } from './sdk_status.js';
 import { sdkVersion } from './sdk_version.js';
-
-const CREATE_PROOF_TIMEOUT = 60 * 1000;
 
 enum SdkInitState {
   // Constructed but uninitialized. Unusable.
@@ -77,11 +78,9 @@ export class CoreSdk extends EventEmitter {
   private options!: CoreSdkOptions;
   private worldState!: WorldState;
   private userStates: UserState[] = [];
-  private joinSplitProver!: JoinSplitProver;
-  private accountProver!: AccountProver;
-  private paymentProofCreator!: PaymentProofCreator;
-  private accountProofCreator!: AccountProofCreator;
-  private defiDepositProofCreator!: DefiDepositProofCreator;
+  private proofRequestDataFactory!: ProofRequestDataFactory;
+  private proofInputFactory!: ProofInputFactory;
+  private proofOutputFactory!: ProofOutputFactory;
   private serialQueue!: SerialQueue;
   private statelessSerialQueue!: SerialQueue;
   private broadcastChannel: BroadcastChannel | undefined = isNode ? undefined : new BroadcastChannel('aztec-sdk');
@@ -211,6 +210,17 @@ export class CoreSdk extends EventEmitter {
         useKeyCache,
         proverless,
       };
+
+      this.proofRequestDataFactory = new ProofRequestDataFactory(this.worldState, this.db, this.blake2s);
+      this.proofInputFactory = new ProofInputFactory(this.noteAlgos, this.grumpkin, this.pedersen, this.barretenberg);
+      this.proofOutputFactory = new ProofOutputFactory(
+        proverless,
+        this.noteAlgos,
+        this.pippenger,
+        this.fftFactory,
+        this.barretenberg,
+        this.workerPool,
+      );
 
       // Ensures we can get the list of users and access current known balances.
       await this.initUserStates();
@@ -459,7 +469,7 @@ export class CoreSdk extends EventEmitter {
     excludePendingNotes?: boolean,
   ) {
     const userState = this.getUserState(userId);
-    return await userState.getSpendableNoteValues(assetId, spendingKeyRequired, excludePendingNotes);
+    return await userState.getSpendableNoteValues(assetId, { spendingKeyRequired, excludePendingNotes });
   }
 
   public async getSpendableSum(
@@ -469,12 +479,12 @@ export class CoreSdk extends EventEmitter {
     excludePendingNotes?: boolean,
   ) {
     const userState = this.getUserState(userId);
-    return await userState.getSpendableSum(assetId, spendingKeyRequired, excludePendingNotes);
+    return await userState.getSpendableSum(assetId, { spendingKeyRequired, excludePendingNotes });
   }
 
   public async getSpendableSums(userId: GrumpkinAddress, spendingKeyRequired?: boolean, excludePendingNotes?: boolean) {
     const userState = this.getUserState(userId);
-    return await userState.getSpendableSums(spendingKeyRequired, excludePendingNotes);
+    return await userState.getSpendableSums({ spendingKeyRequired, excludePendingNotes });
   }
 
   public async getMaxSpendableNoteValues(
@@ -485,7 +495,7 @@ export class CoreSdk extends EventEmitter {
     numNotes?: number,
   ) {
     const userState = this.getUserState(userId);
-    return await userState.getMaxSpendableNoteValues(assetId, spendingKeyRequired, excludePendingNotes, numNotes);
+    return await userState.getMaxSpendableNoteValues(assetId, { spendingKeyRequired, excludePendingNotes, numNotes });
   }
 
   public async pickNotes(
@@ -495,7 +505,7 @@ export class CoreSdk extends EventEmitter {
     spendingKeyRequired?: boolean,
     excludePendingNotes?: boolean,
   ) {
-    return await this.getUserState(userId).pickNotes(assetId, value, spendingKeyRequired, excludePendingNotes);
+    return await this.getUserState(userId).pickNotes(assetId, value, { spendingKeyRequired, excludePendingNotes });
   }
 
   public async pickNote(
@@ -505,7 +515,7 @@ export class CoreSdk extends EventEmitter {
     spendingKeyRequired?: boolean,
     excludePendingNotes?: boolean,
   ) {
-    return await this.getUserState(userId).pickNote(assetId, value, spendingKeyRequired, excludePendingNotes);
+    return await this.getUserState(userId).pickNote(assetId, value, { spendingKeyRequired, excludePendingNotes });
   }
 
   public async getUserTxs(userId: GrumpkinAddress) {
@@ -536,16 +546,6 @@ export class CoreSdk extends EventEmitter {
         await this.genesisSync();
         await this.getInitialTreeSize();
         this.startReceivingBlocks();
-
-        await this.statelessSerialQueue.push(async () => {
-          const { proverless, verifierContractAddress } = this.sdkStatus;
-
-          await this.createJoinSplitProofCreator(proverless);
-          await this.createAccountProofCreator(proverless);
-
-          // Makes the saved proving keys considered valid. Hence set this after they're saved.
-          await this.db.addKey('verifierContractAddress', verifierContractAddress.toBuffer());
-        });
       })
       .catch(err => {
         this.debug('failed to run:', err);
@@ -567,7 +567,7 @@ export class CoreSdk extends EventEmitter {
     recipient: GrumpkinAddress,
     recipientSpendingKeyRequired: boolean,
     txRefNo: number,
-    timeout = CREATE_PROOF_TIMEOUT,
+    timeout?: number,
   ) {
     return await this.statelessSerialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
@@ -575,37 +575,38 @@ export class CoreSdk extends EventEmitter {
       // Create a one time user to generate and sign the proof.
       const accountPrivateKey = randomBytes(32);
       const accountPublicKey = await this.derivePublicKey(accountPrivateKey);
-      const user = {
-        accountPrivateKey,
-        accountPublicKey,
-      } as UserData;
-      const signer = new SchnorrSigner(this, accountPublicKey, accountPrivateKey);
       const spendingPublicKey = accountPublicKey;
 
-      const { proverless } = this.sdkStatus;
-      await this.createJoinSplitProofCreator(proverless);
-
-      const proofInput = await this.paymentProofCreator.createProofInput(
-        user,
-        [], // notes
-        BigInt(0), // privateInput
-        privateOutput,
-        BigInt(0), // senderPrivateOutput
-        publicInput,
-        BigInt(0), // publicOutput
-        assetId,
+      const depositValue = privateOutput;
+      const feeValue = publicInput - privateOutput;
+      const proofRequestData = await this.proofRequestDataFactory.createPaymentProofRequestData(
+        ProofId.DEPOSIT,
+        accountPublicKey,
+        spendingPublicKey,
+        { assetId, value: depositValue },
+        { assetId, value: feeValue },
+        depositor,
         recipient,
         recipientSpendingKeyRequired,
-        depositor,
-        spendingPublicKey,
-        0, // allowChain
       );
+
+      const accountKeyPair = new ConstantKeyPair(accountPublicKey, accountPrivateKey, this.schnorr);
+      const authAlgos = new KeyPairAuthAlgorithms(
+        accountKeyPair,
+        this.grumpkin,
+        this.noteAlgos,
+        this.noteDecryptor,
+        this.barretenberg,
+      );
+      const proofInput = (
+        await this.proofInputFactory.createProofInputs(proofRequestData, authAlgos)
+      )[0] as PaymentProofInput;
+
+      const signer = new SchnorrSigner(this, accountPublicKey, accountPrivateKey);
       const signature = await signer.signMessage(proofInput.signingData);
 
-      await this.computeJoinSplitProvingKey(timeout);
-
       return this.runOrClientLog(
-        () => this.paymentProofCreator.createProof(user, { ...proofInput, signature }, txRefNo, timeout),
+        () => this.proofOutputFactory.createPaymentProof(proofInput, signature, txRefNo, accountKeyPair, timeout),
         'Failed to create deposit proof.',
       );
     });
@@ -631,34 +632,64 @@ export class CoreSdk extends EventEmitter {
       const userState = this.getUserState(userId);
       const user = userState.getUserData();
 
-      const spendingKeyRequired = !spendingPublicKey.equals(userId);
-      const notes = privateInput ? await userState.pickNotes(assetId, privateInput, spendingKeyRequired) : [];
-      if (privateInput && !notes.length) {
-        throw new Error(`Failed to find notes that sum to ${privateInput}.`);
-      }
+      const proofId = (() => {
+        if (publicInput > 0) {
+          return ProofId.DEPOSIT;
+        }
+        if (publicOutput > 0) {
+          return ProofId.WITHDRAW;
+        }
+        return ProofId.SEND;
+      })();
 
-      const { proofInputs, outputNotes } = await this.createChainedProofInputs(userId, spendingPublicKey, notes);
-      const proofInput = await this.paymentProofCreator.createProofInput(
-        user,
-        outputNotes,
-        privateInput,
-        recipientPrivateOutput,
-        senderPrivateOutput,
-        publicInput,
-        publicOutput,
-        assetId,
-        noteRecipient,
-        recipientSpendingKeyRequired,
-        publicOwner,
+      const value = (() => {
+        if (publicInput > 0) {
+          return publicInput;
+        }
+        if (publicOutput > 0) {
+          return publicOutput;
+        }
+        return recipientPrivateOutput;
+      })();
+
+      const feeValue = publicInput + privateInput - (publicOutput + recipientPrivateOutput + senderPrivateOutput);
+
+      const proofRequestData = await this.proofRequestDataFactory.createPaymentProofRequestData(
+        proofId,
+        userId,
         spendingPublicKey,
-        allowChain,
+        { assetId, value },
+        { assetId, value: feeValue },
+        publicOwner || EthAddress.ZERO,
+        noteRecipient || GrumpkinAddress.generator(),
+        recipientSpendingKeyRequired,
+        userState,
+        { allowChain: !!allowChain },
       );
 
-      return [...proofInputs, proofInput];
+      const accountKeyPair = new ConstantKeyPair(user.accountPublicKey, user.accountPrivateKey, this.schnorr);
+      const authAlgos = new KeyPairAuthAlgorithms(
+        accountKeyPair,
+        this.grumpkin,
+        this.noteAlgos,
+        this.noteDecryptor,
+        this.barretenberg,
+      );
+      const proofInputs = (await this.proofInputFactory.createProofInputs(proofRequestData, authAlgos)).map(
+        proofInput => {
+          const { tx, viewingKeys, signingData } = proofInput as PaymentProofInput;
+          return {
+            tx: joinSplitTxInputToJoinSplitTx(tx, user.accountPrivateKey, user.accountPublicKey),
+            viewingKeys,
+            signingData,
+          };
+        },
+      );
+      return proofInputs;
     });
   }
 
-  public async createPaymentProof(input: JoinSplitProofInput, txRefNo: number, timeout = CREATE_PROOF_TIMEOUT) {
+  public async createPaymentProof(input: JoinSplitProofInput, txRefNo: number, timeout?: number): Promise<ProofOutput> {
     return await this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
 
@@ -666,11 +697,17 @@ export class CoreSdk extends EventEmitter {
       const userId = outputNotes[1].ownerPubKey;
       const userState = this.getUserState(userId);
       const user = userState.getUserData();
+      const accountKeyPair = new ConstantKeyPair(user.accountPublicKey, user.accountPrivateKey, this.schnorr);
 
-      await this.computeJoinSplitProvingKey(timeout);
-
-      return this.runOrClientLog(
-        () => this.paymentProofCreator.createProof(user, input, txRefNo, timeout),
+      return await this.runOrClientLog(
+        () =>
+          this.proofOutputFactory.createPaymentProof(
+            { ...input, tx: joinSplitTxToJoinSplitTxInput(input.tx, user.accountPrivateKey, this.noteAlgos) },
+            input.signature!,
+            txRefNo,
+            accountKeyPair,
+            timeout,
+          ),
         'Failed to create payment proof.',
       );
     });
@@ -681,24 +718,44 @@ export class CoreSdk extends EventEmitter {
     alias: string,
     migrate: boolean,
     spendingPublicKey: GrumpkinAddress,
-    newAccountPublicKey?: GrumpkinAddress,
+    newAccountPublicKey = accountPublicKey,
     newSpendingPublicKey1?: GrumpkinAddress,
     newSpendingPublicKey2?: GrumpkinAddress,
   ) {
     return await this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
-      const aliasHash = this.computeAliasHash(alias);
-      const { signingData } = await this.accountProofCreator.createProofInput(
+      const proofRequestData = await this.proofRequestDataFactory.createAccountProofRequestData(
         accountPublicKey,
-        aliasHash,
-        migrate,
-        spendingPublicKey,
+        accountPublicKey, // set the accountPublicKey as spendingPublicKey so the factory won't fetch its hash path.
+        alias || '',
         newAccountPublicKey,
-        newSpendingPublicKey1,
-        newSpendingPublicKey2,
-        false, // spendingKeyExists
+        newSpendingPublicKey1 || GrumpkinAddress.ZERO,
+        newSpendingPublicKey2 || GrumpkinAddress.ZERO,
+        { assetId: 0, value: BigInt(0) }, // deposit
+        { assetId: 0, value: BigInt(0) }, // fee
+        EthAddress.ZERO, // depositor
       );
-      return signingData;
+
+      const randomAccountPrivateKey = randomBytes(32);
+      const randomAccountPublicKey = await this.derivePublicKey(randomAccountPrivateKey);
+      const accountKeyPair = new ConstantKeyPair(randomAccountPublicKey, randomAccountPrivateKey, this.schnorr);
+      const authAlgos = new KeyPairAuthAlgorithms(
+        accountKeyPair,
+        this.grumpkin,
+        this.noteAlgos,
+        this.noteDecryptor,
+        this.barretenberg,
+      );
+      // Set the spendingPublicKey back to recoveryPublicKey.
+      const { spendingKeyAccount } = proofRequestData;
+      const [proofInput] = await this.proofInputFactory.createProofInputs(
+        {
+          ...proofRequestData,
+          spendingKeyAccount: { ...spendingKeyAccount, spendingPublicKey },
+        },
+        authAlgos,
+      );
+      return proofInput.signingData;
     });
   }
 
@@ -706,38 +763,51 @@ export class CoreSdk extends EventEmitter {
     userId: GrumpkinAddress,
     spendingPublicKey: GrumpkinAddress,
     migrate: boolean,
-    newAlias: string | undefined,
+    alias?: string,
     newSpendingPublicKey1?: GrumpkinAddress,
     newSpendingPublicKey2?: GrumpkinAddress,
     newAccountPrivateKey?: Buffer,
-  ) {
+  ): Promise<AccountProofInput> {
     return await this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
-      const aliasHash = newAlias ? this.computeAliasHash(newAlias) : (await this.db.getAlias(userId))?.aliasHash;
-      if (!aliasHash) {
-        throw new Error('Account not registered or not fully synced.');
-      }
-      const newAccountPublicKey = newAccountPrivateKey ? await this.derivePublicKey(newAccountPrivateKey) : undefined;
-      return await this.accountProofCreator.createProofInput(
+
+      const newAccountPublicKey = newAccountPrivateKey ? await this.derivePublicKey(newAccountPrivateKey) : userId;
+      const proofRequestData = await this.proofRequestDataFactory.createAccountProofRequestData(
         userId,
-        aliasHash,
-        migrate,
         spendingPublicKey,
+        alias || '',
         newAccountPublicKey,
-        newSpendingPublicKey1,
-        newSpendingPublicKey2,
+        newSpendingPublicKey1 || GrumpkinAddress.ZERO,
+        newSpendingPublicKey2 || GrumpkinAddress.ZERO,
+        { assetId: 0, value: BigInt(0) }, // deposit
+        { assetId: 0, value: BigInt(0) }, // fee
+        EthAddress.ZERO, // depositor
       );
+
+      // Zero deposit and fee => no payment proofs will be created.
+      // authAlgos doesn't have to be created with the user's account.
+      const randomAccountPrivateKey = randomBytes(32);
+      const randomAccountPublicKey = await this.derivePublicKey(randomAccountPrivateKey);
+      const accountKeyPair = new ConstantKeyPair(randomAccountPublicKey, randomAccountPrivateKey, this.schnorr);
+      const authAlgos = new KeyPairAuthAlgorithms(
+        accountKeyPair,
+        this.grumpkin,
+        this.noteAlgos,
+        this.noteDecryptor,
+        this.barretenberg,
+      );
+      const [proofInput] = await this.proofInputFactory.createProofInputs(proofRequestData, authAlgos);
+      const { tx, signingData } = proofInput as AccountProofInput;
+      return { tx, signingData };
     });
   }
 
-  public async createAccountProof(input: AccountProofInput, txRefNo: number, timeout = CREATE_PROOF_TIMEOUT) {
+  public async createAccountProof(input: AccountProofInput, txRefNo: number, timeout?: number) {
     return await this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
 
-      await this.computeAccountProvingKey(timeout);
-
-      return this.runOrClientLog(
-        () => this.accountProofCreator.createProof(input, txRefNo, timeout),
+      return await this.runOrClientLog(
+        () => this.proofOutputFactory.createAccountProof(input, input.signature!, txRefNo, timeout),
         'Failed to create account proof.',
       );
     });
@@ -755,235 +825,70 @@ export class CoreSdk extends EventEmitter {
       const userState = this.getUserState(userId);
       const user = userState.getUserData();
 
-      // The goal here is to create the necessary inputs for a defi tx
-      // A defi tx can have either 1 or 2 input assets.
-
-      // If it has 1 input asset
-      // then we can use both input notes to achieve the required deposit + fee value
-      // and we can create a chain of J/S txs to merge/split notes to achieve the required input
-
-      // If it has 2 input assets then we are more restricted
-      // We can only have 1 input note for each asset and we can only have 1 chain of J/S txs
-      // to merge/splt notes in order to achieve the correct input for an asset
-      // So, for example. We have 2 assets A and B.
-      // We could create a chain of J/S txs to produce a single note for input asset B.
-      // Then we MUST have a single note of the exact size for input asset A.
-      // If we don't then we can't execute the tx.
-
-      // An additional thing to note is that the fee, if there is one is paid for by input asset A
-      // So the input note/s for asset A will need to include the requested fee value
-
-      let notesA: Note[] = [];
-      let notesB: Note[] = [];
-      let requireJoinSplitForAssetB = false;
-      const hasTwoAssets = bridgeCallData.numInputAssets === 2;
-      const spendingKeyRequired = !spendingPublicKey.equals(userId);
-      if (hasTwoAssets) {
-        // We have 2 input assets, so it's the more complex situation as explained above
-        const assetIdB = bridgeCallData.inputAssetIdB!;
-        // Look for a single note for asset B
-        const note2 = await userState.pickNote(assetIdB, depositValue, spendingKeyRequired);
-        // If we found a single note, great. If not then look for multiple notes.
-        notesB = note2 ? [note2] : await userState.pickNotes(assetIdB, depositValue, spendingKeyRequired);
-        if (!notesB.length) {
-          throw new Error(`Failed to find notes of asset ${assetIdB} that sum to ${depositValue}.`);
-        }
-
-        // If we need more than 1 note for asset B OR the single note we found is too large
-        // then we require J/S txs on asset A
-        // We will not be able to use J/S on input asset A!! This is checked further down...
-        requireJoinSplitForAssetB = notesB.length > 1 || notesB[0].value !== depositValue;
-      }
-
-      {
-        const assetIdA = bridgeCallData.inputAssetIdA;
-        const valueA = depositValue + fee;
-        // If a J/S operation is required for asset B then we require that the input note for asset A is NOT pending
-        // Also, if any of the input notes for asset B are pending then we require that the input note for asset A is NOT pending
-        const excludePendingNotes = requireJoinSplitForAssetB || notesB.some(n => n.pending);
-        // If we have 2 input assets then search for a single note
-        const note1 = hasTwoAssets
-          ? await userState.pickNote(assetIdA, valueA, spendingKeyRequired, excludePendingNotes)
-          : undefined;
-        // If we have a single note, great! If not then search for more notes
-        notesA = note1
-          ? [note1]
-          : await userState.pickNotes(assetIdA, valueA, spendingKeyRequired, excludePendingNotes);
-        if (!notesA.length) {
-          throw new Error(`Failed to find notes of asset ${assetIdA} that sum to ${valueA}.`);
-        }
-
-        // Here we are checking to see if we can execute the tx.
-        // If the total note value for asset A is greater then required then we require J/S txs on asset A
-        // If the number of notes for asset A is greater than 2 then we require J/S txs on asset A
-        // If the number of notes for asset A is greater than 1 AND we have 2 input assets then we require J/S txs on asset A
-        const totalInputNoteValueForAssetA = notesA.reduce((sum, note) => sum + note.value, BigInt(0));
-        const requireJoinSplitForAssetA =
-          totalInputNoteValueForAssetA > valueA || notesA.length > 2 || (hasTwoAssets && notesA.length > 1);
-
-        // At this point, if we need J/S txs on both input assets then the tx can't be executed
-        if (requireJoinSplitForAssetA && requireJoinSplitForAssetB) {
-          throw new Error(`Cannot find a note with the exact value for asset ${assetIdA}. Require ${valueA}.`);
-        }
-      }
-
-      const joinSplitProofInputs: JoinSplitProofInput[] = [];
-      const outputNotes: Note[] = [];
-      {
-        // Here we need to generate the proof inputs based on the notes collected above
-        // For asset A, we need the deposit value + any fee
-        // If there is only 1 input asset (asset A) AND we have more than 2 notes then remove 1 non-pending note from the pack (if there is one)
-        // Also reduce the target value by the value of this note
-        let targetValue = depositValue + fee;
-        const reservedNote = !hasTwoAssets && notesA.length > 2 ? notesA.find(n => !n.pending) : undefined;
-        if (reservedNote) {
-          outputNotes.push(reservedNote);
-          targetValue -= reservedNote.value;
-        }
-        // We now need to produce J/S txs as required to give us the required number of notes for asset A
-        // If we have 2 input assets then we require a single note as output from these txs
-        // If we have reserved a note above then we require a single note as output from these txs
-        // Otherwise we can have 2 notes as output from these txs
-        // One thing to note is that we may have a perfect-sized note for asset A here
-        // In this case, this next operation should produce no J/S txs!
-        // Another thing to note is that the check for non-pending notes above is significant
-        // The output from the following operation will be a pending note and a tx can't have 2 pending input notes
-        const numberOfOutputNotes = hasTwoAssets || reservedNote ? 1 : 2;
-        const { proofInputs, outputNotes: outputNotesA } = await this.createChainedProofInputs(
-          userId,
-          spendingPublicKey,
-          notesA.filter(n => n !== reservedNote),
-          targetValue,
-          numberOfOutputNotes,
-        );
-        joinSplitProofInputs.push(...proofInputs);
-        outputNotes.push(...outputNotesA);
-      }
-      if (hasTwoAssets) {
-        // Having produced the required note for asset A above (and any required J/S txs)
-        // We now need to do the same for asset B
-        // As we have 2 assets then we must produce a single output note for this asset
-        const { proofInputs, outputNotes: outputNotesB } = await this.createChainedProofInputs(
-          userId,
-          spendingPublicKey,
-          notesB,
-          depositValue,
-          1,
-        );
-        joinSplitProofInputs.push(...proofInputs);
-        outputNotes.push(...outputNotesB);
-      }
-
-      const defiProofInput = await this.defiDepositProofCreator.createProofInput(
-        user,
-        bridgeCallData,
-        depositValue,
-        outputNotes,
+      const proofRequestData = await this.proofRequestDataFactory.createDefiProofRequestData(
+        userId,
         spendingPublicKey,
+        bridgeCallData,
+        { assetId: bridgeCallData.inputAssetIdA, value: depositValue },
+        { assetId: bridgeCallData.inputAssetIdA, value: fee },
+        userState,
       );
-
-      return [...joinSplitProofInputs, defiProofInput];
+      const accountKeyPair = new ConstantKeyPair(user.accountPublicKey, user.accountPrivateKey, this.schnorr);
+      const authAlgos = new KeyPairAuthAlgorithms(
+        accountKeyPair,
+        this.grumpkin,
+        this.noteAlgos,
+        this.noteDecryptor,
+        this.barretenberg,
+      );
+      const proofInputs = (await this.proofInputFactory.createProofInputs(proofRequestData, authAlgos)).map(
+        proofInput => {
+          if ((proofInput as PaymentProofInput).viewingKeys) {
+            const { tx, viewingKeys, signingData } = proofInput as PaymentProofInput;
+            return {
+              tx: joinSplitTxInputToJoinSplitTx(tx, user.accountPrivateKey, user.accountPublicKey),
+              viewingKeys,
+              signingData,
+            };
+          } else {
+            const { tx, viewingKey, signingData, partialStateSecretEphPubKey } = proofInput as DefiProofInput;
+            return {
+              tx: joinSplitTxInputToJoinSplitTx(tx, user.accountPrivateKey, user.accountPublicKey),
+              viewingKeys: [viewingKey],
+              signingData,
+              partialStateSecretEphPubKey,
+            };
+          }
+        },
+      );
+      return proofInputs;
     });
   }
 
-  private async createChainedProofInputs(
-    userId: GrumpkinAddress,
-    spendingPublicKey: GrumpkinAddress,
-    notes: Note[],
-    targetValue?: bigint,
-    numberOfOutputNotes = 2,
-  ) {
-    const userState = this.getUserState(userId);
-    const user = userState.getUserData();
-    const spendingKeyRequired = !spendingPublicKey.equals(userId);
-
-    const proofInputs: JoinSplitProofInput[] = [];
-    let outputNotes: Note[] = notes;
-
-    if (notes.length > 2) {
-      // We have more than 2 notes so we want to J/S them down to just 2
-      // We do this by splitting the notes into settled and pending (there must be at most 1 pending note!)
-      // Then we pair a settled note with a settled/pending note to produce a pending output note.
-      // Then we pair that pending output note with another settled note to produce a new pending output note
-      // Repeat this until we have 2 notes remaining, one pending and one settled
-      const settledNotes = notes.filter(n => !n.pending);
-      let firstNote = notes.find(n => n.pending) || settledNotes.shift()!;
-      const lastNote = settledNotes.pop()!;
-      const assetId = firstNote.assetId;
-
-      // Create chained txs to generate 2 output notes
-      for (const note of settledNotes) {
-        const inputNotes = [firstNote, note];
-        const noteSum = inputNotes.reduce((sum, n) => sum + n.value, BigInt(0));
-        const proofInput = await this.paymentProofCreator.createProofInput(
-          user,
-          inputNotes,
-          noteSum, // privateInput
-          BigInt(0), // recipientPrivateOutput
-          noteSum, // senderPrivateOutput
-          BigInt(0), // publicInput,
-          BigInt(0), // publicOutput
-          assetId,
-          userId, // noteRecipient
-          spendingKeyRequired,
-          undefined, // publicOwner
-          spendingPublicKey,
-          2,
-        );
-        proofInputs.push(proofInput);
-        firstNote = treeNoteToNote(proofInput.tx.outputNotes[1], user.accountPrivateKey, this.noteAlgos, {
-          allowChain: true,
-        });
-      }
-
-      outputNotes = [firstNote, lastNote];
-    }
-
-    // If the sum of our output notes does not exactly match the value requested then we must perform 1 final J/S
-    // Also, if the current number of output notes is greater than that requested then we must perform 1 final J/S
-    const noteSum = outputNotes.reduce((sum, n) => sum + n.value, BigInt(0));
-    if ((targetValue !== undefined && noteSum !== targetValue) || outputNotes.length > numberOfOutputNotes) {
-      const senderPrivateOutput = targetValue !== undefined ? targetValue : noteSum;
-      const recipientPrivateOutput = noteSum - senderPrivateOutput;
-      const proofInput = await this.paymentProofCreator.createProofInput(
-        user,
-        outputNotes,
-        noteSum, // privateInput
-        recipientPrivateOutput,
-        senderPrivateOutput,
-        BigInt(0), // publicInput,
-        BigInt(0), // publicOutput
-        outputNotes[0].assetId,
-        userId, // noteRecipient
-        spendingKeyRequired,
-        undefined, // publicOwner
-        spendingPublicKey,
-        3,
-      );
-      proofInputs.push(proofInput);
-      outputNotes = [
-        treeNoteToNote(proofInput.tx.outputNotes[1], user.accountPrivateKey, this.noteAlgos, {
-          allowChain: true,
-        }),
-      ];
-    }
-
-    return { proofInputs, outputNotes };
-  }
-
-  public async createDefiProof(input: JoinSplitProofInput, txRefNo: number, timeout = CREATE_PROOF_TIMEOUT) {
+  public async createDefiProof(input: JoinSplitProofInput, txRefNo: number, timeout?: number) {
     return await this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
 
-      const { outputNotes } = input.tx;
-      const userId = outputNotes[1].ownerPubKey;
+      const { tx, viewingKeys } = input;
+      const userId = tx.outputNotes[1].ownerPubKey;
       const userState = this.getUserState(userId);
       const user = userState.getUserData();
+      const accountKeyPair = new ConstantKeyPair(user.accountPublicKey, user.accountPrivateKey, this.schnorr);
 
-      await this.computeJoinSplitProvingKey(timeout);
-
-      return this.runOrClientLog(
-        () => this.defiDepositProofCreator.createProof(user, input, txRefNo, timeout),
+      return await this.runOrClientLog(
+        () =>
+          this.proofOutputFactory.createDefiProof(
+            {
+              ...input,
+              viewingKey: viewingKeys[0],
+              partialStateSecretEphPubKey: input.partialStateSecretEphPubKey!,
+              tx: joinSplitTxToJoinSplitTxInput(tx, user.accountPrivateKey, this.noteAlgos),
+            },
+            input.signature!,
+            txRefNo,
+            accountKeyPair,
+            timeout,
+          ),
         'Failed to create defi proof.',
       );
     });
@@ -1129,11 +1034,6 @@ export class CoreSdk extends EventEmitter {
     return result ? new EthAddress(result) : undefined;
   }
 
-  private async getLocalVerifierContractAddress() {
-    const result = await this.db.getKey('verifierContractAddress');
-    return result ? new EthAddress(result) : undefined;
-  }
-
   private async getLocalSyncedToRollup() {
     return +(await this.leveldb.get('syncedToRollup').catch(() => -1));
   }
@@ -1187,68 +1087,6 @@ export class CoreSdk extends EventEmitter {
 
   private computeAliasHash(alias: string) {
     return AliasHash.fromAlias(alias, this.blake2s);
-  }
-
-  private async createJoinSplitProofCreator(proverless: boolean) {
-    if (this.defiDepositProofCreator) {
-      return;
-    }
-
-    const fft = await this.fftFactory.createFft(JoinSplitProver.getCircuitSize(proverless));
-    const unrolledProver = new UnrolledProver(
-      this.workerPool ? this.workerPool.workers[0] : this.barretenberg,
-      this.pippenger,
-      fft,
-    );
-    this.joinSplitProver = new JoinSplitProver(unrolledProver, proverless);
-    this.paymentProofCreator = new PaymentProofCreator(
-      this.joinSplitProver,
-      this.noteAlgos,
-      this.worldState,
-      this.grumpkin,
-      this.db,
-    );
-    this.defiDepositProofCreator = new DefiDepositProofCreator(
-      this.joinSplitProver,
-      this.noteAlgos,
-      this.worldState,
-      this.grumpkin,
-      this.db,
-    );
-  }
-
-  private async createAccountProofCreator(proverless: boolean) {
-    if (this.accountProofCreator) {
-      return;
-    }
-
-    const fft = await this.fftFactory.createFft(AccountProver.getCircuitSize(proverless));
-    const unrolledProver = new UnrolledProver(
-      this.workerPool ? this.workerPool.workers[0] : this.barretenberg,
-      this.pippenger,
-      fft,
-    );
-    this.accountProver = new AccountProver(unrolledProver, proverless);
-    this.accountProofCreator = new AccountProofCreator(this.accountProver, this.worldState, this.db);
-  }
-
-  private async computeJoinSplitProvingKey(timeout?: number) {
-    this.debug('release account proving key...');
-    await this.accountProver?.releaseKey();
-    this.debug('computing join-split proving key...');
-    await this.runOrClientLog(
-      () => this.joinSplitProver.computeKey(timeout),
-      'Failed to compute join split proving key.',
-    );
-    this.debug('done.');
-  }
-
-  private async computeAccountProvingKey(timeout?: number) {
-    this.debug('release join-split proving key...');
-    await this.joinSplitProver.releaseKey();
-    this.debug('computing account proving key...');
-    await this.runOrClientLog(() => this.accountProver.computeKey(timeout), 'Failed to compute account proving key.');
-    this.debug('done.');
   }
 
   private async runOrClientLog<T>(fn: () => Promise<T>, message: string) {

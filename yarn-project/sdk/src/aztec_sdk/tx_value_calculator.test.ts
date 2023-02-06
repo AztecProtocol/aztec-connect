@@ -32,26 +32,26 @@ describe('tx value calculator', () => {
     const notePickerC = new NotePicker(noneFeePayingNotes.map(n => ({ ...n, nullifier: randomBytes(32) })) as any);
     const getNotePicker = (aid: number) =>
       aid === assetIdB ? notePickerB : aid === assetId ? notePickerA : notePickerC;
-    core.getSpendableNoteValues.mockImplementation((_, aid, ownerAccountRequired, excludePendingNotes) =>
-      getNotePicker(aid).getSpendableNoteValues({ ownerAccountRequired, excludePendingNotes }),
+    core.getSpendableNoteValues.mockImplementation((_, aid, spendingKeyRequired, excludePendingNotes) =>
+      getNotePicker(aid).getSpendableNoteValues({ spendingKeyRequired, excludePendingNotes }),
     );
-    core.getSpendableSum.mockImplementation((_, aid, ownerAccountRequired, excludePendingNotes) =>
+    core.getSpendableSum.mockImplementation((_, aid, spendingKeyRequired, excludePendingNotes) =>
       getNotePicker(aid)
         .getSpendableNoteValues({
-          ownerAccountRequired,
+          spendingKeyRequired,
           excludePendingNotes,
         })
         .reduce((sum, v) => sum + v, 0n),
     );
-    core.getMaxSpendableNoteValues.mockImplementation((_, aid, ownerAccountRequired, excludePendingNotes) =>
-      getNotePicker(aid).getMaxSpendableNoteValues({ ownerAccountRequired, excludePendingNotes }),
+    core.getMaxSpendableNoteValues.mockImplementation((_, aid, spendingKeyRequired, excludePendingNotes) =>
+      getNotePicker(aid).getMaxSpendableNoteValues({ spendingKeyRequired, excludePendingNotes }),
     );
-    core.pickNotes.mockImplementation((_, aid, value, ownerAccountRequired, excludePendingNotes) =>
-      getNotePicker(aid).pick(value, { ownerAccountRequired, excludePendingNotes }),
+    core.pickNotes.mockImplementation((_, aid, value, spendingKeyRequired, excludePendingNotes) =>
+      getNotePicker(aid).pick(value, { spendingKeyRequired, excludePendingNotes }),
     );
-    core.pickNote.mockImplementation((_, aid, value, ownerAccountRequired, excludePendingNotes) =>
+    core.pickNote.mockImplementation((_, aid, value, spendingKeyRequired, excludePendingNotes) =>
       getNotePicker(aid).pickOne(value, {
-        ownerAccountRequired,
+        spendingKeyRequired,
         excludePendingNotes,
       }),
     );

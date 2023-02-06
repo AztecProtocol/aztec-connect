@@ -213,7 +213,7 @@ resource "aws_lb_listener_rule" "api" {
 
   condition {
     path_pattern {
-      values = ["/${var.DEPLOY_TAG}/falafel/get-blocks"]
+      values = ["/${var.DEPLOY_TAG}/falafel/get-blocks", "/${var.DEPLOY_TAG}/falafel/latest-rollup-id"]
     }
   }
 }

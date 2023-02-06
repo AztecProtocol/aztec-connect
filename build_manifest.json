@@ -45,7 +45,12 @@
     "buildDir": "yarn-project",
     "dockerfile": "yarn-project-base/Dockerfile",
     "rebuildPatterns": ["^yarn-project/yarn-project-base/", "^yarn-project/yarn.lock"],
-    "dependencies": ["aztec-connect-cpp-x86_64-linux-clang", "aztec-connect-cpp-wasm-linux-clang", "blockchain-vks", "contracts"]
+    "dependencies": [
+      "aztec-connect-cpp-x86_64-linux-clang",
+      "aztec-connect-cpp-wasm-linux-clang",
+      "blockchain-vks",
+      "contracts"
+    ]
   },
   "barretenberg.js": {
     "buildDir": "yarn-project",
@@ -102,6 +107,13 @@
     "dockerfile": "block-server/Dockerfile",
     "rebuildPatterns": ["^yarn-project/block-server/"],
     "dependencies": ["barretenberg.js"]
+  },
+  "nym-gateway": {
+    "buildDir": "yarn-project/nym-gateway",
+    "projectDir": "yarn-project/nym-gateway",
+    "dockerfile": "Dockerfile",
+    "rebuildPatterns": ["^yarn-project/nym-gateway/"],
+    "dependencies": []
   },
   "sdk": {
     "buildDir": "yarn-project",
@@ -168,11 +180,6 @@
   "grafana": {
     "buildDir": "metrics/grafana",
     "rebuildPatterns": ["^metrics/grafana/"],
-    "dependencies": []
-  },
-  "website": {
-    "buildDir": "website",
-    "rebuildPatterns": ["^website/"],
     "dependencies": []
   }
 }

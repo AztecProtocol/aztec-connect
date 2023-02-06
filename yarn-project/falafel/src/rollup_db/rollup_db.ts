@@ -4,6 +4,7 @@ import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { TxHash, TxType } from '@aztec/barretenberg/blockchain';
 import { createDebugLogger } from '@aztec/barretenberg/log';
 import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
+import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { serializeBufferArrayToVector } from '@aztec/barretenberg/serialize';
 import { WorldStateConstants } from '@aztec/barretenberg/world_state';
 import { DataSource, In, IsNull, LessThan, MoreThanOrEqual, Not, Repository } from 'typeorm';
@@ -257,9 +258,13 @@ export class TypeOrmRollupDb implements RollupDb {
     // Loading these as part of relations above leaks GB's of memory.
     // One would think the following would be much slower, but it's not actually that bad.
     this.debug(`populating txs for rollup ${id}...`);
-    rollup.rollupProof.txs = await this.txRep.find({ where: { rollupProof: { id: rollup.rollupProof.id } } });
-    // Enforce tx ordering.
-    rollup.rollupProof.afterLoad();
+    // Populate the txs in order by position
+    rollup.rollupProof.txs = await this.txRep.find({
+      where: { rollupProof: { id: rollup.rollupProof.id } },
+      order: {
+        position: 'ASC',
+      },
+    });
     return rollup;
   }
 
@@ -301,9 +306,13 @@ export class TypeOrmRollupDb implements RollupDb {
     // Loading these as part of relations above leaks GB's of memory.
     // One would think the following would be much slower, but it's not actually that bad.
     for (const rollup of result) {
-      rollup.rollupProof.txs = await this.txRep.find({ where: { rollupProof: { id: rollup.rollupProof.id } } });
-      // Enforce tx ordering.
-      rollup.rollupProof.afterLoad();
+      // Populate the txs in order by position
+      rollup.rollupProof.txs = await this.txRep.find({
+        where: { rollupProof: { id: rollup.rollupProof.id } },
+        order: {
+          position: 'ASC',
+        },
+      });
     }
     return result;
   }
@@ -336,10 +345,13 @@ export class TypeOrmRollupDb implements RollupDb {
     // One would think the following would be much slower, but it's not actually that bad.
     for (const rollup of rollups) {
       this.debug(`getSettledRollups: fetching txs for settled rollup ${rollup.id}...`);
-      rollup.rollupProof.txs = await this.txRep.find({ where: { rollupProof: { id: rollup.rollupProof.id } } });
-      // Enforce tx ordering.
-      this.debug(`getSettledRollups: ordering txs...`);
-      rollup.rollupProof.afterLoad();
+      // Populate the txs in order by position
+      rollup.rollupProof.txs = await this.txRep.find({
+        where: { rollupProof: { id: rollup.rollupProof.id } },
+        order: {
+          position: 'ASC',
+        },
+      });
     }
     return rollups;
   }
@@ -363,13 +375,23 @@ export class TypeOrmRollupDb implements RollupDb {
       await transactionalEntityManager.insert(this.rollupProofRep.target, rollup.rollupProof);
       delete rollup.rollupProof.rollup;
 
-      for (const tx of rollup.rollupProof.txs) {
-        tx.rollupProof = rollup.rollupProof;
-        await transactionalEntityManager.upsert(this.txRep.target, tx, {
-          skipUpdateIfNoValuesChanged: true,
-          conflictPaths: ['id'],
-        });
-        delete tx.rollupProof;
+      // To ensure the txs are correctly ordered, we order them as their ids are ordered in the proof data
+      const decodedProofData = RollupProofData.decode(rollup.rollupProof.encodedProofData);
+
+      for (const [i, proof] of decodedProofData.innerProofData.entries()) {
+        if (!proof.isPadding()) {
+          const tx = rollup.rollupProof.txs.find(tx => tx.id.equals(proof.txId));
+          if (!tx) {
+            throw new Error(`Could not find tx with id ${proof.txId} in rollup proof`);
+          }
+          tx.rollupProof = rollup.rollupProof;
+          tx.position = i;
+          await transactionalEntityManager.upsert(this.txRep.target, tx, {
+            skipUpdateIfNoValuesChanged: true,
+            conflictPaths: ['id'],
+          });
+          delete tx.rollupProof;
+        }
       }
 
       const accountDaos = getNewAccountDaos(rollup.rollupProof.txs);
@@ -480,6 +502,10 @@ export class TypeOrmRollupDb implements RollupDb {
     await this.txRep.delete({ nullifier1: In(nullifiers) });
   }
 
+  public async resetPositionOnTxsWithoutRollupProof() {
+    await this.txRep.update({ rollupProof: IsNull() }, { position: -1 });
+  }
+
   public async eraseDb() {
     await this.connection.transaction(async transactionalEntityManager => {
       await transactionalEntityManager.delete(this.accountRep.target, {});
@@ -489,5 +515,39 @@ export class TypeOrmRollupDb implements RollupDb {
       await transactionalEntityManager.delete(this.rollupProofRep.target, {});
       await transactionalEntityManager.delete(this.txRep.target, {});
     });
+  }
+
+  // TODO: remove once production DB is migrated
+  public async populatePositions() {
+    // Iterates over all rollups and populates the position field in the txs.
+    const lastRollup = await this.getLastSettledRollup();
+    if (!lastRollup) {
+      this.debug('No rollups found, skipping position population.');
+      return;
+    }
+    for (let id = 0; id <= lastRollup!.id; id++) {
+      if (id % 100 == 0) {
+        console.log(`Populating tx positions for rollup ${id}...`);
+      }
+      const rollup = nullToUndefined(
+        await this.rollupRep.findOne({
+          where: { id },
+          relations: ['rollupProof'],
+        }),
+      );
+      if (!rollup) {
+        throw new Error(`Could not find rollup with id ${id}`);
+      }
+      const decodedProofData = RollupProofData.decode(rollup.rollupProof.encodedProofData);
+
+      await this.connection.transaction(async transactionalEntityManager => {
+        for (const [i, proof] of decodedProofData.innerProofData.entries()) {
+          if (!proof.isPadding()) {
+            // await this.txRep.update({ id: proof.txId }, { position: i });
+            await transactionalEntityManager.update<TxDao>(this.txRep.target, { id: proof.txId }, { position: i });
+          }
+        }
+      });
+    }
   }
 }

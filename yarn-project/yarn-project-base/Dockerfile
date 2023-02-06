@@ -23,6 +23,7 @@ COPY halloumi/package.json halloumi/package.json
 COPY kebab/package.json kebab/package.json
 COPY falafel/package.json falafel/package.json
 COPY block-server/package.json block-server/package.json
+COPY nym-gateway/package.json nym-gateway/package.json
 COPY sdk/package.json sdk/package.json
 COPY hummus/package.json hummus/package.json
 COPY end-to-end/package.json end-to-end/package.json
