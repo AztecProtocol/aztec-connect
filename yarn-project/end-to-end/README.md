@@ -93,3 +93,9 @@ If you would like the rebuild something inside `yarn-project` there is a slightl
 # Inside /yarn-project
 docker build . -f falafel/Dockerfile -t 278380418400.dkr.ecr.eu-west-2.amazonaws.com/falafel
 ```
+
+## Running integration tests
+
+Inside the `src` directory some tests are prefixed with `int` rather than `e2e`. This means that they are integration tests, rather then e2e tests and do not require the entire infrastructure to be running (`docker-compose.integration.yml`). As this test requires custom configuration (it runs the `AlwaysTrueVerifier` rather than the `MockVerifier`) it cannot be run against the current `tmux-splits`.
+
+The `start_e2e.sh` script will automatically detect if an integration test is running based on the test file prefix `int`, then start up the required `docker-compose` file.
