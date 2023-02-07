@@ -1,7 +1,7 @@
 import { toBigIntBE, toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
 import { InterruptError } from '@aztec/barretenberg/errors';
-import { createLogger } from '@aztec/barretenberg/log';
+import { createDebugLogger, createLogger } from '@aztec/barretenberg/log';
 import { HashPath } from '@aztec/barretenberg/merkle_tree';
 import { NoteAlgorithms } from '@aztec/barretenberg/note_algorithms';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
@@ -27,6 +27,7 @@ export class RollupCreator {
     private metrics: Metrics,
     private feeResolver: TxFeeResolver,
     private log = createLogger('RollupCreator'),
+    private debug = createDebugLogger('rollup_creator'),
   ) {}
 
   /**
@@ -104,7 +105,9 @@ export class RollupCreator {
     const localAssetIds: Set<number> = new Set();
 
     const proofs = txs.map(tx => new ProofData(tx.proofData));
+    this.debug('getting linked commitments...');
     const { linkedCommitmentPaths, linkedCommitmentIndices } = await this.getLinkedCommitments(proofs);
+    this.debug('linked commitments retrieval completed');
 
     for (let i = 0; i < proofs.length; ++i) {
       const proof = proofs[i];
@@ -121,6 +124,7 @@ export class RollupCreator {
         }
       }
 
+      this.debug(`inserting commitments at index ${nextDataIndex}`);
       if (proof.proofId !== ProofId.DEFI_DEPOSIT) {
         await worldStateDb.put(RollupTreeId.DATA, nextDataIndex++, proof.noteCommitment1);
       } else {
@@ -141,7 +145,7 @@ export class RollupCreator {
         await worldStateDb.put(RollupTreeId.DATA, nextDataIndex++, encNote);
       }
       await worldStateDb.put(RollupTreeId.DATA, nextDataIndex++, proof.noteCommitment2);
-
+      this.debug(`inserting nullifiers and retrieving hash paths...`);
       for (const nullifierBuf of [proof.nullifier1, proof.nullifier2]) {
         const nullifier = toBigIntBE(nullifierBuf);
         oldNullPaths.push(await worldStateDb.getHashPath(RollupTreeId.NULL, nullifier));
@@ -154,6 +158,7 @@ export class RollupCreator {
 
       dataRootsPaths.push(await worldStateDb.getHashPath(RollupTreeId.ROOT, BigInt(tx.dataRootsIndex!)));
       dataRootsIndicies.push(tx.dataRootsIndex!);
+      this.debug(`completed merkle tree updates for tx ${i + 1}/${proofs.length}`);
     }
 
     if (txs.length < this.numInnerRollupTxs) {
