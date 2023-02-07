@@ -4468,6 +4468,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/koa-bodyparser@npm:^4.3.10":
+  version: 4.3.10
+  resolution: "@types/koa-bodyparser@npm:4.3.10"
+  dependencies:
+    "@types/koa": "*"
+  checksum: 4b4cd176815a6c1fb0d593bfea03de1285e606d3a96e56ad3691144e35061750ed95e4ecf2ff8e25599d360a93646e29dbb167fdfaaa73ccf87ca5b6141ff0db
+  languageName: node
+  linkType: hard
+
 "@types/koa-bodyparser@npm:^4.3.7":
   version: 4.3.8
   resolution: "@types/koa-bodyparser@npm:4.3.8"
@@ -9586,7 +9595,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"http-errors@npm:2.0.0":
+"http-errors@npm:2.0.0, http-errors@npm:^2.0.0":
   version: 2.0.0
   resolution: "http-errors@npm:2.0.0"
   dependencies:
@@ -11378,6 +11387,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"koa-router@npm:^12.0.0":
+  version: 12.0.0
+  resolution: "koa-router@npm:12.0.0"
+  dependencies:
+    http-errors: ^2.0.0
+    koa-compose: ^4.1.0
+    methods: ^1.1.2
+    path-to-regexp: ^6.2.1
+  checksum: 29b02fd96972c037e805f6ce2626c971f4fd9cba04005bfedc080ab425d31b4b1cfe2ebc000b26e4a45e68215a3a3ed557f836ba486ea0d2f1e7e78fc95f8dca
+  languageName: node
+  linkType: hard
+
 "koa-router@npm:^7.4.0":
   version: 7.4.0
   resolution: "koa-router@npm:7.4.0"
@@ -11420,6 +11441,37 @@ __metadata:
     type-is: "npm:^1.6.16"
     vary: "npm:^1.1.2"
   checksum: c9a6f9c803433b2d143a0788308048c1432a71c5febcfea2af7f2e8bd732b9bfd75c2c220d553752ee9ab9a3f52490f006cfd521db97cd01d8461d67cc1ccc1f
+  languageName: node
+  linkType: hard
+
+"koa@npm:^2.14.1":
+  version: 2.14.1
+  resolution: "koa@npm:2.14.1"
+  dependencies:
+    accepts: ^1.3.5
+    cache-content-type: ^1.0.0
+    content-disposition: ~0.5.2
+    content-type: ^1.0.4
+    cookies: ~0.8.0
+    debug: ^4.3.2
+    delegates: ^1.0.0
+    depd: ^2.0.0
+    destroy: ^1.0.4
+    encodeurl: ^1.0.2
+    escape-html: ^1.0.3
+    fresh: ~0.5.2
+    http-assert: ^1.3.0
+    http-errors: ^1.6.3
+    is-generator-function: ^1.0.7
+    koa-compose: ^4.1.0
+    koa-convert: ^2.0.0
+    on-finished: ^2.3.0
+    only: ~0.0.2
+    parseurl: ^1.3.2
+    statuses: ^1.5.0
+    type-is: ^1.6.16
+    vary: ^1.1.2
+  checksum: 84cfce48d72cf434831bd9f4f06beb3815da030325a7e89b13ee684f5afd158221e16c2d450ca637b221aa0c4a0ab235edd129e4efea656dc5d8384801d3e90f
   languageName: node
   linkType: hard
 
@@ -11792,7 +11844,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"methods@npm:^1.0.1, methods@npm:~1.1.2":
+"methods@npm:^1.0.1, methods@npm:^1.1.2, methods@npm:~1.1.2":
   version: 1.1.2
   resolution: "methods@npm:1.1.2"
   checksum: 0917ff4041fa8e2f2fda5425a955fe16ca411591fbd123c0d722fcf02b73971ed6f764d85f0a6f547ce49ee0221ce2c19a5fa692157931cecb422984f1dcd13a
@@ -12313,8 +12365,16 @@ __metadata:
   resolution: "nym-gateway@workspace:nym-gateway"
   dependencies:
     "@rushstack/eslint-patch": ^1.2.0
+    "@types/koa": ^2.13.5
+    "@types/koa-bodyparser": ^4.3.10
+    "@types/koa-compress": ^4.0.3
+    "@types/koa-router": ^7.4.4
     "@types/node": ^18.7.23
     "@types/ws": ^8.5.4
+    koa: ^2.14.1
+    koa-bodyparser: ^4.3.0
+    koa-compress: ^5.1.0
+    koa-router: ^12.0.0
     log-timestamp: ^0.3.0
     ts-node: ^10.9.1
     tsc-watch: ^6.0.0
@@ -12690,6 +12750,13 @@ __metadata:
   dependencies:
     isarray: "npm:0.0.1"
   checksum: 709f6f083c0552514ef4780cb2e7e4cf49b0cc89a97439f2b7cc69a608982b7690fb5d1720a7473a59806508fc2dae0be751ba49f495ecf89fd8fbc62abccbcd
+  languageName: node
+  linkType: hard
+
+"path-to-regexp@npm:^6.2.1":
+  version: 6.2.1
+  resolution: "path-to-regexp@npm:6.2.1"
+  checksum: f0227af8284ea13300f4293ba111e3635142f976d4197f14d5ad1f124aebd9118783dd2e5f1fe16f7273743cc3dbeddfb7493f237bb27c10fdae07020cc9b698
   languageName: node
   linkType: hard
 

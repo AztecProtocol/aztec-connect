@@ -1007,6 +1007,7 @@ workflows:
             - e2e-virtual-assets
             - e2e-deposit-approval
             - int-rollup-processor
+            - nym-gateway
           filters: *deploy_filters
   metrics:
     when:

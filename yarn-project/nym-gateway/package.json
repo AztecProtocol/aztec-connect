@@ -10,14 +10,23 @@
     "start:dev": "tsc-watch -p tsconfig.json --onSuccess 'yarn start'",
     "init:nym": "./nym-client init --id Aztec",
     "start:nym": "./nym-client run --id Aztec",
-    "clean": "rm -rf ./dest"
+    "clean": "rm -rf ./dest",
+    "test:address": "node scripts/test-surb.js"
   },
   "dependencies": {
+    "koa": "^2.14.1",
+    "koa-bodyparser": "^4.3.0",
+    "koa-compress": "^5.1.0",
+    "koa-router": "^12.0.0",
     "log-timestamp": "^0.3.0",
     "ws": "^8.12.0"
   },
   "devDependencies": {
     "@rushstack/eslint-patch": "^1.2.0",
+    "@types/koa": "^2.13.5",
+    "@types/koa-bodyparser": "^4.3.10",
+    "@types/koa-compress": "^4.0.3",
+    "@types/koa-router": "^7.4.4",
     "@types/node": "^18.7.23",
     "@types/ws": "^8.5.4",
     "ts-node": "^10.9.1",

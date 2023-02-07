@@ -114,6 +114,10 @@ resource "aws_ecs_task_definition" "nym-gateway" {
     ],
     "environment": [
       {
+        "name": "PORT",
+        "value": "80"
+      },
+      {
         "name": "NYM_PORT",
         "value": "1977"
       },
@@ -205,4 +209,41 @@ resource "aws_cloudwatch_log_group" "nym-gateway_logs" {
   retention_in_days = "14"
 }
 
+# Configure ALB to route /nym-gateway to server.
+resource "aws_alb_target_group" "nym-gateway" {
+  name                 = "${var.DEPLOY_TAG}-nym-gateway"
+  port                 = "80"
+  protocol             = "HTTP"
+  target_type          = "ip"
+  vpc_id               = data.terraform_remote_state.setup_iac.outputs.vpc_id
+  deregistration_delay = 5
 
+  health_check {
+    path                = "/${var.DEPLOY_TAG}/nym-gateway"
+    matcher             = "200"
+    interval            = 10
+    healthy_threshold   = 2
+    unhealthy_threshold = 5
+    timeout             = 5
+  }
+
+  tags = {
+    name = "${var.DEPLOY_TAG}-nym-gateway"
+  }
+}
+
+resource "aws_lb_listener_rule" "api" {
+  listener_arn = data.terraform_remote_state.aztec2_iac.outputs.alb_listener_arn
+  priority     = 450
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_alb_target_group.nym-gateway.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/${var.DEPLOY_TAG}/nym-gateway*"]
+    }
+  }
+}

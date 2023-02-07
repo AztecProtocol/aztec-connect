@@ -1,47 +1,36 @@
 import 'log-timestamp';
-import WebSocket from 'ws';
+import http from 'http';
+
 import { Server } from './server.js';
+import { appFactory } from './app.js';
 
 async function main() {
   // basic nym config
   // TODO: move to a config file
-  const HOST = process.env.HOST || '127.0.0.1';
+  const port = process.env.PORT || 8085;
+  const nymHost = process.env.NYM_HOST || '127.0.0.1';
   const nymPort = process.env.NYM_PORT || '1977';
-  const nymClientUrl = `ws:${HOST}:${nymPort}`;
-  let connection: WebSocket;
+  const nymClientUrl = `ws:${nymHost}:${nymPort}`;
 
-  const startServer = (conn: WebSocket) => new Server(conn);
-  connection = await connectWebSocket(nymClientUrl, startServer);
+  const server = new Server(nymClientUrl);
 
-  const shutdown = () => {
-    connection.close();
+  await server.start();
+
+  const shutdown = async () => {
+    if (server.isRunning()) {
+      await server.stop();
+    }
+    process.exit(0);
   };
 
   process.once('SIGTERM', shutdown);
   process.once('SIGINT', shutdown);
+
+  const app = appFactory(server);
+  const httpServer = http.createServer(app.callback());
+  httpServer.listen(port);
+  console.log(`NYM gateway server listening on port ${port}`);
 }
-
-const connectWebSocket = (url: string, cb: (ws: WebSocket) => Server): Promise<WebSocket> => {
-  return new Promise(resolve => {
-    try {
-      const ws = new WebSocket(url);
-      ws.on('open', () => {
-        console.log('conn opened');
-        cb(ws);
-        resolve(ws);
-      });
-      ws.on('error', (err: Error) => {
-        console.log('conn error', err);
-        // retry
-        setTimeout(() => connectWebSocket(url, cb), 5000);
-      });
-
-      ws.on('close', () => console.log('WebSocket closed'));
-    } catch (error) {
-      console.log('Unable to instantiate websocket: ', error);
-    }
-  });
-};
 
 main().catch(err => {
   console.log(err);
