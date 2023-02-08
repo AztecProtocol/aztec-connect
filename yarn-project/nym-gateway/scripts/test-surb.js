@@ -42,7 +42,6 @@ async function main() {
 // Send a message to the mixnet.
 function sendMessageToMixnet(count) {
   const address = process.argv[2];
-  console.log('address', process.argv);
   if (!address) {
     throw new Error('No nym address provided as argument.');
   }
@@ -87,7 +86,7 @@ function handleReceivedTextMessage(message) {
   const senderTag = message.senderTag;
 
   if (senderTag != null) {
-    console.log('text: ', text, 'replySub: ', senderTag);
+    console.log('text: ', text, '\nreplySurb: ', senderTag);
     // console.log('\nReplying to message\n');
     sendReplyMessageToMixnet(senderTag);
   } else {

@@ -118,6 +118,10 @@ resource "aws_ecs_task_definition" "nym-gateway" {
         "value": "80"
       },
       {
+        "name": "API_PREFIX",
+        "value": "/${var.DEPLOY_TAG}/nym-gateway"
+      },
+      {
         "name": "NYM_PORT",
         "value": "1977"
       },

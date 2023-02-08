@@ -118,6 +118,10 @@ resource "aws_ecs_task_definition" "nym-gateway" {
         "value": "80"
       },
       {
+        "name": "API_PREFIX",
+        "value": "/${var.DEPLOY_TAG}/nym-gateway"
+      },
+      {
         "name": "NYM_PORT",
         "value": "1977"
       },
@@ -192,6 +196,12 @@ resource "aws_ecs_service" "nym-gateway" {
       data.terraform_remote_state.setup_iac.outputs.subnet_az2_private_id
     ]
     security_groups = [data.terraform_remote_state.setup_iac.outputs.security_group_private_id]
+  }
+
+  load_balancer {
+    target_group_arn = aws_alb_target_group.nym-gateway.arn
+    container_name   = "${var.DEPLOY_TAG}-nym-gateway"
+    container_port   = 80
   }
 
   service_registries {

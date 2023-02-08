@@ -3,13 +3,11 @@ import http from 'http';
 
 import { Server } from './server.js';
 import { appFactory } from './app.js';
+import { getConfig } from './config.js';
 
 async function main() {
   // basic nym config
-  // TODO: move to a config file
-  const port = process.env.PORT || 8085;
-  const nymHost = process.env.NYM_HOST || '127.0.0.1';
-  const nymPort = process.env.NYM_PORT || '1977';
+  const { nymHost, nymPort, apiPrefix, port } = getConfig();
   const nymClientUrl = `ws:${nymHost}:${nymPort}`;
 
   const server = new Server(nymClientUrl);
@@ -26,7 +24,7 @@ async function main() {
   process.once('SIGTERM', shutdown);
   process.once('SIGINT', shutdown);
 
-  const app = appFactory(server);
+  const app = appFactory(server, apiPrefix);
   const httpServer = http.createServer(app.callback());
   httpServer.listen(port);
   console.log(`NYM gateway server listening on port ${port}`);

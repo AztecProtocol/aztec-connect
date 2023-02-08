@@ -5,9 +5,9 @@ import bodyParser from 'koa-bodyparser';
 
 import { Server } from './server.js';
 
-export function appFactory(server: Server) {
+export function appFactory(server: Server, prefix: string) {
   const app = new Koa();
-  const router = new Router<DefaultState, Context>();
+  const router = new Router<DefaultState, Context>({ prefix });
 
   const checkReady = async (ctx: Context, next: () => Promise<void>) => {
     if (!server.isReady()) {
