@@ -194,6 +194,12 @@ resource "aws_ecs_service" "nym-gateway" {
     security_groups = [data.terraform_remote_state.setup_iac.outputs.security_group_private_id]
   }
 
+  load_balancer {
+    target_group_arn = aws_alb_target_group.nym-gateway.arn
+    container_name   = "${var.DEPLOY_TAG}-nym-gateway"
+    container_port   = 80
+  }
+
   service_registries {
     registry_arn   = aws_service_discovery_service.nym-gateway.arn
     container_name = "${var.DEPLOY_TAG}-nym-gateway"
