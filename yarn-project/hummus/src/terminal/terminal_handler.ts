@@ -67,6 +67,7 @@ export class TerminalHandler {
     public provider: EthereumProvider,
     private options: CreateSdkOptions = {
       serverUrl: 'http://localhost:8081',
+      noVersionCheck: true,
     },
   ) {}
 
@@ -173,7 +174,7 @@ export class TerminalHandler {
     } else {
       this.printQueue.put(
         'deposit <amount>\n' +
-          'defi <amount> <bridge call data> <input asset>\n' +
+          'defi <amount> <call data> <input asset>\n' +
           '     <output asset> [aux data]\n' +
           'withdraw <amount>\n' +
           'transfer <to> <amount>\n' +

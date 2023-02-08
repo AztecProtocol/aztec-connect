@@ -19,7 +19,7 @@ async function main() {
   process.once('SIGINT', shutdown);
   process.once('SIGTERM', shutdown);
 
-  const app = appFactory(server, API_PREFIX);
+  const app = appFactory(server, falafelUrl, API_PREFIX);
 
   const httpServer = http.createServer(app.callback());
   httpServer.listen(+PORT);

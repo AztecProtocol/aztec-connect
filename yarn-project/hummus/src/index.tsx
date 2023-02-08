@@ -48,7 +48,7 @@ async function main() {
 
   const serverUrl = deployTag ? `https://api.aztec.network/${deployTag}/falafel` : 'http://localhost:8081';
 
-  const terminalHandler = new TerminalHandler(terminal, window.ethereum, { debug, serverUrl });
+  const terminalHandler = new TerminalHandler(terminal, window.ethereum, { debug, serverUrl, noVersionCheck: true });
   terminalHandler.start();
 
   // Allows injecting a provider externally (e.g. from puppeteer).

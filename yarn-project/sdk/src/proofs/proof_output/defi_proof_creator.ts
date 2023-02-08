@@ -37,11 +37,21 @@ export class DefiProofCreator {
     } = tx;
     const txFee = toBigIntBE(proofData.txFee);
     const { ownerPubKey: accountPublicKey, accountRequired } = outputNotes[1];
-    const coreTx = new CoreDefiTx(txId, accountPublicKey, bridgeCallData, depositValue, txFee, txRefNo, new Date());
     const partialState = this.noteAlgos.valueNotePartialCommitment(
       partialStateSecret,
       accountPublicKey,
       accountRequired,
+    );
+    const coreTx = new CoreDefiTx(
+      txId,
+      accountPublicKey,
+      bridgeCallData,
+      depositValue,
+      txFee,
+      txRefNo,
+      new Date(),
+      partialState,
+      partialStateSecret,
     );
     const offchainTxData = new OffchainDefiDepositData(
       bridgeCallData,

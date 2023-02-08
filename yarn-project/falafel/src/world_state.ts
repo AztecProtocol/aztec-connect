@@ -185,7 +185,7 @@ export class WorldState {
     if (flushQueue) {
       await this.serialQueue.end();
     } else {
-      this.serialQueue.cancel();
+      await this.serialQueue.cancel();
     }
     await this.blockchain.stop();
     await this.pipeline?.stop(false);

@@ -14,12 +14,15 @@ export class Mutex {
     private readonly pingInterval = 2000,
   ) {}
 
-  public async lock() {
+  public async lock(untilAcquired = true) {
     while (true) {
       if (await this.db.acquireLock(this.name, this.timeout)) {
         const id = this.id;
         this.pingTimeout = setTimeout(() => this.ping(id), this.pingInterval);
-        return;
+        return true;
+      }
+      if (!untilAcquired) {
+        return false;
       }
       await new Promise(resolve => setTimeout(resolve, this.tryLockInterval));
     }

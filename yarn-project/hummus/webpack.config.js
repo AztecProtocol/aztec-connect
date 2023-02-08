@@ -11,6 +11,7 @@ const require = createRequire(import.meta.url);
 export default {
   target: 'web',
   mode: 'production',
+  devtool: false,
   entry: './src/index.tsx',
   module: {
     rules: [
@@ -48,5 +49,8 @@ export default {
   },
   devServer: {
     historyApiFallback: true,
+    client: {
+      overlay: false,
+    },
   },
 };

@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/bash
 set -eu
 
 CONTRACTS_HOST=${CONTRACTS_HOST:-http://localhost:8547}
@@ -26,5 +26,9 @@ if [ -z "${DEBUG-}" ]; then
   export DEBUG="bb:e2e*"
 fi
 
+# Puppeteer in jest has an unfixable problem of leaving dangling chrome instances around if you ctrl-c the test.
+# This is a bit heavy handed, but will kill all chromes owned by the user, launched from node_modules.
+trap "pgrep -f \"node_modules.*chrome\" -u $UID | xargs kill -9" SIGINT
+
 export NODE_NO_WARNINGS=1
-node --openssl-legacy-provider --experimental-vm-modules $(yarn bin jest) --no-cache --runInBand $1
+node ${NODE_ARGS-} --openssl-legacy-provider --experimental-vm-modules $(yarn bin jest) --no-cache --runInBand $1

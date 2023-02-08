@@ -1,23 +1,17 @@
 import { AliasHash } from '@aztec/barretenberg/account_id';
 import { EthAddress, GrumpkinAddress } from '@aztec/barretenberg/address';
-import { toBigIntBE } from '@aztec/barretenberg/bigint_buffer';
 import { DecodedBlock } from '@aztec/barretenberg/block_source';
 import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { AccountProver, JoinSplitProver, ProofId } from '@aztec/barretenberg/client_proofs';
 import { NetCrs } from '@aztec/barretenberg/crs';
 import { Blake2s, keccak256, Pedersen, randomBytes, Schnorr } from '@aztec/barretenberg/crypto';
 import { Grumpkin } from '@aztec/barretenberg/ecc';
-import { InitHelpers, LENGTH_OF_ACCOUNT_DATA } from '@aztec/barretenberg/environment';
 import { FftFactory } from '@aztec/barretenberg/fft';
 import { createDebugLogger, logHistory } from '@aztec/barretenberg/log';
 import { NoteAlgorithms, NoteDecryptor } from '@aztec/barretenberg/note_algorithms';
-import { OffchainAccountData } from '@aztec/barretenberg/offchain_tx_data';
 import { Pippenger } from '@aztec/barretenberg/pippenger';
 import { retryUntil } from '@aztec/barretenberg/retry';
-import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { BridgePublishQuery, BridgePublishQueryResult, RollupProvider, Tx } from '@aztec/barretenberg/rollup_provider';
-import { InterruptableSleep } from '@aztec/barretenberg/sleep';
-import { Timer } from '@aztec/barretenberg/timer';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { BarretenbergWasm, WorkerPool } from '@aztec/barretenberg/wasm';
 import { WorldState, WorldStateConstants } from '@aztec/barretenberg/world_state';
@@ -25,11 +19,10 @@ import isNode from 'detect-node';
 import { EventEmitter } from 'events';
 import { LevelUp } from 'levelup';
 import { KeyPairAuthAlgorithms } from '../auth_algorithms/key_pair_auth_algorithms.js';
-import { BlockContext } from '../block_context/block_context.js';
 import { sendClientLog, sendClientConsoleLog } from '../client_log/client_log.js';
 import { CorePaymentTx, createCorePaymentTxForRecipient } from '../core_tx/index.js';
-import { Alias, Database } from '../database/index.js';
-import { getUserSpendingKeysFromGenesisData, parseGenesisAliasesAndKeys } from '../genesis_state/index.js';
+import { Database } from '../database/index.js';
+import { getUserSpendingKeysFromGenesisData } from '../genesis_state/index.js';
 import { getDeviceMemory } from '../get_num_workers/index.js';
 import { ConstantKeyPair } from '../key_pair/index.js';
 import { VERSION_HASH } from '../package_version.js';
@@ -50,6 +43,7 @@ import { UserState, UserStateEvent, UserStateFactory } from '../user_state/index
 import { CoreSdkOptions } from './core_sdk_options.js';
 import { SdkEvent, SdkStatus } from './sdk_status.js';
 import { sdkVersion } from './sdk_version.js';
+import { Synchroniser } from './synchroniser.js';
 
 enum SdkInitState {
   // Constructed but uninitialized. Unusable.
@@ -75,14 +69,12 @@ enum SdkInitState {
  */
 export class CoreSdk extends EventEmitter {
   private dataVersion = 1;
-  private options!: CoreSdkOptions;
   private worldState!: WorldState;
   private userStates: UserState[] = [];
   private proofRequestDataFactory!: ProofRequestDataFactory;
   private proofInputFactory!: ProofInputFactory;
   private proofOutputFactory!: ProofOutputFactory;
   private serialQueue!: SerialQueue;
-  private statelessSerialQueue!: SerialQueue;
   private broadcastChannel: BroadcastChannel | undefined = isNode ? undefined : new BroadcastChannel('aztec-sdk');
   private userStateFactory!: UserStateFactory;
   private sdkStatus: SdkStatus = {
@@ -106,10 +98,8 @@ export class CoreSdk extends EventEmitter {
   private blake2s!: Blake2s;
   private grumpkin!: Grumpkin;
   private schnorr!: Schnorr;
-  private syncSleep = new InterruptableSleep();
-  private synchingPromise!: Promise<void>;
   private debug = createDebugLogger('bb:core_sdk');
-  private initialTreeSize!: number;
+  private synchroniser: Synchroniser;
 
   constructor(
     private leveldb: LevelUp,
@@ -135,6 +125,29 @@ export class CoreSdk extends EventEmitter {
       this.debug(error);
       this.emit(SdkEvent.VERSION_MISMATCH);
     });
+
+    this.serialQueue = new MutexSerialQueue(this.db, 'aztec_core_sdk', 30000);
+    this.noteAlgos = new NoteAlgorithms(this.barretenberg);
+    this.blake2s = new Blake2s(this.barretenberg);
+    this.grumpkin = new Grumpkin(this.barretenberg);
+    this.schnorr = new Schnorr(this.barretenberg);
+    this.userStateFactory = new UserStateFactory(
+      this.grumpkin,
+      this.noteAlgos,
+      this.noteDecryptor,
+      this.db,
+      this.rollupProvider,
+    );
+    this.worldState = new WorldState(this.leveldb, this.pedersen);
+
+    this.synchroniser = new Synchroniser(rollupProvider, this.worldState, leveldb, db, pedersen, this.serialQueue);
+    this.synchroniser.on(SdkEvent.UPDATED_WORLD_STATE, syncStatus => {
+      this.sdkStatus = {
+        ...this.sdkStatus,
+        ...syncStatus,
+      };
+      this.emit(SdkEvent.UPDATED_WORLD_STATE, this.sdkStatus.syncedToRollup, this.sdkStatus.latestRollupId);
+    });
   }
 
   /**
@@ -151,25 +164,6 @@ export class CoreSdk extends EventEmitter {
     try {
       this.debug(`initializing...${sdkVersion ? ` (version: ${sdkVersion})` : ''}`);
       this.debug(`Version hash: ${VERSION_HASH}`);
-
-      this.options = options;
-      // Tasks in serialQueue require states like notes and hash path, which will need the sdk to sync to (ideally)
-      // the latest block. Tasks in statelessSerialQueue don't.
-
-      this.serialQueue = new MutexSerialQueue(this.db, 'aztec_core_sdk', 30000);
-      this.statelessSerialQueue = new MutexSerialQueue(this.db, 'aztec_core_sdk_stateless');
-      this.noteAlgos = new NoteAlgorithms(this.barretenberg);
-      this.blake2s = new Blake2s(this.barretenberg);
-      this.grumpkin = new Grumpkin(this.barretenberg);
-      this.schnorr = new Schnorr(this.barretenberg);
-      this.userStateFactory = new UserStateFactory(
-        this.grumpkin,
-        this.noteAlgos,
-        this.noteDecryptor,
-        this.db,
-        this.rollupProvider,
-      );
-      this.worldState = new WorldState(this.leveldb, this.pedersen);
 
       const {
         blockchainStatus: { chainId, rollupContractAddress, permitHelperContractAddress, verifierContractAddress },
@@ -194,8 +188,11 @@ export class CoreSdk extends EventEmitter {
       const subtreeDepth = Math.ceil(Math.log2(rollupSize * WorldStateConstants.NUM_NEW_DATA_TREE_NOTES_PER_TX));
       await this.worldState.init(subtreeDepth);
 
+      await this.synchroniser.init();
+
       this.sdkStatus = {
         ...this.sdkStatus,
+        ...this.synchroniser.getSyncStatus(),
         serverUrl: options.serverUrl,
         chainId,
         rollupContractAddress,
@@ -203,10 +200,6 @@ export class CoreSdk extends EventEmitter {
         verifierContractAddress,
         feePayingAssetIds,
         rollupSize,
-        syncedToRollup: await this.getLocalSyncedToRollup(),
-        latestRollupId: await this.rollupProvider.getLatestRollupId(),
-        dataSize: this.worldState.getSize(),
-        dataRoot: this.worldState.getRoot(),
         useKeyCache,
         proverless,
       };
@@ -234,7 +227,6 @@ export class CoreSdk extends EventEmitter {
       await this.db.close();
       await this.workerPool?.destroy();
       this.serialQueue?.cancel();
-      this.statelessSerialQueue?.cancel();
       throw err;
     }
   }
@@ -244,13 +236,11 @@ export class CoreSdk extends EventEmitter {
 
     // If sync() task is running, signals it to stop, to awake for exit if it's asleep, and awaits the exit.
     this.initState = SdkInitState.STOPPING;
-    this.syncSleep.interrupt();
-    await this.synchingPromise;
+    await this.synchroniser.stop();
 
     // The serial queue will cancel itself. This ensures that anything currently in the queue finishes, and ensures
     // that once the await to push() returns, nothing else is on, or can be added to the queue.
     await this.serialQueue.push(() => Promise.resolve(this.serialQueue.cancel()));
-    await this.statelessSerialQueue.push(() => Promise.resolve(this.statelessSerialQueue.cancel()));
 
     // Stop listening to account state updates.
     this.userStates.forEach(us => us.removeAllListeners());
@@ -316,7 +306,7 @@ export class CoreSdk extends EventEmitter {
   public async isAliasRegistered(alias: string, includePending: boolean) {
     const aliasHash = this.computeAliasHash(alias);
     return (
-      (await this.db.getAliases(aliasHash)).length > 0 ||
+      (await this.db.getAliasByAliasHash(aliasHash)) !== undefined ||
       (includePending && (await this.rollupProvider.isAliasRegistered(alias)))
     );
   }
@@ -331,14 +321,32 @@ export class CoreSdk extends EventEmitter {
 
   public async getAccountPublicKey(alias: string) {
     const aliasHash = this.computeAliasHash(alias);
-    const aliases = await this.db.getAliases(aliasHash);
-    return aliases[0]?.accountPublicKey;
+    const dbAlias = await this.db.getAliasByAliasHash(aliasHash);
+
+    if (!dbAlias) {
+      return;
+    }
+
+    const { accountPublicKey, noteCommitment1, spendingPublicKeyX } = dbAlias;
+    // If there is an entry in the address book for the recipient, that has both the note commitment and spending
+    // key x coordinate, then we need to validate the data hashes to the account note commitment. This allows us
+    // to skip computing the commitment for every single alias when synching. Rather we just do it on send.
+    if (noteCommitment1 && spendingPublicKeyX) {
+      // We only stored the X coordinate, and it's the only thing needed. Pad the Y coordinate.
+      const spendingPublicKey = Buffer.concat([spendingPublicKeyX, Buffer.alloc(32)]);
+      const commitment = this.noteAlgos.accountNoteCommitment(aliasHash, accountPublicKey, spendingPublicKey);
+      if (!commitment.equals(noteCommitment1)) {
+        throw new Error('Failed to validate account note commitment for recipient.');
+      }
+    }
+
+    return accountPublicKey;
   }
 
   public async getAccountIndex(alias: string) {
     const aliasHash = this.computeAliasHash(alias);
-    const aliases = await this.db.getAliases(aliasHash);
-    return aliases[0]?.index;
+    const result = await this.db.getAliasByAliasHash(aliasHash);
+    return result?.index;
   }
 
   public async getTxFees(assetId: number) {
@@ -404,41 +412,25 @@ export class CoreSdk extends EventEmitter {
           args: [id.toString()],
         });
       });
-      this.userStates.push(userState);
+      this.userStates = [...this.userStates, userState];
+      this.synchroniser.setUserStates(this.userStates);
 
-      if (!noSync) {
-        // If the sync microtask is sleeping, wake it up to start syncing.
-        this.syncSleep.interrupt();
+      // If this account is doing a full data scan to sync from 0, restart synchroniser to sync blocks from 0.
+      if (!noSync && this.initState == SdkInitState.RUNNING) {
+        await this.synchroniser.stop();
+        await this.synchroniser.start();
       }
 
       return accountPublicKey;
     });
   }
 
-  private async retrieveGenesisData() {
-    const stored = await this.db.getGenesisData();
-    if (stored.length) {
-      return stored;
-    }
-    this.debug('genesis data not found locally, retrieving from server...');
-    const serverData = await this.rollupProvider.getInitialWorldState();
-    await this.db.setGenesisData(serverData.initialAccounts);
-    return serverData.initialAccounts;
-  }
-
-  private async getInitialTreeSize(): Promise<number> {
-    if (this.initialTreeSize === undefined) {
-      const numGenesisAccounts = (await this.retrieveGenesisData()).length / LENGTH_OF_ACCOUNT_DATA;
-      this.initialTreeSize = Math.ceil(numGenesisAccounts / this.sdkStatus.rollupSize);
-      this.debug('initial tree size set to ', this.initialTreeSize);
-    }
-    return this.initialTreeSize;
-  }
-
   public async removeUser(userId: GrumpkinAddress) {
     return await this.serialQueue.push(async () => {
       const userState = this.getUserState(userId);
       this.userStates = this.userStates.filter(us => us !== userState);
+      this.synchroniser.setUserStates(this.userStates);
+      await userState.shutdown();
       userState.removeAllListeners();
       await this.db.removeUser(userId);
     });
@@ -533,19 +525,17 @@ export class CoreSdk extends EventEmitter {
 
     this.initState = SdkInitState.RUNNING;
 
-    const initPippenngerPromise = this.statelessSerialQueue.push(async () => {
-      const maxCircuitSize = Math.max(JoinSplitProver.getCircuitSize(), AccountProver.getCircuitSize());
-      const crsData = await this.getCrsData(maxCircuitSize);
-      await this.pippenger.init(crsData);
-    });
-
     this.serialQueue
       .push(async () => {
-        await initPippenngerPromise;
+        const maxCircuitSize = Math.max(JoinSplitProver.getCircuitSize(), AccountProver.getCircuitSize());
+        const crsData = await this.getCrsData(maxCircuitSize);
+        await this.pippenger.init(crsData);
 
-        await this.genesisSync();
-        await this.getInitialTreeSize();
-        this.startReceivingBlocks();
+        await this.synchroniser.start();
+        this.synchroniser.onAbort(err => {
+          this.debug('failed to sync:', err);
+          void this.destroy();
+        });
       })
       .catch(err => {
         this.debug('failed to run:', err);
@@ -569,7 +559,7 @@ export class CoreSdk extends EventEmitter {
     txRefNo: number,
     timeout?: number,
   ) {
-    return await this.statelessSerialQueue.push(async () => {
+    return await this.serialQueue.push(async () => {
       this.assertInitState(SdkInitState.RUNNING);
 
       // Create a one time user to generate and sign the proof.
@@ -908,22 +898,16 @@ export class CoreSdk extends EventEmitter {
 
       for (const proof of proofs) {
         const { userId } = proof.tx;
-        try {
-          await this.getUserState(userId).addProof(proof);
-        } catch (e) {
-          // Proof sender is not added.
-        }
+        // Proof sender may not have an account.
+        await this.getUserStateUndef(userId)?.addProof(proof);
 
         // Add the payment proof to recipient's account if they are not the sender.
         if ([ProofId.DEPOSIT, ProofId.SEND].includes(proof.tx.proofId)) {
           const recipient = proof.outputNotes[0].owner;
           if (!recipient.equals(userId)) {
             const recipientTx = createCorePaymentTxForRecipient(proof.tx as CorePaymentTx, recipient);
-            try {
-              await this.getUserState(recipient).addProof({ ...proof, tx: recipientTx });
-            } catch (e) {
-              // Recipient's account is not added.
-            }
+            // Recipient may not have an account.
+            await this.getUserStateUndef(recipient)?.addProof({ ...proof, tx: recipientTx });
           }
         }
       }
@@ -948,6 +932,7 @@ export class CoreSdk extends EventEmitter {
     this.assertInitState(SdkInitState.RUNNING);
 
     await this.getUserState(userId).awaitSynchronised(this.sdkStatus.latestRollupId, timeout);
+    await this.awaitSynchronised();
   }
 
   public async awaitSettlement(txId: TxId, timeout?: number) {
@@ -1002,6 +987,7 @@ export class CoreSdk extends EventEmitter {
   // PRIVATE METHODS
   // ---------------
 
+  // TODO: Get rid of throwing behaviour.
   private getUserState(userId: GrumpkinAddress) {
     const userState = this.userStates.find(us => us.getUserData().accountPublicKey.equals(userId));
     if (!userState) {
@@ -1010,7 +996,12 @@ export class CoreSdk extends EventEmitter {
     return userState;
   }
 
+  private getUserStateUndef(userId: GrumpkinAddress) {
+    return this.userStates.find(us => us.getUserData().accountPublicKey.equals(userId));
+  }
+
   private isSynchronised() {
+    // this.debug(`isSynchronised: ${this.sdkStatus.syncedToRollup} === ${this.sdkStatus.latestRollupId}`);
     return this.sdkStatus.syncedToRollup === this.sdkStatus.latestRollupId;
   }
 
@@ -1034,10 +1025,6 @@ export class CoreSdk extends EventEmitter {
     return result ? new EthAddress(result) : undefined;
   }
 
-  private async getLocalSyncedToRollup() {
-    return +(await this.leveldb.get('syncedToRollup').catch(() => -1));
-  }
-
   private async getCrsData(circuitSize: number) {
     this.debug('downloading crs data...');
     const crs = new NetCrs(circuitSize);
@@ -1055,6 +1042,7 @@ export class CoreSdk extends EventEmitter {
     const users = await this.db.getUsers();
     await this.addInitialUserSpendingKeys(users.map(x => x.accountPublicKey));
     this.userStates = await Promise.all(users.map(u => this.userStateFactory.createUserState(u)));
+    this.synchroniser.setUserStates(this.userStates);
     this.userStates.forEach(us =>
       us.on(UserStateEvent.UPDATED_USER_STATE, id => {
         this.emit(SdkEvent.UPDATED_USER_STATE, id);
@@ -1070,7 +1058,7 @@ export class CoreSdk extends EventEmitter {
     if (!userIds.length) {
       return;
     }
-    const genesisAccountsData = await this.retrieveGenesisData();
+    const { initialAccounts: genesisAccountsData } = await this.synchroniser.retrieveGenesisData();
     if (genesisAccountsData.length) {
       const spendingKeys = await getUserSpendingKeysFromGenesisData(
         userIds,
@@ -1104,295 +1092,6 @@ export class CoreSdk extends EventEmitter {
       this.debug(log);
       throw e;
     }
-  }
-
-  /**
-   * If the world state has no data, download the initial world state data and process it.
-   */
-  private async genesisSync(commitmentsOnly = false) {
-    await this.worldState.syncFromDb();
-    if (this.worldState.getSize() > 0) {
-      return;
-    }
-
-    this.debug('initializing genesis state from server...');
-    const genesisTimer = new Timer();
-    const initialState = await this.rollupProvider.getInitialWorldState();
-    this.debug(
-      `received genesis state with ${initialState.initialAccounts.length} bytes and ${initialState.initialSubtreeRoots.length} sub-tree roots`,
-    );
-
-    await this.db.setGenesisData(initialState.initialAccounts);
-    await this.worldState.insertElements(0, initialState.initialSubtreeRoots);
-    if (!commitmentsOnly) {
-      const accounts = InitHelpers.parseAccountTreeData(initialState.initialAccounts);
-      const genesisData = parseGenesisAliasesAndKeys(accounts);
-      this.debug(`storing aliases to db...`);
-      await this.db.addAliases(genesisData.aliases);
-    }
-    this.debug(`genesis sync complete in ${genesisTimer.s()}s`);
-  }
-
-  /**
-   * Starts a micro task that repeatedly calls sync() on the serial queue.
-   * sync() will only process so much data at a time. We sleep for 10s between calls only if we're fully synched.
-   * If we're not fully synched, we loop around immediately to process more data.
-   * This mechanism ensures we don't starve servicing the serial queue for long periods of time.
-   * Will return once destroy() is called and the state shifts to STOPPING.
-   */
-  private startReceivingBlocks() {
-    this.synchingPromise = (async () => {
-      this.debug('starting sync task...');
-      while (this.initState !== SdkInitState.STOPPING) {
-        const timer = new Timer();
-        try {
-          await this.serialQueue.push(() => this.sync());
-        } catch (err) {
-          this.debug('sync() failed:', err);
-          try {
-            await sendClientLog(this.rollupProvider, {
-              message: 'sync failed',
-              error: err,
-            });
-          } catch (err) {
-            this.debug('client log failed:', err);
-          }
-
-          await this.syncSleep.sleep(10000);
-        }
-        if (this.isSynchronised() && this.userStates.every(us => us.isSynchronised(this.sdkStatus.latestRollupId))) {
-          await this.syncSleep.sleep(this.options.pollInterval || 10000);
-        } else if (timer.s() < 1) {
-          // Ensure that at least 1s has passed before we loop around again.
-          await this.syncSleep.sleep(1000);
-        }
-      }
-      this.debug('stopped sync task.');
-    })();
-  }
-
-  /**
-   * Called when data root is not as expected. We need to erase the db and rebuild the merkle tree.
-   */
-  private async reinitDataTree() {
-    this.debug('re-initializing data tree...');
-
-    await this.leveldb.clear();
-
-    const subtreeDepth = Math.ceil(
-      Math.log2(this.sdkStatus.rollupSize * WorldStateConstants.NUM_NEW_DATA_TREE_NOTES_PER_TX),
-    );
-    await this.worldState.init(subtreeDepth);
-    await this.genesisSync(true);
-  }
-
-  /**
-   * Every time called, determine the lowest `from` block for core and user states. If some user state is synced to
-   * a lower block, use this iteration for that user state to catch up (by calling syncUserStates(...) function).
-   * If not, fetch the following chunk of blocks and apply them to both core and user states (syncBoth(...) function).
-   */
-  private async sync() {
-    // Persistent data could have changed underfoot. Ensure this.sdkStatus and user states are up to date first.
-    await this.readSyncInfo();
-    await Promise.all(this.userStates.map(us => us.syncFromDb()));
-    const { syncedToRollup } = this.sdkStatus;
-
-    // Determine the lowest synced block of all user states
-    const userSyncedToRollup = Math.min(...this.userStates.map(us => us.getUserData().syncedToRollup));
-
-    // Insertion of new leaves into the merkle tree is most efficient when done in the "multiples of 2" leaves. For this
-    // reason we want to be inserting chunks of 128 leaves when possible. At genesis, the Aztec Connect system didn't
-    // start from 0 rollup blocks/leaves but instead from `initialSubtreeRootsLength` leaves (in Aztec Connect production
-    // this number is 73). These initial blocks contain aliases from the old system. The SDK requests only `firstTake`
-    // amount of blocks upon sync initialization which will ensure that the inefficent insertion happens only once and
-    // the following insertions are done in multiples of 128.
-    const firstTake = 128 - ((await this.getInitialTreeSize()) % 128);
-    const from = Math.min(syncedToRollup, userSyncedToRollup) + 1;
-    let take = from < firstTake ? firstTake - from : 128 - ((from - firstTake) % 128);
-
-    if (userSyncedToRollup < syncedToRollup) {
-      // Some user state is lagging behind core --> first make the user state catch up to core
-
-      // Ensure user state is never synced to a higher block than core by capping the take amount
-      take = Math.min(take, syncedToRollup - userSyncedToRollup);
-      await this.syncUserStates(from, take);
-    } else {
-      // User state is not lagging behind core --> sync both
-      await this.syncBoth(from, take);
-    }
-  }
-
-  /**
-   * @notice Fetches blocks and applies them to user states
-   * @from Number of a block from which to sync
-   * @take Number of blocks to fetch
-   */
-  private async syncUserStates(from: number, take: number) {
-    const timer = new Timer();
-    this.debug(`fetching blocks from ${from} for user states...`);
-    let userBlocks = await this.rollupProvider.getBlocks(from, take);
-    // Filter blocks with higher `rollupId`/`block height` than `to` --> this should not be necessary in case `take`
-    // param was respected by the server but we do it just in case.
-    userBlocks = userBlocks.filter(block => block.rollupId < from + take);
-    if (!userBlocks.length) {
-      // nothing to do
-      return;
-    }
-    this.debug(`creating contexts for blocks ${from} to ${from + userBlocks.length - 1}...`);
-    const userBlockContexts = userBlocks.map(b => BlockContext.fromBlock(b, this.pedersen));
-    this.debug(`forwarding blocks to user states...`);
-    await Promise.all(this.userStates.map(us => us.processBlocks(userBlockContexts)));
-    this.debug(`finished processing user state blocks ${from} to ${from + userBlocks.length - 1} in ${timer.s()}s...`);
-  }
-
-  /**
-   * @notice Fetches blocks and applies them to both core and user states
-   * @from Number of a block from which to sync
-   * @take Number of blocks to fetch
-   */
-  private async syncBoth(from: number, take: number) {
-    const timer = new Timer();
-
-    const coreBlocks = await this.rollupProvider.getBlocks(from, take);
-    if (!coreBlocks.length) {
-      // nothing to do
-      return;
-    }
-    this.debug(`creating contexts for blocks ${from} to ${from + coreBlocks.length - 1}...`);
-    const coreBlockContexts = coreBlocks.map(b => BlockContext.fromBlock(b, this.pedersen));
-
-    // For debugging corrupted data root.
-    const oldRoot = this.worldState.getRoot();
-
-    // First bring the core in sync (mutable data tree layers and accounts).
-    const rollups = coreBlockContexts.map(b => b.rollup);
-    const offchainTxData = coreBlocks.map(b => b.offchainTxData);
-    const subtreeRoots = coreBlocks.map(block => block.subtreeRoot!);
-    this.debug(`inserting ${subtreeRoots.length} rollup roots into data tree...`);
-    const oldSize = this.worldState.getSize();
-    await this.logOnFailure(
-      () => this.worldState.insertElements(rollups[0].dataStartIndex, subtreeRoots),
-      'worldState.insertElements',
-    );
-    this.debug(`processing aliases...`);
-    await this.logOnFailure(() => this.processAliases(rollups, offchainTxData), 'processAliases');
-    await this.logOnFailure(() => this.writeSyncInfo(rollups[rollups.length - 1].rollupId), 'writeSyncInfo');
-
-    // TODO: Ugly hotfix. Find root cause.
-    // We expect our data root to be equal to the new data root in the last block we processed.
-    // UPDATE: Possibly solved. But leaving in for now. Can monitor for clientLogs.
-    const expectedDataRoot = rollups[rollups.length - 1].newDataRoot;
-    const newRoot = this.worldState.getRoot();
-    if (!newRoot.equals(expectedDataRoot)) {
-      const newSize = this.worldState.getSize();
-      await this.reinitDataTree();
-      await this.writeSyncInfo(-1);
-      await sendClientLog(this.rollupProvider, {
-        message: 'Invalid dataRoot.',
-        synchingFromRollup: from,
-        blocksReceived: coreBlocks.length,
-        oldRoot: oldRoot.toString('hex'),
-        newRoot: newRoot.toString('hex'),
-        newSize,
-        oldSize,
-        expectedDataRoot: expectedDataRoot.toString('hex'),
-      });
-      return;
-    }
-
-    // Second apply the blocks to user states
-    this.debug(`forwarding blocks to user states...`);
-    await this.logOnFailure(
-      () => Promise.all(this.userStates.map(us => us.processBlocks(coreBlockContexts))),
-      'userState.processBlocks',
-    );
-
-    this.debug(`finished processing blocks ${from} to ${from + coreBlocks.length - 1} in ${timer.s()}s...`);
-  }
-
-  /**
-   * Executes the given async function and submits a client log and rethrows in case of failure
-   */
-  private async logOnFailure<T>(fn: () => Promise<T>, description: string) {
-    try {
-      return await fn();
-    } catch (err) {
-      await sendClientLog(this.rollupProvider, {
-        message: description,
-        error: err,
-      });
-      throw err;
-    }
-  }
-
-  /**
-   * Brings this.sdkStatus, in line with whats persisted.
-   */
-  private async readSyncInfo() {
-    const syncedToRollup = await this.getLocalSyncedToRollup();
-    const latestRollupId = await this.rollupProvider.getLatestRollupId();
-    this.sdkStatus.latestRollupId = latestRollupId;
-
-    if (this.sdkStatus.syncedToRollup < syncedToRollup) {
-      await this.worldState.syncFromDb();
-      this.sdkStatus.syncedToRollup = syncedToRollup;
-      this.sdkStatus.dataRoot = this.worldState.getRoot();
-      this.sdkStatus.dataSize = this.worldState.getSize();
-      this.emit(SdkEvent.UPDATED_WORLD_STATE, syncedToRollup, latestRollupId);
-    }
-  }
-
-  /**
-   * Persist new syncedToRollup and update this.sdkStatus.
-   */
-  private async writeSyncInfo(syncedToRollup: number) {
-    await this.leveldb.put('syncedToRollup', syncedToRollup.toString());
-
-    this.sdkStatus.syncedToRollup = syncedToRollup;
-    this.sdkStatus.dataRoot = this.worldState.getRoot();
-    this.sdkStatus.dataSize = this.worldState.getSize();
-
-    this.emit(SdkEvent.UPDATED_WORLD_STATE, syncedToRollup, this.sdkStatus.latestRollupId);
-  }
-
-  private async processAliases(rollups: RollupProofData[], offchainTxData: Buffer[][]) {
-    const processRollup = (rollup: RollupProofData, offchainData: Buffer[]) => {
-      // Using a Map here to preserve insertion-order
-      const aliasMap = new Map<string, Alias>();
-      let offchainIndex = -1;
-      for (let i = 0; i < rollup.innerProofData.length; ++i) {
-        const proof = rollup.innerProofData[i];
-        if (proof.isPadding()) {
-          continue;
-        }
-
-        offchainIndex++;
-
-        if (proof.proofId !== ProofId.ACCOUNT) {
-          continue;
-        }
-
-        const createOrMigrate = !!toBigIntBE(proof.nullifier2);
-        if (createOrMigrate) {
-          const { accountPublicKey, aliasHash, spendingPublicKey1 } = OffchainAccountData.fromBuffer(
-            offchainData[offchainIndex],
-          );
-          const commitment = this.noteAlgos.accountNoteCommitment(aliasHash, accountPublicKey, spendingPublicKey1);
-          // Only need to check one commitment to make sure the aliasHash and accountPublicKey pair is valid.
-          if (commitment.equals(proof.noteCommitment1)) {
-            aliasMap.set(aliasHash.toString(), {
-              accountPublicKey,
-              aliasHash,
-              index: rollup.dataStartIndex + i * 2,
-            });
-          }
-        }
-      }
-      return [...aliasMap.values()];
-    };
-
-    const aliases = rollups.map((rollup, i) => processRollup(rollup, offchainTxData[i])).flat();
-    await this.db.addAliases(aliases);
   }
 
   public async queryDefiPublishStats(query: BridgePublishQuery): Promise<BridgePublishQueryResult> {

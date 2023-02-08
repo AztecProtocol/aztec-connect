@@ -113,10 +113,6 @@ export const depositTxFromJson = ({ assetId, value, publicOwner }: DepositTxJson
   publicOwner: EthAddress.fromString(publicOwner),
 });
 
-export interface InitialWorldState {
-  initialAccounts: Buffer;
-}
-
 export interface RollupProvider extends BlockSource {
   sendTxs(txs: Tx[]): Promise<TxId[]>;
   getStatus(): Promise<RollupProviderStatus>;

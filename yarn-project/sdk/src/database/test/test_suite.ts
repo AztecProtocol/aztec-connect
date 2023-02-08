@@ -10,7 +10,6 @@ import { Alias, Database, SpendingKey } from '../database.js';
 import {
   randomAccountTx,
   randomAlias,
-  randomClaimTx,
   randomDefiTx,
   randomNote,
   randomPaymentTx,
@@ -202,11 +201,11 @@ export const databaseTestSuite = (
     describe('PaymentTx', () => {
       it('add payment tx to db and get it by user id and tx hash', async () => {
         const tx = randomPaymentTx();
-        await db.addPaymentTx(tx);
+        await db.upsertPaymentTx(tx);
 
         const newUserId = GrumpkinAddress.random();
         const sharedTx = { ...tx, userId: newUserId };
-        await db.addPaymentTx(sharedTx);
+        await db.upsertPaymentTx(sharedTx);
 
         const savedTx = await db.getPaymentTx(tx.userId, tx.txId);
         expect(savedTx).toEqual(tx);
@@ -217,10 +216,10 @@ export const databaseTestSuite = (
 
       it('will override old data if try to add a user tx with the same user id and tx hash combination', async () => {
         const tx = randomPaymentTx();
-        await db.addPaymentTx(tx);
+        await db.upsertPaymentTx(tx);
 
         const newTx = randomPaymentTx({ userId: tx.userId, txId: tx.txId });
-        await db.addPaymentTx(newTx);
+        await db.upsertPaymentTx(newTx);
 
         const savedTx = await db.getPaymentTx(tx.userId, tx.txId);
         expect(savedTx).toEqual(newTx);
@@ -230,19 +229,17 @@ export const databaseTestSuite = (
         const tx = randomPaymentTx();
 
         const userId0 = GrumpkinAddress.random();
-        await db.addPaymentTx({ ...tx, userId: userId0 });
+        await db.upsertPaymentTx({ ...tx, userId: userId0 });
 
         const userId1 = GrumpkinAddress.random();
-        await db.addPaymentTx({ ...tx, userId: userId1 });
-
         const settled = new Date();
-        await db.settlePaymentTx(userId0, tx.txId, settled);
+        await db.upsertPaymentTx({ ...tx, userId: userId1, settled });
 
         const tx0 = await db.getPaymentTx(userId0, tx.txId);
-        expect(tx0!.settled).toEqual(settled);
+        expect(tx0!.settled).toEqual(undefined);
 
         const tx1 = await db.getPaymentTx(userId1, tx.txId);
-        expect(tx1!.settled).toEqual(undefined);
+        expect(tx1!.settled).toEqual(settled);
       });
 
       it('get all txs for a user from newest to oldest with unsettled txs first', async () => {
@@ -253,11 +250,11 @@ export const databaseTestSuite = (
         const now = Date.now();
         for (let i = 0; i < 5; ++i) {
           const tx0 = randomPaymentTx({ userId: userId0, settled: new Date(now + i) });
-          await db.addPaymentTx(tx0);
+          await db.upsertPaymentTx(tx0);
           settledTxs0.push(tx0);
 
           const tx1 = randomPaymentTx({ userId: userId1, settled: new Date(now - i) });
-          await db.addPaymentTx(tx1);
+          await db.upsertPaymentTx(tx1);
           settledTxs1.push(tx1);
         }
 
@@ -268,11 +265,11 @@ export const databaseTestSuite = (
         const unsettledTxs1: CorePaymentTx[] = [];
         for (let i = 0; i < 5; ++i) {
           const tx0 = randomPaymentTx({ userId: userId0, created: new Date(now - i) });
-          await db.addPaymentTx(tx0);
+          await db.upsertPaymentTx(tx0);
           unsettledTxs0.push(tx0);
 
           const tx1 = randomPaymentTx({ userId: userId1, created: new Date(now + i) });
-          await db.addPaymentTx(tx1);
+          await db.upsertPaymentTx(tx1);
           unsettledTxs1.push(tx1);
         }
 
@@ -284,10 +281,10 @@ export const databaseTestSuite = (
     describe('AccountTx', () => {
       it('add account tx to db and get it by tx hash', async () => {
         const tx0 = randomAccountTx();
-        await db.addAccountTx(tx0);
+        await db.upsertAccountTx(tx0);
 
         const tx1 = randomAccountTx();
-        await db.addAccountTx(tx1);
+        await db.upsertAccountTx(tx1);
 
         expect(await db.getAccountTx(tx0.txId)).toEqual(tx0);
         expect(await db.getAccountTx(tx1.txId)).toEqual(tx1);
@@ -295,29 +292,13 @@ export const databaseTestSuite = (
 
       it('will override old data if try to add an account tx with existing tx hash', async () => {
         const tx = randomAccountTx();
-        await db.addAccountTx(tx);
+        await db.upsertAccountTx(tx);
 
         const newTx = randomAccountTx({ txId: tx.txId, userId: tx.userId });
-        await db.addAccountTx(newTx);
+        await db.upsertAccountTx(newTx);
 
         const savedTx = await db.getAccountTx(tx.txId);
         expect(savedTx).toEqual(newTx);
-      });
-
-      it('settle an account tx with a specific tx hash', async () => {
-        const tx0 = randomAccountTx();
-        const tx1 = randomAccountTx();
-        await db.addAccountTx(tx0);
-        await db.addAccountTx(tx1);
-
-        const settled = new Date();
-        await db.settleAccountTx(tx1.txId, settled);
-
-        const savedTx0 = await db.getAccountTx(tx0.txId);
-        expect(savedTx0!.settled).toBeFalsy();
-
-        const savedTx1 = await db.getAccountTx(tx1.txId);
-        expect(savedTx1!.settled).toEqual(settled);
       });
 
       it('get all txs for a user from newest to oldest with unsettled txs first', async () => {
@@ -326,11 +307,11 @@ export const databaseTestSuite = (
         const now = Date.now();
         for (let i = 0; i < 5; ++i) {
           const tx = randomAccountTx({ userId, created: new Date(now + i), settled: new Date(now + i) });
-          await db.addAccountTx(tx);
+          await db.upsertAccountTx(tx);
           txs.push(tx);
 
           const tx2 = randomAccountTx();
-          await db.addAccountTx(tx2);
+          await db.upsertAccountTx(tx2);
         }
 
         expect(await db.getAccountTxs(userId)).toEqual([...txs].reverse());
@@ -339,12 +320,12 @@ export const databaseTestSuite = (
         const unsettledTxs1: CoreAccountTx[] = [];
         for (let i = 0; i < 5; ++i) {
           const tx = randomAccountTx({ userId, created: new Date(now - i) });
-          await db.addAccountTx(tx);
+          await db.upsertAccountTx(tx);
           unsettledTxs0.push(tx);
         }
         for (let i = 0; i < 5; ++i) {
           const tx = randomAccountTx({ userId, created: new Date(now + unsettledTxs0.length + i) });
-          await db.addAccountTx(tx);
+          await db.upsertAccountTx(tx);
           unsettledTxs1.push(tx);
         }
 
@@ -359,9 +340,9 @@ export const databaseTestSuite = (
     describe('DefiTx', () => {
       it('add defi tx to db and get it by tx id', async () => {
         const tx1 = randomDefiTx();
-        await db.addDefiTx(tx1);
+        await db.upsertDefiTx(tx1);
         const tx2 = randomDefiTx();
-        await db.addDefiTx(tx2);
+        await db.upsertDefiTx(tx2);
 
         expect(await db.getDefiTx(tx1.txId)).toEqual(tx1);
         expect(await db.getDefiTx(tx2.txId)).toEqual(tx2);
@@ -369,10 +350,10 @@ export const databaseTestSuite = (
 
       it('will override old data if try to add a defi tx with the same tx hash and user id', async () => {
         const tx = randomDefiTx();
-        await db.addDefiTx(tx);
+        await db.upsertDefiTx(tx);
 
         const newTx = randomDefiTx({ txId: tx.txId, userId: tx.userId });
-        await db.addDefiTx(newTx);
+        await db.upsertDefiTx(newTx);
 
         const savedTx = await db.getDefiTx(tx.txId);
         expect(savedTx).toEqual(newTx);
@@ -380,66 +361,54 @@ export const databaseTestSuite = (
 
       it('update defi tx with interaction nonce and isAsync', async () => {
         const tx = randomDefiTx();
-        await db.addDefiTx(tx);
+        await db.upsertDefiTx(tx);
 
         const savedTx = (await db.getDefiTx(tx.txId))!;
         expect(savedTx).toEqual(tx);
 
-        const interactionNonce = 32;
-        const isAsync = true;
-        const settled = new Date(tx.created.getTime() + 1000);
-        await db.settleDefiDeposit(tx.txId, interactionNonce, isAsync, settled);
+        tx.interactionNonce = 32;
+        tx.isAsync = true;
+        tx.settled = new Date(tx.created.getTime() + 1000);
+        await db.upsertDefiTx(tx);
 
         const settledTx = (await db.getDefiTx(tx.txId))!;
-        expect(settledTx).toEqual({
-          ...tx,
-          interactionNonce,
-          isAsync,
-          settled,
-        });
+        expect(settledTx).toEqual(tx);
       });
 
       it('update defi tx with interaction result', async () => {
         const tx = randomDefiTx();
-        await db.addDefiTx(tx);
+        await db.upsertDefiTx(tx);
 
         const savedTx = (await db.getDefiTx(tx.txId))!;
         expect(savedTx.outputValueA).toBe(undefined);
         expect(savedTx.outputValueB).toBe(undefined);
         expect(savedTx.settled).toBeFalsy();
 
-        const outputValueA = 123n;
-        const outputValueB = 456n;
-        const success = true;
-        const finalised = new Date(tx.created.getTime() + 123);
-        await db.updateDefiTxFinalisationResult(tx.txId, success, outputValueA, outputValueB, finalised);
+        tx.outputValueA = 123n;
+        tx.outputValueB = 456n;
+        tx.success = true;
+        tx.finalised = new Date(tx.created.getTime() + 123);
+        await db.upsertDefiTx(tx);
 
         const settledTx = (await db.getDefiTx(tx.txId))!;
-        expect(settledTx).toEqual(
-          expect.objectContaining({
-            outputValueA,
-            outputValueB,
-            success,
-            finalised,
-          }),
-        );
+        expect(settledTx).toEqual(tx);
       });
 
-      it('settle defi tx by tx hash', async () => {
+      it('claim defi tx', async () => {
         const tx = randomDefiTx();
-        await db.addDefiTx(tx);
+        await db.upsertDefiTx(tx);
 
         const savedTx = (await db.getDefiTx(tx.txId))!;
         expect(savedTx.claimSettled).toBeFalsy();
         expect(savedTx.claimTxId).toBeFalsy();
 
-        const settled = new Date();
-        const claimTxId = TxId.random();
-        await db.settleDefiTx(tx.txId, settled, claimTxId);
+        tx.claimSettled = new Date();
+        tx.claimTxId = TxId.random();
+        await db.upsertDefiTx(tx);
 
         const settledTx = (await db.getDefiTx(tx.txId))!;
-        expect(settledTx.claimSettled).toEqual(settled);
-        expect(settledTx.claimTxId).toEqual(claimTxId);
+        expect(settledTx.claimSettled).toEqual(tx.claimSettled);
+        expect(settledTx.claimTxId).toEqual(tx.claimTxId);
       });
 
       it('get all txs for a user from newest to oldest with unsettled txs first', async () => {
@@ -450,11 +419,11 @@ export const databaseTestSuite = (
         const now = Date.now();
         for (let i = 0; i < 5; ++i) {
           const tx0 = randomDefiTx({ userId: userId0, settled: new Date(now + i), interactionNonce: i });
-          await db.addDefiTx(tx0);
+          await db.upsertDefiTx(tx0);
           settledTxs0.push(tx0);
 
           const tx1 = randomDefiTx({ userId: userId1, settled: new Date(now - i), interactionNonce: i });
-          await db.addDefiTx(tx1);
+          await db.upsertDefiTx(tx1);
           settledTxs1.push(tx1);
         }
 
@@ -465,11 +434,11 @@ export const databaseTestSuite = (
         const unsettledTxs1: CoreDefiTx[] = [];
         for (let i = 0; i < 5; ++i) {
           const tx0 = randomDefiTx({ userId: userId0, created: new Date(now - i), interactionNonce: i });
-          await db.addDefiTx(tx0);
+          await db.upsertDefiTx(tx0);
           unsettledTxs0.push(tx0);
 
           const tx1 = randomDefiTx({ userId: userId1, created: new Date(now + i), interactionNonce: i });
-          await db.addDefiTx(tx1);
+          await db.upsertDefiTx(tx1);
           unsettledTxs1.push(tx1);
         }
 
@@ -486,37 +455,22 @@ export const databaseTestSuite = (
         for (let i = 0; i < 10; ++i) {
           {
             const tx = randomDefiTx({ userId: userId0, created: new Date(now + i) });
-            await db.addDefiTx(tx);
+            await db.upsertDefiTx(tx);
             const settledTx = { ...tx, interactionNonce: i % 2, isAsync: !(i % 3), settled: new Date(now + 10 + i) };
             settledTxs0.push(settledTx);
-            await db.settleDefiDeposit(tx.txId, settledTx.interactionNonce, settledTx.isAsync, settledTx.settled);
+            await db.upsertDefiTx(settledTx);
           }
           {
             const tx = randomDefiTx({ userId: userId1, created: new Date(now - i) });
-            await db.addDefiTx(tx);
+            await db.upsertDefiTx(tx);
             const settledTx = { ...tx, interactionNonce: i % 2, isAsync: !(i % 3), settled: new Date(now + 10 - i) };
             settledTxs1.push(settledTx);
-            await db.settleDefiDeposit(tx.txId, settledTx.interactionNonce, settledTx.isAsync, settledTx.settled);
+            await db.upsertDefiTx(settledTx);
           }
         }
 
         expect(await db.getDefiTxs(userId0)).toEqual([...settledTxs0].reverse());
         expect(await db.getDefiTxs(userId1)).toEqual(settledTxs1);
-
-        expect(await db.getDefiTxsByNonce(userId0, 0)).toEqual(
-          [...settledTxs0.filter(tx => tx.interactionNonce === 0)].reverse(),
-        );
-        expect(await db.getDefiTxsByNonce(userId1, 1)).toEqual(settledTxs1.filter(tx => tx.interactionNonce === 1));
-      });
-    });
-
-    describe('ClaimTx', () => {
-      it('add claim tx to db and get it by nullifier', async () => {
-        const tx = randomClaimTx();
-        await db.addClaimTx(tx);
-
-        const savedClaim = await db.getClaimTx(tx.nullifier);
-        expect(savedClaim).toEqual(tx);
       });
     });
 
@@ -534,7 +488,7 @@ export const databaseTestSuite = (
             created: new Date(now + txs.length),
             settled: settled ? new Date(now + txs.length) : undefined,
           });
-          await db.addPaymentTx(tx);
+          await db.upsertPaymentTx(tx);
           txs.push(tx);
           paymentTxs.push(tx);
         };
@@ -544,7 +498,7 @@ export const databaseTestSuite = (
             created: new Date(now + txs.length),
             settled: settled ? new Date(now + txs.length) : undefined,
           });
-          await db.addAccountTx(tx);
+          await db.upsertAccountTx(tx);
           txs.push(tx);
           accountTxs.push(tx);
         };
@@ -554,7 +508,7 @@ export const databaseTestSuite = (
             created: new Date(now + txs.length),
             settled: settled ? new Date(now + txs.length) : undefined,
           });
-          await db.addDefiTx(tx);
+          await db.upsertDefiTx(tx);
           txs.push(tx);
           defiTxs.push(tx);
         };
@@ -577,11 +531,11 @@ export const databaseTestSuite = (
 
       it('only return a tx with the correct type', async () => {
         const jsTx = randomPaymentTx();
-        await db.addPaymentTx(jsTx);
+        await db.upsertPaymentTx(jsTx);
         const accountTx = randomAccountTx();
-        await db.addAccountTx(accountTx);
+        await db.upsertAccountTx(accountTx);
         const defiTx = randomDefiTx();
-        await db.addDefiTx(defiTx);
+        await db.upsertDefiTx(defiTx);
 
         expect(await db.getPaymentTx(jsTx.userId, jsTx.txId)).toEqual(jsTx);
         expect(await db.getPaymentTx(accountTx.userId, accountTx.txId)).toBe(undefined);
@@ -598,19 +552,20 @@ export const databaseTestSuite = (
 
       it('check if a tx is settled', async () => {
         const jsTx = randomPaymentTx();
-        await db.addPaymentTx(jsTx);
+        await db.upsertPaymentTx(jsTx);
         const accountTx = randomAccountTx();
-        await db.addAccountTx(accountTx);
+        await db.upsertAccountTx(accountTx);
         const defiTx = randomDefiTx();
-        await db.addDefiTx(defiTx);
+        await db.upsertDefiTx(defiTx);
 
         expect(await db.isUserTxSettled(jsTx.txId)).toBe(false);
         expect(await db.isUserTxSettled(accountTx.txId)).toBe(false);
         expect(await db.isUserTxSettled(defiTx.txId)).toBe(false);
 
-        await db.settlePaymentTx(jsTx.userId, jsTx.txId, new Date());
-        await db.settleAccountTx(accountTx.txId, new Date());
-        await db.settleDefiDeposit(defiTx.txId, 1, false, new Date());
+        const settled = new Date();
+        await db.upsertPaymentTx({ ...jsTx, settled });
+        await db.upsertAccountTx({ ...accountTx, settled });
+        await db.upsertDefiTx({ ...defiTx, interactionNonce: 1, isAsync: false, settled: new Date() });
 
         expect(await db.isUserTxSettled(jsTx.txId)).toBe(true);
         expect(await db.isUserTxSettled(accountTx.txId)).toBe(true);
@@ -622,49 +577,49 @@ export const databaseTestSuite = (
         const txId = TxId.random();
         for (let i = 0; i < 5; ++i) {
           const tx = randomPaymentTx({ txId, settled: i ? new Date() : undefined });
-          await db.addPaymentTx(tx);
+          await db.upsertPaymentTx(tx);
           txs.push(tx);
         }
 
         expect(await db.isUserTxSettled(txId)).toBe(false);
 
-        await db.settlePaymentTx(txs[0].userId, txId, new Date());
+        await db.upsertPaymentTx({ ...txs[0], settled: new Date() });
 
         expect(await db.isUserTxSettled(txId)).toBe(true);
       });
 
       it('get pending user txs', async () => {
-        const pendingTxIdes: TxId[] = [];
+        const expectedPendingTxs: CoreUserTx[] = [];
         const userId = GrumpkinAddress.random();
         for (let i = 0; i < 10; ++i) {
           const jsTx = randomPaymentTx({ userId: i % 3 ? userId : GrumpkinAddress.random() });
-          await db.addPaymentTx(jsTx);
+          await db.upsertPaymentTx(jsTx);
           if (i % 2) {
-            await db.settlePaymentTx(jsTx.userId, jsTx.txId, new Date());
+            await db.upsertPaymentTx({ ...jsTx, settled: new Date() });
           } else if (i % 3) {
-            pendingTxIdes.push(jsTx.txId);
+            expectedPendingTxs.push(jsTx);
           }
 
           const accountTx = randomAccountTx({ userId: i % 3 ? userId : GrumpkinAddress.random() });
-          await db.addAccountTx(accountTx);
+          await db.upsertAccountTx(accountTx);
           if (!(i % 2)) {
-            await db.settleAccountTx(accountTx.txId, new Date());
+            await db.upsertAccountTx({ ...accountTx, settled: new Date() });
           } else if (i % 3) {
-            pendingTxIdes.push(accountTx.txId);
+            expectedPendingTxs.push(accountTx);
           }
 
           const defiTx = randomDefiTx({ userId: i % 3 ? userId : GrumpkinAddress.random() });
-          await db.addDefiTx(defiTx);
+          await db.upsertDefiTx(defiTx);
           if (!(i % 2)) {
-            await db.settleDefiDeposit(defiTx.txId, 12, false, new Date());
+            await db.upsertDefiTx({ ...defiTx, interactionNonce: 12, isAsync: false, settled: new Date() });
           } else if (i % 3) {
-            pendingTxIdes.push(defiTx.txId);
+            expectedPendingTxs.push(defiTx);
           }
         }
 
-        const txIdes = await db.getPendingUserTxs(userId);
-        expect(txIdes.length).toBe(pendingTxIdes.length);
-        expect(txIdes).toEqual(expect.arrayContaining(pendingTxIdes));
+        const pendingTxs = await db.getPendingUserTxs(userId);
+        expect(pendingTxs.length).toBe(expectedPendingTxs.length);
+        expect(pendingTxs).toEqual(expect.arrayContaining(expectedPendingTxs));
       });
 
       it('remove tx by txId and userId', async () => {
@@ -672,21 +627,21 @@ export const databaseTestSuite = (
         const userB = GrumpkinAddress.random();
 
         const jsTx0 = randomPaymentTx({ userId: userA });
-        await db.addPaymentTx(jsTx0);
-        await db.addPaymentTx({ ...jsTx0, userId: userB });
+        await db.upsertPaymentTx(jsTx0);
+        await db.upsertPaymentTx({ ...jsTx0, userId: userB });
         const jsTx1 = randomPaymentTx({ userId: userA });
-        await db.addPaymentTx(jsTx1);
-        await db.addPaymentTx({ ...jsTx1, userId: userB });
+        await db.upsertPaymentTx(jsTx1);
+        await db.upsertPaymentTx({ ...jsTx1, userId: userB });
 
         const accountTx0 = randomAccountTx({ userId: userA });
         const accountTx1 = randomAccountTx({ userId: userB });
-        await db.addAccountTx(accountTx0);
-        await db.addAccountTx(accountTx1);
+        await db.upsertAccountTx(accountTx0);
+        await db.upsertAccountTx(accountTx1);
 
         const defiTx0 = randomDefiTx({ userId: userA });
         const defiTx1 = randomDefiTx({ userId: userB });
-        await db.addDefiTx(defiTx0);
-        await db.addDefiTx(defiTx1);
+        await db.upsertDefiTx(defiTx0);
+        await db.upsertDefiTx(defiTx1);
 
         await db.removeUserTx(userA, jsTx0.txId);
         await db.removeUserTx(userB, jsTx1.txId);
@@ -831,36 +786,28 @@ export const databaseTestSuite = (
     });
 
     describe('Alias', () => {
+      it('save and lookup alias', async () => {
+        const alias0 = randomAlias();
+        await db.addAlias(alias0);
+
+        expect(await db.getAlias(alias0.accountPublicKey)).toEqual(alias0);
+        expect(await db.getAliasByAliasHash(alias0.aliasHash)).toEqual(alias0);
+      });
+
+      it('return undefined for unknown alias', async () => {
+        expect(await db.getAliasByAliasHash(AliasHash.random())).toBeUndefined();
+      });
+
       it('save alias and its account public key', async () => {
         const alias0 = randomAlias();
         await db.addAlias(alias0);
-        const alias1 = randomAlias();
-        await db.addAlias(alias1);
-        const alias2 = { ...alias0, accountPublicKey: GrumpkinAddress.random() };
-        await db.addAlias(alias2);
 
-        expect(await db.getAlias(alias0.accountPublicKey)).toEqual(alias0);
-        expect(await db.getAlias(alias2.accountPublicKey)).toEqual(alias2);
-        const aliases = await db.getAliases(alias0.aliasHash);
-        expect(aliases.length).toBe(2);
-        expect(aliases).toEqual(expect.arrayContaining([alias0, alias2]));
-        expect(await db.getAliases(alias1.aliasHash)).toEqual([alias1]);
-        expect(await db.getAliases(AliasHash.random())).toEqual([]);
-      });
+        const alias0Migrated = { ...alias0, accountPublicKey: GrumpkinAddress.random() };
+        await db.addAlias(alias0Migrated);
 
-      it('update alias with the same account public key', async () => {
-        const alias1 = randomAlias();
-        await db.addAlias(alias1);
-
-        const alias2 = { ...alias1, accountPublicKey: GrumpkinAddress.random() };
-        await db.addAlias(alias2);
-
-        const updatedAlias = { ...alias1, index: 123 };
-        await db.addAlias(updatedAlias);
-
-        expect(await db.getAlias(alias1.accountPublicKey)).toEqual(updatedAlias);
-
-        expect(await db.getAlias(alias2.accountPublicKey)).toEqual(alias2);
+        expect(await db.getAlias(alias0.accountPublicKey)).toBeUndefined();
+        expect(await db.getAlias(alias0Migrated.accountPublicKey)).toEqual(alias0Migrated);
+        expect(await db.getAliasByAliasHash(alias0.aliasHash)).toEqual(alias0Migrated);
       });
 
       it('bulk saves aliases', async () => {
@@ -879,19 +826,6 @@ export const databaseTestSuite = (
         expect(await db.getAlias(aliases[100].accountPublicKey)).toEqual(aliases[100]);
         expect(await db.getAlias(aliases[101].accountPublicKey)).toEqual(aliases[101]);
         expect(await db.getAlias(aliases[999].accountPublicKey)).toEqual(aliases[999]);
-      });
-
-      it('get aliases with the same alias hash in descending order', async () => {
-        const alias1 = randomAlias({ index: 1 });
-        await db.addAlias(alias1);
-
-        const alias2 = { ...alias1, accountPublicKey: GrumpkinAddress.random(), index: 2 };
-        await db.addAlias(alias2);
-
-        const alias3 = { ...alias1, accountPublicKey: GrumpkinAddress.random(), index: 0 };
-        await db.addAlias(alias3);
-
-        expect(await db.getAliases(alias1.aliasHash)).toEqual([alias2, alias1, alias3]);
       });
     });
 
@@ -989,10 +923,10 @@ export const databaseTestSuite = (
         await db.addSpendingKey(spendingKey);
 
         const paymentTx = randomPaymentTx({ userId: user.accountPublicKey });
-        await db.addPaymentTx(paymentTx);
+        await db.upsertPaymentTx(paymentTx);
 
         const accountTx = randomAccountTx({ userId: user.accountPublicKey });
-        await db.addAccountTx(accountTx);
+        await db.upsertAccountTx(accountTx);
 
         return { user, note, spendingKey, paymentTx, accountTx };
       };
@@ -1039,10 +973,7 @@ export const databaseTestSuite = (
         await db.addSpendingKey(spendingKey);
 
         const tx = randomPaymentTx();
-        await db.addPaymentTx(tx);
-
-        const claim = randomClaimTx();
-        await db.addClaimTx(claim);
+        await db.upsertPaymentTx(tx);
 
         await db.resetUsers();
 
@@ -1050,7 +981,6 @@ export const databaseTestSuite = (
         expect(await db.getNote(note.commitment)).toBeUndefined();
         expect(await db.getSpendingKey(spendingKey.userId, fullKey)).toBeUndefined();
         expect(await db.getPaymentTx(tx.userId, tx.txId)).toBeUndefined();
-        expect(await db.getClaimTx(claim.nullifier)).toBeUndefined();
         expect(await db.getUser(user.accountPublicKey)).toEqual({
           ...user,
           syncedToRollup: -1,
@@ -1077,7 +1007,7 @@ export const databaseTestSuite = (
         await db.addSpendingKey(spendingKey);
 
         const tx = randomPaymentTx();
-        await db.addPaymentTx(tx);
+        await db.upsertPaymentTx(tx);
 
         await db.clear();
 
@@ -1087,32 +1017,6 @@ export const databaseTestSuite = (
         expect(await db.getKey(keyName)).toBeUndefined();
         expect(await db.getSpendingKey(spendingKey.userId, fullKey)).toBeUndefined();
         expect(await db.getPaymentTx(tx.userId, tx.txId)).toBeUndefined();
-      });
-    });
-
-    describe('genesis data', () => {
-      it('stores genesis data', async () => {
-        const data = randomBytes(50000);
-        await expect(db.setGenesisData(data)).resolves.not.toThrow();
-        const saved = await db.getGenesisData();
-        expect(saved.equals(data)).toBe(true);
-      });
-
-      it('stores large genesis data', async () => {
-        const data = randomBytes(21000000);
-        await expect(db.setGenesisData(data)).resolves.not.toThrow();
-        const saved = await db.getGenesisData();
-        expect(saved.equals(data)).toBe(true);
-      });
-
-      it('returns empty buffer if no genesis data present', async () => {
-        const saved = await db.getGenesisData();
-        expect(saved).not.toBeUndefined();
-        expect(saved.equals(Buffer.alloc(0))).toBe(true);
-        const data = randomBytes(50000);
-        await expect(db.setGenesisData(data)).resolves.not.toThrow();
-        const newSaved = await db.getGenesisData();
-        expect(newSaved.equals(data)).toBe(true);
       });
     });
   });

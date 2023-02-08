@@ -3,9 +3,10 @@ import cors from '@koa/cors';
 import Koa, { Context, DefaultState } from 'koa';
 import compress from 'koa-compress';
 import Router from 'koa-router';
+import proxy from 'koa-proxy';
 import { Server } from './server.js';
 
-export function appFactory(server: Server, prefix: string) {
+export function appFactory(server: Server, falafelUrl: URL, prefix: string) {
   const router = new Router<DefaultState, Context>({ prefix });
 
   const exceptionHandler = async (ctx: Koa.Context, next: () => Promise<void>) => {
@@ -83,6 +84,7 @@ export function appFactory(server: Server, prefix: string) {
   app.use(exceptionHandler);
   app.use(router.routes());
   app.use(router.allowedMethods());
+  app.use(proxy({ host: falafelUrl.origin }));
 
   return app;
 }

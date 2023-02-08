@@ -219,6 +219,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["@types/jest", "npm:28.1.6"],\
             ["@types/koa", "npm:2.13.5"],\
             ["@types/koa-compress", "npm:2.0.9"],\
+            ["@types/koa-proxy", "npm:1.0.4"],\
             ["@types/koa-router", "npm:7.4.4"],\
             ["@types/koa__cors", "npm:3.3.0"],\
             ["@types/node", "npm:18.7.23"],\
@@ -227,6 +228,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["jest", "virtual:4cf42c2f2a8aa147d524c15c0290174d77a2062937f0c22441901ac61d50212062460a38e714456279cdb4fab155b3b1d12acfb24cd6bb68fcc1837e921b5557#npm:28.1.3"],\
             ["koa", "npm:2.13.4"],\
             ["koa-compress", "npm:5.1.0"],\
+            ["koa-proxy", "virtual:0d71cb430a68d122c1a03802e1d439978176751efab69783bfadb15a61cbb96a24f9e3176fdbe09e685d849dc6c86206607e54ee5d52b1ab079648be0adc9f1e#npm:1.0.0-alpha.3"],\
             ["koa-router", "npm:7.4.0"],\
             ["log-timestamp", "npm:0.3.0"],\
             ["promise-readable", "npm:5.0.4"],\
@@ -404,6 +406,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["@types/memdown", "npm:3.0.0"],\
             ["@types/node", "npm:18.7.23"],\
             ["assert", "npm:2.0.0"],\
+            ["async-mutex", "npm:0.4.0"],\
             ["buffer", "npm:6.0.3"],\
             ["copy-webpack-plugin", "virtual:9fe0621c2f7452e546afb7407263191bb0ff23335513d4fd321b647e96c783bd3533ee8c741b409ee3ca4a469ab9f9512eb07ca312f25e666f781e44aabf80c5#npm:11.0.0"],\
             ["detect-node", "npm:2.1.0"],\
@@ -412,6 +415,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["fake-indexeddb", "npm:3.1.8"],\
             ["html-webpack-plugin", "virtual:9fe0621c2f7452e546afb7407263191bb0ff23335513d4fd321b647e96c783bd3533ee8c741b409ee3ca4a469ab9f9512eb07ca312f25e666f781e44aabf80c5#npm:5.5.0"],\
             ["jest", "virtual:4cf42c2f2a8aa147d524c15c0290174d77a2062937f0c22441901ac61d50212062460a38e714456279cdb4fab155b3b1d12acfb24cd6bb68fcc1837e921b5557#npm:28.1.3"],\
+            ["jest-mock-extended", "virtual:9fe0621c2f7452e546afb7407263191bb0ff23335513d4fd321b647e96c783bd3533ee8c741b409ee3ca4a469ab9f9512eb07ca312f25e666f781e44aabf80c5#npm:3.0.1"],\
             ["level-js", "npm:6.1.0"],\
             ["leveldown", "npm:6.1.1"],\
             ["levelup", "npm:5.1.1"],\
@@ -6200,6 +6204,16 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           "linkType": "HARD"\
         }]\
       ]],\
+      ["@types/koa-proxy", [\
+        ["npm:1.0.4", {\
+          "packageLocation": "./.yarn/cache/@types-koa-proxy-npm-1.0.4-adb8e542e0-35303fa926.zip/node_modules/@types/koa-proxy/",\
+          "packageDependencies": [\
+            ["@types/koa-proxy", "npm:1.0.4"],\
+            ["@types/koa", "npm:2.13.4"]\
+          ],\
+          "linkType": "HARD"\
+        }]\
+      ]],\
       ["@types/koa-router", [\
         ["npm:7.4.4", {\
           "packageLocation": "./.yarn/cache/@types-koa-router-npm-7.4.4-ea72843f67-23ff5b725d.zip/node_modules/@types/koa-router/",\
@@ -8172,6 +8186,14 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           "packageLocation": "./.yarn/cache/async-mutex-npm-0.2.6-9823894abb-f50102e0c5.zip/node_modules/async-mutex/",\
           "packageDependencies": [\
             ["async-mutex", "npm:0.2.6"],\
+            ["tslib", "npm:2.4.0"]\
+          ],\
+          "linkType": "HARD"\
+        }],\
+        ["npm:0.4.0", {\
+          "packageLocation": "./.yarn/cache/async-mutex-npm-0.4.0-f5a25d4255-813a71728b.zip/node_modules/async-mutex/",\
+          "packageDependencies": [\
+            ["async-mutex", "npm:0.4.0"],\
             ["tslib", "npm:2.4.0"]\
           ],\
           "linkType": "HARD"\
@@ -13737,6 +13759,33 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           "linkType": "HARD"\
         }]\
       ]],\
+      ["jest-mock-extended", [\
+        ["npm:3.0.1", {\
+          "packageLocation": "./.yarn/cache/jest-mock-extended-npm-3.0.1-31df205bd5-8004e6fe53.zip/node_modules/jest-mock-extended/",\
+          "packageDependencies": [\
+            ["jest-mock-extended", "npm:3.0.1"]\
+          ],\
+          "linkType": "SOFT"\
+        }],\
+        ["virtual:9fe0621c2f7452e546afb7407263191bb0ff23335513d4fd321b647e96c783bd3533ee8c741b409ee3ca4a469ab9f9512eb07ca312f25e666f781e44aabf80c5#npm:3.0.1", {\
+          "packageLocation": "./.yarn/__virtual__/jest-mock-extended-virtual-a4e182fe17/0/cache/jest-mock-extended-npm-3.0.1-31df205bd5-8004e6fe53.zip/node_modules/jest-mock-extended/",\
+          "packageDependencies": [\
+            ["jest-mock-extended", "virtual:9fe0621c2f7452e546afb7407263191bb0ff23335513d4fd321b647e96c783bd3533ee8c741b409ee3ca4a469ab9f9512eb07ca312f25e666f781e44aabf80c5#npm:3.0.1"],\
+            ["@types/jest", "npm:28.1.6"],\
+            ["@types/typescript", null],\
+            ["jest", "virtual:4cf42c2f2a8aa147d524c15c0290174d77a2062937f0c22441901ac61d50212062460a38e714456279cdb4fab155b3b1d12acfb24cd6bb68fcc1837e921b5557#npm:28.1.3"],\
+            ["ts-essentials", "virtual:a4e182fe17e2089936760ebac9fe5810563ddba43a137d1539cc16fec779d1dc32eaae412904c57724ccb003724eb62d2b39eaf7f1e61e405b88d9dd9a4f2317#npm:7.0.3"],\
+            ["typescript", "patch:typescript@npm%3A4.7.4#~builtin<compat/typescript>::version=4.7.4&hash=a1c5e5"]\
+          ],\
+          "packagePeers": [\
+            "@types/jest",\
+            "@types/typescript",\
+            "jest",\
+            "typescript"\
+          ],\
+          "linkType": "HARD"\
+        }]\
+      ]],\
       ["jest-pnp-resolver", [\
         ["npm:1.2.2", {\
           "packageLocation": "./.yarn/cache/jest-pnp-resolver-npm-1.2.2-da20f8bdfe-bd85dcc0e7.zip/node_modules/jest-pnp-resolver/",\
@@ -14508,6 +14557,31 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           "packageLocation": "./.yarn/cache/koa-is-json-npm-1.0.0-0fd77526f2-0f14a7780d.zip/node_modules/koa-is-json/",\
           "packageDependencies": [\
             ["koa-is-json", "npm:1.0.0"]\
+          ],\
+          "linkType": "HARD"\
+        }]\
+      ]],\
+      ["koa-proxy", [\
+        ["npm:1.0.0-alpha.3", {\
+          "packageLocation": "./.yarn/cache/koa-proxy-npm-1.0.0-alpha.3-7abaf35309-e1598c1457.zip/node_modules/koa-proxy/",\
+          "packageDependencies": [\
+            ["koa-proxy", "npm:1.0.0-alpha.3"]\
+          ],\
+          "linkType": "SOFT"\
+        }],\
+        ["virtual:0d71cb430a68d122c1a03802e1d439978176751efab69783bfadb15a61cbb96a24f9e3176fdbe09e685d849dc6c86206607e54ee5d52b1ab079648be0adc9f1e#npm:1.0.0-alpha.3", {\
+          "packageLocation": "./.yarn/__virtual__/koa-proxy-virtual-e3b1544fe3/0/cache/koa-proxy-npm-1.0.0-alpha.3-7abaf35309-e1598c1457.zip/node_modules/koa-proxy/",\
+          "packageDependencies": [\
+            ["koa-proxy", "virtual:0d71cb430a68d122c1a03802e1d439978176751efab69783bfadb15a61cbb96a24f9e3176fdbe09e685d849dc6c86206607e54ee5d52b1ab079648be0adc9f1e#npm:1.0.0-alpha.3"],\
+            ["@types/koa", "npm:2.13.5"],\
+            ["koa", "npm:2.13.4"],\
+            ["pause-stream", "npm:0.0.11"],\
+            ["request", "npm:2.88.2"],\
+            ["request-promise-native", "virtual:e3b1544fe31b19a74438622b4aad1c3f6811aaf8aaeb9ef3a5230f53e3c5550ef9797b51edc347bb8a102481c5478435d8c10e4ca9f881c7d019abc83569cd74#npm:1.0.9"]\
+          ],\
+          "packagePeers": [\
+            "@types/koa",\
+            "koa"\
           ],\
           "linkType": "HARD"\
         }]\
@@ -16927,6 +17001,54 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           "linkType": "HARD"\
         }]\
       ]],\
+      ["request-promise-core", [\
+        ["npm:1.1.4", {\
+          "packageLocation": "./.yarn/cache/request-promise-core-npm-1.1.4-cb9fff6c90-c798bafd55.zip/node_modules/request-promise-core/",\
+          "packageDependencies": [\
+            ["request-promise-core", "npm:1.1.4"]\
+          ],\
+          "linkType": "SOFT"\
+        }],\
+        ["virtual:efba12b25bb7ba31b5356d0fb2c5059e272e215de73caae886bce173159b34ad71987dfa3329a5a0cf16a9366e219f899587d00ccbaacca23d60657b2d86b91d#npm:1.1.4", {\
+          "packageLocation": "./.yarn/__virtual__/request-promise-core-virtual-10673e0303/0/cache/request-promise-core-npm-1.1.4-cb9fff6c90-c798bafd55.zip/node_modules/request-promise-core/",\
+          "packageDependencies": [\
+            ["request-promise-core", "virtual:efba12b25bb7ba31b5356d0fb2c5059e272e215de73caae886bce173159b34ad71987dfa3329a5a0cf16a9366e219f899587d00ccbaacca23d60657b2d86b91d#npm:1.1.4"],\
+            ["@types/request", null],\
+            ["lodash", "npm:4.17.21"],\
+            ["request", "npm:2.88.2"]\
+          ],\
+          "packagePeers": [\
+            "@types/request",\
+            "request"\
+          ],\
+          "linkType": "HARD"\
+        }]\
+      ]],\
+      ["request-promise-native", [\
+        ["npm:1.0.9", {\
+          "packageLocation": "./.yarn/cache/request-promise-native-npm-1.0.9-6ae8e592e8-3e2c694eef.zip/node_modules/request-promise-native/",\
+          "packageDependencies": [\
+            ["request-promise-native", "npm:1.0.9"]\
+          ],\
+          "linkType": "SOFT"\
+        }],\
+        ["virtual:e3b1544fe31b19a74438622b4aad1c3f6811aaf8aaeb9ef3a5230f53e3c5550ef9797b51edc347bb8a102481c5478435d8c10e4ca9f881c7d019abc83569cd74#npm:1.0.9", {\
+          "packageLocation": "./.yarn/__virtual__/request-promise-native-virtual-efba12b25b/0/cache/request-promise-native-npm-1.0.9-6ae8e592e8-3e2c694eef.zip/node_modules/request-promise-native/",\
+          "packageDependencies": [\
+            ["request-promise-native", "virtual:e3b1544fe31b19a74438622b4aad1c3f6811aaf8aaeb9ef3a5230f53e3c5550ef9797b51edc347bb8a102481c5478435d8c10e4ca9f881c7d019abc83569cd74#npm:1.0.9"],\
+            ["@types/request", null],\
+            ["request", "npm:2.88.2"],\
+            ["request-promise-core", "virtual:efba12b25bb7ba31b5356d0fb2c5059e272e215de73caae886bce173159b34ad71987dfa3329a5a0cf16a9366e219f899587d00ccbaacca23d60657b2d86b91d#npm:1.1.4"],\
+            ["stealthy-require", "npm:1.1.1"],\
+            ["tough-cookie", "npm:2.5.0"]\
+          ],\
+          "packagePeers": [\
+            "@types/request",\
+            "request"\
+          ],\
+          "linkType": "HARD"\
+        }]\
+      ]],\
       ["require-directory", [\
         ["npm:2.1.1", {\
           "packageLocation": "./.yarn/cache/require-directory-npm-2.1.1-8608aee50b-fb47e70bf0.zip/node_modules/require-directory/",\
@@ -17781,6 +17903,15 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           "linkType": "HARD"\
         }]\
       ]],\
+      ["stealthy-require", [\
+        ["npm:1.1.1", {\
+          "packageLocation": "./.yarn/cache/stealthy-require-npm-1.1.1-0105ec8207-6805b857a9.zip/node_modules/stealthy-require/",\
+          "packageDependencies": [\
+            ["stealthy-require", "npm:1.1.1"]\
+          ],\
+          "linkType": "HARD"\
+        }]\
+      ]],\
       ["stream-browserify", [\
         ["npm:3.0.0", {\
           "packageLocation": "./.yarn/cache/stream-browserify-npm-3.0.0-4c0bd97245-4c47ef64d6.zip/node_modules/stream-browserify/",\
@@ -18479,6 +18610,28 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           "packageDependencies": [\
             ["tr46", "npm:3.0.0"],\
             ["punycode", "npm:2.1.1"]\
+          ],\
+          "linkType": "HARD"\
+        }]\
+      ]],\
+      ["ts-essentials", [\
+        ["npm:7.0.3", {\
+          "packageLocation": "./.yarn/cache/ts-essentials-npm-7.0.3-dbefe5cb3b-74d75868ac.zip/node_modules/ts-essentials/",\
+          "packageDependencies": [\
+            ["ts-essentials", "npm:7.0.3"]\
+          ],\
+          "linkType": "SOFT"\
+        }],\
+        ["virtual:a4e182fe17e2089936760ebac9fe5810563ddba43a137d1539cc16fec779d1dc32eaae412904c57724ccb003724eb62d2b39eaf7f1e61e405b88d9dd9a4f2317#npm:7.0.3", {\
+          "packageLocation": "./.yarn/__virtual__/ts-essentials-virtual-f67dfb3ed3/0/cache/ts-essentials-npm-7.0.3-dbefe5cb3b-74d75868ac.zip/node_modules/ts-essentials/",\
+          "packageDependencies": [\
+            ["ts-essentials", "virtual:a4e182fe17e2089936760ebac9fe5810563ddba43a137d1539cc16fec779d1dc32eaae412904c57724ccb003724eb62d2b39eaf7f1e61e405b88d9dd9a4f2317#npm:7.0.3"],\
+            ["@types/typescript", null],\
+            ["typescript", "patch:typescript@npm%3A4.7.4#~builtin<compat/typescript>::version=4.7.4&hash=a1c5e5"]\
+          ],\
+          "packagePeers": [\
+            "@types/typescript",\
+            "typescript"\
           ],\
           "linkType": "HARD"\
         }]\
