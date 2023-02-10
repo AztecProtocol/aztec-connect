@@ -24,7 +24,7 @@ contract AccessControlTest is TestBase {
     bytes32 private listerRole;
     bytes32 private resumeRole;
 
-    function setUp() public override (TestBase) {
+    function setUp() public override(TestBase) {
         super.setUp();
 
         testAddressWithCode = address(new EmptyContract());

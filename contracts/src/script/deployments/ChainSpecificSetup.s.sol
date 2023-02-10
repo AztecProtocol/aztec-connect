@@ -18,7 +18,6 @@ import {AztecFaucet} from "periphery/AztecFaucet.sol";
 import {MockChainlinkOracle} from "../../test/mocks/MockChainlinkOracle.sol";
 import {MockBridgeDataProvider} from "../../test/mocks/MockBridgeDataProvider.sol";
 
-
 contract ChainSpecificSetup is Test {
     // Mainnet fork key addresses
     address internal constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;

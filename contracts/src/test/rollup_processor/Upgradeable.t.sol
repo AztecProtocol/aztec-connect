@@ -13,7 +13,7 @@ contract UpgradeableTest is TestBase {
     TransparentUpgradeableProxy private proxy;
     RollupProcessorV2 private implementation;
 
-    function setUp() public override (TestBase) {
+    function setUp() public override(TestBase) {
         super.setUp();
 
         proxy = TransparentUpgradeableProxy(payable(address(rollupProcessor)));

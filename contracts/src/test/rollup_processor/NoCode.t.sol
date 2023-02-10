@@ -22,7 +22,7 @@ contract NoCodeTest is TestBase {
     AztecTypes.AztecAsset internal emptyAsset;
     AztecTypes.AztecAsset internal ethAsset;
 
-    function setUp() public override (TestBase) {
+    function setUp() public override(TestBase) {
         super.setUp();
         rollupProcessor.grantRole(rollupProcessor.LISTER_ROLE(), address(this));
 
