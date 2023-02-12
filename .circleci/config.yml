@@ -680,6 +680,9 @@ jobs:
           name: 'Build prometheus'
           command: build prometheus
       - run:
+          name: 'Build loki'
+          command: build loki
+      - run:
           name: 'Build grafana'
           command: build grafana
 
@@ -803,6 +806,9 @@ jobs:
       - run:
           name: 'prometheus'
           command: deploy_global prometheus
+      - run:
+          name: 'loki'
+          command: deploy_global loki
       - run:
           name: 'grafana'
           command: deploy_global grafana

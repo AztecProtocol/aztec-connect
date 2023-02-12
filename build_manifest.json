@@ -177,6 +177,11 @@
     "rebuildPatterns": ["^metrics/prometheus/"],
     "dependencies": []
   },
+  "loki": {
+    "buildDir": "metrics/loki",
+    "rebuildPatterns": ["^metrics/loki/"],
+    "dependencies": []
+  },
   "grafana": {
     "buildDir": "metrics/grafana",
     "rebuildPatterns": ["^metrics/grafana/"],
