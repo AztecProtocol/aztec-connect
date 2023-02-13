@@ -121,7 +121,7 @@ resource "aws_ecs_task_definition" "kebab" {
     "name": "${var.DEPLOY_TAG}-kebab",
     "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/kebab:${var.DEPLOY_TAG}",
     "essential": true,
-    "memoryReservation": 3840,
+    "memoryReservation": 3776,
     "portMappings": [
       {
         "containerPort": 80
@@ -160,12 +160,15 @@ resource "aws_ecs_task_definition" "kebab" {
       }
     ],
     "logConfiguration": {
-      "logDriver": "awslogs",
-      "options": {
-        "awslogs-group": "${aws_cloudwatch_log_group.kebab_logs.name}",
-        "awslogs-region": "eu-west-2",
-        "awslogs-stream-prefix": "ecs"
-      }
+        "logDriver": "awsfirelens",
+        "options": {
+            "Name": "grafana-loki",
+            "Url": "http://loki.local:3100/loki/api/v1/push",
+            "Labels": "{environment=\"${var.DEPLOY_TAG}\", service=\"kebab\"}",
+            "RemoveKeys": "container_id,ecs_task_arn",
+            "LabelKeys": "container_name,ecs_task_definition,source,ecs_cluster",
+            "LineFormat": "key_value"
+        }
     }
   },
   {
@@ -196,6 +199,18 @@ resource "aws_ecs_task_definition" "kebab" {
         "awslogs-stream-prefix": "ecs"
       }
     }
+  },
+  {
+    "essential": true,
+    "image": "grafana/fluent-bit-plugin-loki:2.7.0-amd64",
+    "name": "log_router",
+    "firelensConfiguration": {
+        "type": "fluentbit",
+        "options": {
+            "enable-ecs-log-metadata": "true"
+        }
+    },
+    "memoryReservation": 64
   }
 ]
 DEFINITIONS
