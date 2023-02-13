@@ -146,12 +146,15 @@ resource "aws_ecs_task_definition" "halloumi" {
       }
     ],
     "logConfiguration": {
-      "logDriver": "awslogs",
-      "options": {
-        "awslogs-group": "/fargate/service/${var.DEPLOY_TAG}/halloumi",
-        "awslogs-region": "eu-west-2",
-        "awslogs-stream-prefix": "ecs"
-      }
+        "logDriver": "awsfirelens",
+        "options": {
+            "Name": "grafana-loki",
+            "Url": "http://loki.local:3100/loki/api/v1/push",
+            "Labels": "{environment=\"${var.DEPLOY_TAG}\", service=\"halloumi\"}",
+            "RemoveKeys": "container_id,ecs_task_arn",
+            "LabelKeys": "container_name,ecs_task_definition,source,ecs_cluster",
+            "LineFormat": "key_value"
+        }
     }
   },
   {
@@ -178,6 +181,18 @@ resource "aws_ecs_task_definition" "halloumi" {
         "awslogs-stream-prefix": "ecs"
       }
     }
+  },
+  {
+    "essential": true,
+    "image": "grafana/fluent-bit-plugin-loki:2.7.0-amd64",
+    "name": "log_router",
+    "firelensConfiguration": {
+        "type": "fluentbit",
+        "options": {
+            "enable-ecs-log-metadata": "true"
+        }
+    },
+    "memoryReservation": 64
   }
 ]
 DEFINITIONS
