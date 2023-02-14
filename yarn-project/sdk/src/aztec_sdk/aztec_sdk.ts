@@ -168,8 +168,8 @@ export class AztecSdk extends EventEmitter {
     return await this.core.userExists(accountPublicKey);
   }
 
-  public async addUser(accountPrivateKey: Buffer, noSync = false) {
-    const userId = await this.core.addUser(accountPrivateKey, noSync);
+  public async addUser(accountPrivateKey: Buffer, registrationSync = false, registrationSyncMarginBlocks = 10) {
+    const userId = await this.core.addUser(accountPrivateKey, registrationSync, registrationSyncMarginBlocks);
     return new AztecSdkUser(userId, this);
   }
 

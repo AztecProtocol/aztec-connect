@@ -355,6 +355,10 @@ export class Server {
     return await this.rollupDb.isAliasRegisteredToAccount(accountPublicKey, aliasHash);
   }
 
+  public async getAccountRegistrationRollupId(accountPublicKey: GrumpkinAddress) {
+    return await this.rollupDb.getAccountRegistrationRollupId(accountPublicKey);
+  }
+
   public async getUnsettledDepositTxs() {
     // TODO: Deprecate this. We don't want to support external parties making these requests.
     // We already have getUnsettledTxs(). Use this?

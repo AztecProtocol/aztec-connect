@@ -377,6 +377,10 @@ export class CachedRollupDb implements RollupDb {
     return await this.underlying.isAliasRegisteredToAccount(accountPublicKey, aliasHash);
   }
 
+  public async getAccountRegistrationRollupId(accountPublicKey: GrumpkinAddress) {
+    return await this.underlying.getAccountRegistrationRollupId(accountPublicKey);
+  }
+
   public async isAccountRegistered(accountPublicKey: GrumpkinAddress) {
     return await this.underlying.isAccountRegistered(accountPublicKey);
   }

@@ -91,6 +91,10 @@ export class SyncRollupDb implements RollupDb {
     return this.synchronise(() => this.rollupDb.isAliasRegisteredToAccount(accountPublicKey, aliasHash));
   }
 
+  public getAccountRegistrationRollupId(accountPublicKey: GrumpkinAddress) {
+    return this.synchronise(() => this.rollupDb.getAccountRegistrationRollupId(accountPublicKey));
+  }
+
   public getUnsettledTxCount() {
     return this.synchronise(() => this.rollupDb.getUnsettledTxCount());
   }

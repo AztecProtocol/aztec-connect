@@ -390,15 +390,33 @@ export class CoreSdk extends EventEmitter {
     return Promise.resolve(this.schnorr.constructSignature(message, privateKey));
   }
 
-  public async addUser(accountPrivateKey: Buffer, noSync = false) {
-    return await this.serialQueue.push(async () => {
-      const accountPublicKey = await this.derivePublicKey(accountPrivateKey);
+  public async addUser(accountPrivateKey: Buffer, registrationSync = false, registrationSyncMarginBlocks = 10) {
+    let shouldResync = true;
+    const accountPublicKey = await this.derivePublicKey(accountPrivateKey);
+
+    await this.serialQueue.push(async () => {
       if (await this.db.getUser(accountPublicKey)) {
         throw new Error(`User already exists: ${accountPublicKey}`);
       }
 
-      const { latestRollupId } = this.sdkStatus;
-      const syncedToRollup = noSync ? latestRollupId : -1;
+      let syncedToRollup = -1;
+
+      if (registrationSync) {
+        const { latestRollupId } = this.sdkStatus;
+        const registrationRollupId = await this.rollupProvider.getAccountRegistrationRollupId(accountPublicKey);
+
+        if (registrationRollupId !== -1) {
+          const startingPoint = registrationRollupId - registrationSyncMarginBlocks;
+          syncedToRollup = startingPoint < -1 ? -1 : startingPoint;
+          this.debug(
+            `Adding registrationSync account registered at ${registrationRollupId}, synching from ${syncedToRollup}`,
+          );
+        } else {
+          shouldResync = false;
+          syncedToRollup = latestRollupId;
+        }
+      }
+
       const user: UserData = { accountPrivateKey, accountPublicKey, syncedToRollup };
       await this.db.addUser(user);
 
@@ -414,15 +432,16 @@ export class CoreSdk extends EventEmitter {
       });
       this.userStates = [...this.userStates, userState];
       this.synchroniser.setUserStates(this.userStates);
-
-      // If this account is doing a full data scan to sync from 0, restart synchroniser to sync blocks from 0.
-      if (!noSync && this.initState == SdkInitState.RUNNING) {
-        await this.synchroniser.stop();
-        await this.synchroniser.start();
-      }
-
-      return accountPublicKey;
     });
+
+    // If this account is already registered, we need to restart syncing from registration
+    // It cannot be done in the serial queue as synchroniser.stop can deadlock
+    if (shouldResync && this.initState == SdkInitState.RUNNING) {
+      await this.synchroniser.stop();
+      await this.synchroniser.start();
+    }
+
+    return accountPublicKey;
   }
 
   public async removeUser(userId: GrumpkinAddress) {

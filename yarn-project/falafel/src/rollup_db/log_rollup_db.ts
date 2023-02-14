@@ -96,6 +96,12 @@ export class LogRollupDb implements RollupDb {
     );
   }
 
+  public getAccountRegistrationRollupId(accountPublicKey: GrumpkinAddress) {
+    return this.time('getAccountRegistrationRollupId', () =>
+      this.rollupDb.getAccountRegistrationRollupId(accountPublicKey),
+    );
+  }
+
   public getUnsettledTxCount() {
     return this.time('getUnsettledTxCount', () => this.rollupDb.getUnsettledTxCount());
   }

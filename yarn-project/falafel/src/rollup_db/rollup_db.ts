@@ -144,6 +144,23 @@ export class TypeOrmRollupDb implements RollupDb {
     return !!account;
   }
 
+  public async getAccountRegistrationRollupId(accountPublicKey: GrumpkinAddress) {
+    const account = await this.accountRep.findOne({
+      where: { accountPublicKey: accountPublicKey.toBuffer() },
+      relations: {
+        tx: {
+          rollupProof: {
+            rollup: true,
+          },
+        },
+      },
+    });
+    if (!account?.tx?.rollupProof?.rollup) {
+      return null;
+    }
+    return account.tx.rollupProof.rollup.id;
+  }
+
   public async getUnsettledTxCount() {
     return await this.txRep.count({ where: { mined: IsNull() } });
   }

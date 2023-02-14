@@ -747,4 +747,22 @@ describe('rollup_db', () => {
       expect(tx.position).toBeUndefined();
     }
   });
+
+  it('should get the rollup id of account creation', async () => {
+    const accountPublicKeys = [...Array(6)].map(() => GrumpkinAddress.random());
+    for (let i = 0; i < accountPublicKeys.length; ++i) {
+      const rollupProof = randomRollupProof([
+        randomAccountTx({ aliasHash: AliasHash.random(), accountPublicKey: accountPublicKeys[i] }),
+      ]);
+      await rollupDb.addRollupProof(rollupProof);
+      const rollup = randomRollup(i, rollupProof, undefined);
+      await rollupDb.addRollup(rollup);
+    }
+
+    expect(await rollupDb.getAccountRegistrationRollupId(GrumpkinAddress.random())).toBe(null);
+    for (let i = 0; i < accountPublicKeys.length; ++i) {
+      const rollupId = await rollupDb.getAccountRegistrationRollupId(accountPublicKeys[i]);
+      expect(rollupId).toBe(i);
+    }
+  });
 });

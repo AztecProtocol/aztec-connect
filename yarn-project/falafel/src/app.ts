@@ -387,6 +387,15 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     ctx.status = 200;
   });
 
+  router.post('/get-account-registration-rollup-id', recordMetric, async (ctx: Koa.Context) => {
+    const stream = new PromiseReadable(ctx.req);
+    const data = JSON.parse((await stream.readAll()) as string);
+    const accountPublicKey = GrumpkinAddress.fromString(data.accountPublicKey);
+    const rollupId = await server.getAccountRegistrationRollupId(accountPublicKey);
+    ctx.status = 200;
+    ctx.body = rollupId === null ? -1 : rollupId;
+  });
+
   router.get('/metrics', recordMetric, async (ctx: Koa.Context) => {
     ctx.body = await metrics.getMetrics();
 
