@@ -686,6 +686,9 @@ jobs:
           name: 'Build sidecar'
           command: build metrics-sidecar
       - run:
+          name: 'Build fluent-bit'
+          command: build fluent-bit
+      - run:
           name: 'Build prometheus'
           command: build prometheus
       - run:
@@ -814,6 +817,9 @@ jobs:
       - run:
           name: 'sidecar'
           command: deploy_ecr metrics-sidecar
+      - run:
+          name: 'fluent-bit'
+          command: deploy_ecr fluent-bit
       - run:
           name: 'prometheus'
           command: deploy_global prometheus

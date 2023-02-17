@@ -37,7 +37,7 @@ export type BlockchainAssetJson = Jsonify<BlockchainAsset>;
 
 export const blockchainAssetToJson = ({ address, ...asset }: BlockchainAsset): BlockchainAssetJson => ({
   ...asset,
-  address: address.toString(),
+  address: address.toLowerCaseAddress(),
 });
 
 export const blockchainAssetFromJson = ({ address, ...asset }: BlockchainAssetJson): BlockchainAsset => ({
@@ -55,7 +55,7 @@ export type BlockchainBridgeJson = Jsonify<BlockchainBridge>;
 
 export const blockchainBridgeToJson = ({ address, ...bridge }: BlockchainBridge): BlockchainBridgeJson => ({
   ...bridge,
-  address: address.toString(),
+  address: address.toLowerCaseAddress(),
 });
 
 export const blockchainBridgeFromJson = ({ address, ...bridge }: BlockchainBridgeJson): BlockchainBridge => ({
@@ -88,10 +88,10 @@ export type BlockchainStatusJson = Jsonify<BlockchainStatus>;
 export function blockchainStatusToJson(status: BlockchainStatus): BlockchainStatusJson {
   return {
     ...status,
-    rollupContractAddress: status.rollupContractAddress.toString(),
-    permitHelperContractAddress: status.permitHelperContractAddress.toString(),
-    verifierContractAddress: status.verifierContractAddress.toString(),
-    bridgeDataProvider: status.bridgeDataProvider.toString(),
+    rollupContractAddress: status.rollupContractAddress.toLowerCaseAddress(),
+    permitHelperContractAddress: status.permitHelperContractAddress.toLowerCaseAddress(),
+    verifierContractAddress: status.verifierContractAddress.toLowerCaseAddress(),
+    bridgeDataProvider: status.bridgeDataProvider.toLowerCaseAddress(),
     dataRoot: status.dataRoot.toString('hex'),
     nullRoot: status.nullRoot.toString('hex'),
     rootRoot: status.rootRoot.toString('hex'),
