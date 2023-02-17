@@ -231,7 +231,7 @@ export class CoreSdk extends EventEmitter {
     }
   }
 
-  public async destroy() {
+  public async destroy(error?: string) {
     this.debug('destroying...');
 
     // If sync() task is running, signals it to stop, to awake for exit if it's asleep, and awaits the exit.
@@ -255,7 +255,7 @@ export class CoreSdk extends EventEmitter {
     this.broadcastChannel?.close();
 
     this.initState = SdkInitState.DESTROYED;
-    this.emit(SdkEvent.DESTROYED);
+    this.emit(SdkEvent.DESTROYED, error);
     this.removeAllListeners();
 
     this.debug('destroyed.');
@@ -553,12 +553,12 @@ export class CoreSdk extends EventEmitter {
         await this.synchroniser.start();
         this.synchroniser.onAbort(err => {
           this.debug('failed to sync:', err);
-          void this.destroy();
+          void this.destroy(`Failed to sync: ${err.message}`);
         });
       })
       .catch(err => {
         this.debug('failed to run:', err);
-        return this.destroy();
+        return this.destroy(`Failed to run: ${err.message}`);
       });
 
     return Promise.resolve();
