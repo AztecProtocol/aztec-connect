@@ -72,6 +72,7 @@ resource "aws_ecs_task_definition" "block-server" {
   cpu                      = "2048"
   memory                   = "4096"
   execution_role_arn       = data.terraform_remote_state.setup_iac.outputs.ecs_task_execution_role_arn
+  task_role_arn            = data.terraform_remote_state.aztec2_iac.outputs.cloudwatch_logging_ecs_role_arn
 
   container_definitions = <<DEFINITIONS
 [
@@ -104,11 +105,14 @@ resource "aws_ecs_task_definition" "block-server" {
       }
     ],
     "logConfiguration": {
-      "logDriver": "awslogs",
+      "logDriver":"awsfirelens",
       "options": {
-        "awslogs-group": "/fargate/service/${var.DEPLOY_TAG}/block-server",
-        "awslogs-region": "eu-west-2",
-        "awslogs-stream-prefix": "ecs"
+        "Name": "cloudwatch",
+        "region": "eu-west-2",
+        "log_key": "log",
+        "log_stream_name": "/ecs/$(container_name)/$(ecs_task_id)",
+        "log_group_name": "/fargate/service/${var.DEPLOY_TAG}/block-server",
+        "auto_create_group": "false"
       }
     }
   },
@@ -136,6 +140,46 @@ resource "aws_ecs_task_definition" "block-server" {
         "awslogs-stream-prefix": "ecs"
       }
     }
+  },
+  {
+    "essential": true,
+    "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/fluent-bit:latest",
+    "name": "log_router",
+    "firelensConfiguration": {
+        "type": "fluentbit",
+        "options": {
+            "enable-ecs-log-metadata": "true",
+            "config-file-type":"file",
+            "config-file-value":"/etc/fluent-bit/fluent-bit.conf"
+        }
+    },
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "/fargate/service/${var.DEPLOY_TAG}/block-server",
+        "awslogs-region": "eu-west-2",
+        "awslogs-stream-prefix": "ecs"
+      }
+    },
+    "environment": [
+      {
+        "name": "DEPLOY_TAG",
+        "value": "${var.DEPLOY_TAG}"
+      },
+      {
+        "name": "SERVICE",
+        "value": "block-server"
+      },
+      {
+        "name": "LOKI_HOST",
+        "value": "loki.local"
+      },
+      {
+        "name": "LOKI_PORT",
+        "value": "3100"
+      }
+    ],
+    "memoryReservation": 64
   }
 ]
 DEFINITIONS

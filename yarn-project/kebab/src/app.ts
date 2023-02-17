@@ -68,8 +68,8 @@ export function appFactory(server: Server, prefix: string) {
       } else {
         ctx.body = { jsonrpc, id, error: { message: err.message, code: 5000 } };
       }
-      console.log('RPC request: ', ctx.request.body);
-      console.log('RPC error response: ', ctx.body);
+      console.log('RPC request: ', JSON.stringify(ctx.request.body));
+      console.log('RPC error response: ', JSON.stringify(ctx.body));
     }
   });
 
@@ -95,6 +95,9 @@ export function appFactory(server: Server, prefix: string) {
   });
 
   const app = new Koa();
+  app.on('error', error => {
+    console.log(`KOA app-level error. ${JSON.stringify({ error })}`);
+  });
   app.proxy = true;
 
   app.use(compress({ br: false } as any));

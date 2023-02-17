@@ -97,6 +97,7 @@ resource "aws_ecs_task_definition" "kebab" {
   cpu                      = "2048"
   memory                   = "16384"
   execution_role_arn       = data.terraform_remote_state.setup_iac.outputs.ecs_task_execution_role_arn
+  task_role_arn            = data.terraform_remote_state.aztec2_iac.outputs.cloudwatch_logging_ecs_role_arn
 
   volume {
     name = "efs-data-store"
@@ -154,15 +155,15 @@ resource "aws_ecs_task_definition" "kebab" {
       }
     ],
     "logConfiguration": {
-        "logDriver": "awsfirelens",
-        "options": {
-            "Name": "grafana-loki",
-            "Url": "http://loki.local:3100/loki/api/v1/push",
-            "Labels": "{environment=\"${var.DEPLOY_TAG}\", service=\"kebab\"}",
-            "RemoveKeys": "container_id,ecs_task_arn",
-            "LabelKeys": "container_name,ecs_task_definition,source,ecs_cluster",
-            "LineFormat": "key_value"
-        }
+      "logDriver":"awsfirelens",
+      "options": {
+        "Name": "cloudwatch",
+        "region": "eu-west-2",
+        "log_key": "log",
+        "log_stream_name": "/ecs/$(container_name)/$(ecs_task_id)",
+        "log_group_name": "/fargate/service/${var.DEPLOY_TAG}/kebab",
+        "auto_create_group": "false"
+      }
     }
   },
   {
@@ -196,14 +197,42 @@ resource "aws_ecs_task_definition" "kebab" {
   },
   {
     "essential": true,
-    "image": "grafana/fluent-bit-plugin-loki:2.7.0-amd64",
+    "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/fluent-bit:latest",
     "name": "log_router",
     "firelensConfiguration": {
         "type": "fluentbit",
         "options": {
-            "enable-ecs-log-metadata": "true"
+            "enable-ecs-log-metadata": "true",
+            "config-file-type":"file",
+            "config-file-value":"/etc/fluent-bit/fluent-bit.conf"
         }
     },
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "/fargate/service/${var.DEPLOY_TAG}/kebab",
+        "awslogs-region": "eu-west-2",
+        "awslogs-stream-prefix": "ecs"
+      }
+    },
+    "environment": [
+      {
+        "name": "DEPLOY_TAG",
+        "value": "${var.DEPLOY_TAG}"
+      },
+      {
+        "name": "SERVICE",
+        "value": "kebab"
+      },
+      {
+        "name": "LOKI_HOST",
+        "value": "loki.local"
+      },
+      {
+        "name": "LOKI_PORT",
+        "value": "3100"
+      }
+    ],
     "memoryReservation": 64
   }
 ]

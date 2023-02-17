@@ -77,6 +77,9 @@ export function appFactory(server: Server, prefix: string) {
   });
 
   const app = new Koa();
+  app.on('error', error => {
+    console.log(`KOA app-level error. ${JSON.stringify({ error })}`);
+  });
   app.proxy = true;
   app.use(compress({ br: false } as any));
   app.use(cors());
