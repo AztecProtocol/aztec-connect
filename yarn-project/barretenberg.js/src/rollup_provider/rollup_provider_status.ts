@@ -71,8 +71,8 @@ export const runtimeConfigToJson = ({
   maxFeePerGas: maxFeePerGas.toString(),
   maxPriorityFeePerGas: maxPriorityFeePerGas.toString(),
   privacySets: privacySetsToJson(privacySets),
-  rollupBeneficiary: rollupBeneficiary ? rollupBeneficiary.toString() : undefined,
-  blacklist: blacklist ? blacklist.map(x => x.toString()) : undefined,
+  rollupBeneficiary: rollupBeneficiary ? rollupBeneficiary.toLowerCaseAddress() : undefined,
+  blacklist: blacklist ? blacklist.map(x => x.toLowerCaseAddress()) : undefined,
 });
 
 export const runtimeConfigFromJson = ({

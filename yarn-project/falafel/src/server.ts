@@ -399,7 +399,7 @@ export class Server {
         error: err.message,
         origin: txRequest.requestSender.originUrl,
       };
-      this.log(`Client Tx Error: `, logObject);
+      this.log(`Client Tx Error: `, JSON.stringify(logObject));
       throw err;
     }
   }
