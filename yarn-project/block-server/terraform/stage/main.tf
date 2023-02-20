@@ -107,15 +107,7 @@ resource "aws_ecs_task_definition" "block-server" {
       }
     ],
     "logConfiguration": {
-      "logDriver":"awsfirelens",
-      "options": {
-        "Name": "cloudwatch",
-        "region": "eu-west-2",
-        "log_key": "log",
-        "log_stream_name": "/ecs/$(container_name)/$(ecs_task_id)",
-        "log_group_name": "/fargate/service/${var.DEPLOY_TAG}/block-server",
-        "auto_create_group": "false"
-      }
+      "logDriver":"awsfirelens"
     }
   },
   {
@@ -179,6 +171,14 @@ resource "aws_ecs_task_definition" "block-server" {
       {
         "name": "LOKI_PORT",
         "value": "3100"
+      },
+      {
+        "name": "LOG_LEVEL",
+        "value": "info"
+      },
+      {
+        "name": "REGION",
+        "value": "eu-west-2"
       }
     ],
     "memoryReservation": 64
