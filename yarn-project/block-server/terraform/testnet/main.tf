@@ -178,6 +178,7 @@ resource "aws_ecs_task_definition" "block-server" {
         "name": "REGION",
         "value": "eu-west-2"
       }
+    ],
     "memoryReservation": 64
   }
 ]
