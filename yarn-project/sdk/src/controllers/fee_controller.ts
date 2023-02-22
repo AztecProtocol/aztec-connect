@@ -3,7 +3,7 @@ import { AssetValue } from '@aztec/barretenberg/asset';
 import { Tx } from '@aztec/barretenberg/rollup_provider';
 import { TxId } from '@aztec/barretenberg/tx_id';
 import { CoreSdk } from '../core_sdk/index.js';
-import { ProofOutput } from '../proofs/index.js';
+import { ProofOutput, proofOutputToProofTx } from '../proofs/index.js';
 import { Signer } from '../signer/index.js';
 import { createTxRefNo } from './create_tx_ref_no.js';
 
@@ -47,6 +47,14 @@ export class FeeController {
       proofInput.signature = await this.userSigner.signMessage(proofInput.signingData);
       this.feeProofOutputs.push(await this.core.createPaymentProof(proofInput, txRefNo, timeout));
     }
+  }
+
+  public exportProofTxs() {
+    if (!this.feeProofOutputs.length) {
+      throw new Error('Call createProof() first.');
+    }
+
+    return this.feeProofOutputs.map(proofOutputToProofTx);
   }
 
   public async send() {
