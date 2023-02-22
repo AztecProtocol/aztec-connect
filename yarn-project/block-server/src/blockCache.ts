@@ -26,7 +26,7 @@ export class BlockCache {
 
     this.log(
       `Inserted ${blocks.length} blocks into cache ${
-        startIndex ? `from ${startIndex} to ${startIndex + blocks.length}` : `end`
+        startIndex === undefined ? 'end' : `from ${startIndex} to ${startIndex + blocks.length}`
       }. Total blocks in cache: ${this.totalCachedBlocks}. Total blocks: ${this.blockBufferCache.length}`,
     );
   }
