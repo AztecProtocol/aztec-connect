@@ -56,9 +56,12 @@ export class Server {
 
       const latestRollupId = await ensureGetRollupId();
       this.blockCache.init(latestRollupId + 1);
-      const latestBlock = await this.getRollupProviderBlocks(this.blockCache.getLatestRollupId());
-      this.blockCache.addBlocks(latestBlock, latestRollupId);
-      this.log(`Received ${latestBlock.length} blocks. Total blocks: ${this.blockCache.getLatestRollupId() + 1}`);
+      if (latestRollupId !== -1) {
+        // can only populate cache if there is a rollup
+        const latestBlock = await this.getRollupProviderBlocks(this.blockCache.getLatestRollupId());
+        this.blockCache.addBlocks(latestBlock, latestRollupId);
+        this.log(`Received ${latestBlock.length} blocks. Total blocks: ${this.blockCache.getLatestRollupId() + 1}`);
+      }
     }
 
     // Asynchronously kick off a polling loop for the latest blocks.
