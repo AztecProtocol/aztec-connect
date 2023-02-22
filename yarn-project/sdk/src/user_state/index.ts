@@ -165,6 +165,7 @@ export class UserState extends EventEmitter {
         case ProofId.DEFI_DEPOSIT: {
           const offchainTxData = OffchainDefiDepositData.fromBuffer(offchainTxDataBuffers[i]);
           viewingKeys.push(offchainTxData.viewingKey);
+          // There is only 1 note on the output of DEFI_DEPOSIT (claim note)
           const { noteCommitment2, nullifier2: inputNullifier2 } = innerProofs[i];
           noteCommitments.push(noteCommitment2);
           inputNullifiers.push(inputNullifier2);
