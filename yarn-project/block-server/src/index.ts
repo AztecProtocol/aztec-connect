@@ -6,11 +6,12 @@ import http from 'http';
 import { appFactory } from './app.js';
 import { Server } from './server.js';
 
-const { PORT = '8084', FALAFEL_URL = 'http://localhost:8081', API_PREFIX = '' } = process.env;
+const { PORT = '8084', FALAFEL_URL = 'http://localhost:8081', API_PREFIX = '', INIT_FULL_SYNC = false } = process.env;
 
 async function main() {
+  const initFullSync = INIT_FULL_SYNC === 'true';
   const falafelUrl = new URL(FALAFEL_URL);
-  const server = new Server(falafelUrl);
+  const server = new Server(falafelUrl, initFullSync);
 
   const shutdown = async () => {
     await server.stop();

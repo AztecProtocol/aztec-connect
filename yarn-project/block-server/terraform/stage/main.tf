@@ -99,11 +99,15 @@ resource "aws_ecs_task_definition" "block-server" {
       },
       {
         "name": "FALAFEL_URL",
-        "value": "http://aztec-connect-dev-falafel.local/aztec-connect-dev/falafel"
+        "value": "http://${var.DEPLOY_TAG}-falafel.local/${var.DEPLOY_TAG}/falafel"
       },
       {
         "name": "API_PREFIX",
-        "value": "/aztec-connect-dev/falafel"
+        "value": "/${var.DEPLOY_TAG}/falafel"
+      },
+      {
+        "name": "INIT_FULL_SYNC",
+        "value": "false"
       }
     ],
     "logConfiguration": {
@@ -250,7 +254,7 @@ resource "aws_alb_target_group" "block-server" {
 
 resource "aws_lb_listener_rule" "api" {
   listener_arn = data.terraform_remote_state.aztec2_iac.outputs.alb_listener_arn
-  priority     = 412
+  priority     = 380
 
   action {
     type             = "forward"

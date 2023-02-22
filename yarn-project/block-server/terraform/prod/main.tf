@@ -101,7 +101,11 @@ resource "aws_ecs_task_definition" "block-server" {
       },
       {
         "name": "API_PREFIX",
-        "value": "/aztec-connect-prod/falafel"
+        "value": "/${var.DEPLOY_TAG}/falafel"
+      },
+      {
+        "name": "INIT_FULL_SYNC",
+        "value": "false"
       }
     ],
     "logConfiguration": {
