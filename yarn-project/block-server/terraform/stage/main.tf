@@ -254,7 +254,7 @@ resource "aws_alb_target_group" "block-server" {
 
 resource "aws_lb_listener_rule" "api" {
   listener_arn = data.terraform_remote_state.aztec2_iac.outputs.alb_listener_arn
-  priority     = 412
+  priority     = 380
 
   action {
     type             = "forward"
