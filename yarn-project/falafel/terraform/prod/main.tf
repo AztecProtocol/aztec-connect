@@ -110,6 +110,17 @@ resource "aws_efs_file_system" "falafel_data_store" {
   }
 }
 
+resource "aws_backup_selection" "falafel_data_backup" {
+  iam_role_arn = data.terraform_remote_state.aztec2_iac.outputs.aztec2_backup_role_arn
+  name         = "${var.DEPLOY_TAG}-falafel-backup"
+  plan_id      = data.terraform_remote_state.aztec2_iac.outputs.aws_backup_plan_id
+
+  resources = [
+    aws_efs_file_system.falafel_data_store.arn,
+    aws_db_instance.postgres.arn
+  ]
+}
+
 resource "aws_efs_mount_target" "private_az1" {
   file_system_id  = aws_efs_file_system.falafel_data_store.id
   subnet_id       = data.terraform_remote_state.setup_iac.outputs.subnet_az1_private_id
