@@ -45,7 +45,7 @@ export function appFactory(server: Server, falafelUrl: URL, prefix: string) {
     } else {
       // Ensure take is between 0 -> 128
       const take = ctx.query.take ? Math.min(Math.max(+ctx.query.take, 0), 128) : 128;
-      const [blocksBuffer, takeFullfilled] = server.getBlockBuffers(from, take);
+      const [blocksBuffer, takeFullfilled] = await server.getBlockBuffers(from, take);
       ctx.body = blocksBuffer;
       ctx.compress = false;
       ctx.status = 200;

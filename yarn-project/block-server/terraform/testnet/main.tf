@@ -80,7 +80,7 @@ resource "aws_ecs_task_definition" "block-server" {
     "name": "${var.DEPLOY_TAG}-block-server",
     "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/block-server:${var.DEPLOY_TAG}",
     "essential": true,
-    "memoryReservation": 3776,
+    "memoryReservation": 3840,
     "portMappings": [
       {
         "containerPort": 80
@@ -97,15 +97,24 @@ resource "aws_ecs_task_definition" "block-server" {
       },
       {
         "name": "FALAFEL_URL",
-        "value": "http://aztec-connect-testnet-falafel.local/aztec-connect-testnet/falafel"
+        "value": "http://${var.DEPLOY_TAG}-falafel.local/${var.DEPLOY_TAG}/falafel"
       },
       {
         "name": "API_PREFIX",
-        "value": "/aztec-connect-testnet/falafel"
+        "value": "/${var.DEPLOY_TAG}/falafel"
+      },
+      {
+        "name": "INIT_FULL_SYNC",
+        "value": "false"
       }
     ],
     "logConfiguration": {
-      "logDriver":"awsfirelens"
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "/fargate/service/${var.DEPLOY_TAG}/block-server",
+        "awslogs-region": "eu-west-2",
+        "awslogs-stream-prefix": "ecs"
+      }
     }
   },
   {
@@ -132,54 +141,6 @@ resource "aws_ecs_task_definition" "block-server" {
         "awslogs-stream-prefix": "ecs"
       }
     }
-  },
-  {
-    "essential": true,
-    "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/fluent-bit:latest",
-    "name": "log_router",
-    "firelensConfiguration": {
-        "type": "fluentbit",
-        "options": {
-            "enable-ecs-log-metadata": "true",
-            "config-file-type":"file",
-            "config-file-value":"/etc/fluent-bit/fluent-bit.conf"
-        }
-    },
-    "logConfiguration": {
-      "logDriver": "awslogs",
-      "options": {
-        "awslogs-group": "/fargate/service/${var.DEPLOY_TAG}/block-server",
-        "awslogs-region": "eu-west-2",
-        "awslogs-stream-prefix": "ecs"
-      }
-    },
-    "environment": [
-      {
-        "name": "DEPLOY_TAG",
-        "value": "${var.DEPLOY_TAG}"
-      },
-      {
-        "name": "SERVICE",
-        "value": "block-server"
-      },
-      {
-        "name": "LOKI_HOST",
-        "value": "loki.local"
-      },
-      {
-        "name": "LOKI_PORT",
-        "value": "3100"
-      },
-      {
-        "name": "LOG_LEVEL",
-        "value": "info"
-      },
-      {
-        "name": "REGION",
-        "value": "eu-west-2"
-      }
-    ],
-    "memoryReservation": 64
   }
 ]
 DEFINITIONS

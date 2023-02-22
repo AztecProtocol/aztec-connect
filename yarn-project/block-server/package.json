@@ -10,6 +10,8 @@
     "formatting": "run -T prettier --check ./src && run -T eslint --max-warnings 0 ./src",
     "start": "node ./dest",
     "start:dev": "tsc-watch -p tsconfig.dest.json --onSuccess 'yarn start'",
+    "start:debug": "node ${NODE_ARGS:-} --inspect=0.0.0.0:9221 ./dest",
+    "start:dev_debug": "tsc-watch -p tsconfig.json --onSuccess 'yarn start:debug'",
     "test": "jest --passWithNoTests"
   },
   "jest": {
