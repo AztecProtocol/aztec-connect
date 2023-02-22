@@ -211,7 +211,7 @@ resource "aws_ecs_task_definition" "halloumi_inner" {
     "logConfiguration": {
       "logDriver": "awslogs",
       "options": {
-        "awslogs-group": "/fargate/service/${var.DEPLOY_TAG}/halloumi-inner",
+        "awslogs-group": "/fargate/service/${var.DEPLOY_TAG}/halloumi",
         "awslogs-region": "eu-west-2",
         "awslogs-stream-prefix": "ecs"
       }
@@ -341,7 +341,7 @@ resource "aws_ecs_task_definition" "halloumi_outer" {
     "logConfiguration": {
       "logDriver": "awslogs",
       "options": {
-        "awslogs-group": "/fargate/service/${var.DEPLOY_TAG}/halloumi-outer",
+        "awslogs-group": "/fargate/service/${var.DEPLOY_TAG}/halloumi",
         "awslogs-region": "eu-west-2",
         "awslogs-stream-prefix": "ecs"
       }
