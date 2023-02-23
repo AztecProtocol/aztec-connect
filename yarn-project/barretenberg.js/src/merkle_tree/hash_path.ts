@@ -32,4 +32,14 @@ export class HashPath {
     const { elem, adv } = deserializeArrayFromVector(deserializePath, buf, offset);
     return { elem: new HashPath(elem), adv };
   }
+
+  // For json serialization
+  public toString() {
+    return this.toBuffer().toString('hex');
+  }
+
+  // For json deserialization
+  public static fromString(repr: string) {
+    return HashPath.fromBuffer(Buffer.from(repr, 'hex'));
+  }
 }
