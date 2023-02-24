@@ -246,7 +246,7 @@ constexpr element<Fq, Fr, T> element<Fq, Fr, T>::operator+=(const affine_element
             return *this;
         }
     } else {
-        const bool edge_case_trigger = x.is_msb_set() | other.x.is_msb_set();
+        const bool edge_case_trigger = x.is_msb_set() || other.x.is_msb_set();
         if (edge_case_trigger) {
             if (x.is_msb_set()) {
                 *this = { other.x, other.y, Fq::one() };
