@@ -1,5 +1,5 @@
-import { randomBytes } from '../crypto';
-import { OffchainDefiClaimData } from './offchain_defi_claim_data';
+import { randomBytes } from '../crypto/index.js';
+import { OffchainDefiClaimData } from './offchain_defi_claim_data.js';
 
 describe('OffchainDefiClaimData', () => {
   it('convert offchain defi claim data to and from buffer', () => {

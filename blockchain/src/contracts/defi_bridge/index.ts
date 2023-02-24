@@ -1,1 +1,1 @@
-export * from './defi_bridge';
+export * from './defi_bridge.js';

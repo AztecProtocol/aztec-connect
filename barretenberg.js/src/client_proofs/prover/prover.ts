@@ -1,7 +1,9 @@
-import { createDebugLogger } from '../../log';
-import { Fft } from '../../fft';
-import { Pippenger } from '../../pippenger';
-import { BarretenbergWasm, BarretenbergWorker } from '../../wasm';
+import { createDebugLogger } from '../../log/index.js';
+import { Fft } from '../../fft/index.js';
+import { Pippenger } from '../../pippenger/index.js';
+import { BarretenbergWasm, BarretenbergWorker } from '../../wasm/index.js';
+import { Transfer } from '../../transport/index.js';
+import { TimeoutTask } from '../../timer/index.js';
 
 const debug = createDebugLogger('bb:prover');
 
@@ -34,6 +36,8 @@ class Timer {
  * Fft implementation was initialised with.
  */
 export class Prover {
+  private interruptPromise!: Promise<any>;
+
   constructor(
     private wasm: BarretenbergWorker | BarretenbergWasm,
     private pippenger: Pippenger,
@@ -45,11 +49,17 @@ export class Prover {
     return this.wasm as BarretenbergWorker;
   }
 
-  private async proverCall(name: string, ...args: any[]) {
-    return await this.wasm.call(this.callPrefix + name, ...args);
+  public async createProof(proverPtr: number, timeout?: number) {
+    const task = new TimeoutTask(async () => await this.prove(proverPtr), timeout, 'createProof');
+    this.interruptPromise = task.getInterruptPromise();
+    return await task.exec();
   }
 
-  public async createProof(proverPtr: number) {
+  private async proverCall(name: string, ...args: any[]) {
+    return await Promise.race([this.wasm.asyncCall(this.callPrefix + name, ...args), this.interruptPromise]);
+  }
+
+  private async prove(proverPtr: number) {
     await this.wasm.acquire();
     try {
       const circuitSize = await this.proverCall('prover_get_circuit_size', proverPtr);
@@ -103,7 +113,7 @@ export class Prover {
       const scalarMultSize = await this.proverCall('prover_get_scalar_multiplication_size', proverPtr, i);
       const scalars = await this.wasm.sliceMemory(scalarsPtr, scalarsPtr + scalarMultSize * 32);
       const result = await this.pippenger.pippengerUnsafe(scalars, 0, scalarMultSize);
-      await this.wasm.transferToHeap(result, 0);
+      await this.transferToHeap(result, 0);
       await this.proverCall('prover_put_scalar_multiplication_data', proverPtr, 0, i);
     }
 
@@ -121,13 +131,17 @@ export class Prover {
       jobs.push({ coefficients, inverse: true, i });
     }
 
-    await Promise.all(
+    const finaliserFuncs = await Promise.all(
       jobs.map(({ inverse, coefficients, constant, i }) =>
         inverse
           ? this.doIfft(proverPtr, i, circuitSize, coefficients)
           : this.doFft(proverPtr, i, circuitSize, coefficients, constant!),
       ),
     );
+
+    for (const fn of finaliserFuncs) {
+      await fn();
+    }
   }
 
   private async doFft(
@@ -138,17 +152,29 @@ export class Prover {
     constant: Uint8Array,
   ) {
     const result = await this.fft.fft(coefficients, constant);
-    const resultPtr = await this.wasm.call('bbmalloc', circuitSize * 32);
-    await this.wasm.transferToHeap(result, resultPtr);
-    await this.proverCall('prover_put_fft_data', proverPtr, resultPtr, i);
-    await this.wasm.call('bbfree', resultPtr);
+    return async () => {
+      const resultPtr = await this.wasm.call('bbmalloc', circuitSize * 32);
+      await this.transferToHeap(result, resultPtr);
+      await this.proverCall('prover_put_fft_data', proverPtr, resultPtr, i);
+      await this.wasm.call('bbfree', resultPtr);
+    };
   }
 
   private async doIfft(proverPtr: number, i: number, circuitSize: number, coefficients: Uint8Array) {
     const result = await this.fft.ifft(coefficients);
-    const resultPtr = await this.wasm.call('bbmalloc', circuitSize * 32);
-    await this.wasm.transferToHeap(result, resultPtr);
-    await this.proverCall('prover_put_ifft_data', proverPtr, resultPtr, i);
-    await this.wasm.call('bbfree', resultPtr);
+    return async () => {
+      const resultPtr = await this.wasm.call('bbmalloc', circuitSize * 32);
+      await this.transferToHeap(result, resultPtr);
+      await this.proverCall('prover_put_ifft_data', proverPtr, resultPtr, i);
+      await this.wasm.call('bbfree', resultPtr);
+    };
+  }
+
+  private async transferToHeap(buf: Buffer | Uint8Array, ptr: number) {
+    if (this.wasm instanceof BarretenbergWasm) {
+      this.wasm.transferToHeap(buf, ptr);
+    } else {
+      await this.wasm.transferToHeap(Transfer(buf, [buf.buffer]), ptr);
+    }
   }
 }

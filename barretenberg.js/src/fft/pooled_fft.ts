@@ -1,8 +1,8 @@
-import { createDebugLogger } from '../log';
-import { MemoryFifo } from '../fifo';
-import { WorkerPool } from '../wasm/worker_pool';
-import { Fft, FftFactory } from './fft';
-import { SingleFft } from './single_fft';
+import { createDebugLogger } from '../log/index.js';
+import { MemoryFifo } from '../fifo/index.js';
+import { WorkerPool } from '../wasm/index.js';
+import { Fft, FftFactory } from './fft.js';
+import { SingleFft } from './single_fft.js';
 
 const debug = createDebugLogger('bb:fft');
 

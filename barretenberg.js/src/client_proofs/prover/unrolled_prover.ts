@@ -1,7 +1,7 @@
-import { Fft } from '../../fft';
-import { Pippenger } from '../../pippenger';
-import { BarretenbergWasm, BarretenbergWorker } from '../../wasm';
-import { Prover } from './prover';
+import { Fft } from '../../fft/index.js';
+import { Pippenger } from '../../pippenger/index.js';
+import { BarretenbergWasm, BarretenbergWorker } from '../../wasm/index.js';
+import { Prover } from './prover.js';
 
 /**
  * An UnrolledProver is used for proofs that are verified inside a another snark (e.g. the rollup).

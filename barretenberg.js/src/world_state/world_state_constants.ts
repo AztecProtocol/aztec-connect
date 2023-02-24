@@ -1,5 +1,5 @@
-import { packInteractionNotes } from '../note_algorithms/defi_interaction_note';
-import { RollupProofData } from '../rollup_proof';
+import { packInteractionNotes } from '../note_algorithms/index.js';
+import { RollupProofData } from '../rollup_proof/index.js';
 
 const numberOfBridgeCalls = RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK;
 

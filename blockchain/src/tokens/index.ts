@@ -1,14 +1,13 @@
-export * from './token_store';
-export * from './mainnet_addresses';
+export * from './token_store.js';
+export * from './mainnet_addresses.js';
 
-import { TokenStore } from '.';
+import { TokenStore } from './token_store.js';
 import { EthereumProvider } from '@aztec/barretenberg/blockchain';
 import { Web3Provider } from '@ethersproject/providers';
 import { Contract } from 'ethers';
-import { MainnetAddresses } from '.';
-import * as ERC20Abi from '../abis/ERC20.json';
-import * as WETHabi from '../abis/WETH9.json';
+import { MainnetAddresses } from './mainnet_addresses.js';
 import { EthAddress } from '@aztec/barretenberg/address';
+import { ERC20, WETH9 } from '../abis.js';
 
 const getSigner = (ethereumProvider: EthereumProvider, spender: EthAddress) => {
   return new Web3Provider(ethereumProvider).getSigner(spender.toString());
@@ -36,7 +35,7 @@ export async function purchaseTokens(
 }
 
 export async function getTokenBalance(tokenAddress: EthAddress, owner: EthAddress, ethereumProvider: EthereumProvider) {
-  const tokenContract = new Contract(tokenAddress.toString(), ERC20Abi.abi, new Web3Provider(ethereumProvider));
+  const tokenContract = new Contract(tokenAddress.toString(), ERC20.abi, new Web3Provider(ethereumProvider));
   const currentBalance = await tokenContract.balanceOf(owner.toString());
   return currentBalance.toBigInt();
 }
@@ -47,7 +46,7 @@ export async function getTokenAllowance(
   spender: EthAddress,
   ethereumProvider: EthereumProvider,
 ) {
-  const tokenContract = new Contract(tokenAddress.toString(), ERC20Abi.abi, new Web3Provider(ethereumProvider));
+  const tokenContract = new Contract(tokenAddress.toString(), ERC20.abi, new Web3Provider(ethereumProvider));
   const currentBalance = await tokenContract.allowance(owner.toString(), spender.toString());
   return currentBalance.toBigInt();
 }
@@ -60,7 +59,7 @@ export async function approveToken(
   amount: bigint,
 ) {
   const signer = getSigner(ethereumProvider, owner);
-  const tokenContract = new Contract(tokenAddress.toString(), ERC20Abi.abi, signer);
+  const tokenContract = new Contract(tokenAddress.toString(), ERC20.abi, signer);
   const approved = await tokenContract.approve(spender.toString(), amount);
   await approved.wait();
 }
@@ -73,7 +72,7 @@ export async function transferToken(
   amount: bigint,
 ) {
   const signer = getSigner(ethereumProvider, spender);
-  const tokenContract = new Contract(tokenAddress.toString(), ERC20Abi.abi, signer);
+  const tokenContract = new Contract(tokenAddress.toString(), ERC20.abi, signer);
   const approved = await tokenContract.transfer(recipient.toString(), amount);
   await approved.wait();
 }
@@ -85,20 +84,20 @@ export async function approveWeth(
   ethereumProvider: EthereumProvider,
 ) {
   const signer = getSigner(ethereumProvider, owner);
-  const wethContract = new Contract(MainnetAddresses.Tokens['WETH'], WETHabi.abi, signer);
+  const wethContract = new Contract(MainnetAddresses.Tokens['WETH'], WETH9.abi, signer);
   const approveTx = await wethContract.approve(spender.toString(), amount);
   await approveTx.wait();
 }
 
 export async function getWethBalance(owner: EthAddress, ethereumProvider: EthereumProvider) {
-  const wethContract = new Contract(MainnetAddresses.Tokens['WETH'], WETHabi.abi, new Web3Provider(ethereumProvider));
+  const wethContract = new Contract(MainnetAddresses.Tokens['WETH'], WETH9.abi, new Web3Provider(ethereumProvider));
   const currentBalance = await wethContract.balanceOf(owner.toString());
   return currentBalance.toBigInt();
 }
 
 export async function depositToWeth(spender: EthAddress, amount: bigint, ethereumProvider: EthereumProvider) {
   const signer = getSigner(ethereumProvider, spender);
-  const wethContract = new Contract(MainnetAddresses.Tokens['WETH'], WETHabi.abi, signer);
+  const wethContract = new Contract(MainnetAddresses.Tokens['WETH'], WETH9.abi, signer);
   const balance = (await wethContract.balanceOf(spender.toString())).toBigInt();
   if (balance < amount) {
     const amountToAdd = amount - balance;

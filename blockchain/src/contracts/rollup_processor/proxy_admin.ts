@@ -1,9 +1,7 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { Contract, ContractFactory, Signer } from 'ethers';
-import { formatBytes32String } from 'ethers/lib/utils';
-import * as ProxyAdminContract from '../../artifacts/@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol/ProxyAdmin.json';
-import * as ProxyContract from '../../artifacts/@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol/TransparentUpgradeableProxy.json';
-import * as ProxyDeployer from '../../artifacts/contracts/periphery/ProxyDeployer.sol/ProxyDeployer.json';
+import { formatBytes32String } from 'ethers/lib/utils.js';
+import { ProxyAdminContract, ProxyContract, ProxyDeployer } from '../../abis.js';
 
 /**
  * Thin wrapper around the Proxy Admin contract.

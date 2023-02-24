@@ -1,6 +1,6 @@
-import { EthAddress } from '../../address';
-import { toBigIntBE } from '../../bigint_buffer';
-import { ProofData } from './proof_data';
+import { EthAddress } from '../../address/index.js';
+import { toBigIntBE } from '../../bigint_buffer/index.js';
+import { ProofData } from './proof_data.js';
 
 export class JoinSplitProofData {
   constructor(public readonly proofData: ProofData) {}

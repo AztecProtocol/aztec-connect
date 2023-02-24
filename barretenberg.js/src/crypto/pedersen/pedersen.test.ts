@@ -1,6 +1,6 @@
-import { BarretenbergWasm, WorkerPool } from '../../wasm';
-import { PooledPedersen } from './pooled_pedersen';
-import { SinglePedersen } from './single_pedersen';
+import { BarretenbergWasm, WorkerPool } from '../../wasm/index.js';
+import { PooledPedersen } from './pooled_pedersen.js';
+import { SinglePedersen } from './single_pedersen.js';
 
 describe('pedersen', () => {
   let barretenberg!: BarretenbergWasm;

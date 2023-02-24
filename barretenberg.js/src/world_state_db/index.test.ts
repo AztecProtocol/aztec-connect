@@ -1,7 +1,7 @@
 import { randomBytes } from 'crypto';
-import { WorldStateDb } from './index';
-import { WorldStateConstants } from '../world_state';
-import { MerkleTree } from '../merkle_tree';
+import { WorldStateDb } from './index.js';
+import { WorldStateConstants } from '../world_state/index.js';
+import { MerkleTree } from '../merkle_tree/index.js';
 
 const randomFr = () => {
   const bytes = randomBytes(32);
@@ -9,7 +9,7 @@ const randomFr = () => {
   return bytes;
 };
 
-describe.skip('world_state_db', () => {
+describe('world_state_db', () => {
   let worldStateDb: WorldStateDb;
 
   beforeEach(async () => {
@@ -43,7 +43,7 @@ describe.skip('world_state_db', () => {
     const path = (await worldStateDb.getHashPath(0, BigInt(0))).data;
 
     const expectedFirst = MerkleTree.ZERO_ELEMENT;
-    const expectedLast = '02a12922daa0fe8d05620d98096220a86d9ebf4d9552dc0fbd3862b9c48f7ab9';
+    const expectedLast = '190a24ddaa98c1c1924b86a3897d384dada982bfd05acc2af61eb1214fd1852f';
 
     expect(path.length).toEqual(32);
     expect(path[0][0]).toEqual(expectedFirst);

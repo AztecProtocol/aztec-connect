@@ -2,7 +2,7 @@ import { EthAddress } from '@aztec/barretenberg/address';
 import { EthereumProvider, SendTxOptions, TxHash } from '@aztec/barretenberg/blockchain';
 import { Web3Provider } from '@ethersproject/providers';
 import { Contract } from 'ethers';
-import { abi } from '../../artifacts/contracts/periphery/AztecFeeDistributor.sol/AztecFeeDistributor.json';
+import { AztecFeeDistributor } from '../../abis.js';
 
 const fixEthersStackTrace = (err: Error) => {
   err.stack! += new Error().stack;
@@ -17,7 +17,11 @@ export class FeeDistributor {
     private provider: EthereumProvider,
     private defaults: SendTxOptions = {},
   ) {
-    this.feeDistributor = new Contract(feeDistributorContractAddress.toString(), abi, new Web3Provider(this.provider));
+    this.feeDistributor = new Contract(
+      feeDistributorContractAddress.toString(),
+      AztecFeeDistributor.abi,
+      new Web3Provider(this.provider),
+    );
   }
 
   get address() {
@@ -86,6 +90,6 @@ export class FeeDistributor {
   private getContractWithSigner(options: SendTxOptions) {
     const { provider = this.provider, signingAddress } = options;
     const ethSigner = new Web3Provider(provider).getSigner(signingAddress ? signingAddress.toString() : 0);
-    return new Contract(this.feeDistributorContractAddress.toString(), abi, ethSigner);
+    return new Contract(this.feeDistributorContractAddress.toString(), AztecFeeDistributor.abi, ethSigner);
   }
 }

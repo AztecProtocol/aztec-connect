@@ -1,4 +1,5 @@
-import { BarretenbergWasm } from '../../wasm';
+import { BarretenbergWasm } from '../../wasm/index.js';
+import { default as hash } from 'hash.js';
 
 export class Sha256 {
   constructor(private wasm: BarretenbergWasm) {}
@@ -12,3 +13,5 @@ export class Sha256 {
     return result;
   }
 }
+
+export const sha256 = (data: Buffer) => Buffer.from(hash.sha256().update(data).digest());

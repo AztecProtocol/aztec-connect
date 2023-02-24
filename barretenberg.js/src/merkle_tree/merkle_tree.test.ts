@@ -1,8 +1,8 @@
-import levelup from 'levelup';
-import memdown from 'memdown';
-import { HashPath, MerkleTree } from '.';
-import { SinglePedersen } from '../crypto/pedersen';
-import { BarretenbergWasm } from '../wasm';
+import { default as levelup } from 'levelup';
+import { default as memdown } from 'memdown';
+import { HashPath, MerkleTree } from './index.js';
+import { SinglePedersen } from '../crypto/index.js';
+import { BarretenbergWasm } from '../wasm/index.js';
 
 const expectSameTrees = async (tree1: MerkleTree, tree2: MerkleTree) => {
   const size = tree1.getSize();

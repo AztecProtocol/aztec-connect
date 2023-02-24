@@ -1,1 +1,1 @@
-export * from './grumpkin';
+export * from './grumpkin/index.js';

@@ -1,9 +1,8 @@
-import { GrumpkinAddress } from '../address';
-import { createDebugLogger } from '../log';
-import { Grumpkin } from '../ecc/grumpkin';
-import { DecryptedNote } from './decrypted_note';
-import { NoteAlgorithms } from './note_algorithms';
-import { TreeNote } from './tree_note';
+import { GrumpkinAddress } from '../address/index.js';
+import { createDebugLogger } from '../log/index.js';
+import { DecryptedNote } from './decrypted_note.js';
+import { NoteAlgorithms } from './note_algorithms.js';
+import { TreeNote } from './tree_note.js';
 
 const debug = createDebugLogger('recover_tree_notes');
 
@@ -11,11 +10,9 @@ export const recoverTreeNotes = (
   decryptedNotes: (DecryptedNote | undefined)[],
   inputNullifiers: Buffer[],
   noteCommitments: Buffer[],
-  privateKey: Buffer,
-  grumpkin: Grumpkin,
+  ownerPubKey: GrumpkinAddress,
   noteAlgorithms: NoteAlgorithms,
 ) => {
-  const ownerPubKey = new GrumpkinAddress(grumpkin.mul(Grumpkin.one, privateKey));
   return decryptedNotes.map((decrypted, i) => {
     if (!decrypted) {
       debug(`index ${i}: no decrypted tree note.`);

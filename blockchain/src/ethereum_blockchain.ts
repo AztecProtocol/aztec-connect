@@ -16,8 +16,8 @@ import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { Timer } from '@aztec/barretenberg/timer';
 import { WorldStateConstants } from '@aztec/barretenberg/world_state';
 import { EventEmitter } from 'events';
-import { Contracts } from './contracts/contracts';
-import { validateSignature } from './validate_signature';
+import { Contracts } from './contracts/index.js';
+import { validateSignature } from './validate_signature.js';
 
 export interface EthereumBlockchainConfig {
   console?: boolean;
@@ -56,6 +56,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
     config: EthereumBlockchainConfig,
     rollupContractAddress: EthAddress,
     permitHelperContractAddress: EthAddress,
+    bridgeDataProvider: EthAddress,
     priceFeedContractAddresses: EthAddress[],
     provider: EthereumProvider,
   ) {
@@ -64,6 +65,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
       rollupContractAddress,
       permitHelperContractAddress,
       priceFeedContractAddresses,
+      bridgeDataProvider,
       provider,
       confirmations,
     );
@@ -78,27 +80,35 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
 
   /**
    * Initialises the status object. Requires querying for the latest rollup block from the blockchain.
-   * This could take some time given how `getRollupBlock` searches backwards over the chain.
+   * Once we have the latest block we can populate the correct state variables.
    */
   public async init() {
+    this.log('Initializing blockchain status...');
+    this.status = {
+      chainId: await this.contracts.getChainId(),
+      rollupContractAddress: this.contracts.getRollupContractAddress(),
+      permitHelperContractAddress: this.contracts.getPermitHelperContractAddress(),
+      verifierContractAddress: await this.contracts.getVerifierContractAddress(),
+      bridgeDataProvider: this.contracts.getBridgeDataProviderAddress(),
+      ...(await this.getPerRollupState()),
+      ...(await this.getPerEthBlockState()),
+    };
+
     this.log('Seeking latest rollup...');
-    const latestBlock = await this.contracts.getRollupBlock(-1);
+    const latestBlock = await this.contracts.getRollupBlock(-1, this.getRequiredConfirmations());
     if (latestBlock) {
       this.log(`Found latest rollup id ${latestBlock.rollupId}.`);
       this.latestRollupId = latestBlock.rollupId;
     } else {
       this.log('No rollup found, assuming pristine state.');
     }
-    const chainId = await this.contracts.getChainId();
+
     this.status = {
-      chainId,
-      rollupContractAddress: this.contracts.getRollupContractAddress(),
-      permitHelperContractAddress: this.contracts.getPermitHelperContractAddress(),
-      verifierContractAddress: await this.contracts.getVerifierContractAddress(),
+      ...this.status,
       ...(await this.getPerRollupState(latestBlock)),
-      ...(await this.getPerEthBlockState()),
     };
-    this.log(`Ethereum blockchain initialized with assets: ${this.status.assets.map(a => a.symbol)}`);
+
+    this.log(`Initialized.`);
   }
 
   /**
@@ -222,7 +232,7 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   }
 
   private async updatePerEthBlockState() {
-    await this.contracts.updateAssets();
+    await this.contracts.updatePerEthBlockState();
     this.status = {
       ...this.status,
       ...(await this.getPerEthBlockState()),
@@ -265,6 +275,11 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
   public async getBlocks(rollupId: number) {
     const minConfirmations = this.getRequiredConfirmations();
     return await this.contracts.getRollupBlocksFrom(rollupId, minConfirmations);
+  }
+
+  public async callbackRollupBlocksFrom(rollupId: number, cb: (block: Block) => Promise<void>) {
+    const minConfirmations = this.getRequiredConfirmations();
+    return await this.contracts.callbackRollupBlocksFrom(rollupId, minConfirmations, cb);
   }
 
   /**
@@ -372,5 +387,13 @@ export class EthereumBlockchain extends EventEmitter implements Blockchain {
       throw new Error(`Failed to retrieve bridge cost for bridge ${bridgeCallData.toString()}`);
     }
     return gasLimit;
+  }
+
+  public async getBridgeSubsidy(bridgeCallData: bigint) {
+    return await this.contracts.getBridgeSubsidy(bridgeCallData);
+  }
+
+  public async getBridgeData(bridgeAddressId: number) {
+    return await this.contracts.getBridgeData(bridgeAddressId);
   }
 }

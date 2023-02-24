@@ -1,12 +1,12 @@
-import { randomBytes } from 'crypto';
-import { AliasHash } from '../../account_id';
-import { EthAddress, GrumpkinAddress } from '../../address';
-import { toBigIntBE } from '../../bigint_buffer';
-import { BridgeCallData } from '../../bridge_call_data';
-import { HashPath } from '../../merkle_tree';
-import { ClaimNoteTxData, TreeNote } from '../../note_algorithms';
-import { ProofId } from '../proof_data';
-import { JoinSplitTx } from './join_split_tx';
+import { randomBytes } from '../../crypto/index.js';
+import { AliasHash } from '../../account_id/index.js';
+import { EthAddress, GrumpkinAddress } from '../../address/index.js';
+import { toBigIntBE } from '../../bigint_buffer/index.js';
+import { BridgeCallData } from '../../bridge_call_data/index.js';
+import { HashPath } from '../../merkle_tree/index.js';
+import { ClaimNoteTxData, TreeNote } from '../../note_algorithms/index.js';
+import { ProofId } from '../proof_data/index.js';
+import { JoinSplitTx } from './join_split_tx.js';
 
 const randomBigInt = () => toBigIntBE(randomBytes(30));
 

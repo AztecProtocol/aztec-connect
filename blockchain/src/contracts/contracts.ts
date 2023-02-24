@@ -9,11 +9,14 @@ import {
   TxHash,
   TypedData,
 } from '@aztec/barretenberg/blockchain';
+import { createLogger } from '@aztec/barretenberg/log';
+import { Block } from '@aztec/barretenberg/block_source';
 import { Web3Provider } from '@ethersproject/providers';
-import { Web3Signer } from '../signer';
-import { EthAsset, TokenAsset } from './asset';
-import { EthPriceFeed, GasPriceFeed, TokenPriceFeed } from './price_feed';
-import { RollupProcessor } from './rollup_processor';
+import { Web3Signer } from '../signer/index.js';
+import { EthAsset, TokenAsset } from './asset/index.js';
+import { BridgeDataProvider } from './bridge_data_provider/bridge_data_provider.js';
+import { EthPriceFeed, GasPriceFeed, TokenPriceFeed } from './price_feed/index.js';
+import { RollupProcessor } from './rollup_processor/index.js';
 
 /**
  * Facade around all Aztec smart contract classes.
@@ -23,12 +26,14 @@ import { RollupProcessor } from './rollup_processor';
 export class Contracts {
   private readonly provider!: Web3Provider;
   private readonly ethereumRpc!: EthereumRpc;
+  private log = createLogger('Contracts');
 
   constructor(
     private readonly rollupProcessor: RollupProcessor,
     private assets: Asset[],
     private readonly gasPriceFeed: GasPriceFeed,
     private readonly priceFeeds: PriceFeed[],
+    private readonly bridgeDataProvider: BridgeDataProvider,
     private readonly ethereumProvider: EthereumProvider,
     private readonly confirmations: number,
   ) {
@@ -40,10 +45,12 @@ export class Contracts {
     rollupContractAddress: EthAddress,
     permitHelperContractAddress: EthAddress,
     priceFeedContractAddresses: EthAddress[],
+    bridgeDataProviderAddress: EthAddress,
     ethereumProvider: EthereumProvider,
     confirmations: number,
   ) {
     const rollupProcessor = new RollupProcessor(rollupContractAddress, ethereumProvider, permitHelperContractAddress);
+    const bridgeDataProvider = new BridgeDataProvider(bridgeDataProviderAddress, ethereumProvider);
 
     const assets = [new EthAsset(ethereumProvider)];
 
@@ -54,7 +61,15 @@ export class Contracts {
       ...tokenPriceFeedAddresses.map(a => new TokenPriceFeed(a, ethereumProvider)),
     ];
 
-    const contracts = new Contracts(rollupProcessor, assets, gasPriceFeed, priceFeeds, ethereumProvider, confirmations);
+    const contracts = new Contracts(
+      rollupProcessor,
+      assets,
+      gasPriceFeed,
+      priceFeeds,
+      bridgeDataProvider,
+      ethereumProvider,
+      confirmations,
+    );
 
     await contracts.updateAssets();
     return contracts;
@@ -65,6 +80,10 @@ export class Contracts {
   }
 
   public async updateAssets() {
+    if ((await this.rollupProcessor.getSupportedAssetsLength()) === this.assets.length - 1) {
+      return;
+    }
+    this.log('Initialising supported assets...');
     const supportedAssets = await this.rollupProcessor.getSupportedAssets();
     const newAssets = await Promise.all(
       supportedAssets
@@ -74,6 +93,7 @@ export class Contracts {
         ),
     );
     this.assets = [...this.assets, ...newAssets];
+    this.log(`Supported assets: ${this.assets.map(a => a.getStaticInfo().symbol)}`);
   }
 
   public async getPerRollupState() {
@@ -95,12 +115,21 @@ export class Contracts {
     };
   }
 
+  public async updatePerEthBlockState() {
+    await this.updateAssets();
+    this.bridgeDataProvider.updatePerEthBlockState();
+  }
+
   public getRollupBalance(assetId: number) {
     return this.assets[assetId].balanceOf(this.rollupProcessor.address);
   }
 
   public getRollupContractAddress() {
     return this.rollupProcessor.address;
+  }
+
+  public getBridgeDataProviderAddress() {
+    return this.bridgeDataProvider.address;
   }
 
   public getPermitHelperContractAddress() {
@@ -123,12 +152,20 @@ export class Contracts {
     return await this.rollupProcessor.estimateGas(data);
   }
 
-  public async getRollupBlocksFrom(rollupId: number, minConfirmations = this.confirmations) {
+  public async getRollupBlocksFrom(rollupId: number, minConfirmations: number) {
     return await this.rollupProcessor.getRollupBlocksFrom(rollupId, minConfirmations);
   }
 
-  public async getRollupBlock(rollupId: number) {
-    return await this.rollupProcessor.getRollupBlock(rollupId);
+  public async callbackRollupBlocksFrom(
+    rollupId: number,
+    minConfirmations: number,
+    cb: (block: Block) => Promise<void>,
+  ) {
+    return await this.rollupProcessor.callbackRollupBlocksFrom(rollupId, minConfirmations, cb);
+  }
+
+  public async getRollupBlock(rollupId: number, minConfirmations: number) {
+    return await this.rollupProcessor.getRollupBlock(rollupId, minConfirmations);
   }
 
   public async getUserPendingDeposit(assetId: number, account: EthAddress) {
@@ -149,7 +186,7 @@ export class Contracts {
   }
 
   public async getBlockNumber() {
-    return await this.provider.getBlockNumber();
+    return await this.ethereumRpc.blockNumber();
   }
 
   public async signPersonalMessage(message: Buffer, address: EthAddress) {
@@ -221,5 +258,13 @@ export class Contracts {
 
   public async getRevertError(txHash: TxHash) {
     return await this.rollupProcessor.getRevertError(txHash);
+  }
+
+  public async getBridgeSubsidy(bridgeCallData: bigint) {
+    return await this.bridgeDataProvider.getBridgeSubsidy(bridgeCallData);
+  }
+
+  public async getBridgeData(bridgeAddressId: number) {
+    return await this.bridgeDataProvider.getBridgeData(bridgeAddressId);
   }
 }

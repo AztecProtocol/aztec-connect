@@ -2,8 +2,8 @@ import { EthAddress } from '@aztec/barretenberg/address';
 import { EthereumProvider, SendTxOptions } from '@aztec/barretenberg/blockchain';
 import { Web3Provider } from '@ethersproject/providers';
 import { Contract } from 'ethers';
-import { abi } from '../../artifacts/contracts/interfaces/IDefiBridge.sol/IDefiBridge.json';
-import { ContractWithSigner } from '../contract_with_signer';
+import { IDefiBridge } from '../../abis.js';
+import { ContractWithSigner } from '../contract_with_signer.js';
 
 export class DefiBridge {
   public readonly contract: Contract;
@@ -15,7 +15,7 @@ export class DefiBridge {
     private defaultOptions: SendTxOptions = { gasLimit: 1000000 },
   ) {
     this.provider = new Web3Provider(provider);
-    this.contract = new Contract(address.toString(), abi, this.provider);
+    this.contract = new Contract(address.toString(), IDefiBridge.abi, this.provider);
   }
 
   async finalise(

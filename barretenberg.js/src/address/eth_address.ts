@@ -1,5 +1,5 @@
 import { Keccak } from 'sha3';
-import { randomBytes } from '../crypto';
+import { randomBytes } from '../crypto/index.js';
 
 const hash = new Keccak(256);
 
@@ -104,6 +104,10 @@ export class EthAddress {
 
   public toString() {
     return EthAddress.toChecksumAddress(this.buffer.toString('hex'));
+  }
+
+  public toLowerCaseAddress() {
+    return '0x' + this.buffer.toString('hex').toLowerCase();
   }
 
   public toBuffer() {

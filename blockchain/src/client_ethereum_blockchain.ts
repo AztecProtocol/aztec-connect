@@ -12,7 +12,7 @@ import {
 import { sleep } from '@aztec/barretenberg/sleep';
 import { Timer } from '@aztec/barretenberg/timer';
 import { Web3Provider } from '@ethersproject/providers';
-import { EthAsset, RollupProcessor, TokenAsset } from './contracts';
+import { EthAsset, RollupProcessor, TokenAsset } from './contracts/index.js';
 
 export class ClientEthereumBlockchain {
   private readonly rollupProcessor: RollupProcessor;

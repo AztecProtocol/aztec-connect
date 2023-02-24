@@ -1,5 +1,5 @@
-import { EthereumProvider, RequestArguments } from '@aztec/barretenberg/blockchain/ethereum_provider';
-import { Web3Provider } from './web3_provider';
+import { EthereumProvider, RequestArguments } from '@aztec/barretenberg/blockchain';
+import { Web3Provider } from './web3_provider.js';
 
 /**
  * Adapts a legacy web3 provider into an EIP1193 compatible provider for injecting into the sdk.

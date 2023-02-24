@@ -1,7 +1,7 @@
-import { randomBytes } from 'crypto';
-import { Block } from '.';
-import { TxHash } from '../blockchain';
-import { Deserializer, serializeBufferArrayToVector } from '../serialize';
+import { randomBytes } from '../crypto/index.js';
+import { Block } from './index.js';
+import { TxHash } from '../blockchain/index.js';
+import { Deserializer, serializeBufferArrayToVector } from '../serialize/index.js';
 
 describe('block tests', () => {
   it('should serialize and deserialize block', () => {

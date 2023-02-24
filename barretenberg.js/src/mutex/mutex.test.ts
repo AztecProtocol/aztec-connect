@@ -1,6 +1,7 @@
-import { Mutex } from '.';
-import { sleep } from '../sleep';
-import { MutexDatabase } from './mutex_database';
+import { Mutex } from './index.js';
+import { sleep } from '../sleep/index.js';
+import { MutexDatabase } from './mutex_database.js';
+import { jest } from '@jest/globals';
 
 type Mockify<T> = {
   [P in keyof T]: jest.Mock;
@@ -16,14 +17,14 @@ describe('mutex', () => {
 
   beforeEach(() => {
     db = {
-      acquireLock: jest.fn().mockResolvedValue(false),
+      acquireLock: jest.fn().mockImplementation(() => false),
       extendLock: jest.fn().mockImplementation(() => {
         db.acquireLock.mockResolvedValueOnce(false);
       }),
       releaseLock: jest.fn().mockImplementation(() => {
         db.acquireLock.mockResolvedValueOnce(true);
       }),
-    };
+    } as any;
     db.acquireLock.mockResolvedValueOnce(true);
 
     mutex = new Mutex(db, mutexName, timeout, tryLockInterval, pingInterval);

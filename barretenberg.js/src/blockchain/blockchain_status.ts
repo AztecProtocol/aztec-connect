@@ -1,4 +1,4 @@
-import { EthAddress } from '../address';
+import { EthAddress } from '../address/index.js';
 
 type Jsonify<T> = {
   // eslint-disable-next-line @typescript-eslint/ban-types
@@ -37,7 +37,7 @@ export type BlockchainAssetJson = Jsonify<BlockchainAsset>;
 
 export const blockchainAssetToJson = ({ address, ...asset }: BlockchainAsset): BlockchainAssetJson => ({
   ...asset,
-  address: address.toString(),
+  address: address.toLowerCaseAddress(),
 });
 
 export const blockchainAssetFromJson = ({ address, ...asset }: BlockchainAssetJson): BlockchainAsset => ({
@@ -55,7 +55,7 @@ export type BlockchainBridgeJson = Jsonify<BlockchainBridge>;
 
 export const blockchainBridgeToJson = ({ address, ...bridge }: BlockchainBridge): BlockchainBridgeJson => ({
   ...bridge,
-  address: address.toString(),
+  address: address.toLowerCaseAddress(),
 });
 
 export const blockchainBridgeFromJson = ({ address, ...bridge }: BlockchainBridgeJson): BlockchainBridge => ({
@@ -68,6 +68,7 @@ export interface BlockchainStatus {
   rollupContractAddress: EthAddress;
   permitHelperContractAddress: EthAddress;
   verifierContractAddress: EthAddress;
+  bridgeDataProvider: EthAddress;
   nextRollupId: number;
   dataSize: number;
   dataRoot: Buffer;
@@ -87,9 +88,10 @@ export type BlockchainStatusJson = Jsonify<BlockchainStatus>;
 export function blockchainStatusToJson(status: BlockchainStatus): BlockchainStatusJson {
   return {
     ...status,
-    rollupContractAddress: status.rollupContractAddress.toString(),
-    permitHelperContractAddress: status.permitHelperContractAddress.toString(),
-    verifierContractAddress: status.verifierContractAddress.toString(),
+    rollupContractAddress: status.rollupContractAddress.toLowerCaseAddress(),
+    permitHelperContractAddress: status.permitHelperContractAddress.toLowerCaseAddress(),
+    verifierContractAddress: status.verifierContractAddress.toLowerCaseAddress(),
+    bridgeDataProvider: status.bridgeDataProvider.toLowerCaseAddress(),
     dataRoot: status.dataRoot.toString('hex'),
     nullRoot: status.nullRoot.toString('hex'),
     rootRoot: status.rootRoot.toString('hex'),
@@ -106,6 +108,7 @@ export function blockchainStatusFromJson(json: BlockchainStatusJson): Blockchain
     rollupContractAddress: EthAddress.fromString(json.rollupContractAddress),
     permitHelperContractAddress: EthAddress.fromString(json.permitHelperContractAddress),
     verifierContractAddress: EthAddress.fromString(json.verifierContractAddress),
+    bridgeDataProvider: EthAddress.fromString(json.bridgeDataProvider),
     dataRoot: Buffer.from(json.dataRoot, 'hex'),
     nullRoot: Buffer.from(json.nullRoot, 'hex'),
     rootRoot: Buffer.from(json.rootRoot, 'hex'),

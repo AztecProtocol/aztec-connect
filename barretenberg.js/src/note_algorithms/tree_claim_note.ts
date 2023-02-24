@@ -1,7 +1,7 @@
-import { toBigIntBE, toBufferBE } from '../bigint_buffer';
-import { BridgeCallData } from '../bridge_call_data';
-import { randomBytes } from '../crypto';
-import { numToUInt32BE } from '../serialize';
+import { toBigIntBE, toBufferBE } from '../bigint_buffer/index.js';
+import { BridgeCallData } from '../bridge_call_data/index.js';
+import { randomBytes } from '../crypto/index.js';
+import { numToUInt32BE } from '../serialize/index.js';
 
 export class TreeClaimNote {
   static EMPTY = new TreeClaimNote(BigInt(0), BridgeCallData.ZERO, 0, BigInt(0), Buffer.alloc(32), Buffer.alloc(32));
@@ -37,9 +37,7 @@ export class TreeClaimNote {
   static fromBuffer(buf: Buffer) {
     const value = toBigIntBE(buf.slice(0, 32));
     let offset = 32;
-    const bridgeCallData = BridgeCallData.fromBuffer(
-      buf.slice(offset, offset + BridgeCallData.ENCODED_LENGTH_IN_BYTES),
-    );
+    const bridgeCallData = BridgeCallData.fromBuffer(buf.slice(offset, offset + BridgeCallData.SIZE));
     offset += 32;
     const defiInteractionNonce = buf.readUInt32BE(offset);
     offset += 4;

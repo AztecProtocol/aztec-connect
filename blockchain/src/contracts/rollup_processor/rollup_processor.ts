@@ -1,28 +1,47 @@
-import { BytesLike, Contract, Event, utils } from 'ethers';
-import { TransactionReceipt, TransactionResponse, TransactionRequest } from '@ethersproject/abstract-provider';
-import { Web3Provider } from '@ethersproject/providers';
-import createDebug from 'debug';
-
 import { EthAddress } from '@aztec/barretenberg/address';
-import { EthereumProvider, EthereumSignature, SendTxOptions, TxHash, RollupTxs } from '@aztec/barretenberg/blockchain';
+import {
+  EthereumProvider,
+  EthereumSignature,
+  SendTxOptions,
+  TxHash,
+  RollupTxs,
+  EthereumRpc,
+} from '@aztec/barretenberg/blockchain';
 import { Block } from '@aztec/barretenberg/block_source';
 import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { computeInteractionHashes } from '@aztec/barretenberg/note_algorithms';
 import { Timer } from '@aztec/barretenberg/timer';
 import { sliceOffchainTxData } from '@aztec/barretenberg/offchain_tx_data';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
-import { DefiInteractionEvent } from '@aztec/barretenberg/block_source/defi_interaction_event';
-import { getEarliestBlock } from '../../earliest_block';
-
-import { solidityFormatSignatures } from './solidity_format_signatures';
-import { decodeErrorFromContract, decodeErrorFromContractByTxHash } from '../decode_error';
-import { abi } from '../../artifacts/contracts/RollupProcessor.sol/RollupProcessor.json';
-import { abi as permitHelperAbi } from '../../artifacts/contracts/periphery/PermitHelper.sol/PermitHelper.json';
+import {
+  TransactionReceipt,
+  TransactionResponse,
+  TransactionRequest,
+  Block as EthBlock,
+} from '@ethersproject/abstract-provider';
+import { Web3Provider } from '@ethersproject/providers';
+import createDebug from 'debug';
+import { BytesLike, Contract, Event, utils } from 'ethers';
+import { RollupProcessorV2 as RollupProcessorAbi, PermitHelper } from '../../abis.js';
+import { decodeErrorFromContract, decodeErrorFromContractByTxHash } from '../decode_error.js';
+import { DefiInteractionEvent } from '@aztec/barretenberg/block_source';
+import { solidityFormatSignatures } from './solidity_format_signatures.js';
+import { getEarliestBlock } from '../../earliest_block/index.js';
+import { MemoryFifo, Semaphore } from '@aztec/barretenberg/fifo';
 
 const fixEthersStackTrace = (err: Error) => {
   err.stack! += new Error().stack;
   throw err;
 };
+
+interface RollupMetadata {
+  event: Event;
+  tx: TransactionResponse;
+  block: EthBlock;
+  receipt: TransactionReceipt;
+  offchainDataTxs: TransactionResponse[];
+  offchainDataReceipts: TransactionReceipt[];
+}
 
 /**
  * Thin wrapper around the rollup processor contract. Provides a direct 1 to 1 interface for
@@ -32,13 +51,12 @@ export class RollupProcessor {
   static readonly DEFAULT_BRIDGE_GAS_LIMIT = 300000;
   static readonly DEFAULT_ERC20_GAS_LIMIT = 55000;
 
+  private static DEPOSIT_GAS_LIMIT_MULTIPLIER = 1.1;
+
   public rollupProcessor: Contract;
   public permitHelper: Contract;
-  private lastQueriedRollupId?: number;
-  private lastQueriedRollupBlockNum?: number;
-  protected provider: Web3Provider;
-  private log = createDebug('bb:rollup_processor');
-  // taken from the rollup contract
+  private provider: Web3Provider;
+  private debug = createDebug('bb:rollup_processor');
 
   constructor(
     protected rollupContractAddress: EthAddress,
@@ -46,8 +64,8 @@ export class RollupProcessor {
     protected permitHelperAddress: EthAddress = EthAddress.ZERO,
   ) {
     this.provider = new Web3Provider(ethereumProvider);
-    this.rollupProcessor = new Contract(rollupContractAddress.toString(), abi, this.provider);
-    this.permitHelper = new Contract(permitHelperAddress.toString(), permitHelperAbi, this.provider);
+    this.rollupProcessor = new Contract(rollupContractAddress.toString(), RollupProcessorAbi.abi, this.provider);
+    this.permitHelper = new Contract(permitHelperAddress.toString(), PermitHelper.abi, this.provider);
   }
 
   get address() {
@@ -67,11 +85,11 @@ export class RollupProcessor {
   }
 
   async escapeBlockLowerBound() {
-    return await this.rollupProcessor.escapeBlockLowerBound();
+    return (await this.rollupProcessor.escapeBlockLowerBound()).toBigInt();
   }
 
   async escapeBlockUpperBound() {
-    return await this.rollupProcessor.escapeBlockUpperBound();
+    return (await this.rollupProcessor.escapeBlockUpperBound()).toBigInt();
   }
 
   async hasRole(role: BytesLike, address: EthAddress) {
@@ -346,11 +364,14 @@ export class RollupProcessor {
     return result;
   }
 
-  public async sendRollupTxs({ rollupProofTx, offchainDataTxs }: { rollupProofTx: Buffer; offchainDataTxs: Buffer[] }) {
+  public async sendRollupTxs(
+    { rollupProofTx, offchainDataTxs }: { rollupProofTx: Buffer; offchainDataTxs: Buffer[] },
+    options: SendTxOptions = {},
+  ) {
     for (const tx of offchainDataTxs) {
       await this.sendTx(tx);
     }
-    await this.sendTx(rollupProofTx);
+    return await this.sendTx(rollupProofTx, options);
   }
 
   public async sendTx(data: Buffer, options: SendTxOptions = {}) {
@@ -370,18 +391,42 @@ export class RollupProcessor {
     return TxHash.fromString(txResponse.hash);
   }
 
+  public async getTxReceipt(txHash: TxHash) {
+    const txReceipt = await this.provider.waitForTransaction(txHash.toString());
+    if (!txReceipt) {
+      throw new Error('Tx receipt not found');
+    }
+    return txReceipt;
+  }
+
   public async depositPendingFunds(
     assetId: number,
     amount: bigint,
     proofHash: Buffer = Buffer.alloc(32),
     options: SendTxOptions = {},
   ) {
-    const { gasLimit } = options;
+    let { gasLimit } = options;
     const rollupProcessor = this.getContractWithSigner(options);
     const depositor = await rollupProcessor.signer.getAddress();
+
+    const value = assetId === 0 ? amount : undefined;
+
+    // note: Due to non deterministic gas estimations provided in depositPendingFunds, we add 10% to the total
+    // transaction fee to cover the cost of all execution branches.
+    // Non determinism is cause by user's individually calculating the new deposit limit, where the previous update
+    // determines the path of the next user's execution.
+    if (!gasLimit) {
+      const estimation = await rollupProcessor.estimateGas
+        .depositPendingFunds(assetId, amount, depositor, proofHash, {
+          value,
+        })
+        .catch(fixEthersStackTrace);
+      gasLimit = Math.ceil(estimation.toNumber() * RollupProcessor.DEPOSIT_GAS_LIMIT_MULTIPLIER);
+    }
+
     const tx = await rollupProcessor
       .depositPendingFunds(assetId, amount, depositor, proofHash, {
-        value: assetId === 0 ? amount : undefined,
+        value,
         gasLimit,
       })
       .catch(fixEthersStackTrace);
@@ -395,9 +440,18 @@ export class RollupProcessor {
     signature: EthereumSignature,
     options: SendTxOptions = {},
   ) {
-    const { gasLimit } = options;
+    let { gasLimit } = options;
     const permitHelper = this.getHelperContractWithSigner(options);
     const depositor = await permitHelper.signer.getAddress();
+
+    // Deposit actions have non-deterministic gas consumption - see note in `depositPendingFunds`
+    if (!gasLimit) {
+      const estimation = await permitHelper.estimateGas
+        .depositPendingFundsPermit(assetId, amount, depositor, deadline, signature.v, signature.r, signature.s)
+        .catch(fixEthersStackTrace);
+      gasLimit = Math.ceil(estimation.toNumber() * RollupProcessor.DEPOSIT_GAS_LIMIT_MULTIPLIER);
+    }
+
     const tx = await permitHelper
       .depositPendingFundsPermit(assetId, amount, depositor, deadline, signature.v, signature.r, signature.s, {
         gasLimit,
@@ -414,9 +468,27 @@ export class RollupProcessor {
     signature: EthereumSignature,
     options: SendTxOptions = {},
   ) {
-    const { gasLimit } = options;
+    let { gasLimit } = options;
     const permitHelper = this.getHelperContractWithSigner(options);
     const depositor = await permitHelper.signer.getAddress();
+
+    // Deposit actions have non-deterministic gas consumption - see note in `depositPendingFunds`
+    if (!gasLimit) {
+      const estimation = await permitHelper.estimateGas
+        .depositPendingFundsPermitNonStandard(
+          assetId,
+          amount,
+          depositor,
+          nonce,
+          deadline,
+          signature.v,
+          signature.r,
+          signature.s,
+        )
+        .catch(fixEthersStackTrace);
+      gasLimit = Math.ceil(estimation.toNumber() * RollupProcessor.DEPOSIT_GAS_LIMIT_MULTIPLIER);
+    }
+
     const tx = await permitHelper
       .depositPendingFundsPermitNonStandard(
         assetId,
@@ -460,173 +532,223 @@ export class RollupProcessor {
 
   private rollupRetrievalChunkSize = () => 100000;
 
-  /**
-   *
-   * @param rollupId rollup ID to start getting blocks from, to final block
-   * @param minConfirmations minimum confirmations required for valid blocks
-   * @returns all Aztec rollup blocks from (and including) rollupId to last one
-   *
-   * To avoid dependance on 3rd party services like Infura, we use our own geth node to server eth_requests.
-   * Instead of requesting directly from the geth node, that would cause very poor performance, we have a
-   * proxy (called Kebab) in front of the geth node that Aztec services speak to. The proxy stores all Aztec blocks
-   * in a DB and serves them when requested, resulting in much better performance, compared to a geth node.
-   *
-   * We request data in chunks to avoid any memory overload, as the aztec chain is growing.
-   *
-   * If a previous query has been made and the rollupId >= previous query, the first chunk will be from the last result
-   * rollups block to the end of the chain. This provides best performance for polling clients.
-   */
   public async getRollupBlocksFrom(rollupId: number, minConfirmations: number) {
-    const { earliestBlock } = await this.getEarliestBlock();
-    const latestBlockNumber = await this.provider.getBlockNumber();
-    const rollupChunkSize = this.rollupRetrievalChunkSize();
-    let start =
-      this.lastQueriedRollupId === undefined || rollupId < this.lastQueriedRollupId
-        ? earliestBlock
-        : this.lastQueriedRollupBlockNum! + 1;
-    let end = Math.min(start + rollupChunkSize - 1, latestBlockNumber);
-    let events: Event[] = [];
-    let rollupReached = false;
+    const blocks: Block[] = [];
+    await this.callbackRollupBlocksFrom(rollupId, minConfirmations, block => Promise.resolve(void blocks.push(block)));
+    return blocks;
+  }
 
-    const totalStartTime = new Date().getTime();
+  /**
+   * Emits on the callback, all rollup blocks from (and including) the given rollupId, with >= minConfirmations.
+   * This guarantees that all requested rollups have been sent to the callback before it returns.
+   *
+   * First we locate the desired eth block by querying for the specific given rollupId.
+   * It assumes it's querying an eth node that handles queries efficiently (e.g. infura or kebab).
+   * Second it queries for all rollups from that block onwards. It chunks requests so that it can start processing
+   * rollup events ASAP, and to protect memory usage, but as the node is assumed to be indexed, these chunks can be very
+   * large.
+   *
+   * Processes results on queues. Pipeline is:
+   *   eth node rollup event -> event Q -> get rollup metadata from eth node -> metadata Q -> decode data and callback
+   *
+   * TODO: Introduce chunking and add event Q!
+   */
+  public async callbackRollupBlocksFrom(
+    rollupId: number,
+    minConfirmations: number,
+    cb: (block: Block) => Promise<void>,
+  ) {
+    const specificRollupFilter = this.rollupProcessor.filters.RollupProcessed(rollupId);
+    const e = await this.rollupProcessor.queryFilter(specificRollupFilter);
+    if (!e.length) {
+      this.debug(`no rollup with id ${rollupId} found. early out.`);
+      return;
+    }
+    const start = e[0].blockNumber;
 
-    while (start <= latestBlockNumber) {
-      const rollupFilter = this.rollupProcessor.filters.RollupProcessed();
-      this.log(`fetching rollup events between blocks ${start} and ${end}...`);
-      const startTime = new Date().getTime();
-      const rollupEvents = await this.rollupProcessor.queryFilter(rollupFilter, start, end);
-      this.lastQueriedRollupBlockNum = end;
-      this.log(`${rollupEvents.length} fetched in ${(new Date().getTime() - startTime) / 1000}s`);
+    this.debug(`fetching rollup events from block ${start}...`);
+    const rollupFilter = this.rollupProcessor.filters.RollupProcessed();
+    const timer = new Timer();
+    const allEvents = await this.rollupProcessor.queryFilter(rollupFilter, start);
+    this.debug(`${allEvents.length} fetched in ${timer.s()}s`);
 
-      // check if we've reached requested rollupId
-      if (
-        !rollupReached &&
-        rollupEvents.length &&
-        rollupEvents[rollupEvents.length - 1].args!.rollupId.toNumber() >= rollupId
-      ) {
-        rollupReached = true;
-        const index = rollupEvents.findIndex(({ args }) => args!.rollupId.toNumber() === rollupId);
-        // discard earlier blocks
-        rollupEvents.splice(0, index);
-      }
+    const currentBlockNumber = await new EthereumRpc(this.ethereumProvider).blockNumber();
+    const events = allEvents
+      .filter(e => currentBlockNumber - e.blockNumber + 1 >= minConfirmations)
+      .filter(e => e.args!.rollupId.toNumber() >= rollupId);
 
-      if (rollupReached) {
-        events = [...events, ...rollupEvents];
-      }
-
-      start = end + 1;
-      end = Math.min(start + rollupChunkSize - 1, latestBlockNumber);
+    if (events.length) {
+      const processStartTime = new Timer();
+      await this.getRollupBlocksFromEvents(events, cb);
+      this.debug(`processing complete in ${processStartTime.s()}s`);
+    } else {
+      this.debug(`no events of interest, doing nothing.`);
     }
 
-    this.log(`done: ${events.length} fetched in ${(new Date().getTime() - totalStartTime) / 1000}s`);
-
-    this.lastQueriedRollupId = rollupId;
-
-    return this.getRollupBlocksFromEvents(
-      events.filter(e => e.args!.rollupId.toNumber() >= rollupId),
-      minConfirmations,
-    );
+    return events.length;
   }
 
   /**
    * The same as getRollupBlocksFrom, but just search for a specific rollup.
    * If `rollupId == -1` return the latest rollup.
    */
-  public async getRollupBlock(rollupId: number) {
-    const { earliestBlock } = await this.getEarliestBlock();
-    const latestBlock = await this.provider.getBlockNumber();
-    const rollupChunkSize = this.rollupRetrievalChunkSize();
+  public async getRollupBlock(rollupId: number, minConfirmations: number) {
+    const currentBlockNumber = await new EthereumRpc(this.ethereumProvider).blockNumber();
 
-    let start = earliestBlock;
-    let end = Math.min(latestBlock, start + rollupChunkSize - 1);
+    const findLatestBlock = async () => {
+      const { earliestBlock } = await this.getEarliestBlock();
+      const latestBlock = await this.provider.getBlockNumber();
+      const rollupChunkSize = this.rollupRetrievalChunkSize();
 
-    while (start <= latestBlock) {
-      this.log(`fetching rollup events between blocks ${start} and ${end}...`);
-      const rollupFilter = this.rollupProcessor.filters.RollupProcessed(rollupId == -1 ? undefined : rollupId);
-      const events = await this.rollupProcessor.queryFilter(rollupFilter, start, end);
-      if (events.length) {
-        return (await this.getRollupBlocksFromEvents(events.slice(-1), 1))[0];
+      // look backwards to find the latest rollup, then stop
+      let end = latestBlock;
+      let start = Math.max(end - rollupChunkSize, earliestBlock);
+      let block: Block | undefined;
+
+      while (end > earliestBlock && !block) {
+        this.debug(`fetching rollup events between blocks ${start} and ${end}...`);
+        const rollupFilter = this.rollupProcessor.filters.RollupProcessed();
+        const allEvents = await this.rollupProcessor.queryFilter(rollupFilter, start, end);
+        const events = allEvents.filter(e => currentBlockNumber - e.blockNumber + 1 >= minConfirmations);
+        for (let i = events.length - 1; i >= 0 && !block; i--) {
+          await this.getRollupBlocksFromEvents([events[i]], b => Promise.resolve(void (block = b)));
+        }
+
+        end = Math.max(start - 1, earliestBlock);
+        start = Math.max(end - rollupChunkSize, earliestBlock);
       }
+      return block;
+    };
 
-      start = end + 1;
-      end = Math.min(start + rollupChunkSize - 1, latestBlock);
+    const findSpecificBlock = async () => {
+      const specificRollupFilter = this.rollupProcessor.filters.RollupProcessed(rollupId);
+      const allEvents = await this.rollupProcessor.queryFilter(specificRollupFilter);
+      const events = allEvents.filter(e => currentBlockNumber - e.blockNumber + 1 >= minConfirmations);
+      if (!events.length) {
+        return;
+      }
+      let block: Block | undefined;
+      await this.getRollupBlocksFromEvents(events, b => Promise.resolve(void (block = b)));
+      return block;
+    };
+
+    if (rollupId == -1) {
+      return await findLatestBlock();
     }
+    return await findSpecificBlock();
   }
 
   /**
    * Given an array of rollup events, fetches all the necessary data for each event in order to return a Block.
-   * This somewhat arbitrarily chunks the requests 10 at a time, as that ensures we don't overload the node by
-   * hitting it with thousands of requests at once, while also enabling some degree of parallelism.
-   * WARNING: `rollupEvents` is mutated.
    */
-  private async getRollupBlocksFromEvents(rollupEvents: Event[], minConfirmations: number) {
+  private async getRollupBlocksFromEvents(rollupEvents: Event[], cb: (block: Block) => Promise<void>) {
     if (rollupEvents.length === 0) {
       return [];
     }
 
-    this.log(`fetching data for ${rollupEvents.length} rollups...`);
-    const allTimer = new Timer();
+    this.debug(`fetching data for ${rollupEvents.length} rollups...`);
 
     const defiBridgeEventsTimer = new Timer();
     const allDefiNotes = await this.getDefiBridgeEventsForRollupEvents(rollupEvents);
-    this.log(`defi bridge events fetched in ${defiBridgeEventsTimer.s()}s.`);
+    this.debug(`defi bridge events fetched in ${defiBridgeEventsTimer.s()}s.`);
 
     const offchainEventsTimer = new Timer();
     const allOffchainDataEvents = await this.getOffchainDataEvents(rollupEvents);
-    this.log(`offchain data events fetched in ${offchainEventsTimer.s()}s.`);
+    this.debug(`offchain data events fetched in ${offchainEventsTimer.s()}s.`);
 
-    const blocks: Block[] = [];
-    while (rollupEvents.length) {
-      const events = rollupEvents.splice(0, 10);
-      const chunkedOcdEvents = allOffchainDataEvents.splice(0, 10);
-      const meta = await Promise.all(
-        events.map(async (event, i) => {
-          const meta = await Promise.all([
-            event.getTransaction(),
-            event.getBlock(),
-            event.getTransactionReceipt(),
-            Promise.all(chunkedOcdEvents[i].map(e => e.getTransaction())),
-            Promise.all(chunkedOcdEvents[i].map(e => e.getTransactionReceipt())),
-          ]);
-          return {
-            event,
-            tx: meta[0],
-            block: meta[1],
-            receipt: meta[2],
-            offchainDataTxs: meta[3],
-            offchainDataReceipts: meta[4],
-          };
-        }),
-      );
-      // we now have the tx details and defi notes for this batch of rollup events
-      // we need to assign the defi notes to their specified rollup
-      const newBlocks = meta
-        .filter(m => m.tx.confirmations >= minConfirmations)
-        .map(meta => {
-          // assign the set of defi notes for this rollup and decode the block
-          const hashesForThisRollup = this.extractDefiHashesFromRollupEvent(meta.event);
-          const defiNotesForThisRollup: DefiInteractionEvent[] = [];
-          for (const hash of hashesForThisRollup) {
-            if (!allDefiNotes[hash]) {
-              console.log(`Unable to locate defi interaction note for hash ${hash}!`);
-              continue;
-            }
-            defiNotesForThisRollup.push(allDefiNotes[hash]!);
-          }
-          return this.decodeBlock(
-            { ...meta.tx, timestamp: meta.block.timestamp },
-            meta.receipt,
-            defiNotesForThisRollup,
-            meta.offchainDataTxs,
-            meta.offchainDataReceipts,
-          );
-        });
-      blocks.push(...newBlocks);
+    // if any rollup's off-chain events are not present we need to exclude that rollup and any further rollups
+    const firstInvalidOffchainDataIndex = allOffchainDataEvents.findIndex(x => !x.length);
+    if (firstInvalidOffchainDataIndex != -1) {
+      rollupEvents.splice(firstInvalidOffchainDataIndex);
     }
 
-    this.log(`fetched in ${allTimer.s()}s`);
+    // We want to concurrently perform network io and processing of results, but retain ordered output.
+    // We create a tiny data pipeline to queue output of network IO for ordered processing.
+    const processQueue = new MemoryFifo<any>();
 
-    return blocks;
+    // We use use a semaphore to protect two resources:
+    //   1. Geth (suckware), can handle around 20 rollups worth of metadata requests before "bad thinhs happen".
+    //   2. Our own internal queue of network IO results.
+    // TODO: Kebab should be indexing the requested data so we don't have to worry about the eth node!
+    // We could then raise this number higher than 20, at which point it's only acting to protect against balooning
+    // the processQueue and consuming lots of memory, when the consumer is slow.
+    const queueSemaphore = new Semaphore(20);
+
+    // If we encounter a block that does not have it's full compliment of defi notes then we will
+    // need to stop the pipeline from publishing that block and any further blocks
+    let stop = false;
+
+    // Start processing results of IO.
+    const processPromise = processQueue.process(async ({ event, metaPromise }) => {
+      try {
+        if (stop) {
+          return;
+        }
+        const meta = await metaPromise;
+        const rollupMetadata: RollupMetadata = {
+          event,
+          tx: meta[0],
+          block: meta[1],
+          receipt: meta[2],
+          offchainDataTxs: meta[3],
+          offchainDataReceipts: meta[4],
+        };
+        const defiNotesForRollup = this.defiNotesForBlock(rollupMetadata, allDefiNotes);
+        await cb(this.rollupMetadataToBlock(rollupMetadata, defiNotesForRollup));
+      } catch (err) {
+        stop = true;
+        console.log(err);
+      } finally {
+        queueSemaphore.release();
+      }
+    });
+
+    // Kick off io.
+    for (let i = 0; i < rollupEvents.length && !stop; ++i) {
+      await queueSemaphore.acquire();
+      const event = rollupEvents[i];
+      const offchainData = allOffchainDataEvents[i];
+      this.debug(`fetching metadata for rollup ${event.args?.rollupId}.`);
+      const metaPromise = Promise.all([
+        event.getTransaction(),
+        event.getBlock(),
+        event.getTransactionReceipt(),
+        Promise.all(offchainData.map(e => e.getTransaction())),
+        Promise.all(offchainData.map(e => e.getTransactionReceipt())),
+      ]);
+      processQueue.put({ event, metaPromise });
+    }
+
+    processQueue.end();
+    await processPromise;
+  }
+
+  private defiNotesForBlock(meta: RollupMetadata, allDefiNotes: any) {
+    // we now have the tx details and defi notes for this batch of rollup events
+    // we need to assign the defi notes to their specified rollup
+    // assign the set of defi notes for this rollup and decode the block
+    const hashesForThisRollup = this.extractDefiHashesFromRollupEvent(meta.event);
+    const defiNotesForThisRollup: DefiInteractionEvent[] = [];
+    for (const hash of hashesForThisRollup) {
+      if (!allDefiNotes[hash]) {
+        throw new Error(
+          `Unable to locate defi interaction note for hash ${hash} in rollup ${meta.event.args?.rollupId}!`,
+        );
+      }
+      defiNotesForThisRollup.push(allDefiNotes[hash]!);
+    }
+    return defiNotesForThisRollup;
+  }
+
+  private rollupMetadataToBlock(meta: RollupMetadata, defiNotesForThisRollup: DefiInteractionEvent[]) {
+    const block = this.decodeBlock(
+      { ...meta.tx, timestamp: meta.block.timestamp },
+      meta.receipt,
+      defiNotesForThisRollup,
+      meta.offchainDataTxs,
+      meta.offchainDataReceipts,
+    );
+    return block;
   }
 
   private extractDefiHashesFromRollupEvent(rollupEvent: Event) {
@@ -658,7 +780,7 @@ export class RollupProcessor {
 
     // search back through the stream until all of our notes have been found or we have exhausted the blocks
     while (endBlock > earliestBlock && numHashesToFind > 0) {
-      this.log(`searching for defi notes from blocks ${startBlock} - ${endBlock}`);
+      this.debug(`searching for defi notes from blocks ${startBlock} - ${endBlock}`);
       const filter = this.rollupProcessor.filters.DefiBridgeProcessed();
       const defiBridgeEvents = await this.rollupProcessor.queryFilter(filter, startBlock, endBlock);
       // decode the retrieved events into actual defi interaction notes
@@ -685,10 +807,7 @@ export class RollupProcessor {
           Buffer.from(errorReason.slice(2), 'hex'),
         );
       });
-      this.log(
-        `found ${decodedEvents.length} notes between blocks ${startBlock} - ${endBlock}, nonces: `,
-        decodedEvents.map(note => note.nonce),
-      );
+      this.debug(`found ${decodedEvents.length} notes between blocks ${startBlock} - ${endBlock}`);
       // compute the hash and store the notes against that hash in our mapping
       for (const decodedNote of decodedEvents) {
         const noteHash = computeInteractionHashes([decodedNote])[0].toString('hex');
@@ -711,11 +830,15 @@ export class RollupProcessor {
     );
     // Search from 1 days worth of blocks before, up to the last rollup block.
     const { offchainSearchLead } = await this.getEarliestBlock();
+    const start = rollupEvents[0].blockNumber - offchainSearchLead;
+    const end = rollupEvents[rollupEvents.length - 1].blockNumber;
+    this.debug(`fetching offchain data events from blocks ${start} - ${end}...`);
     const offchainEvents = await this.rollupProcessor.queryFilter(
       filter,
       rollupEvents[0].blockNumber - offchainSearchLead,
       rollupEvents[rollupEvents.length - 1].blockNumber,
     );
+    this.debug(`found ${offchainEvents.length} offchain events.`);
     // Key the offchain data event on the rollup id and sender.
     const offchainEventMap = offchainEvents.reduce<{ [key: string]: Event[] }>((a, e) => {
       const offChainLog = this.contract.interface.parseLog(e);
@@ -728,7 +851,7 @@ export class RollupProcessor {
       if (rollupLogIndex !== -1) {
         const rollupEvent = rollupEvents[rollupLogIndex];
         if (rollupEvent.blockNumber < e.blockNumber) {
-          this.log(
+          this.debug(
             `ignoring offchain event at block ${e.blockNumber} for rollup ${rollupId} at block ${rollupEvent.blockNumber}`,
           );
           return a;
@@ -741,6 +864,7 @@ export class RollupProcessor {
       }
       // Store by chunk index. Copes with chunks being re-published.
       a[key][chunk] = e;
+      this.debug(`parsed offchain event for rollup: ${rollupId} sender: ${sender} chunk: ${chunk}.`);
       return a;
     }, {});
     // Finally, for each rollup log, lookup the offchain events for the rollup id from the same sender.
@@ -754,7 +878,6 @@ export class RollupProcessor {
         console.log(`Missing offchain data chunks for rollup: ${rollupId}`);
         return [];
       }
-      this.log(`rollup ${rollupId} has ${offchainEvents.length} offchain data event(s).`);
       return offchainEvents;
     });
   }
@@ -766,7 +889,7 @@ export class RollupProcessor {
     offchainDataTxs: TransactionResponse[],
     offchainDataReceipts: TransactionReceipt[],
   ): Block {
-    const rollupAbi = new utils.Interface(abi);
+    const rollupAbi = new utils.Interface(RollupProcessorAbi.abi);
     const parsedRollupTx = rollupAbi.parseTransaction({ data: rollupTx.data });
     const offchainTxDataBuf = Buffer.concat(
       offchainDataTxs
@@ -776,9 +899,10 @@ export class RollupProcessor {
     const [proofData] = parsedRollupTx.args;
     const encodedProofBuffer = Buffer.from(proofData.slice(2), 'hex');
     const rollupProofData = RollupProofData.decode(encodedProofBuffer);
-    this.log(`decoding block with tx hash ${rollupTx.hash}, rollupId ${rollupProofData.rollupId}`);
     const validProofIds = rollupProofData.getNonPaddingProofIds();
     const offchainTxData = sliceOffchainTxData(validProofIds, offchainTxDataBuf);
+
+    this.debug(`decoded rollup ${rollupProofData.rollupId}`);
 
     return new Block(
       TxHash.fromString(rollupTx.hash),
@@ -797,14 +921,14 @@ export class RollupProcessor {
     const { signingAddress } = options;
     const provider = options.provider ? new Web3Provider(options.provider) : this.provider;
     const ethSigner = provider.getSigner(signingAddress ? signingAddress.toString() : 0);
-    return new Contract(this.rollupContractAddress.toString(), abi, ethSigner);
+    return new Contract(this.rollupContractAddress.toString(), RollupProcessorAbi.abi, ethSigner);
   }
 
   public getHelperContractWithSigner(options: SendTxOptions) {
     const { signingAddress } = options;
     const provider = options.provider ? new Web3Provider(options.provider) : this.provider;
     const ethSigner = provider.getSigner(signingAddress ? signingAddress.toString() : 0);
-    return new Contract(this.permitHelperAddress.toString(), permitHelperAbi, ethSigner);
+    return new Contract(this.permitHelperAddress.toString(), PermitHelper.abi, ethSigner);
   }
 
   public async estimateGas(data: Buffer) {

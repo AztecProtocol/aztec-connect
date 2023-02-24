@@ -1,3 +1,3 @@
-export * from './pedersen';
-export * from './pooled_pedersen';
-export * from './single_pedersen';
+export * from './pedersen.js';
+export * from './pooled_pedersen.js';
+export * from './single_pedersen.js';

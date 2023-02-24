@@ -1,11 +1,11 @@
-import { Transfer } from 'threads';
-import { BarretenbergWorker } from '../wasm/worker';
-import { Fft, FftFactory } from './fft';
+import { Transfer } from '../transport/index.js';
+import { BarretenbergWasm, BarretenbergWorker } from '../wasm/index.js';
+import { Fft, FftFactory } from './fft.js';
 
 export class SingleFft implements Fft {
   private domainPtr!: number;
 
-  constructor(private wasm: BarretenbergWorker) {}
+  constructor(private wasm: BarretenbergWorker | BarretenbergWasm) {}
 
   public async init(circuitSize: number) {
     this.domainPtr = await this.wasm.call('new_evaluation_domain', circuitSize);
@@ -40,7 +40,7 @@ export class SingleFft implements Fft {
 export class SingleFftFactory implements FftFactory {
   private ffts: { [circuitSize: number]: Fft } = {};
 
-  constructor(private wasm: BarretenbergWorker) {}
+  constructor(private wasm: BarretenbergWorker | BarretenbergWasm) {}
 
   public async createFft(circuitSize: number) {
     if (!this.ffts[circuitSize]) {

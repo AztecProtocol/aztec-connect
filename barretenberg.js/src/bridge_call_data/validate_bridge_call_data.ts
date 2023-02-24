@@ -1,4 +1,4 @@
-import { BridgeCallData } from './bridge_call_data';
+import { BridgeCallData } from './bridge_call_data.js';
 
 export const validateBridgeCallData = (bridgeCallData: BridgeCallData) => {
   if (bridgeCallData.inputAssetIdA === bridgeCallData.inputAssetIdB) {

@@ -1,0 +1,1385 @@
+{
+  "abi": [
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "erc20Address",
+              "type": "address"
+            },
+            {
+              "internalType": "enum AztecTypes.AztecAssetType",
+              "name": "assetType",
+              "type": "uint8"
+            }
+          ],
+          "internalType": "struct AztecTypes.AztecAsset",
+          "name": "_inputAssetA",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "erc20Address",
+              "type": "address"
+            },
+            {
+              "internalType": "enum AztecTypes.AztecAssetType",
+              "name": "assetType",
+              "type": "uint8"
+            }
+          ],
+          "internalType": "struct AztecTypes.AztecAsset",
+          "name": "_inputAssetB",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "erc20Address",
+              "type": "address"
+            },
+            {
+              "internalType": "enum AztecTypes.AztecAssetType",
+              "name": "assetType",
+              "type": "uint8"
+            }
+          ],
+          "internalType": "struct AztecTypes.AztecAsset",
+          "name": "_outputAssetA",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "erc20Address",
+              "type": "address"
+            },
+            {
+              "internalType": "enum AztecTypes.AztecAssetType",
+              "name": "assetType",
+              "type": "uint8"
+            }
+          ],
+          "internalType": "struct AztecTypes.AztecAsset",
+          "name": "_outputAssetB",
+          "type": "tuple"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_totalInputValue",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_interactionNonce",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint64",
+          "name": "_auxData",
+          "type": "uint64"
+        },
+        {
+          "internalType": "address",
+          "name": "_rollupBeneficiary",
+          "type": "address"
+        }
+      ],
+      "name": "convert",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "outputValueA",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "outputValueB",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bool",
+          "name": "isAsync",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "erc20Address",
+              "type": "address"
+            },
+            {
+              "internalType": "enum AztecTypes.AztecAssetType",
+              "name": "assetType",
+              "type": "uint8"
+            }
+          ],
+          "internalType": "struct AztecTypes.AztecAsset",
+          "name": "_inputAssetA",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "erc20Address",
+              "type": "address"
+            },
+            {
+              "internalType": "enum AztecTypes.AztecAssetType",
+              "name": "assetType",
+              "type": "uint8"
+            }
+          ],
+          "internalType": "struct AztecTypes.AztecAsset",
+          "name": "_inputAssetB",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "erc20Address",
+              "type": "address"
+            },
+            {
+              "internalType": "enum AztecTypes.AztecAssetType",
+              "name": "assetType",
+              "type": "uint8"
+            }
+          ],
+          "internalType": "struct AztecTypes.AztecAsset",
+          "name": "_outputAssetA",
+          "type": "tuple"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "erc20Address",
+              "type": "address"
+            },
+            {
+              "internalType": "enum AztecTypes.AztecAssetType",
+              "name": "assetType",
+              "type": "uint8"
+            }
+          ],
+          "internalType": "struct AztecTypes.AztecAsset",
+          "name": "_outputAssetB",
+          "type": "tuple"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_interactionNonce",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint64",
+          "name": "_auxData",
+          "type": "uint64"
+        }
+      ],
+      "name": "finalise",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "outputValueA",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "outputValueB",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bool",
+          "name": "interactionComplete",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "payable",
+      "type": "function"
+    }
+  ],
+  "bytecode": {
+    "object": "0x",
+    "sourceMap": "",
+    "linkReferences": {}
+  },
+  "deployedBytecode": {
+    "object": "0x",
+    "sourceMap": "",
+    "linkReferences": {}
+  },
+  "methodIdentifiers": {
+    "convert((uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),uint256,uint256,uint64,address)": "26c3b515",
+    "finalise((uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),uint256,uint64)": "9b07d342"
+  },
+  "rawMetadata": "{\"compiler\":{\"version\":\"0.8.10+commit.fc410830\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"_inputAssetA\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"_inputAssetB\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"_outputAssetA\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"_outputAssetB\",\"type\":\"tuple\"},{\"internalType\":\"uint256\",\"name\":\"_totalInputValue\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_interactionNonce\",\"type\":\"uint256\"},{\"internalType\":\"uint64\",\"name\":\"_auxData\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"_rollupBeneficiary\",\"type\":\"address\"}],\"name\":\"convert\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"outputValueA\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"outputValueB\",\"type\":\"uint256\"},{\"internalType\":\"bool\",\"name\":\"isAsync\",\"type\":\"bool\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"_inputAssetA\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"_inputAssetB\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"_outputAssetA\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"_outputAssetB\",\"type\":\"tuple\"},{\"internalType\":\"uint256\",\"name\":\"_interactionNonce\",\"type\":\"uint256\"},{\"internalType\":\"uint64\",\"name\":\"_auxData\",\"type\":\"uint64\"}],\"name\":\"finalise\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"outputValueA\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"outputValueB\",\"type\":\"uint256\"},{\"internalType\":\"bool\",\"name\":\"interactionComplete\",\"type\":\"bool\"}],\"stateMutability\":\"payable\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{\"convert((uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),uint256,uint256,uint64,address)\":{\"details\":\"This function is called from the RollupProcessor contract via the DefiBridgeProxy. Before this function is      called _RollupProcessor_ contract will have sent you all the assets defined by the input params. This      function is expected to convert input assets to output assets (e.g. on Uniswap) and return the amounts      of output assets to be received by the _RollupProcessor_. If output assets are ERC20 tokens the bridge has      to set _RollupProcessor_ as a spender before the interaction is finished. If some of the output assets is ETH      it has to be sent to _RollupProcessor_ via the `receiveEthFromBridge(uint256 _interactionNonce)` method      before the `convert(...)` function call finishes.If there are two input assets, equal amounts of both assets will be transferred to the bridge before this      method is called.**BOTH** output assets could be virtual but since their `assetId` is currently assigned as      `_interactionNonce` it would simply mean that more of the same virtual asset is minted.If this interaction is async the function has to return `(0, 0, true)`. Async interaction will be finalised at      a later time and its output assets will be returned in a `IDefiBridge.finalise(...)` call.\",\"params\":{\"_auxData\":\"Bridge specific data to be passed into the bridge contract (e.g. slippage, nftID etc.)\",\"_inputAssetA\":\"A struct detailing the first input asset\",\"_inputAssetB\":\"A struct detailing the second input asset\",\"_interactionNonce\":\"A globally unique identifier of this interaction/`convert(...)` call.\",\"_outputAssetA\":\"A struct detailing the first output asset\",\"_outputAssetB\":\"A struct detailing the second output asset\",\"_totalInputValue\":\"An amount of input assets transferred to the bridge (Note: \\\"total\\\" is in the name                         because the value can represent summed/aggregated token amounts of users actions on L2)\"},\"returns\":{\"isAsync\":\"A flag indicating if the interaction is async.\",\"outputValueA\":\"An amount of `_outputAssetA` returned from this interaction.\",\"outputValueB\":\"An amount of `_outputAssetB` returned from this interaction.\"}},\"finalise((uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),uint256,uint64)\":{\"details\":\"This function should use the `BridgeBase.onlyRollup()` modifier to ensure it can only be called from      the `RollupProcessor.processAsyncDefiInteraction(uint256 _interactionNonce)` method.\",\"params\":{\"_auxData\":\"Bridge specific data to be passed into the bridge contract (e.g. slippage, nftID etc.)\",\"_inputAssetA\":\"A struct detailing the first input asset\",\"_inputAssetB\":\"A struct detailing the second input asset\",\"_interactionNonce\":\"A globally unique identifier of this interaction/`convert(...)` call.\",\"_outputAssetA\":\"A struct detailing the first output asset\",\"_outputAssetB\":\"A struct detailing the second output asset\"},\"returns\":{\"interactionComplete\":\"A flag indicating whether an async interaction was successfully completed/finalised.\",\"outputValueA\":\"An amount of `_outputAssetA` returned from this interaction.\",\"outputValueB\":\"An amount of `_outputAssetB` returned from this interaction.\"}}},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{\"convert((uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),uint256,uint256,uint64,address)\":{\"notice\":\"A function which converts input assets to output assets.\"},\"finalise((uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),uint256,uint64)\":{\"notice\":\"A function that finalises asynchronous interaction.\"}},\"version\":1}},\"settings\":{\"compilationTarget\":{\"src/core/interfaces/IDefiBridge.sol\":\"IDefiBridge\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":2000},\"remappings\":[\":@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/\",\":@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/\",\":@uniswap/v2-core/=lib/v2-core/\",\":@uniswap/v2-periphery/=lib/v2-periphery/\",\":aztec-connect-bridges/=lib/aztec-connect-bridges/src/\",\":bridge-deployments/=lib/aztec-connect-bridges/src/deployment/\",\":bridge-interfaces/=lib/aztec-connect-bridges/src/interfaces/\",\":bridge-tests/=lib/aztec-connect-bridges/src/test/\",\":core/=src/core/\",\":ds-test/=lib/forge-std/lib/ds-test/src/\",\":erc4626-tests/=lib/openzeppelin-contracts/lib/erc4626-tests/\",\":forge-std/=lib/forge-std/src/\",\":mocks/=src/test/mocks/\",\":openzeppelin-contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/\",\":openzeppelin-contracts/=lib/openzeppelin-contracts/\",\":periphery/=src/periphery/\",\":rollup-encoder/=lib/rollup-encoder/src/\",\":v2-core/=lib/v2-core/contracts/\",\":v2-periphery/=lib/v2-periphery/contracts/\"]},\"sources\":{\"lib/rollup-encoder/src/libraries/AztecTypes.sol\":{\"keccak256\":\"0xa11ad1ad795337be7761108304a21812aeedfac4b03969ee5f71a251e226cc77\",\"license\":\"Apache-2.0\",\"urls\":[\"bzz-raw://5f6ea5409dcbe6c61d1c7a7153a4158bc88db92eae2c5c1041809b19c49c3ea7\",\"dweb:/ipfs/QmY7d8839N7SNyR5eGvFi6C6opNW3GW5oZEhTVKEWFvv56\"]},\"src/core/interfaces/IDefiBridge.sol\":{\"keccak256\":\"0x73147df7043deadedcddac410db524d0dc8731c13175e9519825f01b5d91b60b\",\"license\":\"Apache-2.0\",\"urls\":[\"bzz-raw://7066b10fc30f9bb4754f101b2ef6978352623f60369d3a274e9f54466b7402ce\",\"dweb:/ipfs/QmcHnvMkCVdh2NNtmjhaMw58vEd7kvpWxQwR4Cp7c1GaYz\"]}},\"version\":1}",
+  "metadata": {
+    "compiler": {
+      "version": "0.8.10+commit.fc410830"
+    },
+    "language": "Solidity",
+    "output": {
+      "abi": [
+        {
+          "inputs": [
+            {
+              "internalType": "struct AztecTypes.AztecAsset",
+              "name": "_inputAssetA",
+              "type": "tuple",
+              "components": [
+                {
+                  "internalType": "uint256",
+                  "name": "id",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "address",
+                  "name": "erc20Address",
+                  "type": "address"
+                },
+                {
+                  "internalType": "enum AztecTypes.AztecAssetType",
+                  "name": "assetType",
+                  "type": "uint8"
+                }
+              ]
+            },
+            {
+              "internalType": "struct AztecTypes.AztecAsset",
+              "name": "_inputAssetB",
+              "type": "tuple",
+              "components": [
+                {
+                  "internalType": "uint256",
+                  "name": "id",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "address",
+                  "name": "erc20Address",
+                  "type": "address"
+                },
+                {
+                  "internalType": "enum AztecTypes.AztecAssetType",
+                  "name": "assetType",
+                  "type": "uint8"
+                }
+              ]
+            },
+            {
+              "internalType": "struct AztecTypes.AztecAsset",
+              "name": "_outputAssetA",
+              "type": "tuple",
+              "components": [
+                {
+                  "internalType": "uint256",
+                  "name": "id",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "address",
+                  "name": "erc20Address",
+                  "type": "address"
+                },
+                {
+                  "internalType": "enum AztecTypes.AztecAssetType",
+                  "name": "assetType",
+                  "type": "uint8"
+                }
+              ]
+            },
+            {
+              "internalType": "struct AztecTypes.AztecAsset",
+              "name": "_outputAssetB",
+              "type": "tuple",
+              "components": [
+                {
+                  "internalType": "uint256",
+                  "name": "id",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "address",
+                  "name": "erc20Address",
+                  "type": "address"
+                },
+                {
+                  "internalType": "enum AztecTypes.AztecAssetType",
+                  "name": "assetType",
+                  "type": "uint8"
+                }
+              ]
+            },
+            {
+              "internalType": "uint256",
+              "name": "_totalInputValue",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "_interactionNonce",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint64",
+              "name": "_auxData",
+              "type": "uint64"
+            },
+            {
+              "internalType": "address",
+              "name": "_rollupBeneficiary",
+              "type": "address"
+            }
+          ],
+          "stateMutability": "payable",
+          "type": "function",
+          "name": "convert",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "outputValueA",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "outputValueB",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bool",
+              "name": "isAsync",
+              "type": "bool"
+            }
+          ]
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "struct AztecTypes.AztecAsset",
+              "name": "_inputAssetA",
+              "type": "tuple",
+              "components": [
+                {
+                  "internalType": "uint256",
+                  "name": "id",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "address",
+                  "name": "erc20Address",
+                  "type": "address"
+                },
+                {
+                  "internalType": "enum AztecTypes.AztecAssetType",
+                  "name": "assetType",
+                  "type": "uint8"
+                }
+              ]
+            },
+            {
+              "internalType": "struct AztecTypes.AztecAsset",
+              "name": "_inputAssetB",
+              "type": "tuple",
+              "components": [
+                {
+                  "internalType": "uint256",
+                  "name": "id",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "address",
+                  "name": "erc20Address",
+                  "type": "address"
+                },
+                {
+                  "internalType": "enum AztecTypes.AztecAssetType",
+                  "name": "assetType",
+                  "type": "uint8"
+                }
+              ]
+            },
+            {
+              "internalType": "struct AztecTypes.AztecAsset",
+              "name": "_outputAssetA",
+              "type": "tuple",
+              "components": [
+                {
+                  "internalType": "uint256",
+                  "name": "id",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "address",
+                  "name": "erc20Address",
+                  "type": "address"
+                },
+                {
+                  "internalType": "enum AztecTypes.AztecAssetType",
+                  "name": "assetType",
+                  "type": "uint8"
+                }
+              ]
+            },
+            {
+              "internalType": "struct AztecTypes.AztecAsset",
+              "name": "_outputAssetB",
+              "type": "tuple",
+              "components": [
+                {
+                  "internalType": "uint256",
+                  "name": "id",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "address",
+                  "name": "erc20Address",
+                  "type": "address"
+                },
+                {
+                  "internalType": "enum AztecTypes.AztecAssetType",
+                  "name": "assetType",
+                  "type": "uint8"
+                }
+              ]
+            },
+            {
+              "internalType": "uint256",
+              "name": "_interactionNonce",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint64",
+              "name": "_auxData",
+              "type": "uint64"
+            }
+          ],
+          "stateMutability": "payable",
+          "type": "function",
+          "name": "finalise",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "outputValueA",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "outputValueB",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bool",
+              "name": "interactionComplete",
+              "type": "bool"
+            }
+          ]
+        }
+      ],
+      "devdoc": {
+        "kind": "dev",
+        "methods": {
+          "convert((uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),uint256,uint256,uint64,address)": {
+            "details": "This function is called from the RollupProcessor contract via the DefiBridgeProxy. Before this function is      called _RollupProcessor_ contract will have sent you all the assets defined by the input params. This      function is expected to convert input assets to output assets (e.g. on Uniswap) and return the amounts      of output assets to be received by the _RollupProcessor_. If output assets are ERC20 tokens the bridge has      to set _RollupProcessor_ as a spender before the interaction is finished. If some of the output assets is ETH      it has to be sent to _RollupProcessor_ via the `receiveEthFromBridge(uint256 _interactionNonce)` method      before the `convert(...)` function call finishes.If there are two input assets, equal amounts of both assets will be transferred to the bridge before this      method is called.**BOTH** output assets could be virtual but since their `assetId` is currently assigned as      `_interactionNonce` it would simply mean that more of the same virtual asset is minted.If this interaction is async the function has to return `(0, 0, true)`. Async interaction will be finalised at      a later time and its output assets will be returned in a `IDefiBridge.finalise(...)` call.",
+            "params": {
+              "_auxData": "Bridge specific data to be passed into the bridge contract (e.g. slippage, nftID etc.)",
+              "_inputAssetA": "A struct detailing the first input asset",
+              "_inputAssetB": "A struct detailing the second input asset",
+              "_interactionNonce": "A globally unique identifier of this interaction/`convert(...)` call.",
+              "_outputAssetA": "A struct detailing the first output asset",
+              "_outputAssetB": "A struct detailing the second output asset",
+              "_totalInputValue": "An amount of input assets transferred to the bridge (Note: \"total\" is in the name                         because the value can represent summed/aggregated token amounts of users actions on L2)"
+            },
+            "returns": {
+              "isAsync": "A flag indicating if the interaction is async.",
+              "outputValueA": "An amount of `_outputAssetA` returned from this interaction.",
+              "outputValueB": "An amount of `_outputAssetB` returned from this interaction."
+            }
+          },
+          "finalise((uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),uint256,uint64)": {
+            "details": "This function should use the `BridgeBase.onlyRollup()` modifier to ensure it can only be called from      the `RollupProcessor.processAsyncDefiInteraction(uint256 _interactionNonce)` method.",
+            "params": {
+              "_auxData": "Bridge specific data to be passed into the bridge contract (e.g. slippage, nftID etc.)",
+              "_inputAssetA": "A struct detailing the first input asset",
+              "_inputAssetB": "A struct detailing the second input asset",
+              "_interactionNonce": "A globally unique identifier of this interaction/`convert(...)` call.",
+              "_outputAssetA": "A struct detailing the first output asset",
+              "_outputAssetB": "A struct detailing the second output asset"
+            },
+            "returns": {
+              "interactionComplete": "A flag indicating whether an async interaction was successfully completed/finalised.",
+              "outputValueA": "An amount of `_outputAssetA` returned from this interaction.",
+              "outputValueB": "An amount of `_outputAssetB` returned from this interaction."
+            }
+          }
+        },
+        "version": 1
+      },
+      "userdoc": {
+        "kind": "user",
+        "methods": {
+          "convert((uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),uint256,uint256,uint64,address)": {
+            "notice": "A function which converts input assets to output assets."
+          },
+          "finalise((uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),uint256,uint64)": {
+            "notice": "A function that finalises asynchronous interaction."
+          }
+        },
+        "version": 1
+      }
+    },
+    "settings": {
+      "remappings": [
+        ":@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/",
+        ":@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+        ":@uniswap/v2-core/=lib/v2-core/",
+        ":@uniswap/v2-periphery/=lib/v2-periphery/",
+        ":aztec-connect-bridges/=lib/aztec-connect-bridges/src/",
+        ":bridge-deployments/=lib/aztec-connect-bridges/src/deployment/",
+        ":bridge-interfaces/=lib/aztec-connect-bridges/src/interfaces/",
+        ":bridge-tests/=lib/aztec-connect-bridges/src/test/",
+        ":core/=src/core/",
+        ":ds-test/=lib/forge-std/lib/ds-test/src/",
+        ":erc4626-tests/=lib/openzeppelin-contracts/lib/erc4626-tests/",
+        ":forge-std/=lib/forge-std/src/",
+        ":mocks/=src/test/mocks/",
+        ":openzeppelin-contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/",
+        ":openzeppelin-contracts/=lib/openzeppelin-contracts/",
+        ":periphery/=src/periphery/",
+        ":rollup-encoder/=lib/rollup-encoder/src/",
+        ":v2-core/=lib/v2-core/contracts/",
+        ":v2-periphery/=lib/v2-periphery/contracts/"
+      ],
+      "optimizer": {
+        "enabled": true,
+        "runs": 2000
+      },
+      "metadata": {
+        "bytecodeHash": "ipfs"
+      },
+      "compilationTarget": {
+        "src/core/interfaces/IDefiBridge.sol": "IDefiBridge"
+      },
+      "libraries": {}
+    },
+    "sources": {
+      "lib/rollup-encoder/src/libraries/AztecTypes.sol": {
+        "keccak256": "0xa11ad1ad795337be7761108304a21812aeedfac4b03969ee5f71a251e226cc77",
+        "urls": [
+          "bzz-raw://5f6ea5409dcbe6c61d1c7a7153a4158bc88db92eae2c5c1041809b19c49c3ea7",
+          "dweb:/ipfs/QmY7d8839N7SNyR5eGvFi6C6opNW3GW5oZEhTVKEWFvv56"
+        ],
+        "license": "Apache-2.0"
+      },
+      "src/core/interfaces/IDefiBridge.sol": {
+        "keccak256": "0x73147df7043deadedcddac410db524d0dc8731c13175e9519825f01b5d91b60b",
+        "urls": [
+          "bzz-raw://7066b10fc30f9bb4754f101b2ef6978352623f60369d3a274e9f54466b7402ce",
+          "dweb:/ipfs/QmcHnvMkCVdh2NNtmjhaMw58vEd7kvpWxQwR4Cp7c1GaYz"
+        ],
+        "license": "Apache-2.0"
+      }
+    },
+    "version": 1
+  },
+  "ast": {
+    "absolutePath": "src/core/interfaces/IDefiBridge.sol",
+    "id": 53075,
+    "exportedSymbols": {
+      "AztecTypes": [
+        48260
+      ],
+      "IDefiBridge": [
+        53074
+      ]
+    },
+    "nodeType": "SourceUnit",
+    "src": "63:4474:112",
+    "nodes": [
+      {
+        "id": 53015,
+        "nodeType": "PragmaDirective",
+        "src": "63:24:112",
+        "nodes": [],
+        "literals": [
+          "solidity",
+          ">=",
+          "0.8",
+          ".4"
+        ]
+      },
+      {
+        "id": 53017,
+        "nodeType": "ImportDirective",
+        "src": "89:67:112",
+        "nodes": [],
+        "absolutePath": "lib/rollup-encoder/src/libraries/AztecTypes.sol",
+        "file": "rollup-encoder/libraries/AztecTypes.sol",
+        "nameLocation": "-1:-1:-1",
+        "scope": 53075,
+        "sourceUnit": 48261,
+        "symbolAliases": [
+          {
+            "foreign": {
+              "id": 53016,
+              "name": "AztecTypes",
+              "nodeType": "Identifier",
+              "overloadedDeclarations": [],
+              "src": "97:10:112",
+              "typeDescriptions": {}
+            },
+            "nameLocation": "-1:-1:-1"
+          }
+        ],
+        "unitAlias": ""
+      },
+      {
+        "id": 53074,
+        "nodeType": "ContractDefinition",
+        "src": "158:4378:112",
+        "nodes": [
+          {
+            "id": 53047,
+            "nodeType": "FunctionDefinition",
+            "src": "2595:451:112",
+            "nodes": [],
+            "documentation": {
+              "id": 53018,
+              "nodeType": "StructuredDocumentation",
+              "src": "186:2404:112",
+              "text": " @notice A function which converts input assets to output assets.\n @param _inputAssetA A struct detailing the first input asset\n @param _inputAssetB A struct detailing the second input asset\n @param _outputAssetA A struct detailing the first output asset\n @param _outputAssetB A struct detailing the second output asset\n @param _totalInputValue An amount of input assets transferred to the bridge (Note: \"total\" is in the name\n                         because the value can represent summed/aggregated token amounts of users actions on L2)\n @param _interactionNonce A globally unique identifier of this interaction/`convert(...)` call.\n @param _auxData Bridge specific data to be passed into the bridge contract (e.g. slippage, nftID etc.)\n @return outputValueA An amount of `_outputAssetA` returned from this interaction.\n @return outputValueB An amount of `_outputAssetB` returned from this interaction.\n @return isAsync A flag indicating if the interaction is async.\n @dev This function is called from the RollupProcessor contract via the DefiBridgeProxy. Before this function is\n      called _RollupProcessor_ contract will have sent you all the assets defined by the input params. This\n      function is expected to convert input assets to output assets (e.g. on Uniswap) and return the amounts\n      of output assets to be received by the _RollupProcessor_. If output assets are ERC20 tokens the bridge has\n      to set _RollupProcessor_ as a spender before the interaction is finished. If some of the output assets is ETH\n      it has to be sent to _RollupProcessor_ via the `receiveEthFromBridge(uint256 _interactionNonce)` method\n      before the `convert(...)` function call finishes.\n @dev If there are two input assets, equal amounts of both assets will be transferred to the bridge before this\n      method is called.\n @dev **BOTH** output assets could be virtual but since their `assetId` is currently assigned as\n      `_interactionNonce` it would simply mean that more of the same virtual asset is minted.\n @dev If this interaction is async the function has to return `(0, 0, true)`. Async interaction will be finalised at\n      a later time and its output assets will be returned in a `IDefiBridge.finalise(...)` call."
+            },
+            "functionSelector": "26c3b515",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "convert",
+            "nameLocation": "2604:7:112",
+            "parameters": {
+              "id": 53039,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 53021,
+                  "mutability": "mutable",
+                  "name": "_inputAssetA",
+                  "nameLocation": "2652:12:112",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 53047,
+                  "src": "2621:43:112",
+                  "stateVariable": false,
+                  "storageLocation": "calldata",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_struct$_AztecAsset_$48259_calldata_ptr",
+                    "typeString": "struct AztecTypes.AztecAsset"
+                  },
+                  "typeName": {
+                    "id": 53020,
+                    "nodeType": "UserDefinedTypeName",
+                    "pathNode": {
+                      "id": 53019,
+                      "name": "AztecTypes.AztecAsset",
+                      "nodeType": "IdentifierPath",
+                      "referencedDeclaration": 48259,
+                      "src": "2621:21:112"
+                    },
+                    "referencedDeclaration": 48259,
+                    "src": "2621:21:112",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_struct$_AztecAsset_$48259_storage_ptr",
+                      "typeString": "struct AztecTypes.AztecAsset"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 53024,
+                  "mutability": "mutable",
+                  "name": "_inputAssetB",
+                  "nameLocation": "2705:12:112",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 53047,
+                  "src": "2674:43:112",
+                  "stateVariable": false,
+                  "storageLocation": "calldata",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_struct$_AztecAsset_$48259_calldata_ptr",
+                    "typeString": "struct AztecTypes.AztecAsset"
+                  },
+                  "typeName": {
+                    "id": 53023,
+                    "nodeType": "UserDefinedTypeName",
+                    "pathNode": {
+                      "id": 53022,
+                      "name": "AztecTypes.AztecAsset",
+                      "nodeType": "IdentifierPath",
+                      "referencedDeclaration": 48259,
+                      "src": "2674:21:112"
+                    },
+                    "referencedDeclaration": 48259,
+                    "src": "2674:21:112",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_struct$_AztecAsset_$48259_storage_ptr",
+                      "typeString": "struct AztecTypes.AztecAsset"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 53027,
+                  "mutability": "mutable",
+                  "name": "_outputAssetA",
+                  "nameLocation": "2758:13:112",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 53047,
+                  "src": "2727:44:112",
+                  "stateVariable": false,
+                  "storageLocation": "calldata",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_struct$_AztecAsset_$48259_calldata_ptr",
+                    "typeString": "struct AztecTypes.AztecAsset"
+                  },
+                  "typeName": {
+                    "id": 53026,
+                    "nodeType": "UserDefinedTypeName",
+                    "pathNode": {
+                      "id": 53025,
+                      "name": "AztecTypes.AztecAsset",
+                      "nodeType": "IdentifierPath",
+                      "referencedDeclaration": 48259,
+                      "src": "2727:21:112"
+                    },
+                    "referencedDeclaration": 48259,
+                    "src": "2727:21:112",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_struct$_AztecAsset_$48259_storage_ptr",
+                      "typeString": "struct AztecTypes.AztecAsset"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 53030,
+                  "mutability": "mutable",
+                  "name": "_outputAssetB",
+                  "nameLocation": "2812:13:112",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 53047,
+                  "src": "2781:44:112",
+                  "stateVariable": false,
+                  "storageLocation": "calldata",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_struct$_AztecAsset_$48259_calldata_ptr",
+                    "typeString": "struct AztecTypes.AztecAsset"
+                  },
+                  "typeName": {
+                    "id": 53029,
+                    "nodeType": "UserDefinedTypeName",
+                    "pathNode": {
+                      "id": 53028,
+                      "name": "AztecTypes.AztecAsset",
+                      "nodeType": "IdentifierPath",
+                      "referencedDeclaration": 48259,
+                      "src": "2781:21:112"
+                    },
+                    "referencedDeclaration": 48259,
+                    "src": "2781:21:112",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_struct$_AztecAsset_$48259_storage_ptr",
+                      "typeString": "struct AztecTypes.AztecAsset"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 53032,
+                  "mutability": "mutable",
+                  "name": "_totalInputValue",
+                  "nameLocation": "2843:16:112",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 53047,
+                  "src": "2835:24:112",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 53031,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2835:7:112",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 53034,
+                  "mutability": "mutable",
+                  "name": "_interactionNonce",
+                  "nameLocation": "2877:17:112",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 53047,
+                  "src": "2869:25:112",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 53033,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2869:7:112",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 53036,
+                  "mutability": "mutable",
+                  "name": "_auxData",
+                  "nameLocation": "2911:8:112",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 53047,
+                  "src": "2904:15:112",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint64",
+                    "typeString": "uint64"
+                  },
+                  "typeName": {
+                    "id": 53035,
+                    "name": "uint64",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2904:6:112",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint64",
+                      "typeString": "uint64"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 53038,
+                  "mutability": "mutable",
+                  "name": "_rollupBeneficiary",
+                  "nameLocation": "2937:18:112",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 53047,
+                  "src": "2929:26:112",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 53037,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2929:7:112",
+                    "stateMutability": "nonpayable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "2611:350:112"
+            },
+            "returnParameters": {
+              "id": 53046,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 53041,
+                  "mutability": "mutable",
+                  "name": "outputValueA",
+                  "nameLocation": "2996:12:112",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 53047,
+                  "src": "2988:20:112",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 53040,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "2988:7:112",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 53043,
+                  "mutability": "mutable",
+                  "name": "outputValueB",
+                  "nameLocation": "3018:12:112",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 53047,
+                  "src": "3010:20:112",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 53042,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3010:7:112",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 53045,
+                  "mutability": "mutable",
+                  "name": "isAsync",
+                  "nameLocation": "3037:7:112",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 53047,
+                  "src": "3032:12:112",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bool",
+                    "typeString": "bool"
+                  },
+                  "typeName": {
+                    "id": 53044,
+                    "name": "bool",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "3032:4:112",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bool",
+                      "typeString": "bool"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "2987:58:112"
+            },
+            "scope": 53074,
+            "stateMutability": "payable",
+            "virtual": false,
+            "visibility": "external"
+          },
+          {
+            "id": 53073,
+            "nodeType": "FunctionDefinition",
+            "src": "4140:394:112",
+            "nodes": [],
+            "documentation": {
+              "id": 53048,
+              "nodeType": "StructuredDocumentation",
+              "src": "3052:1083:112",
+              "text": " @notice A function that finalises asynchronous interaction.\n @param _inputAssetA A struct detailing the first input asset\n @param _inputAssetB A struct detailing the second input asset\n @param _outputAssetA A struct detailing the first output asset\n @param _outputAssetB A struct detailing the second output asset\n @param _interactionNonce A globally unique identifier of this interaction/`convert(...)` call.\n @param _auxData Bridge specific data to be passed into the bridge contract (e.g. slippage, nftID etc.)\n @return outputValueA An amount of `_outputAssetA` returned from this interaction.\n @return outputValueB An amount of `_outputAssetB` returned from this interaction.\n @return interactionComplete A flag indicating whether an async interaction was successfully completed/finalised.\n @dev This function should use the `BridgeBase.onlyRollup()` modifier to ensure it can only be called from\n      the `RollupProcessor.processAsyncDefiInteraction(uint256 _interactionNonce)` method."
+            },
+            "functionSelector": "9b07d342",
+            "implemented": false,
+            "kind": "function",
+            "modifiers": [],
+            "name": "finalise",
+            "nameLocation": "4149:8:112",
+            "parameters": {
+              "id": 53065,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 53051,
+                  "mutability": "mutable",
+                  "name": "_inputAssetA",
+                  "nameLocation": "4198:12:112",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 53073,
+                  "src": "4167:43:112",
+                  "stateVariable": false,
+                  "storageLocation": "calldata",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_struct$_AztecAsset_$48259_calldata_ptr",
+                    "typeString": "struct AztecTypes.AztecAsset"
+                  },
+                  "typeName": {
+                    "id": 53050,
+                    "nodeType": "UserDefinedTypeName",
+                    "pathNode": {
+                      "id": 53049,
+                      "name": "AztecTypes.AztecAsset",
+                      "nodeType": "IdentifierPath",
+                      "referencedDeclaration": 48259,
+                      "src": "4167:21:112"
+                    },
+                    "referencedDeclaration": 48259,
+                    "src": "4167:21:112",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_struct$_AztecAsset_$48259_storage_ptr",
+                      "typeString": "struct AztecTypes.AztecAsset"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 53054,
+                  "mutability": "mutable",
+                  "name": "_inputAssetB",
+                  "nameLocation": "4251:12:112",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 53073,
+                  "src": "4220:43:112",
+                  "stateVariable": false,
+                  "storageLocation": "calldata",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_struct$_AztecAsset_$48259_calldata_ptr",
+                    "typeString": "struct AztecTypes.AztecAsset"
+                  },
+                  "typeName": {
+                    "id": 53053,
+                    "nodeType": "UserDefinedTypeName",
+                    "pathNode": {
+                      "id": 53052,
+                      "name": "AztecTypes.AztecAsset",
+                      "nodeType": "IdentifierPath",
+                      "referencedDeclaration": 48259,
+                      "src": "4220:21:112"
+                    },
+                    "referencedDeclaration": 48259,
+                    "src": "4220:21:112",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_struct$_AztecAsset_$48259_storage_ptr",
+                      "typeString": "struct AztecTypes.AztecAsset"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 53057,
+                  "mutability": "mutable",
+                  "name": "_outputAssetA",
+                  "nameLocation": "4304:13:112",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 53073,
+                  "src": "4273:44:112",
+                  "stateVariable": false,
+                  "storageLocation": "calldata",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_struct$_AztecAsset_$48259_calldata_ptr",
+                    "typeString": "struct AztecTypes.AztecAsset"
+                  },
+                  "typeName": {
+                    "id": 53056,
+                    "nodeType": "UserDefinedTypeName",
+                    "pathNode": {
+                      "id": 53055,
+                      "name": "AztecTypes.AztecAsset",
+                      "nodeType": "IdentifierPath",
+                      "referencedDeclaration": 48259,
+                      "src": "4273:21:112"
+                    },
+                    "referencedDeclaration": 48259,
+                    "src": "4273:21:112",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_struct$_AztecAsset_$48259_storage_ptr",
+                      "typeString": "struct AztecTypes.AztecAsset"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 53060,
+                  "mutability": "mutable",
+                  "name": "_outputAssetB",
+                  "nameLocation": "4358:13:112",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 53073,
+                  "src": "4327:44:112",
+                  "stateVariable": false,
+                  "storageLocation": "calldata",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_struct$_AztecAsset_$48259_calldata_ptr",
+                    "typeString": "struct AztecTypes.AztecAsset"
+                  },
+                  "typeName": {
+                    "id": 53059,
+                    "nodeType": "UserDefinedTypeName",
+                    "pathNode": {
+                      "id": 53058,
+                      "name": "AztecTypes.AztecAsset",
+                      "nodeType": "IdentifierPath",
+                      "referencedDeclaration": 48259,
+                      "src": "4327:21:112"
+                    },
+                    "referencedDeclaration": 48259,
+                    "src": "4327:21:112",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_struct$_AztecAsset_$48259_storage_ptr",
+                      "typeString": "struct AztecTypes.AztecAsset"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 53062,
+                  "mutability": "mutable",
+                  "name": "_interactionNonce",
+                  "nameLocation": "4389:17:112",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 53073,
+                  "src": "4381:25:112",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 53061,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4381:7:112",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 53064,
+                  "mutability": "mutable",
+                  "name": "_auxData",
+                  "nameLocation": "4423:8:112",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 53073,
+                  "src": "4416:15:112",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint64",
+                    "typeString": "uint64"
+                  },
+                  "typeName": {
+                    "id": 53063,
+                    "name": "uint64",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4416:6:112",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint64",
+                      "typeString": "uint64"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "4157:280:112"
+            },
+            "returnParameters": {
+              "id": 53072,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 53067,
+                  "mutability": "mutable",
+                  "name": "outputValueA",
+                  "nameLocation": "4472:12:112",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 53073,
+                  "src": "4464:20:112",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 53066,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4464:7:112",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 53069,
+                  "mutability": "mutable",
+                  "name": "outputValueB",
+                  "nameLocation": "4494:12:112",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 53073,
+                  "src": "4486:20:112",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_uint256",
+                    "typeString": "uint256"
+                  },
+                  "typeName": {
+                    "id": 53068,
+                    "name": "uint256",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4486:7:112",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_uint256",
+                      "typeString": "uint256"
+                    }
+                  },
+                  "visibility": "internal"
+                },
+                {
+                  "constant": false,
+                  "id": 53071,
+                  "mutability": "mutable",
+                  "name": "interactionComplete",
+                  "nameLocation": "4513:19:112",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 53073,
+                  "src": "4508:24:112",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bool",
+                    "typeString": "bool"
+                  },
+                  "typeName": {
+                    "id": 53070,
+                    "name": "bool",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "4508:4:112",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bool",
+                      "typeString": "bool"
+                    }
+                  },
+                  "visibility": "internal"
+                }
+              ],
+              "src": "4463:70:112"
+            },
+            "scope": 53074,
+            "stateMutability": "payable",
+            "virtual": false,
+            "visibility": "external"
+          }
+        ],
+        "abstract": false,
+        "baseContracts": [],
+        "canonicalName": "IDefiBridge",
+        "contractDependencies": [],
+        "contractKind": "interface",
+        "fullyImplemented": false,
+        "linearizedBaseContracts": [
+          53074
+        ],
+        "name": "IDefiBridge",
+        "nameLocation": "168:11:112",
+        "scope": 53075,
+        "usedErrors": []
+      }
+    ],
+    "license": "Apache-2.0"
+  },
+  "id": 112
+}

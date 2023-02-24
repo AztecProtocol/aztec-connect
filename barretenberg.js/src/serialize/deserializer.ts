@@ -5,7 +5,7 @@ import {
   deserializeBufferFromVector,
   deserializeInt32,
   deserializeUInt32,
-} from './free_funcs';
+} from './free_funcs.js';
 
 export type DeserializeFn<T> = (buf: Buffer, offset: number) => { elem: T; adv: number };
 

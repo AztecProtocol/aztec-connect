@@ -1,4 +1,4 @@
-import { BarretenbergWasm } from '../../wasm';
+import { BarretenbergWasm } from '../../wasm/index.js';
 
 export class Aes128 {
   constructor(private wasm: BarretenbergWasm) {}

@@ -1,9 +1,16 @@
-import { toBigIntBE, toBufferBE } from '../bigint_buffer';
+import { toBigIntBE, toBufferBE } from '../bigint_buffer/index.js';
 
 // For serializing bool.
 export function boolToByte(b: boolean) {
   const buf = Buffer.alloc(1);
   buf.writeUInt8(b ? 1 : 0);
+  return buf;
+}
+
+// For serializing numbers to 32 bit little-endian form.
+export function numToUInt32LE(n: number, bufferSize = 4) {
+  const buf = Buffer.alloc(bufferSize);
+  buf.writeUInt32LE(n, bufferSize - 4);
   return buf;
 }
 

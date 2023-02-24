@@ -1,7 +1,7 @@
 import { randomBytes } from 'crypto';
-import { ProofData, ProofId } from '../client_proofs';
-import { randomInnerProofData } from './fixtures';
-import { InnerProofData } from './inner_proof';
+import { ProofData, ProofId } from '../client_proofs/index.js';
+import { randomInnerProofData } from './fixtures.js';
+import { InnerProofData } from './inner_proof.js';
 
 describe('InnerProofData', () => {
   it('can convert an inner proof object to buffer and back', () => {

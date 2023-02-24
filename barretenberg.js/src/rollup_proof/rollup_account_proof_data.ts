@@ -1,5 +1,5 @@
-import { ProofId } from '../client_proofs';
-import { InnerProofData } from './inner_proof';
+import { ProofId } from '../client_proofs/index.js';
+import { InnerProofData } from './inner_proof.js';
 
 export class RollupAccountProofData {
   static ENCODED_LENGTH = 1 + 4 * 32;

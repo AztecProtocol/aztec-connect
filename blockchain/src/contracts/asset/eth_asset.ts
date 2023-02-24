@@ -2,7 +2,7 @@
 import { EthAddress } from '@aztec/barretenberg/address';
 import { Asset, EthereumProvider, SendTxOptions, TxHash } from '@aztec/barretenberg/blockchain';
 import { Web3Provider } from '@ethersproject/providers';
-import { fromBaseUnits, toBaseUnits } from '../../units';
+import { fromBaseUnits, toBaseUnits } from '../../units.js';
 
 const fixEthersStackTrace = (err: Error) => {
   err.stack! += new Error().stack;

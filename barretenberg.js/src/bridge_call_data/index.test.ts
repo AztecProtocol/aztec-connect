@@ -1,17 +1,17 @@
-import { BitConfig } from './bit_config';
-import { BridgeCallData } from './bridge_call_data';
-import { BITCONFIG_OFFSET, virtualAssetIdFlag } from './bridge_call_data_config';
+import { BitConfig } from './bit_config.js';
+import { BridgeCallData } from './bridge_call_data.js';
+import { BITCONFIG_OFFSET, virtualAssetIdFlag } from './bridge_call_data_config.js';
 
 describe('bridge call data', () => {
   const virtualAssetId = virtualAssetIdFlag + 1;
   const bridgeCallDatas = [
     BridgeCallData.ZERO,
     new BridgeCallData(0, 1, 0),
-    new BridgeCallData(67, 123, 456, 78, 90, 1),
-    new BridgeCallData(67, 123, 456, undefined, virtualAssetId, 78),
-    new BridgeCallData(67, 123, 456, virtualAssetId, undefined, 78),
-    new BridgeCallData(67, virtualAssetId, 456, virtualAssetId + 1, 123, 78),
-    new BridgeCallData(67, 123, virtualAssetId, undefined, 123, 78),
+    new BridgeCallData(67, 123, 456, 78, 90, 1n),
+    new BridgeCallData(67, 123, 456, undefined, virtualAssetId, 78n),
+    new BridgeCallData(67, 123, 456, virtualAssetId, undefined, 78n),
+    new BridgeCallData(67, virtualAssetId, 456, virtualAssetId + 1, 123, 78n),
+    new BridgeCallData(67, 123, virtualAssetId, undefined, 123, 7n),
   ];
 
   it('convert bridge call data to and from buffer', () => {

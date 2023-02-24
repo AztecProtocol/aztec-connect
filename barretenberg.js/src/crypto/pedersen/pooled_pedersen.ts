@@ -1,5 +1,5 @@
-import { BarretenbergWasm, WorkerPool } from '../../wasm';
-import { SinglePedersen } from './single_pedersen';
+import { BarretenbergWasm, WorkerPool } from '../../wasm/index.js';
+import { SinglePedersen } from './single_pedersen.js';
 // import createDebug from 'debug';
 
 // const debug = createDebug('bb:pooled_pedersen');

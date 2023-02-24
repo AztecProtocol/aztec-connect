@@ -1,5 +1,5 @@
-import { BarretenbergWasm } from '../../wasm';
-import { Aes128 } from '.';
+import { BarretenbergWasm } from '../../wasm/index.js';
+import { Aes128 } from './index.js';
 
 import { randomBytes, createCipheriv, createDecipheriv } from 'crypto';
 

@@ -1,7 +1,7 @@
-import { MemoryMerkleTree } from './memory_merkle_tree';
-import { HashPath } from './hash_path';
-import { BarretenbergWasm } from '../wasm';
-import { SinglePedersen } from '../crypto';
+import { MemoryMerkleTree } from './memory_merkle_tree.js';
+import { HashPath } from './hash_path.js';
+import { BarretenbergWasm } from '../wasm/index.js';
+import { SinglePedersen } from '../crypto/index.js';
 
 const expectSameTrees = (tree1: MemoryMerkleTree, tree2: MemoryMerkleTree) => {
   const size = tree1.getSize();

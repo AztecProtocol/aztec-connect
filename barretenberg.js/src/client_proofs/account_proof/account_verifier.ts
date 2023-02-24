@@ -1,5 +1,5 @@
-import { BarretenbergWorker } from '../../wasm/worker';
-import { SinglePippenger } from '../../pippenger';
+import { BarretenbergWorker } from '../../wasm/index.js';
+import { SinglePippenger } from '../../pippenger/index.js';
 
 export class AccountVerifier {
   private worker!: BarretenbergWorker;
@@ -7,7 +7,7 @@ export class AccountVerifier {
   public async computeKey(pippenger: SinglePippenger, g2Data: Uint8Array) {
     this.worker = pippenger.getWorker();
     await this.worker.transferToHeap(g2Data, 0);
-    await this.worker.call('account__init_verification_key', pippenger.getPointer(), 0);
+    await this.worker.asyncCall('account__init_verification_key', pippenger.getPointer(), 0);
   }
 
   public async getKey() {

@@ -1,4 +1,4 @@
-import { serializeBufferArrayToVector } from '.';
+import { serializeBufferArrayToVector } from './index.js';
 import {
   boolToByte,
   numToInt32BE,
@@ -6,7 +6,7 @@ import {
   serializeBigInt,
   serializeBufferToVector,
   serializeDate,
-} from './free_funcs';
+} from './free_funcs.js';
 
 // export type DeserializeFn<T> = (buf: Buffer, offset: number) => { elem: T; adv: number };
 

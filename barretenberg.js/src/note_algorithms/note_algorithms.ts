@@ -1,10 +1,10 @@
-import { AliasHash } from '../account_id';
-import { GrumpkinAddress } from '../address';
-import { toBigIntBE, toBufferBE } from '../bigint_buffer';
-import { BarretenbergWasm } from '../wasm';
-import { DefiInteractionNote } from './defi_interaction_note';
-import { TreeClaimNote } from './tree_claim_note';
-import { TreeNote } from './tree_note';
+import { AliasHash } from '../account_id/index.js';
+import { GrumpkinAddress } from '../address/index.js';
+import { toBigIntBE, toBufferBE } from '../bigint_buffer/index.js';
+import { BarretenbergWasm } from '../wasm/index.js';
+import { DefiInteractionNote } from './defi_interaction_note.js';
+import { TreeClaimNote } from './tree_claim_note.js';
+import { TreeNote } from './tree_note.js';
 
 export class NoteAlgorithms {
   constructor(private wasm: BarretenbergWasm) {}

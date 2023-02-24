@@ -1,7 +1,7 @@
-import { EthAddress } from '../address';
-import { toBigIntBE } from '../bigint_buffer';
-import { ProofId } from '../client_proofs';
-import { InnerProofData } from './inner_proof';
+import { EthAddress } from '../address/index.js';
+import { toBigIntBE } from '../bigint_buffer/index.js';
+import { ProofId } from '../client_proofs/index.js';
+import { InnerProofData } from './inner_proof.js';
 
 export class RollupWithdrawProofData {
   static ENCODED_LENGTH = 1 + 5 * 32 + 20 + 4;

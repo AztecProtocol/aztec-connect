@@ -1,13 +1,18 @@
-import { EthAddress } from '../address';
-import { EthereumProvider } from './ethereum_provider';
-import { TxHash } from './tx_hash';
+import { EthAddress } from '../address/index.js';
+import { EthereumProvider } from './ethereum_provider.js';
+import { TxHash } from './tx_hash.js';
 
-export interface Block {
+export interface EthereumBlock {
   baseFeePerGas: bigint;
 }
 
 export class EthereumRpc {
   constructor(protected provider: EthereumProvider) {}
+
+  public async blockNumber() {
+    const result = await this.provider.request({ method: 'eth_blockNumber' });
+    return Number(result);
+  }
 
   public async getChainId() {
     const result = await this.provider.request({ method: 'eth_chainId' });
@@ -52,6 +57,6 @@ export class EthereumRpc {
     return {
       ...result,
       baseFeePerGas: BigInt(result.baseFeePerGas),
-    } as Block;
+    } as EthereumBlock;
   }
 }

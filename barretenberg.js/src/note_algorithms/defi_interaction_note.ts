@@ -1,8 +1,7 @@
-import { createHash } from 'crypto';
-import { toBigIntBE, toBufferBE } from '../bigint_buffer';
-import { BridgeCallData } from '../bridge_call_data';
-import { randomBytes } from '../crypto';
-import { numToUInt32BE, Deserializer, Serializer } from '../serialize';
+import { toBigIntBE, toBufferBE } from '../bigint_buffer/index.js';
+import { BridgeCallData } from '../bridge_call_data/index.js';
+import { randomBytes, sha256 } from '../crypto/index.js';
+import { numToUInt32BE, Deserializer, Serializer } from '../serialize/index.js';
 
 export class DefiInteractionNote {
   static EMPTY = new DefiInteractionNote(BridgeCallData.ZERO, 0, BigInt(0), BigInt(0), BigInt(0), false);
@@ -75,28 +74,24 @@ export const computeInteractionHashes = (notes: DefiInteractionNote[], padTo = n
   notes = [...notes, ...Array(padTo - notes.length).fill(DefiInteractionNote.EMPTY)];
 
   const hash = notes.map(note =>
-    createHash('sha256')
-      .update(
-        Buffer.concat([
-          note.bridgeCallData.toBuffer(),
-          numToUInt32BE(note.nonce, 32),
-          toBufferBE(note.totalInputValue, 32),
-          toBufferBE(note.totalOutputValueA, 32),
-          toBufferBE(note.totalOutputValueB, 32),
-          Buffer.alloc(31),
-          Buffer.from([+note.result]),
-        ]),
-      )
-      .digest(),
+    sha256(
+      Buffer.concat([
+        note.bridgeCallData.toBuffer(),
+        numToUInt32BE(note.nonce, 32),
+        toBufferBE(note.totalInputValue, 32),
+        toBufferBE(note.totalOutputValueA, 32),
+        toBufferBE(note.totalOutputValueB, 32),
+        Buffer.alloc(31),
+        Buffer.from([+note.result]),
+      ]),
+    ),
   );
 
   return hash.map(h => toBufferBE(BigInt('0x' + h.toString('hex')) % DefiInteractionNote.groupModulus, 32));
 };
 
 export const packInteractionNotes = (notes: DefiInteractionNote[], padTo = notes.length) => {
-  const hash = createHash('sha256')
-    .update(Buffer.concat(computeInteractionHashes(notes, padTo)))
-    .digest();
+  const hash = sha256(Buffer.concat(computeInteractionHashes(notes, padTo)));
 
   return toBufferBE(BigInt('0x' + hash.toString('hex')) % DefiInteractionNote.groupModulus, 32);
 };

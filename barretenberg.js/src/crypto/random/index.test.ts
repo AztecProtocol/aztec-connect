@@ -1,4 +1,4 @@
-import { randomBytes } from '.';
+import { randomBytes } from './index.js';
 
 describe('random', () => {
   it('randomBytes returns a filled byte array', () => {

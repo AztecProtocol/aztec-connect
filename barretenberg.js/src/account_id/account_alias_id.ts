@@ -1,5 +1,5 @@
-import { Blake2s } from '../crypto/blake2s';
-import { AliasHash } from './alias_hash';
+import { Blake2s } from '../crypto/index.js';
+import { AliasHash } from './alias_hash.js';
 
 export class AccountAliasId {
   static ZERO = AccountAliasId.fromBuffer(Buffer.alloc(32));

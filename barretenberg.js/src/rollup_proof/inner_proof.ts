@@ -1,5 +1,5 @@
-import { createTxId, ProofId } from '../client_proofs';
-import { numToUInt32BE } from '../serialize';
+import { createTxId, ProofId } from '../client_proofs/index.js';
+import { numToUInt32BE } from '../serialize/index.js';
 
 export class InnerProofData {
   static NUM_PUBLIC_INPUTS = 8;

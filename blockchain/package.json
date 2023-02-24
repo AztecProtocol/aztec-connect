@@ -1,81 +1,58 @@
 {
   "name": "@aztec/blockchain",
   "version": "2.0.0",
-  "main": "index.js",
   "license": "GPL-2.0-only",
+  "exports": "./dest/index.js",
+  "type": "module",
   "scripts": {
-    "build": "yarn clean && yarn compile && yarn formatting && tsc -p tsconfig.dest.json && node ./package.js && chmod +x ./dest/deploy/index.js ./dest/cli/index.js",
+    "build": "yarn clean && tsc -b tsconfig.dest.json",
     "build:dev": "tsc -p tsconfig.dest.json --watch",
-    "formatting": "prettier --check ./src && eslint --max-warnings 0 ./src",
-    "compile": "node ./ensure_versions && yarn hardhat compile",
-    "clean": "rm -rf ./cache ./data ./dest ./src/artifacts",
-    "lint": "solhint 'contracts/**/*.sol'",
-    "start:ganache": "yarn compile && ganache-cli -h 0.0.0.0 -l 12000000 -e 10000 -m 'test test test test test test test test test test test junk'",
-    "start:ganache:fork": "yarn compile && ganache-cli -f https://mainnet.infura.io/v3/6a04b7c89c5b421faefde663f787aa35 --chain.chainId 0xe2e --fork.blockNumber 15525911 -h 0.0.0.0 -l 15000000 -e 10000 -m 'test test test test test test test test test test test junk'",
-    "start:hardhat:fork": "yarn compile && yarn hardhat node",
-    "test": "cd ./src/contracts/verifier/fixtures && ./create_fixture.sh true true && yarn compile && yarn hardhat test --parallel",
-    "deploy": "node ./dest/deploy/index.js",
-    "blockchain_cli": "node ./dest/cli/index.js",
-    "verify:goerli": "hardhat verify --network goerli --contract contracts/RollupProcessor.sol:RollupProcessor",
-    "size": "hardhat size-contracts",
-    "gas": "hardhat test",
-    "coverage": "yarn add solidity-coverage --dev && hardhat coverage && yarn remove solidity-coverage --dev"
-  },
-  "bin": {
-    "deploy_rollup_processor": "./deploy/index.js",
-    "blockchain_cli": "./cli/index.js"
+    "formatting": "run -T prettier --check ./src && run -T eslint --max-warnings 0 ./src",
+    "clean": "rm -rf ./dest .tsbuildinfo",
+    "start": "anvil --host :: -p=8544 -m 'test test test test test test test test test test test junk'",
+    "start:fork": "anvil -f https://mainnet.infura.io/v3/85712ac4df0446b58612ace3ed566352 --chain-id 3630 --fork-block-number 15918000 --host :: -p=8544 -m 'test test test test test test test test test test test junk'",
+    "test": "NODE_NO_WARNINGS=1 node --openssl-legacy-provider --experimental-vm-modules $(yarn bin jest) --no-cache --silent"
   },
   "jest": {
-    "transform": {
-      "^.+\\.ts$": "ts-jest"
+    "preset": "ts-jest/presets/default-esm",
+    "globals": {
+      "ts-jest": {
+        "useESM": true
+      }
+    },
+    "moduleNameMapper": {
+      "^(\\.{1,2}/.*)\\.js$": "$1"
     },
     "testRegex": ".*\\.test\\.ts$",
     "rootDir": "./src",
-    "testTimeout": 90000,
+    "testTimeout": 120000,
     "slowTestThreshold": 60
   },
   "dependencies": {
-    "@aztec/barretenberg": "../barretenberg.js/dest",
-    "@aztec/bridge-clients": "0.1.47",
+    "@aztec/barretenberg": "workspace:^",
+    "@ethersproject/abi": "5.5.0",
+    "@ethersproject/abstract-provider": "5.5.1",
+    "@ethersproject/contracts": "5.5.0",
     "@ethersproject/experimental": "5.5.0",
-    "@openzeppelin/contracts": "4.6.0",
-    "@openzeppelin/contracts-upgradeable": "4.6.0",
+    "@ethersproject/providers": "5.5.1",
     "@uniswap/v2-core": "^1.0.1",
     "@uniswap/v2-periphery": "^1.1.0-beta.0",
-    "bip85": "^0.0.3",
-    "commander": "^9.0.0",
-    "debug": "^4.1.1",
-    "dotenv": "^8.2.0",
-    "ethers": "5.5.1",
-    "typescript": "^4.4.4"
+    "cross-fetch": "^3.1.5",
+    "debug": "^4.3.4",
+    "ethers": "5.5.1"
   },
   "devDependencies": {
-    "@nomiclabs/hardhat-ethers": "^2.0.2",
-    "@nomiclabs/hardhat-etherscan": "^2.1.8",
-    "@nomiclabs/hardhat-waffle": "^2.0.1",
-    "@types/debug": "^4.1.5",
-    "@types/jest": "^26.0.15",
-    "@types/mocha": "^9.0.0",
-    "@typescript-eslint/eslint-plugin": "^5.25.0",
-    "@typescript-eslint/parser": "^5.25.0",
-    "chai": "^4.3.6",
-    "eslint": "^8.16.0",
-    "eslint-config-prettier": "^8.5.0",
-    "ethereum-waffle": "^3.4.4",
-    "ethereumjs-util": "^7.0.7",
-    "ganache": "^7.0.3",
-    "hardhat": "^2.10.2",
-    "hardhat-contract-sizer": "^2.5.1",
-    "hardhat-gas-reporter": "^1.0.8",
-    "jest": "^27.0.6",
-    "prettier": "^2.2.1",
-    "prettier-plugin-solidity": "^1.0.0-beta.3",
-    "solhint": "^3.3.7",
-    "ts-jest": "^27.0.3",
-    "ts-node": "^8.9.1",
-    "tsc-watch": "^2.2.1"
-  },
-  "resolutions": {
-    "ethers": "5.5.1"
+    "@aztec/eslint-config": "workspace:^",
+    "@jest/globals": "^29.3.1",
+    "@jest/types": "^28.1.3",
+    "@rushstack/eslint-patch": "^1.1.4",
+    "@types/debug": "^4.1.7",
+    "@types/jest": "^28.1.6",
+    "@types/node": "^18.7.23",
+    "jest": "^28.1.3",
+    "ts-jest": "^28.0.7",
+    "ts-node": "^10.9.1",
+    "tsc-watch": "^5.0.3",
+    "typescript": "^4.7.4"
   }
 }

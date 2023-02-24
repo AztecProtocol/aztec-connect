@@ -1,5 +1,5 @@
-import { toBigIntBE, toBufferBE } from '../bigint_buffer';
-import { BridgeCallData } from '../bridge_call_data';
+import { toBigIntBE, toBufferBE } from '../bigint_buffer/index.js';
+import { BridgeCallData } from '../bridge_call_data/index.js';
 
 export class ClaimNoteTxData {
   static EMPTY = new ClaimNoteTxData(BigInt(0), BridgeCallData.ZERO, Buffer.alloc(32), Buffer.alloc(32));

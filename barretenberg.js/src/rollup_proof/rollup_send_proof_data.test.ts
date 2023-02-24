@@ -1,7 +1,7 @@
-import { ProofId } from '../client_proofs/proof_data';
-import { randomInnerProofData, randomSendProofData } from './fixtures';
-import { RollupSendProofData } from './rollup_send_proof_data';
-import { RollupWithdrawProofData } from './rollup_withdraw_proof_data';
+import { ProofId } from '../client_proofs/index.js';
+import { randomInnerProofData, randomSendProofData } from './fixtures.js';
+import { RollupSendProofData } from './rollup_send_proof_data.js';
+import { RollupWithdrawProofData } from './rollup_withdraw_proof_data.js';
 
 describe('RollupSendProofData', () => {
   it('throw if inner proof is not a send proof', () => {

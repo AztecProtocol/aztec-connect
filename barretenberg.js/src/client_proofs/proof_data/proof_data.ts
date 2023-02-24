@@ -1,5 +1,5 @@
-import { createTxId } from './create_tx_id';
-import { ProofId } from './proof_id';
+import { createTxId } from './create_tx_id.js';
+import { ProofId } from './proof_id.js';
 
 enum ProofDataFields {
   PROOF_ID,
@@ -52,8 +52,15 @@ export class ProofData {
   static getProofIdFromBuffer(rawProofData: Buffer) {
     return rawProofData.readUInt32BE(ProofDataOffsets.PROOF_ID);
   }
+  static allowChainFromNote1(allowChain: number) {
+    return [1, 3].includes(allowChain);
+  }
 
-  public readonly txId: Buffer;
+  static allowChainFromNote2(allowChain: number) {
+    return [2, 3].includes(allowChain);
+  }
+
+  private txId_: Buffer | undefined;
 
   public readonly proofId: ProofId;
   public readonly noteCommitment1: Buffer;
@@ -102,21 +109,26 @@ export class ProofData {
     this.defiRoot = rawProofData.slice(ProofDataOffsets.DEFI_ROOT, ProofDataOffsets.DEFI_ROOT + 32);
     this.backwardLink = rawProofData.slice(ProofDataOffsets.BACKWARD_LINK, ProofDataOffsets.BACKWARD_LINK + 32);
     this.allowChain = rawProofData.slice(ProofDataOffsets.ALLOW_CHAIN, ProofDataOffsets.ALLOW_CHAIN + 32);
-
-    this.txId = createTxId(rawProofData.slice(0, ProofData.NUM_PUBLISHED_PUBLIC_INPUTS * 32));
   }
 
   get allowChainFromNote1() {
     const allowChain = this.allowChain.readUInt32BE(28);
-    return [1, 3].includes(allowChain);
+    return ProofData.allowChainFromNote1(allowChain);
   }
 
   get allowChainFromNote2() {
     const allowChain = this.allowChain.readUInt32BE(28);
-    return [2, 3].includes(allowChain);
+    return ProofData.allowChainFromNote2(allowChain);
   }
 
   get feeAssetId() {
     return this.txFeeAssetId.readUInt32BE(28);
+  }
+
+  get txId(): Buffer {
+    if (!this.txId_) {
+      this.txId_ = createTxId(this.rawProofData.slice(0, ProofData.NUM_PUBLISHED_PUBLIC_INPUTS * 32));
+    }
+    return this.txId_;
   }
 }

@@ -1,7 +1,7 @@
-import { ViewingKey } from '../../viewing_key';
-import { WorkerPool } from '../../wasm';
-import { NoteDecryptor } from './note_decryptor';
-import { SingleNoteDecryptor } from './single_note_decryptor';
+import { ViewingKey } from '../../viewing_key/index.js';
+import { WorkerPool } from '../../wasm/index.js';
+import { NoteDecryptor } from './note_decryptor.js';
+import { SingleNoteDecryptor } from './single_note_decryptor.js';
 
 export class PooledNoteDecryptor implements NoteDecryptor {
   private pool: SingleNoteDecryptor[] = [];

@@ -3,7 +3,7 @@ import { Asset, BlockchainAsset, EthereumProvider, SendTxOptions, TxHash } from 
 import { ContractTransaction } from '@ethersproject/contracts';
 import { Web3Provider } from '@ethersproject/providers';
 import { Contract } from 'ethers';
-import { fromBaseUnits, toBaseUnits } from '../../units';
+import { fromBaseUnits, toBaseUnits } from '../../units.js';
 
 const abi = [
   'function transfer(address to, uint256 amount) public returns(bool)',

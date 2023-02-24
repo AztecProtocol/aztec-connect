@@ -1,6 +1,6 @@
-import { BarretenbergWasm } from '../../wasm';
-import { Grumpkin } from '.';
-import { randomBytes } from 'crypto';
+import { BarretenbergWasm } from '../../wasm/index.js';
+import { Grumpkin } from './index.js';
+import { randomBytes } from '../../crypto/index.js';
 import createDebug from 'debug';
 
 const debug = createDebug('bb:grumpkin_test');
@@ -22,7 +22,7 @@ describe('grumpkin', () => {
 
     const points: Buffer[] = [];
     for (let i = 0; i < numPoints; ++i) {
-      points.push(grumpkin.mul(Grumpkin.one, randomBytes(32)));
+      points.push(grumpkin.mul(Grumpkin.generator, randomBytes(32)));
     }
     let pointBuf: Buffer = points[0];
 

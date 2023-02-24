@@ -1,5 +1,5 @@
-import { ProofData } from './proof_data';
-import { ProofId } from './proof_id';
+import { ProofData } from './proof_data.js';
+import { ProofId } from './proof_id.js';
 
 export class AccountProofData {
   constructor(public readonly proofData: ProofData) {

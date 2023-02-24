@@ -1,4 +1,4 @@
-import { InterruptError } from '../errors';
+import { InterruptError } from '../errors/index.js';
 
 export class InterruptableSleep {
   private interruptResolve: (shouldThrow: boolean) => void = () => {};

@@ -1,11 +1,10 @@
-import ISwapRouter from '../abis/ISwapRouter.json';
-import { depositToWeth, approveWeth, getTokenBalance } from '.';
-
+import { depositToWeth, approveWeth, getTokenBalance } from './index.js';
 import { Contract } from 'ethers';
 import { Web3Provider } from '@ethersproject/providers';
-import { MainnetAddresses } from './mainnet_addresses';
+import { MainnetAddresses } from './mainnet_addresses.js';
 import { EthereumProvider } from '@aztec/barretenberg/blockchain';
 import { EthAddress } from '@aztec/barretenberg/address';
+import { ISwapRouter } from '../abis.js';
 
 const supportedAssets = [
   MainnetAddresses.Tokens['DAI'],

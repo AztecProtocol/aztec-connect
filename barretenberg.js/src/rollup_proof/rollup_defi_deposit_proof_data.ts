@@ -1,7 +1,7 @@
-import { toBigIntBE } from '../bigint_buffer';
-import { BridgeCallData } from '../bridge_call_data';
-import { ProofId } from '../client_proofs';
-import { InnerProofData } from './inner_proof';
+import { toBigIntBE } from '../bigint_buffer/index.js';
+import { BridgeCallData } from '../bridge_call_data/index.js';
+import { ProofId } from '../client_proofs/index.js';
+import { InnerProofData } from './inner_proof.js';
 
 export class RollupDefiDepositProofData {
   static ENCODED_LENGTH = 1 + 4 * 32;

@@ -1,9 +1,3 @@
 cache
-artifacts
-**/fixtures/*.dat
+src/verifier-fixtures/*.dat
 .openzeppelin
-data
-out
-broadcast
-coverage/
-coverage.json

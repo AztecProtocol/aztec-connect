@@ -1,4 +1,4 @@
-import { Blake2s, randomBytes } from '../crypto';
+import { Blake2s, randomBytes } from '../crypto/index.js';
 
 export class AliasHash {
   static SIZE = 28;
@@ -15,7 +15,7 @@ export class AliasHash {
   }
 
   static fromAlias(alias: string, blake2s: Blake2s) {
-    return new AliasHash(blake2s.hashToField(Buffer.from(alias)).slice(0, 28));
+    return new AliasHash(blake2s.hashToField(Buffer.from(alias)).subarray(0, 28));
   }
 
   static fromString(hash: string) {

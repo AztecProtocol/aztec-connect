@@ -1,8 +1,8 @@
-import { randomBytes } from 'crypto';
-import { AliasHash } from '../../account_id';
-import { GrumpkinAddress } from '../../address';
-import { HashPath } from '../../merkle_tree';
-import { AccountTx } from './account_tx';
+import { randomBytes } from '../../crypto/index.js';
+import { AliasHash } from '../../account_id/index.js';
+import { GrumpkinAddress } from '../../address/index.js';
+import { HashPath } from '../../merkle_tree/index.js';
+import { AccountTx } from './account_tx.js';
 
 describe('account tx', () => {
   it('should convert to and from buffer', () => {

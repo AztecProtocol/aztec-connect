@@ -1,5 +1,5 @@
-import { randomBytes } from 'crypto';
-import { ViewingKey } from './';
+import { randomBytes } from '../crypto/index.js';
+import { ViewingKey } from './index.js';
 
 describe('viewing_key', () => {
   it('convert viewing key from and to buffer', () => {

@@ -1,5 +1,5 @@
-import { Hasher } from './hasher';
-import { HashPath } from './hash_path';
+import { Hasher } from './hasher.js';
+import { HashPath } from './hash_path.js';
 
 /**
  * An 'in-memory' implementation of an immutable Merkle Tree

@@ -1,5 +1,5 @@
 import { Keccak } from 'sha3';
-import { ProofId } from './proof_id';
+import { ProofId } from './proof_id.js';
 
 const hash = new Keccak(256);
 

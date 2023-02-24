@@ -1,7 +1,7 @@
-import { randomBytes } from 'crypto';
-import { AliasHash } from '../account_id';
-import { GrumpkinAddress } from '../address';
-import { OffchainAccountData } from './offchain_account_data';
+import { randomBytes } from '../crypto/index.js';
+import { AliasHash } from '../account_id/index.js';
+import { GrumpkinAddress } from '../address/index.js';
+import { OffchainAccountData } from './offchain_account_data.js';
 
 describe('OffchainAccountData', () => {
   it('convert offchain account data to and from buffer', () => {

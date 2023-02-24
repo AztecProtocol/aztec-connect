@@ -1,8 +1,9 @@
-import { BarretenbergWasm, WorkerPool } from '../wasm';
-import { PooledPedersen } from '../crypto/pedersen';
-import { MerkleTree } from '.';
-import levelup from 'levelup';
-import memdown from 'memdown';
+import { BarretenbergWasm, WorkerPool } from '../wasm/index.js';
+import { PooledPedersen } from '../crypto/index.js';
+import { MerkleTree } from './index.js';
+import { default as levelup } from 'levelup';
+import { default as memdown } from 'memdown';
+import { jest } from '@jest/globals';
 
 jest.setTimeout(10000);
 

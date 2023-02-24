@@ -1,9 +1,10 @@
-import { EthAddress, GrumpkinAddress } from '../address';
-import { AssetValue } from '../asset';
-import { BlockSource } from '../block_source';
-import { BridgeCallData } from '../bridge_call_data';
-import { TxId } from '../tx_id';
-import { RollupProviderStatus } from './rollup_provider_status';
+import { EthAddress, GrumpkinAddress } from '../address/index.js';
+import { AssetValue } from '../asset/index.js';
+import { BlockSource } from '../block_source/index.js';
+import { BridgeCallData } from '../bridge_call_data/index.js';
+import { TxId } from '../tx_id/index.js';
+import { BridgePublishQuery, BridgePublishQueryResult } from './bridge_publish_stats_query.js';
+import { RollupProviderStatus } from './rollup_provider_status.js';
 
 export enum TxSettlementTime {
   NEXT_ROLLUP,
@@ -112,10 +113,6 @@ export const depositTxFromJson = ({ assetId, value, publicOwner }: DepositTxJson
   publicOwner: EthAddress.fromString(publicOwner),
 });
 
-export interface InitialWorldState {
-  initialAccounts: Buffer;
-}
-
 export interface RollupProvider extends BlockSource {
   sendTxs(txs: Tx[]): Promise<TxId[]>;
   getStatus(): Promise<RollupProviderStatus>;
@@ -124,9 +121,12 @@ export interface RollupProvider extends BlockSource {
   getPendingTxs(): Promise<PendingTx[]>;
   getPendingNoteNullifiers(): Promise<Buffer[]>;
   getPendingDepositTxs(): Promise<DepositTx[]>;
-  clientLog(msg: any): Promise<void>;
+  clientLog(log: any): Promise<void>;
+  clientConsoleLog(log: any): Promise<void>;
   getInitialWorldState(): Promise<InitialWorldState>;
   isAccountRegistered(accountPublicKey: GrumpkinAddress): Promise<boolean>;
   isAliasRegistered(alias: string): Promise<boolean>;
   isAliasRegisteredToAccount(accountPublicKey: GrumpkinAddress, alias: string): Promise<boolean>;
+  getAccountRegistrationRollupId(accountPublicKey: GrumpkinAddress): Promise<number>;
+  queryDefiPublishStats(query: BridgePublishQuery): Promise<BridgePublishQueryResult>;
 }

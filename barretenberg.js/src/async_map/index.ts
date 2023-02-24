@@ -1,5 +1,4 @@
 /**
- * TODO: Move to sdk?
  * Much the same as Array.map, only it takes an async fn as an element handler, and ensures that each element handler
  * is executed sequentially.
  * The pattern of `await Promise.all(arr.map(async e => { ... }))` only works if one's happy with each element handler

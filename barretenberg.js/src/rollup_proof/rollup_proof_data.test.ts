@@ -1,15 +1,15 @@
 import { randomBytes } from 'crypto';
-import { RollupDepositProofData } from '.';
-import { ProofId } from '../client_proofs/proof_data';
+import { RollupDepositProofData } from './index.js';
+import { ProofId } from '../client_proofs/index.js';
 import {
   createRollupProofData,
   randomDepositProofData,
   randomInnerProofData,
   randomSendProofData,
   randomWithdrawProofData,
-} from './fixtures';
-import { InnerProofData } from './inner_proof';
-import { RollupProofData } from './rollup_proof_data';
+} from './fixtures.js';
+import { InnerProofData } from './inner_proof.js';
+import { RollupProofData } from './rollup_proof_data.js';
 
 describe('RollupProofData', () => {
   it('can convert a rollup proof object to buffer and back', () => {
@@ -137,7 +137,7 @@ describe('RollupProofData', () => {
   it('should get tx ids from buffer', () => {
     const inners = [randomDepositProofData(), randomDepositProofData()];
     const rollupProofData = createRollupProofData(inners);
-    const expected = rollupProofData.innerProofData.filter(i => !i.isPadding()).map(i => i.txId);
+    const expected = rollupProofData.getNonPaddingProofs().map(i => i.txId);
     const txIds = RollupProofData.getTxIdsFromBuffer(rollupProofData.toBuffer());
     expect(txIds).toEqual(expected);
   });

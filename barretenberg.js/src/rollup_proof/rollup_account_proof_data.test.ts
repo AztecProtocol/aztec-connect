@@ -1,7 +1,7 @@
-import { ProofId } from '../client_proofs/proof_data';
-import { randomInnerProofData } from './fixtures';
-import { RollupAccountProofData } from './rollup_account_proof_data';
-import { RollupDefiDepositProofData } from './rollup_defi_deposit_proof_data';
+import { ProofId } from '../client_proofs/index.js';
+import { randomInnerProofData } from './fixtures.js';
+import { RollupAccountProofData } from './rollup_account_proof_data.js';
+import { RollupDefiDepositProofData } from './rollup_defi_deposit_proof_data.js';
 
 describe('RollupAccountProofData', () => {
   it('throw if inner proof is not an account proof', () => {

@@ -1,5 +1,5 @@
-import { EthAddress } from '../address';
-import { TypedData } from './typed_data';
+import { EthAddress } from '../address/index.js';
+import { TypedData } from './typed_data.js';
 
 export type EthereumSignature = { v: Buffer; r: Buffer; s: Buffer };
 

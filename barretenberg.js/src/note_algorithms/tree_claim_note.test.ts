@@ -1,4 +1,4 @@
-import { TreeClaimNote } from './tree_claim_note';
+import { TreeClaimNote } from './tree_claim_note.js';
 
 describe('tree_claim_note', () => {
   it('convert tree claim note to and from buffer', () => {

@@ -1,6 +1,6 @@
-import { isVirtualAsset } from '../asset';
-import { toBigIntBE, toBufferBE } from '../bigint_buffer';
-import { BitConfig } from './bit_config';
+import { isVirtualAsset } from '../asset/index.js';
+import { toBigIntBE, toBufferBE } from '../bigint_buffer/index.js';
+import { BitConfig } from './bit_config.js';
 import {
   ADDRESS_BIT_LEN,
   ADDRESS_OFFSET,
@@ -16,16 +16,16 @@ import {
   OUTPUT_ASSET_ID_A_OFFSET,
   OUTPUT_ASSET_ID_B_LEN,
   OUTPUT_ASSET_ID_B_OFFSET,
-} from './bridge_call_data_config';
+} from './bridge_call_data_config.js';
 
 const randomInt = (to = 2 ** 30 - 1) => Math.floor(Math.random() * (to + 1));
 
-const getNumber = (val: bigint, offset: number, size: number) =>
-  Number((val >> BigInt(offset)) & ((BigInt(1) << BigInt(size)) - BigInt(1)));
+const extractBigInt = (val: bigint, offset: number, size: number) =>
+  (val >> BigInt(offset)) & ((BigInt(1) << BigInt(size)) - BigInt(1));
 
 export class BridgeCallData {
   static ZERO = new BridgeCallData(0, 0, 0);
-  static ENCODED_LENGTH_IN_BYTES = 32;
+  static SIZE = 32;
 
   public readonly bitConfig: BitConfig;
 
@@ -35,24 +35,24 @@ export class BridgeCallData {
     public readonly outputAssetIdA: number,
     public readonly inputAssetIdB?: number,
     public readonly outputAssetIdB?: number,
-    public readonly auxData = 0,
+    public readonly auxData = BigInt(0),
   ) {
     this.bitConfig = new BitConfig(inputAssetIdB !== undefined, outputAssetIdB !== undefined);
   }
 
   static random() {
-    return new BridgeCallData(randomInt(), randomInt(), randomInt(), randomInt(), randomInt(), randomInt());
+    return new BridgeCallData(randomInt(), randomInt(), randomInt(), randomInt(), randomInt(), BigInt(randomInt()));
   }
 
   static fromBigInt(val: bigint) {
-    const bridgeAddressId = getNumber(val, ADDRESS_OFFSET, ADDRESS_BIT_LEN);
-    const inputAssetIdA = getNumber(val, INPUT_ASSET_ID_A_OFFSET, INPUT_ASSET_ID_A_LEN);
-    const outputAssetIdA = getNumber(val, OUTPUT_ASSET_ID_A_OFFSET, OUTPUT_ASSET_ID_A_LEN);
-    const inputAssetIdB = getNumber(val, INPUT_ASSET_ID_B_OFFSET, INPUT_ASSET_ID_B_LEN);
-    const outputAssetIdB = getNumber(val, OUTPUT_ASSET_ID_B_OFFSET, OUTPUT_ASSET_ID_B_LEN);
-    const auxData = getNumber(val, AUX_DATA_OFFSET, AUX_DATA_LEN);
+    const bridgeAddressId = Number(extractBigInt(val, ADDRESS_OFFSET, ADDRESS_BIT_LEN));
+    const inputAssetIdA = Number(extractBigInt(val, INPUT_ASSET_ID_A_OFFSET, INPUT_ASSET_ID_A_LEN));
+    const outputAssetIdA = Number(extractBigInt(val, OUTPUT_ASSET_ID_A_OFFSET, OUTPUT_ASSET_ID_A_LEN));
+    const inputAssetIdB = Number(extractBigInt(val, INPUT_ASSET_ID_B_OFFSET, INPUT_ASSET_ID_B_LEN));
+    const outputAssetIdB = Number(extractBigInt(val, OUTPUT_ASSET_ID_B_OFFSET, OUTPUT_ASSET_ID_B_LEN));
+    const auxData = extractBigInt(val, AUX_DATA_OFFSET, AUX_DATA_LEN);
 
-    const bitConfig = BitConfig.fromBigInt(BigInt(getNumber(val, BITCONFIG_OFFSET, BITCONFIG_LEN)));
+    const bitConfig = BitConfig.fromBigInt(BigInt(extractBigInt(val, BITCONFIG_OFFSET, BITCONFIG_LEN)));
     if (!bitConfig.secondInputInUse && inputAssetIdB) {
       throw new Error('Inconsistent second input.');
     }

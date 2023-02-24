@@ -2,16 +2,14 @@ import { EthAddress } from '@aztec/barretenberg/address';
 import { BlockchainAsset, BlockchainBridge, TxHash } from '@aztec/barretenberg/blockchain';
 import { Block } from '@aztec/barretenberg/block_source';
 import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
-import { InitHelpers } from '@aztec/barretenberg/environment';
 import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { randomBytes } from 'crypto';
-import { Contracts } from './contracts';
-import { EthereumBlockchain, EthereumBlockchainConfig } from './ethereum_blockchain';
-
-jest.mock('@aztec/barretenberg/environment');
+import { Contracts } from './contracts/index.js';
+import { EthereumBlockchain, EthereumBlockchainConfig } from './ethereum_blockchain.js';
+import { jest } from '@jest/globals';
 
 type Mockify<T> = {
-  [P in keyof T]: jest.Mock;
+  [P in keyof T]: jest.Mock<any>;
 };
 
 const blockchainBridges: BlockchainBridge[] = [
@@ -62,37 +60,27 @@ describe('ethereum_blockchain', () => {
       BigInt(0),
     );
 
-  beforeAll(() => {
-    const getInitRootsMock = jest.fn(() => {
-      return {
-        dataRoot: Buffer.alloc(32),
-        nullRoot: Buffer.alloc(32),
-        rootsRoot: Buffer.alloc(32),
-      };
-    });
-    const MockInitHelpers = InitHelpers as jest.Mocked<typeof InitHelpers>;
-    MockInitHelpers.getInitRoots.mockImplementation(getInitRootsMock);
-  });
-
   beforeEach(async () => {
     blocks = [generateBlock(0), generateBlock(1), generateBlock(2)];
 
     contracts = {
       init: jest.fn(),
       updateAssets: jest.fn(),
-      getPerRollupState: jest.fn().mockResolvedValue({ nextRollupId: 0 }),
-      getPerBlockState: jest.fn().mockResolvedValue({
+      updatePerEthBlockState: jest.fn(),
+      getPerRollupState: jest.fn<any>().mockResolvedValue({ nextRollupId: 0 }),
+      getPerBlockState: jest.fn<any>().mockResolvedValue({
         escapeOpen: false,
         numEscapeBlocksRemaining: 100,
       }),
-      getRollupBlocksFrom: jest.fn().mockResolvedValue(blocks),
-      getRollupBlock: jest.fn().mockResolvedValue(blocks[blocks.length - 1]),
+      getRollupBlocksFrom: jest.fn<any>().mockResolvedValue(blocks),
+      getRollupBlock: jest.fn<any>().mockResolvedValue(blocks[blocks.length - 1]),
       getRollupContractAddress: jest.fn().mockReturnValue(EthAddress.random()),
       getPermitHelperContractAddress: jest.fn().mockReturnValue(EthAddress.random()),
       getFeeDistributorContractAddress: jest.fn().mockReturnValue(EthAddress.random()),
       getVerifierContractAddress: jest.fn().mockReturnValue(EthAddress.random()),
-      getBlockNumber: jest.fn().mockImplementation(() => Promise.resolve(blocks.length)),
-      getChainId: jest.fn().mockResolvedValue(999),
+      getBridgeDataProviderAddress: jest.fn().mockReturnValue(EthAddress.random()),
+      getBlockNumber: jest.fn<any>().mockImplementation(() => Promise.resolve(blocks.length)),
+      getChainId: jest.fn<any>().mockResolvedValue(999),
       getTransactionReceipt: jest.fn(),
       getTransactionByHash: jest.fn().mockReturnValue({}),
       getAssets: jest.fn().mockImplementation(() => blockchainAssets),
@@ -224,7 +212,7 @@ describe('ethereum_blockchain', () => {
     const statusBefore = blockchain.getBlockchainStatus();
     expect(statusBefore.assets.length).toBe(0);
     expect(statusBefore.bridges.length).toBe(0);
-    contracts.updateAssets.mockClear();
+    contracts.updatePerEthBlockState.mockClear();
 
     contracts.getAssets.mockReturnValueOnce(blockchainAssets);
     contracts.getSupportedBridges.mockResolvedValueOnce(blockchainBridges);
@@ -238,6 +226,6 @@ describe('ethereum_blockchain', () => {
     const statusAfter = blockchain.getBlockchainStatus();
     expect(statusAfter.assets).toEqual(blockchainAssets);
     expect(statusAfter.bridges).toEqual(blockchainBridges);
-    expect(contracts.updateAssets).toHaveBeenCalledTimes(1);
+    expect(contracts.updatePerEthBlockState).toHaveBeenCalledTimes(1);
   });
 });

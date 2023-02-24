@@ -1,12 +1,12 @@
-import { randomBytes } from 'crypto';
-import { EthAddress } from '../address';
-import { toBufferBE } from '../bigint_buffer';
-import { ProofId } from '../client_proofs/proof_data';
-import { numToUInt32BE } from '../serialize';
-import { randomInnerProofData, randomWithdrawProofData } from './fixtures';
-import { InnerProofData } from './inner_proof';
-import { RollupSendProofData } from './rollup_send_proof_data';
-import { RollupWithdrawProofData } from './rollup_withdraw_proof_data';
+import { randomBytes } from '../crypto/index.js';
+import { EthAddress } from '../address/index.js';
+import { toBufferBE } from '../bigint_buffer/index.js';
+import { ProofId } from '../client_proofs/index.js';
+import { numToUInt32BE } from '../serialize/index.js';
+import { randomInnerProofData, randomWithdrawProofData } from './fixtures.js';
+import { InnerProofData } from './inner_proof.js';
+import { RollupSendProofData } from './rollup_send_proof_data.js';
+import { RollupWithdrawProofData } from './rollup_withdraw_proof_data.js';
 
 describe('RollupWithdrawProofData', () => {
   it('can get typed data from proof data', () => {

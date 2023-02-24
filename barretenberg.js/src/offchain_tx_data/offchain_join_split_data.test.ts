@@ -1,13 +1,21 @@
-import { randomBytes } from '../crypto';
-import { ViewingKey } from '../viewing_key';
-import { OffchainJoinSplitData } from './offchain_join_split_data';
+import { randomBytes } from '../crypto/index.js';
+import { ViewingKey } from '../viewing_key/index.js';
+import { OffchainJoinSplitData } from './offchain_join_split_data.js';
 
 describe('OffchainJoinSplitData', () => {
   it('convert offchain join split data to and from buffer', () => {
-    const userData = new OffchainJoinSplitData([ViewingKey.random(), ViewingKey.random()], 123);
-    const buf = userData.toBuffer();
+    const offchainData = new OffchainJoinSplitData([ViewingKey.random(), ViewingKey.random()], 123);
+    const buf = offchainData.toBuffer();
     expect(buf.length).toBe(OffchainJoinSplitData.SIZE);
-    expect(OffchainJoinSplitData.fromBuffer(buf)).toEqual(userData);
+    expect(OffchainJoinSplitData.fromBuffer(buf)).toEqual(offchainData);
+  });
+
+  it('get viewing key buffers from offchain data buffer', () => {
+    const viewingKey0 = ViewingKey.random();
+    const viewingKey1 = ViewingKey.random();
+    const offchainData = new OffchainJoinSplitData([viewingKey0, viewingKey1], 123);
+    const buf = offchainData.toBuffer();
+    expect(OffchainJoinSplitData.getViewingKeyBuffers(buf)).toEqual([viewingKey0.toBuffer(), viewingKey1.toBuffer()]);
   });
 
   it('throw if number of viewing keys is wrong', () => {

@@ -1,12 +1,12 @@
-import { randomBytes } from 'crypto';
-import { EthAddress } from '../address';
-import { toBufferBE } from '../bigint_buffer';
-import { ProofId } from '../client_proofs/proof_data';
-import { numToUInt32BE } from '../serialize';
-import { randomDepositProofData, randomInnerProofData } from './fixtures';
-import { InnerProofData } from './inner_proof';
-import { RollupDefiDepositProofData } from './rollup_defi_deposit_proof_data';
-import { RollupDepositProofData } from './rollup_deposit_proof_data';
+import { randomBytes } from '../crypto/index.js';
+import { EthAddress } from '../address/index.js';
+import { toBufferBE } from '../bigint_buffer/index.js';
+import { ProofId } from '../client_proofs/index.js';
+import { numToUInt32BE } from '../serialize/index.js';
+import { randomDepositProofData, randomInnerProofData } from './fixtures.js';
+import { InnerProofData } from './inner_proof.js';
+import { RollupDefiDepositProofData } from './rollup_defi_deposit_proof_data.js';
+import { RollupDepositProofData } from './rollup_deposit_proof_data.js';
 
 describe('RollupDepositProofData', () => {
   it('can get typed data from proof data', () => {

@@ -1,6 +1,6 @@
-import { RollupProofData } from '../rollup_proof';
-import { WorldStateConstants } from '../world_state';
-import { DefiInteractionNote, packInteractionNotes } from './defi_interaction_note';
+import { RollupProofData } from '../rollup_proof/index.js';
+import { WorldStateConstants } from '../world_state/index.js';
+import { DefiInteractionNote, packInteractionNotes } from './defi_interaction_note.js';
 
 const numberOfBridgeCalls = RollupProofData.NUM_BRIDGE_CALLS_PER_BLOCK;
 

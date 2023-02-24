@@ -1,10 +1,10 @@
-import { MemoryFifo } from '../fifo';
+import { MemoryFifo } from '../fifo/index.js';
 import { mkdirp } from 'fs-extra';
-import { HashPath } from '../merkle_tree';
-import { toBigIntBE, toBufferBE } from '../bigint_buffer';
+import { HashPath } from '../merkle_tree/index.js';
+import { toBigIntBE, toBufferBE } from '../bigint_buffer/index.js';
 import { ChildProcess, execSync, spawn } from 'child_process';
 import { PromiseReadable } from 'promise-readable';
-import { serializeBufferArrayToVector } from '../serialize';
+import { serializeBufferArrayToVector } from '../serialize/index.js';
 
 enum Command {
   GET,
@@ -34,14 +34,13 @@ export class WorldStateDb {
   private stdioQueue = new MemoryFifo<() => Promise<void>>();
   private roots: Buffer[] = [];
   private sizes: bigint[] = [];
-  private binPath = '../barretenberg/build/bin/db_cli';
+  private binPath = '../../aztec-connect-cpp/build/bin/db_cli';
 
   constructor(private dbPath: string = './data/world_state.db') {}
 
   public async start() {
     await this.launch();
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.processStdioQueue();
+    void this.processStdioQueue();
   }
 
   public stop() {

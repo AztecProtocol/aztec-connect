@@ -1,7 +1,7 @@
-import { toBigIntBE } from '../../bigint_buffer';
-import { BridgeCallData } from '../../bridge_call_data';
-import { ProofData } from './proof_data';
-import { ProofId } from './proof_id';
+import { toBigIntBE } from '../../bigint_buffer/index.js';
+import { BridgeCallData } from '../../bridge_call_data/index.js';
+import { ProofData } from './proof_data.js';
+import { ProofId } from './proof_id.js';
 
 export class DefiClaimProofData {
   constructor(public readonly proofData: ProofData) {

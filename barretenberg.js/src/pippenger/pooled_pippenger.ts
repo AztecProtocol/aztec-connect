@@ -1,7 +1,7 @@
-import { Pippenger } from './pippenger';
-import { SinglePippenger } from './single_pippenger';
-import { createDebugLogger } from '../log';
-import { WorkerPool } from '../wasm/worker_pool';
+import { Pippenger } from './pippenger.js';
+import { SinglePippenger } from './single_pippenger.js';
+import { createDebugLogger } from '../log/index.js';
+import { WorkerPool } from '../wasm/index.js';
 
 const debug = createDebugLogger('bb:pippenger');
 
@@ -21,6 +21,12 @@ export class PooledPippenger implements Pippenger {
       }),
     );
     debug(`initialization took: ${new Date().getTime() - start}ms`);
+  }
+
+  public async destroy() {
+    for (const p of this.pool) {
+      await p.destroy();
+    }
   }
 
   public async pippengerUnsafe(scalars: Uint8Array, from: number, range: number) {

@@ -1,8 +1,8 @@
-import { DefiInteractionNote } from '../note_algorithms';
-import { toBigIntBE } from '../bigint_buffer';
-import { BridgeCallData } from '../bridge_call_data';
-import { randomBytes } from '../crypto';
-import { Deserializer, Serializer } from '../serialize';
+import { DefiInteractionNote } from '../note_algorithms/index.js';
+import { toBigIntBE } from '../bigint_buffer/index.js';
+import { BridgeCallData } from '../bridge_call_data/index.js';
+import { randomBytes } from '../crypto/index.js';
+import { Deserializer, Serializer } from '../serialize/index.js';
 
 export class DefiInteractionEvent {
   static EMPTY = new DefiInteractionEvent(BridgeCallData.ZERO, 0, BigInt(0), BigInt(0), BigInt(0), false);

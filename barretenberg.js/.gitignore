@@ -1,1 +1,2 @@
-./src/wasm/barretenberg.wasm
+src/wasm/aztec-connect.wasm
+src/wasm/node/node_worker.js

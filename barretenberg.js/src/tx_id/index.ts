@@ -1,4 +1,4 @@
-import { randomBytes } from '../crypto';
+import { randomBytes } from '../crypto/index.js';
 
 export class TxId {
   constructor(private buffer: Buffer) {

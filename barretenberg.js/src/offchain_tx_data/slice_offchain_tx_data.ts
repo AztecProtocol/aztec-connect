@@ -1,7 +1,7 @@
-import { ProofId } from '../client_proofs';
-import { OffchainAccountData } from './offchain_account_data';
-import { OffchainDefiDepositData } from './offchain_defi_deposit_data';
-import { OffchainJoinSplitData } from './offchain_join_split_data';
+import { ProofId } from '../client_proofs/index.js';
+import { OffchainAccountData } from './offchain_account_data.js';
+import { OffchainDefiDepositData } from './offchain_defi_deposit_data.js';
+import { OffchainJoinSplitData } from './offchain_join_split_data.js';
 
 export function getOffchainDataLength(proofId: ProofId) {
   switch (proofId) {

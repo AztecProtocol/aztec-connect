@@ -1,14 +1,23 @@
 import { promises as fs } from 'fs';
-import { WorldStateDb, PutEntry } from '../../world_state_db';
-import { toBigIntBE, toBufferBE } from '../../bigint_buffer';
+import { WorldStateDb, PutEntry } from '../../world_state_db/index.js';
+import { toBigIntBE, toBufferBE } from '../../bigint_buffer/index.js';
 import * as pathTools from 'path';
-import { getInitData } from './init_config';
+import { getInitData } from './init_config.js';
+import { dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const resolvePath = (relPath: string) => {
+  const __dirname = dirname(fileURLToPath(import.meta.url));
+  return pathTools.resolve(__dirname, relPath);
+};
 
 const NOTE_LENGTH = 32;
 const ADDRESS_LENGTH = 64;
 const ALIAS_HASH_LENGTH = 28;
 const NULLIFIER_LENGTH = 32;
 const SIGNING_KEY_LENGTH = 32;
+export const LENGTH_OF_ACCOUNT_DATA =
+  ALIAS_HASH_LENGTH + ADDRESS_LENGTH + 2 * NOTE_LENGTH + 2 * NULLIFIER_LENGTH + 2 * SIGNING_KEY_LENGTH;
 
 export interface AccountNotePair {
   note1: Buffer;
@@ -73,43 +82,21 @@ export class InitHelpers {
     return getInitData(chainId).initAccounts;
   }
 
-  public static getAccountDataFile(chainId: number) {
-    if (!getInitData(chainId).accountsData) {
-      return undefined;
-    }
-    const relPathToFile = getInitData(chainId).accountsData;
-    const fullPath = pathTools.resolve(__dirname, relPathToFile);
-    return fullPath;
-  }
-
   public static getRootDataFile(chainId: number) {
     if (!getInitData(chainId).roots) {
       return undefined;
     }
     const relPathToFile = getInitData(chainId).roots;
-    const fullPath = pathTools.resolve(__dirname, relPathToFile);
+    const fullPath = resolvePath(relPathToFile);
     return fullPath;
   }
 
   public static async writeData(filePath: string, data: Buffer) {
-    const path = pathTools.resolve(__dirname, filePath);
+    const path = resolvePath(filePath);
     const fileHandle = await fs.open(path, 'w');
     const { bytesWritten } = await fileHandle.write(data);
     await fileHandle.close();
     return bytesWritten;
-  }
-
-  public static async readData(filePath: string) {
-    const path = pathTools.resolve(__dirname, filePath);
-    try {
-      const fileHandle = await fs.open(path, 'r');
-      const data = await fileHandle.readFile();
-      await fileHandle.close();
-      return data;
-    } catch (err) {
-      console.log(`Failed to read file: ${path}. Error: ${err}`);
-      return Buffer.alloc(0);
-    }
   }
 
   public static async writeAccountTreeData(accountData: AccountData[], filePath: string) {
@@ -164,16 +151,27 @@ export class InitHelpers {
     return await this.writeData(filePath, Buffer.concat(dataToWrite));
   }
 
+  public static async readData(filePath: string) {
+    const path = resolvePath(filePath);
+    try {
+      const fileHandle = await fs.open(path, 'r');
+      const data = await fileHandle.readFile();
+      await fileHandle.close();
+      return data;
+    } catch (err) {
+      console.log(`Failed to read file: ${path}. Error: ${err}`);
+      return Buffer.alloc(0);
+    }
+  }
+
   public static parseAccountTreeData(data: Buffer) {
-    const lengthOfAccountData =
-      ALIAS_HASH_LENGTH + ADDRESS_LENGTH + 2 * NOTE_LENGTH + 2 * NULLIFIER_LENGTH + 2 * SIGNING_KEY_LENGTH;
-    const numAccounts = data.length / lengthOfAccountData;
+    const numAccounts = data.length / LENGTH_OF_ACCOUNT_DATA;
     if (numAccounts === 0) {
       return [];
     }
     const accounts = new Array<AccountData>(numAccounts);
     for (let i = 0; i < numAccounts; i++) {
-      let start = i * lengthOfAccountData;
+      let start = i * LENGTH_OF_ACCOUNT_DATA;
       const alias: AccountAlias = {
         aliasHash: data.slice(start, start + ALIAS_HASH_LENGTH),
         address: data.slice(start + ALIAS_HASH_LENGTH, start + (ALIAS_HASH_LENGTH + ADDRESS_LENGTH)),

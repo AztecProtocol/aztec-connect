@@ -1,7 +1,7 @@
-import { randomBytes } from 'crypto';
-import { EthAddress } from '../address';
-import { ProofId } from '../client_proofs/proof_data';
-import { InnerProofData, RollupProofData } from './';
+import { randomBytes } from '../crypto/index.js';
+import { EthAddress } from '../address/index.js';
+import { ProofId } from '../client_proofs/index.js';
+import { InnerProofData, RollupProofData } from './index.js';
 
 const randomCommitment = () => randomBytes(32);
 const randomNullifier = () => randomBytes(32);

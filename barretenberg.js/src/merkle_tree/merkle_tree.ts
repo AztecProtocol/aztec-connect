@@ -1,7 +1,10 @@
 import { LevelUp, LevelUpChain } from 'levelup';
-import { HashPath } from './hash_path';
-import { Hasher } from './hasher';
+import { HashPath } from './hash_path.js';
+import { Hasher } from './hasher.js';
+import { createDebugLogger } from '../log/debug.js';
+import { Timer } from '../timer/index.js';
 
+const debug = createDebugLogger('bb:merkle_tree');
 const MAX_DEPTH = 32;
 
 function keepNLsb(input: number, numBits: number) {
@@ -218,6 +221,7 @@ export class MerkleTree {
       const toInsert = leafHashes.slice(0, subtreeSize);
       const hashes = await this.hasher.hashToTree(toInsert);
 
+      debug(`updateLeafHashes calculating batch update to insert ${toInsert.length} leaves at ${index}...`);
       this.root = await this.updateElementsInternal(this.root, hashes, index, this.depth, subtreeDepth, batch);
 
       // Slice off inserted values and adjust next insertion index.
@@ -226,7 +230,10 @@ export class MerkleTree {
       this.size = index;
 
       await this.writeMeta(batch);
+      const writeTimer = new Timer();
+      debug(`updateLeafHashes writing ${toInsert.length} leaves...`);
       await batch.write();
+      debug(`updateLeafHashes write complete in ${writeTimer.ms()}ms.`);
     }
   }
 

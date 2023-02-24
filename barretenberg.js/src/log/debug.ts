@@ -4,16 +4,19 @@ let preLogHook: ((...args: any[]) => void) | undefined;
 let postLogHook: ((...args: any[]) => void) | undefined;
 
 function theFunctionThroughWhichAllLogsPass(logger: any, ...args: any[]) {
+  if (!debug.enabled(logger.namespace)) {
+    return;
+  }
   if (preLogHook) {
-    preLogHook(...args);
+    preLogHook(logger.namespace, ...args);
   }
   logger(...args);
   if (postLogHook) {
-    postLogHook(...args);
+    postLogHook(logger.namespace, ...args);
   }
 }
 
-export function createDebugLogger(name: string): any {
+export function createDebugLogger(name: string) {
   const logger = debug(name);
   return (...args: any[]) => theFunctionThroughWhichAllLogsPass(logger, ...args);
 }
@@ -30,6 +33,6 @@ export function enableLogs(str: string) {
   debug.enable(str);
 }
 
-export function isEnabled(str: string) {
+export function isLogEnabled(str: string) {
   return debug.enabled(str);
 }

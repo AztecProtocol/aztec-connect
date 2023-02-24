@@ -1,4 +1,4 @@
-import { fromBaseUnits, toBaseUnits } from './units';
+import { fromBaseUnits, toBaseUnits } from './units.js';
 
 describe('units', () => {
   it('should format correctly', () => {

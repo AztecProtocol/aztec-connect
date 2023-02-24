@@ -1,1 +1,1 @@
-export * from './web3_signer';
+export * from './web3_signer.js';

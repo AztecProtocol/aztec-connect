@@ -1,9 +1,8 @@
 {
   "compilerOptions": {
-    "target": "es2018",
-    "moduleResolution": "node",
+    "target": "es2020",
     "lib": ["dom", "esnext", "es2017.object"],
-    "module": "commonjs",
+    "module": "NodeNext",
     "outDir": "dest",
     "strict": true,
     "declaration": true,
@@ -15,7 +14,10 @@
     "inlineSourceMap": true,
     "declarationMap": true,
     "importHelpers": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "composite": true,
+    "rootDir": "src",
+    "tsBuildInfoFile": ".tsbuildinfo"
   },
   "include": ["src"]
 }

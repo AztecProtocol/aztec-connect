@@ -1,7 +1,7 @@
-import { deserializeArrayFromVector, deserializeField, serializeBufferArrayToVector } from '../../serialize';
-import { BarretenbergWasm } from '../../wasm';
-import { BarretenbergWorker } from '../../wasm/worker';
-import { Pedersen } from './pedersen';
+import { deserializeArrayFromVector, deserializeField, serializeBufferArrayToVector } from '../../serialize/index.js';
+import { BarretenbergWasm, BarretenbergWorker } from '../../wasm/index.js';
+import { Transfer } from '../../transport/index.js';
+import { Pedersen } from './pedersen.js';
 
 /**
  * Single threaded implementation of pedersen.
@@ -52,7 +52,10 @@ export class SinglePedersen implements Pedersen {
   public async hashToTree(values: Buffer[]) {
     const data = serializeBufferArrayToVector(values);
     const inputPtr = await this.worker.call('bbmalloc', data.length);
-    await this.worker.transferToHeap(data, inputPtr);
+    await this.worker.transferToHeap(
+      this.worker instanceof BarretenbergWasm ? data : Transfer(data, [data.buffer]),
+      inputPtr,
+    );
 
     const resultPtr = await this.worker.call('pedersen__hash_to_tree', inputPtr);
     const resultNumFields = Buffer.from(await this.worker.sliceMemory(resultPtr, resultPtr + 4)).readUInt32BE(0);

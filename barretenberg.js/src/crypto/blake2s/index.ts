@@ -1,4 +1,4 @@
-import { BarretenbergWasm } from '../../wasm';
+import { BarretenbergWasm } from '../../wasm/index.js';
 
 export class Blake2s {
   constructor(private wasm: BarretenbergWasm) {}

@@ -1,4 +1,4 @@
-import { randomBytes } from 'crypto';
+import { randomBytes } from '../crypto/index.js';
 import {
   serializeBufferToVector,
   deserializeBufferFromVector,
@@ -6,7 +6,7 @@ import {
   deserializeField,
   serializeBufferArrayToVector,
   deserializeArrayFromVector,
-} from './';
+} from './index.js';
 
 describe('serialize', () => {
   it('serialize buffer to vector and deserialize it back', () => {

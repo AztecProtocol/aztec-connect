@@ -1,3 +1,3 @@
-export * from './fft';
-export * from './single_fft';
-export * from './pooled_fft';
+export * from './fft.js';
+export * from './single_fft.js';
+export * from './pooled_fft.js';

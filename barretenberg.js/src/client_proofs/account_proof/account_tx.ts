@@ -1,7 +1,7 @@
-import { AliasHash } from '../../account_id';
-import { GrumpkinAddress } from '../../address';
-import { HashPath } from '../../merkle_tree';
-import { numToUInt32BE } from '../../serialize';
+import { AliasHash } from '../../account_id/index.js';
+import { GrumpkinAddress } from '../../address/index.js';
+import { HashPath } from '../../merkle_tree/index.js';
+import { numToUInt32BE } from '../../serialize/index.js';
 
 export class AccountTx {
   constructor(
@@ -15,7 +15,7 @@ export class AccountTx {
     public migrate: boolean,
     public accountIndex: number,
     public accountPath: HashPath,
-    public spendingPublicKey: GrumpkinAddress,
+    public spendingPublicKey: GrumpkinAddress, // key used to sign this tx
   ) {}
 
   toBuffer() {

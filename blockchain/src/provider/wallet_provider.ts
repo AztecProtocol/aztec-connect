@@ -4,10 +4,10 @@ import {
   ProviderMessage,
   ProviderRpcError,
   RequestArguments,
-} from '@aztec/barretenberg/blockchain/ethereum_provider';
+} from '@aztec/barretenberg/blockchain';
 import { Wallet } from 'ethers';
 import { EthAddress } from '@aztec/barretenberg/address';
-import { EthersAdapter } from './ethers_adapter';
+import { EthersAdapter } from './ethers_adapter.js';
 import { JsonRpcProvider, Web3Provider, TransactionRequest } from '@ethersproject/providers';
 import { readFileSync } from 'fs';
 
@@ -105,7 +105,7 @@ export class WalletProvider implements EthereumProvider {
 
   private async signTypedData(args: RequestArguments) {
     const [from, data] = args.params!;
-    const { types, domain, message } = JSON.parse(data);
+    const { types, domain, message } = typeof data === 'string' ? JSON.parse(data) : data;
     const account = this.accounts.find(a => a.address.toLowerCase() === from.toLowerCase());
     if (account) {
       delete types.EIP712Domain;

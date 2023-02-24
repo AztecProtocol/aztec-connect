@@ -1,11 +1,11 @@
-import { EthAddress } from '../address';
-import { BlockSource } from '../block_source';
-import { Asset } from './asset';
-import { BlockchainStatusSource } from './blockchain_status';
-import { EthereumProvider } from './ethereum_provider';
-import { EthereumSigner } from './ethereum_signer';
-import { PriceFeed } from './price_feed';
-import { TxHash } from './tx_hash';
+import { EthAddress } from '../address/index.js';
+import { Block, BlockSource } from '../block_source/index.js';
+import { Asset } from './asset.js';
+import { BlockchainStatusSource } from './blockchain_status.js';
+import { EthereumProvider } from './ethereum_provider.js';
+import { EthereumSigner } from './ethereum_signer.js';
+import { PriceFeed } from './price_feed.js';
+import { TxHash } from './tx_hash.js';
 
 export interface RevertError {
   name: string;
@@ -25,6 +25,7 @@ export interface SendTxOptions {
   signingAddress?: EthAddress;
   provider?: EthereumProvider;
   nonce?: number;
+  value?: bigint;
 }
 
 export interface FeeData {
@@ -36,6 +37,19 @@ export interface FeeData {
 export interface RollupTxs {
   rollupProofTx: Buffer;
   offchainDataTxs: Buffer[];
+}
+
+export interface BridgeData {
+  address: EthAddress;
+  addressId: number;
+  description: string;
+}
+
+export interface BridgeSubsidy {
+  addressId: number;
+  criteria: bigint;
+  subsidyInWei: bigint;
+  subsidyInGas: number;
 }
 
 export interface Blockchain extends BlockSource, BlockchainStatusSource, EthereumSigner {
@@ -90,4 +104,10 @@ export interface Blockchain extends BlockSource, BlockchainStatusSource, Ethereu
   getFeeData(): Promise<FeeData>;
 
   getBridgeGas(bridgeCallData: bigint): number;
+
+  getBridgeSubsidy(bridgeCallData: bigint): Promise<BridgeSubsidy>;
+
+  getBridgeData(bridgeAddressId: number): Promise<BridgeData>;
+
+  callbackRollupBlocksFrom(rollupId: number, cb: (block: Block) => Promise<void>);
 }

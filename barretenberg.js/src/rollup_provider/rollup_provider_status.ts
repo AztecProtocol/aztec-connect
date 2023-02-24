@@ -1,17 +1,17 @@
-import { EthAddress } from '../address';
+import { EthAddress } from '../address/index.js';
 import {
   BlockchainStatus,
   blockchainStatusFromJson,
   BlockchainStatusJson,
   blockchainStatusToJson,
-} from '../blockchain';
-import { BridgeConfig, bridgeConfigFromJson, BridgeConfigJson, bridgeConfigToJson } from './bridge_config';
-import { BridgeStatus, bridgeStatusFromJson, BridgeStatusJson, bridgeStatusToJson } from './bridge_status';
-import { privacySetsFromJson, privacySetsToJson, PrivacySet, PrivacySetJson } from './privacy_set';
+} from '../blockchain/index.js';
+import { BridgeConfig } from './bridge_config.js';
+import { BridgeStatus, bridgeStatusFromJson, BridgeStatusJson, bridgeStatusToJson } from './bridge_status.js';
+import { privacySetsFromJson, privacySetsToJson, PrivacySet, PrivacySetJson } from './privacy_set.js';
 
-export * from './bridge_config';
-export * from './bridge_status';
-export * from './privacy_set';
+export * from './bridge_config.js';
+export * from './bridge_status.js';
+export * from './privacy_set.js';
 
 export interface RuntimeConfig {
   acceptingTxs: boolean;
@@ -49,7 +49,7 @@ export interface RuntimeConfigJson {
   maxPriorityFeePerGas: string;
   maxUnsettledTxs: number;
   defaultDeFiBatchSize: number;
-  bridgeConfigs: BridgeConfigJson[];
+  bridgeConfigs: BridgeConfig[];
   feePayingAssetIds: number[];
   privacySets: { [key: string]: PrivacySetJson[] };
   rollupBeneficiary?: string;
@@ -61,7 +61,6 @@ export const runtimeConfigToJson = ({
   maxFeeGasPrice,
   maxFeePerGas,
   maxPriorityFeePerGas,
-  bridgeConfigs,
   privacySets,
   rollupBeneficiary,
   blacklist,
@@ -71,17 +70,15 @@ export const runtimeConfigToJson = ({
   maxFeeGasPrice: maxFeeGasPrice.toString(),
   maxFeePerGas: maxFeePerGas.toString(),
   maxPriorityFeePerGas: maxPriorityFeePerGas.toString(),
-  bridgeConfigs: bridgeConfigs.map(bridgeConfigToJson),
   privacySets: privacySetsToJson(privacySets),
-  rollupBeneficiary: rollupBeneficiary ? rollupBeneficiary.toString() : undefined,
-  blacklist: blacklist ? blacklist.map(x => x.toString()) : undefined,
+  rollupBeneficiary: rollupBeneficiary ? rollupBeneficiary.toLowerCaseAddress() : undefined,
+  blacklist: blacklist ? blacklist.map(x => x.toLowerCaseAddress()) : undefined,
 });
 
 export const runtimeConfigFromJson = ({
   maxFeeGasPrice,
   maxFeePerGas,
   maxPriorityFeePerGas,
-  bridgeConfigs,
   privacySets,
   rollupBeneficiary,
   blacklist,
@@ -91,7 +88,6 @@ export const runtimeConfigFromJson = ({
   maxFeeGasPrice: BigInt(maxFeeGasPrice),
   maxFeePerGas: BigInt(maxFeePerGas),
   maxPriorityFeePerGas: BigInt(maxPriorityFeePerGas),
-  bridgeConfigs: bridgeConfigs.map(bridgeConfigFromJson),
   privacySets: privacySetsFromJson(privacySets),
   rollupBeneficiary: rollupBeneficiary ? EthAddress.fromString(rollupBeneficiary) : undefined,
   blacklist: blacklist ? blacklist.map(x => EthAddress.fromString(x)) : undefined,
@@ -101,7 +97,6 @@ export const partialRuntimeConfigFromJson = ({
   maxFeeGasPrice,
   maxFeePerGas,
   maxPriorityFeePerGas,
-  bridgeConfigs,
   privacySets,
   rollupBeneficiary,
   blacklist,
@@ -111,13 +106,13 @@ export const partialRuntimeConfigFromJson = ({
   ...(maxFeeGasPrice !== undefined ? { maxFeeGasPrice: BigInt(maxFeeGasPrice) } : {}),
   ...(maxFeePerGas !== undefined ? { maxFeePerGas: BigInt(maxFeePerGas) } : {}),
   ...(maxPriorityFeePerGas !== undefined ? { maxPriorityFeePerGas: BigInt(maxPriorityFeePerGas) } : {}),
-  ...(bridgeConfigs ? { bridgeConfigs: bridgeConfigs.map(bridgeConfigFromJson) } : {}),
   ...(privacySets ? { privacySets: privacySetsFromJson(privacySets) } : {}),
   ...(rollupBeneficiary ? { rollupBeneficiary: EthAddress.fromString(rollupBeneficiary) } : {}),
   ...(blacklist ? { blacklist: blacklist.map(x => EthAddress.fromString(x)) } : {}),
 });
 
 export interface RollupProviderStatus {
+  version: string;
   blockchainStatus: BlockchainStatus;
   nextPublishTime: Date;
   nextPublishNumber: number;
@@ -125,13 +120,17 @@ export interface RollupProviderStatus {
   numTxsInNextRollup: number;
   numUnsettledTxs: number;
   pendingTxCount: number;
+  pendingSecondClassTxCount: number;
   runtimeConfig: RuntimeConfig;
   bridgeStatus: BridgeStatus[];
   proverless: boolean;
   rollupSize: number;
+  totalTxs: number;
+  totalBlocks: number;
 }
 
 export interface RollupProviderStatusJson {
+  version: string;
   blockchainStatus: BlockchainStatusJson;
   nextPublishTime: string;
   nextPublishNumber: number;
@@ -139,10 +138,13 @@ export interface RollupProviderStatusJson {
   numTxsInNextRollup: number;
   numUnsettledTxs: number;
   pendingTxCount: number;
+  pendingSecondClassTxCount: number;
   runtimeConfig: RuntimeConfigJson;
   bridgeStatus: BridgeStatusJson[];
   proverless: boolean;
   rollupSize: number;
+  totalTxs: number;
+  totalBlocks: number;
 }
 
 export const rollupProviderStatusToJson = ({

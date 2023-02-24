@@ -1,1 +1,1 @@
-export * from './rollup_processor';
+export * from './rollup_processor.js';

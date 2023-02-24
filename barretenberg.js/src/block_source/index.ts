@@ -6,15 +6,15 @@ import {
   serializeBufferArrayToVector,
   serializeBufferToVector,
   serializeDate,
-} from '../serialize';
-import { TxHash } from '../blockchain';
-import { DefiInteractionEvent } from './defi_interaction_event';
+} from '../serialize/index.js';
+import { TxHash } from '../blockchain/index.js';
+import { DefiInteractionEvent } from './defi_interaction_event.js';
 import { EventEmitter } from 'stream';
 
 export class Block {
   constructor(
     public txHash: TxHash,
-    public created: Date,
+    public mined: Date,
     public rollupId: number,
     public rollupSize: number,
     public encodedRollupProofData: Buffer,
@@ -28,7 +28,7 @@ export class Block {
   static deserialize(buf: Buffer, offset = 0) {
     const des = new Deserializer(buf, offset);
     const txHash = des.exec(TxHash.deserialize);
-    const created = des.date();
+    const mined = des.date();
     const rollupId = des.uInt32();
     const rollupSize = des.uInt32();
     const rollupProofData = des.vector();
@@ -40,7 +40,7 @@ export class Block {
     return {
       elem: new Block(
         txHash,
-        created,
+        mined,
         rollupId,
         rollupSize,
         rollupProofData,
@@ -61,7 +61,7 @@ export class Block {
   toBuffer() {
     return Buffer.concat([
       this.txHash.toBuffer(),
-      serializeDate(this.created),
+      serializeDate(this.mined),
       numToUInt32BE(this.rollupId),
       numToUInt32BE(this.rollupSize),
       serializeBufferToVector(this.encodedRollupProofData),
@@ -76,11 +76,11 @@ export class Block {
 
 export interface BlockSource extends EventEmitter {
   /**
-   * Returns blocks from rollup id `from`.
+   * Returns up to `take` blocks from rollup id `from`.
    * This does not guarantee all blocks are returned. It may return a subset, and the
    * client should use `getLatestRollupId()` to determine if it needs to make further requests.
    */
-  getBlocks(from: number): Promise<Block[]>;
+  getBlocks(from: number, take?: number): Promise<Block[]>;
 
   /**
    * Starts emitting rollup blocks.
@@ -91,11 +91,13 @@ export interface BlockSource extends EventEmitter {
   stop(): Promise<void>;
 
   on(event: 'block', fn: (block: Block) => void): this;
+  on(event: 'versionMismatch', fn: (error: string) => void): this;
 
   removeAllListeners(): this;
 
   getLatestRollupId(): Promise<number>;
 }
 
-export * from './server_block_source';
-export * from './defi_interaction_event';
+export * from './server_block_source.js';
+export * from './defi_interaction_event.js';
+export * from './decoded_block.js';

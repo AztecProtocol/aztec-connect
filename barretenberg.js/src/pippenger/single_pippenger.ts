@@ -1,19 +1,22 @@
-import { BarretenbergWorker } from '../wasm/worker';
-import { Pippenger } from './pippenger';
-import { Transfer } from 'threads';
+import { BarretenbergWasm, BarretenbergWorker } from '../wasm/index.js';
+import { Pippenger } from './pippenger.js';
+import { Transfer } from '../transport/index.js';
 
 export class SinglePippenger implements Pippenger {
   private pippengerPtr!: number;
   private numPoints!: number;
 
-  constructor(private wasm: BarretenbergWorker) {}
+  constructor(private wasm: BarretenbergWorker | BarretenbergWasm) {}
 
   public async init(crsData: Uint8Array) {
-    const crsPtr = await this.wasm.call('bbmalloc', crsData.length);
     this.numPoints = crsData.length / 64;
-    await this.wasm.transferToHeap(crsData, crsPtr);
+    // The allocation is as per the point_table_size in pippenger.hpp.
+    // The crs data does not have the affine_one point at the start.
+    // affine_one is filled in at the first position by new_pippenger before building the point table.
+    // The last point is discarded, so we still end up with numPoints points.
+    const crsPtr = await this.wasm.call('bbmalloc', 64 * (this.numPoints * 2 + 16));
+    await this.wasm.transferToHeap(crsData.slice(0, -64), crsPtr + 64);
     this.pippengerPtr = await this.wasm.call('new_pippenger', crsPtr, this.numPoints);
-    await this.wasm.call('bbfree', crsPtr);
   }
 
   public async destroy() {
@@ -41,6 +44,6 @@ export class SinglePippenger implements Pippenger {
   }
 
   public getWorker() {
-    return this.wasm;
+    return this.wasm as BarretenbergWorker;
   }
 }

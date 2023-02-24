@@ -1,20 +1,21 @@
 import { randomBytes } from 'crypto';
 import createDebug from 'debug';
 import { EventEmitter } from 'events';
-import levelup from 'levelup';
-import memdown from 'memdown';
-import { AliasHash } from '../../account_id';
-import { GrumpkinAddress } from '../../address';
-import { Crs } from '../../crs';
-import { Blake2s, Pedersen, Schnorr, SinglePedersen } from '../../crypto';
-import { PooledFft } from '../../fft';
-import { MerkleTree } from '../../merkle_tree';
-import { NoteAlgorithms } from '../../note_algorithms';
-import { PooledPippenger } from '../../pippenger';
-import { BarretenbergWasm, WorkerPool } from '../../wasm';
-import { ProofData, ProofId } from '../proof_data';
-import { UnrolledProver } from '../prover';
-import { AccountProver, AccountTx, AccountVerifier } from './index';
+import { default as levelup } from 'levelup';
+import { default as memdown } from 'memdown';
+import { AliasHash } from '../../account_id/index.js';
+import { GrumpkinAddress } from '../../address/index.js';
+import { Crs } from '../../crs/index.js';
+import { Blake2s, Pedersen, Schnorr, sha256, SinglePedersen } from '../../crypto/index.js';
+import { PooledFft } from '../../fft/index.js';
+import { MerkleTree } from '../../merkle_tree/index.js';
+import { NoteAlgorithms } from '../../note_algorithms/index.js';
+import { PooledPippenger } from '../../pippenger/index.js';
+import { BarretenbergWasm, WorkerPool } from '../../wasm/index.js';
+import { ProofData, ProofId } from '../proof_data/index.js';
+import { UnrolledProver } from '../prover/index.js';
+import { AccountProver, AccountTx, AccountVerifier } from './index.js';
+import { jest } from '@jest/globals';
 
 const debug = createDebug('bb:account_proof_test');
 
@@ -37,12 +38,12 @@ describe('account proof', () => {
     const circuitSize = AccountProver.getCircuitSize();
 
     crs = new Crs(circuitSize);
-    await crs.download();
+    await crs.init();
 
     barretenberg = await BarretenbergWasm.new();
 
     pool = new WorkerPool();
-    await pool.init(barretenberg.module, Math.min(navigator.hardwareConcurrency, 8));
+    await pool.init(barretenberg.module, Math.min(navigator.hardwareConcurrency, 8), 16384);
 
     pippenger = new PooledPippenger(pool);
     await pippenger.init(crs.getData());
@@ -60,8 +61,12 @@ describe('account proof', () => {
     accountProver = new AccountProver(prover);
     accountVerifier = new AccountVerifier();
 
+    debug('creating keys...');
+    const start = new Date().getTime();
     await accountProver.computeKey();
     await accountVerifier.computeKey(pippenger.pool[0], crs.getG2Data());
+    debug(`created circuit keys: ${new Date().getTime() - start}ms`);
+    debug(`vk hash: ${sha256(await accountVerifier.getKey()).toString('hex')}`);
   });
 
   afterAll(async () => {
@@ -73,14 +78,6 @@ describe('account proof', () => {
     const publicKey = new GrumpkinAddress(schnorr.computePublicKey(privateKey));
     return { privateKey, publicKey };
   };
-
-  it('should get key data', async () => {
-    const provingKey = await accountProver.getKey();
-    expect(provingKey.length).toBeGreaterThan(0);
-
-    const verificationKey = await accountVerifier.getKey();
-    expect(verificationKey.length).toBeGreaterThan(0);
-  });
 
   it('create and verify an account proof', async () => {
     const tree = new MerkleTree(levelup(memdown()), pedersen, 'data', 32);

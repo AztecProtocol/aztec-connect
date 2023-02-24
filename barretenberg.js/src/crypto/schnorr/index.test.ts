@@ -1,7 +1,8 @@
+import { Schnorr, SchnorrSignature } from './index.js';
 import { TextEncoder } from 'util';
-import { Grumpkin } from '../../ecc/grumpkin';
-import { BarretenbergWasm } from '../../wasm';
-import { Schnorr, SchnorrSignature } from './index';
+import { BarretenbergWasm } from '../../wasm/index.js';
+import { Grumpkin } from '../../ecc/index.js';
+import { GrumpkinAddress } from '../../address/index.js';
 
 describe('schnorr', () => {
   let barretenberg!: BarretenbergWasm;
@@ -135,5 +136,21 @@ describe('schnorr', () => {
       pubKeys[1] = pubKeys[2];
       expect(schnorr.multiSigValidateAndCombinePublicKeys(pubKeys)).toEqual(emptyCombinedKey);
     }
+  });
+
+  it('public key negation should work', () => {
+    const publicKeyStr =
+      '0x164f01b1011a1b292217acf53eef4d74f625f6e9bd5edfdb74c56fd81aafeebb21912735f9266a3719f61c1eb747ddee0cac9917f5c807485d356709b529b62c';
+    const publicKey = GrumpkinAddress.fromString(publicKeyStr);
+    // hardcoded expected negated public key
+    const expectedInvertedStr =
+      '0x164f01b1011a1b292217acf53eef4d74f625f6e9bd5edfdb74c56fd81aafeebb0ed3273ce80b35f29e5a2997ca397a6f1b874f3083f16948e6ac8e8a3ad649d5';
+    const expectedInverted = GrumpkinAddress.fromString(expectedInvertedStr);
+
+    // negate - should match expected negated key
+    const negatedPublicKey = schnorr.negatePublicKey(publicKey);
+    expect(negatedPublicKey.equals(expectedInverted)).toEqual(true);
+    // negate again - should be original public key now
+    expect(schnorr.negatePublicKey(negatedPublicKey).equals(publicKey)).toEqual(true);
   });
 });
