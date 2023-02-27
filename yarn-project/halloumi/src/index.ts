@@ -6,6 +6,7 @@ import { HttpJobWorker } from './proof_generator/index.js';
 import { appFactory } from './app.js';
 import http from 'http';
 
+// @dev See readme for details on the vars bellow.
 const {
   MAX_CIRCUIT_SIZE = '8388608',
   NUM_INNER_ROLLUP_TXS = '1',
