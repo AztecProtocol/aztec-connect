@@ -6,6 +6,10 @@ import http from 'http';
 import { appFactory } from './app.js';
 import { Server } from './server.js';
 
+// PORT: The port the service will listen on.
+// FALAFEL_URL: The URL of the falafel service.
+// API_PREFIX: The prefix to add to all API routes. (e.g. '/block-server/production')
+// INIT_FULL_SYNC: Whether to perform a full sync on initialization (see Server constructor for more details).
 const { PORT = '8084', FALAFEL_URL = 'http://localhost:8081', API_PREFIX = '', INIT_FULL_SYNC = false } = process.env;
 
 async function main() {

@@ -19,6 +19,7 @@ export function appFactory(server: Server, falafelUrl: URL, prefix: string) {
     }
   };
 
+  // An endpoint informing whther the server is ready to serve requests.
   router.get('/', (ctx: Koa.Context) => {
     ctx.body = {
       serviceName: 'block-server',
@@ -58,6 +59,7 @@ export function appFactory(server: Server, falafelUrl: URL, prefix: string) {
     }
   });
 
+  // An endpoint which returns an id of the rollup/block up to which the server has synced.
   router.get('/latest-rollup-id', (ctx: Koa.Context) => {
     ctx.body = server.getLatestRollupId();
     ctx.compress = false;

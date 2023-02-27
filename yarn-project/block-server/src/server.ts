@@ -4,6 +4,8 @@ import { serializeBufferArrayToVector } from '@aztec/barretenberg/serialize';
 import { InterruptableSleep, sleep } from '@aztec/barretenberg/sleep';
 import { BlockCache } from './blockCache.js';
 
+// @notice A class responsible for managing a cache of blocks.
+// @dev Rollup and block are used in the Aztec codebase interchangeably.
 export class Server {
   private running = false;
   private runningPromise?: Promise<void>;
@@ -15,11 +17,23 @@ export class Server {
   private reqMissTime = 0;
   private numInitialSubtreeRoots?: number;
 
+  /*
+   * @notice Constructs a new Server instance.
+   * @param falafelUrl - The URL of the falafel server.
+   * @param initFullSync - Whether to perform a full sync on initialization.
+   * @param log - A logger instance.
+   * @dev If `initFullSync` is `true`, the server will perform a full sync on initialization.
+   *      If `initFullSync` is `false`, the server will only sync the latest block on initialization.
+   */
   constructor(falafelUrl: URL, private initFullSync: boolean, private log = createLogger('Server')) {
     this.serverRollupProvider = new ServerRollupProvider(falafelUrl);
     this.blockCache = new BlockCache(log);
   }
 
+  /*
+   * @notice A function which does the intial block sync and asynchronously kicks off a polling loop for the latest
+   *         blocks.
+   */
   public async start() {
     if (this.initFullSync) {
       this.log('Initializing with full sync...');
@@ -82,6 +96,7 @@ export class Server {
     this.ready = true;
   }
 
+  // @notice A function which stops the polling loop.
   public async stop() {
     this.log('Stopping...');
     this.running = false;
@@ -91,13 +106,17 @@ export class Server {
     this.log('Stopped.');
   }
 
+  // @notice Returns whether the server is ready to serve requests --> whether the initial sync finished.
   public isReady() {
     return this.ready;
   }
 
   /*
-   * Returns a buffer containing the requested blocks, and a boolean indicating whether there was `take` blocks
-   * available. If not, the buffer will contain less than `take` blocks.
+   * @notice Returns the latest rollup ID from the rollup provider.
+   * @from The block number to start from.
+   * @take The number of blocks to return.
+   * @returns A buffer containing the requested blocks, and a boolean indicating whether there was `take` blocks
+   *         available. If not, the buffer will contain less than `take` blocks.
    */
   public async getBlockBuffers(from: number, take: number): Promise<[Buffer, boolean]> {
     if (!this.blockCache) {
@@ -142,6 +161,7 @@ export class Server {
     return [serializeBufferArrayToVector(blocks as Buffer[]), blocks.length === take];
   }
 
+  // @notice Returns the latest rollup/block ID stored in the block cache.
   public getLatestRollupId() {
     return this.blockCache.getLatestRollupId();
   }
@@ -155,6 +175,12 @@ export class Server {
     return this.numInitialSubtreeRoots;
   }
 
+  /*
+   * @notice Returns the an array of block buffers.
+   * @from The block number to start from.
+   * @take The number of blocks to fetch.
+   * @returns An array of buffers containing the requested blocks.
+   */
   private async getRollupProviderBlocks(from: number, take?: number) {
     while (true) {
       try {
@@ -167,6 +193,7 @@ export class Server {
     }
   }
 
+  // @notice Returns the latest rollup/block ID from the rollup provider.
   private async getRollupProviderLatestRollupId() {
     const rollupId = await this.serverRollupProvider.getLatestRollupId();
     return rollupId;
