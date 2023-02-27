@@ -15,25 +15,45 @@ const { DATA_DIR = './data', INITIAL_RUNTIME_CONFIG_PATH = undefined } = process
 export type SupportedDb = 'mysql' | 'postgres' | 'sqlite';
 
 interface StartupConfig {
+  // A string of the form MAJ.MIN.SUB returned in the status request so clients can be notified of breaking api changes. Env: FALAFEL_VERSION_OVERRIDE
   version: string;
+  // The port number on which to start the http service. Env: PORT
   port: number;
+  // An optional postgres DB connection string, if absent Falafel will use a local SQLite DB. Env: DB_URL
   dbUrl?: string;
+  // The address of the rollup contract. Env: ROLLUP_CONTRACT_ADDRESS
   rollupContractAddress: EthAddress;
+  // The address of the permit helper contract. Env: PERMIT_HELPER_CONTRACT_ADDRESS
   permitHelperContractAddress: EthAddress;
+  // Addresses of price feed contracts for pricing gas and asset valuations Env: PRICE_FEED_CONTRACT_ADDRESSES
   priceFeedContractAddresses: EthAddress[];
+  // Address of data provider contract. Env: BRIDGE_DATA_PROVIDER_CONTRACT_ADDRESS
   bridgeDataProviderAddress: EthAddress;
+  // URL of JSON RPC endpoint for all blockchain interactions. Env: ETHEREUM_HOST
   ethereumHost: string;
+  // Optional period with which to poll for new rollups. Env: ETHEREUM_POLL_INTERVAL
   ethereumPollInterval?: number;
+  // A string specifying the mode under which halloumi proof constructors are deployed. Valid values are 'split' and 'local'. Anything else defaults to 'normal'. Env: PROOF_GENERATOR_MODE
   proofGeneratorMode: string;
+  // The private key to be used for publishing rollups. Env: PRIVATE_KEY
   privateKey: Buffer;
+  // The number of txs within an 'inner' rollup. Env: NUM_INNER_ROLLUP_TXS
   numInnerRollupTxs: number;
+  // The number of txs within an 'outer' rollup. Env: NUM_OUTER_ROLLUP_PROOFS
   numOuterRollupProofs: number;
+  // The prefix used as part of all api routes e.g. https://api.aztec.network/<api prefix>/status. Env: API_PREFIX
   apiPrefix: string;
+  // String required to be specified in the 'server-auth-token' header of administrative requests. Env: SERVER_AUTH_TOKEN
   serverAuthToken: string;
+  // The number of confirmations required for a rollup to be accepted. Env: MIN_CONFIRMATION
   minConfirmation: number;
+  // The number of confirmations required for a rollup to be accepted within the Escape Hatch. Env: MIN_CONFIRMATION_ESCAPE_HATCH_WINDOW
   minConfirmationEHW: number;
+  // A flag specifying whether additional logging be added to DB calls. Env: TYPEORM_LOGGING
   typeOrmLogging: boolean;
+  // A flag specifying whether the system should be run as 'proverless'. This should only used within test environments. Env: PROVERLESS
   proverless: boolean;
+  // The maximum amount of call data that can be consumed by a rollup. Env: CALL_DATA_LIMIT_KB
   rollupCallDataLimit: number;
 }
 
