@@ -201,7 +201,7 @@ export class Server {
       let success = true;
       for (const errorType of results.map(x => extractEventErrorType(x))) {
         if (errorType.type === EventRetrieverErrors.STREAM) {
-          // problems with the stream need investigation, throw here to prevent startup
+          // problems with the stream need investigation, throw here to prevent continuing
           throw new Error(errorType.message);
         } else if (errorType.type !== EventRetrieverErrors.NONE) {
           success = false;

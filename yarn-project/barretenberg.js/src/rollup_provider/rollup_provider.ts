@@ -113,10 +113,6 @@ export const depositTxFromJson = ({ assetId, value, publicOwner }: DepositTxJson
   publicOwner: EthAddress.fromString(publicOwner),
 });
 
-export interface InitialWorldState {
-  initialAccounts: Buffer;
-}
-
 export interface RollupProvider extends BlockSource {
   sendTxs(txs: Tx[]): Promise<TxId[]>;
   getStatus(): Promise<RollupProviderStatus>;
@@ -131,5 +127,6 @@ export interface RollupProvider extends BlockSource {
   isAccountRegistered(accountPublicKey: GrumpkinAddress): Promise<boolean>;
   isAliasRegistered(alias: string): Promise<boolean>;
   isAliasRegisteredToAccount(accountPublicKey: GrumpkinAddress, alias: string): Promise<boolean>;
+  getAccountRegistrationRollupId(accountPublicKey: GrumpkinAddress): Promise<number>;
   queryDefiPublishStats(query: BridgePublishQuery): Promise<BridgePublishQueryResult>;
 }

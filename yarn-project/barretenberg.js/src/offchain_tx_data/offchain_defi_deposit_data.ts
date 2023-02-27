@@ -45,7 +45,7 @@ export class OffchainDefiDepositData {
     public readonly partialStateSecretEphPubKey: GrumpkinAddress, // the public key from which the partial state's secret may be derived (when combined with a valid account private key).
     public readonly depositValue: bigint,
     public readonly txFee: bigint,
-    public readonly viewingKey: ViewingKey, // viewing key for the 'change' note
+    public readonly viewingKey: ViewingKey, // viewing key for the 'claim' note
     public readonly txRefNo = 0,
   ) {
     if (partialState.length !== DataSizes.PARTIAL_STATE) {

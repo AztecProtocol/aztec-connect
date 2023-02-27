@@ -1,8 +1,10 @@
-import { JsonRpcProvider, AztecSdk, createAztecSdk, WalletProvider } from '@aztec/sdk';
+import { JsonRpcProvider, AztecSdk, createAztecSdk, WalletProvider, AztecSdkUser } from '@aztec/sdk';
 import { EventEmitter } from 'events';
+import { jest } from '@jest/globals';
 
 jest.setTimeout(10 * 60 * 1000);
 EventEmitter.defaultMaxListeners = 30;
+Error.stackTraceLimit = 50;
 
 const {
   ETHEREUM_HOST = 'http://localhost:8545',
@@ -18,6 +20,7 @@ const {
 
 describe('end-to-end sync tests', () => {
   let sdk: AztecSdk;
+  let user: AztecSdkUser;
 
   beforeAll(async () => {
     const ethereumProvider = new JsonRpcProvider(ETHEREUM_HOST);
@@ -30,11 +33,12 @@ describe('end-to-end sync tests', () => {
       serverUrl: ROLLUP_HOST,
       memoryDb: true,
       minConfirmation: 1,
+      noVersionCheck: true,
     });
 
     if (PRIVATE_KEY) {
       const keyPair = await sdk.generateAccountKeyPair(walletProvider.getAccount(0), walletProvider);
-      await sdk.addUser(keyPair.privateKey);
+      user = await sdk.addUser(keyPair.privateKey);
     }
 
     await sdk.run();
@@ -45,6 +49,7 @@ describe('end-to-end sync tests', () => {
   });
 
   it('should sync', async () => {
-    await sdk.awaitSynchronised();
+    await user.awaitSynchronised();
+    console.log(`Private balance: ${sdk.fromBaseUnits(await user.getBalance(0), true)}`);
   });
 });

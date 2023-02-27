@@ -12,6 +12,10 @@ import {
 @Entity({ name: 'paymentTx' })
 @Index(['txId', 'userId'], { unique: true })
 export class PaymentTxDao implements CorePaymentTx {
+  public constructor(init?: Partial<PaymentTxDao>) {
+    Object.assign(this, init);
+  }
+
   @PrimaryColumn('blob', { transformer: [txIdTransformer] })
   public txId!: TxId;
 

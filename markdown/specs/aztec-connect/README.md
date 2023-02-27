@@ -24,7 +24,7 @@ If you already use port `3000` for something, choose something else.
 
 ### To view the book
 
-- `cd aztec-internal`  
+- `cd aztec2-internal`  
 - `cd markdown/specs/aztec-connect`  
 - `mdbook serve -p 3000 -n <your mainframe IP address of the form _._._._>`  
 

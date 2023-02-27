@@ -1,9 +1,9 @@
-
 import {MockChainlinkOracle} from "mocks/MockChainlinkOracle.sol";
 import {TestBase} from "../aztec/TestBase.sol";
 
-/** Mock Chainlink Oracle Test
- * 
+/**
+ * Mock Chainlink Oracle Test
+ *
  * Lightweight test for the MockChainlinkOracle contract
  */
 contract MockChainLinkOracleTest is TestBase {
@@ -22,7 +22,8 @@ contract MockChainLinkOracleTest is TestBase {
     }
 
     function testLatestRound() public {
-        (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound) = oracle.latestRound();
+        (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound) =
+            oracle.latestRound();
         assertEq(roundId, 1);
         assertEq(answer, 1000000000000000000);
         assertEq(startedAt, block.timestamp - 1);
@@ -31,7 +32,8 @@ contract MockChainLinkOracleTest is TestBase {
     }
 
     function testGetRoundData() public {
-        (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound) = oracle.getRoundData(1);
+        (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound) =
+            oracle.getRoundData(1);
         assertEq(roundId, 1);
         assertEq(answer, 1000000000000000000);
         assertEq(startedAt, block.timestamp - 1);

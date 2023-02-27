@@ -11,6 +11,7 @@ const require = createRequire(import.meta.url);
 export default {
   target: 'web',
   mode: 'production',
+  devtool: false,
   entry: {
     main: './src/index.ts',
   },
@@ -18,7 +19,14 @@ export default {
     rules: [
       {
         test: /\.tsx?$/,
-        use: [{ loader: 'ts-loader' }],
+        use: [
+          {
+            loader: 'ts-loader',
+            options: {
+              configFile: 'tsconfig.dest.json',
+            },
+          },
+        ],
       },
     ],
   },

@@ -6,9 +6,10 @@ import { databaseTestSuite } from './test_suite.js';
 
 let db: DexieDatabase;
 
-const createDb = () => {
+const createDb = async () => {
   db = new DexieDatabase();
-  return Promise.resolve(db);
+  await db.open();
+  return db;
 };
 
 const destroyDb = async () => {

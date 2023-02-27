@@ -6,7 +6,7 @@ import {MockVerificationKey} from "../keys/MockVerificationKey.sol";
 import {BaseStandardVerifier} from "../BaseStandardVerifier.sol";
 
 contract MockVerifier is BaseStandardVerifier {
-    function getVerificationKeyHash() public pure override (BaseStandardVerifier) returns (bytes32) {
+    function getVerificationKeyHash() public pure override(BaseStandardVerifier) returns (bytes32) {
         return MockVerificationKey.verificationKeyHash();
     }
 

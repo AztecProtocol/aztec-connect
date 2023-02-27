@@ -1,7 +1,6 @@
 # This config consists of currently 3 workflows.
 # - system: The main Aztec infrastructure, services, frontends etc.
 # - metrics: The metrics grafana and prometheus instances, and some prometheus data sources.
-# - website: The company website.
 #
 # The default workflow is system. To trigger the other workflows, trigger a workflow from CCI
 # setting a string variable called `workflow` to another name.
@@ -51,7 +50,7 @@ checkout: &checkout
 
       chmod 0600 .ssh/id_rsa
 
-      # IF YOU'RE CHANGING THIS, YOU ALSO WANT TO CHANGE: .circleci/remote_build/remote_build
+      # IF YOU'RE CHANGING THIS, YOU ALSO WANT TO CHANGE: build-system/remote_build/remote_build
       # Shallow checkout this commit.
       mkdir -p project
       cd project
@@ -60,6 +59,8 @@ checkout: &checkout
       # Only download metadata when fetching.
       git fetch --depth 50 --filter=blob:none origin $CIRCLE_SHA1
       git checkout FETCH_HEAD
+      # Pull in build-system submodule.
+      git submodule update --init build-system
 
 # This build step checks out the code from the benchmark-archive repository.
 # The key is saved in CircleCi environment in base64 format.
@@ -94,7 +95,7 @@ benchmark_add_keys: &benchmark_add_keys
 setup_env: &setup_env
   run:
     name: 'Setup environment'
-    command: cd .circleci && ./setup_env "$CIRCLE_SHA1" "$CIRCLE_TAG" "$CIRCLE_JOB" "$CIRCLE_REPOSITORY_URL" "$CIRCLE_BRANCH"
+    command: ./build-system/scripts/setup_env "$CIRCLE_SHA1" "$CIRCLE_TAG" "$CIRCLE_JOB" "$CIRCLE_REPOSITORY_URL" "$CIRCLE_BRANCH"
 
 # This step is used to save logs from various barretenberg test to the workspace so that they can be used later to parse benchmark values out of them
 save_logs: &save_logs
@@ -355,6 +356,17 @@ jobs:
           name: 'Build and test'
           command: build block-server
 
+  nym-gateway:
+    machine:
+      image: ubuntu-2004:202010-01
+    resource_class: medium
+    steps:
+      - *checkout
+      - *setup_env
+      - run:
+          name: 'Build'
+          command: build nym-gateway
+
   sdk:
     machine:
       image: ubuntu-2004:202010-01
@@ -387,17 +399,6 @@ jobs:
       - run:
           name: 'Build and test'
           command: build hummus
-
-  explorer:
-    machine:
-      image: ubuntu-2004:202010-01
-    resource_class: large
-    steps:
-      - *checkout
-      - *setup_env
-      - run:
-          name: 'Build and test'
-          command: build explorer
 
   wallet:
     machine:
@@ -646,17 +647,6 @@ jobs:
           name: 'Noop'
           command: echo Noop
 
-  website:
-    machine:
-      image: ubuntu-2004:202010-01
-    resource_class: large
-    steps:
-      - *checkout
-      - *setup_env
-      - run:
-          name: 'Build and test'
-          command: build website
-
   mainnet-fork:
     machine:
       image: ubuntu-2004:202010-01
@@ -687,8 +677,14 @@ jobs:
           name: 'Build sidecar'
           command: build metrics-sidecar
       - run:
+          name: 'Build fluent-bit'
+          command: build fluent-bit
+      - run:
           name: 'Build prometheus'
           command: build prometheus
+      - run:
+          name: 'Build loki'
+          command: build loki
       - run:
           name: 'Build grafana'
           command: build grafana
@@ -754,6 +750,9 @@ jobs:
           name: 'block-server'
           command: deploy block-server
       - run:
+          name: 'nym-gateway'
+          command: deploy nym-gateway
+      - run:
           name: 'sdk'
           command: |
             deploy_ecr sdk
@@ -773,11 +772,6 @@ jobs:
             deploy_ecr wallet
             deploy_s3 wallet
       - run:
-          name: 'explorer'
-          command: |
-            deploy_ecr explorer
-            deploy_s3 explorer
-      - run:
           name: 'faucet'
           command: deploy faucet
 
@@ -794,20 +788,6 @@ jobs:
   #         name: 'Test'
   #         working_directory: end-to-end/scripts
   #         command: ./run_smoketest
-
-  deploy-website:
-    machine:
-      image: ubuntu-2004:202010-01
-    resource_class: medium
-    steps:
-      - *checkout
-      - *setup_env
-      - run:
-          name: 'website'
-          working_directory: website
-          command: |
-            deploy_ecr website
-            deploy_s3 website is_global
 
   deploy-metrics:
     machine:
@@ -827,8 +807,14 @@ jobs:
           name: 'sidecar'
           command: deploy_ecr metrics-sidecar
       - run:
+          name: 'fluent-bit'
+          command: deploy_ecr fluent-bit
+      - run:
           name: 'prometheus'
           command: deploy_global prometheus
+      - run:
+          name: 'loki'
+          command: deploy_global loki
       - run:
           name: 'grafana'
           command: deploy_global grafana
@@ -857,15 +843,14 @@ jobs:
       - run:
           name: 'deploy-mainnet-fork'
           working_directory: mainnet-fork # redeploy the fork and taint the state file system
-          command: deploy_terraform mainnet-fork ./terraform/$VERSION_TAG aws_efs_file_system.mainnet_fork_data_store
-      - run:
-          name: 'Wait for fork' # Wait for a successful health-check
-          command: wait_for_fork
+          command: |
+            deploy_terraform mainnet-fork ./terraform/$VERSION_TAG aws_efs_file_system.mainnet_fork_data_store
+            ./scripts/wait_for_fork
       - run:
           name: 'Deploy contracts'
           working_directory: contracts
           command: |
-            deploy_ecr contracts 
+            deploy_ecr contracts
             ./scripts/ci_deploy_contracts.sh
       - run:
           name: 'Redeploy kebab'
@@ -956,10 +941,10 @@ workflows:
       - halloumi: *yarn_project
       - falafel: *yarn_project
       - block-server: *yarn_project
+      - nym-gateway
       - sdk: *yarn_project
       - wasabi: *yarn_project
       - hummus: *yarn_project
-      - explorer: *yarn_project
       - wallet: *yarn_project
       # Not currently a yarn project due to using next.js, but should be.
       - faucet:
@@ -1003,7 +988,6 @@ workflows:
       #     filters: *deploy_filters
       - yarn-join:
           requires:
-            - explorer
             - wallet
             - wasabi
             - blockchain
@@ -1035,6 +1019,7 @@ workflows:
             - e2e-virtual-assets
             - e2e-deposit-approval
             - int-rollup-processor
+            - nym-gateway
           filters: *deploy_filters
   metrics:
     when:
@@ -1044,14 +1029,6 @@ workflows:
       - deploy-metrics:
           requires:
             - metrics
-  website:
-    when:
-      equal: [website, << pipeline.parameters.workflow >>]
-    jobs:
-      - website
-      - deploy-website:
-          requires:
-            - website
   redeploy-mainnet-fork:
     when:
       equal: [redeploy-mainnet-fork, << pipeline.parameters.workflow >>]

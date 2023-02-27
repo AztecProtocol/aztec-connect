@@ -18,11 +18,11 @@ COPY barretenberg.js/package.json barretenberg.js/package.json
 COPY blockchain/package.json blockchain/package.json
 COPY aztec-dev-cli/package.json aztec-dev-cli/package.json
 COPY contracts-verifier-test/package.json contracts-verifier-test/package.json
-COPY explorer/package.json explorer/package.json
 COPY halloumi/package.json halloumi/package.json
 COPY kebab/package.json kebab/package.json
 COPY falafel/package.json falafel/package.json
 COPY block-server/package.json block-server/package.json
+COPY nym-gateway/package.json nym-gateway/package.json
 COPY sdk/package.json sdk/package.json
 COPY hummus/package.json hummus/package.json
 COPY end-to-end/package.json end-to-end/package.json

@@ -138,6 +138,7 @@ resource "aws_ecs_task_definition" "falafel" {
   cpu                      = "2048"
   memory                   = "4096"
   execution_role_arn       = data.terraform_remote_state.setup_iac.outputs.ecs_task_execution_role_arn
+  task_role_arn            = data.terraform_remote_state.aztec2_iac.outputs.cloudwatch_logging_ecs_role_arn
 
   volume {
     name = "efs-data-store"
@@ -347,7 +348,7 @@ resource "aws_alb_target_group" "falafel" {
 
 resource "aws_lb_listener_rule" "api" {
   listener_arn = data.terraform_remote_state.aztec2_iac.outputs.alb_listener_arn
-  priority     = 411
+  priority     = 381
 
   action {
     type             = "forward"

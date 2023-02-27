@@ -1,5 +1,8 @@
 import { MemoryFifo } from '@aztec/barretenberg/fifo';
 
+/**
+ * A more specialised fifo queue that enqueues functions to execute. Enqueued functions are executed in serial.
+ */
 export class SerialQueue {
   private readonly queue = new MemoryFifo<() => Promise<void>>();
   private runningPromise!: Promise<void>;
@@ -14,13 +17,18 @@ export class SerialQueue {
 
   public cancel() {
     this.queue.cancel();
+    return this.runningPromise;
   }
 
-  public async end() {
+  public end() {
     this.queue.end();
-    await this.runningPromise;
+    return this.runningPromise;
   }
 
+  /**
+   * Enqueues fn for execution on the serial queue.
+   * Returns the result of the function after execution.
+   */
   public put<T>(fn: () => Promise<T>): Promise<T> {
     return new Promise((resolve, reject) => {
       this.queue.put(async () => {

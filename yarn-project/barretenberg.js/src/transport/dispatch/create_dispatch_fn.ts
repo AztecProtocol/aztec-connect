@@ -3,13 +3,10 @@ export interface DispatchMsg {
   args: any[];
 }
 
-export function createDispatchFn(container: any, target: string, debug = console.error) {
+export function createDispatchFn(targetFn: () => any, debug = console.error) {
   return async ({ fn, args }: DispatchMsg) => {
+    const target = targetFn();
     debug(`dispatching to ${target}: ${fn}`, args);
-    if (!container[target][fn] || typeof container[target][fn] !== 'function') {
-      debug(`dispatch error, undefined or not a function on ${target}: ${fn}`);
-      return;
-    }
-    return await container[target][fn](...args);
+    return await target[fn](...args);
   };
 }

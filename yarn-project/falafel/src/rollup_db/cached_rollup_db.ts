@@ -313,6 +313,10 @@ export class CachedRollupDb implements RollupDb {
     this.refreshPromise = undefined;
   }
 
+  public async resetPositionOnTxsWithoutRollupProof() {
+    await this.underlying.resetPositionOnTxsWithoutRollupProof();
+  }
+
   public async getTx(txId: Buffer) {
     return await this.underlying.getTx(txId);
   }
@@ -371,6 +375,10 @@ export class CachedRollupDb implements RollupDb {
 
   public async isAliasRegisteredToAccount(accountPublicKey: GrumpkinAddress, aliasHash: AliasHash) {
     return await this.underlying.isAliasRegisteredToAccount(accountPublicKey, aliasHash);
+  }
+
+  public async getAccountRegistrationRollupId(accountPublicKey: GrumpkinAddress) {
+    return await this.underlying.getAccountRegistrationRollupId(accountPublicKey);
   }
 
   public async isAccountRegistered(accountPublicKey: GrumpkinAddress) {

@@ -3,9 +3,10 @@ import cors from '@koa/cors';
 import Koa, { Context, DefaultState } from 'koa';
 import compress from 'koa-compress';
 import Router from 'koa-router';
+import proxy from 'koa-proxy';
 import { Server } from './server.js';
 
-export function appFactory(server: Server, prefix: string) {
+export function appFactory(server: Server, falafelUrl: URL, prefix: string) {
   const router = new Router<DefaultState, Context>({ prefix });
 
   const exceptionHandler = async (ctx: Koa.Context, next: () => Promise<void>) => {
@@ -18,6 +19,7 @@ export function appFactory(server: Server, prefix: string) {
     }
   };
 
+  // An endpoint informing whther the server is ready to serve requests.
   router.get('/', (ctx: Koa.Context) => {
     ctx.body = {
       serviceName: 'block-server',
@@ -44,7 +46,7 @@ export function appFactory(server: Server, prefix: string) {
     } else {
       // Ensure take is between 0 -> 128
       const take = ctx.query.take ? Math.min(Math.max(+ctx.query.take, 0), 128) : 128;
-      const [blocksBuffer, takeFullfilled] = server.getBlockBuffers(from, take);
+      const [blocksBuffer, takeFullfilled] = await server.getBlockBuffers(from, take);
       ctx.body = blocksBuffer;
       ctx.compress = false;
       ctx.status = 200;
@@ -55,6 +57,13 @@ export function appFactory(server: Server, prefix: string) {
         ctx.set('Cache-Control', 'public, max-age=31536000, immutable');
       }
     }
+  });
+
+  // An endpoint which returns an id of the rollup/block up to which the server has synced.
+  router.get('/latest-rollup-id', (ctx: Koa.Context) => {
+    ctx.body = server.getLatestRollupId();
+    ctx.compress = false;
+    ctx.status = 200;
   });
 
   router.get('/metrics', async (ctx: Koa.Context) => {
@@ -71,12 +80,16 @@ export function appFactory(server: Server, prefix: string) {
   });
 
   const app = new Koa();
+  app.on('error', error => {
+    console.log(`KOA app-level error. ${JSON.stringify({ error })}`);
+  });
   app.proxy = true;
   app.use(compress({ br: false } as any));
   app.use(cors());
   app.use(exceptionHandler);
   app.use(router.routes());
   app.use(router.allowedMethods());
+  app.use(proxy({ host: falafelUrl.origin }));
 
   return app;
 }

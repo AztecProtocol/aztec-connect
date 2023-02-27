@@ -11,6 +11,10 @@ import {
 
 @Entity({ name: 'defiTx' })
 export class DefiTxDao {
+  public constructor(init?: Partial<DefiTxDao>) {
+    Object.assign(this, init);
+  }
+
   @PrimaryColumn('blob', { transformer: [txIdTransformer] })
   public txId!: TxId;
 
@@ -32,6 +36,16 @@ export class DefiTxDao {
 
   @Column()
   public created!: Date;
+
+  @Column()
+  public partialState!: Buffer;
+
+  @Column()
+  public partialStateSecret!: Buffer;
+
+  @Column({ nullable: true })
+  @Index()
+  public nullifier!: Buffer;
 
   @Column({ nullable: true })
   public settled?: Date;

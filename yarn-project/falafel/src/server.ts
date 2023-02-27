@@ -355,6 +355,10 @@ export class Server {
     return await this.rollupDb.isAliasRegisteredToAccount(accountPublicKey, aliasHash);
   }
 
+  public async getAccountRegistrationRollupId(accountPublicKey: GrumpkinAddress) {
+    return await this.rollupDb.getAccountRegistrationRollupId(accountPublicKey);
+  }
+
   public async getUnsettledDepositTxs() {
     // TODO: Deprecate this. We don't want to support external parties making these requests.
     // We already have getUnsettledTxs(). Use this?
@@ -383,12 +387,21 @@ export class Server {
       throw new Error('Too many transactions awaiting settlement. Try again later.');
     }
 
-    const start = new Date().getTime();
-    const end = this.metrics.receiveTxTimer();
-    const result = await this.txReceiver.receiveTxs(txRequest, secondClass);
-    end();
-    this.log(`Received tx in ${new Date().getTime() - start}ms.`);
-    return result;
+    try {
+      const start = new Date().getTime();
+      const end = this.metrics.receiveTxTimer();
+      const result = await this.txReceiver.receiveTxs(txRequest, secondClass);
+      end();
+      this.log(`Received tx in ${new Date().getTime() - start}ms.`);
+      return result;
+    } catch (err) {
+      const logObject = {
+        error: err.message,
+        origin: txRequest.requestSender.originUrl,
+      };
+      this.log(`Client Tx Error: `, JSON.stringify(logObject));
+      throw err;
+    }
   }
 
   public flushTxs() {

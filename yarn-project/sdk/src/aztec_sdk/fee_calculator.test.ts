@@ -4,7 +4,7 @@ import { ProofData, ProofId } from '@aztec/barretenberg/client_proofs';
 import { numToUInt32BE } from '@aztec/barretenberg/serialize';
 import { ClientEthereumBlockchain } from '@aztec/blockchain';
 import { CoreSdk } from '../core_sdk/index.js';
-import { FeeCalculator } from './fee_calcalator.js';
+import { FeeCalculator } from './fee_calculator.js';
 import { jest } from '@jest/globals';
 
 type Mockify<T> = {

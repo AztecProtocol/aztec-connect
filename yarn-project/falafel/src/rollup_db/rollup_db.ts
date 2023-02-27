@@ -4,6 +4,7 @@ import { toBufferBE } from '@aztec/barretenberg/bigint_buffer';
 import { TxHash, TxType } from '@aztec/barretenberg/blockchain';
 import { createDebugLogger } from '@aztec/barretenberg/log';
 import { DefiInteractionNote } from '@aztec/barretenberg/note_algorithms';
+import { RollupProofData } from '@aztec/barretenberg/rollup_proof';
 import { serializeBufferArrayToVector } from '@aztec/barretenberg/serialize';
 import { WorldStateConstants } from '@aztec/barretenberg/world_state';
 import { DataSource, In, IsNull, LessThan, MoreThanOrEqual, Not, Repository } from 'typeorm';
@@ -143,6 +144,23 @@ export class TypeOrmRollupDb implements RollupDb {
     return !!account;
   }
 
+  public async getAccountRegistrationRollupId(accountPublicKey: GrumpkinAddress) {
+    const account = await this.accountRep.findOne({
+      where: { accountPublicKey: accountPublicKey.toBuffer() },
+      relations: {
+        tx: {
+          rollupProof: {
+            rollup: true,
+          },
+        },
+      },
+    });
+    if (!account?.tx?.rollupProof?.rollup) {
+      return null;
+    }
+    return account.tx.rollupProof.rollup.id;
+  }
+
   public async getUnsettledTxCount() {
     return await this.txRep.count({ where: { mined: IsNull() } });
   }
@@ -257,9 +275,13 @@ export class TypeOrmRollupDb implements RollupDb {
     // Loading these as part of relations above leaks GB's of memory.
     // One would think the following would be much slower, but it's not actually that bad.
     this.debug(`populating txs for rollup ${id}...`);
-    rollup.rollupProof.txs = await this.txRep.find({ where: { rollupProof: { id: rollup.rollupProof.id } } });
-    // Enforce tx ordering.
-    rollup.rollupProof.afterLoad();
+    // Populate the txs in order by position
+    rollup.rollupProof.txs = await this.txRep.find({
+      where: { rollupProof: { id: rollup.rollupProof.id } },
+      order: {
+        position: 'ASC',
+      },
+    });
     return rollup;
   }
 
@@ -301,9 +323,13 @@ export class TypeOrmRollupDb implements RollupDb {
     // Loading these as part of relations above leaks GB's of memory.
     // One would think the following would be much slower, but it's not actually that bad.
     for (const rollup of result) {
-      rollup.rollupProof.txs = await this.txRep.find({ where: { rollupProof: { id: rollup.rollupProof.id } } });
-      // Enforce tx ordering.
-      rollup.rollupProof.afterLoad();
+      // Populate the txs in order by position
+      rollup.rollupProof.txs = await this.txRep.find({
+        where: { rollupProof: { id: rollup.rollupProof.id } },
+        order: {
+          position: 'ASC',
+        },
+      });
     }
     return result;
   }
@@ -336,10 +362,13 @@ export class TypeOrmRollupDb implements RollupDb {
     // One would think the following would be much slower, but it's not actually that bad.
     for (const rollup of rollups) {
       this.debug(`getSettledRollups: fetching txs for settled rollup ${rollup.id}...`);
-      rollup.rollupProof.txs = await this.txRep.find({ where: { rollupProof: { id: rollup.rollupProof.id } } });
-      // Enforce tx ordering.
-      this.debug(`getSettledRollups: ordering txs...`);
-      rollup.rollupProof.afterLoad();
+      // Populate the txs in order by position
+      rollup.rollupProof.txs = await this.txRep.find({
+        where: { rollupProof: { id: rollup.rollupProof.id } },
+        order: {
+          position: 'ASC',
+        },
+      });
     }
     return rollups;
   }
@@ -363,13 +392,23 @@ export class TypeOrmRollupDb implements RollupDb {
       await transactionalEntityManager.insert(this.rollupProofRep.target, rollup.rollupProof);
       delete rollup.rollupProof.rollup;
 
-      for (const tx of rollup.rollupProof.txs) {
-        tx.rollupProof = rollup.rollupProof;
-        await transactionalEntityManager.upsert(this.txRep.target, tx, {
-          skipUpdateIfNoValuesChanged: true,
-          conflictPaths: ['id'],
-        });
-        delete tx.rollupProof;
+      // To ensure the txs are correctly ordered, we order them as their ids are ordered in the proof data
+      const decodedProofData = RollupProofData.decode(rollup.rollupProof.encodedProofData);
+
+      for (const [i, proof] of decodedProofData.innerProofData.entries()) {
+        if (!proof.isPadding()) {
+          const tx = rollup.rollupProof.txs.find(tx => tx.id.equals(proof.txId));
+          if (!tx) {
+            throw new Error(`Could not find tx with id ${proof.txId} in rollup proof`);
+          }
+          tx.rollupProof = rollup.rollupProof;
+          tx.position = i;
+          await transactionalEntityManager.upsert(this.txRep.target, tx, {
+            skipUpdateIfNoValuesChanged: true,
+            conflictPaths: ['id'],
+          });
+          delete tx.rollupProof;
+        }
       }
 
       const accountDaos = getNewAccountDaos(rollup.rollupProof.txs);
@@ -478,6 +517,10 @@ export class TypeOrmRollupDb implements RollupDb {
     });
     const nullifiers = unsettledClaim.map(c => c.nullifier);
     await this.txRep.delete({ nullifier1: In(nullifiers) });
+  }
+
+  public async resetPositionOnTxsWithoutRollupProof() {
+    await this.txRep.update({ rollupProof: IsNull() }, { position: -1 });
   }
 
   public async eraseDb() {

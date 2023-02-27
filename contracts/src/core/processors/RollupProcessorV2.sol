@@ -493,7 +493,7 @@ contract RollupProcessorV2 is IRollupProcessorV2, Decoder, Initializable, Access
     /**
      * @notice A function which allow the holders of the EMERGENCY_ROLE role to pause the contract
      */
-    function pause() public override (IRollupProcessor) whenNotPaused onlyRole(EMERGENCY_ROLE) noReenter {
+    function pause() public override(IRollupProcessor) whenNotPaused onlyRole(EMERGENCY_ROLE) noReenter {
         rollupState.paused = true;
         emit Paused(msg.sender);
     }
@@ -501,7 +501,7 @@ contract RollupProcessorV2 is IRollupProcessorV2, Decoder, Initializable, Access
     /**
      * @dev Allow the holders of the RESUME_ROLE to unpause the contract.
      */
-    function unpause() public override (IRollupProcessor) whenPaused onlyRole(RESUME_ROLE) noReenter {
+    function unpause() public override(IRollupProcessor) whenPaused onlyRole(RESUME_ROLE) noReenter {
         rollupState.paused = false;
         emit Unpaused(msg.sender);
     }
@@ -529,7 +529,7 @@ contract RollupProcessorV2 is IRollupProcessorV2, Decoder, Initializable, Access
      */
     function setRollupProvider(address _provider, bool _valid)
         external
-        override (IRollupProcessor)
+        override(IRollupProcessor)
         onlyRole(OWNER_ROLE)
         noReenter
     {
@@ -574,7 +574,7 @@ contract RollupProcessorV2 is IRollupProcessorV2, Decoder, Initializable, Access
      *  (         contract
      * @param _verifier an address of the verification smart contract
      */
-    function setVerifier(address _verifier) public override (IRollupProcessor) onlyRole(OWNER_ROLE) noReenter {
+    function setVerifier(address _verifier) public override(IRollupProcessor) onlyRole(OWNER_ROLE) noReenter {
         if (_verifier.code.length == 0) {
             revert INVALID_ADDRESS_NO_CODE();
         }
@@ -589,7 +589,7 @@ contract RollupProcessorV2 is IRollupProcessorV2, Decoder, Initializable, Access
      */
     function setAllowThirdPartyContracts(bool _allowThirdPartyContracts)
         external
-        override (IRollupProcessor)
+        override(IRollupProcessor)
         onlyRole(OWNER_ROLE)
         noReenter
     {
@@ -603,7 +603,7 @@ contract RollupProcessorV2 is IRollupProcessorV2, Decoder, Initializable, Access
      */
     function setDefiBridgeProxy(address _defiBridgeProxy)
         public
-        override (IRollupProcessor)
+        override(IRollupProcessor)
         onlyRole(OWNER_ROLE)
         noReenter
     {
@@ -621,7 +621,7 @@ contract RollupProcessorV2 is IRollupProcessorV2, Decoder, Initializable, Access
      */
     function setSupportedAsset(address _token, uint256 _gasLimit)
         external
-        override (IRollupProcessor)
+        override(IRollupProcessor)
         whenNotPaused
         checkThirdPartyContractStatus
         noReenter
@@ -646,7 +646,7 @@ contract RollupProcessorV2 is IRollupProcessorV2, Decoder, Initializable, Access
      */
     function setSupportedBridge(address _bridge, uint256 _gasLimit)
         external
-        override (IRollupProcessor)
+        override(IRollupProcessor)
         whenNotPaused
         checkThirdPartyContractStatus
         noReenter
@@ -685,7 +685,7 @@ contract RollupProcessorV2 is IRollupProcessorV2, Decoder, Initializable, Access
      */
     function processRollup(bytes calldata, /* encodedProofData */ bytes calldata _signatures)
         external
-        override (IRollupProcessor)
+        override(IRollupProcessor)
         whenNotPaused
         allowAsyncReenter
     {
@@ -716,7 +716,7 @@ contract RollupProcessorV2 is IRollupProcessorV2, Decoder, Initializable, Access
      * @notice A function used by bridges to send ETH to the RollupProcessor during an interaction
      * @param _interactionNonce an interaction nonce that used as an ID of this payment
      */
-    function receiveEthFromBridge(uint256 _interactionNonce) external payable override (IRollupProcessor) {
+    function receiveEthFromBridge(uint256 _interactionNonce) external payable override(IRollupProcessor) {
         assembly {
             // ethPayments[interactionNonce] += msg.value
             mstore(0x00, _interactionNonce)
@@ -732,7 +732,7 @@ contract RollupProcessorV2 is IRollupProcessorV2, Decoder, Initializable, Access
      * @dev this function is one way and must be called by the owner of the funds
      * @param _proofHash keccak256 hash of the inner proof public inputs
      */
-    function approveProof(bytes32 _proofHash) public override (IRollupProcessor) whenNotPaused {
+    function approveProof(bytes32 _proofHash) public override(IRollupProcessor) whenNotPaused {
         // asm implementation to reduce compiled bytecode size
         assembly {
             // depositProofApprovals[msg.sender][_proofHash] = true;
@@ -756,7 +756,7 @@ contract RollupProcessorV2 is IRollupProcessorV2, Decoder, Initializable, Access
     function depositPendingFunds(uint256 _assetId, uint256 _amount, address _owner, bytes32 _proofHash)
         external
         payable
-        override (IRollupProcessor)
+        override(IRollupProcessor)
         whenNotPaused
         noReenter
     {
@@ -795,7 +795,7 @@ contract RollupProcessorV2 is IRollupProcessorV2, Decoder, Initializable, Access
      */
     function offchainData(uint256 _rollupId, uint256 _chunk, uint256 _totalChunks, bytes calldata /* offchainTxData */ )
         external
-        override (IRollupProcessor)
+        override(IRollupProcessor)
         whenNotPaused
     {
         emit OffchainData(_rollupId, _chunk, _totalChunks, msg.sender);
@@ -808,7 +808,7 @@ contract RollupProcessorV2 is IRollupProcessorV2, Decoder, Initializable, Access
      */
     function processAsyncDefiInteraction(uint256 _interactionNonce)
         external
-        override (IRollupProcessor)
+        override(IRollupProcessor)
         whenNotPaused
         noReenterButAsync
         returns (bool)
@@ -1394,7 +1394,7 @@ contract RollupProcessorV2 is IRollupProcessorV2, Decoder, Initializable, Access
      * @notice Get true if the contract is paused, false otherwise
      * @return isPaused - True if paused, false otherwise
      */
-    function paused() external view override (IRollupProcessor) returns (bool isPaused) {
+    function paused() external view override(IRollupProcessor) returns (bool isPaused) {
         return rollupState.paused;
     }
 
@@ -1402,7 +1402,7 @@ contract RollupProcessorV2 is IRollupProcessorV2, Decoder, Initializable, Access
      * @notice Gets the number of filled entries in the data tree
      * @return dataSize number of filled entries in the data tree (equivalent to the number of notes created on L2)
      */
-    function getDataSize() public view override (IRollupProcessor) returns (uint256 dataSize) {
+    function getDataSize() public view override(IRollupProcessor) returns (uint256 dataSize) {
         return rollupState.datasize;
     }
 
@@ -1410,7 +1410,7 @@ contract RollupProcessorV2 is IRollupProcessorV2, Decoder, Initializable, Access
      * @notice Returns true if deposits are capped, false otherwise
      * @return capped - True if deposits are capped, false otherwise
      */
-    function getCapped() public view override (IRollupProcessorV2) returns (bool capped) {
+    function getCapped() public view override(IRollupProcessorV2) returns (bool capped) {
         return rollupState.capped;
     }
 
@@ -1422,7 +1422,7 @@ contract RollupProcessorV2 is IRollupProcessorV2, Decoder, Initializable, Access
      *      iterates through `asyncDefiInteractionHashes` and copies their values into `defiInteractionHashes`. Loop
      *      is bounded to < 512 so that tx does not exceed block gas limit.
      */
-    function getPendingDefiInteractionHashesLength() public view override (IRollupProcessor) returns (uint256) {
+    function getPendingDefiInteractionHashesLength() public view override(IRollupProcessor) returns (uint256) {
         return rollupState.numAsyncDefiInteractionHashes + rollupState.numDefiInteractionHashes;
     }
 
@@ -1430,7 +1430,7 @@ contract RollupProcessorV2 is IRollupProcessorV2, Decoder, Initializable, Access
      * @notice Gets the address of the PLONK verification smart contract
      * @return - address of the verification smart contract
      */
-    function verifier() public view override (IRollupProcessor) returns (address) {
+    function verifier() public view override(IRollupProcessor) returns (address) {
         return address(rollupState.verifier);
     }
 
@@ -1438,7 +1438,7 @@ contract RollupProcessorV2 is IRollupProcessorV2, Decoder, Initializable, Access
      * @notice Gets the number of supported bridges
      * @return - the number of supported bridges
      */
-    function getSupportedBridgesLength() external view override (IRollupProcessor) returns (uint256) {
+    function getSupportedBridgesLength() external view override(IRollupProcessor) returns (uint256) {
         return supportedBridges.length;
     }
 
@@ -1447,7 +1447,7 @@ contract RollupProcessorV2 is IRollupProcessorV2, Decoder, Initializable, Access
      * @param _bridgeAddressId identifier used to denote a particular bridge
      * @return - the address of the matching bridge contract
      */
-    function getSupportedBridge(uint256 _bridgeAddressId) public view override (IRollupProcessor) returns (address) {
+    function getSupportedBridge(uint256 _bridgeAddressId) public view override(IRollupProcessor) returns (address) {
         return supportedBridges[_bridgeAddressId - 1];
     }
 
@@ -1455,7 +1455,7 @@ contract RollupProcessorV2 is IRollupProcessorV2, Decoder, Initializable, Access
      * @notice Gets the number of supported assets
      * @return - the number of supported assets
      */
-    function getSupportedAssetsLength() external view override (IRollupProcessor) returns (uint256) {
+    function getSupportedAssetsLength() external view override(IRollupProcessor) returns (uint256) {
         return supportedAssets.length;
     }
 
@@ -1467,7 +1467,7 @@ contract RollupProcessorV2 is IRollupProcessorV2, Decoder, Initializable, Access
     function getSupportedAsset(uint256 _assetId)
         public
         view
-        override (IRollupProcessor)
+        override(IRollupProcessor)
         validateAssetIdIsNotVirtual(_assetId)
         returns (address)
     {
@@ -1488,7 +1488,7 @@ contract RollupProcessorV2 is IRollupProcessorV2, Decoder, Initializable, Access
      * @return True if escape hatch is open, false otherwise
      * @return The number of blocks until the next opening/closing of escape hatch
      */
-    function getEscapeHatchStatus() public view override (IRollupProcessor) returns (bool, uint256) {
+    function getEscapeHatchStatus() public view override(IRollupProcessor) returns (bool, uint256) {
         uint256 blockNum = block.number;
 
         bool isOpen = blockNum % escapeBlockUpperBound >= escapeBlockLowerBound;
@@ -1513,7 +1513,7 @@ contract RollupProcessorV2 is IRollupProcessorV2, Decoder, Initializable, Access
      *      L2 Defi claim notes into L2 value notes.
      * @return - the number of pending defi interaction hashes
      */
-    function getDefiInteractionHashesLength() public view override (IRollupProcessor) returns (uint256) {
+    function getDefiInteractionHashesLength() public view override(IRollupProcessor) returns (uint256) {
         return rollupState.numDefiInteractionHashes;
     }
 
@@ -1524,7 +1524,7 @@ contract RollupProcessorV2 is IRollupProcessorV2, Decoder, Initializable, Access
      *      L2 Defi claim notes into L2 value notes.
      * @return - the number of pending async defi interaction hashes
      */
-    function getAsyncDefiInteractionHashesLength() public view override (IRollupProcessor) returns (uint256) {
+    function getAsyncDefiInteractionHashesLength() public view override(IRollupProcessor) returns (uint256) {
         return rollupState.numAsyncDefiInteractionHashes;
     }
 

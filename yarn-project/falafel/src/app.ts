@@ -89,6 +89,11 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     await next();
   };
 
+  const recordParamUrlMetric = (url: string) => async (ctx: Koa.Context, next: () => Promise<void>) => {
+    metrics.httpEndpoint(`${prefix}${url}`);
+    await next();
+  };
+
   const checkReady = async (ctx: Koa.Context, next: () => Promise<void>) => {
     if (!server.isReady()) {
       ctx.status = 503;
@@ -233,13 +238,13 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     }
   });
 
-  router.get('/latest-rollup-id', async (ctx: Koa.Context) => {
+  router.get('/latest-rollup-id', recordMetric, async (ctx: Koa.Context) => {
     ctx.body = await server.getLatestRollupId();
     ctx.compress = false;
     ctx.status = 200;
   });
 
-  router.get('/tx/:txId', async (ctx: Koa.Context) => {
+  router.get('/tx/:txId', recordParamUrlMetric('/tx'), async (ctx: Koa.Context) => {
     const { txId } = ctx.params;
     const tx = await server.getTxById(txId);
     if (!tx) {
@@ -382,6 +387,15 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
     ctx.status = 200;
   });
 
+  router.post('/get-account-registration-rollup-id', recordMetric, async (ctx: Koa.Context) => {
+    const stream = new PromiseReadable(ctx.req);
+    const data = JSON.parse((await stream.readAll()) as string);
+    const accountPublicKey = GrumpkinAddress.fromString(data.accountPublicKey);
+    const rollupId = await server.getAccountRegistrationRollupId(accountPublicKey);
+    ctx.status = 200;
+    ctx.body = rollupId === null ? -1 : rollupId;
+  });
+
   router.get('/metrics', recordMetric, async (ctx: Koa.Context) => {
     ctx.body = await metrics.getMetrics();
 
@@ -396,6 +410,9 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
   });
 
   const app = new Koa();
+  app.on('error', error => {
+    console.log(`KOA app-level error. ${JSON.stringify({ error })}`);
+  });
   app.proxy = true;
   app.use(compress({ br: false } as any));
   app.use(cors());

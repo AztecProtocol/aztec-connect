@@ -203,7 +203,7 @@ describe('end-to-end account tests', () => {
     expectEqualSpendingKeys(await user1.getSpendingKeys(), [spendingKey1.publicKey]);
 
     await sdk.awaitSynchronised();
-    expect(await sdk.isAccountRegistered(account0.publicKey)).toBe(true);
+    expect(await sdk.isAccountRegistered(account0.publicKey)).toBe(false);
     expect(await sdk.isAccountRegistered(account1.publicKey)).toBe(true);
     expect(await sdk.isAliasRegistered(alias)).toBe(true);
   });

@@ -6,7 +6,7 @@
   "scripts": {
     "build": "yarn clean && webpack",
     "start": "serve -p 8080 ./dest",
-    "start:dev": "webpack serve",
+    "start:dev": "webpack serve --mode=development",
     "build:cli": "yarn clean && tsc -p tsconfig.cli.json",
     "start:cli": "node ./dest/cli.js",
     "start:cli:dev": "tsc-watch -p tsconfig.cli.json --onSuccess 'yarn start:cli'",

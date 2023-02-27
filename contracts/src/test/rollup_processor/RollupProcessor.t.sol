@@ -16,7 +16,7 @@ contract RollupProcessorTest is TestBase {
 
     address internal addressWithCode;
 
-    function setUp() public override (TestBase) {
+    function setUp() public override(TestBase) {
         super.setUp();
         rollupProcessor.grantRole(rollupProcessor.LISTER_ROLE(), address(this));
 
@@ -127,5 +127,4 @@ contract RollupProcessorTest is TestBase {
         rollupProcessor.setAllowThirdPartyContracts(true);
         assertEq(rollupProcessor.allowThirdPartyContracts(), true, "Flag not set");
     }
-
 }

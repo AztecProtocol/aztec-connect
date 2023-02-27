@@ -2,7 +2,7 @@ import { AliasHash } from '@aztec/barretenberg/account_id';
 import { GrumpkinAddress } from '@aztec/barretenberg/address';
 import { MutexDatabase } from '@aztec/barretenberg/mutex';
 import { TxId } from '@aztec/barretenberg/tx_id';
-import { CoreAccountTx, CoreClaimTx, CoreDefiTx, CorePaymentTx, CoreUserTx } from '../core_tx/index.js';
+import { CoreAccountTx, CoreDefiTx, CorePaymentTx, CoreUserTx } from '../core_tx/index.js';
 import { Note } from '../note/index.js';
 import { UserData } from '../user/index.js';
 
@@ -20,7 +20,25 @@ export class SpendingKey {
 }
 
 export class Alias {
-  constructor(public accountPublicKey: GrumpkinAddress, public aliasHash: AliasHash, public index: number) {}
+  constructor(
+    public accountPublicKey: GrumpkinAddress,
+    public aliasHash: AliasHash,
+    public index: number,
+    public noteCommitment1?: Buffer,
+    public spendingPublicKeyX?: Buffer,
+  ) {}
+}
+
+export class BulkUserStateUpdateData {
+  constructor(
+    public updateUserArgs: Parameters<Database['updateUser']>[] = [],
+    public addSpendingKeyArgs: Parameters<Database['addSpendingKey']>[] = [],
+    public upsertAccountTxArgs: Parameters<Database['upsertAccountTx']>[] = [],
+    public upsertPaymentTxArgs: Parameters<Database['upsertPaymentTx']>[] = [],
+    public upsertDefiTxArgs: Parameters<Database['upsertDefiTx']>[] = [],
+    public addNoteArgs: Parameters<Database['addNote']>[] = [],
+    public nullifyNoteArgs: Parameters<Database['nullifyNote']>[] = [],
+  ) {}
 }
 
 export interface Database extends MutexDatabase {
@@ -42,36 +60,22 @@ export interface Database extends MutexDatabase {
   removeUser(accountPublicKey: GrumpkinAddress): Promise<void>;
   resetUsers(): Promise<void>;
 
-  addPaymentTx(tx: CorePaymentTx): Promise<void>;
+  upsertPaymentTx(tx: CorePaymentTx): Promise<void>;
   getPaymentTx(userId: GrumpkinAddress, txId: TxId): Promise<CorePaymentTx | undefined>;
   getPaymentTxs(userId: GrumpkinAddress): Promise<CorePaymentTx[]>;
-  settlePaymentTx(userId: GrumpkinAddress, txId: TxId, settled: Date): Promise<void>;
 
-  addAccountTx(tx: CoreAccountTx): Promise<void>;
+  upsertAccountTx(tx: CoreAccountTx): Promise<void>;
   getAccountTx(txId: TxId): Promise<CoreAccountTx | undefined>;
   getAccountTxs(userId: GrumpkinAddress): Promise<CoreAccountTx[]>;
-  settleAccountTx(txId: TxId, settled: Date): Promise<void>;
 
-  addDefiTx(tx: CoreDefiTx): Promise<void>;
+  upsertDefiTx(tx: CoreDefiTx): Promise<void>;
+  getUnclaimedDefiTxs(userId: GrumpkinAddress): Promise<CoreDefiTx[]>;
   getDefiTx(txId: TxId): Promise<CoreDefiTx | undefined>;
   getDefiTxs(userId: GrumpkinAddress): Promise<CoreDefiTx[]>;
-  getDefiTxsByNonce(userId: GrumpkinAddress, interactionNonce: number): Promise<CoreDefiTx[]>;
-  settleDefiDeposit(txId: TxId, interactionNonce: number, isAsync: boolean, settled: Date): Promise<void>;
-  updateDefiTxFinalisationResult(
-    txId: TxId,
-    success: boolean,
-    outputValueA: bigint,
-    outputValueB: bigint,
-    finalised: Date,
-  ): Promise<void>;
-  settleDefiTx(txId: TxId, claimSettled: Date, claimTxId: TxId): Promise<void>;
-
-  addClaimTx(tx: CoreClaimTx): Promise<void>;
-  getClaimTx(nullifier: Buffer): Promise<CoreClaimTx | undefined>;
 
   getUserTxs(userId: GrumpkinAddress): Promise<CoreUserTx[]>;
   isUserTxSettled(txId: TxId): Promise<boolean>;
-  getPendingUserTxs(userId: GrumpkinAddress): Promise<TxId[]>;
+  getPendingUserTxs(userId: GrumpkinAddress): Promise<CoreUserTx[]>;
   removeUserTx(userId: GrumpkinAddress, txId: TxId): Promise<void>;
 
   addSpendingKey(spendingKey: SpendingKey): Promise<void>;
@@ -83,12 +87,11 @@ export interface Database extends MutexDatabase {
   addAlias(alias: Alias): Promise<void>;
   addAliases(alias: Alias[]): Promise<void>;
   getAlias(accountPublicKey: GrumpkinAddress): Promise<Alias | undefined>;
-  getAliases(aliasHash: AliasHash): Promise<Alias[]>;
+  getAliasByAliasHash(aliasHash: AliasHash): Promise<Alias | undefined>;
 
   addKey(name: string, value: Buffer): Promise<void>;
   getKey(name: string): Promise<Buffer | undefined>;
   deleteKey(name: string): Promise<void>;
 
-  setGenesisData(data: Buffer): Promise<void>;
-  getGenesisData(): Promise<Buffer>;
+  bulkUserStateUpdate(data: BulkUserStateUpdateData): Promise<void>;
 }

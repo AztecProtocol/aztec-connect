@@ -154,6 +154,13 @@ export class ServerRollupProvider extends ServerBlockSource implements RollupPro
     return +(await response.text()) === 1;
   }
 
+  async getAccountRegistrationRollupId(accountPublicKey: GrumpkinAddress) {
+    const response = await this.fetch('/get-account-registration-rollup-id', {
+      accountPublicKey: accountPublicKey.toString(),
+    });
+    return +(await response.text());
+  }
+
   /**
    * Submits a request to baseUrl at the specified path
    * If data is provided, a POST is sent with that data as the body.

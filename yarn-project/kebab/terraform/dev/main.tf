@@ -106,6 +106,7 @@ resource "aws_ecs_task_definition" "kebab" {
   cpu                      = "2048"
   memory                   = "16384"
   execution_role_arn       = data.terraform_remote_state.setup_iac.outputs.ecs_task_execution_role_arn
+  task_role_arn            = data.terraform_remote_state.aztec2_iac.outputs.cloudwatch_logging_ecs_role_arn
 
   volume {
     name = "efs-data-store"
@@ -120,7 +121,7 @@ resource "aws_ecs_task_definition" "kebab" {
     "name": "${var.DEPLOY_TAG}-kebab",
     "image": "278380418400.dkr.ecr.eu-west-2.amazonaws.com/kebab:${var.DEPLOY_TAG}",
     "essential": true,
-    "memoryReservation": 3840,
+    "memoryReservation": 3776,
     "portMappings": [
       {
         "containerPort": 80
@@ -161,7 +162,7 @@ resource "aws_ecs_task_definition" "kebab" {
     "logConfiguration": {
       "logDriver": "awslogs",
       "options": {
-        "awslogs-group": "${aws_cloudwatch_log_group.kebab_logs.name}",
+        "awslogs-group": "/fargate/service/${var.DEPLOY_TAG}/kebab",
         "awslogs-region": "eu-west-2",
         "awslogs-stream-prefix": "ecs"
       }

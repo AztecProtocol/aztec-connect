@@ -6,7 +6,7 @@ import {VerificationKey1x1} from "../keys/VerificationKey1x1.sol";
 import {BaseStandardVerifier} from "../BaseStandardVerifier.sol";
 
 contract Verifier1x1 is BaseStandardVerifier {
-    function getVerificationKeyHash() public pure override (BaseStandardVerifier) returns (bytes32) {
+    function getVerificationKeyHash() public pure override(BaseStandardVerifier) returns (bytes32) {
         return VerificationKey1x1.verificationKeyHash();
     }
 

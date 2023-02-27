@@ -1,8 +1,8 @@
 #pragma once
-#include <ecc/curves/grumpkin/grumpkin.hpp>
-#include <numeric/uint256/uint256.hpp>
 #include <stddef.h>
 #include <stdint.h>
+#include <numeric/uint256/uint256.hpp>
+#include <ecc/curves/grumpkin/grumpkin.hpp>
 
 namespace rollup {
 
@@ -11,10 +11,9 @@ constexpr size_t NULL_TREE_DEPTH = 256;
 constexpr size_t ROOT_TREE_DEPTH = 28;
 constexpr size_t DEFI_TREE_DEPTH = 30;
 
-constexpr size_t MAX_NO_WRAP_INTEGER_BIT_LENGTH = 252;
+constexpr size_t MAX_NO_WRAP_INTEGER_BIT_LENGTH = grumpkin::MAX_NO_WRAP_INTEGER_BIT_LENGTH;
 constexpr size_t MAX_TXS_BIT_LENGTH = 10;
-constexpr size_t TX_FEE_BIT_LENGTH =
-    MAX_NO_WRAP_INTEGER_BIT_LENGTH - MAX_TXS_BIT_LENGTH;
+constexpr size_t TX_FEE_BIT_LENGTH = MAX_NO_WRAP_INTEGER_BIT_LENGTH - MAX_TXS_BIT_LENGTH;
 
 constexpr size_t NUM_ASSETS_BIT_LENGTH = 4;
 constexpr size_t NUM_ASSETS = 1 << NUM_ASSETS_BIT_LENGTH;
@@ -29,17 +28,14 @@ constexpr uint32_t NUM_INTERACTION_RESULTS_PER_BLOCK = 32;
 namespace circuit_gate_count {
 
 /*
-The boolean is_circuit_change_expected should be set to 0 by default. When there
-is an expected circuit change, the developer can quickly check whether the
-circuit gate counts are in allowed range i.e., below the next power of two
-limit, by setting it to one. However, while merging the corresponding PR, the
-developer should set is_circuit_change_expected to zero and change the modified
-circuit gate counts accordingly.
+The boolean is_circuit_change_expected should be set to 0 by default. When there is an expected circuit change, the
+developer can quickly check whether the circuit gate counts are in allowed range i.e., below the next power of two
+limit, by setting it to one. However, while merging the corresponding PR, the developer should set
+is_circuit_change_expected to zero and change the modified circuit gate counts accordingly.
 */
 constexpr bool is_circuit_change_expected = 0;
-/* The below constants are only used for regression testing; to identify
- accidental changes to circuit constraints. They need to be changed when there
- is a circuit change. */
+/* The below constants are only used for regression testing; to identify accidental changes to circuit
+ constraints. They need to be changed when there is a circuit change. */
 constexpr uint32_t ACCOUNT = 23967;
 constexpr uint32_t JOIN_SPLIT = 64047;
 constexpr uint32_t CLAIM = 22684;
@@ -49,8 +45,7 @@ constexpr uint32_t ROOT_VERIFIER = 7435892;
 }; // namespace circuit_gate_count
 
 namespace circuit_gate_next_power_of_two {
-/* The below constants are used in tests to detect undesirable circuit changes.
-They should not be changed unless we
+/* The below constants are used in tests to detect undesirable circuit changes. They should not be changed unless we
 want to exceed the next power of two limit. */
 constexpr uint32_t ACCOUNT = 32768;
 constexpr uint32_t JOIN_SPLIT = 65536;
@@ -61,36 +56,21 @@ constexpr uint32_t ROOT_VERIFIER = 8388608;
 }; // namespace circuit_gate_next_power_of_two
 
 namespace circuit_vk_hash {
-/* These below constants are only used for regression testing; to identify
- accidental changes to circuit constraints. They need to be changed when there
- is a circuit change. Note that they are written in the reverse order
+/* These below constants are only used for regression testing; to identify accidental changes to circuit
+ constraints. They need to be changed when there is a circuit change. Note that they are written in the reverse order
  to comply with the from_buffer<>() method. */
-constexpr auto ACCOUNT = uint256_t(0xcd6d70c733eaf823, 0x6505d3402817ad3d,
-                                   0xbf9e2b6a262589cf, 0xafcc546b55cc45e3);
-constexpr auto JOIN_SPLIT = uint256_t(0xb23c7772f47bc823, 0x5493625d4f08603c,
-                                      0x21ac50a5929576f9, 0xb7b3113c131460e5);
-constexpr auto CLAIM = uint256_t(0x878301ebba40ab60, 0x931466762c62d661,
-                                 0x40aad71ec3496905, 0x9f47aaa109759d0a);
-constexpr auto ROLLUP = uint256_t(0x8712bcbeb11180c5, 0x598412e4f700c484,
-                                  0xfe50ad453c8e4288, 0xa7340fac5feb663f);
-constexpr auto ROOT_ROLLUP = uint256_t(0xcf2fee21f089b32f, 0x90c6187354cf70d4,
-                                       0x3a5a90b8c86d8c64, 0xd55af088ddc86db7);
+constexpr auto ACCOUNT = uint256_t(0xcd6d70c733eaf823, 0x6505d3402817ad3d, 0xbf9e2b6a262589cf, 0xafcc546b55cc45e3);
+constexpr auto JOIN_SPLIT = uint256_t(0xb23c7772f47bc823, 0x5493625d4f08603c, 0x21ac50a5929576f9, 0xb7b3113c131460e5);
+constexpr auto CLAIM = uint256_t(0x878301ebba40ab60, 0x931466762c62d661, 0x40aad71ec3496905, 0x9f47aaa109759d0a);
+constexpr auto ROLLUP = uint256_t(0x8712bcbeb11180c5, 0x598412e4f700c484, 0xfe50ad453c8e4288, 0xa7340fac5feb663f);
+constexpr auto ROOT_ROLLUP = uint256_t(0xcf2fee21f089b32f, 0x90c6187354cf70d4, 0x3a5a90b8c86d8c64, 0xd55af088ddc86db7);
 ;
 constexpr auto ROOT_VERIFIER =
-    uint256_t(0xe91df73df393fb5f, 0x99a9fa13abfbb206, 0x2ffe8c891cbde8c2,
-              0xdcb051e8ca06df5e);
+    uint256_t(0xe91df73df393fb5f, 0x99a9fa13abfbb206, 0x2ffe8c891cbde8c2, 0xdcb051e8ca06df5e);
 }; // namespace circuit_vk_hash
 
 namespace ProofIds {
-enum {
-  PADDING = 0,
-  DEPOSIT = 1,
-  WITHDRAW = 2,
-  SEND = 3,
-  ACCOUNT = 4,
-  DEFI_DEPOSIT = 5,
-  DEFI_CLAIM = 6
-};
+enum { PADDING = 0, DEPOSIT = 1, WITHDRAW = 2, SEND = 3, ACCOUNT = 4, DEFI_DEPOSIT = 5, DEFI_CLAIM = 6 };
 };
 
 } // namespace rollup

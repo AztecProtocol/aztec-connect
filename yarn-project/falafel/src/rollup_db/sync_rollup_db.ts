@@ -91,6 +91,10 @@ export class SyncRollupDb implements RollupDb {
     return this.synchronise(() => this.rollupDb.isAliasRegisteredToAccount(accountPublicKey, aliasHash));
   }
 
+  public getAccountRegistrationRollupId(accountPublicKey: GrumpkinAddress) {
+    return this.synchronise(() => this.rollupDb.getAccountRegistrationRollupId(accountPublicKey));
+  }
+
   public getUnsettledTxCount() {
     return this.synchronise(() => this.rollupDb.getUnsettledTxCount());
   }
@@ -251,6 +255,10 @@ export class SyncRollupDb implements RollupDb {
 
   public deleteUnsettledClaimTxs() {
     return this.synchronise(() => this.rollupDb.deleteUnsettledClaimTxs());
+  }
+
+  public resetPositionOnTxsWithoutRollupProof() {
+    return this.synchronise(() => this.rollupDb.resetPositionOnTxsWithoutRollupProof());
   }
 
   public getAssetMetrics(assetId: number) {

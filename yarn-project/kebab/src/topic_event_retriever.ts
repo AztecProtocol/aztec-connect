@@ -25,10 +25,6 @@ export function extractEventErrorType(promiseResult: PromiseSettledResult<void>)
   return error;
 }
 
-function throwError(type: EventRetrieverErrors, message: string) {
-  throw new EventRetrieverError(type, message);
-}
-
 export interface EventProperties {
   mainTopic: string;
   name: string;
@@ -90,7 +86,7 @@ export class TopicEventRetriever {
         if (!validation.success) {
           // stream is broken, exit here
           this.log(`ERROR: sequence of events for ${this.eventProprties.name} broken!!`);
-          throwError(EventRetrieverErrors.STREAM, validation.message);
+          this.throwError(EventRetrieverErrors.STREAM, validation.message);
         }
       }
       // grab the last event as the new 'previous'
@@ -123,7 +119,7 @@ export class TopicEventRetriever {
         params: [param],
       });
     } catch (err) {
-      throwError(EventRetrieverErrors.PROVIDER, err);
+      this.throwError(EventRetrieverErrors.PROVIDER, err);
     }
   }
 
@@ -131,7 +127,7 @@ export class TopicEventRetriever {
     try {
       return await this.logsDb.getLastEvent(this.eventProprties.mainTopic);
     } catch (err) {
-      throwError(EventRetrieverErrors.DB, err);
+      this.throwError(EventRetrieverErrors.DB, err);
     }
   }
 
@@ -139,7 +135,12 @@ export class TopicEventRetriever {
     try {
       await store.addEthLogs(events);
     } catch (err) {
-      throwError(EventRetrieverErrors.DB, err);
+      this.throwError(EventRetrieverErrors.DB, err);
     }
+  }
+
+  private throwError(type: EventRetrieverErrors, message: string) {
+    this.log(`EventRetrieverError - ${EventRetrieverErrors[type]} ${message}`);
+    throw new EventRetrieverError(type, message);
   }
 }

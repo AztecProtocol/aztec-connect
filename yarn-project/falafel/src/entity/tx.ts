@@ -70,6 +70,10 @@ export class TxDao {
   @Column()
   public excessGas!: number;
 
+  // position of the tx in the block
+  @Column({ default: -1 })
+  public position?: number;
+
   @Column({ nullable: false, default: false })
   @Index()
   public secondClass?: boolean;
@@ -89,6 +93,9 @@ export class TxDao {
     }
     if (this.mined === null) {
       delete this.mined;
+    }
+    if (this.position === -1) {
+      delete this.position;
     }
   }
 

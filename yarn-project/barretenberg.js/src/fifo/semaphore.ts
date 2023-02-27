@@ -1,5 +1,8 @@
 import { MemoryFifo } from '@aztec/barretenberg/fifo';
 
+/**
+ * Allows the acquiring of up to `size` tokens before calls to acquire block, waiting for a call to release().
+ */
 export class Semaphore {
   private readonly queue = new MemoryFifo<boolean>();
 

@@ -200,7 +200,7 @@ describe('end-to-end migrate account and funds tests', () => {
       expect(await sdk.isAccountRegistered(newAccountKeyPair.publicKey)).toBe(true);
       expectEqualSpendingKeys(await newUser.getSpendingKeys(), [newAccountSpendingKeyPair.publicKey]);
       expect(await sdk.isAliasRegisteredToAccount(newAccountKeyPair.publicKey!, aliasToBeKept)).toBe(true);
-      expect(await sdk.isAliasRegisteredToAccount(oldAccountKeyPair.publicKey!, aliasToBeKept)).toBe(true);
+      expect(await sdk.isAliasRegisteredToAccount(oldAccountKeyPair.publicKey!, aliasToBeKept)).toBe(false);
       const newUserPublicKey = await sdk.getAccountPublicKey(aliasToBeKept);
       expect(newUserPublicKey).toBeDefined();
       expect(newUserPublicKey?.equals(newAccountKeyPair.publicKey)).toBe(true);

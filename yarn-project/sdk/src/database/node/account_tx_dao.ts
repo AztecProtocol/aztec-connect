@@ -6,6 +6,10 @@ import { aliasHashTransformer, grumpkinAddressTransformer, txIdTransformer } fro
 
 @Entity({ name: 'accountTx' })
 export class AccountTxDao {
+  public constructor(init?: Partial<AccountTxDao>) {
+    Object.assign(this, init);
+  }
+
   @PrimaryColumn('blob', { transformer: [txIdTransformer] })
   public txId!: TxId;
 

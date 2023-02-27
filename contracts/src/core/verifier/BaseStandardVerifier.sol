@@ -137,7 +137,7 @@ abstract contract BaseStandardVerifier is IVerifier {
     error EC_SCALAR_MUL_FAILURE();
     error PROOF_FAILURE();
 
-    function getVerificationKeyHash() public pure virtual override (IVerifier) returns (bytes32);
+    function getVerificationKeyHash() public pure virtual override(IVerifier) returns (bytes32);
 
     function loadVerificationKey(uint256 vk, uint256 _omegaInverseLoc) internal pure virtual;
 
@@ -147,7 +147,7 @@ abstract contract BaseStandardVerifier is IVerifier {
      * @param - public input hash as computed from the broadcast data
      * @return True if proof is valid, reverts otherwise
      */
-    function verify(bytes calldata, uint256 public_inputs_hash) external view override (IVerifier) returns (bool) {
+    function verify(bytes calldata, uint256 public_inputs_hash) external view override(IVerifier) returns (bool) {
         // validate the correctness of the public inputs hash
         {
             bool hash_matches_input;

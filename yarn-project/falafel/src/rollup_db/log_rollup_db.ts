@@ -96,6 +96,12 @@ export class LogRollupDb implements RollupDb {
     );
   }
 
+  public getAccountRegistrationRollupId(accountPublicKey: GrumpkinAddress) {
+    return this.time('getAccountRegistrationRollupId', () =>
+      this.rollupDb.getAccountRegistrationRollupId(accountPublicKey),
+    );
+  }
+
   public getUnsettledTxCount() {
     return this.time('getUnsettledTxCount', () => this.rollupDb.getUnsettledTxCount());
   }
@@ -256,6 +262,12 @@ export class LogRollupDb implements RollupDb {
 
   public deleteUnsettledClaimTxs() {
     return this.time('deleteUnsettledClaimTxs', () => this.rollupDb.deleteUnsettledClaimTxs());
+  }
+
+  public resetPositionOnTxsWithoutRollupProof() {
+    return this.time('resetPositionOnTxsWithoutRollupProof', () =>
+      this.rollupDb.resetPositionOnTxsWithoutRollupProof(),
+    );
   }
 
   public getAssetMetrics(assetId: number) {

@@ -72,6 +72,7 @@ resource "aws_ecs_task_definition" "block-server" {
   cpu                      = "2048"
   memory                   = "4096"
   execution_role_arn       = data.terraform_remote_state.setup_iac.outputs.ecs_task_execution_role_arn
+  task_role_arn            = data.terraform_remote_state.aztec2_iac.outputs.cloudwatch_logging_ecs_role_arn
 
   container_definitions = <<DEFINITIONS
 [
@@ -96,11 +97,15 @@ resource "aws_ecs_task_definition" "block-server" {
       },
       {
         "name": "FALAFEL_URL",
-        "value": "http://aztec-connect-testnet-falafel.local/aztec-connect-testnet/falafel"
+        "value": "http://${var.DEPLOY_TAG}-falafel.local/${var.DEPLOY_TAG}/falafel"
       },
       {
         "name": "API_PREFIX",
-        "value": "/aztec-connect-testnet/falafel"
+        "value": "/${var.DEPLOY_TAG}/falafel"
+      },
+      {
+        "name": "INIT_FULL_SYNC",
+        "value": "false"
       }
     ],
     "logConfiguration": {
@@ -213,7 +218,7 @@ resource "aws_lb_listener_rule" "api" {
 
   condition {
     path_pattern {
-      values = ["/${var.DEPLOY_TAG}/falafel/get-blocks"]
+      values = ["/${var.DEPLOY_TAG}/falafel/get-blocks", "/${var.DEPLOY_TAG}/falafel/latest-rollup-id"]
     }
   }
 }

@@ -449,7 +449,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
     /**
      * @dev Allow the multisig owner to pause the contract.
      */
-    function pause() public override (IRollupProcessor) whenNotPaused onlyRole(EMERGENCY_ROLE) noReenter {
+    function pause() public override(IRollupProcessor) whenNotPaused onlyRole(EMERGENCY_ROLE) noReenter {
         rollupState.paused = true;
         emit Paused(msg.sender);
     }
@@ -457,7 +457,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
     /**
      * @dev Allow the multisig owner to unpause the contract.
      */
-    function unpause() public override (IRollupProcessor) whenPaused onlyRole(OWNER_ROLE) noReenter {
+    function unpause() public override(IRollupProcessor) whenPaused onlyRole(OWNER_ROLE) noReenter {
         rollupState.paused = false;
         emit Unpaused(msg.sender);
     }
@@ -469,7 +469,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
      */
     function setRollupProvider(address providerAddress, bool valid)
         external
-        override (IRollupProcessor)
+        override(IRollupProcessor)
         onlyRole(OWNER_ROLE)
         noReenter
     {
@@ -481,7 +481,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
      * @dev sets the address of the PLONK verification smart contract. Admin only
      * @param _verifierAddress address of the verification smart contract
      */
-    function setVerifier(address _verifierAddress) public override (IRollupProcessor) onlyRole(OWNER_ROLE) noReenter {
+    function setVerifier(address _verifierAddress) public override(IRollupProcessor) onlyRole(OWNER_ROLE) noReenter {
         rollupState.verifier = IVerifier(_verifierAddress);
         emit VerifierUpdated(_verifierAddress);
     }
@@ -492,7 +492,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
      */
     function setAllowThirdPartyContracts(bool _flag)
         external
-        override (IRollupProcessor)
+        override(IRollupProcessor)
         onlyRole(OWNER_ROLE)
         noReenter
     {
@@ -505,7 +505,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
      */
     function setDefiBridgeProxy(address defiBridgeProxyAddress)
         public
-        override (IRollupProcessor)
+        override(IRollupProcessor)
         onlyRole(OWNER_ROLE)
         noReenter
     {
@@ -519,7 +519,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
      */
     function setSupportedAsset(address linkedToken, uint256 gasLimit)
         external
-        override (IRollupProcessor)
+        override(IRollupProcessor)
         whenNotPaused
         checkThirdPartyContractStatus
         noReenter
@@ -543,7 +543,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
      */
     function setSupportedBridge(address linkedBridge, uint256 gasLimit)
         external
-        override (IRollupProcessor)
+        override(IRollupProcessor)
         whenNotPaused
         checkThirdPartyContractStatus
         noReenter
@@ -577,7 +577,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
      */
     function processRollup(bytes calldata, /* encodedProofData */ bytes calldata signatures)
         external
-        override (IRollupProcessor)
+        override(IRollupProcessor)
         whenNotPaused
         allowAsyncReenter
     {
@@ -605,7 +605,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
      * @dev Used by bridge contracts to send RollupProcessor ETH during a bridge interaction
      * @param interactionNonce the Defi interaction nonce that this payment is logged against
      */
-    function receiveEthFromBridge(uint256 interactionNonce) external payable override (IRollupProcessor) {
+    function receiveEthFromBridge(uint256 interactionNonce) external payable override(IRollupProcessor) {
         assembly {
             // ethPayments[interactionNonce] += msg.value
             mstore(0x00, interactionNonce)
@@ -620,7 +620,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
      * @dev Approve a proofHash for spending a users deposited funds, this is one way and must be called by the owner of the funds
      * @param _proofHash - keccack256 hash of the inner proof public inputs
      */
-    function approveProof(bytes32 _proofHash) public override (IRollupProcessor) whenNotPaused {
+    function approveProof(bytes32 _proofHash) public override(IRollupProcessor) whenNotPaused {
         // asm implementation to reduce compiled bytecode size
         assembly {
             // depositProofApprovals[msg.sender][_proofHash] = true;
@@ -642,7 +642,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
     function depositPendingFunds(uint256 assetId, uint256 amount, address owner, bytes32 proofHash)
         external
         payable
-        override (IRollupProcessor)
+        override(IRollupProcessor)
         whenNotPaused
         noReenter
     {
@@ -735,7 +735,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
      */
     function offchainData(uint256 rollupId, uint256 chunk, uint256 totalChunks, bytes calldata /* offchainTxData */ )
         external
-        override (IRollupProcessor)
+        override(IRollupProcessor)
         whenNotPaused
     {
         emit OffchainData(rollupId, chunk, totalChunks, msg.sender);
@@ -748,7 +748,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
      */
     function processAsyncDefiInteraction(uint256 interactionNonce)
         external
-        override (IRollupProcessor)
+        override(IRollupProcessor)
         whenNotPaused
         noReenterButAsync
         returns (bool)
@@ -1293,7 +1293,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
      * @dev Get true if the contract is paused, false otherwise
      * @return isPaused - True if paused, false otherwise
      */
-    function paused() external view override (IRollupProcessor) returns (bool isPaused) {
+    function paused() external view override(IRollupProcessor) returns (bool isPaused) {
         return rollupState.paused;
     }
 
@@ -1302,7 +1302,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
      * This is equivalent to the number of notes created in the Aztec L2
      * @return dataSize
      */
-    function getDataSize() public view override (IRollupProcessor) returns (uint256 dataSize) {
+    function getDataSize() public view override(IRollupProcessor) returns (uint256 dataSize) {
         assembly {
             dataSize := and(DATASIZE_MASK, shr(DATASIZE_BIT_OFFSET, sload(rollupState.slot)))
         }
@@ -1314,7 +1314,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
      * copies their values into `defiInteractionHashes`. Loop is bounded to < 512 so that tx does not exceed block gas limit
      * @return res the number of pending interactions
      */
-    function getPendingDefiInteractionHashesLength() public view override (IRollupProcessor) returns (uint256 res) {
+    function getPendingDefiInteractionHashesLength() public view override(IRollupProcessor) returns (uint256 res) {
         assembly {
             let state := sload(rollupState.slot)
             let defiInteractionHashesLength := and(ARRAY_LENGTH_MASK, shr(DEFIINTERACTIONHASHES_BIT_OFFSET, state))
@@ -1328,7 +1328,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
      * @dev get the address of the PLONK verification smart contract
      * @return verifierAddress - address of the verification smart contract
      */
-    function verifier() public view override (IRollupProcessor) returns (address verifierAddress) {
+    function verifier() public view override(IRollupProcessor) returns (address verifierAddress) {
         // asm implementation to reduce compiled bytecode size
         assembly {
             verifierAddress := and(sload(rollupState.slot), ADDRESS_MASK)
@@ -1339,7 +1339,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
      * @dev Get the number of supported bridges
      * @return res The number of supported bridges
      */
-    function getSupportedBridgesLength() external view override (IRollupProcessor) returns (uint256 res) {
+    function getSupportedBridgesLength() external view override(IRollupProcessor) returns (uint256 res) {
         res = supportedBridges.length;
     }
 
@@ -1347,7 +1347,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
      * @dev Get the bridge contract address for a given bridgeAddressId
      * @param bridgeAddressId - identifier used to denote a particular bridge
      */
-    function getSupportedBridge(uint256 bridgeAddressId) public view override (IRollupProcessor) returns (address) {
+    function getSupportedBridge(uint256 bridgeAddressId) public view override(IRollupProcessor) returns (address) {
         return supportedBridges[bridgeAddressId - 1];
     }
 
@@ -1355,7 +1355,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
      * @dev Get the number of supported assets
      * @return res The number of supported assets
      */
-    function getSupportedAssetsLength() external view override (IRollupProcessor) returns (uint256 res) {
+    function getSupportedAssetsLength() external view override(IRollupProcessor) returns (uint256 res) {
         res = supportedAssets.length;
     }
 
@@ -1363,7 +1363,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
      * @dev Get the ERC20 token address of a supported asset, for a given assetId
      * @param assetId - identifier used to denote a particular asset
      */
-    function getSupportedAsset(uint256 assetId) public view override (IRollupProcessor) returns (address) {
+    function getSupportedAsset(uint256 assetId) public view override(IRollupProcessor) returns (address) {
         // If the asset ID is >= 2^29, the asset represents a 'virtual' asset that has no ERC20 analogue
         // Virtual assets are used by defi bridges to track non-token data. E.g. to represent a loan.
         // If an assetId is *not* a virtual asset, its ERC20 address can be recovered from `supportedAssets[assetId]`
@@ -1396,7 +1396,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
      * hatch is open and also the number of blocks until the hatch will switch from
      * open to closed or vice versa
      */
-    function getEscapeHatchStatus() public view override (IRollupProcessor) returns (bool, uint256) {
+    function getEscapeHatchStatus() public view override(IRollupProcessor) returns (bool, uint256) {
         uint256 blockNum = block.number;
 
         bool isOpen = blockNum % escapeBlockUpperBound >= escapeBlockLowerBound;
@@ -1417,7 +1417,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
      * has not yet been added into the Aztec Defi Merkle tree. This step is needed in order to convert L2 Defi claim notes into L2 value notes
      * @return res the number of pending defi interaction hashes
      */
-    function getDefiInteractionHashesLength() public view override (IRollupProcessor) returns (uint256 res) {
+    function getDefiInteractionHashesLength() public view override(IRollupProcessor) returns (uint256 res) {
         assembly {
             res := and(ARRAY_LENGTH_MASK, shr(DEFIINTERACTIONHASHES_BIT_OFFSET, sload(rollupState.slot)))
         }
@@ -1457,7 +1457,7 @@ contract RollupProcessor is IRollupProcessor, Decoder, Initializable, AccessCont
      * has not yet been added into the Aztec Defi Merkle tree. This step is needed in order to convert L2 Defi claim notes into L2 value notes
      * @return res the number of pending async defi interaction hashes
      */
-    function getAsyncDefiInteractionHashesLength() public view override (IRollupProcessor) returns (uint256 res) {
+    function getAsyncDefiInteractionHashesLength() public view override(IRollupProcessor) returns (uint256 res) {
         assembly {
             res := and(ARRAY_LENGTH_MASK, shr(ASYNCDEFIINTERACTIONHASHES_BIT_OFFSET, sload(rollupState.slot)))
         }

@@ -110,6 +110,17 @@ resource "aws_efs_file_system" "falafel_data_store" {
   }
 }
 
+resource "aws_backup_selection" "falafel_data_backup" {
+  iam_role_arn = data.terraform_remote_state.aztec2_iac.outputs.aztec2_backup_role_arn
+  name         = "${var.DEPLOY_TAG}-falafel-backup"
+  plan_id      = data.terraform_remote_state.aztec2_iac.outputs.aws_backup_plan_id
+
+  resources = [
+    aws_efs_file_system.falafel_data_store.arn,
+    aws_db_instance.postgres.arn
+  ]
+}
+
 resource "aws_efs_mount_target" "private_az1" {
   file_system_id  = aws_efs_file_system.falafel_data_store.id
   subnet_id       = data.terraform_remote_state.setup_iac.outputs.subnet_az1_private_id
@@ -130,6 +141,7 @@ resource "aws_ecs_task_definition" "falafel" {
   cpu                      = "4096"
   memory                   = "16384"
   execution_role_arn       = data.terraform_remote_state.setup_iac.outputs.ecs_task_execution_role_arn
+  task_role_arn            = data.terraform_remote_state.aztec2_iac.outputs.cloudwatch_logging_ecs_role_arn
 
   volume {
     name = "efs-data-store"
@@ -193,11 +205,11 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "PRIVATE_KEY",
-        "value": "${var.PRIVATE_KEY_MAINNET_AC}"
+        "value": "${var.PROD_ROLLUP_PROVIDER_PRIVATE_KEY}"
       },
       {
         "name": "SERVER_AUTH_TOKEN",
-        "value": "${var.SERVER_AUTH_TOKEN}"
+        "value": "${var.PROD_SERVER_AUTH_TOKEN}"
       },
       {
         "name": "API_PREFIX",

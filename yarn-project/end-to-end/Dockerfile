@@ -13,7 +13,7 @@ RUN yarn workspaces focus --production > /dev/null
 
 FROM node:18-alpine
 ENV CHROME_BIN="/usr/bin/chromium-browser" PUPPETEER_SKIP_CHROMIUM_DOWNLOAD="true"
-RUN apk update && apk add --no-cache udev ttf-freefont chromium curl jq
+RUN apk update && apk add --no-cache udev ttf-freefont chromium curl jq bash
 COPY --from=0 /usr/src /usr/src
 WORKDIR /usr/src/yarn-project/end-to-end
 ENV DEBUG=bb:*

@@ -1,4 +1,4 @@
 {
-  "extends": ".",
+  "extends": "./tsconfig.json",
   "exclude": ["src/**/*.test.ts", "src/**/fixtures/*", "src/wasm/web_worker.ts"]
 }

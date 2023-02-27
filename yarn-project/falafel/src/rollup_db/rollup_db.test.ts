@@ -167,7 +167,7 @@ describe('rollup_db', () => {
   it('should get rollups by an array of rollup ids', async () => {
     const rollups: RollupDao[] = [];
     for (let i = 0; i < 6; ++i) {
-      const rollupProof = randomRollupProof([]);
+      const rollupProof = randomRollupProof([randomTx(), randomTx(), randomTx()]);
       await rollupDb.addRollupProof(rollupProof);
       const rollup = randomRollup(i, rollupProof, undefined);
       await rollupDb.addRollup(rollup);
@@ -189,7 +189,7 @@ describe('rollup_db', () => {
     times[1] = undefined;
     times[7] = undefined;
     for (let i = 0; i < 10; ++i) {
-      const rollupProof = randomRollupProof([]);
+      const rollupProof = randomRollupProof([randomTx(), randomTx(), randomTx()]);
       await rollupDb.addRollupProof(rollupProof);
       const rollup = randomRollup(i, rollupProof, times[i]);
       await rollupDb.addRollup(rollup);
@@ -459,16 +459,26 @@ describe('rollup_db', () => {
     }
   });
 
-  it('should get settled txs', async () => {
-    const tx0 = randomTx();
-    const tx1 = randomTx();
-    const rollupProof = randomRollupProof([tx0, tx1], 0);
+  it('should get settled txs in the correct order', async () => {
+    // create an array of random txs
+    const txs = Array.from({ length: 100 }, () => randomTx());
+    // create a rollup with those txs
+    const rollupProof = randomRollupProof(txs, 0);
     const rollup = randomRollup(0, rollupProof, undefined);
 
-    // Before adding to db, lets re-order the txs to ensure we get them back in "rollup order".
+    // randomly shuffle the txs to later check that they are returned in the correct order
     {
-      const [t0, t1] = rollup.rollupProof.txs;
-      rollup.rollupProof.txs = [t1, t0];
+      // inlined function which shuffles an array and returns a new one
+      const shuffle = (array: any[]) => {
+        const newArray = [...array];
+        for (let i = newArray.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+        }
+        return newArray;
+      };
+      // shuffle the txs
+      rollup.rollupProof.txs = shuffle(rollup.rollupProof.txs);
     }
 
     await rollupDb.addRollup(rollup);
@@ -483,7 +493,7 @@ describe('rollup_db', () => {
       new Date(),
       TxHash.random(),
       [],
-      [tx0.id, tx1.id],
+      txs.map(tx => tx.id),
       [],
       [],
       randomBytes(32),
@@ -492,8 +502,12 @@ describe('rollup_db', () => {
     const settledRollups2 = await rollupDb.getSettledRollups(0, 100);
     expect(settledRollups2.length).toBe(1);
     expect(settledRollups2[0].rollupProof).not.toBeUndefined();
-    expect(settledRollups2[0].rollupProof.txs[0].id).toEqual(tx0.id);
-    expect(settledRollups2[0].rollupProof.txs[1].id).toEqual(tx1.id);
+    // check the num txs is correct
+    expect(settledRollups2[0].rollupProof.txs.length).toEqual(txs.length);
+    // check that the txs are returned in the correct order
+    for (let i = 0; i < txs.length; i++) {
+      expect(settledRollups2[0].rollupProof.txs[i].id).toEqual(txs[i].id);
+    }
   });
 
   it('should erase db', async () => {
@@ -691,5 +705,64 @@ describe('rollup_db', () => {
     const newPendingTxs = await rollupDb.getPendingTxs();
     const expectedTxs = txs.filter(tx => !idsToDelete.some(id => tx.id.equals(id)));
     expect(newPendingTxs).toEqual(expectedTxs.sort((a, b) => (a.created.getTime() > b.created.getTime() ? 1 : -1)));
+  });
+
+  it('should reset position on txs without rollup proof', async () => {
+    // Note: we test this on a real scenario where unsettled rollup is deleted (can happen due to reorg)
+    const numTxs = 100;
+    // create an array of random txs
+    const txs = Array.from({ length: numTxs }, () => randomTx());
+    // create a rollup with those txs
+    const rollupProof = randomRollupProof(txs, 0);
+    const rollup = randomRollup(0, rollupProof, undefined);
+
+    await rollupDb.addRollup(rollup);
+
+    // check there is one unsettled rollup
+    const unsettledRollups = await rollupDb.getUnsettledRollups();
+    expect(unsettledRollups).toHaveLength(1);
+
+    // check position is correclty set on unsettled txs
+    const unsettledTxs = await rollupDb.getUnsettledTxs();
+    expect(unsettledTxs).toHaveLength(numTxs);
+    for (let i = 0; i < numTxs; ++i) {
+      expect(unsettledTxs[i].position).toBe(i);
+    }
+
+    // check there are no pending txs
+    let pendingTxs = await rollupDb.getPendingTxs();
+    expect(pendingTxs).toHaveLength(0);
+
+    // delete all unsettled rollups to cause the txs to have a position but no rollup proof
+    await rollupDb.deleteUnsettledRollups();
+    await rollupDb.deleteOrphanedRollupProofs();
+
+    // reset position on txs without rollup proof
+    await rollupDb.resetPositionOnTxsWithoutRollupProof();
+
+    // check there are pending txs now and non of those has position set
+    pendingTxs = await rollupDb.getPendingTxs();
+    expect(pendingTxs).toHaveLength(numTxs);
+    for (const tx of pendingTxs) {
+      expect(tx.position).toBeUndefined();
+    }
+  });
+
+  it('should get the rollup id of account creation', async () => {
+    const accountPublicKeys = [...Array(6)].map(() => GrumpkinAddress.random());
+    for (let i = 0; i < accountPublicKeys.length; ++i) {
+      const rollupProof = randomRollupProof([
+        randomAccountTx({ aliasHash: AliasHash.random(), accountPublicKey: accountPublicKeys[i] }),
+      ]);
+      await rollupDb.addRollupProof(rollupProof);
+      const rollup = randomRollup(i, rollupProof, undefined);
+      await rollupDb.addRollup(rollup);
+    }
+
+    expect(await rollupDb.getAccountRegistrationRollupId(GrumpkinAddress.random())).toBe(null);
+    for (let i = 0; i < accountPublicKeys.length; ++i) {
+      const rollupId = await rollupDb.getAccountRegistrationRollupId(accountPublicKeys[i]);
+      expect(rollupId).toBe(i);
+    }
   });
 });

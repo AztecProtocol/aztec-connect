@@ -156,6 +156,7 @@ resource "aws_ecs_task_definition" "halloumi_inner" {
   requires_compatibilities = ["EC2"]
   network_mode             = "awsvpc"
   execution_role_arn       = data.terraform_remote_state.setup_iac.outputs.ecs_task_execution_role_arn
+  task_role_arn            = data.terraform_remote_state.aztec2_iac.outputs.cloudwatch_logging_ecs_role_arn
 
   container_definitions = <<DEFINITIONS
 [
@@ -285,6 +286,7 @@ resource "aws_ecs_task_definition" "halloumi_outer" {
   requires_compatibilities = ["EC2"]
   network_mode             = "awsvpc"
   execution_role_arn       = data.terraform_remote_state.setup_iac.outputs.ecs_task_execution_role_arn
+  task_role_arn            = data.terraform_remote_state.aztec2_iac.outputs.cloudwatch_logging_ecs_role_arn
 
   container_definitions = <<DEFINITIONS
 [

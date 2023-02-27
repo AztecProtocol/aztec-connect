@@ -11,6 +11,7 @@
     "clean_db": "rm -rf ./data",
     "formatting": "run -T prettier --check ./src && run -T eslint --max-warnings 0 ./src",
     "start": "node ${NODE_ARGS:-} ./dest",
+    "start:debug": "node ${NODE_ARGS:-} --inspect-brk=0.0.0.0:9221 ./dest",
     "start:e2e": "./scripts/start_e2e.sh",
     "test": "NODE_NO_WARNINGS=1 node --experimental-vm-modules $(yarn bin jest) --no-cache"
   },

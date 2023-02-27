@@ -36,7 +36,7 @@ import { SchnorrSigner, Signer } from '../signer/index.js';
 import { RecoveryData, RecoveryPayload } from '../user/index.js';
 import { UserAccountTx, UserDefiTx, UserPaymentTx } from '../user_tx/index.js';
 import { AztecSdkUser } from './aztec_sdk_user.js';
-import { FeeCalculator, GetFeesOptions } from './fee_calcalator.js';
+import { FeeCalculator, GetFeesOptions } from './fee_calculator.js';
 import { groupUserTxs } from './group_user_txs.js';
 import { TxValueCalculator, GetMaxTxValueOptions } from './tx_value_calculator.js';
 
@@ -46,7 +46,7 @@ export interface AztecSdk {
   on(event: SdkEvent.VERSION_MISMATCH, listener: () => void): this;
   on(event: SdkEvent.UPDATED_USER_STATE, listener: (userId: GrumpkinAddress) => void): this;
   on(event: SdkEvent.UPDATED_WORLD_STATE, listener: (syncedToRollup: number, latestRollupId: number) => void): this;
-  on(event: SdkEvent.DESTROYED, listener: () => void): this;
+  on(event: SdkEvent.DESTROYED, listener: (error?: string) => void): this;
 }
 
 export class AztecSdk extends EventEmitter {
@@ -168,8 +168,8 @@ export class AztecSdk extends EventEmitter {
     return await this.core.userExists(accountPublicKey);
   }
 
-  public async addUser(accountPrivateKey: Buffer, noSync = false) {
-    const userId = await this.core.addUser(accountPrivateKey, noSync);
+  public async addUser(accountPrivateKey: Buffer, registrationSync = false, registrationSyncMarginBlocks = 10) {
+    const userId = await this.core.addUser(accountPrivateKey, registrationSync, registrationSyncMarginBlocks);
     return new AztecSdkUser(userId, this);
   }
 

@@ -8,6 +8,8 @@ export async function getDb(memoryDb = false, identifier?: string) {
   if (isNode) {
     return await SQLDatabase.getDb(memoryDb, identifier);
   } else {
-    return new DexieDatabase();
+    const db = new DexieDatabase();
+    await db.open();
+    return db;
   }
 }

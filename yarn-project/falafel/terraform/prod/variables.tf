@@ -1,8 +1,8 @@
-variable "PRIVATE_KEY_MAINNET_AC" {
+variable "PROD_ROLLUP_PROVIDER_PRIVATE_KEY" {
   type = string
 }
 
-variable "SERVER_AUTH_TOKEN" {
+variable "PROD_SERVER_AUTH_TOKEN" {
   type = string
 }
 

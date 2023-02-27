@@ -6,6 +6,18 @@ import { createDebugLogger } from '../log/index.js';
 
 const debug = createDebugLogger('bb:world_state');
 
+/**
+ * Wraps the merkle tree that represents the "mutable" part of the data tree. That is the tree where each leaf
+ * is the root of rollups data subtree. Provides ability to compute a complete hash path when given a rollups
+ * "immutable" data tree.
+ *
+ * It is *NOT* safe to concurrently perform reads and writes, due the underlying merkle tree implementation.
+ * Even though it does its updates in a batch, the walking of the tree first makes it unsafe.
+ * There is no point protecting the merkle tree with a mutex here, as in any practical context, there will be
+ * several external reads that need to performed atomically. Thus, the caller is responsible for mutexing reads
+ * and write appropriately. Another option would be to change the API here to e.g. `getHashPaths([])`, but
+ * that maybe restrictive from a client perspective.
+ */
 export class WorldState {
   private tree!: MerkleTree;
   private subTreeDepth = 0;

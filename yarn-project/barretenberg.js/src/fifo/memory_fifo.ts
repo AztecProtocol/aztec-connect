@@ -1,3 +1,8 @@
+/**
+ * A simple fifo queue. It can grow unbounded. It can have multiple producers and consumers.
+ * Putting an item onto the queue always succeeds, unless either end() or cancel() has been called in which case
+ * the item being pushed is simply discarded.
+ */
 export class MemoryFifo<T> {
   private waiting: ((item: T | null) => void)[] = [];
   private items: T[] = [];
@@ -53,6 +58,7 @@ export class MemoryFifo<T> {
   /**
    * Once ended, no further items are added to queue. Consumers will consume remaining items within the queue.
    * The queue is not reusable after calling `end()`.
+   * Any consumers waiting for an item receive null.
    */
   public end() {
     this.flushing = true;
@@ -60,8 +66,9 @@ export class MemoryFifo<T> {
   }
 
   /**
-   * Once cancelled, all items are discarded from the queue.
+   * Once cancelled, all items are discarded from the queue, and no further items are added to the queue.
    * The queue is not reusable after calling `cancel()`.
+   * Any consumers waiting for an item receive null.
    */
   public cancel() {
     this.flushing = true;

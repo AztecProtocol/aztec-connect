@@ -14,15 +14,21 @@ export class CoreDefiTx {
     public readonly txFee: bigint,
     public readonly txRefNo: number,
     public readonly created: Date,
-    public readonly settled?: Date,
-    public readonly interactionNonce?: number,
-    public readonly isAsync?: boolean,
-    public readonly success?: boolean,
-    public readonly outputValueA?: bigint,
-    public readonly outputValueB?: bigint,
-    public readonly finalised?: Date,
-    public readonly claimSettled?: Date,
-    public readonly claimTxId?: TxId,
+    public readonly partialState: Buffer,
+    public readonly partialStateSecret: Buffer,
+    // Optional because not known at the time of proof construction.
+    public nullifier?: Buffer,
+    public settled?: Date,
+    public interactionNonce?: number,
+    public isAsync?: boolean,
+    // Optional because filled in once interaction finalised.
+    public success?: boolean,
+    public outputValueA?: bigint,
+    public outputValueB?: bigint,
+    public finalised?: Date,
+    // Optional becaused filled in once claimed.
+    public claimSettled?: Date,
+    public claimTxId?: TxId,
   ) {}
 }
 
@@ -35,6 +41,9 @@ export interface CoreDefiTxJson {
   txFee: string;
   txRefNo: number;
   created: Date;
+  partialState: string;
+  partialStateSecret: string;
+  nullifier?: string;
   settled?: Date;
   interactionNonce?: number;
   isAsync?: boolean;
@@ -53,6 +62,9 @@ export const coreDefiTxToJson = (tx: CoreDefiTx): CoreDefiTxJson => ({
   bridgeCallData: tx.bridgeCallData.toString(),
   depositValue: tx.depositValue.toString(),
   txFee: tx.txFee.toString(),
+  partialState: tx.partialState.toString('hex'),
+  partialStateSecret: tx.partialStateSecret.toString('hex'),
+  nullifier: tx.nullifier?.toString('hex'),
   outputValueA: tx.outputValueA?.toString(),
   outputValueB: tx.outputValueB?.toString(),
   claimTxId: tx.claimTxId?.toString(),
@@ -67,6 +79,9 @@ export const coreDefiTxFromJson = (json: CoreDefiTxJson) =>
     BigInt(json.txFee),
     json.txRefNo,
     json.created,
+    Buffer.from(json.partialState, 'hex'),
+    Buffer.from(json.partialStateSecret, 'hex'),
+    json.nullifier ? Buffer.from(json.nullifier, 'hex') : undefined,
     json.settled,
     json.interactionNonce,
     json.isAsync,

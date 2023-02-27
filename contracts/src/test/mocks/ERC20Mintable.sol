@@ -22,11 +22,11 @@ contract ERC20Mintable is ERC20 {
         return true;
     }
 
-    function decimals() public view override (ERC20) returns (uint8) {
+    function decimals() public view override(ERC20) returns (uint8) {
         return assetDecimals;
     }
 
-    function _spendAllowance(address _owner, address _spender, uint256 _amount) internal override (ERC20) {
+    function _spendAllowance(address _owner, address _spender, uint256 _amount) internal override(ERC20) {
         uint256 currentAllowance = allowance(_owner, _spender);
         if (currentAllowance != type(uint256).max) {
             require(currentAllowance >= _amount, string(abi.encodePacked(symbol(), ": insufficient allowance")));
