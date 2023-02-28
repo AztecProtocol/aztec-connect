@@ -1,0 +1,29 @@
+{
+  "name": "@aztec/alpha-sdk",
+  "version": "2.2.0",
+  "exports": {
+    "node": "./dest/index.js",
+    "default": "./dest/main.js"
+  },
+  "main": "./dest/index.js",
+  "homepage": "https://github.com/AztecProtocol/aztec-connect/blob/master/alpha-sdk/README.md",
+  "author": "AZTEC",
+  "type": "module",
+  "license": "GPL-2.0",
+  "dependencies": {
+    "@aztec/barretenberg": "2.2.0-alpha.5",
+    "@aztec/blockchain": "2.2.0-alpha.5",
+    "detect-node": "^2.1.0",
+    "dexie": "3.0.1",
+    "events": "^3.3.0",
+    "level-js": "^6.1.0",
+    "leveldown": "^6.1.1",
+    "levelup": "^5.1.1",
+    "memdown": "^6.1.1",
+    "serve": "^14.0.1",
+    "sqlite3": "^5.0.9",
+    "supports-color": "7.2.0",
+    "tslib": "^2.4.0",
+    "typeorm": "^0.3.10"
+  }
+}

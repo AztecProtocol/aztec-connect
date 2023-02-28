@@ -1,0 +1,79 @@
+import { GrumpkinAddress } from '@aztec/barretenberg/address';
+import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
+import { ProofId } from '@aztec/barretenberg/client_proofs';
+import { TxId } from '@aztec/barretenberg/tx_id';
+
+export class CoreDefiTx {
+  public readonly proofId = ProofId.DEFI_DEPOSIT;
+
+  constructor(
+    public readonly txId: TxId,
+    public readonly accountPublicKey: GrumpkinAddress,
+    public readonly bridgeCallData: BridgeCallData,
+    public readonly depositValue: bigint,
+    public readonly txFee: bigint,
+    public readonly txRefNo: number,
+    public readonly created: Date,
+    public readonly settled?: Date,
+    public readonly interactionNonce?: number,
+    public readonly isAsync?: boolean,
+    public readonly success?: boolean,
+    public readonly outputValueA?: bigint,
+    public readonly outputValueB?: bigint,
+    public readonly finalised?: Date,
+    public readonly claimSettled?: Date,
+    public readonly claimTxId?: TxId,
+  ) {}
+}
+
+export interface CoreDefiTxJson {
+  proofId: number;
+  txId: string;
+  accountPublicKey: string;
+  bridgeCallData: string;
+  depositValue: string;
+  txFee: string;
+  txRefNo: number;
+  created: Date;
+  settled?: Date;
+  interactionNonce?: number;
+  isAsync?: boolean;
+  success?: boolean;
+  outputValueA?: string;
+  outputValueB?: string;
+  finalised?: Date;
+  claimSettled?: Date;
+  claimTxId?: string;
+}
+
+export const coreDefiTxToJson = (tx: CoreDefiTx): CoreDefiTxJson => ({
+  ...tx,
+  txId: tx.txId.toString(),
+  accountPublicKey: tx.accountPublicKey.toString(),
+  bridgeCallData: tx.bridgeCallData.toString(),
+  depositValue: tx.depositValue.toString(),
+  txFee: tx.txFee.toString(),
+  outputValueA: tx.outputValueA?.toString(),
+  outputValueB: tx.outputValueB?.toString(),
+  claimTxId: tx.claimTxId?.toString(),
+});
+
+export const coreDefiTxFromJson = (json: CoreDefiTxJson) =>
+  new CoreDefiTx(
+    TxId.fromString(json.txId),
+    GrumpkinAddress.fromString(json.accountPublicKey),
+    BridgeCallData.fromString(json.bridgeCallData),
+    BigInt(json.depositValue),
+    BigInt(json.txFee),
+    json.txRefNo,
+    json.created,
+    json.settled,
+    json.interactionNonce,
+    json.isAsync,
+    json.success,
+    json.outputValueA ? BigInt(json.outputValueA) : undefined,
+    json.outputValueB ? BigInt(json.outputValueB) : undefined,
+    json.finalised,
+    json.claimSettled,
+    json.claimTxId ? TxId.fromString(json.claimTxId) : undefined,
+  );
