@@ -750,9 +750,6 @@ jobs:
           name: 'block-server'
           command: deploy block-server
       - run:
-          name: 'nym-gateway'
-          command: deploy nym-gateway
-      - run:
           name: 'sdk'
           command: |
             deploy_ecr sdk
@@ -832,7 +829,7 @@ jobs:
           name: 'set environment'
           command: |
             echo export VERSION_TAG=<< pipeline.parameters.target >> >> $BASH_ENV
-            echo export DEPLOY_TAG=ac-<< pipeline.parameters.target >> >> $BASH_ENV
+            echo export DEPLOY_TAG=aztec-connect-<< pipeline.parameters.target >> >> $BASH_ENV
             source $BASH_ENV
       - run:
           name: 'derive keys'
@@ -1019,7 +1016,6 @@ workflows:
             - e2e-virtual-assets
             - e2e-deposit-approval
             - int-rollup-processor
-            - nym-gateway
           filters: *deploy_filters
   metrics:
     when:
