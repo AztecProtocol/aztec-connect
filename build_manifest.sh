@@ -25,5 +25,5 @@ PROJECTS=(
   end-to-end:yarn-project
   # wasabi:yarn-project
   # explorer:yarn-project
-  faucet:faucet
+  # faucet:faucet
 )
