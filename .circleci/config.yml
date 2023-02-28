@@ -829,7 +829,7 @@ jobs:
           name: 'set environment'
           command: |
             echo export VERSION_TAG=<< pipeline.parameters.target >> >> $BASH_ENV
-            echo export DEPLOY_TAG=aztec-connect-<< pipeline.parameters.target >> >> $BASH_ENV
+            echo export DEPLOY_TAG=ac-<< pipeline.parameters.target >> >> $BASH_ENV
             source $BASH_ENV
       - run:
           name: 'derive keys'
