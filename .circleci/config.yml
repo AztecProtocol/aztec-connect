@@ -750,6 +750,9 @@ jobs:
           name: 'block-server'
           command: deploy block-server
       - run:
+          name: 'nym-gateway'
+          command: deploy nym-gateway
+      - run:
           name: 'sdk'
           command: |
             deploy_ecr sdk
@@ -1016,6 +1019,7 @@ workflows:
             - e2e-virtual-assets
             - e2e-deposit-approval
             - int-rollup-processor
+            - nym-gateway
           filters: *deploy_filters
   metrics:
     when:
