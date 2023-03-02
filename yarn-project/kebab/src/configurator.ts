@@ -4,14 +4,24 @@ import fsExtra from 'fs-extra';
 const { mkdirpSync, pathExistsSync, readJsonSync, writeJsonSync } = fsExtra;
 
 export interface StartupConfig {
+  // The port number on which to start the http service. Env: PORT
   port: number;
+  // The URL of an Ethereum node that Kebab uses to serve requests & build the Aztec Connect logs DB. Env: ETHEREUM_HOST
   ethereumHost: string;
+  // The prefix used as part of Kebab's API routes e.g. https://aztec-connect-dev-eth-host.aztec.network:8545/<api prefix>/status. Env: API_PREFIX
   apiPrefix: string;
+  // A flag specifying whether additional logging be added to DB calls. Env: TYPEORM_LOGGING
   typeOrmLogging: boolean;
+  // A flag specifying whether Kebab should allow methods that DON'T start with `eth_` to be executed. Env: ALLOW_PRIVILEGED_METHODS
   allowPrivilegedMethods: boolean;
+  // A list of specific methods that DON'T start with `eth_` that Kebab should allow to be executed. Env: ADDITIONAL_PERMITTED_METHODS
   additionalPermittedMethods: string[];
+  // A list of keys that can restrict access to Kebab if specified. Adding an API key updates Kebab's endpoint that serves ETH requests.
+  // e.g. POST https://aztec-connect-dev-eth-host.aztec.network:8545/<prefix>/<api key>
   apiKeys: string[];
+  // A flag specifying whether Kebab should create an Aztec Connect event DB and serve related `eth_getLogs` calls from there. Env: INDEXING
   indexing: boolean;
+  // The Ethereum address of the Aztec Connect contract. Env: ROLLUP_CONTRACT_ADDRESS
   rollupContractAddress: EthAddress;
 }
 
