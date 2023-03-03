@@ -178,15 +178,15 @@ describe('Tx Fee Allocator', () => {
       preciselyFundedTx(2, TxType.TRANSFER, NON_FEE_PAYING_ASSET),
     ];
     expect(() => {
-      txFeeAllocator.validateReceivedTxs(txs, [TxType.TRANSFER, TxType.TRANSFER], true);
-    }).toThrow('Transactions must have exactly 1 fee paying asset');
+      txFeeAllocator.validateReceivedTxs(txs, [TxType.TRANSFER, TxType.TRANSFER]);
+    }).toThrow("Transactions don't have the correct number of fee paying assets");
   });
 
   it('should throw if multiple fee paying assets', () => {
     const txs = [preciselyFundedTx(1, TxType.TRANSFER, 0), preciselyFundedTx(2, TxType.TRANSFER, 1)];
     expect(() => {
       txFeeAllocator.validateReceivedTxs(txs, [TxType.TRANSFER, TxType.TRANSFER]);
-    }).toThrow('Transactions must have exactly 1 fee paying asset');
+    }).toThrow("Transactions don't have the correct number of fee paying assets");
   });
 
   it('correctly determines fee paying asset', () => {

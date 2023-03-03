@@ -230,7 +230,7 @@ describe('tx receiver', () => {
       ];
 
       await expect(() => txReceiver.receiveTxs(createTxRequest(txs, 'id1'))).rejects.toThrow(
-        'Transactions must have exactly 1 fee paying asset.',
+        "Transactions don't have the correct number of fee paying assets",
       );
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
     });
@@ -635,7 +635,7 @@ describe('tx receiver', () => {
       const txs = [mockTx({ proofId: ProofId.SEND, txFeeAssetId: nonFeePayingAssetId })];
 
       await expect(() => txReceiver.receiveTxs(createTxRequest(txs, 'id1'))).rejects.toThrow(
-        'Transactions must have exactly 1 fee paying asset.',
+        "Transactions don't have the correct number of fee paying assets",
       );
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
     });
