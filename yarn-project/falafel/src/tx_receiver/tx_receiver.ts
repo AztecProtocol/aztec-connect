@@ -124,7 +124,7 @@ export class TxReceiver {
       const txDaos: TxDao[] = [];
       if (!secondClass) {
         const txFeeAllocator = new TxFeeAllocator(this.txFeeResolver);
-        const validation = txFeeAllocator.validateReceivedTxs(txs, txTypes);
+        const validation = txFeeAllocator.validateReceivedTxs(txs, txTypes, exitOnly);
         this.log(
           `Gas Required/Provided: ${validation.gasRequired}/${validation.gasProvided}. Fee asset index: ${validation.feePayingAsset}. Feeless txs: ${validation.hasFeelessTxs}.`,
         );
