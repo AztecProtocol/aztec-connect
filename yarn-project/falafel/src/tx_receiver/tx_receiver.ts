@@ -103,6 +103,9 @@ export class TxReceiver {
               !allowedBridgeCallData.includes(bridgeCallData.toString()) &&
               (outputAssetIdB !== undefined || ![0, 1].includes(outputAssetIdA))
             ) {
+              this.log(
+                `Rejecting defi tx for bridge ${bridgeCallData.toString()}, output assets A/B: ${outputAssetIdA}/${outputAssetIdB}`,
+              );
               throw new Error(
                 'This application has been sunset, only DeFi exits and Withdraw transactions are allowed.',
               );
