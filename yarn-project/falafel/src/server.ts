@@ -231,6 +231,7 @@ export class Server {
       numInnerRollupTxs,
       numOuterRollupProofs,
       rollupCallDataLimit,
+      exitOnly,
       runtimeConfig: {
         verificationGas,
         maxFeeGasPrice,
@@ -252,6 +253,7 @@ export class Server {
       rollupCallDataLimit,
       gasLimit,
       feeRoundUpSignificantFigures,
+      exitOnly,
     );
   }
 

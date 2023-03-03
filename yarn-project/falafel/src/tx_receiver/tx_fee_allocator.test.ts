@@ -145,6 +145,15 @@ describe('Tx Fee Allocator', () => {
     expect(validation.hasFeelessTxs).toEqual(false);
   });
 
+  it('correctly validates single payment - exit only', () => {
+    const tx = preciselyFundedTx(1, TxType.TRANSFER, 0);
+    const validation = txFeeAllocator.validateReceivedTxs([tx], [TxType.TRANSFER], true);
+    expect(validation.feePayingAsset).toEqual(0);
+    expect(validation.gasProvided).toEqual(getTxGasWithBase(TxType.TRANSFER));
+    expect(validation.gasRequired).toEqual(0);
+    expect(validation.hasFeelessTxs).toEqual(false);
+  });
+
   it('correctly validates multiple payments', () => {
     const txs = [preciselyFundedTx(1, TxType.TRANSFER, 0), preciselyFundedTx(2, TxType.TRANSFER, 0)];
     const validation = txFeeAllocator.validateReceivedTxs(txs, [TxType.TRANSFER, TxType.TRANSFER]);
@@ -154,13 +163,22 @@ describe('Tx Fee Allocator', () => {
     expect(validation.hasFeelessTxs).toEqual(false);
   });
 
+  it('correctly validates multiple payments - exit only', () => {
+    const txs = [preciselyFundedTx(1, TxType.TRANSFER, 0), preciselyFundedTx(2, TxType.TRANSFER, 0)];
+    const validation = txFeeAllocator.validateReceivedTxs(txs, [TxType.TRANSFER, TxType.TRANSFER], true);
+    expect(validation.feePayingAsset).toEqual(0);
+    expect(validation.gasProvided).toEqual(getTxGasWithBase(TxType.TRANSFER) * 2);
+    expect(validation.gasRequired).toEqual(0);
+    expect(validation.hasFeelessTxs).toEqual(false);
+  });
+
   it('should throw if no fee paying assets', () => {
     const txs = [
       preciselyFundedTx(1, TxType.TRANSFER, NON_FEE_PAYING_ASSET),
       preciselyFundedTx(2, TxType.TRANSFER, NON_FEE_PAYING_ASSET),
     ];
     expect(() => {
-      txFeeAllocator.validateReceivedTxs(txs, [TxType.TRANSFER, TxType.TRANSFER]);
+      txFeeAllocator.validateReceivedTxs(txs, [TxType.TRANSFER, TxType.TRANSFER], true);
     }).toThrow('Transactions must have exactly 1 fee paying asset');
   });
 
@@ -652,6 +670,88 @@ describe('Tx Fee Allocator', () => {
     expect(txDaos.map(dao => dao.excessGas)).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0]);
   });
 
+  it('should allocate excess gas to first non-fee paying tx - exit only', () => {
+    const excessGas = getTxGasWithBase(TxType.TRANSFER);
+    const txs = [
+      preciselyFundedTx(3, TxType.TRANSFER, 1, excessGas),
+      preciselyFundedTx(4, TxType.TRANSFER, NON_FEE_PAYING_ASSET),
+    ];
+    const txTypes = [TxType.TRANSFER, TxType.TRANSFER];
+
+    // daos start off with 0 excess gas
+    const txDaos = txs.map((tx, i) => {
+      return toTxDao(tx, txTypes[i]);
+    });
+
+    const validation = txFeeAllocator.validateReceivedTxs(txs, txTypes, true);
+
+    expect(validation.feePayingAsset).toEqual(1);
+    expect(validation.gasProvided).toEqual(getTxGasWithBase(TxType.TRANSFER) + excessGas);
+
+    expect(validation.gasRequired).toEqual(0);
+    expect(validation.hasFeelessTxs).toEqual(true);
+
+    // no excess gas so nothing should be 'reallocated'
+    txFeeAllocator.reallocateGas(txDaos, txs, txTypes, validation);
+
+    // no excess. the additional fee on the first transfer was completely used to pay for non-fee payer
+    expect(txDaos.map(dao => dao.excessGas)).toEqual([0, 0]);
+  });
+
+  it('should allocate excess gas to first non-fee paying tx - exit only 2', () => {
+    const excessGas =
+      getTxGasWithBase(TxType.TRANSFER) +
+      getTxGasWithBase(TxType.WITHDRAW_HIGH_GAS) * 2 +
+      getTxGasWithBase(TxType.WITHDRAW_TO_WALLET);
+    const txs = [
+      preciselyFundedTx(1, TxType.ACCOUNT, 1),
+      preciselyFundedTx(2, TxType.DEPOSIT, 1, excessGas),
+      preciselyFundedTx(3, TxType.TRANSFER, 1),
+      preciselyFundedTx(4, TxType.TRANSFER, NON_FEE_PAYING_ASSET),
+      preciselyFundedTx(5, TxType.WITHDRAW_HIGH_GAS, 1),
+      preciselyFundedTx(6, TxType.WITHDRAW_HIGH_GAS, NON_FEE_PAYING_ASSET),
+      preciselyFundedTx(7, TxType.WITHDRAW_HIGH_GAS, NON_FEE_PAYING_ASSET),
+      preciselyFundedTx(8, TxType.WITHDRAW_TO_WALLET, 1),
+      preciselyFundedTx(9, TxType.WITHDRAW_TO_WALLET, NON_FEE_PAYING_ASSET),
+    ];
+    const txTypes = [
+      TxType.ACCOUNT,
+      TxType.DEPOSIT,
+      TxType.TRANSFER,
+      TxType.TRANSFER,
+      TxType.WITHDRAW_HIGH_GAS,
+      TxType.WITHDRAW_HIGH_GAS,
+      TxType.WITHDRAW_HIGH_GAS,
+      TxType.WITHDRAW_TO_WALLET,
+      TxType.WITHDRAW_TO_WALLET,
+    ];
+
+    // daos start off with 0 excess gas
+    const txDaos = txs.map((tx, i) => {
+      return toTxDao(tx, txTypes[i]);
+    });
+
+    const validation = txFeeAllocator.validateReceivedTxs(txs, txTypes, true);
+
+    expect(validation.feePayingAsset).toEqual(1);
+    expect(validation.gasProvided).toEqual(
+      getTxGasWithBase(TxType.ACCOUNT) +
+        getTxGasWithBase(TxType.DEPOSIT) +
+        getTxGasWithBase(TxType.TRANSFER) +
+        getTxGasWithBase(TxType.WITHDRAW_HIGH_GAS) +
+        getTxGasWithBase(TxType.WITHDRAW_TO_WALLET) +
+        excessGas,
+    );
+    expect(validation.gasRequired).toEqual(0);
+    expect(validation.hasFeelessTxs).toEqual(true);
+
+    // no excess gas so nothing should be 'reallocated'
+    txFeeAllocator.reallocateGas(txDaos, txs, txTypes, validation);
+
+    // no excess, tx costs have consumed all provided gas
+    expect(txDaos.map(dao => dao.excessGas)).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0]);
+  });
+
   it('should allocate excess gas to non-paying DEFI', () => {
     const excessGas =
       getTxGasWithBase(TxType.DEFI_DEPOSIT) +
@@ -724,5 +824,36 @@ describe('Tx Fee Allocator', () => {
 
     // the DEFI should have excess equal to all other bridge tx slots
     expect(txDaos.map(dao => dao.excessGas)).toEqual([0, expectedExcess]);
+  });
+
+  it('should allocate excess gas to non-paying DEFI - exit only', () => {
+    const excessGas =
+      getTxGasWithBase(TxType.DEFI_DEPOSIT) +
+      getSingleBridgeCost(bridgeCallDatas[0].toBigInt()) +
+      getTxGasWithBase(TxType.DEFI_CLAIM);
+    const txs = [
+      preciselyFundedTx(3, TxType.TRANSFER, 1, excessGas),
+      mockDefiBridgeTx(6, 0, bridgeCallDatas[0].toBigInt(), 1),
+    ];
+    const txTypes = [TxType.TRANSFER, TxType.DEFI_DEPOSIT];
+
+    // daos start off with 0 excess gas
+    const txDaos = txs.map((tx, i) => {
+      return toTxDao(tx, txTypes[i]);
+    });
+
+    const validation = txFeeAllocator.validateReceivedTxs(txs, txTypes, true);
+
+    expect(validation.feePayingAsset).toEqual(1);
+    expect(validation.gasProvided).toEqual(getTxGasWithBase(TxType.TRANSFER) + excessGas);
+    // gas required includes the claim
+    expect(validation.gasRequired).toEqual(0);
+    expect(validation.hasFeelessTxs).toEqual(true);
+
+    // no excess gas so nothing should be 'reallocated'
+    txFeeAllocator.reallocateGas(txDaos, txs, txTypes, validation);
+
+    // no excess. the additional fee on the first transfer was completely used to pay for the DEFI
+    expect(txDaos.map(dao => dao.excessGas)).toEqual([0, 0]);
   });
 });

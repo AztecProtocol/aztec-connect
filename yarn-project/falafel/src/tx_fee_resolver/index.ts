@@ -21,6 +21,7 @@ export class TxFeeResolver {
     callDataPerRollup: number,
     gasLimitPerRollup: number,
     numSignificantFigures = 2,
+    private exitOnly = false,
     refreshInterval = 5 * 60 * 1000, // 5 mins
     minFeeDuration = refreshInterval * 2, // 10 mins
   ) {
@@ -35,6 +36,7 @@ export class TxFeeResolver {
       callDataPerRollup,
       gasLimitPerRollup,
       numSignificantFigures,
+      this.exitOnly,
     );
   }
 
@@ -122,7 +124,10 @@ export class TxFeeResolver {
     const immediateTxGas = defiDepositGas + defiClaimGas + fullBridgeTxGas + emptySlotGas * (this.txsPerRollup - 1);
 
     const values = [
-      { assetId: feeAssetId, value: this.feeCalculator.getTxFeeFromGas(feeAssetId, slowTxGas) },
+      // AC SUNSET CODE
+      this.exitOnly
+        ? { assetId: feeAssetId, value: 0n }
+        : { assetId: feeAssetId, value: this.feeCalculator.getTxFeeFromGas(feeAssetId, slowTxGas) },
       { assetId: feeAssetId, value: this.feeCalculator.getTxFeeFromGas(feeAssetId, fastTxGas) },
       { assetId: feeAssetId, value: this.feeCalculator.getTxFeeFromGas(feeAssetId, immediateTxGas) },
     ];

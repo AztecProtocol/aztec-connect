@@ -101,9 +101,11 @@ export async function getComponents(configurator: Configurator) {
     proverless,
     rollupCallDataLimit,
     version,
+    exitOnly,
   } = confVars;
   const { provider, signingAddress } = await getProvider(ethereumHost, privateKey);
 
+  console.log(`EXIT-ONLY mode: ${exitOnly ? 'TRUE' : 'FALSE'}`);
   console.log(`Process Id: ${process.pid}`);
   console.log(`Database Url: ${dbUrl || 'none (local sqlite)'}`);
   console.log(`Ethereum host: ${ethereumHost}`);

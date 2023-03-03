@@ -125,4 +125,30 @@ describe('tx fee resolver', () => {
     expect(txFeeResolver.isFeePayingAsset(1)).toEqual(true);
     expect(txFeeResolver.isFeePayingAsset(2)).toEqual(false);
   });
+
+  it('return correct defi fees on exit-only mode', async () => {
+    const assetId = 0;
+    const bridgeCallData = new BridgeCallData(0, assetId, 0).toBigInt();
+    txFeeResolver = new TxFeeResolver(
+      blockchain,
+      bridgeCostResolver as any,
+      verificationGas,
+      maxFeeGasPrice,
+      feeGasPriceMultiplier,
+      txsPerRollup,
+      feePayingAssetIds,
+      callDataPerRollup,
+      gasLimitPerRollup,
+      numSignificantFigures,
+      true,
+    );
+    await txFeeResolver.start();
+
+    const defiFees = txFeeResolver.getDefiFees(bridgeCallData);
+    expect(defiFees).toEqual([
+      { assetId, value: 0n },
+      { assetId, value: 12503696000000000000n },
+      { assetId, value: 12514946000000000000n },
+    ]);
+  });
 });

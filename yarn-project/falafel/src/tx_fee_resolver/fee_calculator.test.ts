@@ -28,9 +28,11 @@ describe('fee calculator', () => {
   const numSignificantFigures = 0;
   const callDataPerRollup = 128 * 1024;
   const gasLimitPerRollup = 12000000;
+  let exitOnly: boolean;
   let priceTracker: Mockify<PriceTracker>;
   let blockchain: Mockify<Blockchain>;
   let feeCalculator: FeeCalculator;
+  let exitOnlyFeeCalculator: FeeCalculator;
 
   const getGasOverheadForTxType = (assetId: number, txType: TxType) => {
     const assetGasLimit = { assetId, gasLimit: assets[assetId].gasLimit };
@@ -38,6 +40,7 @@ describe('fee calculator', () => {
   };
 
   beforeEach(() => {
+    exitOnly = false;
     jest.spyOn(console, 'log').mockImplementation(() => {});
     priceTracker = {
       getGasPrice: jest.fn().mockReturnValue(100n),
@@ -72,6 +75,7 @@ describe('fee calculator', () => {
       callDataPerRollup,
       gasLimitPerRollup,
       numSignificantFigures,
+      exitOnly,
     );
   });
 
@@ -114,6 +118,7 @@ describe('fee calculator', () => {
           callDataPerRollup,
           gasLimitPerRollup,
           numSignificantFigures,
+          exitOnly,
         );
         expect(feeCalculator.getUnadjustedBaseVerificationGas()).toBe(Math.ceil(vGas / txs));
       }
@@ -132,6 +137,7 @@ describe('fee calculator', () => {
       callDataPerRollup,
       gasLimitPerRollup,
       numSignificantFigures,
+      exitOnly,
     );
     // call data per rollup above is 128 * 1024
     // gas limit per rollup above is 12000000
@@ -340,5 +346,29 @@ describe('fee calculator', () => {
           feeCalculator.getUnadjustedTxGas(1, TxType.WITHDRAW_HIGH_GAS),
       ).toBe(adjustmentValue);
     }
+  });
+
+  it('returns correct fees for exit-only mode', () => {
+    exitOnly = true;
+    exitOnlyFeeCalculator = new FeeCalculator(
+      priceTracker as any,
+      blockchain,
+      verificationGas,
+      maxFeeGasPrice,
+      feeGasPriceMultiplier,
+      txsPerRollup,
+      callDataPerRollup,
+      gasLimitPerRollup,
+      numSignificantFigures,
+      exitOnly,
+    );
+    let fees = exitOnlyFeeCalculator.getTxFees(0, 0);
+    expect(fees.map(val => val[0].value)).toEqual(new Array(7).fill(0n));
+    fees = exitOnlyFeeCalculator.getTxFees(1, 0);
+    expect(fees.map(val => val[0].value)).toEqual(new Array(7).fill(0n));
+    fees = exitOnlyFeeCalculator.getTxFees(1, 1);
+    expect(fees.map(val => val[0].value)).toEqual(new Array(7).fill(0n));
+    fees = exitOnlyFeeCalculator.getTxFees(0, 1);
+    expect(fees.map(val => val[0].value)).toEqual(new Array(7).fill(0n));
   });
 });

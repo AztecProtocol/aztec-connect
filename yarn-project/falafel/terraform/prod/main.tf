@@ -238,6 +238,10 @@ resource "aws_ecs_task_definition" "falafel" {
       {
         "name": "NODE_ARGS",
         "value": "--inspect=0.0.0.0:9229"
+      },
+      {
+        "name": "EXIT_ONLY",
+        "value": "false"
       }
     ],
     "mountPoints": [

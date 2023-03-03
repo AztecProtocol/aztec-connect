@@ -16,7 +16,7 @@ interface TxGroupValidation {
 export class TxFeeAllocator {
   constructor(private txFeeResolver: TxFeeResolver, private log = createLogger('TxFeeAllocator')) {}
 
-  public validateReceivedTxs(txs: Tx[], txTypes: TxType[]): TxGroupValidation {
+  public validateReceivedTxs(txs: Tx[], txTypes: TxType[], exitOnly = false): TxGroupValidation {
     const feePayingAssets = new Set<number>();
     let hasFeelessTxs = false;
     // determine the fee paying asset type for this block of txs
@@ -44,7 +44,11 @@ export class TxFeeAllocator {
     for (let i = 0; i < txs.length; i++) {
       const tx = txs[i];
       const txAssetId = tx.proof.feeAssetId;
-      if (txTypes[i] === TxType.DEFI_DEPOSIT) {
+
+      // AC SUNSET CODE
+      if (exitOnly) {
+        gasRequired = 0;
+      } else if (txTypes[i] === TxType.DEFI_DEPOSIT) {
         const { bridgeCallData } = new DefiDepositProofData(tx.proof);
         // this call return BASE_TX_GAS + constants[DEFI_DEPOSIT] + BRIDGE_TX_GAS
         gasRequired += this.txFeeResolver.getAdjustedBridgeTxGas(txAssetId, bridgeCallData.toBigInt());
@@ -159,10 +163,10 @@ export class TxFeeAllocator {
           // this call return BASE_TX_GAS + constants[DEFI_CLAIM]
           const gasCostClaim = this.txFeeResolver.getAdjustedTxGas(txFeeAssetId, TxType.DEFI_CLAIM);
           // this gives us the excess to apply first to the bridge and then to the verification
-          txDaos[i].excessGas = gasProvidedThisTx - (gasCostClaim + gasCostDeposit);
+          txDaos[i].excessGas = Math.max(0, gasProvidedThisTx - (gasCostClaim + gasCostDeposit));
         } else {
           const gasCost = this.txFeeResolver.getAdjustedTxGas(txFeeAssetId, txTypes[i]);
-          txDaos[i].excessGas = gasProvidedThisTx - gasCost;
+          txDaos[i].excessGas = Math.max(0, gasProvidedThisTx - gasCost);
         }
       }
       return;
@@ -196,7 +200,7 @@ export class TxFeeAllocator {
     // if we have a defi, allocate the excess gas to it
     const defiIndex = txTypes.findIndex(tx => tx === TxType.DEFI_DEPOSIT);
     if (defiIndex >= 0) {
-      txDaos[defiIndex].excessGas = providedGas;
+      txDaos[defiIndex].excessGas = Math.max(0, providedGas);
       return;
     }
 
@@ -208,6 +212,6 @@ export class TxFeeAllocator {
     if (nonFeeIndex === -1) {
       throw new Error(`Failed to allocate fee to tx`);
     }
-    txDaos[nonFeeIndex].excessGas = providedGas;
+    txDaos[nonFeeIndex].excessGas = Math.max(0, providedGas);
   }
 }

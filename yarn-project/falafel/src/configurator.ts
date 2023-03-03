@@ -55,6 +55,8 @@ interface StartupConfig {
   proverless: boolean;
   // The maximum amount of call data that can be consumed by a rollup. Env: CALL_DATA_LIMIT_KB
   rollupCallDataLimit: number;
+  // To be turned on when Aztec Connect is sunset. Means that users are only allowed to exit AC. Env: EXIT_ONLY
+  exitOnly: boolean;
 }
 
 export interface ConfVars extends StartupConfig {
@@ -81,6 +83,7 @@ const defaultStartupConfig: StartupConfig = {
   serverAuthToken: '!changeme#',
   typeOrmLogging: false,
   proverless: false,
+  exitOnly: false,
   rollupCallDataLimit: 120 * 1024,
 };
 
@@ -107,6 +110,7 @@ const defaultRuntimeConfig: RuntimeConfig = {
 
 function getStartupConfigEnvVars(): Partial<StartupConfig> {
   const {
+    EXIT_ONLY,
     FALAFEL_VERSION_OVERRIDE,
     DB_URL,
     ROLLUP_CONTRACT_ADDRESS,
@@ -154,6 +158,7 @@ function getStartupConfigEnvVars(): Partial<StartupConfig> {
     apiPrefix: API_PREFIX,
     typeOrmLogging: TYPEORM_LOGGING ? TYPEORM_LOGGING === 'true' : undefined,
     proverless: PROVERLESS ? PROVERLESS === 'true' : undefined,
+    exitOnly: EXIT_ONLY ? EXIT_ONLY === 'true' : undefined,
     serverAuthToken: SERVER_AUTH_TOKEN,
     rollupCallDataLimit: CALL_DATA_LIMIT_KB ? +CALL_DATA_LIMIT_KB * 1024 : undefined,
   };

@@ -25,6 +25,7 @@ export class FeeCalculator {
     private readonly callDataPerRollup: number,
     private readonly gasPerRollup: number,
     private readonly numSignificantFigures = 0,
+    private readonly exitOnly: boolean,
     private readonly log = createLogger('FeeCalculator'),
   ) {
     this.log('Creating...');
@@ -54,7 +55,10 @@ export class FeeCalculator {
     return allTxTypes.map(txType => [
       {
         assetId: feeAssetId,
-        value: this.getBaseFee(txAssetId, feeAssetId, txType) + this.getFeeConstant(txAssetId, feeAssetId, txType),
+        // AC SUNSET CODE
+        value: this.exitOnly
+          ? 0n
+          : this.getBaseFee(txAssetId, feeAssetId, txType) + this.getFeeConstant(txAssetId, feeAssetId, txType),
       },
       {
         assetId: feeAssetId,

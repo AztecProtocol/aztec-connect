@@ -238,6 +238,10 @@ resource "aws_ecs_task_definition" "falafel" {
       {
         "name": "INITIAL_RUNTIME_CONFIG_PATH",
         "value": "./config/dev_testnet_initial_config.json"
+      },
+      {
+        "name": "EXIT_ONLY",
+        "value": "false"
       }
     ],
     "mountPoints": [
