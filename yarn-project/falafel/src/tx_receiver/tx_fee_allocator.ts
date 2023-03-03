@@ -33,8 +33,9 @@ export class TxFeeAllocator {
     }
 
     // there must be only one!
-    if (feePayingAssets.size !== 1) {
-      throw new Error('Transactions must have exactly 1 fee paying asset.');
+    const allowedFeeAssetCount = exitOnly ? [0, 1] : [1];
+    if (!allowedFeeAssetCount.includes(feePayingAssets.size)) {
+      throw new Error("Transactions don't have the correct number of fee paying assets");
     }
 
     const feePayingAsset = [...feePayingAssets][0];
