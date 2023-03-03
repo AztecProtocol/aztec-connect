@@ -86,6 +86,7 @@ export class TxReceiver {
     await this.mutex.acquire();
     const txs = txRequest.txs;
     try {
+      let shouldReject = exitOnly;
       const txTypes: TxType[] = [];
       for (let i = 0; i < txs.length; ++i) {
         const { proof } = txs[i];
@@ -93,21 +94,19 @@ export class TxReceiver {
 
         // AC SUNSET CODE
         if (exitOnly) {
-          if ([TxType.ACCOUNT, TxType.TRANSFER].includes(txType)) {
-            throw new Error('This application has been sunset, only DeFi exits and Withdraw transactions are allowed.');
+          if ([TxType.WITHDRAW_HIGH_GAS, TxType.WITHDRAW_TO_WALLET, TxType.DEPOSIT].includes(txType)) {
+            shouldReject = false;
           }
           if (txType === TxType.DEFI_DEPOSIT) {
             const { bridgeCallData } = new DefiDepositProofData(proof);
             const { outputAssetIdA, outputAssetIdB } = bridgeCallData;
-            if (
-              !allowedBridgeCallData.includes(bridgeCallData.toString()) &&
-              (outputAssetIdB !== undefined || ![0, 1].includes(outputAssetIdA))
-            ) {
+            if (allowedBridgeCallData.includes(bridgeCallData.toString())) {
+              shouldReject = false;
+            } else if (outputAssetIdB === undefined && [0, 1].includes(outputAssetIdA)) {
+              shouldReject = false;
+            } else {
               this.log(
                 `Rejecting defi tx for bridge ${bridgeCallData.toString()}, output assets A/B: ${outputAssetIdA}/${outputAssetIdB}`,
-              );
-              throw new Error(
-                'This application has been sunset, only DeFi exits and Withdraw transactions are allowed.',
               );
             }
           }
@@ -116,6 +115,10 @@ export class TxReceiver {
         this.metrics.txReceived(txType, txRequest.requestSender.originUrl);
         this.log(`Received tx (${i + 1}/${txs.length}): ${proof.txId.toString('hex')}, type: ${TxType[txType]}`);
         txTypes.push(txType);
+      }
+
+      if (shouldReject) {
+        throw new Error('This application has been sunset, only DeFi exits and Withdraw transactions are allowed.');
       }
 
       const txDaos: TxDao[] = [];
