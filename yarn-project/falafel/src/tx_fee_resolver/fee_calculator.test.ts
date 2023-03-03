@@ -362,13 +362,20 @@ describe('fee calculator', () => {
       numSignificantFigures,
       exitOnly,
     );
+    const zeroArray = new Array(7).fill(0n);
     let fees = exitOnlyFeeCalculator.getTxFees(0, 0);
-    expect(fees.map(val => val[0].value)).toEqual(new Array(7).fill(0n));
+    expect(fees.map(val => val[0].value)).toEqual(zeroArray);
+    expect(fees.map(val => val[1].value)).not.toEqual(zeroArray);
     fees = exitOnlyFeeCalculator.getTxFees(1, 0);
-    expect(fees.map(val => val[0].value)).toEqual(new Array(7).fill(0n));
+    expect(fees.map(val => val[0].value)).toEqual(zeroArray);
+    expect(fees.map(val => val[1].value)).not.toEqual(zeroArray);
+
     fees = exitOnlyFeeCalculator.getTxFees(1, 1);
-    expect(fees.map(val => val[0].value)).toEqual(new Array(7).fill(0n));
+    expect(fees.map(val => val[0].value)).toEqual(zeroArray);
+    expect(fees.map(val => val[1].value)).not.toEqual(zeroArray);
+
     fees = exitOnlyFeeCalculator.getTxFees(0, 1);
-    expect(fees.map(val => val[0].value)).toEqual(new Array(7).fill(0n));
+    expect(fees.map(val => val[0].value)).toEqual(zeroArray);
+    expect(fees.map(val => val[1].value)).not.toEqual(zeroArray);
   });
 });

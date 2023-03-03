@@ -53,18 +53,6 @@ export class FeeCalculator {
 
   public getTxFees(txAssetId: number, feeAssetId: number) {
     // AC SUNSET CODE
-    if (this.exitOnly) {
-      return allTxTypes.map(() => [
-        {
-          assetId: feeAssetId,
-          value: 0n,
-        },
-        {
-          assetId: feeAssetId,
-          value: 0n,
-        },
-      ]);
-    }
     return allTxTypes.map(txType => [
       {
         assetId: feeAssetId,
