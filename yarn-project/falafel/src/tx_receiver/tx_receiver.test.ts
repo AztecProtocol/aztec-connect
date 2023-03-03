@@ -18,7 +18,7 @@ import { AddressCheckProviders, AztecBlacklistProvider, RateLimiter } from '../c
 import { RollupDb } from '../rollup_db/index.js';
 import { TxFeeResolver } from '../tx_fee_resolver/index.js';
 import { Tx, TxRequest } from './tx.js';
-import { TxReceiver } from './tx_receiver.js';
+import { TxReceiver, allowedBridgeCallData } from './tx_receiver.js';
 import { jest } from '@jest/globals';
 
 type Mockify<T> = {
@@ -105,7 +105,6 @@ describe('tx receiver', () => {
       nullifier2: create || migrate ? randomBytes(32) : Buffer.alloc(32),
     });
   };
-
   const mockDefiDepositTx = ({
     bridgeCallData = new BridgeCallData(0, 0, 1),
     defiDepositValue = 1n,
@@ -623,6 +622,15 @@ describe('tx receiver', () => {
       expect(rollupDb.addTxs).toHaveBeenCalledWith([expect.objectContaining({ id: txs[0].proof.txId })]);
     });
 
+    it('rejects a send tx - exit only', async () => {
+      const txs = [mockTx({ proofId: ProofId.SEND })];
+
+      await expect(() => txReceiver.receiveTxs(createTxRequest(txs, 'id1'), false, true)).rejects.toThrow(
+        'This application has been sunset, only DeFi exits and Withdraw transactions are allowed.',
+      );
+      expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
+    });
+
     it('reject a send tx paid with non-fee-paying asset', async () => {
       const txs = [mockTx({ proofId: ProofId.SEND, txFeeAssetId: nonFeePayingAssetId })];
 
@@ -707,6 +715,17 @@ describe('tx receiver', () => {
       await txReceiver.receiveTxs(createTxRequest(txs, 'id1'));
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(1);
       expect(rollupDb.addTxs).toHaveBeenCalledWith([expect.objectContaining({ id: txs[0].proof.txId })]);
+    });
+
+    it('reject an account tx - exit only', async () => {
+      const txs = [mockAccountTx()];
+      noteAlgo.accountNoteCommitment.mockReturnValueOnce(txs[0].proof.noteCommitment1);
+      noteAlgo.accountNoteCommitment.mockReturnValueOnce(txs[0].proof.noteCommitment2);
+
+      await expect(txReceiver.receiveTxs(createTxRequest(txs, 'id1'), false, true)).rejects.toThrow(
+        'This application has been sunset, only DeFi exits and Withdraw transactions are allowed.',
+      );
+      expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
     });
 
     it('reject an account tx with invalid proof', async () => {
@@ -795,6 +814,40 @@ describe('tx receiver', () => {
       await txReceiver.receiveTxs(createTxRequest(txs, 'id1'));
       expect(rollupDb.addTxs).toHaveBeenCalledTimes(1);
       expect(rollupDb.addTxs).toHaveBeenCalledWith([expect.objectContaining({ id: txs[0].proof.txId })]);
+    });
+
+    it('accept a defi deposit tx from allowed bridge calldata - exit only', async () => {
+      const txs = [mockDefiDepositTx({ bridgeCallData: BridgeCallData.fromString(allowedBridgeCallData[0]) })];
+
+      await txReceiver.receiveTxs(createTxRequest(txs, 'id1'), false, true);
+      expect(rollupDb.addTxs).toHaveBeenCalledTimes(1);
+      expect(rollupDb.addTxs).toHaveBeenCalledWith([expect.objectContaining({ id: txs[0].proof.txId })]);
+    });
+
+    it('accept a defi deposit tx with valid outputAssetIdA - exit only', async () => {
+      const txs = [mockDefiDepositTx({ bridgeCallData: new BridgeCallData(0, 0, 1) })];
+
+      await txReceiver.receiveTxs(createTxRequest(txs, 'id1'), false, true);
+      expect(rollupDb.addTxs).toHaveBeenCalledTimes(1);
+      expect(rollupDb.addTxs).toHaveBeenCalledWith([expect.objectContaining({ id: txs[0].proof.txId })]);
+    });
+
+    it('reject a defi deposit tx with invalid outputAssetIdA - exit only', async () => {
+      const txs = [mockDefiDepositTx({ bridgeCallData: new BridgeCallData(0, 0, 2) })];
+
+      await expect(txReceiver.receiveTxs(createTxRequest(txs, 'id1'), false, true)).rejects.toThrow(
+        'This application has been sunset, only DeFi exits and Withdraw transactions are allowed.',
+      );
+      expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
+    });
+
+    it('reject a defi deposit tx with outputAssetIdB - exit only', async () => {
+      const txs = [mockDefiDepositTx({ bridgeCallData: new BridgeCallData(0, 0, 0, 0, 0) })];
+
+      await expect(txReceiver.receiveTxs(createTxRequest(txs, 'id1'), false, true)).rejects.toThrow(
+        'This application has been sunset, only DeFi exits and Withdraw transactions are allowed.',
+      );
+      expect(rollupDb.addTxs).toHaveBeenCalledTimes(0);
     });
 
     it('does not apply rate limit to defi deposits', async () => {

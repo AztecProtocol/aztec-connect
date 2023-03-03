@@ -32,6 +32,12 @@ import { Tx, TxRequest } from './tx.js';
 import { TxFeeAllocator } from './tx_fee_allocator.js';
 import { RateLimiter, AddressCheckProviders } from '../compliance/index.js';
 
+// AC SUNSET CODE
+export const allowedBridgeCallData = [
+  '0x000000000000000001000000000000000000000020000000000000060000000a',
+  '0x0000000000000000010000000000000000000000a00000000000000f00000008',
+];
+
 export class TxReceiver {
   private worker!: BarretenbergWorker;
   private mutex = new Mutex();
@@ -75,7 +81,7 @@ export class TxReceiver {
     this.txFeeResolver = txFeeResolver;
   }
 
-  public async receiveTxs(txRequest: TxRequest, secondClass = false) {
+  public async receiveTxs(txRequest: TxRequest, secondClass = false, exitOnly = false) {
     // We mutex this entire receive call until we move to "deposit to proof hash". Read more below.
     await this.mutex.acquire();
     const txs = txRequest.txs;
@@ -84,6 +90,26 @@ export class TxReceiver {
       for (let i = 0; i < txs.length; ++i) {
         const { proof } = txs[i];
         const txType = await getTxTypeFromProofData(proof, this.blockchain);
+
+        // AC SUNSET CODE
+        if (exitOnly) {
+          if ([TxType.ACCOUNT, TxType.TRANSFER].includes(txType)) {
+            throw new Error('This application has been sunset, only DeFi exits and Withdraw transactions are allowed.');
+          }
+          if (txType === TxType.DEFI_DEPOSIT) {
+            const { bridgeCallData } = new DefiDepositProofData(proof);
+            const { outputAssetIdA, outputAssetIdB } = bridgeCallData;
+            if (
+              !allowedBridgeCallData.includes(bridgeCallData.toString()) &&
+              (outputAssetIdB !== undefined || ![0, 1].includes(outputAssetIdA))
+            ) {
+              throw new Error(
+                'This application has been sunset, only DeFi exits and Withdraw transactions are allowed.',
+              );
+            }
+          }
+        }
+
         this.metrics.txReceived(txType, txRequest.requestSender.originUrl);
         this.log(`Received tx (${i + 1}/${txs.length}): ${proof.txId.toString('hex')}, type: ${TxType[txType]}`);
         txTypes.push(txType);

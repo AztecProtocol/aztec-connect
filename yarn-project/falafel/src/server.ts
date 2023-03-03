@@ -383,7 +383,10 @@ export class Server {
   }
 
   public async receiveTxs(txRequest: TxRequest, secondClass = false) {
-    const { maxUnsettledTxs } = this.configurator.getConfVars().runtimeConfig;
+    const {
+      runtimeConfig: { maxUnsettledTxs },
+      exitOnly,
+    } = this.configurator.getConfVars();
     const unsettled = await this.getUnsettledTxCount();
     if (maxUnsettledTxs && unsettled >= maxUnsettledTxs) {
       throw new Error('Too many transactions awaiting settlement. Try again later.');
@@ -392,7 +395,7 @@ export class Server {
     try {
       const start = new Date().getTime();
       const end = this.metrics.receiveTxTimer();
-      const result = await this.txReceiver.receiveTxs(txRequest, secondClass);
+      const result = await this.txReceiver.receiveTxs(txRequest, secondClass, exitOnly);
       end();
       this.log(`Received tx in ${new Date().getTime() - start}ms.`);
       return result;
