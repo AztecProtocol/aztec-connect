@@ -749,9 +749,9 @@ jobs:
       - run:
           name: 'block-server'
           command: deploy block-server
-      - run:
-          name: 'nym-gateway'
-          command: deploy nym-gateway
+      # - run:
+      #     name: 'nym-gateway'
+      #     command: deploy nym-gateway
       - run:
           name: 'sdk'
           command: |
