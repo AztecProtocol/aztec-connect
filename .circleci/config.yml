@@ -749,9 +749,9 @@ jobs:
       - run:
           name: 'block-server'
           command: deploy block-server
-      - run:
-          name: 'nym-gateway'
-          command: deploy nym-gateway
+      # - run:
+      #     name: 'nym-gateway'
+      #     command: deploy nym-gateway
       - run:
           name: 'sdk'
           command: |
@@ -1001,6 +1001,7 @@ workflows:
             # Must list all projects at the end of a dependency chain.
             # - bb-join
             - yarn-join
+            - nym-gateway
             - faucet
             - e2e-account
             - e2e-browser
@@ -1019,7 +1020,6 @@ workflows:
             - e2e-virtual-assets
             - e2e-deposit-approval
             - int-rollup-processor
-            - nym-gateway
           filters: *deploy_filters
   metrics:
     when:
