@@ -143,7 +143,7 @@ export function deriveDeploymentKeys(mnemonic: string) {
       type: 'mnemonic',
       length: 12,
       children: [
-        { name: 'KEBAB_API_KEY', type: 'hex', length: 32 },
+        { name: 'DUMMY_KEY', type: 'hex', length: 32 },
         { name: 'FORK_API_KEY', type: 'hex', length: 32 },
         {
           name: 'FORK',
@@ -156,6 +156,7 @@ export function deriveDeploymentKeys(mnemonic: string) {
           ],
         },
         { name: 'SERVER_AUTH_TOKEN', type: 'base64', length: 16 },
+        { name: 'KEBAB_API_KEY', type: 'hex', length: 32 },
       ],
     },
     {
