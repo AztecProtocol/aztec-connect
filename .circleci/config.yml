@@ -393,17 +393,6 @@ jobs:
           name: "Build and test"
           command: build wallet
 
-  faucet:
-    machine:
-      image: ubuntu-2004:202010-01
-    resource_class: large
-    steps:
-      - *checkout
-      - *setup_env
-      - run:
-          name: "Build and test"
-          command: build faucet
-
   end-to-end:
     machine:
       image: ubuntu-2004:202010-01
@@ -708,9 +697,6 @@ jobs:
           command: |
             deploy_ecr wallet
             deploy_s3 wallet
-      - run:
-          name: "faucet"
-          command: deploy faucet
 
 # Repeatable config for defining the workflow below.
 tag_regex: &tag_regex /v[0-9]+(\.[0-9]+)*(-[a-zA-Z-]+\.[0-9]+)?/
@@ -844,7 +830,6 @@ workflows:
             # Must list all projects at the end of a dependency chain.
             - cpp-join
             - yarn-join
-            - faucet
             - e2e-account
             - e2e-browser
             - e2e-chained-txs
