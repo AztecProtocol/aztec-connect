@@ -1,10 +1,3 @@
-# This config consists of currently 3 workflows.
-# - system: The main Aztec infrastructure, services, frontends etc.
-# - metrics: The metrics grafana and prometheus instances, and some prometheus data sources.
-#
-# The default workflow is system. To trigger the other workflows, trigger a workflow from CCI
-# setting a string variable called `workflow` to another name.
-#
 # This file uses YAML anchors and aliases to prevent repetition of blocks of config:
 # https://support.atlassian.com/bitbucket-cloud/docs/yaml-anchors/
 #
@@ -25,12 +18,12 @@ version: 2.1
 parameters:
   workflow:
     type: string
-    default: 'system'
+    default: "system"
   target:
     type: enum
-    default: 'dev'
+    default: "dev"
     description: The environment to trigger redeploys to
-    enum: ['dev', 'testnet', 'stage']
+    enum: ["dev", "testnet", "stage"]
 
 # This build step checks out the code from the repository. It has a hardcoded readonly key to allow the checkout.
 # Initially it just fetches the repo metadata for the current commit hash to a depth of 50 commits.
@@ -38,7 +31,7 @@ parameters:
 # It then checks out the fetched head to actually download the data.
 checkout: &checkout
   run:
-    name: 'Checkout code'
+    name: "Checkout code"
     command: |
       cd $HOME
       mkdir -p .ssh
@@ -67,7 +60,7 @@ checkout: &checkout
 # Initially it just fetches the latest version.
 benchmark_add_keys: &benchmark_add_keys
   run:
-    name: 'Add keys for getting the benchmark archive'
+    name: "Add keys for getting the benchmark archive"
     command: |
       cd $HOME
       mkdir -p .ssh
@@ -94,7 +87,7 @@ benchmark_add_keys: &benchmark_add_keys
 # the build process. This enables easy running of the build system external to CCI, as used for powerful EC2 builds.
 setup_env: &setup_env
   run:
-    name: 'Setup environment'
+    name: "Setup environment"
     command: ./build-system/scripts/setup_env "$CIRCLE_SHA1" "$CIRCLE_TAG" "$CIRCLE_JOB" "$CIRCLE_REPOSITORY_URL" "$CIRCLE_BRANCH"
 
 # This step is used to save logs from various barretenberg test to the workspace so that they can be used later to parse benchmark values out of them
@@ -113,7 +106,7 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'Build'
+          name: "Build"
           command: cond_spot_run_build aztec-connect-cpp-wasm-linux-clang 64
 
   x86_64-linux-clang:
@@ -124,7 +117,7 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'Build'
+          name: "Build"
           command: cond_spot_run_build aztec-connect-cpp-x86_64-linux-clang 64
 
   x86_64-linux-clang-assert:
@@ -135,7 +128,7 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'Build'
+          name: "Build"
           command: cond_spot_run_build aztec-connect-cpp-x86_64-linux-clang-assert 64
 
   x86_64-linux-gcc:
@@ -146,7 +139,7 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'Build'
+          name: "Build"
           command: cond_spot_run_build aztec-connect-cpp-x86_64-linux-gcc 64
 
   small-circuit-tests:
@@ -157,7 +150,7 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'Test'
+          name: "Test"
           command: cond_spot_run_tests aztec-connect-cpp-x86_64-linux-clang-assert ac-tests
       - *save_logs
 
@@ -169,7 +162,7 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'Test'
+          name: "Test"
           command: cond_spot_run_tests aztec-connect-cpp-x86_64-linux-clang-assert rollup_proofs_tx_rollup_tests --gtest_filter=-rollup_full_tests.*
       - *save_logs
 
@@ -181,7 +174,7 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'Test'
+          name: "Test"
           command: cond_spot_run_tests aztec-connect-cpp-x86_64-linux-clang-assert rollup_proofs_tx_rollup_tests --gtest_filter=rollup_full_tests.*
       - *save_logs
 
@@ -193,7 +186,7 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'Test'
+          name: "Test"
           command: cond_spot_run_tests aztec-connect-cpp-x86_64-linux-clang-assert rollup_proofs_root_rollup_tests --gtest_filter=-root_rollup_full_tests.*
       - *save_logs
 
@@ -205,7 +198,7 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'Test'
+          name: "Test"
           command: cond_spot_run_tests aztec-connect-cpp-x86_64-linux-clang-assert rollup_proofs_root_rollup_tests --gtest_filter=root_rollup_full_tests.*
       - *save_logs
 
@@ -217,7 +210,7 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'Test'
+          name: "Test"
           command: cond_spot_run_tests aztec-connect-cpp-x86_64-linux-clang-assert rollup_proofs_root_verifier_tests
       - *save_logs
 
@@ -243,7 +236,7 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'Build'
+          name: "Build"
           command: cond_spot_run_build blockchain-vks 32
 
   contracts:
@@ -254,7 +247,7 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'Build'
+          name: "Build"
           command: build contracts
 
   yarn-project-base:
@@ -265,7 +258,7 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'Build'
+          name: "Build"
           command: build yarn-project-base
 
   barretenberg-js:
@@ -276,7 +269,7 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'Build and test'
+          name: "Build and test"
           command: build barretenberg.js
 
   contracts-verifier-test:
@@ -287,7 +280,7 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'Build'
+          name: "Build"
           command: cond_spot_run_build contracts-verifier-test 64
 
   blockchain:
@@ -298,7 +291,7 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'Build and test'
+          name: "Build and test"
           command: build blockchain
 
   aztec-dev-cli:
@@ -309,7 +302,7 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'Build and test'
+          name: "Build and test"
           command: build aztec-dev-cli
 
   kebab:
@@ -320,7 +313,7 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'Build and test'
+          name: "Build and test"
           command: build kebab
 
   halloumi:
@@ -331,7 +324,7 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'Build and test'
+          name: "Build and test"
           command: build halloumi
 
   falafel:
@@ -342,7 +335,7 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'Build and test'
+          name: "Build and test"
           command: build falafel
 
   block-server:
@@ -353,7 +346,7 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'Build and test'
+          name: "Build and test"
           command: build block-server
 
   nym-gateway:
@@ -364,7 +357,7 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'Build'
+          name: "Build"
           command: build nym-gateway
 
   sdk:
@@ -375,7 +368,7 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'Build and test'
+          name: "Build and test"
           command: build sdk
 
   wasabi:
@@ -386,7 +379,7 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'Build and test'
+          name: "Build and test"
           command: build wasabi
 
   hummus:
@@ -397,7 +390,7 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'Build and test'
+          name: "Build and test"
           command: build hummus
 
   wallet:
@@ -408,7 +401,7 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'Build and test'
+          name: "Build and test"
           command: build wallet
 
   faucet:
@@ -419,7 +412,7 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'Build and test'
+          name: "Build and test"
           command: build faucet
 
   end-to-end:
@@ -430,7 +423,7 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'Build'
+          name: "Build"
           command: build end-to-end
 
   e2e-prover:
@@ -441,7 +434,7 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'Test'
+          name: "Test"
           command: cond_spot_run_tests end-to-end ./src/e2e_deposit.test.ts 1 1 VerificationKey1x1
 
   e2e-payment:
@@ -452,7 +445,7 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'Test'
+          name: "Test"
           command: cond_spot_run_tests end-to-end ./src/e2e.test.ts
 
   e2e-deposit-permit:
@@ -463,7 +456,7 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'Test'
+          name: "Test"
           command: cond_spot_run_tests end-to-end ./src/e2e_deposit_permit.test.ts
 
   e2e-migrated-accounts:
@@ -474,7 +467,7 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'Test'
+          name: "Test"
           command: cond_spot_run_tests end-to-end ./src/e2e_migrated_accounts.test.ts
 
   e2e-migrate-account-and-funds:
@@ -485,7 +478,7 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'Test'
+          name: "Test"
           command: cond_spot_run_tests end-to-end ./src/e2e_migrate_account_and_funds.test.ts
 
   e2e-account:
@@ -496,7 +489,7 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'Test'
+          name: "Test"
           command: cond_spot_run_tests end-to-end ./src/e2e_account.test.ts
 
   e2e-sync-bridge:
@@ -507,7 +500,7 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'Test'
+          name: "Test"
           command: cond_spot_run_tests end-to-end ./src/e2e_sync_bridge.test.ts
 
   e2e-async-bridge:
@@ -518,7 +511,7 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'Test'
+          name: "Test"
           command: cond_spot_run_tests end-to-end ./src/e2e_async_bridge.test.ts
 
   e2e-subsidy:
@@ -529,7 +522,7 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'Test'
+          name: "Test"
           command: cond_spot_run_tests end-to-end ./src/e2e_subsidy.test.ts
 
   e2e-subsidy-async:
@@ -540,7 +533,7 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'Test'
+          name: "Test"
           command: cond_spot_run_tests end-to-end ./src/e2e_subsidy_async.test.ts
 
   e2e-non-fee-assets:
@@ -551,7 +544,7 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'Test'
+          name: "Test"
           command: cond_spot_run_tests end-to-end ./src/e2e_non_fee_assets.test.ts
 
   e2e-virtual-assets:
@@ -562,7 +555,7 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'Test'
+          name: "Test"
           command: cond_spot_run_tests end-to-end ./src/e2e_virtual_assets.test.ts
 
   e2e-chained-txs:
@@ -573,7 +566,7 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'Test'
+          name: "Test"
           command: cond_spot_run_tests end-to-end ./src/e2e_chained_txs.test.ts
 
   e2e-chained-txs-with-spending-keys:
@@ -584,7 +577,7 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'Test'
+          name: "Test"
           command: cond_spot_run_tests end-to-end ./src/e2e_chained_txs_with_spending_keys.test.ts
 
   e2e-browser:
@@ -595,7 +588,7 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'Test'
+          name: "Test"
           command: cond_spot_run_tests end-to-end ./src/e2e_browser.test.ts
 
   e2e-deposit-approval:
@@ -606,7 +599,7 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'Test'
+          name: "Test"
           command: cond_spot_run_tests end-to-end ./src/e2e_deposit_approval.test.ts
 
   int-rollup-processor:
@@ -617,7 +610,7 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'Test'
+          name: "Test"
           command: cond_spot_run_tests end-to-end ./src/int_rollup_processor.test.ts 3 2 AlwaysTrueVerifier
 
   e2e-join:
@@ -626,7 +619,7 @@ jobs:
     resource_class: small
     steps:
       - run:
-          name: 'Noop'
+          name: "Noop"
           command: echo Noop
 
   bb-join:
@@ -635,7 +628,7 @@ jobs:
     resource_class: small
     steps:
       - run:
-          name: 'Noop'
+          name: "Noop"
           command: echo Noop
 
   yarn-join:
@@ -644,50 +637,8 @@ jobs:
     resource_class: small
     steps:
       - run:
-          name: 'Noop'
+          name: "Noop"
           command: echo Noop
-
-  mainnet-fork:
-    machine:
-      image: ubuntu-2004:202010-01
-    resource_class: large
-    steps:
-      - *checkout
-      - *setup_env
-      - run: # Building the fork requires keys to be derived
-          name: 'Derive keys'
-          command: |
-            ensure_repo aztec-dev-cli $ECR_REGION
-            docker run --rm $ECR_URL/aztec-dev-cli:cache-$COMMIT_HASH deriveKeys "$KEY_DERIVATION_MNEMONIC" >> $BASH_ENV
-      - run:
-          name: 'Build and test'
-          command: build mainnet-fork
-
-  metrics:
-    machine:
-      image: ubuntu-2004:202010-01
-    resource_class: large
-    steps:
-      - *checkout
-      - *setup_env
-      - run:
-          name: 'Build coinbase-exporter'
-          command: build coinbase-exporter
-      - run:
-          name: 'Build sidecar'
-          command: build metrics-sidecar
-      - run:
-          name: 'Build fluent-bit'
-          command: build fluent-bit
-      - run:
-          name: 'Build prometheus'
-          command: build prometheus
-      - run:
-          name: 'Build loki'
-          command: build loki
-      - run:
-          name: 'Build grafana'
-          command: build grafana
 
   deploy:
     machine:
@@ -697,29 +648,29 @@ jobs:
       - *checkout
       - *setup_env
       - run:
-          name: 'derive keys'
+          name: "derive keys"
           command: |
             ensure_repo aztec-dev-cli $ECR_REGION
             docker run --rm $ECR_URL/aztec-dev-cli:cache-$COMMIT_HASH deriveKeys "$KEY_DERIVATION_MNEMONIC" >> $BASH_ENV
       - run:
-          name: 'contracts'
+          name: "contracts"
           working_directory: contracts
           command: |
             deploy_ecr contracts
             deploy_dockerhub contracts
             ./scripts/ci_deploy_contracts.sh
       - run:
-          name: 'barretenberg.js'
+          name: "barretenberg.js"
           command: |
             deploy_ecr barretenberg.js
             deploy_npm barretenberg.js
       - run:
-          name: 'blockchain'
+          name: "blockchain"
           command: |
             deploy_ecr blockchain
             deploy_npm blockchain
       - run:
-          name: 'kebab'
+          name: "kebab"
           command: |
             LAST_COMMIT=$(last_successful_commit kebab $DEPLOY_TAG-deployed)
             if changed $LAST_COMMIT "contracts/deploy/$VERSION_TAG"; then
@@ -730,12 +681,12 @@ jobs:
             fi
             deploy_dockerhub kebab
       - run:
-          name: 'halloumi'
+          name: "halloumi"
           command: |
             deploy halloumi "halloumi halloumi-inner halloumi-outer"
             deploy_dockerhub halloumi
       - run:
-          name: 'falafel'
+          name: "falafel"
           command: |
             LAST_COMMIT=$(last_successful_commit falafel $DEPLOY_TAG-deployed)
             if changed $LAST_COMMIT "contracts/deploy/$VERSION_TAG"; then
@@ -747,119 +698,29 @@ jobs:
             fi
             deploy_dockerhub falafel
       - run:
-          name: 'block-server'
+          name: "block-server"
           command: deploy block-server
-      # - run:
-      #     name: 'nym-gateway'
-      #     command: deploy nym-gateway
       - run:
-          name: 'sdk'
+          name: "sdk"
           command: |
             deploy_ecr sdk
             deploy_s3 sdk
             deploy_npm sdk
       - run:
-          name: 'wasabi'
+          name: "wasabi"
           command: deploy wasabi
       - run:
-          name: 'hummus'
+          name: "hummus"
           command: |
             deploy_ecr hummus
             deploy_s3 hummus
       - run:
-          name: 'wallet'
+          name: "wallet"
           command: |
             deploy_ecr wallet
             deploy_s3 wallet
       - run:
-          name: 'faucet'
-          command: deploy faucet
-
-  # smoketest:
-  #   docker:
-  #     - image: aztecprotocol/alpine-build-image
-  #   resource_class: small
-  #   steps:
-  #     - *checkout
-  #     - *setup_env
-  #     - setup_remote_docker:
-  #         version: 19.03.13
-  #     - run:
-  #         name: 'Test'
-  #         working_directory: end-to-end/scripts
-  #         command: ./run_smoketest
-
-  deploy-metrics:
-    machine:
-      image: ubuntu-2004:202010-01
-    resource_class: medium
-    steps:
-      - *checkout
-      - *setup_env
-      - run:
-          name: 'coinbase-exporter'
-          command: deploy_global coinbase-exporter
-      - run:
-          name: 'ecs-exporter'
-          working_directory: metrics/ecs-exporter
-          command: deploy_terraform "" ./terraform
-      - run:
-          name: 'sidecar'
-          command: deploy_ecr metrics-sidecar
-      - run:
-          name: 'fluent-bit'
-          command: deploy_ecr fluent-bit
-      - run:
-          name: 'prometheus'
-          command: deploy_global prometheus
-      - run:
-          name: 'loki'
-          command: deploy_global loki
-      - run:
-          name: 'grafana'
-          command: deploy_global grafana
-
-  deploy-mainnet-fork:
-    machine:
-      image: ubuntu-2004:202010-01
-    resource_class: medium
-    environment:
-      FORCE_DEPLOY: 'true'
-    steps:
-      - *checkout
-      - *setup_env
-      - run:
-          name: 'set environment'
-          command: |
-            echo export VERSION_TAG=<< pipeline.parameters.target >> >> $BASH_ENV
-            echo export DEPLOY_TAG=aztec-connect-<< pipeline.parameters.target >> >> $BASH_ENV
-            source $BASH_ENV
-      - run:
-          name: 'derive keys'
-          command: |
-            ensure_repo aztec-dev-cli $ECR_REGION
-            docker run --rm $ECR_URL/aztec-dev-cli:cache-$COMMIT_HASH deriveKeys "$KEY_DERIVATION_MNEMONIC" >> $BASH_ENV
-            source $BASH_ENV
-      - run:
-          name: 'deploy-mainnet-fork'
-          working_directory: mainnet-fork # redeploy the fork and taint the state file system
-          command: |
-            deploy_terraform mainnet-fork ./terraform/$VERSION_TAG aws_efs_file_system.mainnet_fork_data_store
-            ./scripts/wait_for_fork
-      - run:
-          name: 'Deploy contracts'
-          working_directory: contracts
-          command: |
-            deploy_ecr contracts
-            ./scripts/ci_deploy_contracts.sh
-      - run:
-          name: 'Redeploy kebab'
-          command: deploy kebab kebab aws_efs_file_system.kebab_data_store
-      - run:
-          name: 'Redeploy falafel'
-          command: deploy falafel "falafel block-server" "aws_db_instance.postgres aws_efs_file_system.falafel_data_store"
-      - run:
-          name: 'Redeploy faucet'
+          name: "faucet"
           command: deploy faucet
 
 # Repeatable config for defining the workflow below.
@@ -908,9 +769,7 @@ workflows:
       - root-verifier-tests: *ac_test
       # - benchmark-aggregator:
       #     requires:
-      #       - barretenberg-tests
-      #       - stdlib-primitives-tests
-      #       - stdlib-recursion-tests
+      #       - small-circuit-tests
       #       - tx-rollup-tests
       #       - tx-rollup-full-tests
       #       - root-verifier-tests
@@ -941,15 +800,10 @@ workflows:
       - halloumi: *yarn_project
       - falafel: *yarn_project
       - block-server: *yarn_project
-      - nym-gateway
       - sdk: *yarn_project
       - wasabi: *yarn_project
       - hummus: *yarn_project
       - wallet: *yarn_project
-      # Not currently a yarn project due to using next.js, but should be.
-      - faucet:
-          requires:
-            - contracts
       - end-to-end: *yarn_project
       - e2e-join:
           requires:
@@ -977,15 +831,15 @@ workflows:
       - e2e-virtual-assets: *e2e_test
       - e2e-deposit-approval: *e2e_test
       - int-rollup-processor: *e2e_test
-      # - bb-join:
-      #     requires:
-      #       - small-circuit-tests
-      #       - tx-rollup-tests
-      #       - tx-rollup-full-tests
-      #       - root-rollup-tests
-      #       - root-rollup-full-tests
-      #       - root-verifier-tests
-      #     filters: *deploy_filters
+      - cpp-join:
+          requires:
+            - small-circuit-tests
+            - tx-rollup-tests
+            - tx-rollup-full-tests
+            - root-rollup-tests
+            - root-rollup-full-tests
+            - root-verifier-tests
+          filters: *deploy_filters
       - yarn-join:
           requires:
             - wallet
@@ -999,7 +853,7 @@ workflows:
       - deploy:
           requires:
             # Must list all projects at the end of a dependency chain.
-            # - bb-join
+            - cpp-join
             - yarn-join
             - nym-gateway
             - faucet
@@ -1021,30 +875,3 @@ workflows:
             - e2e-deposit-approval
             - int-rollup-processor
           filters: *deploy_filters
-  metrics:
-    when:
-      equal: [metrics, << pipeline.parameters.workflow >>]
-    jobs:
-      - metrics
-      - deploy-metrics:
-          requires:
-            - metrics
-  redeploy-mainnet-fork:
-    when:
-      equal: [redeploy-mainnet-fork, << pipeline.parameters.workflow >>]
-    jobs:
-      - aztec-dev-cli
-      - mainnet-fork:
-          requires:
-            - aztec-dev-cli
-      - contracts
-      - falafel
-      - faucet
-      - kebab
-      - deploy-mainnet-fork:
-          requires:
-            - mainnet-fork
-            - contracts
-            - falafel
-            - faucet
-            - kebab
