@@ -349,17 +349,6 @@ jobs:
           name: "Build and test"
           command: build block-server
 
-  nym-gateway:
-    machine:
-      image: ubuntu-2004:202010-01
-    resource_class: medium
-    steps:
-      - *checkout
-      - *setup_env
-      - run:
-          name: "Build"
-          command: build nym-gateway
-
   sdk:
     machine:
       image: ubuntu-2004:202010-01
@@ -855,7 +844,6 @@ workflows:
             # Must list all projects at the end of a dependency chain.
             - cpp-join
             - yarn-join
-            - nym-gateway
             - faucet
             - e2e-account
             - e2e-browser
