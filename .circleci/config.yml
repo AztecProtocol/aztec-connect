@@ -743,7 +743,7 @@ e2e_test: &e2e_test
 deploy_filters: &deploy_filters
   branches:
     only:
-      - defi-bridge-project
+      - master
       - stage
   tags:
     only: *tag_regex
@@ -778,7 +778,7 @@ workflows:
       #     filters:
       #       branches:
       #         only:
-      #           - defi-bridge-project
+      #           - master
       - blockchain-vks:
           requires:
             - x86_64-linux-clang
