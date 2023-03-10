@@ -9,3 +9,6 @@ variable "DEPLOY_TAG" {
 variable "DEV_KEBAB_API_KEY" {
   type = string
 }
+variable "DEV_SERVER_AUTH_TOKEN" {
+  type = string
+}
