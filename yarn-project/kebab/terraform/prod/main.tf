@@ -129,7 +129,7 @@ resource "aws_ecs_task_definition" "kebab" {
       },
       {
         "name": "ETHEREUM_HOST",
-        "value": "https://mainnet.infura.io/v3/a3135f474fad4ce3868e5b92fc30ac40"
+        "value": "https://mainnet.infura.io/v3/${var.PROD_KEBAB_INFURA_API_KEY}"
       },
       {
         "name": "REDEPLOY",

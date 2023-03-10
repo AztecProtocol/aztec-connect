@@ -181,7 +181,7 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "SERVER_AUTH_TOKEN",
-        "value": "!devnet#"
+        "value": "${var.DEV_SERVER_AUTH_TOKEN}"
       },
       {
         "name": "API_PREFIX",

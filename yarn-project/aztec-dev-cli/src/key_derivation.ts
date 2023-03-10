@@ -136,6 +136,7 @@ export function deriveDeploymentKeys(mnemonic: string) {
             { name: 'ROLLUP_PROVIDER', type: 'eth_keypair' },
           ],
         },
+        { name: 'SERVER_AUTH_TOKEN', type: 'base64', length: 16 },
       ],
     },
     {
