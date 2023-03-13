@@ -21,8 +21,7 @@ export class BlockDownloader {
     // Initially inserting 55 brings us to 128, after which we work with chunks of 128 rollups.
     // If not synching from zero, the chunk size is whatever takes us up to the next 128 alignment.
     // This allows for optimal subtree insertions in the client side merkle tree for better sync performance.
-    // This assumes the initialTreeSize is <= 128 which is true for all AC environments
-    this.genesisTake = 128 - initialTreeSize;
+    this.genesisTake = 128 - (initialTreeSize % 128);
   }
 
   public start(from = 0) {
@@ -42,7 +41,8 @@ export class BlockDownloader {
           // If requesting from block 0, then take the fixed number of blocks to take us to 128 (genesisTake)
           // Otherwise, take blocks as required to get us to a 128 aligned boundary starting from block (128 - initialTreeSize).
           // e.g. we are trying to get to blocks 183, 311, 439 etc....
-          const takeValue = this.from === 0 ? this.genesisTake : 128 - ((this.from - this.genesisTake) % 128);
+          const takeValue =
+            this.from < this.genesisTake ? this.genesisTake - this.from : 128 - ((this.from - this.genesisTake) % 128);
           const blocks = await this.rollupProvider.getBlocks(this.from, takeValue);
 
           if (!blocks.length) {
