@@ -87,13 +87,6 @@ export class WorldState {
     private expireTxPoolAfter = 60 * 1000,
     private log = createLogger('WorldState'),
   ) {
-    this.txPoolProfile = Promise.resolve({
-      numTxs: 0,
-      numTxsInNextRollup: 0,
-      pendingTxCount: 0,
-      pendingSecondClassTxCount: 0,
-      pendingBridgeStats: [],
-    });
     this.bridgeStatsQueryHandler = new BridgeStatsQueryHandler(rollupDb, txFeeResolver);
   }
 
