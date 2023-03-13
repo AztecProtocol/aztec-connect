@@ -348,7 +348,7 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
 
   router.get('/get-pending-txs', recordMetric, async (ctx: Koa.Context) => {
     const txs = await server.getUnsettledTxs();
-    ctx.body = txs.map(tx => new ProofData(tx.proofData)).map(toPendingTxJson);
+    ctx.body = txs.map(tx => new ProofData(tx.proofData, tx.id)).map(toPendingTxJson);
     ctx.status = 200;
   });
 

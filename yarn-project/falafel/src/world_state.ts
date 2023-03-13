@@ -71,8 +71,7 @@ type TxPoolProfile = {
 export class WorldState {
   private serialQueue = new SerialQueue();
   private pipeline?: RollupPipeline;
-  private txPoolProfile!: TxPoolProfile;
-  private txPoolProfileValidUntil!: Date;
+  private txPoolProfile?: Promise<TxPoolProfile>;
   private initialSubtreeRootsCache: Buffer[] = [];
   private bridgeStatsQueryHandler: BridgeStatsQueryHandler;
 
@@ -88,13 +87,6 @@ export class WorldState {
     private expireTxPoolAfter = 60 * 1000,
     private log = createLogger('WorldState'),
   ) {
-    this.txPoolProfile = {
-      numTxs: 0,
-      numTxsInNextRollup: 0,
-      pendingTxCount: 0,
-      pendingSecondClassTxCount: 0,
-      pendingBridgeStats: [],
-    };
     this.bridgeStatsQueryHandler = new BridgeStatsQueryHandler(rollupDb, txFeeResolver);
   }
 
@@ -136,45 +128,10 @@ export class WorldState {
   }
 
   public async getTxPoolProfile() {
-    // getPendingTxs from rollup db
-    // remove the tranasctions that we know are in the next rollup currently being built
-    if (!this.txPoolProfileValidUntil || new Date().getTime() > this.txPoolProfileValidUntil.getTime()) {
-      const pendingTxs = await this.rollupDb.getPendingTxs();
-      const processedTransactions = this.pipeline?.getProcessedTxs() || [];
-      const pendingTransactionsNotInRollup = pendingTxs.filter(elem =>
-        processedTransactions.every(tx => !tx.id.equals(elem.id)),
-      );
-
-      const pendingBridgeStats: Map<bigint, BridgeStat> = new Map();
-      for (const tx of pendingTransactionsNotInRollup) {
-        const proof = new ProofData(tx.proofData);
-        if (proof.proofId !== ProofId.DEFI_DEPOSIT) {
-          continue;
-        }
-
-        const defiProof = new DefiDepositProofData(proof);
-        const rollupTx = createDefiRollupTx(tx, defiProof);
-        const bridgeCallData = rollupTx.bridgeCallData!;
-        const bridgeProfile = pendingBridgeStats.get(bridgeCallData) || {
-          bridgeCallData,
-          gasAccrued: 0,
-        };
-        bridgeProfile.gasAccrued += this.txFeeResolver.getSingleBridgeTxGas(bridgeCallData) + rollupTx.excessGas;
-
-        pendingBridgeStats.set(bridgeCallData, bridgeProfile);
-      }
-
-      this.txPoolProfile = {
-        numTxs: await this.rollupDb.getUnsettledTxCount(),
-        numTxsInNextRollup: processedTransactions.length,
-        pendingBridgeStats: [...pendingBridgeStats.values()],
-        pendingTxCount: pendingTransactionsNotInRollup.length,
-        pendingSecondClassTxCount: await this.rollupDb.getPendingSecondClassTxCount(),
-      };
-      this.txPoolProfileValidUntil = new Date(Date.now() + this.expireTxPoolAfter);
+    if (!this.txPoolProfile) {
+      this.txPoolProfile = this.computeTxPoolProfile();
     }
-
-    return this.txPoolProfile;
+    return await this.txPoolProfile;
   }
 
   public async queryBridgeStats(query: BridgePublishQuery) {
@@ -820,5 +777,53 @@ export class WorldState {
     }
 
     await this.worldStateDb.commit();
+  }
+
+  /**
+   * getPendingTxs from rollup db
+   * remove the tranasctions that we know are in the next rollup currently being built
+   */
+  private async computeTxPoolProfile() {
+    const pendingTxs = await this.rollupDb.getPendingTxs();
+    const processedTransactions = this.pipeline?.getProcessedTxs() || [];
+
+    const txsBeingProcessed = new Set(processedTransactions.map(tx => tx.id.toString('hex')));
+
+    const pendingTransactionsNotBeingProcessed = pendingTxs.filter(
+      elem => !txsBeingProcessed.has(elem.id.toString('hex')),
+    );
+
+    const pendingBridgeStats: Map<bigint, BridgeStat> = new Map();
+    for (const tx of pendingTransactionsNotBeingProcessed) {
+      const proof = new ProofData(tx.proofData);
+      if (proof.proofId !== ProofId.DEFI_DEPOSIT) {
+        continue;
+      }
+
+      const defiProof = new DefiDepositProofData(proof);
+      const rollupTx = createDefiRollupTx(tx, defiProof);
+      const bridgeCallData = rollupTx.bridgeCallData!;
+      const bridgeProfile = pendingBridgeStats.get(bridgeCallData) || {
+        bridgeCallData,
+        gasAccrued: 0,
+      };
+      bridgeProfile.gasAccrued += this.txFeeResolver.getSingleBridgeTxGas(bridgeCallData) + rollupTx.excessGas;
+
+      pendingBridgeStats.set(bridgeCallData, bridgeProfile);
+    }
+
+    setTimeout(() => {
+      this.txPoolProfile = undefined;
+    }, this.expireTxPoolAfter);
+
+    const result: TxPoolProfile = {
+      numTxs: await this.rollupDb.getUnsettledTxCount(),
+      numTxsInNextRollup: processedTransactions.length,
+      pendingBridgeStats: [...pendingBridgeStats.values()],
+      pendingTxCount: pendingTransactionsNotBeingProcessed.length,
+      pendingSecondClassTxCount: await this.rollupDb.getPendingSecondClassTxCount(),
+    };
+
+    return result;
   }
 }
