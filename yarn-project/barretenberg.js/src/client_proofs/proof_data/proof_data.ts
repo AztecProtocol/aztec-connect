@@ -81,7 +81,7 @@ export class ProofData {
   public readonly backwardLink: Buffer;
   public readonly allowChain: Buffer;
 
-  constructor(public rawProofData: Buffer) {
+  constructor(public rawProofData: Buffer, txId?: Buffer) {
     this.proofId = rawProofData.readUInt32BE(ProofDataOffsets.PROOF_ID);
     this.noteCommitment1 = rawProofData.slice(
       ProofDataOffsets.NOTE_COMMITMENT_1,
@@ -109,6 +109,8 @@ export class ProofData {
     this.defiRoot = rawProofData.slice(ProofDataOffsets.DEFI_ROOT, ProofDataOffsets.DEFI_ROOT + 32);
     this.backwardLink = rawProofData.slice(ProofDataOffsets.BACKWARD_LINK, ProofDataOffsets.BACKWARD_LINK + 32);
     this.allowChain = rawProofData.slice(ProofDataOffsets.ALLOW_CHAIN, ProofDataOffsets.ALLOW_CHAIN + 32);
+
+    this.txId_ = txId;
   }
 
   get allowChainFromNote1() {

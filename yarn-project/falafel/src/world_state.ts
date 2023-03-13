@@ -141,12 +141,15 @@ export class WorldState {
     if (!this.txPoolProfileValidUntil || new Date().getTime() > this.txPoolProfileValidUntil.getTime()) {
       const pendingTxs = await this.rollupDb.getPendingTxs();
       const processedTransactions = this.pipeline?.getProcessedTxs() || [];
-      const pendingTransactionsNotInRollup = pendingTxs.filter(elem =>
-        processedTransactions.every(tx => !tx.id.equals(elem.id)),
+
+      const txsBeingProcessed = new Set(processedTransactions.map(tx => tx.id.toString('hex')));
+
+      const pendingTransactionsNotBeingProcessed = pendingTxs.filter(
+        elem => !txsBeingProcessed.has(elem.id.toString('hex')),
       );
 
       const pendingBridgeStats: Map<bigint, BridgeStat> = new Map();
-      for (const tx of pendingTransactionsNotInRollup) {
+      for (const tx of pendingTransactionsNotBeingProcessed) {
         const proof = new ProofData(tx.proofData);
         if (proof.proofId !== ProofId.DEFI_DEPOSIT) {
           continue;
@@ -168,7 +171,7 @@ export class WorldState {
         numTxs: await this.rollupDb.getUnsettledTxCount(),
         numTxsInNextRollup: processedTransactions.length,
         pendingBridgeStats: [...pendingBridgeStats.values()],
-        pendingTxCount: pendingTransactionsNotInRollup.length,
+        pendingTxCount: pendingTransactionsNotBeingProcessed.length,
         pendingSecondClassTxCount: await this.rollupDb.getPendingSecondClassTxCount(),
       };
       this.txPoolProfileValidUntil = new Date(Date.now() + this.expireTxPoolAfter);
