@@ -40,7 +40,7 @@ export class BlockDownloader {
       while (this.running) {
         try {
           // If requesting from block 0, then take the fixed number of blocks to take us to 128 (genesisTake)
-          // Otherwise, take blocks as required to get us to a 128 aligned boundary starting from block 55.
+          // Otherwise, take blocks as required to get us to a 128 aligned boundary starting from block (128 - initialTreeSize).
           // e.g. we are trying to get to blocks 183, 311, 439 etc....
           const takeValue = this.from === 0 ? this.genesisTake : 128 - ((this.from - this.genesisTake) % 128);
           const blocks = await this.rollupProvider.getBlocks(this.from, takeValue);
