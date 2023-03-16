@@ -713,13 +713,16 @@ e2e_test: &e2e_test
   requires:
     - e2e-join
   <<: *defaults
-deploy_filters: &deploy_filters
-  branches:
-    only:
-      - master
-      - stage
-  tags:
-    only: *tag_regex
+deploy_defaults: &deploy_defaults
+  filters:
+    branches:
+      only:
+        - master
+        - stage
+    tags:
+      only: *tag_regex
+  context:
+    - build
 
 workflows:
   system:
@@ -812,7 +815,7 @@ workflows:
             - root-rollup-tests
             - root-rollup-full-tests
             - root-verifier-tests
-          filters: *deploy_filters
+          <<: *deploy_defaults
       - yarn-join:
           requires:
             - wallet
@@ -822,7 +825,7 @@ workflows:
             - barretenberg-js
             - block-server
             - aztec-dev-cli
-          filters: *deploy_filters
+          <<: *deploy_defaults
       - deploy:
           requires:
             # Must list all projects at the end of a dependency chain.
@@ -845,4 +848,4 @@ workflows:
             - e2e-virtual-assets
             - e2e-deposit-approval
             - int-rollup-processor
-          filters: *deploy_filters
+          <<: *deploy_defaults
