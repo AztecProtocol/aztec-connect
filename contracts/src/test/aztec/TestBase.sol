@@ -4,7 +4,7 @@ pragma solidity >=0.8.4;
 
 import {Test} from "forge-std/Test.sol";
 
-import {RollupProcessor} from "core/RollupProcessor.sol";
+import {RollupProcessor} from "core/processors/RollupProcessor.sol";
 import {RollupProcessorV2} from "core/processors/RollupProcessorV2.sol";
 import {DefiBridgeProxy} from "core/DefiBridgeProxy.sol";
 import {PermitHelper} from "periphery/PermitHelper.sol";
@@ -16,6 +16,9 @@ import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transpa
 import {AlwaysTrueVerifier} from "../mocks/AlwaysTrueVerifier.sol";
 import {RollupDeployer} from "../../script/deployments/RollupDeployer.s.sol";
 
+/**
+ * @dev Bootstraps the test environment for all tests.
+ */
 abstract contract TestBase is Test {
     // Events copied from RollupProcessor for testing purposes
     event AssetAdded(uint256 indexed assetId, address indexed assetAddress, uint256 assetGasLimit);
