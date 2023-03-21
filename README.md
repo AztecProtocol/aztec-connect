@@ -15,3 +15,26 @@
 - `yarn-project/kebab` - Proxy server sitting between falafel and ETH node.
 - `yarn-project/sdk` - SDK for interacting with a rollup provider.
 - `yarn-project/wasabi` - Load testing tool.
+
+## Bug Bounties and Vulnerability Reporting
+
+We are currently running a Bug Bounty Program. For all information, please visit [immunefi](https://immunefi.com/bounty/aztecnetwork/).
+
+## Audit reports
+
+See audit reports [here](https://github.com/AztecProtocol/aztec-security/tree/main/Audits)
+
+| Title             | Vendor              | Report                                                                                                                                  |
+| ----------------- | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Rollup Processor  | Arbitrary Execution | [link](https://github.com/AztecProtocol/aztec-security/blob/main/Audits/Aztec_20221014.pdf)                                             |
+| Rollup Processor  | Solidified          | [link](<https://github.com/AztecProtocol/aztec-security/blob/main/Audits/Audit%20Report%20-%20Aztec%20(1).pdf>)                         |
+| Aave Bridge       | Solidified          | [link](https://github.com/AztecProtocol/aztec-security/blob/main/Audits/Audit%20Report%20-%20Aztec%20Aave%20Bridge.pdf)                 |
+| Compound Bridge   | Solidified          | [link](https://github.com/AztecProtocol/aztec-security/blob/main/Audits/Audit%20Report%20-%20Aztec%20Compound%20Bridge.pdf)             |
+| Curve Bridge      | Solidified          | [link](https://github.com/AztecProtocol/aztec-security/blob/main/Audits/Audit%20Report%20-%20Aztec%20Curve%20Bridge.pdf)                |
+| DCA Bridge        | Solidified          | [link](https://github.com/AztecProtocol/aztec-security/blob/main/Audits/Audit%20Report%20-%20Aztec%20DCA%20Bridge.pdf)                  |
+| Element Bridge    | Solidified          | [link](https://github.com/AztecProtocol/aztec-security/blob/main/Audits/Audit%20Report%20-%20Aztec%20Element%20Bridge.pdf)              |
+| Lido Bridge       | Solidified          | [link](https://github.com/AztecProtocol/aztec-security/blob/main/Audits/Audit%20Report%20-%20Aztec%20Lido%20Bridge.pdf)                 |
+| Liquity Bridge    | Solidified          | [link](https://github.com/AztecProtocol/aztec-security/blob/main/Audits/Audit%20Report%20-%20Aztec%20Liquity%20Bridge.pdf)              |
+| Liquity Bridge #2 | Solidified          | [link](https://github.com/AztecProtocol/aztec-security/blob/main/Audits/Audit%20Report%20-%20Aztec%20Liquity%20Trove%20Bridge%20II.pdf) |
+| Set Bridge        | Solidified          | [link](https://github.com/AztecProtocol/aztec-security/blob/main/Audits/Audit%20Report%20-%20Aztec%20Set%20Bridge.pdf)                  |
+| Rollup Subsidy    | Solidified          | [link](https://github.com/AztecProtocol/aztec-security/blob/main/Audits/Audit%20Report%20-%20Aztec%20Subsidy%20Contract.pdf)            |
