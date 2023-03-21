@@ -34,10 +34,6 @@ Forge modules:
 - [rollup encoder](https://github.com/AztecProtocol/rollup-encoder) (Test harness to encode rollup calldata)
 - [aztec connect bridges](https://github.com/AztecProtocol/aztec-connect-bridges) (Bridges repository)
 
-Periphery:
-
-- [build system](https://github.com/AztecProtocol/build-system) (Homegrown ci system)
-
 Use `forge update --no-commit` if submodules have changed and you already have some installed. If submodules are causing issues and errors are occurring while installing. Deleting the `/lib` folder then running `forge install --no-commit` will generally resolve the issues.
 
 ### Directory Structure
