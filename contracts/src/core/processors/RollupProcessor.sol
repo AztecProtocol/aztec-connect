@@ -6,15 +6,15 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-import {IVerifier} from "./interfaces/IVerifier.sol";
+import {IVerifier} from "../interfaces/IVerifier.sol";
 import {IRollupProcessor} from "rollup-encoder/interfaces/IRollupProcessor.sol";
-import {IERC20Permit} from "./interfaces/IERC20Permit.sol";
-import {IDefiBridge} from "./interfaces/IDefiBridge.sol";
+import {IERC20Permit} from "../interfaces/IERC20Permit.sol";
+import {IDefiBridge} from "../interfaces/IDefiBridge.sol";
 
-import {Decoder} from "./Decoder.sol";
+import {Decoder} from "../Decoder.sol";
 import {AztecTypes} from "rollup-encoder/libraries/AztecTypes.sol";
 
-import {TokenTransfers} from "./libraries/TokenTransfers.sol";
+import {TokenTransfers} from "../libraries/TokenTransfers.sol";
 import "rollup-encoder/libraries/RollupProcessorLibrary.sol";
 
 /**

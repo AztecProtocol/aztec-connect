@@ -1,49 +1,96 @@
 # Aztec-Connect Contracts
 
-## Getting setup
+## Overview
 
-As per usual, running `./bootstrap.sh` should get you up to speed. However some information below on the use of submodules is covered to help you reason about it does.
+Aztec is a privacy-first recursive zero-knowledge rollup (zk-zk-rollup) built on Ethereum and today it is the only zkRollup built from the ground up to be privacy-preserving. Its unique architecture ensures that transactions are private, while also retaining auditability and compliance. Our long-term vision is building a decentralized, high-throughput, privacy-preserving network that enables Web3 to cross the chasm and achieve mainstream adoption.
 
-This project uses foundry as it's testing framework, before getting started / if you have any issues it is worth exploring the [book](https://book.getfoundry.sh/). It is generally a fantastic up to date resource.
+For more information about Aztec, please visit https://aztec.network/ or https://twitter.com/aztecnetwork. Documentation for Aztec Connect Bridges is available at https://github.com/AztecProtocol/aztec-connect-bridges.
 
-## Setting up submodules
+If you are interested in the Rollup Contract itself, a reference implementation (too big for mainnet) is put in the `core/reference` folder, it uses less yul so is a little easier to reason about.
 
-Foundry has some wrapper functions around submodules that generally make them easier to work with. If it is your first time setting up this repo running `forge install --no-commit` should have you ready to roll.
+## Developers
 
-`forge update --no-commit` is the command to use if submodules has changed and you already have some installed. If submodules are causing a lot of issues and lots of errors are occurring while attempting to install. Deleting the /lib folder and running `forge install --no-commit` will generally resolve the issues.
+If you would like to build on top of Aztec, please see our [documentation](https://aztec.network/developers/).  
+If you would like to contribute to the protocol, please see the [aztec2 book](https://github.com/AztecProtocol/aztec-connect/tree/master/specs/aztec-connect) for our specifications.
 
-# Tests
+### Getting started
 
-`forge test` will run the test suite. See the forge book linked above about how to target specific tests.
+```
+./bootstrap.sh
+```
 
-## Running the docker for tests locally:
+As per usual, running `./bootstrap.sh` should get you up to speed. It will install any submodules / frameworks required.
+This project uses foundry as it's testing framework, before getting started / if you have any issues consult the [book](https://book.getfoundry.sh/).
+
+### Submodules
+
+Forge modules:
+
+- [forge-std](https://github.com/foundry-rs/forge-std) (Testing)
+- [uniswap v2 core](https://github.com/uniswap/v2-core) (Fee Distributor dependency)
+- [uniswap v2 periphery](https://github.com/uniswap/v2-periphery) (Fee Distributor dependency)
+- [openzeppelin contracts](https://github.com/openzeppelin/openzeppelin-contracts)
+- [openzeppelin contracts upgradable](https://github.com/openzeppelin/openzeppelin-contracts-upgradable)
+- [rollup encoder](https://github.com/AztecProtocol/rollup-encoder) (Test harness to encode rollup calldata)
+- [aztec connect bridges](https://github.com/AztecProtocol/aztec-connect-bridges) (Bridges repository)
+
+Use `forge update --no-commit` if submodules have changed and you already have some installed. If submodules are causing issues and errors are occurring while installing. Deleting the `/lib` folder then running `forge install --no-commit` will generally resolve the issues.
+
+### Directory Structure
+
+```
+src
+├── core
+│   ├── Decoder.sol
+│   ├── DefiBridgeProxy.sol
+│   ├── processors
+│   │   ├── RollupProcessor.sol
+│   │   └── RollupProcessorV2.sol
+│   ├── reference
+│   │   └── RollupProcessorV2Reference.sol
+│   └── verifier
+│       ├── BaseStandardVerifier.sol
+│       ├── instances
+│       │   └── ... Contract Verifiers
+│       └── keys
+│           └── ... Contract Verification Keys
+├── periphery
+│   ├── AztecFaucet.sol
+│   ├── AztecFeeDistributor.sol
+│   ├── PermitHelper.sol
+│   └── ProxyDeployer.sol
+├── script
+│   └── ... Deployment scripts
+└── test
+    └── ... Test suite
+```
+## Tests
+
+`forge test` will run the test suite. See the forge book linked above about how to target specific tests. To use the reference implementation set `export REFERENCE=true`. 
+
+### Running tests in a Docker container:
 
 ```bash
 # In root run
-docker build -f ./contracts/DockerFile --no-cache .
+docker build --no-cache .
 ```
 
-# Generating new verification keys
+## Generating new verification keys (for aztec developers)
 
-It is possible to generate new verification keys by running the `generate_vks.sh` script that is put in `verification-keys`. This generates the keys and their matching solidity contracts. Also to be used for generating the large 28x32 key.
+It is possible to generate new verification keys by running the `generate_vks.sh` script that is put in `verification-keys`. This generates the keys and their matching solidity contracts. For example the 28x32 key (used in our production rollup) verifies the circuit which validates 28 recursive proofs of 32 smaller inner proofs.
 
-# Verifier test
+## Deployments
 
-The verifier test is available in `yarn-project/contracts-verifier-test`.
+### Devnet / Stage / Testnet Deployments
 
-# Deployments
+The CI/CD pipeline will use the script in `deploy/deploy_contracts.sh` to orchestrate deployments.
 
-## e2e tests
+### Local Deployments
 
-The familiar tmux-scripts and docker-compose setups will automatically deploy a new set of contracts to a anvil instance for you.  
-If you would just like to run the deployment script for testing purposes, `deploy_local` will set reasonable defaults and then run the testing script.
-
-## Devnet / Stage / Testnet Deployments
-
-The CD pipeline will use the script in `deploy/deploy_contracts.sh` to reason whether it should perform new deployments or not.
+To quickly bootstrap an anvil fork with our entire suite of mainnet contracts deployed run `scripts/start_e2e_fork.sh`.
 
 **Environment Variables**
-When deploying to dev or testnet from a local machine, there are some required environment variables
+When deploying to dev or testnet from a local machine, there are some required environment variables.
 
 Required:
 
@@ -61,15 +108,16 @@ Optional:
 
 ### How are deployments triggered?
 
-Inside the `deploy` folder there are files named for each of the environments (`dev`, `testnet`. `stage`). In the deployment script it will check whether there is a diff in the file of the deployment environment. E.g. if you want to trigger a redeploy in dev, then if your version tag has a change in the dev file, it will redeploy the contracts.  
+Redeploying the testnet contracts can be done in one click with the `redeploy-mainnet-fork` circle ci workflow.
+To force deployments through ci there are override files for each environment inside the `deploy` folder (`dev`, `testnet`. `stage`). The deployment script it will check whether there is a diff in the target environment's file. E.g. if you want to force a redeploy in dev, changing the dev file will trigger it.  
 Please exercise caution in your commits that these files have not changed by accident.
 
 ### How do downstream services consume the contract addresses?
 
 #### e2e
 
-In e2e tests the contracts service will serve the deployed addresses using `socat` - see `serve.sh`. It will look for the output of the deployment script `/serve/deployment_addresses.json` and serve it on a defined port (usually 8547). Before each of the other services (`kebab`, `falafel`) boot they run an `export_addresses` script that queries the contract addresses on this port.
+For e2e tests the contracts service will serve deployed addresses using `socat` - see `serve.sh`. It will serve the deployment script output (`/serve/deployment_addresses.json`) on the defined port (8547 by default). When downstream services (`kebab`, `falafel`) boot they run an `export_addresses` script that consumes the contract addresses.
 
-### Deployments
+#### Deployments
 
-At the end of the deployments script there is a loop that will export all of the critical addresses into terraform variables. The accompanying files in the `terraform` folder will output these addresses such that they are available to the other services as environment vars at deploy time.
+At the end of the deployments script, all critical addresses will be saved into terraform variables. They are consumed by downstream services as env vars at deploy time.

@@ -9,7 +9,7 @@ import {Test} from "forge-std/Test.sol";
 
 import {AztecTypes} from "rollup-encoder/libraries/AztecTypes.sol";
 import {RollupProcessorLibrary} from "rollup-encoder/libraries/RollupProcessorLibrary.sol";
-import {RollupProcessor} from "core/RollupProcessor.sol";
+import {RollupProcessor} from "core/processors/RollupProcessor.sol";
 
 import {DefiBridgeProxy} from "core/DefiBridgeProxy.sol";
 import {ProxyDeployer} from "periphery/ProxyDeployer.sol";

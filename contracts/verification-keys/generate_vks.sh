@@ -1,4 +1,5 @@
 #!/bin/bash
+# Note this file assumes that it is being build as part of the wider aztec build system.
 set -e
 
 # It takes ages to compute the real 28x32, so let's leave it behind a flag and assume we'll do it manually.

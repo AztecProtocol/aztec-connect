@@ -20,7 +20,7 @@ RUN forge install --no-commit \
   https://github.com/AztecProtocol/aztec-connect-bridges@master
 ENV MAINNET_RPC_URL='https://mainnet.infura.io/v3/9928b52099854248b3a096be07a6b23c'
 
-RUN forge clean && forge build && forge test
+RUN forge clean && forge build && forge test && REFERENCE=true forge test 
 
 WORKDIR /usr/src/contracts
 CMD ["./scripts/deploy_contracts.sh"]
