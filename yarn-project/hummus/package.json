@@ -1,7 +1,7 @@
 {
   "name": "hummus",
   "version": "1.0.1",
-  "license": "GPL-2.0",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "build": "yarn clean && webpack",

@@ -9,7 +9,7 @@
   "homepage": "https://github.com/AztecProtocol/aztec-connect/blob/master/alpha-sdk/README.md",
   "author": "AZTEC",
   "type": "module",
-  "license": "GPL-2.0",
+  "license": "MIT",
   "dependencies": {
     "@aztec/barretenberg": "2.2.0-alpha.5",
     "@aztec/blockchain": "2.2.0-alpha.5",

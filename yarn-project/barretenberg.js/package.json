@@ -2,7 +2,7 @@
   "name": "@aztec/barretenberg",
   "version": "2.1.0",
   "main": "index.js",
-  "license": "GPL-2.0",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "build": "yarn clean && tsc -p tsconfig.dest.json && webpack --config webpack.config.prod.js",
