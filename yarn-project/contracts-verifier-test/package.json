@@ -1,7 +1,7 @@
 {
   "name": "@aztec/contracts-verifier-test",
   "version": "2.0.0",
-  "license": "GPL-2.0-only",
+  "license": "MIT",
   "exports": "./dest/index.js",
   "type": "module",
   "scripts": {

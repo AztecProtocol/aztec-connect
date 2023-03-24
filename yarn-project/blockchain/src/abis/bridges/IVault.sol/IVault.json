@@ -241,7 +241,7 @@
     "queryBatchSwap(uint8,(bytes32,uint256,uint256,uint256,bytes)[],address[],(address,bool,address,bool))": "f84d066e",
     "swap((bytes32,uint8,address,address,uint256,bytes),(address,bool,address,bool),uint256,uint256)": "52bbbe29"
   },
-  "rawMetadata": "{\"compiler\":{\"version\":\"0.8.10+commit.fc410830\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"poolId\",\"type\":\"bytes32\"}],\"name\":\"getPool\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"enum PoolSpecialization\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"poolId\",\"type\":\"bytes32\"}],\"name\":\"getPoolTokens\",\"outputs\":[{\"internalType\":\"contract IERC20[]\",\"name\":\"tokens\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"balances\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256\",\"name\":\"lastChangeBlock\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"enum IVault.SwapKind\",\"name\":\"kind\",\"type\":\"uint8\"},{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"poolId\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"assetInIndex\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"assetOutIndex\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"userData\",\"type\":\"bytes\"}],\"internalType\":\"struct IVault.BatchSwapStep[]\",\"name\":\"swaps\",\"type\":\"tuple[]\"},{\"internalType\":\"contract IAsset[]\",\"name\":\"assets\",\"type\":\"address[]\"},{\"components\":[{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"fromInternalBalance\",\"type\":\"bool\"},{\"internalType\":\"address payable\",\"name\":\"recipient\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"toInternalBalance\",\"type\":\"bool\"}],\"internalType\":\"struct IVault.FundManagement\",\"name\":\"funds\",\"type\":\"tuple\"}],\"name\":\"queryBatchSwap\",\"outputs\":[{\"internalType\":\"int256[]\",\"name\":\"assetDeltas\",\"type\":\"int256[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"poolId\",\"type\":\"bytes32\"},{\"internalType\":\"enum IVault.SwapKind\",\"name\":\"kind\",\"type\":\"uint8\"},{\"internalType\":\"contract IAsset\",\"name\":\"assetIn\",\"type\":\"address\"},{\"internalType\":\"contract IAsset\",\"name\":\"assetOut\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"userData\",\"type\":\"bytes\"}],\"internalType\":\"struct IVault.SingleSwap\",\"name\":\"singleSwap\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"fromInternalBalance\",\"type\":\"bool\"},{\"internalType\":\"address payable\",\"name\":\"recipient\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"toInternalBalance\",\"type\":\"bool\"}],\"internalType\":\"struct IVault.FundManagement\",\"name\":\"funds\",\"type\":\"tuple\"},{\"internalType\":\"uint256\",\"name\":\"limit\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"deadline\",\"type\":\"uint256\"}],\"name\":\"swap\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"payable\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{\"getPoolTokens(bytes32)\":{\"details\":\"Returns a Pool's registered tokens, the total balance for each, and the latest block when *any* of the tokens' `balances` changed. The order of the `tokens` array is the same order that will be used in `joinPool`, `exitPool`, as well as in all Pool hooks (where applicable). Calls to `registerTokens` and `deregisterTokens` may change this order. If a Pool only registers tokens once, and these are sorted in ascending order, they will be stored in the same order as passed to `registerTokens`. Total balances include both tokens held by the Vault and those withdrawn by the Pool's Asset Managers. These are the amounts used by joins, exits and swaps. For a detailed breakdown of token balances, use `getPoolTokenInfo` instead.\"},\"swap((bytes32,uint8,address,address,uint256,bytes),(address,bool,address,bool),uint256,uint256)\":{\"details\":\"Performs a swap with a single Pool. If the swap is 'given in' (the number of tokens to send to the Pool is known), it returns the amount of tokens taken from the Pool, which must be greater than or equal to `limit`. If the swap is 'given out' (the number of tokens to take from the Pool is known), it returns the amount of tokens sent to the Pool, which must be less than or equal to `limit`. Internal Balance usage and the recipient are determined by the `funds` struct. Emits a `Swap` event.\"}},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"src/interfaces/element/IVault.sol\":\"IVault\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":100000},\"remappings\":[\":@openzeppelin/=lib/openzeppelin-contracts/\",\":ds-test/=lib/forge-std/lib/ds-test/src/\",\":erc4626-tests/=lib/openzeppelin-contracts/lib/erc4626-tests/\",\":forge-std/=lib/forge-std/src/\",\":openzeppelin-contracts/=lib/openzeppelin-contracts/contracts/\",\":rollup-encoder/=lib/rollup-encoder/src/\"]},\"sources\":{\"lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol\":{\"keccak256\":\"0x9750c6b834f7b43000631af5cc30001c5f547b3ceb3635488f140f60e897ea6b\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://5a7d5b1ef5d8d5889ad2ed89d8619c09383b80b72ab226e0fe7bde1636481e34\",\"dweb:/ipfs/QmebXWgtEfumQGBdVeM6c71McLixYXQP5Bk6kKXuoY4Bmr\"]},\"src/interfaces/element/IVault.sol\":{\"keccak256\":\"0xb4f96ad12823ffa83e16fbae73900b1bf69c04bd7c84d138f846f85ac0efee8c\",\"license\":\"GPL-2.0-or-later\",\"urls\":[\"bzz-raw://d8898e490b4323ae3fc9af035cbda4a4ff42c6ab40c2df7bc604fd0a427b8ab3\",\"dweb:/ipfs/QmNcrqKPYZj8TkaX6C9xpihU1XztRXtXU131zLPEb6h6T7\"]}},\"version\":1}",
+  "rawMetadata": "{\"compiler\":{\"version\":\"0.8.10+commit.fc410830\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"poolId\",\"type\":\"bytes32\"}],\"name\":\"getPool\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"enum PoolSpecialization\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"poolId\",\"type\":\"bytes32\"}],\"name\":\"getPoolTokens\",\"outputs\":[{\"internalType\":\"contract IERC20[]\",\"name\":\"tokens\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"balances\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256\",\"name\":\"lastChangeBlock\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"enum IVault.SwapKind\",\"name\":\"kind\",\"type\":\"uint8\"},{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"poolId\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"assetInIndex\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"assetOutIndex\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"userData\",\"type\":\"bytes\"}],\"internalType\":\"struct IVault.BatchSwapStep[]\",\"name\":\"swaps\",\"type\":\"tuple[]\"},{\"internalType\":\"contract IAsset[]\",\"name\":\"assets\",\"type\":\"address[]\"},{\"components\":[{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"fromInternalBalance\",\"type\":\"bool\"},{\"internalType\":\"address payable\",\"name\":\"recipient\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"toInternalBalance\",\"type\":\"bool\"}],\"internalType\":\"struct IVault.FundManagement\",\"name\":\"funds\",\"type\":\"tuple\"}],\"name\":\"queryBatchSwap\",\"outputs\":[{\"internalType\":\"int256[]\",\"name\":\"assetDeltas\",\"type\":\"int256[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"poolId\",\"type\":\"bytes32\"},{\"internalType\":\"enum IVault.SwapKind\",\"name\":\"kind\",\"type\":\"uint8\"},{\"internalType\":\"contract IAsset\",\"name\":\"assetIn\",\"type\":\"address\"},{\"internalType\":\"contract IAsset\",\"name\":\"assetOut\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"userData\",\"type\":\"bytes\"}],\"internalType\":\"struct IVault.SingleSwap\",\"name\":\"singleSwap\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"fromInternalBalance\",\"type\":\"bool\"},{\"internalType\":\"address payable\",\"name\":\"recipient\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"toInternalBalance\",\"type\":\"bool\"}],\"internalType\":\"struct IVault.FundManagement\",\"name\":\"funds\",\"type\":\"tuple\"},{\"internalType\":\"uint256\",\"name\":\"limit\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"deadline\",\"type\":\"uint256\"}],\"name\":\"swap\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"payable\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{\"getPoolTokens(bytes32)\":{\"details\":\"Returns a Pool's registered tokens, the total balance for each, and the latest block when *any* of the tokens' `balances` changed. The order of the `tokens` array is the same order that will be used in `joinPool`, `exitPool`, as well as in all Pool hooks (where applicable). Calls to `registerTokens` and `deregisterTokens` may change this order. If a Pool only registers tokens once, and these are sorted in ascending order, they will be stored in the same order as passed to `registerTokens`. Total balances include both tokens held by the Vault and those withdrawn by the Pool's Asset Managers. These are the amounts used by joins, exits and swaps. For a detailed breakdown of token balances, use `getPoolTokenInfo` instead.\"},\"swap((bytes32,uint8,address,address,uint256,bytes),(address,bool,address,bool),uint256,uint256)\":{\"details\":\"Performs a swap with a single Pool. If the swap is 'given in' (the number of tokens to send to the Pool is known), it returns the amount of tokens taken from the Pool, which must be greater than or equal to `limit`. If the swap is 'given out' (the number of tokens to take from the Pool is known), it returns the amount of tokens sent to the Pool, which must be less than or equal to `limit`. Internal Balance usage and the recipient are determined by the `funds` struct. Emits a `Swap` event.\"}},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"src/interfaces/element/IVault.sol\":\"IVault\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":100000},\"remappings\":[\":@openzeppelin/=lib/openzeppelin-contracts/\",\":ds-test/=lib/forge-std/lib/ds-test/src/\",\":erc4626-tests/=lib/openzeppelin-contracts/lib/erc4626-tests/\",\":forge-std/=lib/forge-std/src/\",\":openzeppelin-contracts/=lib/openzeppelin-contracts/contracts/\",\":rollup-encoder/=lib/rollup-encoder/src/\"]},\"sources\":{\"lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol\":{\"keccak256\":\"0x9750c6b834f7b43000631af5cc30001c5f547b3ceb3635488f140f60e897ea6b\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://5a7d5b1ef5d8d5889ad2ed89d8619c09383b80b72ab226e0fe7bde1636481e34\",\"dweb:/ipfs/QmebXWgtEfumQGBdVeM6c71McLixYXQP5Bk6kKXuoY4Bmr\"]},\"src/interfaces/element/IVault.sol\":{\"keccak256\":\"0xb4f96ad12823ffa83e16fbae73900b1bf69c04bd7c84d138f846f85ac0efee8c\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://d8898e490b4323ae3fc9af035cbda4a4ff42c6ab40c2df7bc604fd0a427b8ab3\",\"dweb:/ipfs/QmNcrqKPYZj8TkaX6C9xpihU1XztRXtXU131zLPEb6h6T7\"]}},\"version\":1}",
   "metadata": {
     "compiler": {
       "version": "0.8.10+commit.fc410830"
@@ -528,7 +528,7 @@
           "bzz-raw://d8898e490b4323ae3fc9af035cbda4a4ff42c6ab40c2df7bc604fd0a427b8ab3",
           "dweb:/ipfs/QmNcrqKPYZj8TkaX6C9xpihU1XztRXtXU131zLPEb6h6T7"
         ],
-        "license": "GPL-2.0-or-later"
+        "license": "MIT"
       }
     },
     "version": 1
@@ -537,18 +537,10 @@
     "absolutePath": "src/interfaces/element/IVault.sol",
     "id": 52275,
     "exportedSymbols": {
-      "IAsset": [
-        52169
-      ],
-      "IERC20": [
-        25396
-      ],
-      "IVault": [
-        52274
-      ],
-      "PoolSpecialization": [
-        52173
-      ]
+      "IAsset": [52169],
+      "IERC20": [25396],
+      "IVault": [52274],
+      "PoolSpecialization": [52173]
     },
     "nodeType": "SourceUnit",
     "src": "45:5468:93",
@@ -558,12 +550,7 @@
         "nodeType": "PragmaDirective",
         "src": "45:24:93",
         "nodes": [],
-        "literals": [
-          "solidity",
-          ">=",
-          "0.8",
-          ".4"
-        ]
+        "literals": ["solidity", ">=", "0.8", ".4"]
       },
       {
         "id": 52168,
@@ -601,9 +588,7 @@
         "contractDependencies": [],
         "contractKind": "interface",
         "fullyImplemented": true,
-        "linearizedBaseContracts": [
-          52169
-        ],
+        "linearizedBaseContracts": [52169],
         "name": "IAsset",
         "nameLocation": "153:6:93",
         "scope": 52275,
@@ -1838,16 +1823,14 @@
         "contractDependencies": [],
         "contractKind": "interface",
         "fullyImplemented": false,
-        "linearizedBaseContracts": [
-          52274
-        ],
+        "linearizedBaseContracts": [52274],
         "name": "IVault",
         "nameLocation": "303:6:93",
         "scope": 52275,
         "usedErrors": []
       }
     ],
-    "license": "GPL-2.0-or-later"
+    "license": "MIT"
   },
   "id": 93
 }

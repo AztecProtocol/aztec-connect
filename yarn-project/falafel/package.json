@@ -2,7 +2,7 @@
   "name": "falafel",
   "version": "1.0.0",
   "main": "dest/index.js",
-  "license": "GPL-2.0",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "version_hash": "node -p \"`export const VERSION_HASH = '${COMMIT_HASH:-}';`\" > src/package_version.ts",

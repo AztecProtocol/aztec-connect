@@ -527,7 +527,7 @@
     "convert((uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),uint256,uint256,uint64,address)": "26c3b515",
     "finalise((uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),uint256,uint64)": "9b07d342"
   },
-  "rawMetadata": "{\"compiler\":{\"version\":\"0.8.10+commit.fc410830\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_rollupProcessor\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"AsyncDisabled\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidCaller\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidConfiguration\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidInputA\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidOutputA\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidUnwrapReturnValue\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"MissingImplementation\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"CURVE_POOL\",\"outputs\":[{\"internalType\":\"contract ICurvePool\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"LIDO\",\"outputs\":[{\"internalType\":\"contract ILido\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"PRECISION\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"ROLLUP_PROCESSOR\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"SUBSIDY\",\"outputs\":[{\"internalType\":\"contract ISubsidy\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"WRAPPED_STETH\",\"outputs\":[{\"internalType\":\"contract IWstETH\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"\",\"type\":\"tuple\"},{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"name\":\"computeCriteria\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"_inputAssetA\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"_outputAssetA\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"\",\"type\":\"tuple\"},{\"internalType\":\"uint256\",\"name\":\"_totalInputValue\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_interactionNonce\",\"type\":\"uint256\"},{\"internalType\":\"uint64\",\"name\":\"_auxData\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"convert\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"outputValueA\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"\",\"type\":\"tuple\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"name\":\"finalise\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"stateMutability\":\"payable\",\"type\":\"receive\"}],\"devdoc\":{\"author\":\"Aztec Team\",\"details\":\"Synchronous and stateless bridge that will hold no funds beyond dust for gas-savings.\",\"kind\":\"dev\",\"methods\":{\"computeCriteria((uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),uint64)\":{\"details\":\"Should be overridden by bridge implementation if intended to limit subsidy.\",\"returns\":{\"_0\":\"The criteria to be passed along\"}},\"constructor\":{\"details\":\"As the contract will not be holding state nor tokens, it can be approved safely.\",\"params\":{\"_rollupProcessor\":\"The address of the RollupProcessor to use\"}},\"convert((uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),uint256,uint256,uint64,address)\":{\"params\":{\"_auxData\":\"For eth->wstEth, the minimum acceptable amount of stEth per 1 eth, for wstEth->eth, the minimum                 acceptable amount of eth per 1 wstEth.\",\"_inputAssetA\":\"The inputAsset (eth or wstEth)\",\"_interactionNonce\":\"The nonce of the DeFi interaction, used when swapping wstEth -> eth\",\"_outputAssetA\":\"The output asset (eth or wstEth) opposite `_inputAssetB`\",\"_totalInputValue\":\"The amount of token deposited\"},\"returns\":{\"outputValueA\":\"The amount of `_outputAssetA` that the RollupProcessor should pull\"}}},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{\"computeCriteria((uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),uint64)\":{\"notice\":\"Computes the criteria that is passed on to the subsidy contract when claiming\"},\"constructor\":{\"notice\":\"Sets the address of the RollupProcessor and pre-approve tokens\"},\"convert((uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),uint256,uint256,uint64,address)\":{\"notice\":\"Swaps between the eth<->wstEth tokens through the curve eth/stEth pool and wrapping stEth\"}},\"notice\":\"A DeFiBridge for trading between Eth and wstEth using curve and the stEth wrapper.\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"src/bridges/curve/CurveStEthBridge.sol\":\"CurveStEthBridge\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":100000},\"remappings\":[\":@openzeppelin/=lib/openzeppelin-contracts/\",\":ds-test/=lib/forge-std/lib/ds-test/src/\",\":erc4626-tests/=lib/openzeppelin-contracts/lib/erc4626-tests/\",\":forge-std/=lib/forge-std/src/\",\":openzeppelin-contracts/=lib/openzeppelin-contracts/contracts/\",\":rollup-encoder/=lib/rollup-encoder/src/\"]},\"sources\":{\"lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol\":{\"keccak256\":\"0x9750c6b834f7b43000631af5cc30001c5f547b3ceb3635488f140f60e897ea6b\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://5a7d5b1ef5d8d5889ad2ed89d8619c09383b80b72ab226e0fe7bde1636481e34\",\"dweb:/ipfs/QmebXWgtEfumQGBdVeM6c71McLixYXQP5Bk6kKXuoY4Bmr\"]},\"lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Permit.sol\":{\"keccak256\":\"0x35e258421ae206f3db37281cea70871b4c3553914734aa76139a41af60ac1abb\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://2ef94b6bc4ee356db612a1849c615f7dd4b15542d6c8584c86bb9243a7913cf0\",\"dweb:/ipfs/QmaxFj5NFpAjjitZtHPNS9PPtCuBATaRz9ktDDRCQCQ83y\"]},\"lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol\":{\"keccak256\":\"0xb0fafd1e5a5e316405d08b8390bdf4716c7644cc2c8e89ce41050316f28f92a3\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://8c194429bb8dd25539faa90982240db467042daf2487b17debc908cfd98f069a\",\"dweb:/ipfs/QmYdFwzgxG9C1iyGsDFZCLNG4LBKSL9b8osCP1RLtYnpvm\"]},\"lib/openzeppelin-contracts/contracts/utils/Address.sol\":{\"keccak256\":\"0x68404b57d114b893554b0e54334b32f578f5d1abf61830025c83fb71dc1944ce\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://d3d0a94b3c8afd92c2a9f03f3325e9ac22cec56e995b94ff212670ff3653f0d3\",\"dweb:/ipfs/QmPqKWUysbo8QqKcqH5Lp7SQiL1LfjeoGCSa7iFWmAP8Mw\"]},\"lib/rollup-encoder/src/interfaces/IRollupProcessor.sol\":{\"keccak256\":\"0x7f8cc09c537d9c9b80b5e90c1ebe02d2fbb4efd5510bbe3a4df57940e368a71d\",\"license\":\"Apache-2.0\",\"urls\":[\"bzz-raw://8d0e59e15799702bbdf118c00851ae154e01b329c625dc6f3097b0cd072770ef\",\"dweb:/ipfs/QmPsPp6Drzym9RAai34jMJbnuftV3XkDnDp35RX94hWh2u\"]},\"lib/rollup-encoder/src/libraries/AztecTypes.sol\":{\"keccak256\":\"0xa11ad1ad795337be7761108304a21812aeedfac4b03969ee5f71a251e226cc77\",\"license\":\"Apache-2.0\",\"urls\":[\"bzz-raw://5f6ea5409dcbe6c61d1c7a7153a4158bc88db92eae2c5c1041809b19c49c3ea7\",\"dweb:/ipfs/QmY7d8839N7SNyR5eGvFi6C6opNW3GW5oZEhTVKEWFvv56\"]},\"src/aztec/interfaces/IDefiBridge.sol\":{\"keccak256\":\"0xf2e1d1e8dc5326f1fe8b4a909541d459546f44fb7e1013b9f9be3bc8aac379d4\",\"license\":\"Apache-2.0\",\"urls\":[\"bzz-raw://b24142083ad22a38a2d7e5190d05ed286964f0bedbe83bb0ae4c1366521ee5ec\",\"dweb:/ipfs/QmPbfmHjYq4rqpFwVb75mNxDVdRBoRNWu6neGMdLJibDts\"]},\"src/aztec/interfaces/ISubsidy.sol\":{\"keccak256\":\"0x03afbff2b5181d4fc39190a2bb7ad0a60b6a4ae44527d77509c23299b4a3c668\",\"license\":\"Apache-2.0\",\"urls\":[\"bzz-raw://8a6f880e61c2a097e8f49409b5db5db42aa727d3256625cf8f4b409423923bea\",\"dweb:/ipfs/QmRkpCEkEHUpP9RWGANyQNPPmDUfht15uSiFKeSNWYmr8C\"]},\"src/bridges/base/BridgeBase.sol\":{\"keccak256\":\"0x7ff16906ae0c58fc9ef08096db9c006887875e371ee45440c535dcae4649b75c\",\"license\":\"Apache-2.0\",\"urls\":[\"bzz-raw://778cde55152d439e4e05393af4e54eb6ece56572f7e7ccf7f7eabac20159e525\",\"dweb:/ipfs/QmcGY9MGzBr4MaEQNa76hcKKabkLE2hYDxNRgwEEuCeLW2\"]},\"src/bridges/base/ErrorLib.sol\":{\"keccak256\":\"0x0d5ada9c43f52812ff2c60014543fc21684e48610bbe6c4bd77cfdb0186876c9\",\"license\":\"Apache-2.0\",\"urls\":[\"bzz-raw://ee4e31e01128c5b683806908876f3e73f0df9fd4c145f426054aad1dbd829cce\",\"dweb:/ipfs/QmQiLtbCuNCe1r1jcAL1cVtTwouXbGETyk1abtTFBDwxZV\"]},\"src/bridges/curve/CurveStEthBridge.sol\":{\"keccak256\":\"0x8cbb01c6d405957aa5a673b8413cdc0c21499dc8198a376e83bdcee503b1669e\",\"license\":\"Apache-2.0\",\"urls\":[\"bzz-raw://cf5ca4fa3e9b8e2c187ad079704aa1ff87eb1a1407ec9eecad8c6ed621adf958\",\"dweb:/ipfs/QmUE5xuSffk8jB55Kt9sR5XTH2kMzV4q7UWRRusyLu4y79\"]},\"src/interfaces/curve/ICurvePool.sol\":{\"keccak256\":\"0xd0383f0c1d3ac1ac5e765290d82e0669379d6a2c62c720361f70eb55626df361\",\"license\":\"GPLv2\",\"urls\":[\"bzz-raw://4c76cea836ff2f0aadb84f764a9d30dacef989f84a3184b3ca8676d8590750ad\",\"dweb:/ipfs/QmNTfV45RwGAwz3iSxCT99WqvRHWz52eu4NTHtgJ2rg9vZ\"]},\"src/interfaces/lido/ILido.sol\":{\"keccak256\":\"0xd195a22416bfc8630dbe6c66805c77712b47de4f1397268a24664c526eca48cd\",\"license\":\"GPLv2\",\"urls\":[\"bzz-raw://3edaef781a5a0555ba2f1e14e7dacabd21d1a4ab43026fe5a743b58a79ca39e1\",\"dweb:/ipfs/QmbatGGRnkn3r4ccFvZqUHSDKe3992LiqPiY9QVSmuz2SD\"]},\"src/interfaces/lido/IWstETH.sol\":{\"keccak256\":\"0x431ee9675fd4634cb56e32bfa8736b5a565f58b5ccf224270d4afa8aa86cbe02\",\"license\":\"GPLv2\",\"urls\":[\"bzz-raw://bc3231cc6592b76881ab137c535b79eeec5fe47349c2cbb5e78312432fb5b48e\",\"dweb:/ipfs/QmfMEbn8hixxzxBLocgpqVQgg9hvbweyWhazWkVpaSAxYL\"]}},\"version\":1}",
+  "rawMetadata": "{\"compiler\":{\"version\":\"0.8.10+commit.fc410830\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_rollupProcessor\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"AsyncDisabled\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidCaller\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidConfiguration\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidInputA\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidOutputA\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidUnwrapReturnValue\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"MissingImplementation\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"CURVE_POOL\",\"outputs\":[{\"internalType\":\"contract ICurvePool\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"LIDO\",\"outputs\":[{\"internalType\":\"contract ILido\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"PRECISION\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"ROLLUP_PROCESSOR\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"SUBSIDY\",\"outputs\":[{\"internalType\":\"contract ISubsidy\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"WRAPPED_STETH\",\"outputs\":[{\"internalType\":\"contract IWstETH\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"\",\"type\":\"tuple\"},{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"name\":\"computeCriteria\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"_inputAssetA\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"_outputAssetA\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"\",\"type\":\"tuple\"},{\"internalType\":\"uint256\",\"name\":\"_totalInputValue\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_interactionNonce\",\"type\":\"uint256\"},{\"internalType\":\"uint64\",\"name\":\"_auxData\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"convert\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"outputValueA\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"\",\"type\":\"tuple\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"name\":\"finalise\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"stateMutability\":\"payable\",\"type\":\"receive\"}],\"devdoc\":{\"author\":\"Aztec Team\",\"details\":\"Synchronous and stateless bridge that will hold no funds beyond dust for gas-savings.\",\"kind\":\"dev\",\"methods\":{\"computeCriteria((uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),uint64)\":{\"details\":\"Should be overridden by bridge implementation if intended to limit subsidy.\",\"returns\":{\"_0\":\"The criteria to be passed along\"}},\"constructor\":{\"details\":\"As the contract will not be holding state nor tokens, it can be approved safely.\",\"params\":{\"_rollupProcessor\":\"The address of the RollupProcessor to use\"}},\"convert((uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),uint256,uint256,uint64,address)\":{\"params\":{\"_auxData\":\"For eth->wstEth, the minimum acceptable amount of stEth per 1 eth, for wstEth->eth, the minimum                 acceptable amount of eth per 1 wstEth.\",\"_inputAssetA\":\"The inputAsset (eth or wstEth)\",\"_interactionNonce\":\"The nonce of the DeFi interaction, used when swapping wstEth -> eth\",\"_outputAssetA\":\"The output asset (eth or wstEth) opposite `_inputAssetB`\",\"_totalInputValue\":\"The amount of token deposited\"},\"returns\":{\"outputValueA\":\"The amount of `_outputAssetA` that the RollupProcessor should pull\"}}},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{\"computeCriteria((uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),uint64)\":{\"notice\":\"Computes the criteria that is passed on to the subsidy contract when claiming\"},\"constructor\":{\"notice\":\"Sets the address of the RollupProcessor and pre-approve tokens\"},\"convert((uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),uint256,uint256,uint64,address)\":{\"notice\":\"Swaps between the eth<->wstEth tokens through the curve eth/stEth pool and wrapping stEth\"}},\"notice\":\"A DeFiBridge for trading between Eth and wstEth using curve and the stEth wrapper.\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"src/bridges/curve/CurveStEthBridge.sol\":\"CurveStEthBridge\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":100000},\"remappings\":[\":@openzeppelin/=lib/openzeppelin-contracts/\",\":ds-test/=lib/forge-std/lib/ds-test/src/\",\":erc4626-tests/=lib/openzeppelin-contracts/lib/erc4626-tests/\",\":forge-std/=lib/forge-std/src/\",\":openzeppelin-contracts/=lib/openzeppelin-contracts/contracts/\",\":rollup-encoder/=lib/rollup-encoder/src/\"]},\"sources\":{\"lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol\":{\"keccak256\":\"0x9750c6b834f7b43000631af5cc30001c5f547b3ceb3635488f140f60e897ea6b\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://5a7d5b1ef5d8d5889ad2ed89d8619c09383b80b72ab226e0fe7bde1636481e34\",\"dweb:/ipfs/QmebXWgtEfumQGBdVeM6c71McLixYXQP5Bk6kKXuoY4Bmr\"]},\"lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Permit.sol\":{\"keccak256\":\"0x35e258421ae206f3db37281cea70871b4c3553914734aa76139a41af60ac1abb\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://2ef94b6bc4ee356db612a1849c615f7dd4b15542d6c8584c86bb9243a7913cf0\",\"dweb:/ipfs/QmaxFj5NFpAjjitZtHPNS9PPtCuBATaRz9ktDDRCQCQ83y\"]},\"lib/openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol\":{\"keccak256\":\"0xb0fafd1e5a5e316405d08b8390bdf4716c7644cc2c8e89ce41050316f28f92a3\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://8c194429bb8dd25539faa90982240db467042daf2487b17debc908cfd98f069a\",\"dweb:/ipfs/QmYdFwzgxG9C1iyGsDFZCLNG4LBKSL9b8osCP1RLtYnpvm\"]},\"lib/openzeppelin-contracts/contracts/utils/Address.sol\":{\"keccak256\":\"0x68404b57d114b893554b0e54334b32f578f5d1abf61830025c83fb71dc1944ce\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://d3d0a94b3c8afd92c2a9f03f3325e9ac22cec56e995b94ff212670ff3653f0d3\",\"dweb:/ipfs/QmPqKWUysbo8QqKcqH5Lp7SQiL1LfjeoGCSa7iFWmAP8Mw\"]},\"lib/rollup-encoder/src/interfaces/IRollupProcessor.sol\":{\"keccak256\":\"0x7f8cc09c537d9c9b80b5e90c1ebe02d2fbb4efd5510bbe3a4df57940e368a71d\",\"license\":\"Apache-2.0\",\"urls\":[\"bzz-raw://8d0e59e15799702bbdf118c00851ae154e01b329c625dc6f3097b0cd072770ef\",\"dweb:/ipfs/QmPsPp6Drzym9RAai34jMJbnuftV3XkDnDp35RX94hWh2u\"]},\"lib/rollup-encoder/src/libraries/AztecTypes.sol\":{\"keccak256\":\"0xa11ad1ad795337be7761108304a21812aeedfac4b03969ee5f71a251e226cc77\",\"license\":\"Apache-2.0\",\"urls\":[\"bzz-raw://5f6ea5409dcbe6c61d1c7a7153a4158bc88db92eae2c5c1041809b19c49c3ea7\",\"dweb:/ipfs/QmY7d8839N7SNyR5eGvFi6C6opNW3GW5oZEhTVKEWFvv56\"]},\"src/aztec/interfaces/IDefiBridge.sol\":{\"keccak256\":\"0xf2e1d1e8dc5326f1fe8b4a909541d459546f44fb7e1013b9f9be3bc8aac379d4\",\"license\":\"Apache-2.0\",\"urls\":[\"bzz-raw://b24142083ad22a38a2d7e5190d05ed286964f0bedbe83bb0ae4c1366521ee5ec\",\"dweb:/ipfs/QmPbfmHjYq4rqpFwVb75mNxDVdRBoRNWu6neGMdLJibDts\"]},\"src/aztec/interfaces/ISubsidy.sol\":{\"keccak256\":\"0x03afbff2b5181d4fc39190a2bb7ad0a60b6a4ae44527d77509c23299b4a3c668\",\"license\":\"Apache-2.0\",\"urls\":[\"bzz-raw://8a6f880e61c2a097e8f49409b5db5db42aa727d3256625cf8f4b409423923bea\",\"dweb:/ipfs/QmRkpCEkEHUpP9RWGANyQNPPmDUfht15uSiFKeSNWYmr8C\"]},\"src/bridges/base/BridgeBase.sol\":{\"keccak256\":\"0x7ff16906ae0c58fc9ef08096db9c006887875e371ee45440c535dcae4649b75c\",\"license\":\"Apache-2.0\",\"urls\":[\"bzz-raw://778cde55152d439e4e05393af4e54eb6ece56572f7e7ccf7f7eabac20159e525\",\"dweb:/ipfs/QmcGY9MGzBr4MaEQNa76hcKKabkLE2hYDxNRgwEEuCeLW2\"]},\"src/bridges/base/ErrorLib.sol\":{\"keccak256\":\"0x0d5ada9c43f52812ff2c60014543fc21684e48610bbe6c4bd77cfdb0186876c9\",\"license\":\"Apache-2.0\",\"urls\":[\"bzz-raw://ee4e31e01128c5b683806908876f3e73f0df9fd4c145f426054aad1dbd829cce\",\"dweb:/ipfs/QmQiLtbCuNCe1r1jcAL1cVtTwouXbGETyk1abtTFBDwxZV\"]},\"src/bridges/curve/CurveStEthBridge.sol\":{\"keccak256\":\"0x8cbb01c6d405957aa5a673b8413cdc0c21499dc8198a376e83bdcee503b1669e\",\"license\":\"Apache-2.0\",\"urls\":[\"bzz-raw://cf5ca4fa3e9b8e2c187ad079704aa1ff87eb1a1407ec9eecad8c6ed621adf958\",\"dweb:/ipfs/QmUE5xuSffk8jB55Kt9sR5XTH2kMzV4q7UWRRusyLu4y79\"]},\"src/interfaces/curve/ICurvePool.sol\":{\"keccak256\":\"0xd0383f0c1d3ac1ac5e765290d82e0669379d6a2c62c720361f70eb55626df361\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://4c76cea836ff2f0aadb84f764a9d30dacef989f84a3184b3ca8676d8590750ad\",\"dweb:/ipfs/QmNTfV45RwGAwz3iSxCT99WqvRHWz52eu4NTHtgJ2rg9vZ\"]},\"src/interfaces/lido/ILido.sol\":{\"keccak256\":\"0xd195a22416bfc8630dbe6c66805c77712b47de4f1397268a24664c526eca48cd\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://3edaef781a5a0555ba2f1e14e7dacabd21d1a4ab43026fe5a743b58a79ca39e1\",\"dweb:/ipfs/QmbatGGRnkn3r4ccFvZqUHSDKe3992LiqPiY9QVSmuz2SD\"]},\"src/interfaces/lido/IWstETH.sol\":{\"keccak256\":\"0x431ee9675fd4634cb56e32bfa8736b5a565f58b5ccf224270d4afa8aa86cbe02\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://bc3231cc6592b76881ab137c535b79eeec5fe47349c2cbb5e78312432fb5b48e\",\"dweb:/ipfs/QmfMEbn8hixxzxBLocgpqVQgg9hvbweyWhazWkVpaSAxYL\"]}},\"version\":1}",
   "metadata": {
     "compiler": {
       "version": "0.8.10+commit.fc410830"
@@ -1188,7 +1188,7 @@
           "bzz-raw://4c76cea836ff2f0aadb84f764a9d30dacef989f84a3184b3ca8676d8590750ad",
           "dweb:/ipfs/QmNTfV45RwGAwz3iSxCT99WqvRHWz52eu4NTHtgJ2rg9vZ"
         ],
-        "license": "GPLv2"
+        "license": "MIT"
       },
       "src/interfaces/lido/ILido.sol": {
         "keccak256": "0xd195a22416bfc8630dbe6c66805c77712b47de4f1397268a24664c526eca48cd",
@@ -1196,7 +1196,7 @@
           "bzz-raw://3edaef781a5a0555ba2f1e14e7dacabd21d1a4ab43026fe5a743b58a79ca39e1",
           "dweb:/ipfs/QmbatGGRnkn3r4ccFvZqUHSDKe3992LiqPiY9QVSmuz2SD"
         ],
-        "license": "GPLv2"
+        "license": "MIT"
       },
       "src/interfaces/lido/IWstETH.sol": {
         "keccak256": "0x431ee9675fd4634cb56e32bfa8736b5a565f58b5ccf224270d4afa8aa86cbe02",
@@ -1204,7 +1204,7 @@
           "bzz-raw://bc3231cc6592b76881ab137c535b79eeec5fe47349c2cbb5e78312432fb5b48e",
           "dweb:/ipfs/QmfMEbn8hixxzxBLocgpqVQgg9hvbweyWhazWkVpaSAxYL"
         ],
-        "license": "GPLv2"
+        "license": "MIT"
       }
     },
     "version": 1
@@ -1213,33 +1213,15 @@
     "absolutePath": "src/bridges/curve/CurveStEthBridge.sol",
     "id": 33038,
     "exportedSymbols": {
-      "AztecTypes": [
-        29932
-      ],
-      "BridgeBase": [
-        32640
-      ],
-      "CurveStEthBridge": [
-        33037
-      ],
-      "ErrorLib": [
-        32671
-      ],
-      "ICurvePool": [
-        52005
-      ],
-      "ILido": [
-        52394
-      ],
-      "IRollupProcessor": [
-        29897
-      ],
-      "IWstETH": [
-        52441
-      ],
-      "SafeERC20": [
-        26423
-      ]
+      "AztecTypes": [29932],
+      "BridgeBase": [32640],
+      "CurveStEthBridge": [33037],
+      "ErrorLib": [32671],
+      "ICurvePool": [52005],
+      "ILido": [52394],
+      "IRollupProcessor": [29897],
+      "IWstETH": [52441],
+      "SafeERC20": [26423]
     },
     "nodeType": "SourceUnit",
     "src": "64:6516:42",
@@ -1249,12 +1231,7 @@
         "nodeType": "PragmaDirective",
         "src": "64:24:42",
         "nodes": [],
-        "literals": [
-          "solidity",
-          ">=",
-          "0.8",
-          ".4"
-        ]
+        "literals": ["solidity", ">=", "0.8", ".4"]
       },
       {
         "id": 32675,
@@ -2876,9 +2853,7 @@
               "nodes": [],
               "statements": [
                 {
-                  "assignments": [
-                    32839
-                  ],
+                  "assignments": [32839],
                   "declarations": [
                     {
                       "constant": false,
@@ -3000,9 +2975,7 @@
                   "src": "3434:73:42"
                 },
                 {
-                  "assignments": [
-                    32848
-                  ],
+                  "assignments": [32848],
                   "declarations": [
                     {
                       "constant": false,
@@ -3611,9 +3584,7 @@
                 }
               ]
             },
-            "baseFunctions": [
-              32583
-            ],
+            "baseFunctions": [32583],
             "documentation": {
               "id": 32805,
               "nodeType": "StructuredDocumentation",
@@ -4279,9 +4250,7 @@
                   }
                 },
                 {
-                  "assignments": [
-                    32928
-                  ],
+                  "assignments": [32928],
                   "declarations": [
                     {
                       "constant": false,
@@ -4404,9 +4373,7 @@
                   "src": "4841:64:42"
                 },
                 {
-                  "assignments": [
-                    32937
-                  ],
+                  "assignments": [32937],
                   "declarations": [
                     {
                       "constant": false,
@@ -4557,9 +4524,7 @@
                       "isLValue": false,
                       "isPure": false,
                       "lValueRequested": false,
-                      "names": [
-                        "value"
-                      ],
+                      "names": ["value"],
                       "nodeType": "FunctionCallOptions",
                       "options": [
                         {
@@ -5001,9 +4966,7 @@
                   }
                 },
                 {
-                  "assignments": [
-                    32985
-                  ],
+                  "assignments": [32985],
                   "declarations": [
                     {
                       "constant": false,
@@ -5101,9 +5064,7 @@
                   "src": "6037:54:42"
                 },
                 {
-                  "assignments": [
-                    32992
-                  ],
+                  "assignments": [32992],
                   "declarations": [
                     {
                       "constant": false,
@@ -5226,9 +5187,7 @@
                   "src": "6102:53:42"
                 },
                 {
-                  "assignments": [
-                    33001
-                  ],
+                  "assignments": [33001],
                   "declarations": [
                     {
                       "constant": false,
@@ -5660,9 +5619,7 @@
                       "isLValue": false,
                       "isPure": false,
                       "lValueRequested": false,
-                      "names": [
-                        "value"
-                      ],
+                      "names": ["value"],
                       "nodeType": "FunctionCallOptions",
                       "options": [
                         {
@@ -5903,23 +5860,11 @@
           "text": " @notice A DeFiBridge for trading between Eth and wstEth using curve and the stEth wrapper.\n @dev Synchronous and stateless bridge that will hold no funds beyond dust for gas-savings.\n @author Aztec Team"
         },
         "fullyImplemented": true,
-        "linearizedBaseContracts": [
-          33037,
-          32640,
-          31565
-        ],
+        "linearizedBaseContracts": [33037, 32640, 31565],
         "name": "CurveStEthBridge",
         "nameLocation": "829:16:42",
         "scope": 33038,
-        "usedErrors": [
-          32515,
-          32644,
-          32648,
-          32652,
-          32670,
-          32702,
-          32704
-        ]
+        "usedErrors": [32515, 32644, 32648, 32652, 32670, 32702, 32704]
       }
     ],
     "license": "Apache-2.0"
