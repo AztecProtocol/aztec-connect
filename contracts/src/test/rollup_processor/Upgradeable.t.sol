@@ -4,7 +4,7 @@ pragma solidity >=0.8.4;
 
 import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {Vm} from "forge-std/Test.sol";
-import {RollupProcessor} from "core/RollupProcessor.sol";
+import {RollupProcessor} from "core/processors/RollupProcessor.sol";
 import {RollupProcessorV2} from "core/processors/RollupProcessorV2.sol";
 import {TestBase} from "../aztec/TestBase.sol";
 import {RollupProcessorVPlus1} from "../mocks/RollupProcessorVPlus1.sol";

@@ -1,7 +1,7 @@
 {
   "name": "@aztec/halloumi",
   "version": "1.0.0",
-  "license": "GPL-2.0",
+  "license": "MIT",
   "type": "module",
   "exports": {
     "./proof_generator": "./dest/proof_generator/index.js"

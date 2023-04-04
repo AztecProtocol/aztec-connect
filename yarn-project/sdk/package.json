@@ -1,6 +1,6 @@
 {
   "name": "@aztec/sdk",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "main": "./dest/index.js",
   "exports": {
     "node": "./dest/index.js",
@@ -8,7 +8,7 @@
   },
   "homepage": "https://docs.aztec.network/sdk/overview",
   "author": "AZTEC",
-  "license": "GPL-2.0",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "version_hash": "node -p \"`export const VERSION_HASH = '${COMMIT_HASH:-}';`\" > src/package_version.ts",

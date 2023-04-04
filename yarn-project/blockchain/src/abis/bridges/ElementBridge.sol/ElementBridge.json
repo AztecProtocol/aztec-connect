@@ -911,7 +911,7 @@
     "pools(uint256)": "ac4afa38",
     "registerConvergentPoolAddress(address,address,uint64)": "05ff03ba"
   },
-  "rawMetadata": "{\"compiler\":{\"version\":\"0.8.10+commit.fc410830\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_rollupProcessor\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_trancheFactory\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"_trancheBytecodeHash\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"_balancerVaultAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_elementDeploymentValidatorAddress\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"ALREADY_FINALISED\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ASSET_IDS_NOT_EQUAL\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ASSET_NOT_ERC20\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"BRIDGE_NOT_READY\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"HEAP_EMPTY\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"INPUT_ASSETB_NOT_UNUSED\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"INTERACTION_ALREADY_EXISTS\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"INVALID_CHANGE_IN_BALANCE\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"INVALID_POOL\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"INVALID_TOKEN_BALANCE_RECEIVED\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"INVALID_TRANCHE\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"INVALID_WRAPPED_POSITION\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidCaller\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidNonce\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"MissingImplementation\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"OUTPUT_ASSETB_NOT_UNUSED\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"POOL_EXPIRY_MISMATCH\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"POOL_NOT_FOUND\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"POOL_UNDERLYING_MISMATCH\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"RECEIVED_LESS_THAN_LIMIT\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"TRANCHE_ALREADY_EXPIRED\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"TRANCHE_EXPIRY_MISMATCH\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"TRANCHE_POSITION_MISMATCH\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"TRANCHE_UNDERLYING_MISMATCH\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"UNREGISTERED_PAIR\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"UNREGISTERED_POOL\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"UNREGISTERED_POSITION\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"VAULT_ADDRESS_MISMATCH\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"VAULT_ADDRESS_VERIFICATION_FAILED\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"totalInputValue\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"int64\",\"name\":\"gasUsed\",\"type\":\"int64\"}],\"name\":\"LogConvert\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"message\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"int64\",\"name\":\"gasUsed\",\"type\":\"int64\"}],\"name\":\"LogFinalise\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"poolAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"wrappedPositionAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"expiry\",\"type\":\"uint64\"}],\"name\":\"LogPoolAdded\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"ROLLUP_PROCESSOR\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"SUBSIDY\",\"outputs\":[{\"internalType\":\"contract ISubsidy\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"assetToExpirys\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"\",\"type\":\"tuple\"},{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"name\":\"computeCriteria\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"inputAssetA\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"inputAssetB\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"outputAssetA\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"outputAssetB\",\"type\":\"tuple\"},{\"internalType\":\"uint256\",\"name\":\"totalInputValue\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"interactionNonce\",\"type\":\"uint256\"},{\"internalType\":\"uint64\",\"name\":\"auxData\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"convert\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"outputValueA\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"outputValueB\",\"type\":\"uint256\"},{\"internalType\":\"bool\",\"name\":\"isAsync\",\"type\":\"bool\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"outputAssetA\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"\",\"type\":\"tuple\"},{\"internalType\":\"uint256\",\"name\":\"interactionNonce\",\"type\":\"uint256\"},{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"name\":\"finalise\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"outputValueA\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"outputValueB\",\"type\":\"uint256\"},{\"internalType\":\"bool\",\"name\":\"interactionCompleted\",\"type\":\"bool\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"asset\",\"type\":\"address\"}],\"name\":\"getAssetExpiries\",\"outputs\":[{\"internalType\":\"uint64[]\",\"name\":\"assetExpiries\",\"type\":\"uint64[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"interactionNonce\",\"type\":\"uint256\"}],\"name\":\"getTrancheDeploymentBlockNumber\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"asset\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"expiry\",\"type\":\"uint64\"}],\"name\":\"hashAssetAndExpiry\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"hashValue\",\"type\":\"uint256\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"interactions\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"quantityPT\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"trancheAddress\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"expiry\",\"type\":\"uint64\"},{\"internalType\":\"bool\",\"name\":\"finalised\",\"type\":\"bool\"},{\"internalType\":\"bool\",\"name\":\"failed\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"pools\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"poolId\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"trancheAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"poolAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"wrappedPositionAddress\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_convergentPool\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_wrappedPosition\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"_expiry\",\"type\":\"uint64\"}],\"name\":\"registerConvergentPoolAddress\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"details\":\"Smart contract responsible for depositing, managing and redeeming Defi interactions with the Element protocol\",\"kind\":\"dev\",\"methods\":{\"computeCriteria((uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),uint64)\":{\"details\":\"Should be overridden by bridge implementation if intended to limit subsidy.\",\"returns\":{\"_0\":\"The criteria to be passed along\"}},\"constructor\":{\"details\":\"Constructor\",\"params\":{\"_balancerVaultAddress\":\"the address of the balancer router contract\",\"_elementDeploymentValidatorAddress\":\"the address of the element deployment validator contract\",\"_rollupProcessor\":\"the address of the rollup contract\",\"_trancheBytecodeHash\":\"the hash of the bytecode of the tranche contract, used for tranche contract address derivation\",\"_trancheFactory\":\"the address of the element tranche factor contract\"}},\"convert((uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),uint256,uint256,uint64,address)\":{\"details\":\"Function to add a new interaction to the bridge Converts the amount of input asset given to the market determined amount of tranche asset\",\"params\":{\"auxData\":\"The expiry value for this interaction\",\"inputAssetA\":\"The type of input asset for the new interaction\",\"interactionNonce\":\"The nonce value for this interaction\",\"outputAssetA\":\"The type of output asset for the new interaction\",\"totalInputValue\":\"The amount the the input asset provided in this interaction\"},\"returns\":{\"isAsync\":\"Flag specifying if this interaction is asynchronous - will be true\",\"outputValueA\":\"The interaction's first ouptut value after this call - will be 0\",\"outputValueB\":\"The interaction's second ouptut value after this call - will be 0\"}},\"finalise((uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),uint256,uint64)\":{\"details\":\"Function to finalise an interaction Converts the held amount of tranche asset for the given interaction into the output asset\",\"params\":{\"interactionNonce\":\"The nonce value for the interaction that should be finalised\"}},\"getAssetExpiries(address)\":{\"details\":\"Function for retrieving the available expiries for the given asset\",\"params\":{\"asset\":\"the asset address being queried\"},\"returns\":{\"assetExpiries\":\"the list of available expiries for the provided asset address\"}},\"getTrancheDeploymentBlockNumber(uint256)\":{\"details\":\"Returns the block number in which a tranche was first configured on the bridge based on the nonce of an interaction in that tranche\",\"params\":{\"interactionNonce\":\"the nonce of the interaction to query\"},\"returns\":{\"blockNumber\":\"the number of the block in which the tranche was first configured\"}},\"hashAssetAndExpiry(address,uint64)\":{\"details\":\"Produces a hash of the given asset and expiry value\",\"params\":{\"asset\":\"The asset address\",\"expiry\":\"The expiry value\"},\"returns\":{\"hashValue\":\"The resulting hash value\"}},\"registerConvergentPoolAddress(address,address,uint64)\":{\"details\":\"Registers a convergent pool with the contract, setting up a new asset/expiry element tranche\",\"params\":{\"_convergentPool\":\"The pool's address\",\"_expiry\":\"The expiry of the tranche being configured\",\"_wrappedPosition\":\"The element wrapped position contract's address\"}}},\"title\":\"Element Bridge\",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{\"computeCriteria((uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),uint64)\":{\"notice\":\"Computes the criteria that is passed on to the subsidy contract when claiming\"}},\"version\":1}},\"settings\":{\"compilationTarget\":{\"src/bridges/element/ElementBridge.sol\":\"ElementBridge\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":100000},\"remappings\":[\":@openzeppelin/=lib/openzeppelin-contracts/\",\":ds-test/=lib/forge-std/lib/ds-test/src/\",\":erc4626-tests/=lib/openzeppelin-contracts/lib/erc4626-tests/\",\":forge-std/=lib/forge-std/src/\",\":openzeppelin-contracts/=lib/openzeppelin-contracts/contracts/\",\":rollup-encoder/=lib/rollup-encoder/src/\"]},\"sources\":{\"lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol\":{\"keccak256\":\"0x9750c6b834f7b43000631af5cc30001c5f547b3ceb3635488f140f60e897ea6b\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://5a7d5b1ef5d8d5889ad2ed89d8619c09383b80b72ab226e0fe7bde1636481e34\",\"dweb:/ipfs/QmebXWgtEfumQGBdVeM6c71McLixYXQP5Bk6kKXuoY4Bmr\"]},\"lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Permit.sol\":{\"keccak256\":\"0x35e258421ae206f3db37281cea70871b4c3553914734aa76139a41af60ac1abb\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://2ef94b6bc4ee356db612a1849c615f7dd4b15542d6c8584c86bb9243a7913cf0\",\"dweb:/ipfs/QmaxFj5NFpAjjitZtHPNS9PPtCuBATaRz9ktDDRCQCQ83y\"]},\"lib/openzeppelin-contracts/contracts/token/ERC20/extensions/draft-IERC20Permit.sol\":{\"keccak256\":\"0x6a8df18a4cf9ddce45d0b6609e90ad81c948475b1178ab40c35ea79bfd99a319\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://b99013f9788f6de8a4208e0190e1132c102ef83f79215825e2f4dfa8fc01738d\",\"dweb:/ipfs/QmT25dXiwuszQYgbHFxJshdupZXTj2LtFCAaQqxPQwpyWC\"]},\"lib/rollup-encoder/src/interfaces/IRollupProcessor.sol\":{\"keccak256\":\"0x7f8cc09c537d9c9b80b5e90c1ebe02d2fbb4efd5510bbe3a4df57940e368a71d\",\"license\":\"Apache-2.0\",\"urls\":[\"bzz-raw://8d0e59e15799702bbdf118c00851ae154e01b329c625dc6f3097b0cd072770ef\",\"dweb:/ipfs/QmPsPp6Drzym9RAai34jMJbnuftV3XkDnDp35RX94hWh2u\"]},\"lib/rollup-encoder/src/libraries/AztecTypes.sol\":{\"keccak256\":\"0xa11ad1ad795337be7761108304a21812aeedfac4b03969ee5f71a251e226cc77\",\"license\":\"Apache-2.0\",\"urls\":[\"bzz-raw://5f6ea5409dcbe6c61d1c7a7153a4158bc88db92eae2c5c1041809b19c49c3ea7\",\"dweb:/ipfs/QmY7d8839N7SNyR5eGvFi6C6opNW3GW5oZEhTVKEWFvv56\"]},\"src/aztec/interfaces/IDefiBridge.sol\":{\"keccak256\":\"0xf2e1d1e8dc5326f1fe8b4a909541d459546f44fb7e1013b9f9be3bc8aac379d4\",\"license\":\"Apache-2.0\",\"urls\":[\"bzz-raw://b24142083ad22a38a2d7e5190d05ed286964f0bedbe83bb0ae4c1366521ee5ec\",\"dweb:/ipfs/QmPbfmHjYq4rqpFwVb75mNxDVdRBoRNWu6neGMdLJibDts\"]},\"src/aztec/interfaces/ISubsidy.sol\":{\"keccak256\":\"0x03afbff2b5181d4fc39190a2bb7ad0a60b6a4ae44527d77509c23299b4a3c668\",\"license\":\"Apache-2.0\",\"urls\":[\"bzz-raw://8a6f880e61c2a097e8f49409b5db5db42aa727d3256625cf8f4b409423923bea\",\"dweb:/ipfs/QmRkpCEkEHUpP9RWGANyQNPPmDUfht15uSiFKeSNWYmr8C\"]},\"src/bridges/base/BridgeBase.sol\":{\"keccak256\":\"0x7ff16906ae0c58fc9ef08096db9c006887875e371ee45440c535dcae4649b75c\",\"license\":\"Apache-2.0\",\"urls\":[\"bzz-raw://778cde55152d439e4e05393af4e54eb6ece56572f7e7ccf7f7eabac20159e525\",\"dweb:/ipfs/QmcGY9MGzBr4MaEQNa76hcKKabkLE2hYDxNRgwEEuCeLW2\"]},\"src/bridges/base/ErrorLib.sol\":{\"keccak256\":\"0x0d5ada9c43f52812ff2c60014543fc21684e48610bbe6c4bd77cfdb0186876c9\",\"license\":\"Apache-2.0\",\"urls\":[\"bzz-raw://ee4e31e01128c5b683806908876f3e73f0df9fd4c145f426054aad1dbd829cce\",\"dweb:/ipfs/QmQiLtbCuNCe1r1jcAL1cVtTwouXbGETyk1abtTFBDwxZV\"]},\"src/bridges/element/ElementBridge.sol\":{\"keccak256\":\"0x023ed8a50af5e41c3f83642999f1d262d8e0b455f07197a9bf3ef614cbb4193b\",\"license\":\"Apache-2.0\",\"urls\":[\"bzz-raw://9369ec5db2aea201bf2f3fd47e9b65c725b51943bcde79ae0535c48f4edf6393\",\"dweb:/ipfs/QmcDveHPiKbV3NJrSTmVdixiAeXLMVw3F37PTvSpRYcu1F\"]},\"src/bridges/element/MinHeap.sol\":{\"keccak256\":\"0x64c7dec82bc1204edffeecd7be082e2b0f15693ac3e06ad282fbdc680efb6d79\",\"urls\":[\"bzz-raw://976d0893256b6cacb69119a4043ae9a7108da748825293a14d77aa52b4483aeb\",\"dweb:/ipfs/QmPSKv8W4DnkbRFNi8yDc6xCYuKLspNaYWdwGqHiuicFDm\"]},\"src/interfaces/element/IDeploymentValidator.sol\":{\"keccak256\":\"0x311aac8f48d197f004dda93cb8fd562f8fca4b6e83f89b30a18e3573130b79c0\",\"license\":\"Apache-2.0\",\"urls\":[\"bzz-raw://822e6566b1fdf3659f36f6751353154539416586a67de134ee6e218b5384d962\",\"dweb:/ipfs/QmTWXGuxT3A6dromfoydYEejw4Tidbpp3jyfnUUy6xkvBi\"]},\"src/interfaces/element/IPool.sol\":{\"keccak256\":\"0x8a419a61cf8ee1479f3878d0e296a8fd50ba215b4bf1b8c59a95543433067360\",\"license\":\"GPL-2.0-or-later\",\"urls\":[\"bzz-raw://66fffc42767e8744414081909afb12eb97c73cd568ae8131cacec1bdf20cbfc7\",\"dweb:/ipfs/Qmd347Z8NhvJpfpgZfsEvkSsDdoot2ANJxDTXV66pF9Xyy\"]},\"src/interfaces/element/ITranche.sol\":{\"keccak256\":\"0xa3da5087be04e99feeecfd9b5065fbfdc53655ac9b8dee0840008c5db92ea62a\",\"license\":\"Apache-2.0\",\"urls\":[\"bzz-raw://363c64f44f8db15f48cd1ad1eb12ecdc8b0db2fd7df6638c8c6c532a5ae10801\",\"dweb:/ipfs/QmNS6v9GcwuTfEX6j2xW8Byzb9PBpMVKYDP9SThsGKM8hU\"]},\"src/interfaces/element/IVault.sol\":{\"keccak256\":\"0xb4f96ad12823ffa83e16fbae73900b1bf69c04bd7c84d138f846f85ac0efee8c\",\"license\":\"GPL-2.0-or-later\",\"urls\":[\"bzz-raw://d8898e490b4323ae3fc9af035cbda4a4ff42c6ab40c2df7bc604fd0a427b8ab3\",\"dweb:/ipfs/QmNcrqKPYZj8TkaX6C9xpihU1XztRXtXU131zLPEb6h6T7\"]},\"src/interfaces/element/IWrappedPosition.sol\":{\"keccak256\":\"0xc7baf2ad568f17ded94778da98a27e8eccdeb7067df9a38e7955f46f6f05474e\",\"license\":\"Apache-2.0\",\"urls\":[\"bzz-raw://2d5c0dacfe512e93e8b777e34a10b5701d74c1dc6f3bd69b3b73492da0cafade\",\"dweb:/ipfs/Qmc9bdaPYKS9wz7gNQjYQUKBfAoWV7DxY49deVc9maGciY\"]},\"src/libraries/uniswapv3/FullMath.sol\":{\"keccak256\":\"0x6b147dd51ad698298604a81403071c439ec739b40fc4a6ec965520ad4115a1da\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://82a2d96cd8d781b588978b9b09db64e40a3037e330a11cc09395c59fcac4c0f8\",\"dweb:/ipfs/QmRPSEp12gPLkMmZ41fEnUoWdezgqPtzz7qTUXqMBrxxNG\"]}},\"version\":1}",
+  "rawMetadata": "{\"compiler\":{\"version\":\"0.8.10+commit.fc410830\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_rollupProcessor\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_trancheFactory\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"_trancheBytecodeHash\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"_balancerVaultAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_elementDeploymentValidatorAddress\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"ALREADY_FINALISED\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ASSET_IDS_NOT_EQUAL\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ASSET_NOT_ERC20\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"BRIDGE_NOT_READY\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"HEAP_EMPTY\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"INPUT_ASSETB_NOT_UNUSED\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"INTERACTION_ALREADY_EXISTS\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"INVALID_CHANGE_IN_BALANCE\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"INVALID_POOL\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"INVALID_TOKEN_BALANCE_RECEIVED\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"INVALID_TRANCHE\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"INVALID_WRAPPED_POSITION\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidCaller\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidNonce\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"MissingImplementation\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"OUTPUT_ASSETB_NOT_UNUSED\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"POOL_EXPIRY_MISMATCH\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"POOL_NOT_FOUND\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"POOL_UNDERLYING_MISMATCH\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"RECEIVED_LESS_THAN_LIMIT\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"TRANCHE_ALREADY_EXPIRED\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"TRANCHE_EXPIRY_MISMATCH\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"TRANCHE_POSITION_MISMATCH\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"TRANCHE_UNDERLYING_MISMATCH\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"UNREGISTERED_PAIR\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"UNREGISTERED_POOL\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"UNREGISTERED_POSITION\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"VAULT_ADDRESS_MISMATCH\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"VAULT_ADDRESS_VERIFICATION_FAILED\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"totalInputValue\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"int64\",\"name\":\"gasUsed\",\"type\":\"int64\"}],\"name\":\"LogConvert\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"message\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"int64\",\"name\":\"gasUsed\",\"type\":\"int64\"}],\"name\":\"LogFinalise\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"poolAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"wrappedPositionAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"expiry\",\"type\":\"uint64\"}],\"name\":\"LogPoolAdded\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"ROLLUP_PROCESSOR\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"SUBSIDY\",\"outputs\":[{\"internalType\":\"contract ISubsidy\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"assetToExpirys\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"\",\"type\":\"tuple\"},{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"name\":\"computeCriteria\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"inputAssetA\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"inputAssetB\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"outputAssetA\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"outputAssetB\",\"type\":\"tuple\"},{\"internalType\":\"uint256\",\"name\":\"totalInputValue\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"interactionNonce\",\"type\":\"uint256\"},{\"internalType\":\"uint64\",\"name\":\"auxData\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"convert\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"outputValueA\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"outputValueB\",\"type\":\"uint256\"},{\"internalType\":\"bool\",\"name\":\"isAsync\",\"type\":\"bool\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"outputAssetA\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"erc20Address\",\"type\":\"address\"},{\"internalType\":\"enum AztecTypes.AztecAssetType\",\"name\":\"assetType\",\"type\":\"uint8\"}],\"internalType\":\"struct AztecTypes.AztecAsset\",\"name\":\"\",\"type\":\"tuple\"},{\"internalType\":\"uint256\",\"name\":\"interactionNonce\",\"type\":\"uint256\"},{\"internalType\":\"uint64\",\"name\":\"\",\"type\":\"uint64\"}],\"name\":\"finalise\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"outputValueA\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"outputValueB\",\"type\":\"uint256\"},{\"internalType\":\"bool\",\"name\":\"interactionCompleted\",\"type\":\"bool\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"asset\",\"type\":\"address\"}],\"name\":\"getAssetExpiries\",\"outputs\":[{\"internalType\":\"uint64[]\",\"name\":\"assetExpiries\",\"type\":\"uint64[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"interactionNonce\",\"type\":\"uint256\"}],\"name\":\"getTrancheDeploymentBlockNumber\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"asset\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"expiry\",\"type\":\"uint64\"}],\"name\":\"hashAssetAndExpiry\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"hashValue\",\"type\":\"uint256\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"interactions\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"quantityPT\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"trancheAddress\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"expiry\",\"type\":\"uint64\"},{\"internalType\":\"bool\",\"name\":\"finalised\",\"type\":\"bool\"},{\"internalType\":\"bool\",\"name\":\"failed\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"pools\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"poolId\",\"type\":\"bytes32\"},{\"internalType\":\"address\",\"name\":\"trancheAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"poolAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"wrappedPositionAddress\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_convergentPool\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_wrappedPosition\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"_expiry\",\"type\":\"uint64\"}],\"name\":\"registerConvergentPoolAddress\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"details\":\"Smart contract responsible for depositing, managing and redeeming Defi interactions with the Element protocol\",\"kind\":\"dev\",\"methods\":{\"computeCriteria((uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),uint64)\":{\"details\":\"Should be overridden by bridge implementation if intended to limit subsidy.\",\"returns\":{\"_0\":\"The criteria to be passed along\"}},\"constructor\":{\"details\":\"Constructor\",\"params\":{\"_balancerVaultAddress\":\"the address of the balancer router contract\",\"_elementDeploymentValidatorAddress\":\"the address of the element deployment validator contract\",\"_rollupProcessor\":\"the address of the rollup contract\",\"_trancheBytecodeHash\":\"the hash of the bytecode of the tranche contract, used for tranche contract address derivation\",\"_trancheFactory\":\"the address of the element tranche factor contract\"}},\"convert((uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),uint256,uint256,uint64,address)\":{\"details\":\"Function to add a new interaction to the bridge Converts the amount of input asset given to the market determined amount of tranche asset\",\"params\":{\"auxData\":\"The expiry value for this interaction\",\"inputAssetA\":\"The type of input asset for the new interaction\",\"interactionNonce\":\"The nonce value for this interaction\",\"outputAssetA\":\"The type of output asset for the new interaction\",\"totalInputValue\":\"The amount the the input asset provided in this interaction\"},\"returns\":{\"isAsync\":\"Flag specifying if this interaction is asynchronous - will be true\",\"outputValueA\":\"The interaction's first ouptut value after this call - will be 0\",\"outputValueB\":\"The interaction's second ouptut value after this call - will be 0\"}},\"finalise((uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),uint256,uint64)\":{\"details\":\"Function to finalise an interaction Converts the held amount of tranche asset for the given interaction into the output asset\",\"params\":{\"interactionNonce\":\"The nonce value for the interaction that should be finalised\"}},\"getAssetExpiries(address)\":{\"details\":\"Function for retrieving the available expiries for the given asset\",\"params\":{\"asset\":\"the asset address being queried\"},\"returns\":{\"assetExpiries\":\"the list of available expiries for the provided asset address\"}},\"getTrancheDeploymentBlockNumber(uint256)\":{\"details\":\"Returns the block number in which a tranche was first configured on the bridge based on the nonce of an interaction in that tranche\",\"params\":{\"interactionNonce\":\"the nonce of the interaction to query\"},\"returns\":{\"blockNumber\":\"the number of the block in which the tranche was first configured\"}},\"hashAssetAndExpiry(address,uint64)\":{\"details\":\"Produces a hash of the given asset and expiry value\",\"params\":{\"asset\":\"The asset address\",\"expiry\":\"The expiry value\"},\"returns\":{\"hashValue\":\"The resulting hash value\"}},\"registerConvergentPoolAddress(address,address,uint64)\":{\"details\":\"Registers a convergent pool with the contract, setting up a new asset/expiry element tranche\",\"params\":{\"_convergentPool\":\"The pool's address\",\"_expiry\":\"The expiry of the tranche being configured\",\"_wrappedPosition\":\"The element wrapped position contract's address\"}}},\"title\":\"Element Bridge\",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{\"computeCriteria((uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),(uint256,address,uint8),uint64)\":{\"notice\":\"Computes the criteria that is passed on to the subsidy contract when claiming\"}},\"version\":1}},\"settings\":{\"compilationTarget\":{\"src/bridges/element/ElementBridge.sol\":\"ElementBridge\"},\"evmVersion\":\"london\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":100000},\"remappings\":[\":@openzeppelin/=lib/openzeppelin-contracts/\",\":ds-test/=lib/forge-std/lib/ds-test/src/\",\":erc4626-tests/=lib/openzeppelin-contracts/lib/erc4626-tests/\",\":forge-std/=lib/forge-std/src/\",\":openzeppelin-contracts/=lib/openzeppelin-contracts/contracts/\",\":rollup-encoder/=lib/rollup-encoder/src/\"]},\"sources\":{\"lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol\":{\"keccak256\":\"0x9750c6b834f7b43000631af5cc30001c5f547b3ceb3635488f140f60e897ea6b\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://5a7d5b1ef5d8d5889ad2ed89d8619c09383b80b72ab226e0fe7bde1636481e34\",\"dweb:/ipfs/QmebXWgtEfumQGBdVeM6c71McLixYXQP5Bk6kKXuoY4Bmr\"]},\"lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Permit.sol\":{\"keccak256\":\"0x35e258421ae206f3db37281cea70871b4c3553914734aa76139a41af60ac1abb\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://2ef94b6bc4ee356db612a1849c615f7dd4b15542d6c8584c86bb9243a7913cf0\",\"dweb:/ipfs/QmaxFj5NFpAjjitZtHPNS9PPtCuBATaRz9ktDDRCQCQ83y\"]},\"lib/openzeppelin-contracts/contracts/token/ERC20/extensions/draft-IERC20Permit.sol\":{\"keccak256\":\"0x6a8df18a4cf9ddce45d0b6609e90ad81c948475b1178ab40c35ea79bfd99a319\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://b99013f9788f6de8a4208e0190e1132c102ef83f79215825e2f4dfa8fc01738d\",\"dweb:/ipfs/QmT25dXiwuszQYgbHFxJshdupZXTj2LtFCAaQqxPQwpyWC\"]},\"lib/rollup-encoder/src/interfaces/IRollupProcessor.sol\":{\"keccak256\":\"0x7f8cc09c537d9c9b80b5e90c1ebe02d2fbb4efd5510bbe3a4df57940e368a71d\",\"license\":\"Apache-2.0\",\"urls\":[\"bzz-raw://8d0e59e15799702bbdf118c00851ae154e01b329c625dc6f3097b0cd072770ef\",\"dweb:/ipfs/QmPsPp6Drzym9RAai34jMJbnuftV3XkDnDp35RX94hWh2u\"]},\"lib/rollup-encoder/src/libraries/AztecTypes.sol\":{\"keccak256\":\"0xa11ad1ad795337be7761108304a21812aeedfac4b03969ee5f71a251e226cc77\",\"license\":\"Apache-2.0\",\"urls\":[\"bzz-raw://5f6ea5409dcbe6c61d1c7a7153a4158bc88db92eae2c5c1041809b19c49c3ea7\",\"dweb:/ipfs/QmY7d8839N7SNyR5eGvFi6C6opNW3GW5oZEhTVKEWFvv56\"]},\"src/aztec/interfaces/IDefiBridge.sol\":{\"keccak256\":\"0xf2e1d1e8dc5326f1fe8b4a909541d459546f44fb7e1013b9f9be3bc8aac379d4\",\"license\":\"Apache-2.0\",\"urls\":[\"bzz-raw://b24142083ad22a38a2d7e5190d05ed286964f0bedbe83bb0ae4c1366521ee5ec\",\"dweb:/ipfs/QmPbfmHjYq4rqpFwVb75mNxDVdRBoRNWu6neGMdLJibDts\"]},\"src/aztec/interfaces/ISubsidy.sol\":{\"keccak256\":\"0x03afbff2b5181d4fc39190a2bb7ad0a60b6a4ae44527d77509c23299b4a3c668\",\"license\":\"Apache-2.0\",\"urls\":[\"bzz-raw://8a6f880e61c2a097e8f49409b5db5db42aa727d3256625cf8f4b409423923bea\",\"dweb:/ipfs/QmRkpCEkEHUpP9RWGANyQNPPmDUfht15uSiFKeSNWYmr8C\"]},\"src/bridges/base/BridgeBase.sol\":{\"keccak256\":\"0x7ff16906ae0c58fc9ef08096db9c006887875e371ee45440c535dcae4649b75c\",\"license\":\"Apache-2.0\",\"urls\":[\"bzz-raw://778cde55152d439e4e05393af4e54eb6ece56572f7e7ccf7f7eabac20159e525\",\"dweb:/ipfs/QmcGY9MGzBr4MaEQNa76hcKKabkLE2hYDxNRgwEEuCeLW2\"]},\"src/bridges/base/ErrorLib.sol\":{\"keccak256\":\"0x0d5ada9c43f52812ff2c60014543fc21684e48610bbe6c4bd77cfdb0186876c9\",\"license\":\"Apache-2.0\",\"urls\":[\"bzz-raw://ee4e31e01128c5b683806908876f3e73f0df9fd4c145f426054aad1dbd829cce\",\"dweb:/ipfs/QmQiLtbCuNCe1r1jcAL1cVtTwouXbGETyk1abtTFBDwxZV\"]},\"src/bridges/element/ElementBridge.sol\":{\"keccak256\":\"0x023ed8a50af5e41c3f83642999f1d262d8e0b455f07197a9bf3ef614cbb4193b\",\"license\":\"Apache-2.0\",\"urls\":[\"bzz-raw://9369ec5db2aea201bf2f3fd47e9b65c725b51943bcde79ae0535c48f4edf6393\",\"dweb:/ipfs/QmcDveHPiKbV3NJrSTmVdixiAeXLMVw3F37PTvSpRYcu1F\"]},\"src/bridges/element/MinHeap.sol\":{\"keccak256\":\"0x64c7dec82bc1204edffeecd7be082e2b0f15693ac3e06ad282fbdc680efb6d79\",\"urls\":[\"bzz-raw://976d0893256b6cacb69119a4043ae9a7108da748825293a14d77aa52b4483aeb\",\"dweb:/ipfs/QmPSKv8W4DnkbRFNi8yDc6xCYuKLspNaYWdwGqHiuicFDm\"]},\"src/interfaces/element/IDeploymentValidator.sol\":{\"keccak256\":\"0x311aac8f48d197f004dda93cb8fd562f8fca4b6e83f89b30a18e3573130b79c0\",\"license\":\"Apache-2.0\",\"urls\":[\"bzz-raw://822e6566b1fdf3659f36f6751353154539416586a67de134ee6e218b5384d962\",\"dweb:/ipfs/QmTWXGuxT3A6dromfoydYEejw4Tidbpp3jyfnUUy6xkvBi\"]},\"src/interfaces/element/IPool.sol\":{\"keccak256\":\"0x8a419a61cf8ee1479f3878d0e296a8fd50ba215b4bf1b8c59a95543433067360\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://66fffc42767e8744414081909afb12eb97c73cd568ae8131cacec1bdf20cbfc7\",\"dweb:/ipfs/Qmd347Z8NhvJpfpgZfsEvkSsDdoot2ANJxDTXV66pF9Xyy\"]},\"src/interfaces/element/ITranche.sol\":{\"keccak256\":\"0xa3da5087be04e99feeecfd9b5065fbfdc53655ac9b8dee0840008c5db92ea62a\",\"license\":\"Apache-2.0\",\"urls\":[\"bzz-raw://363c64f44f8db15f48cd1ad1eb12ecdc8b0db2fd7df6638c8c6c532a5ae10801\",\"dweb:/ipfs/QmNS6v9GcwuTfEX6j2xW8Byzb9PBpMVKYDP9SThsGKM8hU\"]},\"src/interfaces/element/IVault.sol\":{\"keccak256\":\"0xb4f96ad12823ffa83e16fbae73900b1bf69c04bd7c84d138f846f85ac0efee8c\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://d8898e490b4323ae3fc9af035cbda4a4ff42c6ab40c2df7bc604fd0a427b8ab3\",\"dweb:/ipfs/QmNcrqKPYZj8TkaX6C9xpihU1XztRXtXU131zLPEb6h6T7\"]},\"src/interfaces/element/IWrappedPosition.sol\":{\"keccak256\":\"0xc7baf2ad568f17ded94778da98a27e8eccdeb7067df9a38e7955f46f6f05474e\",\"license\":\"Apache-2.0\",\"urls\":[\"bzz-raw://2d5c0dacfe512e93e8b777e34a10b5701d74c1dc6f3bd69b3b73492da0cafade\",\"dweb:/ipfs/Qmc9bdaPYKS9wz7gNQjYQUKBfAoWV7DxY49deVc9maGciY\"]},\"src/libraries/uniswapv3/FullMath.sol\":{\"keccak256\":\"0x6b147dd51ad698298604a81403071c439ec739b40fc4a6ec965520ad4115a1da\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://82a2d96cd8d781b588978b9b09db64e40a3037e330a11cc09395c59fcac4c0f8\",\"dweb:/ipfs/QmRPSEp12gPLkMmZ41fEnUoWdezgqPtzz7qTUXqMBrxxNG\"]}},\"version\":1}",
   "metadata": {
     "compiler": {
       "version": "0.8.10+commit.fc410830"
@@ -1958,7 +1958,7 @@
           "bzz-raw://66fffc42767e8744414081909afb12eb97c73cd568ae8131cacec1bdf20cbfc7",
           "dweb:/ipfs/Qmd347Z8NhvJpfpgZfsEvkSsDdoot2ANJxDTXV66pF9Xyy"
         ],
-        "license": "GPL-2.0-or-later"
+        "license": "MIT"
       },
       "src/interfaces/element/ITranche.sol": {
         "keccak256": "0xa3da5087be04e99feeecfd9b5065fbfdc53655ac9b8dee0840008c5db92ea62a",
@@ -1974,7 +1974,7 @@
           "bzz-raw://d8898e490b4323ae3fc9af035cbda4a4ff42c6ab40c2df7bc604fd0a427b8ab3",
           "dweb:/ipfs/QmNcrqKPYZj8TkaX6C9xpihU1XztRXtXU131zLPEb6h6T7"
         ],
-        "license": "GPL-2.0-or-later"
+        "license": "MIT"
       },
       "src/interfaces/element/IWrappedPosition.sol": {
         "keccak256": "0xc7baf2ad568f17ded94778da98a27e8eccdeb7067df9a38e7955f46f6f05474e",
@@ -1999,51 +1999,21 @@
     "absolutePath": "src/bridges/element/ElementBridge.sol",
     "id": 37924,
     "exportedSymbols": {
-      "AztecTypes": [
-        29932
-      ],
-      "BridgeBase": [
-        32640
-      ],
-      "ElementBridge": [
-        37923
-      ],
-      "ErrorLib": [
-        32671
-      ],
-      "FullMath": [
-        53860
-      ],
-      "IAsset": [
-        52169
-      ],
-      "IDeploymentValidator": [
-        52048
-      ],
-      "IERC20": [
-        25396
-      ],
-      "IPool": [
-        52085
-      ],
-      "IRollupProcessor": [
-        29897
-      ],
-      "ITranche": [
-        52164
-      ],
-      "IVault": [
-        52274
-      ],
-      "IWrappedPosition": [
-        52354
-      ],
-      "MinHeap": [
-        38350
-      ],
-      "PoolSpecialization": [
-        52173
-      ]
+      "AztecTypes": [29932],
+      "BridgeBase": [32640],
+      "ElementBridge": [37923],
+      "ErrorLib": [32671],
+      "FullMath": [53860],
+      "IAsset": [52169],
+      "IDeploymentValidator": [52048],
+      "IERC20": [25396],
+      "IPool": [52085],
+      "IRollupProcessor": [29897],
+      "ITranche": [52164],
+      "IVault": [52274],
+      "IWrappedPosition": [52354],
+      "MinHeap": [38350],
+      "PoolSpecialization": [52173]
     },
     "nodeType": "SourceUnit",
     "src": "64:42691:48",
@@ -2053,12 +2023,7 @@
         "nodeType": "PragmaDirective",
         "src": "64:24:48",
         "nodes": [],
-        "literals": [
-          "solidity",
-          ">=",
-          "0.8",
-          ".4"
-        ]
+        "literals": ["solidity", ">=", "0.8", ".4"]
       },
       {
         "id": 35619,
@@ -5228,9 +5193,7 @@
               "nodes": [],
               "statements": [
                 {
-                  "assignments": [
-                    35910
-                  ],
+                  "assignments": [35910],
                   "declarations": [
                     {
                       "constant": false,
@@ -5379,9 +5342,7 @@
                   "src": "9426:60:48"
                 },
                 {
-                  "assignments": [
-                    35920
-                  ],
+                  "assignments": [35920],
                   "declarations": [
                     {
                       "constant": false,
@@ -6146,9 +6107,7 @@
               "nodes": [],
               "statements": [
                 {
-                  "assignments": [
-                    35977
-                  ],
+                  "assignments": [35977],
                   "declarations": [
                     {
                       "constant": false,
@@ -6190,9 +6149,7 @@
                   "src": "10365:24:48"
                 },
                 {
-                  "assignments": [
-                    35981
-                  ],
+                  "assignments": [35981],
                   "declarations": [
                     {
                       "constant": false,
@@ -6648,9 +6605,7 @@
                   "src": "10874:71:48"
                 },
                 {
-                  "assignments": [
-                    36021
-                  ],
+                  "assignments": [36021],
                   "declarations": [
                     {
                       "constant": false,
@@ -7267,9 +7222,7 @@
                   "src": "11404:196:48"
                 },
                 {
-                  "assignments": [
-                    36076
-                  ],
+                  "assignments": [36076],
                   "declarations": [
                     {
                       "constant": false,
@@ -7866,9 +7819,7 @@
                   }
                 },
                 {
-                  "assignments": [
-                    36129
-                  ],
+                  "assignments": [36129],
                   "declarations": [
                     {
                       "constant": false,
@@ -9207,9 +9158,7 @@
                   }
                 },
                 {
-                  "assignments": [
-                    36252
-                  ],
+                  "assignments": [36252],
                   "declarations": [
                     {
                       "constant": false,
@@ -9299,10 +9248,7 @@
                   "src": "13777:46:48"
                 },
                 {
-                  "assignments": [
-                    36258,
-                    null
-                  ],
+                  "assignments": [36258, null],
                   "declarations": [
                     {
                       "constant": false,
@@ -9575,9 +9521,7 @@
                   "src": "14096:88:48"
                 },
                 {
-                  "assignments": [
-                    36279
-                  ],
+                  "assignments": [36279],
                   "declarations": [
                     {
                       "constant": false,
@@ -9873,9 +9817,7 @@
                   "src": "14370:108:48"
                 },
                 {
-                  "assignments": [
-                    36303
-                  ],
+                  "assignments": [36303],
                   "declarations": [
                     {
                       "constant": false,
@@ -9971,9 +9913,7 @@
                   "src": "14488:76:48"
                 },
                 {
-                  "assignments": [
-                    36310
-                  ],
+                  "assignments": [36310],
                   "declarations": [
                     {
                       "constant": false,
@@ -10419,9 +10359,7 @@
                   "src": "14906:56:48"
                 },
                 {
-                  "assignments": [
-                    36350
-                  ],
+                  "assignments": [36350],
                   "declarations": [
                     {
                       "constant": false,
@@ -10876,9 +10814,7 @@
               "nodes": [],
               "statements": [
                 {
-                  "assignments": [
-                    36382
-                  ],
+                  "assignments": [36382],
                   "declarations": [
                     {
                       "constant": false,
@@ -11160,9 +11096,7 @@
               "nodes": [],
               "statements": [
                 {
-                  "assignments": [
-                    36410
-                  ],
+                  "assignments": [36410],
                   "declarations": [
                     {
                       "constant": false,
@@ -11545,9 +11479,7 @@
               "nodes": [],
               "statements": [
                 {
-                  "assignments": [
-                    36444
-                  ],
+                  "assignments": [36444],
                   "declarations": [
                     {
                       "constant": false,
@@ -12607,9 +12539,7 @@
               "nodes": [],
               "statements": [
                 {
-                  "assignments": [
-                    36552
-                  ],
+                  "assignments": [36552],
                   "declarations": [
                     {
                       "constant": false,
@@ -12762,9 +12692,7 @@
                   "src": "19519:43:48"
                 },
                 {
-                  "assignments": [
-                    36563
-                  ],
+                  "assignments": [36563],
                   "declarations": [
                     {
                       "constant": false,
@@ -13610,9 +13538,7 @@
                   "src": "20289:16:48"
                 },
                 {
-                  "assignments": [
-                    36634
-                  ],
+                  "assignments": [36634],
                   "declarations": [
                     {
                       "constant": false,
@@ -13752,12 +13678,7 @@
                     "isPure": false,
                     "kind": "structConstructorCall",
                     "lValueRequested": false,
-                    "names": [
-                      "inputAssetAddress",
-                      "totalInputValue",
-                      "interactionNonce",
-                      "auxData"
-                    ],
+                    "names": ["inputAssetAddress", "totalInputValue", "interactionNonce", "auxData"],
                     "nodeType": "FunctionCall",
                     "src": "20438:204:48",
                     "tryCall": false,
@@ -13770,9 +13691,7 @@
                   "src": "20405:237:48"
                 },
                 {
-                  "assignments": [
-                    36645
-                  ],
+                  "assignments": [36645],
                   "declarations": [
                     {
                       "constant": false,
@@ -13933,9 +13852,7 @@
                   "src": "20741:97:48"
                 },
                 {
-                  "assignments": [
-                    36656
-                  ],
+                  "assignments": [36656],
                   "declarations": [
                     {
                       "constant": false,
@@ -14135,9 +14052,7 @@
                   }
                 },
                 {
-                  "assignments": [
-                    36673
-                  ],
+                  "assignments": [36673],
                   "declarations": [
                     {
                       "constant": false,
@@ -14227,9 +14142,7 @@
                   "src": "20993:43:48"
                 },
                 {
-                  "assignments": [
-                    36679
-                  ],
+                  "assignments": [36679],
                   "declarations": [
                     {
                       "constant": false,
@@ -14456,9 +14369,7 @@
                   }
                 },
                 {
-                  "assignments": [
-                    36697
-                  ],
+                  "assignments": [36697],
                   "declarations": [
                     {
                       "constant": false,
@@ -14603,9 +14514,7 @@
                   "src": "21257:139:48"
                 },
                 {
-                  "assignments": [
-                    36708
-                  ],
+                  "assignments": [36708],
                   "declarations": [
                     {
                       "constant": false,
@@ -14957,9 +14866,7 @@
                   "src": "21837:76:48"
                 },
                 {
-                  "assignments": [
-                    36740
-                  ],
+                  "assignments": [36740],
                   "declarations": [
                     {
                       "constant": false,
@@ -15498,9 +15405,7 @@
                 }
               ]
             },
-            "baseFunctions": [
-              32583
-            ],
+            "baseFunctions": [32583],
             "documentation": {
               "id": 36518,
               "nodeType": "StructuredDocumentation",
@@ -15898,9 +15803,7 @@
               "nodes": [],
               "statements": [
                 {
-                  "assignments": [
-                    36800
-                  ],
+                  "assignments": [36800],
                   "declarations": [
                     {
                       "constant": false,
@@ -16208,14 +16111,7 @@
                     "isPure": false,
                     "kind": "structConstructorCall",
                     "lValueRequested": false,
-                    "names": [
-                      "poolId",
-                      "kind",
-                      "assetIn",
-                      "assetOut",
-                      "amount",
-                      "userData"
-                    ],
+                    "names": ["poolId", "kind", "assetIn", "assetOut", "amount", "userData"],
                     "nodeType": "FunctionCall",
                     "src": "23186:554:48",
                     "tryCall": false,
@@ -16228,9 +16124,7 @@
                   "src": "23148:592:48"
                 },
                 {
-                  "assignments": [
-                    36823
-                  ],
+                  "assignments": [36823],
                   "declarations": [
                     {
                       "constant": false,
@@ -16511,12 +16405,7 @@
                     "isPure": false,
                     "kind": "structConstructorCall",
                     "lValueRequested": false,
-                    "names": [
-                      "sender",
-                      "fromInternalBalance",
-                      "recipient",
-                      "toInternalBalance"
-                    ],
+                    "names": ["sender", "fromInternalBalance", "recipient", "toInternalBalance"],
                     "nodeType": "FunctionCall",
                     "src": "23796:349:48",
                     "tryCall": false,
@@ -16649,9 +16538,7 @@
                   "src": "24222:58:48"
                 },
                 {
-                  "assignments": [
-                    36850
-                  ],
+                  "assignments": [36850],
                   "declarations": [
                     {
                       "constant": false,
@@ -17036,9 +16923,7 @@
                   "src": "24390:225:48"
                 },
                 {
-                  "assignments": [
-                    36876
-                  ],
+                  "assignments": [36876],
                   "declarations": [
                     {
                       "constant": false,
@@ -17320,9 +17205,7 @@
                   }
                 },
                 {
-                  "assignments": [
-                    36897
-                  ],
+                  "assignments": [36897],
                   "declarations": [
                     {
                       "constant": false,
@@ -17736,9 +17619,7 @@
               "nodes": [],
               "statements": [
                 {
-                  "assignments": [
-                    36926
-                  ],
+                  "assignments": [36926],
                   "declarations": [
                     {
                       "constant": false,
@@ -17845,9 +17726,7 @@
                   "src": "26042:102:48"
                 },
                 {
-                  "assignments": [
-                    36934
-                  ],
+                  "assignments": [36934],
                   "declarations": [
                     {
                       "constant": false,
@@ -17930,10 +17809,7 @@
                     "src": "26265:1106:48",
                     "statements": [
                       {
-                        "assignments": [
-                          36944,
-                          36946
-                        ],
+                        "assignments": [36944, 36946],
                         "declarations": [
                           {
                             "constant": false,
@@ -18087,9 +17963,7 @@
                         }
                       },
                       {
-                        "assignments": [
-                          36957
-                        ],
+                        "assignments": [36957],
                         "declarations": [
                           {
                             "constant": false,
@@ -18213,9 +18087,7 @@
                         }
                       },
                       {
-                        "assignments": [
-                          36968
-                        ],
+                        "assignments": [36968],
                         "declarations": [
                           {
                             "constant": false,
@@ -18454,9 +18326,7 @@
                             "isLValue": false,
                             "isPure": false,
                             "lValueRequested": false,
-                            "names": [
-                              "gas"
-                            ],
+                            "names": ["gas"],
                             "nodeType": "FunctionCallOptions",
                             "options": [
                               {
@@ -18633,9 +18503,7 @@
               "nodes": [],
               "statements": [
                 {
-                  "assignments": [
-                    37024
-                  ],
+                  "assignments": [37024],
                   "declarations": [
                     {
                       "constant": false,
@@ -18788,9 +18656,7 @@
                   "src": "28067:43:48"
                 },
                 {
-                  "assignments": [
-                    37035
-                  ],
+                  "assignments": [37035],
                   "declarations": [
                     {
                       "constant": false,
@@ -18841,9 +18707,7 @@
                   "src": "28120:17:48"
                 },
                 {
-                  "assignments": [
-                    37040
-                  ],
+                  "assignments": [37040],
                   "declarations": [
                     {
                       "constant": false,
@@ -19237,9 +19101,7 @@
                   }
                 },
                 {
-                  "assignments": [
-                    37075
-                  ],
+                  "assignments": [37075],
                   "declarations": [
                     {
                       "constant": false,
@@ -19333,9 +19195,7 @@
                   "src": "28577:83:48"
                 },
                 {
-                  "assignments": [
-                    37082
-                  ],
+                  "assignments": [37082],
                   "declarations": [
                     {
                       "constant": false,
@@ -19397,9 +19257,7 @@
                   "src": "28752:58:48"
                 },
                 {
-                  "assignments": [
-                    37087
-                  ],
+                  "assignments": [37087],
                   "declarations": [
                     {
                       "constant": false,
@@ -19848,9 +19706,7 @@
                     "src": "29418:1503:48",
                     "statements": [
                       {
-                        "assignments": [
-                          37120
-                        ],
+                        "assignments": [37120],
                         "declarations": [
                           {
                             "constant": false,
@@ -21386,9 +21242,7 @@
                   }
                 },
                 {
-                  "assignments": [
-                    37245
-                  ],
+                  "assignments": [37245],
                   "declarations": [
                     {
                       "constant": false,
@@ -21748,9 +21602,7 @@
                   }
                 },
                 {
-                  "assignments": [
-                    37273
-                  ],
+                  "assignments": [37273],
                   "declarations": [
                     {
                       "constant": false,
@@ -23016,9 +22868,7 @@
                 }
               ]
             },
-            "baseFunctions": [
-              32616
-            ],
+            "baseFunctions": [32616],
             "documentation": {
               "id": 36994,
               "nodeType": "StructuredDocumentation",
@@ -23685,9 +23535,7 @@
               "nodes": [],
               "statements": [
                 {
-                  "assignments": [
-                    37413
-                  ],
+                  "assignments": [37413],
                   "declarations": [
                     {
                       "constant": false,
@@ -23768,9 +23616,7 @@
                   "src": "34691:48:48"
                 },
                 {
-                  "assignments": [
-                    37419
-                  ],
+                  "assignments": [37419],
                   "declarations": [
                     {
                       "constant": false,
@@ -24460,9 +24306,7 @@
               "nodes": [],
               "statements": [
                 {
-                  "assignments": [
-                    37479
-                  ],
+                  "assignments": [37479],
                   "declarations": [
                     {
                       "constant": false,
@@ -24524,9 +24368,7 @@
                   "src": "35731:34:48"
                 },
                 {
-                  "assignments": [
-                    37487
-                  ],
+                  "assignments": [37487],
                   "declarations": [
                     {
                       "constant": false,
@@ -24607,9 +24449,7 @@
                   "src": "35775:48:48"
                 },
                 {
-                  "assignments": [
-                    37493
-                  ],
+                  "assignments": [37493],
                   "declarations": [
                     {
                       "constant": false,
@@ -24750,9 +24590,7 @@
                   }
                 },
                 {
-                  "assignments": [
-                    37505
-                  ],
+                  "assignments": [37505],
                   "declarations": [
                     {
                       "constant": false,
@@ -25883,9 +25721,7 @@
                   }
                 },
                 {
-                  "assignments": [
-                    37599
-                  ],
+                  "assignments": [37599],
                   "declarations": [
                     {
                       "constant": false,
@@ -26087,9 +25923,7 @@
                   }
                 },
                 {
-                  "assignments": [
-                    37618
-                  ],
+                  "assignments": [37618],
                   "declarations": [
                     {
                       "constant": false,
@@ -26170,9 +26004,7 @@
                   "src": "37602:52:48"
                 },
                 {
-                  "assignments": [
-                    37624
-                  ],
+                  "assignments": [37624],
                   "declarations": [
                     {
                       "constant": false,
@@ -26233,9 +26065,7 @@
                   "src": "37664:36:48"
                 },
                 {
-                  "assignments": [
-                    37629
-                  ],
+                  "assignments": [37629],
                   "declarations": [
                     {
                       "constant": false,
@@ -26334,9 +26164,7 @@
                     "src": "37842:1509:48",
                     "statements": [
                       {
-                        "assignments": [
-                          37644
-                        ],
+                        "assignments": [37644],
                         "declarations": [
                           {
                             "constant": false,
@@ -26589,9 +26417,7 @@
                         }
                       },
                       {
-                        "assignments": [
-                          37668
-                        ],
+                        "assignments": [37668],
                         "declarations": [
                           {
                             "constant": false,
@@ -26926,10 +26752,7 @@
                         }
                       },
                       {
-                        "assignments": [
-                          37696,
-                          37698
-                        ],
+                        "assignments": [37696, 37698],
                         "declarations": [
                           {
                             "constant": false,
@@ -27884,9 +27707,7 @@
               "nodes": [],
               "statements": [
                 {
-                  "assignments": [
-                    37767
-                  ],
+                  "assignments": [37767],
                   "declarations": [
                     {
                       "constant": false,
@@ -28510,9 +28331,7 @@
                   }
                 },
                 {
-                  "assignments": [
-                    37817
-                  ],
+                  "assignments": [37817],
                   "declarations": [
                     {
                       "constant": false,
@@ -28617,9 +28436,7 @@
                   "src": "41566:55:48"
                 },
                 {
-                  "assignments": [
-                    37824
-                  ],
+                  "assignments": [37824],
                   "declarations": [
                     {
                       "constant": false,
@@ -28754,9 +28571,7 @@
                     "src": "41700:367:48",
                     "statements": [
                       {
-                        "assignments": [
-                          37833
-                        ],
+                        "assignments": [37833],
                         "declarations": [
                           {
                             "constant": false,
@@ -29031,9 +28846,7 @@
                   }
                 },
                 {
-                  "assignments": [
-                    37858
-                  ],
+                  "assignments": [37858],
                   "declarations": [
                     {
                       "constant": false,
@@ -29158,9 +28971,7 @@
                   "src": "42076:47:48"
                 },
                 {
-                  "assignments": [
-                    37868
-                  ],
+                  "assignments": [37868],
                   "declarations": [
                     {
                       "constant": false,
@@ -29250,9 +29061,7 @@
                   "src": "42133:62:48"
                 },
                 {
-                  "assignments": [
-                    37874
-                  ],
+                  "assignments": [37874],
                   "declarations": [
                     {
                       "constant": false,
@@ -29377,9 +29186,7 @@
                   "src": "42205:60:48"
                 },
                 {
-                  "assignments": [
-                    37883
-                  ],
+                  "assignments": [37883],
                   "declarations": [
                     {
                       "constant": false,
@@ -29504,9 +29311,7 @@
                   "src": "42275:60:48"
                 },
                 {
-                  "assignments": [
-                    37892
-                  ],
+                  "assignments": [37892],
                   "declarations": [
                     {
                       "constant": false,
@@ -30035,44 +29840,13 @@
           "text": " @title Element Bridge\n @dev Smart contract responsible for depositing, managing and redeeming Defi interactions with the Element protocol"
         },
         "fullyImplemented": true,
-        "linearizedBaseContracts": [
-          37923,
-          32640,
-          31565
-        ],
+        "linearizedBaseContracts": [37923, 32640, 31565],
         "name": "ElementBridge",
         "nameLocation": "1054:13:48",
         "scope": 37924,
         "usedErrors": [
-          32515,
-          32644,
-          32668,
-          35652,
-          35654,
-          35656,
-          35658,
-          35660,
-          35662,
-          35664,
-          35666,
-          35668,
-          35670,
-          35672,
-          35674,
-          35676,
-          35678,
-          35680,
-          35682,
-          35684,
-          35686,
-          35688,
-          35690,
-          35692,
-          35694,
-          35696,
-          35698,
-          35700,
-          37932
+          32515, 32644, 32668, 35652, 35654, 35656, 35658, 35660, 35662, 35664, 35666, 35668, 35670, 35672, 35674,
+          35676, 35678, 35680, 35682, 35684, 35686, 35688, 35690, 35692, 35694, 35696, 35698, 35700, 37932
         ]
       }
     ],
