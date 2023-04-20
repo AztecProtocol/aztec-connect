@@ -238,7 +238,7 @@ resource "aws_ecs_task_definition" "falafel" {
       },
       {
         "name": "EXIT_ONLY",
-        "value": "true"
+        "value": "false"
       }
     ],
     "mountPoints": [
