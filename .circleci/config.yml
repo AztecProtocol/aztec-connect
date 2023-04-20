@@ -640,6 +640,15 @@ jobs:
           name: "Noop"
           command: echo Noop
 
+  cpp-join:
+    docker:
+      - image: cimg/base:current
+    resource_class: small
+    steps:
+      - run:
+          name: "Noop"
+          command: echo Noop
+
   deploy:
     machine:
       image: ubuntu-2004:202010-01
