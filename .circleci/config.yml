@@ -680,9 +680,6 @@ jobs:
             deploy_s3 sdk
             deploy_npm sdk
       - run:
-          name: "wasabi"
-          command: deploy wasabi
-      - run:
           name: "hummus"
           command: |
             deploy_ecr hummus
