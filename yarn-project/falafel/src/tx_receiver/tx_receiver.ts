@@ -99,10 +99,12 @@ export class TxReceiver {
           }
           if (txType === TxType.DEFI_DEPOSIT) {
             const { bridgeCallData } = new DefiDepositProofData(proof);
-            const { outputAssetIdA, outputAssetIdB } = bridgeCallData;
+            const { inputAssetIdA, outputAssetIdA, outputAssetIdB } = bridgeCallData;
             if (allowedBridgeCallData.includes(bridgeCallData.toString())) {
               shouldReject = false;
             } else if (outputAssetIdB === undefined && [0, 1].includes(outputAssetIdA)) {
+              shouldReject = false;
+            } else if ([5, 6, 7].includes(inputAssetIdA)) {
               shouldReject = false;
             } else {
               this.log(

@@ -82,7 +82,7 @@ resource "aws_db_instance" "postgres" {
   max_allocated_storage  = 100
   db_subnet_group_name   = aws_db_subnet_group.default.name
   engine                 = "postgres"
-  engine_version         = "13.7"
+  engine_version         = "13.10"
   identifier             = "${var.DEPLOY_TAG}-falafel-db"
   instance_class         = "db.t4g.large"
   name                   = "falafel"
