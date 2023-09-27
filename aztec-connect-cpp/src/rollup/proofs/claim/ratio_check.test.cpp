@@ -166,12 +166,12 @@ TEST(ratio_check, zero_denominator_a2_returns_false)
     ratios ratios{ a1, a2, b1, b2 };
     auto result = ratio_check(composer, ratios);
     result.assert_equal(false);
-
     waffle::TurboProver prover = composer.create_prover();
     waffle::TurboVerifier verifier = composer.create_verifier();
     waffle::plonk_proof proof = prover.construct_proof();
     bool proof_result = verifier.verify_proof(proof);
-    EXPECT_EQ(proof_result, true);
+    // Zero denominator now completely breaks the proof. It is not allowed
+    EXPECT_EQ(proof_result, false);
 }
 
 TEST(ratio_check, zero_denominator_b2_returns_false)
@@ -221,7 +221,9 @@ TEST(ratio_check, zero_denominator_both_returns_false)
     waffle::TurboVerifier verifier = composer.create_verifier();
     waffle::plonk_proof proof = prover.construct_proof();
     bool proof_result = verifier.verify_proof(proof);
-    EXPECT_EQ(proof_result, true);
+
+    // Zero denominator now completely breaks the proof. It is not allowed
+    EXPECT_EQ(proof_result, false);
 }
 
 TEST(ratio_check, field_modulus_overflow_fails)
