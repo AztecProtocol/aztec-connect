@@ -10,13 +10,24 @@ namespace {
 auto& engine = numeric::random::get_debug_engine();
 } // namespace
 
+uint256_t get_random_note(bool is_defi_claim_note = false)
+{
+    uint256_t note_mask = (uint256_t(1) << rollup::proofs::notes::NOTE_VALUE_BIT_LENGTH) - 1;
+    uint256_t claim_note_mask = (uint256_t(1) << rollup::proofs::notes::DEFI_DEPOSIT_VALUE_BIT_LENGTH) - 1;
+
+    if (is_defi_claim_note) {
+        return engine.get_random_uint256() & claim_note_mask;
+    } else {
+        return engine.get_random_uint256() & note_mask;
+    }
+}
 // Testing a1 * b1 == a2 * b2 passes for valid ratios.
 TEST(ratio_check, product_check)
 {
-    uint256_t a1 = engine.get_random_uint256();
+    uint256_t a1 = get_random_note(true);
     a1.data[3] = a1.data[3] & 0x0fffffffffffffffULL; // 60-bits
 
-    uint256_t b1 = engine.get_random_uint256();
+    uint256_t b1 = get_random_note();                // engine.get_random_uint256();
     b1.data[3] = b1.data[3] & 0x0fffffffffffffffULL; // 60-bits
     b1.data[0] = b1.data[0] & 0xfffffffffffffffeULL; // 64-bits (lsb zero)
 
@@ -28,7 +39,7 @@ TEST(ratio_check, product_check)
     uint512_t test_right = uint512_t(a2) * uint512_t(b2);
     EXPECT_EQ(test_left, test_right);
 
-    waffle::TurboComposer composer = waffle::TurboComposer("../barretenberg/cpp/srs_db/ignition");
+    waffle::TurboComposer composer = waffle::TurboComposer();
 
     field_ct left1(witness_ct(&composer, a1));
     field_ct right1(witness_ct(&composer, b1));
@@ -53,7 +64,7 @@ TEST(ratio_check, product_check_with_zeros)
     uint256_t c = 5;
     uint256_t d = 0;
 
-    waffle::TurboComposer composer = waffle::TurboComposer("../barretenberg/cpp/srs_db/ignition");
+    waffle::TurboComposer composer = waffle::TurboComposer();
 
     field_ct a1(witness_ct(&composer, a));
     field_ct b1(witness_ct(&composer, b));
@@ -72,13 +83,14 @@ TEST(ratio_check, product_check_with_zeros)
 
 TEST(ratio_check, ratio_check)
 {
-    uint256_t a = engine.get_random_uint256();
+    uint256_t a = get_random_note(true);
     a.data[3] = a.data[3] & 0x0fffffffffffffffULL; // 60-bits
-    uint256_t b = engine.get_random_uint256();
+    uint256_t b = get_random_note();               // engine.get_random_uint256();
     b.data[3] = b.data[3] & 0x0fffffffffffffffULL; // 60-bits
-    uint256_t c;
+    uint256_t c = 0;
     while (c == 0) {
-        c = engine.get_random_uint256(); // it'll 'never' happen, but just in case it's 0, try again.
+        c = get_random_note(); // engine.get_random_uint256(); // it'll 'never' happen, but just in case it's 0, try
+                               // again.
     }
     c.data[3] = c.data[3] & 0x0fffffffffffffffULL; // 60-bits
 
@@ -91,7 +103,7 @@ TEST(ratio_check, ratio_check)
 
     const uint256_t d = ((uint512_t(a) * uint512_t(b)) / uint512_t(c)).lo;
 
-    waffle::TurboComposer composer = waffle::TurboComposer("../barretenberg/cpp/srs_db/ignition");
+    waffle::TurboComposer composer = waffle::TurboComposer();
 
     field_ct a1(witness_ct(&composer, a));
     field_ct a2(witness_ct(&composer, c));
@@ -119,7 +131,7 @@ TEST(ratio_check, bad_ratio_check)
     uint256_t c = 200;
     uint256_t d = 21;
 
-    waffle::TurboComposer composer = waffle::TurboComposer("../barretenberg/cpp/srs_db/ignition");
+    waffle::TurboComposer composer = waffle::TurboComposer();
 
     field_ct a1(witness_ct(&composer, a));
     field_ct a2(witness_ct(&composer, b));
@@ -144,7 +156,7 @@ TEST(ratio_check, zero_denominator_a2_returns_false)
     uint256_t c = 5;
     uint256_t d = 0;
 
-    waffle::TurboComposer composer = waffle::TurboComposer("../barretenberg/cpp/srs_db/ignition");
+    waffle::TurboComposer composer = waffle::TurboComposer();
 
     field_ct a1(witness_ct(&composer, a));
     field_ct a2(witness_ct(&composer, d));
@@ -169,7 +181,7 @@ TEST(ratio_check, zero_denominator_b2_returns_false)
     uint256_t c = 5;
     uint256_t d = 1;
 
-    waffle::TurboComposer composer = waffle::TurboComposer("../barretenberg/cpp/srs_db/ignition");
+    waffle::TurboComposer composer = waffle::TurboComposer();
 
     field_ct a1(witness_ct(&composer, a));
     field_ct a2(witness_ct(&composer, d));
@@ -194,7 +206,7 @@ TEST(ratio_check, zero_denominator_both_returns_false)
     uint256_t c = 5;
     uint256_t d = 0;
 
-    waffle::TurboComposer composer = waffle::TurboComposer("../barretenberg/cpp/srs_db/ignition");
+    waffle::TurboComposer composer = waffle::TurboComposer();
 
     field_ct a1(witness_ct(&composer, a));
     field_ct a2(witness_ct(&composer, d));
@@ -220,7 +232,7 @@ TEST(ratio_check, field_modulus_overflow_fails)
     // uint256_t d = 10944121435919637611123202872628637544274182200208017171849102093287904247809; // = 2^(-1)
     uint256_t d(0xA1F0FAC9F8000001ULL, 0x9419F4243CDCB848ULL, 0xDC2822DB40C0AC2EULL, 0x183227397098D014ULL); // = 2^(-1)
 
-    waffle::TurboComposer composer = waffle::TurboComposer("../barretenberg/cpp/srs_db/ignition");
+    waffle::TurboComposer composer = waffle::TurboComposer();
 
     field_ct a1(witness_ct(&composer, a));
     field_ct a2(witness_ct(&composer, d));
@@ -237,7 +249,8 @@ TEST(ratio_check, field_modulus_overflow_fails)
     waffle::TurboVerifier verifier = composer.create_verifier();
     waffle::plonk_proof proof = prover.construct_proof();
     bool proof_result = verifier.verify_proof(proof);
-    EXPECT_EQ(proof_result, true);
+    // if ratio check == false because the inputs are too large, we expect the proof to fail
+    EXPECT_EQ(proof_result, false);
 }
 
 TEST(ratio_check, field_modulus_overflow_with_biggest_numbers_possible_fails)
@@ -250,7 +263,7 @@ TEST(ratio_check, field_modulus_overflow_with_biggest_numbers_possible_fails)
     uint256_t c = r - 1;
     uint256_t d = r - 1;
 
-    waffle::TurboComposer composer = waffle::TurboComposer("../barretenberg/cpp/srs_db/ignition");
+    waffle::TurboComposer composer = waffle::TurboComposer();
 
     field_ct a1(witness_ct(&composer, a));
     field_ct a2(witness_ct(&composer, d));
@@ -267,5 +280,6 @@ TEST(ratio_check, field_modulus_overflow_with_biggest_numbers_possible_fails)
     waffle::TurboVerifier verifier = composer.create_verifier();
     waffle::plonk_proof proof = prover.construct_proof();
     bool proof_result = verifier.verify_proof(proof);
-    EXPECT_EQ(proof_result, true);
+    // if ratio check == false because of a field modulus overflow, we expect the proof to fail
+    EXPECT_EQ(proof_result, false);
 }
