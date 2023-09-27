@@ -78,14 +78,15 @@ inline bool_ct product_check(Composer& composer,
         for (size_t i = 0; i < 4; i++) {
             // If we've run out of bits, enforce zero
             if (bits_left == 0) {
-                limbs[i].assert_zero();
+                limbs[i].assert_is_zero();
                 // If there are not enough bits for a full lmb, reduce constraint
             } else if (bits_left < NUM_BITS_PER_LIMB) {
-                limbs[i].create_range_constrant(bits_left);
+                limbs[i].create_range_constraint(bits_left);
                 bits_left = 0;
             } else {
                 // Just a regular limb
-                limbs[i].create_range_constraint(NUM_BITS_PER_LIMB) bits_left -= NUM_BITS_PER_LIMB;
+                limbs[i].create_range_constraint(NUM_BITS_PER_LIMB);
+                bits_left -= NUM_BITS_PER_LIMB;
             }
         }
 
