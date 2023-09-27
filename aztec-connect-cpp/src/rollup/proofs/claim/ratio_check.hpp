@@ -1,5 +1,6 @@
 #pragma once
 #include "claim_tx.hpp"
+#include <atomic>
 #include <stdlib/types/turbo.hpp>
 #include "../notes/constants.hpp"
 
@@ -52,6 +53,10 @@ inline bool_ct product_check(Composer& composer,
         const uint256_t value = input.get_value();
 
         constexpr size_t NUM_BITS_PER_LIMB = 68;
+
+        ASSERT(MAX_INPUT_BITS <= MAX_NO_WRAP_INTEGER_BIT_LENGTH);
+        ASSERT(MAX_INPUT_BITS > 0);
+
         const uint256_t t0 = value.slice(0, NUM_BITS_PER_LIMB);
         const uint256_t t1 = value.slice(NUM_BITS_PER_LIMB, 2 * NUM_BITS_PER_LIMB);
         const uint256_t t2 = value.slice(2 * NUM_BITS_PER_LIMB, 3 * NUM_BITS_PER_LIMB);
@@ -68,32 +73,22 @@ inline bool_ct product_check(Composer& composer,
         field_ct limb_sum_2 = input - (limbs[3] * shift_3);
         limb_sum_1.assert_equal(limb_sum_2);
 
-        limbs[0].create_range_constraint(68);
-        limbs[1].create_range_constraint(68);
-        limbs[2].create_range_constraint(68);
-        limbs[3].create_range_constraint(68);
-
-        // Check that limb_hi * 2^LO_BITS + limb_lo < modulus when evaluated over the integers
-        // modulus - limb_sum > 0 (over the integers)
-        {
-            field_ct limbs_lo = limbs[0] + limbs[1] * (uint256_t(1) << 68);
-            field_ct limbs_hi = limbs[2] + limbs[3] * (uint256_t(1) << 68);
-            constexpr size_t LO_BITS = 68 * 2;
-            const size_t HI_BITS = MAX_INPUT_BITS - LO_BITS;
-            const uint256_t modulus = (uint256_t(1) << MAX_INPUT_BITS) - 1;
-            const uint256_t r_lo = modulus.slice(0, LO_BITS);
-            const uint256_t r_hi = modulus.slice(LO_BITS, HI_BITS);
-            bool need_borrow = uint256_t(limbs_lo.get_value()) > r_lo;
-            field_ct borrow = limbs_lo.is_constant() ? need_borrow : field_ct(witness_ct(&composer, need_borrow));
-            (borrow * borrow).assert_equal(borrow);
-            // Hi range check = r_hi - y_hi - borrow
-            // Lo range check = r_lo - y_lo + borrow * 2^{136}
-            field_ct hi = (-limbs_hi + r_hi) - borrow;
-            field_ct lo = (-limbs_lo + r_lo) + (borrow * (uint256_t(1) << LO_BITS));
-
-            hi.create_range_constraint(HI_BITS, "limb split, HI_BITS fail");
-            lo.create_range_constraint(LO_BITS, "limb split, LO_BITS fail");
+        // Since the modulus is a power of two minus one, wwe can simply range constrain each of the limbs
+        size_t bits_left = MAX_INPUT_BITS;
+        for (size_t i = 0; i < 4; i++) {
+            // If we've run out of bits, enforce zero
+            if (bits_left == 0) {
+                limbs[i].assert_zero();
+                // If there are not enough bits for a full lmb, reduce constraint
+            } else if (bits_left < NUM_BITS_PER_LIMB) {
+                limbs[i].create_range_constrant(bits_left);
+                bits_left = 0;
+            } else {
+                // Just a regular limb
+                limbs[i].create_range_constraint(NUM_BITS_PER_LIMB) bits_left -= NUM_BITS_PER_LIMB;
+            }
         }
+
         return limbs;
     };
 
