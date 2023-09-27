@@ -1,6 +1,5 @@
 #pragma once
 #include "claim_tx.hpp"
-#include <atomic>
 #include <stdlib/types/turbo.hpp>
 #include "../notes/constants.hpp"
 
