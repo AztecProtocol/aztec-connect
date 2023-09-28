@@ -62,7 +62,7 @@ namespace circuit_vk_hash {
 constexpr auto ACCOUNT = uint256_t(0xcd6d70c733eaf823, 0x6505d3402817ad3d, 0xbf9e2b6a262589cf, 0xafcc546b55cc45e3);
 constexpr auto JOIN_SPLIT = uint256_t(0xb23c7772f47bc823, 0x5493625d4f08603c, 0x21ac50a5929576f9, 0xb7b3113c131460e5);
 constexpr auto CLAIM = uint256_t(0xa753ce523719749e, 0x80216aff7f8bc9ce, 0xa9b0f69bbd24ac33, 0xae17c5fb7d488138);
-constexpr auto ROLLUP = uint256_t(0x8712bcbeb11180c5, 0x598412e4f700c484, 0xfe50ad453c8e4288, 0xa7340fac5feb663f);
+constexpr auto ROLLUP = uint256_t(0x5f2f6590e5553f19, 0x62c287e01b897621, 0xf32d03437085e2d, 0x567b0be24dc99966);
 constexpr auto ROOT_ROLLUP = uint256_t(0x64e5e03cf9534ed6, 0x7fdc871935b9e4fe, 0xd2b81e990cc15f3d, 0x47f00f76d92e5e4d);
 ;
 constexpr auto ROOT_VERIFIER =
