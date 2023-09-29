@@ -49,7 +49,15 @@ describe('hummus terminal test', () => {
     browser = await puppeteer.launch({
       headless: true,
       executablePath: process.env.CHROME_BIN,
-      args: ['--no-sandbox', '--headless', '--disable-gpu', '--disable-dev-shm-usage', '--disk-cache-dir=/dev/null'],
+      args: [
+        '--no-sandbox',
+        '--headless',
+        '--disable-gpu',
+        '--disable-dev-shm-usage',
+        '--disable-software-rasterizer',
+        '--remote-debugging-port=9222',
+        '--disk-cache-dir=/dev/null'
+      ],
     });
     page = await browser.newPage();
 
