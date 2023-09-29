@@ -58,6 +58,7 @@ describe('hummus terminal test', () => {
         '--remote-debugging-port=9222',
         '--disk-cache-dir=/dev/null',
       ],
+      dumpio: true,
     });
     page = await browser.newPage();
 
