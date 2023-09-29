@@ -56,7 +56,7 @@ describe('hummus terminal test', () => {
         '--disable-dev-shm-usage',
         '--disable-software-rasterizer',
         '--remote-debugging-port=9222',
-        '--disk-cache-dir=/dev/null'
+        '--disk-cache-dir=/dev/null',
       ],
     });
     page = await browser.newPage();
