@@ -1,0 +1,79 @@
+version: '3'
+services:
+  contracts:
+    image: aztecprotocol/contracts:latest
+    environment:
+      ETHEREUM_HOST: ${ETHEREUM_HOST:-}
+      VK: ${VK:-}
+      PORT: 8547
+    command: ./scripts/start_e2e.sh
+
+  kebab:
+    image: aztecprotocol/kebab:latest
+    environment:
+      ETHEREUM_HOST: ${ETHEREUM_HOST:-http://contracts:8544}
+      CONTRACTS_HOST: http://contracts:8547
+      NO_BUILD: 'true'
+      PORT: 8545
+    depends_on:
+      - contracts
+    command: start:e2e
+
+  halloumi1:
+    image: aztecprotocol/halloumi:latest
+    environment:
+      NUM_INNER_ROLLUP_TXS: ${NUM_INNER_ROLLUP_TXS:-3}
+      NUM_OUTER_ROLLUP_PROOFS: ${NUM_OUTER_ROLLUP_PROOFS:-2}
+      PERSIST: 'false'
+      PROVERLESS: ${PROVERLESS:-true}
+      JOB_SERVER_URL: http://falafel:8082
+
+  halloumi2:
+    image: aztecprotocol/halloumi:latest
+    environment:
+      NUM_INNER_ROLLUP_TXS: ${NUM_INNER_ROLLUP_TXS:-3}
+      NUM_OUTER_ROLLUP_PROOFS: ${NUM_OUTER_ROLLUP_PROOFS:-2}
+      PERSIST: 'false'
+      PROVERLESS: ${PROVERLESS:-true}
+      JOB_SERVER_URL: http://falafel:8082
+
+  falafel:
+    image: aztecprotocol/falafel:latest
+    environment:
+      ETHEREUM_HOST: http://kebab:8545
+      CONTRACTS_HOST: http://contracts:8547
+      NUM_INNER_ROLLUP_TXS: ${NUM_INNER_ROLLUP_TXS:-3}
+      NUM_OUTER_ROLLUP_PROOFS: ${NUM_OUTER_ROLLUP_PROOFS:-2}
+      PROVERLESS: ${PROVERLESS:-true}
+      NO_BUILD: 'true'
+      PORT: 8081
+    depends_on:
+      - kebab
+    command: start:e2e
+
+  # sdk:
+  #   image: aztecprotocol/sdk:latest
+  #   environment:
+  #     ROLLUP_HOST: http://falafel:8081
+  #   depends_on:
+  #     - falafel
+  #   command: start:e2e
+  #   ports:
+  #     - '1234:1234'
+
+  hummus:
+    image: aztecprotocol/hummus:latest
+    # depends_on:
+    #   - sdk
+
+  end-to-end:
+    image: aztecprotocol/end-to-end:latest
+    environment:
+      ETHEREUM_HOST: http://kebab:8545
+      ROLLUP_HOST: http://falafel:8081
+      CONTRACTS_HOST: http://contracts:8547
+      SDK_HOST: http://sdk:1234
+      HUMMUS_HOST: http://hummus:8080
+    depends_on:
+      - hummus
+    entrypoint: ['./scripts/start_browser_e2e.sh', '${TEST:-./src/e2e_browser.test.ts}']
