@@ -3,10 +3,19 @@
 #include "index.hpp"
 #include "../inner_proof_data/inner_proof_data.hpp"
 #include "../notes/native/index.hpp"
+#include "../notes/circuit/index.hpp"
+#include "./claim_circuit.hpp"
 #include <common/test.hpp>
+#include <cstddef>
+#include <iterator>
 #include <stdlib/merkle_tree/index.hpp>
 #include <numeric/random/engine.hpp>
+#include <string>
+#include <utility>
 
+#define ENABLE_MALICIOUS_RATIO_CHECK_FOR_TESTS
+#include "./malicious_claim_circuit.hpp"
+#undef ENABLE_MALICIOUS_RATIO_CHECK_FOR_TESTS
 namespace rollup {
 namespace proofs {
 namespace claim {
@@ -1579,6 +1588,72 @@ TEST_F(claim_tests, test_real_virtual)
     EXPECT_EQ(tx.get_output_notes()[0], result.public_inputs[InnerProofFields::NOTE_COMMITMENT1]);
     EXPECT_EQ(tx.get_output_notes()[1], result.public_inputs[InnerProofFields::NOTE_COMMITMENT2]);
 }
+/**
+ * @brief Check that malicious prover can't submit an erroneous claim
+ *
+ */
+TEST_F(claim_tests, test_claim_fails_if_prover_is_malicious)
+{
+    // Generate notes with malicious values
+    const claim_note note1 = { .deposit_value = 1,
+                               .bridge_call_data = 0,
+                               .defi_interaction_nonce = 0,
+                               .fee = 0,
+                               .value_note_partial_commitment =
+                                   create_partial_commitment(user.note_secret, user.owner.public_key, 0, 0),
+                               .input_nullifier = fr::random_element(&engine) };
+
+    const defi_interaction::note note2 = { .bridge_call_data = 0,
+                                           .interaction_nonce = 0,
+                                           .total_input_value = 100,
+                                           .total_output_value_a = 100,
+                                           .total_output_value_b = 100,
+                                           .interaction_result = 1 };
+    append_note(note1, data_tree);
+    append_note(note2, defi_tree);
+    claim_tx tx = create_claim_tx(note1, 0, 0, note2);
+    tx.output_value_a = 100;
+    tx.output_value_b = 100;
+
+    // Create one regular composer
+    Composer composer = Composer(cd.proving_key, cd.verification_key, cd.num_gates);
+    // And one donor
+    Composer donor = Composer(cd.proving_key, cd.verification_key, cd.num_gates);
+
+    // Construct the circuit with malicious witness in the donor
+    malicious_claim_circuit(donor, tx);
+
+    // Construct the regular claim circuit in the regular composer
+    claim_circuit(composer, tx);
+
+    // The witness in the regular will not satisfy the contriaints
+    info("Check circuit before transplant: ", composer.check_circuit());
+    ASSERT_EQ(composer.variables.size(), donor.variables.size());
+    // Copy the values of variables into the regular circuit
+    for (size_t i = 0; i < composer.variables.size(); i++) {
+        composer.variables[i] = donor.variables[i];
+    }
+    // If the circuit is undercontrained, the will both pass now
+    info("Check donor circuit: ", donor.check_circuit());
+    info("Check circuit after transplant: ", composer.check_circuit());
+    Timer proof_timer;
+    info(": Creating proof...");
+    verify_result<Composer> result;
+    auto prover = composer.create_unrolled_prover();
+    auto proof = prover.construct_proof();
+    result.proof_data = proof.proof_data;
+    info(": Proof created in ", proof_timer.toString(), "s");
+    auto verifier = composer.create_unrolled_verifier();
+    result.verified = verifier.verify_proof({ result.proof_data });
+    if (!result.verified) {
+        info(": Proof validation failed.");
+    } else {
+        info(": Verified successfully.");
+    }
+    result.verification_key = composer.circuit_verification_key;
+    EXPECT_FALSE(result.verified);
+}
+
 } // namespace claim
 } // namespace proofs
 } // namespace rollup
