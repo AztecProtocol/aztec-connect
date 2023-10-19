@@ -47,7 +47,7 @@ contract InteractionNotesTest is TestBase {
         asyncBridgeAddressId = rollupProcessor.getSupportedBridgesLength();
 
         // Setup token A
-        tokenA = new ERC20Mintable('TokenA');
+        tokenA = new ERC20Mintable("TokenA");
         rollupProcessor.setSupportedAsset(address(tokenA), 100000);
         tokenAssetA = AztecTypes.AztecAsset({
             id: rollupProcessor.getSupportedAssetsLength(),
@@ -56,7 +56,7 @@ contract InteractionNotesTest is TestBase {
         });
 
         // Setup token B
-        tokenB = new ERC20Mintable('TokenB');
+        tokenB = new ERC20Mintable("TokenB");
         rollupProcessor.setSupportedAsset(address(tokenB), 100000);
         tokenAssetB = AztecTypes.AztecAsset({
             id: rollupProcessor.getSupportedAssetsLength(),
@@ -65,7 +65,7 @@ contract InteractionNotesTest is TestBase {
         });
 
         // Setup token C
-        tokenC = new ERC20Mintable('TokenC');
+        tokenC = new ERC20Mintable("TokenC");
         rollupProcessor.setSupportedAsset(address(tokenC), 100000);
         tokenAssetC = AztecTypes.AztecAsset({
             id: rollupProcessor.getSupportedAssetsLength(),
@@ -126,6 +126,8 @@ contract InteractionNotesTest is TestBase {
             uint256 firstNonce = rollupId * NUMBER_OF_BRIDGE_CALLS;
             for (uint256 nonce = firstNonce; nonce < NUMBER_OF_BRIDGE_CALLS; nonce++) {
                 rollupEncoder.defiInteractionL2(encodedBridgeCallDataAsync, totalInputValueAsync);
+            }
+            for (uint256 nonce = firstNonce; nonce < NUMBER_OF_BRIDGE_CALLS; nonce++) {
                 vm.expectEmit(true, true, false, true);
                 emit AsyncDefiBridgeProcessed(encodedBridgeCallDataAsync, nonce, totalInputValueAsync);
             }
@@ -139,6 +141,8 @@ contract InteractionNotesTest is TestBase {
             firstNonce = rollupId * NUMBER_OF_BRIDGE_CALLS;
             for (uint256 nonce = firstNonce; nonce < firstNonce + 8; nonce++) {
                 rollupEncoder.defiInteractionL2(encodedBridgeCallDataAsync, totalInputValueAsync);
+            }
+            for (uint256 nonce = firstNonce; nonce < firstNonce + 8; nonce++) {
                 vm.expectEmit(true, true, false, true);
                 emit AsyncDefiBridgeProcessed(encodedBridgeCallDataAsync, nonce, totalInputValueAsync);
             }
@@ -190,7 +194,7 @@ contract InteractionNotesTest is TestBase {
                     outputValueBAsync,
                     true,
                     ""
-                    );
+                );
                 rollupProcessor.processAsyncDefiInteraction(nonce);
             }
         }
@@ -211,7 +215,9 @@ contract InteractionNotesTest is TestBase {
 
             rollupEncoder.defiInteractionL2(encodedBridgeCallDataSync, totalInputValueSync);
 
-            bytes32[] memory nextExpectedDefiHashes = new bytes32[](NUMBER_OF_BRIDGE_CALLS);
+            bytes32[] memory nextExpectedDefiHashes = new bytes32[](
+                NUMBER_OF_BRIDGE_CALLS
+            );
             for (uint256 i = 0; i < NUMBER_OF_BRIDGE_CALLS; i++) {
                 nextExpectedDefiHashes[i] = rollupEncoder.computeDefiInteractionHash(
                     encodedBridgeCallDataAsync,
@@ -226,7 +232,7 @@ contract InteractionNotesTest is TestBase {
             vm.expectEmit(true, true, false, true);
             emit DefiBridgeProcessed(
                 encodedBridgeCallDataSync, nonce, totalInputValueSync, outputValueASync, 0, true, ""
-                );
+            );
             vm.expectEmit(true, false, false, true);
             emit RollupProcessed(rollupId, nextExpectedDefiHashes, ROLLUP_PROVIDER);
             rollupEncoder.processRollup();
@@ -244,7 +250,7 @@ contract InteractionNotesTest is TestBase {
                     outputValueBAsync,
                     true,
                     ""
-                    );
+                );
                 rollupProcessor.processAsyncDefiInteraction(nonce);
             }
         }
@@ -284,7 +290,7 @@ contract InteractionNotesTest is TestBase {
             vm.expectEmit(true, true, false, true);
             emit DefiBridgeProcessed(
                 encodedBridgeCallDataSync, nonce, totalInputValueSync, outputValueASync, 0, true, ""
-                );
+            );
             vm.expectEmit(true, false, false, true);
             emit RollupProcessed(rollupId, nextExpectedDefiHashes, ROLLUP_PROVIDER);
             rollupEncoder.processRollup();
@@ -292,7 +298,9 @@ contract InteractionNotesTest is TestBase {
     }
 
     function _setAsyncBridgeAction(uint256 _outputValueA, uint256 _outputValueB) private returns (uint256) {
-        AsyncBridge.SubAction[] memory subActions = new AsyncBridge.SubAction[](2);
+        AsyncBridge.SubAction[] memory subActions = new AsyncBridge.SubAction[](
+            2
+        );
         subActions[0] = AsyncBridge.SubAction({
             target: address(tokenA),
             value: 0,
@@ -315,7 +323,9 @@ contract InteractionNotesTest is TestBase {
     }
 
     function _setSyncBridgeAction(uint256 _outputValueA, uint256 _interactionNonce) private returns (uint256) {
-        SyncBridge.SubAction[] memory subActions = new SyncBridge.SubAction[](1);
+        SyncBridge.SubAction[] memory subActions = new SyncBridge.SubAction[](
+            1
+        );
         subActions[0] = SyncBridge.SubAction({
             target: address(rollupProcessor),
             value: _outputValueA,

@@ -38,7 +38,7 @@ constexpr bool is_circuit_change_expected = 0;
  constraints. They need to be changed when there is a circuit change. */
 constexpr uint32_t ACCOUNT = 23967;
 constexpr uint32_t JOIN_SPLIT = 64047;
-constexpr uint32_t CLAIM = 22684;
+constexpr uint32_t CLAIM = 23050;
 constexpr uint32_t ROLLUP = 1173221;
 constexpr uint32_t ROOT_ROLLUP = 5481327;
 constexpr uint32_t ROOT_VERIFIER = 7435892;
@@ -61,12 +61,12 @@ namespace circuit_vk_hash {
  to comply with the from_buffer<>() method. */
 constexpr auto ACCOUNT = uint256_t(0xcd6d70c733eaf823, 0x6505d3402817ad3d, 0xbf9e2b6a262589cf, 0xafcc546b55cc45e3);
 constexpr auto JOIN_SPLIT = uint256_t(0xb23c7772f47bc823, 0x5493625d4f08603c, 0x21ac50a5929576f9, 0xb7b3113c131460e5);
-constexpr auto CLAIM = uint256_t(0x878301ebba40ab60, 0x931466762c62d661, 0x40aad71ec3496905, 0x9f47aaa109759d0a);
-constexpr auto ROLLUP = uint256_t(0x8712bcbeb11180c5, 0x598412e4f700c484, 0xfe50ad453c8e4288, 0xa7340fac5feb663f);
-constexpr auto ROOT_ROLLUP = uint256_t(0xcf2fee21f089b32f, 0x90c6187354cf70d4, 0x3a5a90b8c86d8c64, 0xd55af088ddc86db7);
+constexpr auto CLAIM = uint256_t(0xa753ce523719749e, 0x80216aff7f8bc9ce, 0xa9b0f69bbd24ac33, 0xae17c5fb7d488138);
+constexpr auto ROLLUP = uint256_t(0x5f2f6590e5553f19, 0x62c287e01b897621, 0xf32d03437085e2d, 0x567b0be24dc99966);
+constexpr auto ROOT_ROLLUP = uint256_t(0x64e5e03cf9534ed6, 0x7fdc871935b9e4fe, 0xd2b81e990cc15f3d, 0x47f00f76d92e5e4d);
 ;
 constexpr auto ROOT_VERIFIER =
-    uint256_t(0xe91df73df393fb5f, 0x99a9fa13abfbb206, 0x2ffe8c891cbde8c2, 0xdcb051e8ca06df5e);
+    uint256_t(0xb4349747ae6ea507, 0xfaafa0f2e384c984, 0x9325870bcc594daf, 0x50163a2572c67363);
 }; // namespace circuit_vk_hash
 
 namespace ProofIds {
