@@ -7,7 +7,7 @@ import { TxDao } from '../entity/index.js';
 import { checkDuplicateNullifiers, checkNullifiersAgainstWorldState, findNearbyTxs } from './diagnostics.js';
 import { jest } from '@jest/globals';
 
-jest.useFakeTimers();
+jest.useFakeTimers({ doNotFake: ['performance'] });
 
 type Mockify<T> = {
   [P in keyof T]: jest.Mock;

@@ -16,7 +16,7 @@ import { RollupDb } from './rollup_db/index.js';
 import { TxFeeResolver } from './tx_fee_resolver/index.js';
 import { jest } from '@jest/globals';
 
-jest.useFakeTimers();
+jest.useFakeTimers({ doNotFake: ['performance'] });
 
 type Mockify<T> = {
   [P in keyof T]: jest.Mock;
