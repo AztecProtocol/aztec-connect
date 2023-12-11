@@ -57,6 +57,8 @@ interface StartupConfig {
   rollupCallDataLimit: number;
   // To be turned on when Aztec Connect is sunset. Means that users are only allowed to exit AC. Env: EXIT_ONLY
   exitOnly: boolean;
+  // Added once subsidy retrieval started failing to allow us to disable it.
+  enableSubsidies: boolean;
 }
 
 export interface ConfVars extends StartupConfig {
@@ -85,6 +87,7 @@ const defaultStartupConfig: StartupConfig = {
   proverless: false,
   exitOnly: false,
   rollupCallDataLimit: 120 * 1024,
+  enableSubsidies: false,
 };
 
 const defaultRuntimeConfig: RuntimeConfig = {
@@ -131,6 +134,7 @@ function getStartupConfigEnvVars(): Partial<StartupConfig> {
     TYPEORM_LOGGING,
     SERVER_AUTH_TOKEN,
     CALL_DATA_LIMIT_KB,
+    ENABLE_SUBSIDIES,
   } = process.env;
 
   const envVars: Partial<StartupConfig> = {
@@ -161,6 +165,7 @@ function getStartupConfigEnvVars(): Partial<StartupConfig> {
     exitOnly: EXIT_ONLY ? EXIT_ONLY === 'true' : undefined,
     serverAuthToken: SERVER_AUTH_TOKEN,
     rollupCallDataLimit: CALL_DATA_LIMIT_KB ? +CALL_DATA_LIMIT_KB * 1024 : undefined,
+    enableSubsidies: ENABLE_SUBSIDIES ? ENABLE_SUBSIDIES === 'true' : false,
   };
   return Object.fromEntries(Object.entries(envVars).filter(e => e[1] !== undefined));
 }

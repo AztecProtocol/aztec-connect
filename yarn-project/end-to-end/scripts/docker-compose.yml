@@ -45,6 +45,7 @@ services:
       NUM_INNER_ROLLUP_TXS: ${NUM_INNER_ROLLUP_TXS:-3}
       NUM_OUTER_ROLLUP_PROOFS: ${NUM_OUTER_ROLLUP_PROOFS:-2}
       PROVERLESS: ${PROVERLESS:-true}
+      ENABLE_SUBSIDIES: ${ENABLE_SUBSIDIES:-true}
       NO_BUILD: 'true'
       PORT: 8081
     depends_on:

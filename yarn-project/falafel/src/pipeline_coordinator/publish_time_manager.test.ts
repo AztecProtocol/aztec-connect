@@ -1,7 +1,7 @@
 import { PublishTimeManager } from './publish_time_manager.js';
 import { jest } from '@jest/globals';
 
-jest.useFakeTimers();
+jest.useFakeTimers({ doNotFake: ['performance'] });
 
 const currentTime = '2021-11-11T09:30:00+00:00';
 const rollupTimeoutDurationSecs = 3600;
