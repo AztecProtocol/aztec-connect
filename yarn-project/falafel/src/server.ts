@@ -77,7 +77,7 @@ export class Server {
 
     const noteAlgo = new NoteAlgorithms(barretenberg);
     this.blake = new Blake2s(barretenberg);
-    this.bridgeResolver = new BridgeResolver(bridgeConfigs, blockchain);
+    this.bridgeResolver = new BridgeResolver(bridgeConfigs, blockchain, true);
 
     this.txFeeResolver = this.createTxFeeResolver();
 
