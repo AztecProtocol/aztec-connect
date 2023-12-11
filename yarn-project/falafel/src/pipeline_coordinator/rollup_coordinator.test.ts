@@ -21,7 +21,7 @@ import { PublishTimeManager, RollupTimeouts } from './publish_time_manager.js';
 import { RollupCoordinator } from './rollup_coordinator.js';
 import { jest } from '@jest/globals';
 
-jest.useFakeTimers();
+jest.useFakeTimers({ doNotFake: ['performance'] });
 
 type Mockify<T> = {
   [P in keyof T]: jest.Mock;

@@ -144,9 +144,39 @@ describe('Bridge Resolver', () => {
       getBlockchainStatus: jest.fn().mockReturnValue({
         allowThirdPartyContracts: false,
       }),
+      getBridgeSubsidy: jest.fn((bridgeCallData: bigint) => {
+        const fullCallData = BridgeCallData.fromBigInt(bridgeCallData);
+        return {
+          criteria: 1n,
+          subsidyInGas: 10000,
+          subsidyInWei: 25000000n,
+          bridgeAddressId: fullCallData.bridgeAddressId,
+        };
+      }),
     } as any;
 
     bridgeResolver = new BridgeResolver(bridgeConfigs, blockchain as any);
+  });
+
+  it('returns bridge subsidy from the data provider contract if contract not disabled', async () => {
+    const localBridgeResolver = new BridgeResolver(bridgeConfigs, blockchain as any);
+    const [cd] = generateSampleBridgeCallDatas();
+    const result = await localBridgeResolver.getBridgeSubsidy(cd.callData);
+    expect(blockchain.getBridgeSubsidy).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({
+      criteria: 1n,
+      subsidyInGas: 10000,
+      subsidyInWei: 25000000n,
+      bridgeAddressId: BridgeCallData.fromBigInt(cd.callData).bridgeAddressId,
+    });
+  });
+
+  it('returns undefined bridge subsidy if contract has been disabled', async () => {
+    const localBridgeResolver = new BridgeResolver(bridgeConfigs, blockchain as any, true);
+    const [cd] = generateSampleBridgeCallDatas();
+    const result = await localBridgeResolver.getBridgeSubsidy(cd.callData);
+    expect(blockchain.getBridgeSubsidy).toHaveBeenCalledTimes(0);
+    expect(result).toBeUndefined();
   });
 
   it('returns correct bridge config', () => {
