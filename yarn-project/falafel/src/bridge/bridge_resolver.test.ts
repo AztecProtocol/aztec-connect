@@ -167,7 +167,7 @@ describe('Bridge Resolver', () => {
       criteria: 1n,
       subsidyInGas: 10000,
       subsidyInWei: 25000000n,
-      bridgeAddressId: BridgeCallData.fromBigInt(cd).bridgeAddressId,
+      bridgeAddressId: BridgeCallData.fromBigInt(cd.callData).bridgeAddressId,
     });
   });
 
