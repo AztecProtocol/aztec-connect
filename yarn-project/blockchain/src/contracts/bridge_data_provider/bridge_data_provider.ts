@@ -35,6 +35,7 @@ export class BridgeDataProvider {
     private bridgeDataProviderAddress: EthAddress,
     ethereumProvider: EthereumProvider,
     contractCreation: () => Contract = () => createContract(bridgeDataProviderAddress.toString(), ethereumProvider),
+    private disableContract = false,
   ) {
     this.contract = contractCreation();
   }
@@ -47,12 +48,10 @@ export class BridgeDataProvider {
     const bd = BridgeCallData.fromBigInt(bridgeCallData);
     const bridgeCallDataAsString = bd.toString();
     if (this.subsidyCache[bridgeCallDataAsString] === undefined) {
-      const [criteria, subsidyInWei, subsidyInGas] = await this.contract.getAccumulatedSubsidyAmount(bridgeCallData);
+      const subsidy = await this.getAccumulatedSubsidy(bridgeCallData);
       this.subsidyCache[bridgeCallDataAsString] = {
+        ...subsidy,
         addressId: bd.bridgeAddressId,
-        subsidyInGas: subsidyInGas.toNumber(),
-        subsidyInWei: subsidyInWei.toBigInt(),
-        criteria: criteria.toBigInt(),
       } as BridgeSubsidy;
     }
     return this.subsidyCache[bridgeCallDataAsString];
@@ -73,7 +72,16 @@ export class BridgeDataProvider {
   }
 
   public updatePerEthBlockState() {
-    // clear the subsidy cache with each eth block as this will continuosly change
+    // clear the subsidy cache with each eth block as this will continuously change
     this.subsidyCache = {};
+  }
+
+  private async getAccumulatedSubsidy(bridgeCallData: bigint): Promise<{subsidyInGas: number, subsidyInWei: bigint, criteria: bigint}> {
+    const [criteria, subsidyInWei, subsidyInGas] = await this.contract.getAccumulatedSubsidyAmount(bridgeCallData);
+    return {
+      criteria,
+      subsidyInGas,
+      subsidyInWei
+    }
   }
 }
