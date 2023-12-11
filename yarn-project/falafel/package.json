@@ -9,7 +9,7 @@
     "build": "yarn version_hash && rm -rf ./dest && tsc -b tsconfig.dest.json && cp ../../aztec-connect-cpp/build-wasm/bin/aztec-connect.wasm ./dest/wasm && cp -r ./src/environment/init/data ./dest/environment/init/data",
     "clean": "rm -rf ./data ./dest",
     "clean_db": "rm -rf ./data",
-    "formatting": "run -T prettier -w ./src && run -T eslint --max-warnings 0 ./src",
+    "formatting": "run -T prettier --check ./src && run -T eslint --max-warnings 0 ./src",
     "start": "node ${NODE_ARGS:-} ./dest",
     "start:debug": "node ${NODE_ARGS:-} --inspect-brk=0.0.0.0:9221 ./dest",
     "start:e2e": "./scripts/start_e2e.sh",
