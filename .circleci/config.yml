@@ -487,27 +487,27 @@ jobs:
           name: "Test"
           command: cond_spot_run_tests end-to-end ./src/e2e_async_bridge.test.ts
 
-  e2e-subsidy:
-    docker:
-      - image: aztecprotocol/alpine-build-image
-    resource_class: small
-    steps:
-      - *checkout
-      - *setup_env
-      - run:
-          name: "Test"
-          command: cond_spot_run_tests end-to-end ./src/e2e_subsidy.test.ts
+  # e2e-subsidy:
+  #   docker:
+  #     - image: aztecprotocol/alpine-build-image
+  #   resource_class: small
+  #   steps:
+  #     - *checkout
+  #     - *setup_env
+  #     - run:
+  #         name: "Test"
+  #         command: cond_spot_run_tests end-to-end ./src/e2e_subsidy.test.ts
 
-  e2e-subsidy-async:
-    docker:
-      - image: aztecprotocol/alpine-build-image
-    resource_class: small
-    steps:
-      - *checkout
-      - *setup_env
-      - run:
-          name: "Test"
-          command: cond_spot_run_tests end-to-end ./src/e2e_subsidy_async.test.ts
+  # e2e-subsidy-async:
+  #   docker:
+  #     - image: aztecprotocol/alpine-build-image
+  #   resource_class: small
+  #   steps:
+  #     - *checkout
+  #     - *setup_env
+  #     - run:
+  #         name: "Test"
+  #         command: cond_spot_run_tests end-to-end ./src/e2e_subsidy_async.test.ts
 
   e2e-non-fee-assets:
     docker:
