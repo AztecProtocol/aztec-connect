@@ -60,6 +60,7 @@ export class Server {
       numOuterRollupProofs,
       proverless,
       rollupCallDataLimit,
+      enableSubsidies,
       runtimeConfig: {
         publishInterval,
         flushAfterIdle,
@@ -77,7 +78,7 @@ export class Server {
 
     const noteAlgo = new NoteAlgorithms(barretenberg);
     this.blake = new Blake2s(barretenberg);
-    this.bridgeResolver = new BridgeResolver(bridgeConfigs, blockchain, true);
+    this.bridgeResolver = new BridgeResolver(bridgeConfigs, blockchain, enableSubsidies);
 
     this.txFeeResolver = this.createTxFeeResolver();
 
