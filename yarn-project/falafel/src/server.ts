@@ -78,6 +78,9 @@ export class Server {
 
     const noteAlgo = new NoteAlgorithms(barretenberg);
     this.blake = new Blake2s(barretenberg);
+    if (!enableSubsidies) {
+      this.log(`Starting with bridge subsidies disabled.`);
+    }
     this.bridgeResolver = new BridgeResolver(bridgeConfigs, blockchain, !enableSubsidies);
 
     this.txFeeResolver = this.createTxFeeResolver();
