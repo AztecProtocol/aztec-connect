@@ -8,7 +8,7 @@ export class BridgeResolver {
     private bridgeConfigs: BridgeConfig[],
     private blockchain: Blockchain,
     // Added to bypass the call to the data provider contract as we encountered problems with it after sunset
-    private disableBridgeSubsidy = false
+    private disableBridgeSubsidy = false,
   ) {}
 
   // The aim here is to find a bridge config that corresponds to the provided bridge call data
