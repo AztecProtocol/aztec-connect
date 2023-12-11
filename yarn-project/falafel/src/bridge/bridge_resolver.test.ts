@@ -172,7 +172,7 @@ describe('Bridge Resolver', () => {
   });
 
   it('returns undefined bridge subsidy if contract has been disabled', async () => {
-    const localBridgeResolver = new BridgeResolver(bridgeConfigs, blockchain as any);
+    const localBridgeResolver = new BridgeResolver(bridgeConfigs, blockchain as any, true);
     const [cd] = generateSampleBridgeCallDatas();
     const result = await localBridgeResolver.getBridgeSubsidy(cd.callData);
     expect(blockchain.getBridgeSubsidy).toHaveBeenCalledTimes(0);
