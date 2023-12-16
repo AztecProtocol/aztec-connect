@@ -8,7 +8,7 @@ import { TxFeeResolver } from '../tx_fee_resolver/index.js';
 import { jest } from '@jest/globals';
 import { BridgeStatsQueryHandler } from './bridge_stats_query.js';
 
-jest.useFakeTimers();
+jest.useFakeTimers({ doNotFake: ['performance'] });
 
 type Mockify<T> = {
   [P in keyof T]: ReturnType<typeof jest.fn>;
