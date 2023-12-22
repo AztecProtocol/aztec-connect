@@ -32,7 +32,7 @@
     "rootDir": "./src"
   },
   "dependencies": {
-    "@aztec/barretenberg": "workspace:^",
+    "@aztec/barretenberg": "2.0.0",
     "@aztec/blockchain": "workspace:^",
     "@aztec/halloumi": "workspace:^",
     "@koa/cors": "^3.3.0",
