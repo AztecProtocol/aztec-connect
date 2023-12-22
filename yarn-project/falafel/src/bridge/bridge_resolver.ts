@@ -4,7 +4,12 @@ import { BridgeCallData } from '@aztec/barretenberg/bridge_call_data';
 import { BridgeConfig } from '@aztec/barretenberg/rollup_provider';
 
 export class BridgeResolver {
-  constructor(private bridgeConfigs: BridgeConfig[], private blockchain: Blockchain) {}
+  constructor(
+    private bridgeConfigs: BridgeConfig[],
+    private blockchain: Blockchain,
+    // Added to bypass the call to the data provider contract as we encountered problems with it after sunset
+    private disableBridgeSubsidy = false,
+  ) {}
 
   // The aim here is to find a bridge config that corresponds to the provided bridge call data
   // We match on the bridge id exactly and where all bridge call data assets exist
@@ -27,6 +32,11 @@ export class BridgeResolver {
   }
 
   public async getBridgeSubsidy(bridgeCallData: bigint) {
+    // If the calls to the data provider have been disabled then just return undefined
+    // This is handled upstream
+    if (this.disableBridgeSubsidy) {
+      return Promise.resolve(undefined);
+    }
     return await this.blockchain.getBridgeSubsidy(bridgeCallData);
   }
 
