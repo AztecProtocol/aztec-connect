@@ -54,7 +54,7 @@
     "reflect-metadata": "^0.1.13",
     "request-ip": "^2.1.3",
     "source-map-support": "^0.5.21",
-    "sqlite3": "^5.0.9",
+    "sqlite3": "^5.1.5",
     "typeorm": "^0.3.10"
   },
   "devDependencies": {
