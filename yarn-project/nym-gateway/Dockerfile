@@ -1,4 +1,4 @@
-FROM node:18 AS builder
+FROM node:20.0-bullseye-slim AS builder
 
 WORKDIR /usr/src/nym-gateway
 COPY . .
@@ -6,7 +6,7 @@ COPY . .
 RUN yarn install
 RUN yarn build
 
-FROM node:18
+FROM node:20.0-bullseye-slim
 
 WORKDIR /usr/src/nym-gateway
 
