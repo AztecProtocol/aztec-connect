@@ -6,7 +6,7 @@ import { BridgeResolver } from '../bridge/index.js';
 import { TxFeeResolver } from './index.js';
 import { jest } from '@jest/globals';
 
-jest.useFakeTimers();
+jest.useFakeTimers({ doNotFake: ['performance'] });
 
 type Mockify<T> = {
   [P in keyof T]: jest.Mock;

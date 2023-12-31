@@ -21,6 +21,7 @@ export FEE_GAS_PRICE_MULTIPLIER=0.01
 export FEE_PAYING_ASSET_IDS=0,1
 export PROVERLESS=${PROVERLESS:-true}
 export INITIAL_RUNTIME_CONFIG_PATH=${INITIAL_RUNTIME_CONFIG_PATH:-"./config/e2e_test_initial_config.json"}
+export ENABLE_SUBSIDIES=true
 
 # Export contract addresses.
 . ./scripts/export_addresses.sh
