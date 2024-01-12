@@ -29,7 +29,7 @@
   },
   "dependencies": {
     "@aztec/barretenberg": "workspace:^",
-    "@koa/cors": "^3.3.0",
+    "@koa/cors": "^5.0.0",
     "bn.js": "^5.0.0",
     "koa": "^2.7.0",
     "koa-compress": "^5.1.0",
