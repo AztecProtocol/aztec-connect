@@ -383,10 +383,10 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["levelup", "npm:5.1.1"],\
             ["memdown", "npm:6.1.1"],\
             ["serve", "npm:14.0.1"],\
-            ["sqlite3", "virtual:9fe0621c2f7452e546afb7407263191bb0ff23335513d4fd321b647e96c783bd3533ee8c741b409ee3ca4a469ab9f9512eb07ca312f25e666f781e44aabf80c5#npm:5.0.9"],\
+            ["sqlite3", "virtual:c7f26350c8c8beb924b8ca9a8fd7c8fcef506682d6c393b40a750aee91a258cbcbb97f8423c1d1910d00636820d95f0f8b054ae3520389877b4a5a5b23a76217#npm:5.0.9"],\
             ["supports-color", "npm:7.2.0"],\
             ["tslib", "npm:2.4.0"],\
-            ["typeorm", "virtual:9fe0621c2f7452e546afb7407263191bb0ff23335513d4fd321b647e96c783bd3533ee8c741b409ee3ca4a469ab9f9512eb07ca312f25e666f781e44aabf80c5#npm:0.3.10"]\
+            ["typeorm", "virtual:c7f26350c8c8beb924b8ca9a8fd7c8fcef506682d6c393b40a750aee91a258cbcbb97f8423c1d1910d00636820d95f0f8b054ae3520389877b4a5a5b23a76217#npm:0.3.10"]\
           ],\
           "linkType": "HARD"\
         }],\
@@ -423,7 +423,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["path-browserify", "npm:1.0.1"],\
             ["resolve-typescript-plugin", "virtual:9fe0621c2f7452e546afb7407263191bb0ff23335513d4fd321b647e96c783bd3533ee8c741b409ee3ca4a469ab9f9512eb07ca312f25e666f781e44aabf80c5#npm:1.2.0"],\
             ["serve", "npm:14.0.1"],\
-            ["sqlite3", "virtual:9fe0621c2f7452e546afb7407263191bb0ff23335513d4fd321b647e96c783bd3533ee8c741b409ee3ca4a469ab9f9512eb07ca312f25e666f781e44aabf80c5#npm:5.0.9"],\
+            ["sqlite3", "virtual:9fe0621c2f7452e546afb7407263191bb0ff23335513d4fd321b647e96c783bd3533ee8c741b409ee3ca4a469ab9f9512eb07ca312f25e666f781e44aabf80c5#npm:5.1.6"],\
             ["stream-browserify", "npm:3.0.0"],\
             ["string_decoder", "npm:1.3.0"],\
             ["supports-color", "npm:7.2.0"],\
@@ -11770,7 +11770,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["reflect-metadata", "npm:0.1.13"],\
             ["request-ip", "npm:2.2.0"],\
             ["source-map-support", "npm:0.5.21"],\
-            ["sqlite3", "virtual:9fe0621c2f7452e546afb7407263191bb0ff23335513d4fd321b647e96c783bd3533ee8c741b409ee3ca4a469ab9f9512eb07ca312f25e666f781e44aabf80c5#npm:5.0.9"],\
+            ["sqlite3", "virtual:9fe0621c2f7452e546afb7407263191bb0ff23335513d4fd321b647e96c783bd3533ee8c741b409ee3ca4a469ab9f9512eb07ca312f25e666f781e44aabf80c5#npm:5.1.6"],\
             ["ts-jest", "virtual:4cf42c2f2a8aa147d524c15c0290174d77a2062937f0c22441901ac61d50212062460a38e714456279cdb4fab155b3b1d12acfb24cd6bb68fcc1837e921b5557#npm:28.0.7"],\
             ["ts-node", "virtual:4cf42c2f2a8aa147d524c15c0290174d77a2062937f0c22441901ac61d50212062460a38e714456279cdb4fab155b3b1d12acfb24cd6bb68fcc1837e921b5557#npm:10.9.1"],\
             ["tsc-watch", "virtual:e35cb2f9a33ef1b8aada102e2350ccc0551c137001f6014fc1f11d4a3ec40651db24890427c255d134f29987a3e5475186f25e17bc3995d86758303b9bd18a6a#npm:5.0.3"],\
@@ -14679,7 +14679,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["koa-router", "npm:7.4.0"],\
             ["log-timestamp", "npm:0.3.0"],\
             ["promise-readable", "npm:5.0.4"],\
-            ["sqlite3", "virtual:504f930c7708850465a18c98db5a19cd01fdb6565b0b250f8254f90f1997dd196249ca8f34c528b264cf75b8c2e850901269ef77be3d9d2306556342311415d2#npm:5.1.1"],\
+            ["sqlite3", "virtual:9fe0621c2f7452e546afb7407263191bb0ff23335513d4fd321b647e96c783bd3533ee8c741b409ee3ca4a469ab9f9512eb07ca312f25e666f781e44aabf80c5#npm:5.1.6"],\
             ["ts-jest", "virtual:504f930c7708850465a18c98db5a19cd01fdb6565b0b250f8254f90f1997dd196249ca8f34c528b264cf75b8c2e850901269ef77be3d9d2306556342311415d2#npm:28.0.8"],\
             ["ts-node", "virtual:4cf42c2f2a8aa147d524c15c0290174d77a2062937f0c22441901ac61d50212062460a38e714456279cdb4fab155b3b1d12acfb24cd6bb68fcc1837e921b5557#npm:10.9.1"],\
             ["tsc-watch", "virtual:e35cb2f9a33ef1b8aada102e2350ccc0551c137001f6014fc1f11d4a3ec40651db24890427c255d134f29987a3e5475186f25e17bc3995d86758303b9bd18a6a#npm:5.0.3"],\
@@ -18221,23 +18221,23 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
       ]],\
       ["sqlite3", [\
         ["npm:5.0.9", {\
-          "packageLocation": "./.yarn/unplugged/sqlite3-virtual-583561abb2/node_modules/sqlite3/",\
+          "packageLocation": "./.yarn/unplugged/sqlite3-virtual-fd911e666c/node_modules/sqlite3/",\
           "packageDependencies": [\
             ["sqlite3", "npm:5.0.9"]\
           ],\
           "linkType": "SOFT"\
         }],\
-        ["npm:5.1.1", {\
-          "packageLocation": "./.yarn/unplugged/sqlite3-virtual-c3e9bf86fe/node_modules/sqlite3/",\
+        ["npm:5.1.6", {\
+          "packageLocation": "./.yarn/unplugged/sqlite3-virtual-595228ae9e/node_modules/sqlite3/",\
           "packageDependencies": [\
-            ["sqlite3", "npm:5.1.1"]\
+            ["sqlite3", "npm:5.1.6"]\
           ],\
           "linkType": "SOFT"\
         }],\
-        ["virtual:504f930c7708850465a18c98db5a19cd01fdb6565b0b250f8254f90f1997dd196249ca8f34c528b264cf75b8c2e850901269ef77be3d9d2306556342311415d2#npm:5.1.1", {\
-          "packageLocation": "./.yarn/unplugged/sqlite3-virtual-c3e9bf86fe/node_modules/sqlite3/",\
+        ["virtual:9fe0621c2f7452e546afb7407263191bb0ff23335513d4fd321b647e96c783bd3533ee8c741b409ee3ca4a469ab9f9512eb07ca312f25e666f781e44aabf80c5#npm:5.1.6", {\
+          "packageLocation": "./.yarn/unplugged/sqlite3-virtual-595228ae9e/node_modules/sqlite3/",\
           "packageDependencies": [\
-            ["sqlite3", "virtual:504f930c7708850465a18c98db5a19cd01fdb6565b0b250f8254f90f1997dd196249ca8f34c528b264cf75b8c2e850901269ef77be3d9d2306556342311415d2#npm:5.1.1"],\
+            ["sqlite3", "virtual:9fe0621c2f7452e546afb7407263191bb0ff23335513d4fd321b647e96c783bd3533ee8c741b409ee3ca4a469ab9f9512eb07ca312f25e666f781e44aabf80c5#npm:5.1.6"],\
             ["@mapbox/node-pre-gyp", "npm:1.0.9"],\
             ["@types/node-gyp", null],\
             ["node-addon-api", "npm:4.3.0"],\
@@ -18249,10 +18249,10 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           ],\
           "linkType": "HARD"\
         }],\
-        ["virtual:9fe0621c2f7452e546afb7407263191bb0ff23335513d4fd321b647e96c783bd3533ee8c741b409ee3ca4a469ab9f9512eb07ca312f25e666f781e44aabf80c5#npm:5.0.9", {\
-          "packageLocation": "./.yarn/unplugged/sqlite3-virtual-583561abb2/node_modules/sqlite3/",\
+        ["virtual:c7f26350c8c8beb924b8ca9a8fd7c8fcef506682d6c393b40a750aee91a258cbcbb97f8423c1d1910d00636820d95f0f8b054ae3520389877b4a5a5b23a76217#npm:5.0.9", {\
+          "packageLocation": "./.yarn/unplugged/sqlite3-virtual-fd911e666c/node_modules/sqlite3/",\
           "packageDependencies": [\
-            ["sqlite3", "virtual:9fe0621c2f7452e546afb7407263191bb0ff23335513d4fd321b647e96c783bd3533ee8c741b409ee3ca4a469ab9f9512eb07ca312f25e666f781e44aabf80c5#npm:5.0.9"],\
+            ["sqlite3", "virtual:c7f26350c8c8beb924b8ca9a8fd7c8fcef506682d6c393b40a750aee91a258cbcbb97f8423c1d1910d00636820d95f0f8b054ae3520389877b4a5a5b23a76217#npm:5.0.9"],\
             ["@mapbox/node-pre-gyp", "npm:1.0.9"],\
             ["@types/node-gyp", null],\
             ["node-addon-api", "npm:4.3.0"],\
@@ -19663,7 +19663,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["reflect-metadata", "npm:0.1.13"],\
             ["sha.js", "npm:2.4.11"],\
             ["sql.js", null],\
-            ["sqlite3", "virtual:9fe0621c2f7452e546afb7407263191bb0ff23335513d4fd321b647e96c783bd3533ee8c741b409ee3ca4a469ab9f9512eb07ca312f25e666f781e44aabf80c5#npm:5.0.9"],\
+            ["sqlite3", "virtual:9fe0621c2f7452e546afb7407263191bb0ff23335513d4fd321b647e96c783bd3533ee8c741b409ee3ca4a469ab9f9512eb07ca312f25e666f781e44aabf80c5#npm:5.1.6"],\
             ["ts-node", "virtual:4cf42c2f2a8aa147d524c15c0290174d77a2062937f0c22441901ac61d50212062460a38e714456279cdb4fab155b3b1d12acfb24cd6bb68fcc1837e921b5557#npm:10.9.1"],\
             ["tslib", "npm:2.4.0"],\
             ["typeorm-aurora-data-api-driver", null],\
@@ -19757,7 +19757,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["reflect-metadata", "npm:0.1.13"],\
             ["sha.js", "npm:2.4.11"],\
             ["sql.js", null],\
-            ["sqlite3", "virtual:504f930c7708850465a18c98db5a19cd01fdb6565b0b250f8254f90f1997dd196249ca8f34c528b264cf75b8c2e850901269ef77be3d9d2306556342311415d2#npm:5.1.1"],\
+            ["sqlite3", "virtual:9fe0621c2f7452e546afb7407263191bb0ff23335513d4fd321b647e96c783bd3533ee8c741b409ee3ca4a469ab9f9512eb07ca312f25e666f781e44aabf80c5#npm:5.1.6"],\
             ["ts-node", "virtual:4cf42c2f2a8aa147d524c15c0290174d77a2062937f0c22441901ac61d50212062460a38e714456279cdb4fab155b3b1d12acfb24cd6bb68fcc1837e921b5557#npm:10.9.1"],\
             ["tslib", "npm:2.4.0"],\
             ["typeorm-aurora-data-api-driver", null],\
@@ -19851,7 +19851,101 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["reflect-metadata", "npm:0.1.13"],\
             ["sha.js", "npm:2.4.11"],\
             ["sql.js", null],\
-            ["sqlite3", "virtual:9fe0621c2f7452e546afb7407263191bb0ff23335513d4fd321b647e96c783bd3533ee8c741b409ee3ca4a469ab9f9512eb07ca312f25e666f781e44aabf80c5#npm:5.0.9"],\
+            ["sqlite3", "virtual:9fe0621c2f7452e546afb7407263191bb0ff23335513d4fd321b647e96c783bd3533ee8c741b409ee3ca4a469ab9f9512eb07ca312f25e666f781e44aabf80c5#npm:5.1.6"],\
+            ["ts-node", null],\
+            ["tslib", "npm:2.4.0"],\
+            ["typeorm-aurora-data-api-driver", null],\
+            ["uuid", "npm:8.3.2"],\
+            ["xml2js", "npm:0.4.23"],\
+            ["yargs", "npm:17.5.1"]\
+          ],\
+          "packagePeers": [\
+            "@google-cloud/spanner",\
+            "@sap/hana-client",\
+            "@types/better-sqlite3",\
+            "@types/google-cloud__spanner",\
+            "@types/hdb-pool",\
+            "@types/ioredis",\
+            "@types/mongodb",\
+            "@types/mssql",\
+            "@types/mysql2",\
+            "@types/oracledb",\
+            "@types/pg-native",\
+            "@types/pg-query-stream",\
+            "@types/pg",\
+            "@types/redis",\
+            "@types/sap__hana-client",\
+            "@types/sql.js",\
+            "@types/sqlite3",\
+            "@types/ts-node",\
+            "@types/typeorm-aurora-data-api-driver",\
+            "better-sqlite3",\
+            "hdb-pool",\
+            "ioredis",\
+            "mongodb",\
+            "mssql",\
+            "mysql2",\
+            "oracledb",\
+            "pg-native",\
+            "pg-query-stream",\
+            "pg",\
+            "redis",\
+            "sql.js",\
+            "sqlite3",\
+            "ts-node",\
+            "typeorm-aurora-data-api-driver"\
+          ],\
+          "linkType": "HARD"\
+        }],\
+        ["virtual:c7f26350c8c8beb924b8ca9a8fd7c8fcef506682d6c393b40a750aee91a258cbcbb97f8423c1d1910d00636820d95f0f8b054ae3520389877b4a5a5b23a76217#npm:0.3.10", {\
+          "packageLocation": "./.yarn/__virtual__/typeorm-virtual-5b53da4531/0/cache/typeorm-npm-0.3.10-4667857f33-8a4ce43b42.zip/node_modules/typeorm/",\
+          "packageDependencies": [\
+            ["typeorm", "virtual:c7f26350c8c8beb924b8ca9a8fd7c8fcef506682d6c393b40a750aee91a258cbcbb97f8423c1d1910d00636820d95f0f8b054ae3520389877b4a5a5b23a76217#npm:0.3.10"],\
+            ["@google-cloud/spanner", null],\
+            ["@sap/hana-client", null],\
+            ["@sqltools/formatter", "npm:1.2.3"],\
+            ["@types/better-sqlite3", null],\
+            ["@types/google-cloud__spanner", null],\
+            ["@types/hdb-pool", null],\
+            ["@types/ioredis", null],\
+            ["@types/mongodb", null],\
+            ["@types/mssql", null],\
+            ["@types/mysql2", null],\
+            ["@types/oracledb", null],\
+            ["@types/pg", null],\
+            ["@types/pg-native", null],\
+            ["@types/pg-query-stream", null],\
+            ["@types/redis", null],\
+            ["@types/sap__hana-client", null],\
+            ["@types/sql.js", null],\
+            ["@types/sqlite3", null],\
+            ["@types/ts-node", null],\
+            ["@types/typeorm-aurora-data-api-driver", null],\
+            ["app-root-path", "npm:3.0.0"],\
+            ["better-sqlite3", null],\
+            ["buffer", "npm:6.0.3"],\
+            ["chalk", "npm:4.1.2"],\
+            ["cli-highlight", "npm:2.1.11"],\
+            ["date-fns", "npm:2.28.0"],\
+            ["debug", "virtual:e9a07d9e500f265638a80b6a2d60a63d2c1402dd6a58d2f05af9d82e52be33df29a16291c32b33b9e23f1a0efea054868bd3312893433fe0583e4dba376fe47e#npm:4.3.4"],\
+            ["dotenv", "npm:16.0.1"],\
+            ["glob", "npm:7.2.3"],\
+            ["hdb-pool", null],\
+            ["ioredis", null],\
+            ["js-yaml", "npm:4.1.0"],\
+            ["mkdirp", "npm:1.0.4"],\
+            ["mongodb", null],\
+            ["mssql", null],\
+            ["mysql2", null],\
+            ["oracledb", null],\
+            ["pg", null],\
+            ["pg-native", null],\
+            ["pg-query-stream", null],\
+            ["redis", null],\
+            ["reflect-metadata", "npm:0.1.13"],\
+            ["sha.js", "npm:2.4.11"],\
+            ["sql.js", null],\
+            ["sqlite3", "virtual:c7f26350c8c8beb924b8ca9a8fd7c8fcef506682d6c393b40a750aee91a258cbcbb97f8423c1d1910d00636820d95f0f8b054ae3520389877b4a5a5b23a76217#npm:5.0.9"],\
             ["ts-node", null],\
             ["tslib", "npm:2.4.0"],\
             ["typeorm-aurora-data-api-driver", null],\

@@ -42,7 +42,7 @@
     "koa-router": "^7.4.0",
     "log-timestamp": "^0.3.0",
     "promise-readable": "^5.0.4",
-    "sqlite3": "^5.0.8",
+    "sqlite3": "^5.1.5",
     "typeorm": "^0.3.10"
   },
   "devDependencies": {
