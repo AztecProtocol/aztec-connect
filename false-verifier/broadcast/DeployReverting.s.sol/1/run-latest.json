@@ -1,0 +1,53 @@
+{
+  "transactions": [
+    {
+      "hash": "0xd9326c01064fbb58a2aa9e50934a8c55ef72b15cb5c5d643ac3f1acf0fb504f2",
+      "transactionType": "CREATE",
+      "contractName": "AlwaysReverting",
+      "contractAddress": "0xc0CFF28c45dA7d36B8cD1e3dCd6451e812CA30d1",
+      "function": null,
+      "arguments": null,
+      "transaction": {
+        "type": "0x02",
+        "from": "0xa15562aa99035eadf8f4992a31ac90958d5b5ddf",
+        "gas": "0x185da",
+        "value": "0x0",
+        "data": "0x6080604052348015600f57600080fd5b50606c80601d6000396000f3fe6080604052348015600f57600080fd5b5060405162461bcd60e51b8152602060048201526000602482015260440160405180910390fdfea264697066735822122087c7aecfa44f50a4b2d5cee19431007844c2d1f9e882d5456d8e8e68b8b4d32764736f6c63430008150033",
+        "nonce": "0x2",
+        "accessList": []
+      },
+      "additionalContracts": [],
+      "isFixedGasLimit": false
+    }
+  ],
+  "receipts": [
+    {
+      "transactionHash": "0xd9326c01064fbb58a2aa9e50934a8c55ef72b15cb5c5d643ac3f1acf0fb504f2",
+      "transactionIndex": "0x24",
+      "blockHash": "0xbab47cb9065dd2ade9f1038e5c2bf6f2a88801910155b155d8a1596ef1cb4084",
+      "blockNumber": "0x121eb58",
+      "from": "0xa15562aa99035EaDf8F4992A31AC90958d5B5Ddf",
+      "to": null,
+      "cumulativeGasUsed": "0x3132e2",
+      "gasUsed": "0x12bed",
+      "contractAddress": "0xc0CFF28c45dA7d36B8cD1e3dCd6451e812CA30d1",
+      "logs": [],
+      "status": "0x1",
+      "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "type": "0x2",
+      "effectiveGasPrice": "0x45d9833c5"
+    }
+  ],
+  "libraries": [],
+  "pending": [],
+  "returns": {
+    "fv": {
+      "internal_type": "contract AlwaysReverting",
+      "value": "0xc0CFF28c45dA7d36B8cD1e3dCd6451e812CA30d1"
+    }
+  },
+  "timestamp": 1705175274,
+  "chain": 1,
+  "multi": false,
+  "commit": "ed8cde642"
+}
