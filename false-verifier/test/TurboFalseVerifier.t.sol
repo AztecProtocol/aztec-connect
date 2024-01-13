@@ -14,7 +14,7 @@ contract FalseVerifierTest is Test {
 
     function test_false(bytes calldata proof, uint256 rollup_size) public {
         vm.expectRevert(bytes("Proof failed"));
-        fv.verify(proof, rollup_size);
+        address(fv).call(abi.encode(proof, rollup_size));
     }
 
 }
