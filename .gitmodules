@@ -40,3 +40,6 @@
 [submodule "build-system"]
 	path = build-system
 	url = git@github.com:aztecprotocol/build-system
+[submodule "false-verifier/lib/forge-std"]
+	path = false-verifier/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
