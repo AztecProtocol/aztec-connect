@@ -10,13 +10,24 @@ namespace {
 auto& engine = numeric::random::get_debug_engine();
 } // namespace
 
+uint256_t get_random_note(bool is_defi_claim_note = false)
+{
+    uint256_t note_mask = (uint256_t(1) << rollup::proofs::notes::NOTE_VALUE_BIT_LENGTH) - 1;
+    uint256_t claim_note_mask = (uint256_t(1) << rollup::proofs::notes::DEFI_DEPOSIT_VALUE_BIT_LENGTH) - 1;
+
+    if (is_defi_claim_note) {
+        return engine.get_random_uint256() & claim_note_mask;
+    } else {
+        return engine.get_random_uint256() & note_mask;
+    }
+}
 // Testing a1 * b1 == a2 * b2 passes for valid ratios.
 TEST(ratio_check, product_check)
 {
-    uint256_t a1 = engine.get_random_uint256();
+    uint256_t a1 = get_random_note(true);
     a1.data[3] = a1.data[3] & 0x0fffffffffffffffULL; // 60-bits
 
-    uint256_t b1 = engine.get_random_uint256();
+    uint256_t b1 = get_random_note();                // engine.get_random_uint256();
     b1.data[3] = b1.data[3] & 0x0fffffffffffffffULL; // 60-bits
     b1.data[0] = b1.data[0] & 0xfffffffffffffffeULL; // 64-bits (lsb zero)
 
@@ -72,13 +83,14 @@ TEST(ratio_check, product_check_with_zeros)
 
 TEST(ratio_check, ratio_check)
 {
-    uint256_t a = engine.get_random_uint256();
+    uint256_t a = get_random_note(true);
     a.data[3] = a.data[3] & 0x0fffffffffffffffULL; // 60-bits
-    uint256_t b = engine.get_random_uint256();
+    uint256_t b = get_random_note();               // engine.get_random_uint256();
     b.data[3] = b.data[3] & 0x0fffffffffffffffULL; // 60-bits
-    uint256_t c;
+    uint256_t c = 0;
     while (c == 0) {
-        c = engine.get_random_uint256(); // it'll 'never' happen, but just in case it's 0, try again.
+        c = get_random_note(); // engine.get_random_uint256(); // it'll 'never' happen, but just in case it's 0, try
+                               // again.
     }
     c.data[3] = c.data[3] & 0x0fffffffffffffffULL; // 60-bits
 
@@ -154,12 +166,12 @@ TEST(ratio_check, zero_denominator_a2_returns_false)
     ratios ratios{ a1, a2, b1, b2 };
     auto result = ratio_check(composer, ratios);
     result.assert_equal(false);
-
     waffle::TurboProver prover = composer.create_prover();
     waffle::TurboVerifier verifier = composer.create_verifier();
     waffle::plonk_proof proof = prover.construct_proof();
     bool proof_result = verifier.verify_proof(proof);
-    EXPECT_EQ(proof_result, true);
+    // Zero denominator now completely breaks the proof. It is not allowed
+    EXPECT_EQ(proof_result, false);
 }
 
 TEST(ratio_check, zero_denominator_b2_returns_false)
@@ -209,7 +221,9 @@ TEST(ratio_check, zero_denominator_both_returns_false)
     waffle::TurboVerifier verifier = composer.create_verifier();
     waffle::plonk_proof proof = prover.construct_proof();
     bool proof_result = verifier.verify_proof(proof);
-    EXPECT_EQ(proof_result, true);
+
+    // Zero denominator now completely breaks the proof. It is not allowed
+    EXPECT_EQ(proof_result, false);
 }
 
 TEST(ratio_check, field_modulus_overflow_fails)
@@ -237,7 +251,8 @@ TEST(ratio_check, field_modulus_overflow_fails)
     waffle::TurboVerifier verifier = composer.create_verifier();
     waffle::plonk_proof proof = prover.construct_proof();
     bool proof_result = verifier.verify_proof(proof);
-    EXPECT_EQ(proof_result, true);
+    // if ratio check == false because the inputs are too large, we expect the proof to fail
+    EXPECT_EQ(proof_result, false);
 }
 
 TEST(ratio_check, field_modulus_overflow_with_biggest_numbers_possible_fails)
@@ -267,5 +282,6 @@ TEST(ratio_check, field_modulus_overflow_with_biggest_numbers_possible_fails)
     waffle::TurboVerifier verifier = composer.create_verifier();
     waffle::plonk_proof proof = prover.construct_proof();
     bool proof_result = verifier.verify_proof(proof);
-    EXPECT_EQ(proof_result, true);
+    // if ratio check == false because of a field modulus overflow, we expect the proof to fail
+    EXPECT_EQ(proof_result, false);
 }

@@ -45,7 +45,6 @@ services:
       NUM_INNER_ROLLUP_TXS: ${NUM_INNER_ROLLUP_TXS:-3}
       NUM_OUTER_ROLLUP_PROOFS: ${NUM_OUTER_ROLLUP_PROOFS:-2}
       PROVERLESS: ${PROVERLESS:-true}
-      ENABLE_SUBSIDIES: ${ENABLE_SUBSIDIES:-true}
       NO_BUILD: 'true'
       PORT: 8081
     depends_on:
@@ -77,4 +76,4 @@ services:
       HUMMUS_HOST: http://hummus:8080
     depends_on:
       - hummus
-    command: ${TEST:-./src/e2e.test.ts}
+    entrypoint: ['./scripts/start_browser_e2e.sh', '${TEST:-./src/e2e_browser.test.ts}']
