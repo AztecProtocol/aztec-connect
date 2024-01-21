@@ -6572,10 +6572,10 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
         }]\
       ]],\
       ["@types/validator", [\
-        ["npm:13.0.0", {\
-          "packageLocation": "./.yarn/cache/@types-validator-npm-13.0.0-3945abde2e-7001e96e66.zip/node_modules/@types/validator/",\
+        ["npm:13.7.14", {\
+          "packageLocation": "./.yarn/cache/@types-validator-npm-13.7.14-4ec2b734b2-51bd82cd08.zip/node_modules/@types/validator/",\
           "packageDependencies": [\
-            ["@types/validator", "npm:13.0.0"]\
+            ["@types/validator", "npm:13.7.14"]\
           ],\
           "linkType": "HARD"\
         }]\
@@ -9529,14 +9529,13 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
         }]\
       ]],\
       ["class-validator", [\
-        ["npm:0.12.2", {\
-          "packageLocation": "./.yarn/cache/class-validator-npm-0.12.2-48b8b644ff-37a806f627.zip/node_modules/class-validator/",\
+        ["npm:0.14.0", {\
+          "packageLocation": "./.yarn/cache/class-validator-npm-0.14.0-b600d5fe72-f62e4a0ad2.zip/node_modules/class-validator/",\
           "packageDependencies": [\
-            ["class-validator", "npm:0.12.2"],\
-            ["@types/validator", "npm:13.0.0"],\
-            ["google-libphonenumber", "npm:3.2.29"],\
-            ["tslib", "npm:2.4.0"],\
-            ["validator", "npm:13.0.0"]\
+            ["class-validator", "npm:0.14.0"],\
+            ["@types/validator", "npm:13.7.14"],\
+            ["libphonenumber-js", "npm:1.10.26"],\
+            ["validator", "npm:13.9.0"]\
           ],\
           "linkType": "HARD"\
         }]\
@@ -11662,7 +11661,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["@types/source-map-support", "npm:0.5.4"],\
             ["async-mutex", "npm:0.2.6"],\
             ["bn.js", "npm:5.2.1"],\
-            ["class-validator", "npm:0.12.2"],\
+            ["class-validator", "npm:0.14.0"],\
             ["coinbase-pro", "npm:0.9.0"],\
             ["commander", "npm:9.4.0"],\
             ["fs-extra", "npm:9.0.1"],\
@@ -12319,15 +12318,6 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["ignore", "npm:5.2.0"],\
             ["merge2", "npm:1.4.1"],\
             ["slash", "npm:4.0.0"]\
-          ],\
-          "linkType": "HARD"\
-        }]\
-      ]],\
-      ["google-libphonenumber", [\
-        ["npm:3.2.29", {\
-          "packageLocation": "./.yarn/cache/google-libphonenumber-npm-3.2.29-5a8fed5bb7-42781ab622.zip/node_modules/google-libphonenumber/",\
-          "packageDependencies": [\
-            ["google-libphonenumber", "npm:3.2.29"]\
           ],\
           "linkType": "HARD"\
         }]\
@@ -14916,6 +14906,15 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["levn", "npm:0.4.1"],\
             ["prelude-ls", "npm:1.2.1"],\
             ["type-check", "npm:0.4.0"]\
+          ],\
+          "linkType": "HARD"\
+        }]\
+      ]],\
+      ["libphonenumber-js", [\
+        ["npm:1.10.26", {\
+          "packageLocation": "./.yarn/cache/libphonenumber-js-npm-1.10.26-d53d956578-125cbe60ea.zip/node_modules/libphonenumber-js/",\
+          "packageDependencies": [\
+            ["libphonenumber-js", "npm:1.10.26"]\
           ],\
           "linkType": "HARD"\
         }]\
@@ -20165,10 +20164,10 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
         }]\
       ]],\
       ["validator", [\
-        ["npm:13.0.0", {\
-          "packageLocation": "./.yarn/cache/validator-npm-13.0.0-657bea9dad-7b5df6d0ae.zip/node_modules/validator/",\
+        ["npm:13.9.0", {\
+          "packageLocation": "./.yarn/cache/validator-npm-13.9.0-54b07e9e81-e2c936f041.zip/node_modules/validator/",\
           "packageDependencies": [\
-            ["validator", "npm:13.0.0"]\
+            ["validator", "npm:13.9.0"]\
           ],\
           "linkType": "HARD"\
         }]\
