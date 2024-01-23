@@ -213,7 +213,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["@aztec/eslint-config", "workspace:eslint-config"],\
             ["@jest/globals", "npm:28.1.3"],\
             ["@jest/types", "npm:28.1.3"],\
-            ["@koa/cors", "npm:3.3.0"],\
+            ["@koa/cors", "npm:5.0.0"],\
             ["@rushstack/eslint-patch", "npm:1.1.4"],\
             ["@types/bn.js", "npm:4.11.6"],\
             ["@types/jest", "npm:28.1.6"],\
@@ -5702,10 +5702,10 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
         }]\
       ]],\
       ["@koa/cors", [\
-        ["npm:3.3.0", {\
-          "packageLocation": "./.yarn/cache/@koa-cors-npm-3.3.0-0564248a2f-bb49c680e0.zip/node_modules/@koa/cors/",\
+        ["npm:5.0.0", {\
+          "packageLocation": "./.yarn/cache/@koa-cors-npm-5.0.0-693911adf6-050701fb57.zip/node_modules/@koa/cors/",\
           "packageDependencies": [\
-            ["@koa/cors", "npm:3.3.0"],\
+            ["@koa/cors", "npm:5.0.0"],\
             ["vary", "npm:1.1.2"]\
           ],\
           "linkType": "HARD"\
@@ -12043,7 +12043,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["@aztec/halloumi", "workspace:halloumi"],\
             ["@jest/globals", "npm:28.1.3"],\
             ["@jest/types", "npm:28.1.3"],\
-            ["@koa/cors", "npm:3.3.0"],\
+            ["@koa/cors", "npm:5.0.0"],\
             ["@rushstack/eslint-patch", "npm:1.1.4"],\
             ["@types/bn.js", "npm:4.11.6"],\
             ["@types/debug", "npm:4.1.7"],\
@@ -15447,7 +15447,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["@aztec/barretenberg", "workspace:barretenberg.js"],\
             ["@aztec/blockchain", "workspace:blockchain"],\
             ["@aztec/eslint-config", "workspace:eslint-config"],\
-            ["@koa/cors", "npm:3.3.0"],\
+            ["@koa/cors", "npm:5.0.0"],\
             ["@rushstack/eslint-patch", "npm:1.1.4"],\
             ["@types/debug", "npm:4.1.7"],\
             ["@types/fs-extra", "npm:9.0.13"],\
