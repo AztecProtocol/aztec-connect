@@ -48,7 +48,7 @@
     "levelup": "^5.1.1",
     "memdown": "^6.1.1",
     "serve": "^14.0.1",
-    "sqlite3": "^5.0.9",
+    "sqlite3": "^5.1.5",
     "supports-color": "7.2.0",
     "tslib": "^2.4.0",
     "typeorm": "^0.3.10"
