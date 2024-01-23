@@ -38,7 +38,7 @@
     "@koa/cors": "^3.3.0",
     "async-mutex": "^0.2.6",
     "bn.js": "^5.0.0",
-    "class-validator": "^0.12.2",
+    "class-validator": "^0.14.0",
     "coinbase-pro": "^0.9.0",
     "commander": "^9.4.0",
     "fs-extra": "9.0.1",
