@@ -17881,7 +17881,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["@types/react-dom", "npm:18.0.6"],\
             ["react", "npm:18.2.0"],\
             ["react-dom", "virtual:3ab5e1aac1ccb251dc64fdaf39e5ba9ee1514e61346fae57870ad090de6cb82f1931ebe458ad7847a64074fbe7b2ce6175e410afc2f44c3a99a00215f7183566#npm:18.2.0"],\
-            ["ua-parser-js", "npm:1.0.2"]\
+            ["ua-parser-js", "npm:1.0.37"]\
           ],\
           "packagePeers": [\
             "@types/react-dom",\
@@ -20775,10 +20775,10 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
         }]\
       ]],\
       ["ua-parser-js", [\
-        ["npm:1.0.2", {\
-          "packageLocation": "./.yarn/cache/ua-parser-js-npm-1.0.2-c3376785e2-ff7f6d79a9.zip/node_modules/ua-parser-js/",\
+        ["npm:1.0.37", {\
+          "packageLocation": "./.yarn/cache/ua-parser-js-npm-1.0.37-b79655e1b5-4d481c720d.zip/node_modules/ua-parser-js/",\
           "packageDependencies": [\
-            ["ua-parser-js", "npm:1.0.2"]\
+            ["ua-parser-js", "npm:1.0.37"]\
           ],\
           "linkType": "HARD"\
         }]\
