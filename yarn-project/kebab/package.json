@@ -33,7 +33,7 @@
   "dependencies": {
     "@aztec/barretenberg": "workspace:^",
     "@aztec/blockchain": "workspace:^",
-    "@koa/cors": "^3.3.0",
+    "@koa/cors": "^5.0.0",
     "fs-extra": "^10.1.0",
     "json-normalize": "^1.1.2",
     "koa": "^2.13.4",
@@ -42,7 +42,7 @@
     "koa-router": "^7.4.0",
     "log-timestamp": "^0.3.0",
     "promise-readable": "^5.0.4",
-    "sqlite3": "^5.0.8",
+    "sqlite3": "^5.1.5",
     "typeorm": "^0.3.10"
   },
   "devDependencies": {
