@@ -290,7 +290,7 @@ __metadata:
     buffer: ^6.0.3
     copy-webpack-plugin: ^11.0.0
     detect-node: ^2.1.0
-    dexie: 3.0.1
+    dexie: 3.2.2
     events: ^3.3.0
     fake-indexeddb: ^3.0.2
     html-webpack-plugin: ^5.5.0
@@ -8281,6 +8281,13 @@ __metadata:
   version: 3.0.1
   resolution: "dexie@npm:3.0.1"
   checksum: 71b0523a177370b4e782f2c5954935478e7c0bfd5e426b35495df6e3178838fdb304256d943c810443101c686af7726532befdf85ba017e2082833aea1c13d4b
+  languageName: node
+  linkType: hard
+
+"dexie@npm:3.2.2":
+  version: 3.2.2
+  resolution: "dexie@npm:3.2.2"
+  checksum: 7a21079f7ab139ebd724a009917f9293f2b01c341e2a3cd51d2455dda4d4e78b9ca7de0373e963108395cf1921ce7f6556cac967c1e957005a3c7c11794ceccf
   languageName: node
   linkType: hard
 

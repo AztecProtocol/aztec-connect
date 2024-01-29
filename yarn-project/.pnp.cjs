@@ -410,7 +410,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["buffer", "npm:6.0.3"],\
             ["copy-webpack-plugin", "virtual:9fe0621c2f7452e546afb7407263191bb0ff23335513d4fd321b647e96c783bd3533ee8c741b409ee3ca4a469ab9f9512eb07ca312f25e666f781e44aabf80c5#npm:11.0.0"],\
             ["detect-node", "npm:2.1.0"],\
-            ["dexie", "npm:3.0.1"],\
+            ["dexie", "npm:3.2.2"],\
             ["events", "npm:3.3.0"],\
             ["fake-indexeddb", "npm:3.1.8"],\
             ["html-webpack-plugin", "virtual:9fe0621c2f7452e546afb7407263191bb0ff23335513d4fd321b647e96c783bd3533ee8c741b409ee3ca4a469ab9f9512eb07ca312f25e666f781e44aabf80c5#npm:5.5.0"],\
@@ -10984,6 +10984,13 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           "packageLocation": "./.yarn/cache/dexie-npm-3.0.1-505763b128-71b0523a17.zip/node_modules/dexie/",\
           "packageDependencies": [\
             ["dexie", "npm:3.0.1"]\
+          ],\
+          "linkType": "HARD"\
+        }],\
+        ["npm:3.2.2", {\
+          "packageLocation": "./.yarn/cache/dexie-npm-3.2.2-1acd619fbb-7a21079f7a.zip/node_modules/dexie/",\
+          "packageDependencies": [\
+            ["dexie", "npm:3.2.2"]\
           ],\
           "linkType": "HARD"\
         }]\
