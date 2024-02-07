@@ -290,7 +290,12 @@ recursion_output<bn254> rollup_circuit(Composer& composer,
     auto bridge_call_datas = map(rollup.bridge_call_datas, [&](auto& bid) {
         return suint_ct(witness_ct(&composer, bid), DEFI_BRIDGE_CALL_DATA_BIT_LENGTH, "bridge_call_data");
     });
-    const auto recursive_manifest = Composer::create_unrolled_manifest(verification_keys[0]->num_public_inputs);
+
+    // We need a special manifest that includes pairing inputs from previous batch operations for all steps but the
+    // initial one
+    const auto recursive_manifest_step_0 = Composer::create_unrolled_manifest(verification_keys[0]->num_public_inputs);
+    const auto recursive_manifest_with_batching =
+        Composer::create_unrolled_manifest_for_batching(verification_keys[0]->num_public_inputs);
 
     const auto num_asset_ids = field_ct(witness_ct(&composer, rollup.num_asset_ids));
     auto asset_ids = map(rollup.asset_ids, [&](auto& aid) { return field_ct(witness_ct(&composer, aid)); });
@@ -332,12 +337,23 @@ recursion_output<bn254> rollup_circuit(Composer& composer,
         recursive_verification_key->validate_key_is_in_set(verification_keys);
 
         // Verify the inner proof.
-        recursion_output =
-            verify_proof<bn254, recursive_turbo_verifier_settings<bn254>>(&composer,
-                                                                          recursive_verification_key,
-                                                                          recursive_manifest,
-                                                                          waffle::plonk_proof{ rollup.txs[i] },
-                                                                          recursion_output);
+        if (i == 0) {
+            // First proof uses standard unrolled transcript
+            recursion_output =
+                verify_proof<bn254, recursive_turbo_verifier_settings<bn254>>(&composer,
+                                                                              recursive_verification_key,
+                                                                              recursive_manifest_step_0,
+                                                                              waffle::plonk_proof{ rollup.txs[i] },
+                                                                              recursion_output);
+        } else {
+            // The following transcripts embed previous recursion outputs to ensure batching isn't exploitable
+            recursion_output =
+                verify_proof<bn254, recursive_turbo_verifier_settings<bn254>>(&composer,
+                                                                              recursive_verification_key,
+                                                                              recursive_manifest_with_batching,
+                                                                              waffle::plonk_proof{ rollup.txs[i] },
+                                                                              recursion_output);
+        }
 
         auto is_real = num_txs > uint32_ct(&composer, i);
         auto& public_inputs = recursion_output.public_inputs;
