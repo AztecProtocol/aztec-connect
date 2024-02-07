@@ -53,7 +53,6 @@ template <typename Store> class WorldState {
         for (uint32_t i = 0; i < din.size(); i++) {
             defi_tree.update_element(start_index + i, din[i].commit());
         }
-
     }
 
     void nullify(uint256_t index) { null_tree.update_element(index, { 1 }); }
