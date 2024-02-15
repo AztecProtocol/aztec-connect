@@ -211,7 +211,7 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
   // reason we want to be inserting chunks of 128 leaves when possible. At genesis, the Aztec Connect system didn't
   // start from 0 rollup blocks/leaves but instead from `numInitialSubtreeRoots` leaves (in Aztec Connect production
   // this number is 73). These initial blocks contain aliases from the old system. We expect the SDK to request only
-  // `firstTake` amount of blocks upon sync initialization which will ensure that the inefficent insertion happens only
+  // `firstTake` amount of blocks upon sync initialization which will ensure that the inefficient insertion happens only
   // once and the following insertions are done in multiples of 128.
   router.get('/get-blocks', recordMetric, checkReady, async (ctx: Koa.Context) => {
     const from = +ctx.query.from!;

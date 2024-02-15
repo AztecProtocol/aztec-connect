@@ -13,7 +13,7 @@ const {
 } = process.env;
 
 /**
- * Not really a test. But provides a convienient way of analysing a startup sync.
+ * Not really a test. But provides a convenient way of analysing a startup sync.
  * Run falafel pointing it to an ethereum node with a load of data on it.
  * Then run this test and watch it sync.
  */

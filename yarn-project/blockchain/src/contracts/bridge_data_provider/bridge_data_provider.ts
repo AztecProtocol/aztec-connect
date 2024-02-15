@@ -73,7 +73,7 @@ export class BridgeDataProvider {
   }
 
   public updatePerEthBlockState() {
-    // clear the subsidy cache with each eth block as this will continuosly change
+    // clear the subsidy cache with each eth block as this will continuously change
     this.subsidyCache = {};
   }
 }

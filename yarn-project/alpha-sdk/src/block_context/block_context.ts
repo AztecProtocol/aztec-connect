@@ -8,7 +8,7 @@ import { MemorySerialQueue } from '../serial_queue/index.js';
 /**
  * Block Context is designed to wrap a block received from the rollup provider
  * and percolate through the sdk, existing for the duration that the block is 'processed'.
- * It provides an opportunity for 'once per block' caching/optimsation across all entities interested in the block
+ * It provides an opportunity for 'once per block' caching/optimization across all entities interested in the block
  * Requires mutex protection due to the concurrent nature of user states
  */
 export class BlockContext {

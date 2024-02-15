@@ -273,7 +273,7 @@ export class Server {
     // Any data stored in the cache will be *no older* than this.blockNumber.
     // They could be newer as the `call` request may populate the cache between a new block, and the poll discovering it.
     // This means there is data inconsistency spanning maybe two blocks, potentially for a few seconds.
-    // This is certainly no worse then using something like Infura.
+    // This is certainly no worse than using something like Infra.
     //
     // We can remedy this case.
     // Here we filter any transaction receipts that would acknowledge state that is newer than what is in the cache.

@@ -158,13 +158,13 @@ describe('fee calculator', () => {
     // calculations for determining the number of txs that can fit into the rollup first reduce the available resource by
     // a worst case consumer of that resource e.g. for call data
     // the worst case consumer is a DEPOSIT at 281 bytes
-    // if the call data limit is 131072 then we adjust this down by 281 before didviding by the amount of call data
+    // if the call data limit is 131072 then we adjust this down by 281 before dividing by the amount of call data
     // consumed by the tx
     // so fo a TRANSFER which consumes 129 bytes of call data the num possible txs based on call data is
     // ((131072 - 281) / 129) = 1013 (floored as you can't have a partial tx)
 
-    // for gas the worst case is a withdraw for an ERC20 token with a high gas limit
-    // e.g. for a withdraw to wallet with a gas limit of 60000 the gas required is 67744
+    // for gas the worst case is a withdrawal for an ERC20 token with a high gas limit
+    // e.g. for a withdrawal to wallet with a gas limit of 60000 the gas required is 67744
     // if the rollup gas limit is 12,000,000 and the verification gas is 500,000 then we need to
     // calculate the gas available for txs = 12,000,000 - 500,000 = 11,500,000
     // then subtract the worst case gas consumer (67744)

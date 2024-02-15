@@ -114,7 +114,7 @@ export class FeeCalculator {
   }
 
   // the purpose of this function is to return the gas cost of the verifier
-  // shared across all of the slots in the rollup
+  // shared across all the slots in the rollup
   // hence 'unadjusted' base gas
   public getUnadjustedBaseVerificationGas() {
     return Math.ceil(this.verificationGas / this.txsPerRollup);
@@ -141,7 +141,7 @@ export class FeeCalculator {
   // as soon as there is not enough calldata/gas available for all of our tx types then we need to publish
   // otherwise we could encounter a situation where a user pays for an instant tx that won't fit
   // by removing this worst case value from the amount available to txs we should prevent
-  // this situation occuring
+  // this situation occurring
   private getNumAdjustedTxsPerRollup(txAssetId: number, txType: TxType) {
     const callDataForTx = getTxCallData(txType);
     const maxCallDataForAnyTx = this.getMaxTxCallData();

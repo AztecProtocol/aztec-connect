@@ -256,7 +256,7 @@ describe('merkle_tree', () => {
     // insert partial values to another tree
     await tree2.updateElements(0, values.slice(0, treeSize - 7));
 
-    // insert exsiting values plus new values to another tree
+    // insert existing values plus new values to another tree
     await tree2.updateElements(0, values);
 
     await expectSameTrees(tree1, tree2);

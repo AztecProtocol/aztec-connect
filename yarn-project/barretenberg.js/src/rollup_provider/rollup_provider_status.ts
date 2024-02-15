@@ -22,7 +22,7 @@ export interface RuntimeConfig {
   publishInterval: number;
   // A time period after which a rollup should be published if no transactions have been received, only used for test environments
   flushAfterIdle: number;
-  // An upper limit on the amount of gas that a sinle rollup transaction should consume
+  // An upper limit on the amount of gas that a single rollup transaction should consume
   gasLimit: number;
   // The amount of gas consumed by executing the verification step of the rollup transaction
   verificationGas: number;
