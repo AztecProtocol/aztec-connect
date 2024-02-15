@@ -236,7 +236,7 @@ jobs:
 
   contracts:
     machine:
-      image: ubuntu-2004:202010-01
+      image: default
     resource_class: large
     steps:
       - *checkout
@@ -247,7 +247,7 @@ jobs:
 
   yarn-project-base:
     machine:
-      image: ubuntu-2004:202010-01
+      image: default
     resource_class: large
     steps:
       - *checkout
@@ -258,7 +258,7 @@ jobs:
 
   barretenberg-js:
     machine:
-      image: ubuntu-2004:202010-01
+      image: default
     resource_class: large
     steps:
       - *checkout
@@ -280,7 +280,7 @@ jobs:
 
   blockchain:
     machine:
-      image: ubuntu-2004:202010-01
+      image: default
     resource_class: large
     steps:
       - *checkout
@@ -291,7 +291,7 @@ jobs:
 
   aztec-dev-cli:
     machine:
-      image: ubuntu-2004:202010-01
+      image: default
     resource_class: large
     steps:
       - *checkout
@@ -302,7 +302,7 @@ jobs:
 
   kebab:
     machine:
-      image: ubuntu-2004:202010-01
+      image: default
     resource_class: large
     steps:
       - *checkout
@@ -313,7 +313,7 @@ jobs:
 
   halloumi:
     machine:
-      image: ubuntu-2004:202010-01
+      image: default
     resource_class: large
     steps:
       - *checkout
@@ -324,7 +324,7 @@ jobs:
 
   falafel:
     machine:
-      image: ubuntu-2004:202010-01
+      image: default
     resource_class: large
     steps:
       - *checkout
@@ -335,7 +335,7 @@ jobs:
 
   block-server:
     machine:
-      image: ubuntu-2004:202010-01
+      image: default
     resource_class: large
     steps:
       - *checkout
@@ -346,7 +346,7 @@ jobs:
 
   sdk:
     machine:
-      image: ubuntu-2004:202010-01
+      image: default
     resource_class: large
     steps:
       - *checkout
@@ -357,7 +357,7 @@ jobs:
 
   wasabi:
     machine:
-      image: ubuntu-2004:202010-01
+      image: default
     resource_class: large
     steps:
       - *checkout
@@ -368,7 +368,7 @@ jobs:
 
   hummus:
     machine:
-      image: ubuntu-2004:202010-01
+      image: default
     resource_class: large
     steps:
       - *checkout
@@ -379,7 +379,7 @@ jobs:
 
   wallet:
     machine:
-      image: ubuntu-2004:202010-01
+      image: default
     resource_class: large
     steps:
       - *checkout
@@ -390,7 +390,7 @@ jobs:
 
   end-to-end:
     machine:
-      image: ubuntu-2004:202010-01
+      image: default
     resource_class: large
     steps:
       - *checkout
@@ -615,7 +615,7 @@ jobs:
 
   deploy:
     machine:
-      image: ubuntu-2004:202010-01
+      image: default
     resource_class: medium
     steps:
       - *checkout
