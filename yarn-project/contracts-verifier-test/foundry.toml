@@ -2,9 +2,12 @@
 src = 'src'
 out = 'out'
 libs = ['lib']
-solc_version = '0.8.10'
+solc_version = '0.8.20'
 optimizer = true
 optimizer_runs = 2000
+allow_paths = [
+    '../../contracts/'
+]
 remappings = [
     'core/=src/core/',
     'forge-std/=lib/forge-std/src',
