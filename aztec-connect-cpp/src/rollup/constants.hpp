@@ -41,7 +41,7 @@ constexpr uint32_t JOIN_SPLIT = 64047;
 constexpr uint32_t CLAIM = 23050;
 constexpr uint32_t ROLLUP = 1167809;
 constexpr uint32_t ROOT_ROLLUP = 5466707;
-constexpr uint32_t ROOT_VERIFIER = 7370222;
+constexpr uint32_t ROOT_VERIFIER = 7628270;
 }; // namespace circuit_gate_count
 
 namespace circuit_gate_next_power_of_two {
@@ -65,7 +65,8 @@ constexpr auto CLAIM = uint256_t(0xa753ce523719749e, 0x80216aff7f8bc9ce, 0xa9b0f
 constexpr auto ROLLUP = uint256_t(0x47427863b042e198, 0xbcfaeb63d9e263e, 0x405c66379df643d0, 0x11a2cb6aef44a77d);
 constexpr auto ROOT_ROLLUP = uint256_t(0x3f9f4b9944097e45, 0x20279b5f76e6ec69, 0xd7a31ace33aaed41, 0x49f209bdff64342c);
 constexpr auto ROOT_VERIFIER =
-    uint256_t(0x5183ad73cd43310e, 0x2c2d57dd13d93c33, 0xccd8b57eb8836b57, 0xf977a879374cdb9e);
+    uint256_t(0x7de149243dd52594, 0x1c40fbda00798466, 0x8afc5663ee50a18c, 0xa1c5c44397212706);
+
 }; // namespace circuit_vk_hash
 
 namespace ProofIds {
