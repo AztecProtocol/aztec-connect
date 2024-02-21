@@ -33,7 +33,7 @@
   "dependencies": {
     "@aztec/barretenberg": "workspace:^",
     "@aztec/blockchain": "workspace:^",
-    "@koa/cors": "^3.3.0",
+    "@koa/cors": "^5.0.0",
     "fs-extra": "^10.1.0",
     "json-normalize": "^1.1.2",
     "koa": "^2.13.4",

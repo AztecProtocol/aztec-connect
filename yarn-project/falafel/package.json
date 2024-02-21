@@ -35,7 +35,7 @@
     "@aztec/barretenberg": "workspace:^",
     "@aztec/blockchain": "workspace:^",
     "@aztec/halloumi": "workspace:^",
-    "@koa/cors": "^3.3.0",
+    "@koa/cors": "^5.0.0",
     "async-mutex": "^0.2.6",
     "bn.js": "^5.0.0",
     "class-validator": "^0.14.0",
