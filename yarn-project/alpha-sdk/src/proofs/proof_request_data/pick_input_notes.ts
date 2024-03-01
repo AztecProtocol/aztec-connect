@@ -45,7 +45,7 @@ export const pickDefiInputNotes = async (
 
   // If it has 2 input assets then we are more restricted.
   // We can only have 1 input note for each asset and we can only have 1 chain of J/S txs
-  // to merge/splt notes in order to achieve the correct input for an asset.
+  // to merge/split notes in order to achieve the correct input for an asset.
   // So, for example:
   // We have 2 assets A and B.
   // We could create a chain of J/S txs to produce a single note for input asset B.

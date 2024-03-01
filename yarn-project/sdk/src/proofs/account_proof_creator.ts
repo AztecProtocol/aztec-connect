@@ -101,7 +101,7 @@ export class AccountProofCreator {
     // when importing account registrations from the old system we didn't account for the fact that prior to June 2021
     // users had registrations with no spending keys (only an alias), and such dormant registrations ended up
     // inheriting their account keys as registered spending keys. In order to allow such accounts to migrate their
-    // aliases, we have an expectional case in we perform the "registered" action instead of the "unregistered" action.
+    // aliases, we have an exceptional case in we perform the "registered" action instead of the "unregistered" action.
     if (spendingPublicKey.equals(accountPublicKey) && !migrate) {
       return {
         path: this.worldState.buildZeroHashPath(WorldStateConstants.DATA_TREE_DEPTH),

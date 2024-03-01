@@ -98,7 +98,7 @@ export interface BridgeDataFieldGetters {
   /**
    * @dev This function should be implemented for async bridges
    * @param interactionNonce A globally unique identifier of a given DeFi interaction
-   * @return A boolean indicating whether the interaction has been finilised
+   * @return A boolean indicating whether the interaction has been finalised
    */
   hasFinalised?(interactionNonce: number): Promise<boolean>;
 

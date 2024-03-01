@@ -19,7 +19,7 @@ export class BlockDownloader {
     // Choosing 55 as an initial chunk to insert if starting from 0, is an aztec-connect optimisation.
     // The aztec-connect genesis data consists of 73 rollups.
     // Initially inserting 55 brings us to 128, after which we work with chunks of 128 rollups.
-    // If not synching from zero, the chunk size is whatever takes us up to the next 128 alignment.
+    // If not syncing from zero, the chunk size is whatever takes us up to the next 128 alignment.
     // This allows for optimal subtree insertions in the client side merkle tree for better sync performance.
     this.genesisTake = 128 - (initialTreeSize % 128);
   }

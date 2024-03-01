@@ -967,7 +967,7 @@ export class CoreSdk extends EventEmitter {
     // reason we want to be inserting chunks of 128 leaves when possible. At genesis, the Aztec Connect system didn't
     // start from 0 rollup blocks/leaves but instead from `initialSubtreeRootsLength` leaves (in Aztec Connect production
     // this number is 73). These initial blocks contain aliases from the old system. The SDK requests only `firstTake`
-    // amount of blocks upon sync initialization which will ensure that the inefficent insertion happens only once and
+    // amount of blocks upon sync initialization which will ensure that the inefficient insertion happens only once and
     // the following insertions are done in multiples of 128.
     const firstTake = 128 - ((await this.getInitialTreeSize()) % 128);
     const from = Math.min(syncedToRollup, userSyncedToRollup) + 1;

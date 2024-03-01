@@ -17,7 +17,7 @@ export interface AsyncFnState {
  *   my_func(state: AsyncFnState, ...args)
  * with a call to `wrapImportFn`.
  * The arguments are whatever the original call arguments were. The addition of AsyncFnState as the first argument
- * allows for the detection of wether the function is continuing after the the async call has completed.
+ * allows for the detection of whether the function is continuing after the async call has completed.
  * If `state.continuation` is false, the function should start its async operation and return the promise.
  * If `state.continuation` is true, the function can get the result from `state.result` perform any finalisation,
  * and return an (optional) value to the wasm.

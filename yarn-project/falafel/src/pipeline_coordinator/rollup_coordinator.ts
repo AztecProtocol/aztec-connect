@@ -568,7 +568,7 @@ export class RollupCoordinator {
     // Profitable if gasBalance is equal or above what's needed.
     const isProfitable = rollupProfile.gasBalance >= 0;
 
-    // If any tx in this rollup is older than it's deadline, then we've timedout and should publish.
+    // If any tx in this rollup is older than it's deadline, then we've timeout and should publish.
     const deadline = this.rollupHasDeadlined(txs, rollupProfile, rollupTimeouts);
 
     // The amount of L1 gas remaining until we breach the gasLimit.

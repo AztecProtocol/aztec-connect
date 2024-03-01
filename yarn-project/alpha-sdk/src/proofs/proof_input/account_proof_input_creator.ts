@@ -56,7 +56,7 @@ export class AccountProofInputCreator {
             spendingKeyAccount: {
               ...spendingKeyAccount,
               // The spending key exists for a request to recover an account, but its private key was discarded after
-              // recovery payload was generated. We only have the siganure for the account proof, and can't use that
+              // recovery payload was generated. We only have the signature for the account proof, and can't use that
               // spending key to create and sign a deposit tx.
               spendingPublicKey: accountPublicKey.equals(newAccountPublicKey)
                 ? accountPublicKey

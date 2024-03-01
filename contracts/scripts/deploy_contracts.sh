@@ -3,7 +3,7 @@ set -eu
 
 # Sets up defaults then runs the E2E Setup script to perform contract deployments
 #
-# Expected enviornment variables
+# Expected environment variables
 # - ROLLUP_PROVIDER_ADDRESS - The address capable of submitting rollups, will default to deployer
 # - FAUCET_CONTROLLER - Faucet superuser, will default to deployer
 # - SAFE_ADDRESS - Permissioned address - usually multisig, will default to deployer

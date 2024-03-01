@@ -48,11 +48,11 @@ import { Synchroniser } from './synchroniser.js';
 enum SdkInitState {
   // Constructed but uninitialized. Unusable.
   UNINITIALIZED = 'UNINITIALIZED',
-  // Initialized but not yet synching data tree and user accounts. Can be queried for data, but not create proofs.
+  // Initialized but not yet syncing data tree and user accounts. Can be queried for data, but not create proofs.
   INITIALIZED = 'INITIALIZED',
   // Synchronises data tree and user accounts. Ready for proof construction.
   RUNNING = 'RUNNING',
-  // Stop requested. Wait for synching task to return.
+  // Stop requested. Wait for syncing task to return.
   STOPPING = 'STOPPING',
   // Unusable.
   DESTROYED = 'DESTROYED',
@@ -61,7 +61,7 @@ enum SdkInitState {
 /**
  * CoreSdk is responsible for keeping everything in sync and proof construction.
  * init() should be called before making any other calls to construct the basic components.
- * run() should be called once a client wants to start synching, or requesting proof construction.
+ * run() should be called once a client wants to start syncing, or requesting proof construction.
  * Takes ownership of injected components (should destroy them etc).
  * A serial queue ensures that all calls that modify internal state happen in sequence.
  * By default, the serial queue is protected with a cross-process mutex, ensuring that if multiple instances

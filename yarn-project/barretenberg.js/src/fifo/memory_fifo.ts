@@ -77,7 +77,7 @@ export class MemoryFifo<T> {
   }
 
   /**
-   * Helper method that can be used to continously consume and process items on the queue.
+   * Helper method that can be used to continuously consume and process items on the queue.
    */
   public async process(handler: (item: T) => Promise<void>) {
     try {

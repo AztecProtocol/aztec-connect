@@ -158,7 +158,7 @@ describe('fee calculator', () => {
     // calculations for determining the number of txs that can fit into the rollup first reduce the available resource by
     // a worst case consumer of that resource e.g. for call data
     // the worst case consumer is a DEPOSIT at 281 bytes
-    // if the call data limit is 131072 then we adjust this down by 281 before didviding by the amount of call data
+    // if the call data limit is 131072 then we adjust this down by 281 before dividing by the amount of call data
     // consumed by the tx
     // so fo a TRANSFER which consumes 129 bytes of call data the num possible txs based on call data is
     // ((131072 - 281) / 129) = 1013 (floored as you can't have a partial tx)

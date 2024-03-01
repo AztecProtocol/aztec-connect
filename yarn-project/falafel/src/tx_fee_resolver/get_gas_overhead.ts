@@ -39,7 +39,7 @@ function getWithdrawHighGas(assetGasLimit: AssetGasLimit) {
     (OffchainJoinSplitData.SIZE + getTxCallData(TxType.WITHDRAW_HIGH_GAS)) * CALLDATA_GAS_PER_BYTE;
   // We set the contract overhead for eth to 10000 + the eth gas limit.
   // The 10000 covers the cost of the value transfer.
-  // The gas limit ensures we cover the cost of transferrring to either a contract or an 'empty' account.
+  // The gas limit ensures we cover the cost of transferring to either a contract or an 'empty' account.
   // An 'empty' account is defined as code == nonce == balance == 0
   // For ERC20 tokens, it's the asset's gas limit
   const contractOverhead =

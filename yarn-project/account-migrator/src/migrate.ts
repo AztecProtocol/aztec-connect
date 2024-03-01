@@ -62,7 +62,7 @@ async function writeAndVerifyAccounts(accountsFile: string, accounts: AccountDat
     }
   });
 
-  console.log('Successfully verfied contents of accounts file');
+  console.log('Successfully verified contents of accounts file');
 
   return accounts;
 }

@@ -29,8 +29,8 @@ export class BoundedSerialQueue {
   }
 
   /**
-   * The caller will block until fn is succesfully enqueued.
-   * The fn itself is execute asyncronously and its result discarded.
+   * The caller will block until fn is successfully enqueued.
+   * The fn itself is executed asynchronously and its result discarded.
    */
   public async put(fn: () => Promise<void>): Promise<void> {
     await this.semaphore.acquire();
