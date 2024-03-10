@@ -41,7 +41,7 @@
     "@aztec/blockchain": "workspace:^",
     "async-mutex": "^0.4.0",
     "detect-node": "^2.1.0",
-    "dexie": "3.2.2",
+    "dexie": "3.2.3",
     "events": "^3.3.0",
     "level-js": "^6.1.0",
     "leveldown": "^6.1.1",
@@ -78,7 +78,7 @@
     "ts-loader": "^9.3.1",
     "typescript": "^4.7.4",
     "util": "^0.12.4",
-    "webpack": "^5.74.0",
+    "webpack": "^5.76.0",
     "webpack-cli": "^4.10.0"
   }
 }
