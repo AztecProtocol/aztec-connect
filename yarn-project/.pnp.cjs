@@ -410,7 +410,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["buffer", "npm:6.0.3"],\
             ["copy-webpack-plugin", "virtual:9fe0621c2f7452e546afb7407263191bb0ff23335513d4fd321b647e96c783bd3533ee8c741b409ee3ca4a469ab9f9512eb07ca312f25e666f781e44aabf80c5#npm:11.0.0"],\
             ["detect-node", "npm:2.1.0"],\
-            ["dexie", "npm:3.2.4"],\
+            ["dexie", "npm:3.2.5"],\
             ["events", "npm:3.3.0"],\
             ["fake-indexeddb", "npm:3.1.8"],\
             ["html-webpack-plugin", "virtual:9fe0621c2f7452e546afb7407263191bb0ff23335513d4fd321b647e96c783bd3533ee8c741b409ee3ca4a469ab9f9512eb07ca312f25e666f781e44aabf80c5#npm:5.5.0"],\
@@ -11046,10 +11046,11 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           ],\
           "linkType": "HARD"\
         }],\
-        ["npm:3.2.4", {\
-          "packageLocation": "./.yarn/cache/dexie-npm-3.2.4-05177fe3ec-4e5294a954.zip/node_modules/dexie/",\
+        ["npm:3.2.5", {\
+          "packageLocation": "./.yarn/cache/dexie-npm-3.2.5-7d2a5de09b-648497ae25.zip/node_modules/dexie/",\
           "packageDependencies": [\
-            ["dexie", "npm:3.2.4"]\
+            ["dexie", "npm:3.2.5"],\
+            ["karma-safari-launcher", "virtual:7d2a5de09b23facfd9ab6e3ae50fa18b9bbbd2f3a174d6048d9748b9da307c3b47d57c1be8a39a7442a6475e9c019fabeb12b5c5fb1eca058bdc80558c918880#npm:1.0.0"]\
           ],\
           "linkType": "HARD"\
         }]\
@@ -15556,6 +15557,28 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["extsprintf", "npm:1.3.0"],\
             ["json-schema", "npm:0.4.0"],\
             ["verror", "npm:1.10.0"]\
+          ],\
+          "linkType": "HARD"\
+        }]\
+      ]],\
+      ["karma-safari-launcher", [\
+        ["npm:1.0.0", {\
+          "packageLocation": "./.yarn/cache/karma-safari-launcher-npm-1.0.0-36f7679f98-09de8a2310.zip/node_modules/karma-safari-launcher/",\
+          "packageDependencies": [\
+            ["karma-safari-launcher", "npm:1.0.0"]\
+          ],\
+          "linkType": "SOFT"\
+        }],\
+        ["virtual:7d2a5de09b23facfd9ab6e3ae50fa18b9bbbd2f3a174d6048d9748b9da307c3b47d57c1be8a39a7442a6475e9c019fabeb12b5c5fb1eca058bdc80558c918880#npm:1.0.0", {\
+          "packageLocation": "./.yarn/__virtual__/karma-safari-launcher-virtual-13431697ba/0/cache/karma-safari-launcher-npm-1.0.0-36f7679f98-09de8a2310.zip/node_modules/karma-safari-launcher/",\
+          "packageDependencies": [\
+            ["karma-safari-launcher", "virtual:7d2a5de09b23facfd9ab6e3ae50fa18b9bbbd2f3a174d6048d9748b9da307c3b47d57c1be8a39a7442a6475e9c019fabeb12b5c5fb1eca058bdc80558c918880#npm:1.0.0"],\
+            ["@types/karma", null],\
+            ["karma", null]\
+          ],\
+          "packagePeers": [\
+            "@types/karma",\
+            "karma"\
           ],\
           "linkType": "HARD"\
         }]\
