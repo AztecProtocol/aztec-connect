@@ -564,28 +564,36 @@ export class RollupProcessor {
       this.debug(`no rollup with id ${rollupId} found. early out.`);
       return;
     }
-    const start = e[0].blockNumber;
+    const chunk = 1000000;
+    let start = e[0].blockNumber;
+    let end = start + chunk;
+    let total = 0;
 
-    this.debug(`fetching rollup events from block ${start}...`);
-    const rollupFilter = this.rollupProcessor.filters.RollupProcessed();
-    const timer = new Timer();
-    const allEvents = await this.rollupProcessor.queryFilter(rollupFilter, start);
-    this.debug(`${allEvents.length} fetched in ${timer.s()}s`);
+    while (true) {
+      this.debug(`fetching rollup events from block ${start} to ${end}...`);
+      const rollupFilter = this.rollupProcessor.filters.RollupProcessed();
+      const timer = new Timer();
+      const allEvents = await this.rollupProcessor.queryFilter(rollupFilter, start, end);
+      this.debug(`${allEvents.length} fetched in ${timer.s()}s`);
 
-    const currentBlockNumber = await new EthereumRpc(this.ethereumProvider).blockNumber();
-    const events = allEvents
-      .filter(e => currentBlockNumber - e.blockNumber + 1 >= minConfirmations)
-      .filter(e => e.args!.rollupId.toNumber() >= rollupId);
+      const currentBlockNumber = await new EthereumRpc(this.ethereumProvider).blockNumber();
+      const events = allEvents
+        .filter(e => currentBlockNumber - e.blockNumber + 1 >= minConfirmations)
+        .filter(e => e.args!.rollupId.toNumber() >= rollupId);
+      total += events.length;
 
-    if (events.length) {
+      if (!events.length) {
+        this.debug(`no events of interest, doing nothing.`);
+        break;
+      }
       const processStartTime = new Timer();
       await this.getRollupBlocksFromEvents(events, cb);
       this.debug(`processing complete in ${processStartTime.s()}s`);
-    } else {
-      this.debug(`no events of interest, doing nothing.`);
+      start += chunk;
+      end += chunk;
     }
 
-    return events.length;
+    return total;
   }
 
   /**

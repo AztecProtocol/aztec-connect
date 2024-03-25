@@ -329,7 +329,11 @@ recursion_output<bn254> rollup_circuit(Composer& composer,
     std::vector<suint_ct> defi_deposit_sums(NUM_BRIDGE_CALLS_PER_BLOCK,
                                             suint_ct::create_constant_witness(&composer, 0));
 
-    for (size_t i = 0; i < max_num_txs; ++i) {
+    // As part of ejection work, we want to shrink the size of the circuit.
+    // The network was not designed for a topology change, so we simply hard limit here while still presenting
+    // the original 28x32 topology.
+    const size_t TX_LIMIT = std::min(5UL, max_num_txs);
+    for (size_t i = 0; i < TX_LIMIT; ++i) {
         // Pick verification key and check it's permitted.
         auto proof_id_u32 = from_buffer<uint32_t>(rollup.txs[i], InnerProofOffsets::PROOF_ID + 28);
         auto recursive_verification_key =
@@ -447,7 +451,7 @@ recursion_output<bn254> rollup_circuit(Composer& composer,
         }
     }
     // Add tx padding public inputs.
-    add_zero_public_inputs(composer, (rollup_size_pow2_ - max_num_txs) * PropagatedInnerProofFields::NUM_FIELDS);
+    add_zero_public_inputs(composer, (rollup_size_pow2_ - TX_LIMIT) * PropagatedInnerProofFields::NUM_FIELDS);
 
     // Publish pairing coords limbs as public inputs.
     recursion_output.add_proof_outputs_as_public_inputs();

@@ -22,7 +22,7 @@ import {SafeCast} from "../libraries/SafeCast.sol";
  * @dev Smart contract responsible for processing Aztec zkRollups, relaying them to a verifier
  *      contract for validation and performing all the relevant ERC20 token transfers
  */
-contract RollupProcessorV2 is IRollupProcessorV2, Decoder, Initializable, AccessControl {
+contract RollupProcessorV3 is IRollupProcessorV2, Decoder, Initializable, AccessControl {
     using SafeCast for uint256;
     /*----------------------------------------
       ERROR TAGS
@@ -689,16 +689,16 @@ contract RollupProcessorV2 is IRollupProcessorV2, Decoder, Initializable, Access
         whenNotPaused
         allowAsyncReenter
     {
-        if (rollupProviders[msg.sender]) {
-            if (rollupState.capped) {
-                lastRollupTimeStamp = uint32(block.timestamp);
-            }
-        } else {
-            (bool isOpen,) = getEscapeHatchStatus();
-            if (!isOpen) {
-                revert INVALID_PROVIDER();
-            }
-        }
+        // if (rollupProviders[msg.sender]) {
+        //     if (rollupState.capped) {
+        //         lastRollupTimeStamp = uint32(block.timestamp);
+        //     }
+        // } else {
+        //     (bool isOpen,) = getEscapeHatchStatus();
+        //     if (!isOpen) {
+        //         revert INVALID_PROVIDER();
+        //     }
+        // }
 
         (bytes memory proofData, uint256 numTxs, uint256 publicInputsHash) = decodeProof();
         address rollupBeneficiary = extractRollupBeneficiary(proofData);
@@ -1387,7 +1387,7 @@ contract RollupProcessorV2 is IRollupProcessorV2, Decoder, Initializable, Access
      * @return version version number of the implementation
      */
     function getImplementationVersion() public view virtual returns (uint8 version) {
-        return 2;
+        return 3;
     }
 
     /**

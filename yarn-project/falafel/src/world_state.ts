@@ -98,7 +98,7 @@ export class WorldState {
     // Syncs rollups that are on-chain but not yet in our db.
     await this.syncState();
 
-    this.startNewPipeline();
+    await this.startNewPipeline();
 
     // Subscribe to sync any new rollups.
     this.blockchain.on('block', block => this.serialQueue.put(() => this.handleBlock(block)));
@@ -295,7 +295,7 @@ export class WorldState {
     await this.rollupDb.deleteUnsettledRollups();
     await this.rollupDb.deleteOrphanedRollupProofs();
     await this.rollupDb.deletePendingTxs();
-    this.startNewPipeline();
+    await this.startNewPipeline();
   }
 
   /**
@@ -304,15 +304,15 @@ export class WorldState {
   public async restartPipeline() {
     await this.pipeline?.stop(true);
     await this.worldStateDb.rollback();
-    this.startNewPipeline();
+    await this.startNewPipeline();
   }
 
-  private startNewPipeline() {
+  private async startNewPipeline() {
     if (this.disablePipeline) {
       return;
     }
     this.log('Starting new pipeline...');
-    this.pipeline = this.pipelineFactory.create();
+    this.pipeline = await this.pipelineFactory.create();
     this.pipeline.start().catch(err => {
       this.pipeline = undefined;
       this.log('PIPELINE PANIC! Handle the exception!');
@@ -332,7 +332,7 @@ export class WorldState {
       await this.pipeline.stop(false);
     }
     await this.updateDbs(block);
-    this.startNewPipeline();
+    await this.startNewPipeline();
   }
 
   /**

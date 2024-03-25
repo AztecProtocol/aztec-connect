@@ -168,7 +168,9 @@ export class RollupPipelineFactory {
     return outerRollupSize;
   }
 
-  public create() {
+  public async create() {
+    await this.proofGenerator.stop();
+    await this.proofGenerator.start();
     return new RollupPipeline(
       this.proofGenerator,
       this.blockchain,
