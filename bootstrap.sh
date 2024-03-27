@@ -34,6 +34,7 @@ fi
 
 \. ~/.nvm/nvm.sh
 nvm install
+npm install -g yarn
 
 # Until we push .yarn/cache, we still need to install.
 cd yarn-project

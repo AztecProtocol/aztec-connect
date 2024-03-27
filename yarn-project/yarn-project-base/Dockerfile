@@ -35,7 +35,7 @@ COPY .yarn .yarn
 # Although we're attempting to be "zero-install", in practice we still need to build arch specific packages.
 RUN yarn --immutable
 # If everything's worked properly, we should no longer need access to the network.
-RUN echo "enableNetwork: false" >> .yarnrc.yml
+# RUN echo "enableNetwork: false" >> .yarnrc.yml
 
 # Yarn devs won't provide an extremely simple and useful feature of pruning dev dependencies from the local cache:
 # https://github.com/yarnpkg/berry/issues/1789

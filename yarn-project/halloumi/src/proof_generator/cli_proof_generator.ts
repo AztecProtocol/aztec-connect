@@ -81,6 +81,8 @@ export class CliProofGenerator implements ProofGenerator {
   }
 
   public async start() {
+    this.execQueue = new MemoryFifo<() => Promise<void>>();
+
     await this.ensureCrs();
     this.launch();
 

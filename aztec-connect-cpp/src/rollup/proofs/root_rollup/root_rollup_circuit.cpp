@@ -282,8 +282,11 @@ circuit_result_data root_rollup_circuit(Composer& composer,
     std::vector<field_ct> defi_deposit_sums(NUM_BRIDGE_CALLS_PER_BLOCK,
                                             field_ct(witness_ct::create_constant_witness(&composer, 0)));
 
-    // Loop over each inner proof.
-    for (uint32_t i = 0; i < max_num_inner_proofs; ++i) {
+    // As part of ejection work, we want to shrink the size of the circuit.
+    // The network was not designed for a topology change, so we simply hard limit here while still presenting
+    // the original 28x32 topology.
+    const size_t INNER_LIMIT = 1;
+    for (uint32_t i = 0; i < INNER_LIMIT; ++i) {
         auto is_real = num_inner_proofs > i;
 
         // Verify the inner proof.
@@ -343,6 +346,8 @@ circuit_result_data root_rollup_circuit(Composer& composer,
         }
     }
 
+    inner_input_hashes.resize(max_num_inner_proofs, zero_hash);
+
     // Check defi interaction notes are inserted and computes previous_defi_interaction_hash.
     std::vector<field_ct> defi_interaction_note_commitments;
     auto previous_defi_interaction_hash = process_defi_interaction_notes(composer,
@@ -382,7 +387,7 @@ circuit_result_data root_rollup_circuit(Composer& composer,
     // Construct list of fields to be broadcast along with proof.
     // [ header fields ][ public inputs of each tx ][ zero field padding ]
     std::vector<fr> header_fields_fr = map(header_fields, [](auto const& f) { return f.get_value(); });
-    size_t padding_rollups = num_inner_proofs_pow2 - max_num_inner_proofs;
+    size_t padding_rollups = num_inner_proofs_pow2 - INNER_LIMIT;
     size_t padding_txs = padding_rollups * num_inner_txs_pow2;
     std::vector<fr> zero_padding(padding_txs * rollup::PropagatedInnerProofFields::NUM_FIELDS, fr(0));
     std::vector<fr> broadcast_fields = join({ header_fields_fr, tx_proof_public_inputs, zero_padding });

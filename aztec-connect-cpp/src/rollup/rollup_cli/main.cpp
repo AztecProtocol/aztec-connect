@@ -116,6 +116,9 @@ bool create_root_rollup()
     auto result = verify(root_rollup, root_rollup_cd);
 
     root_rollup::root_rollup_broadcast_data broadcast_data(result.broadcast_data);
+    auto broadcast_data_buf = to_buffer(broadcast_data);
+    std::cerr << format("Writing ", broadcast_data_buf.size(), " bytes broadcast data.") << std::endl;
+    std::cerr << format("Writing ", result.proof_data.size(), " bytes proof data.") << std::endl;
     auto buf = join({ to_buffer(broadcast_data), result.proof_data });
 
     write(std::cout, buf);
@@ -173,6 +176,8 @@ bool create_root_verifier()
 
     auto rollup_size = inners_per_root * tx_rollup_cd.rollup_size;
     auto tx = root_verifier::create_root_verifier_tx(root_rollup_proof_buf, rollup_size);
+    std::cerr << format("Read ", tx.broadcast_data.size(), " bytes broadcast data.") << std::endl;
+    std::cerr << format("Read ", tx.proof_data.size(), " bytes proof data.") << std::endl;
 
     auto result = verify(tx, root_verifier_cd, root_rollup_cd);
 

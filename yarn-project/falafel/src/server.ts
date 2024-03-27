@@ -92,11 +92,11 @@ export class Server {
       case 'local': {
         const { MAX_CIRCUIT_SIZE = '0' } = process.env;
         this.proofGenerator = new CliProofGenerator(
-          proverless ? 8192 : +MAX_CIRCUIT_SIZE || 2 ** 25,
+          proverless ? 8192 : +MAX_CIRCUIT_SIZE || 2 ** 23,
           numInnerRollupTxs,
           numOuterRollupProofs,
           proverless,
-          false,
+          true,
           false,
           './data',
         );
