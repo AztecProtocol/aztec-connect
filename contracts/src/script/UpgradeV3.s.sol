@@ -25,6 +25,8 @@ contract UpgradeV3 is Test {
     ProxyAdmin internal PROXY_ADMIN;
 
     function run() public {
+        emit log_named_uint("block number", block.number);
+
         ROLLUP = RollupProcessorV3(0xFF1F2B4ADb9dF6FC8eAFecDcbF96A2B351680455);
         PROXY_ADMIN = _getProxyAdmin();
 
@@ -66,11 +68,12 @@ contract UpgradeV3 is Test {
 
         emit log("Simulating upgrade");
 
-        // vm.prank(PROXY_ADMIN.owner());
-        vm.broadcast();
+        vm.prank(PROXY_ADMIN.owner());
+        //vm.broadcast();
         (bool success,) = address(PROXY_ADMIN).call(upgradeCalldata);
         require(success, "Upgrade call failed");
-        vm.broadcast();
+        //vm.broadcast();
+        vm.prank(PROXY_ADMIN.owner());
         (success,) = address(ROLLUP).call(updateVerifierCalldata);
         require(success, "Update verifier call failed");
         // vm.stopPrank();
@@ -98,8 +101,19 @@ contract UpgradeV3 is Test {
         emit log_named_address(
             "Implementation address     ",
             PROXY_ADMIN.getProxyImplementation(TransparentUpgradeableProxy(payable(address(ROLLUP))))
-            );
+        );
         emit log_named_bytes32("Vkhash       ", IVerifier(ROLLUP.verifier()).getVerificationKeyHash());
+        
+        // Make sure that caps are activated and all are set to 0$
+        assertTrue(ROLLUP.getCapped(), "Must be capped");
+        uint256 upper = ROLLUP.getSupportedAssetsLength();
+        for (uint256 i = 0 ; i < upper; i++){
+            (uint128 available, , uint32 pendingCap, uint32 dailyCap, ) =
+                ROLLUP.caps(i);
+            assertEq(available, 0, "Available should be 0");
+            assertEq(dailyCap, 0, "Daily cap should be 0");
+            assertEq(pendingCap, 0, "Pending cap should be 0");
+        }
     }
 
     function _prepareRollup() internal returns (address) {

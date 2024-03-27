@@ -464,27 +464,6 @@ contract RollupProcessorV3 is IRollupProcessorV2, Decoder, Initializable, Access
     function initialize() external reinitializer(getImplementationVersion()) {
         rollupState.capped = true;
         lastRollupTimeStamp = uint32(block.timestamp);
-
-        // Set Eth asset caps. 6 Eth to cover 5 eth deposits + fee up to 1 eth.
-        caps[0] = AssetCap({
-            available: uint128(1000e18),
-            lastUpdatedTimestamp: uint32(block.timestamp),
-            pendingCap: 6,
-            dailyCap: 1000,
-            precision: 18
-        });
-
-        // Set Dai asset cap. 10100 Dai to cover 10K deposits + fee up to 100 dai.
-        caps[1] = AssetCap({
-            available: uint128(1e24),
-            lastUpdatedTimestamp: uint32(block.timestamp),
-            pendingCap: 10100,
-            dailyCap: 1e6,
-            precision: 18
-        });
-
-        emit AssetCapUpdated(0, 6, 1000);
-        emit AssetCapUpdated(1, 10100, 1e6);
     }
 
     /*----------------------------------------
@@ -689,17 +668,6 @@ contract RollupProcessorV3 is IRollupProcessorV2, Decoder, Initializable, Access
         whenNotPaused
         allowAsyncReenter
     {
-        // if (rollupProviders[msg.sender]) {
-        //     if (rollupState.capped) {
-        //         lastRollupTimeStamp = uint32(block.timestamp);
-        //     }
-        // } else {
-        //     (bool isOpen,) = getEscapeHatchStatus();
-        //     if (!isOpen) {
-        //         revert INVALID_PROVIDER();
-        //     }
-        // }
-
         (bytes memory proofData, uint256 numTxs, uint256 publicInputsHash) = decodeProof();
         address rollupBeneficiary = extractRollupBeneficiary(proofData);
 
