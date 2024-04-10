@@ -26,5 +26,6 @@ PROJECTS=(
   # wasabi:yarn-project
   # explorer:yarn-project
   # faucet:faucet
+  zk-money:zk-money
   ejector:ejector
 )

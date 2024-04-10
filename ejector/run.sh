@@ -36,8 +36,8 @@ done
 # Update runtime config.
 curl -X PATCH http://localhost:8081/runtime-config -H "server-auth-token: !changeme#" -H "Content-Type: application/json" -d @<(cat <<EOF
 {
-  "publishInterval": 10,
-  "flushAfterIdle": 5,
+  "publishInterval": 0,
+  "flushAfterIdle": 60,
   "gasLimit": ${GAS_LIMIT:-2000000},
   "maxFeeGasPrice": 0,
   "feeGasPriceMultiplier": 0,
@@ -47,6 +47,10 @@ curl -X PATCH http://localhost:8081/runtime-config -H "server-auth-token: !chang
 EOF
 )
 
-(cd ../zk-money && yarn serve ./dest) &
+sleep 5
+# Restart pipeline
+curl http://localhost:8081/restart -H "server-auth-token: !changeme#"
+
+(cd ../zk-money && yarn serve -p 80 ./dest) &
 
 wait

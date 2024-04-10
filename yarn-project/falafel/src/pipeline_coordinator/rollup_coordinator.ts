@@ -38,7 +38,7 @@ export class RollupCoordinator {
     private rollupPublisher: RollupPublisher,
     private rollupDb: RollupDb,
     private numInnerRollupTxs: number,
-    private numOuterRollupProofs: number,
+    _: number,
     private oldDefiRoot: Buffer,
     private oldDefiPath: HashPath,
     private bridgeResolver: BridgeResolver,
@@ -49,7 +49,8 @@ export class RollupCoordinator {
     private metrics: Metrics,
     private log = console.log,
   ) {
-    this.totalSlots = this.numOuterRollupProofs * this.numInnerRollupTxs;
+    // Ejector only has 5 slots.
+    this.totalSlots = 5; //this.numOuterRollupProofs * this.numInnerRollupTxs;
   }
 
   public getProcessedTxs() {
@@ -353,10 +354,10 @@ export class RollupCoordinator {
     }
 
     const conditions = this.getRollupPublishConditions(txsToRollup, rollupProfile, rollupTimeouts);
-    const { isProfitable, deadline } = conditions;
+    const { deadline } = conditions;
     let { outOfGas, outOfCallData, outOfSlots } = conditions;
 
-    const shouldPublish = flush || isProfitable || deadline || outOfGas || outOfCallData || outOfSlots;
+    const shouldPublish = flush;
 
     if (!shouldPublish) {
       try {
