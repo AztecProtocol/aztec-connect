@@ -415,7 +415,7 @@ export function appFactory(server: Server, prefix: string, metrics: Metrics, ser
   });
   app.proxy = true;
   app.use(compress({ br: false } as any));
-  app.use(cors());
+  app.use(cors({ origin: '*' }));
   app.use(exceptionHandler);
   app.use(router.routes());
   app.use(router.allowedMethods());

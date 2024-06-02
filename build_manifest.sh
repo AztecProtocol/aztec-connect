@@ -10,20 +10,22 @@ PROJECTS=(
   aztec-connect-cpp-x86_64:aztec-connect-cpp:./dockerfiles/Dockerfile.x86_64-linux-clang:aztec-connect-cpp-x86_64-linux-clang
   aztec-connect-cpp-wasm:aztec-connect-cpp:./dockerfiles/Dockerfile.wasm-linux-clang:aztec-connect-cpp-wasm-linux-clang
   blockchain-vks:blockchain-vks
-  mainnet-fork:mainnet-fork
+  #mainnet-fork:mainnet-fork
   contracts:contracts
   yarn-project-base:yarn-project
   barretenberg.js:yarn-project
   blockchain:yarn-project
-  aztec-dev-cli:yarn-project
+  #aztec-dev-cli:yarn-project
   halloumi:yarn-project
   falafel:yarn-project
-  kebab:yarn-project
+  #kebab:yarn-project
   # sdk:yarn-project
-  hummus:yarn-project
+  #hummus:yarn-project
   # wallet:yarn-project
-  end-to-end:yarn-project
+  #end-to-end:yarn-project
   # wasabi:yarn-project
   # explorer:yarn-project
   # faucet:faucet
+  zk-money:zk-money
+  ejector:ejector
 )
